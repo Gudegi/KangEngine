@@ -1,7 +1,15 @@
 {
+  "name": "vcpkg-example",
   "version": "0.0.1",
   "dependencies": [
+    "cglm",
+    "glad",
     "glfw3",
-    "glad"
+    {
+      "name": "imgui",
+      "features": ["glfw-binding", "opengl3-binding"]
+    },
+    "imguizmo",
+    "stb"
   ]
 }
