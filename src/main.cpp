@@ -11,8 +11,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
 
 // 창 크기 설정
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+const unsigned int SCR_WIDTH = 1920;
+const unsigned int SCR_HEIGHT = 1080;
 
 //각 shader GLSL 코드
 const char *vertexShaderSource = "#version 330 core\n"
@@ -139,14 +139,30 @@ int main(){
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
+
+    float xscale, yscale;
+    GLFWmonitor* monitor = glfwGetWindowMonitor(window);
+    if (!monitor) {
+        monitor = glfwGetPrimaryMonitor();
+    }
+    glfwGetMonitorContentScale(monitor, &xscale, &yscale);
+    float dpi_scale = (xscale + yscale) * 0.5f;
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.ScaleAllSizes(dpi_scale);
+    io.FontGlobalScale = dpi_scale;
+    //ImFontConfig config;
+    //config.SizePixels = 16.0f * dpi_scale;
+    //io.Fonts->AddFontDefault(&config);
+    //io.Fonts->Build();
     
     //ImGui를 통해 조절할 변수
     bool drawTriangle = true;

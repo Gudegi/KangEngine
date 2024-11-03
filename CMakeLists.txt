@@ -15,7 +15,7 @@ find_package(cglm CONFIG REQUIRED)
 find_package(Stb REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 find_package(imguizmo CONFIG REQUIRED)
-find_package(pxr REQUIRED)
+#find_package(pxr REQUIRED)
 
 add_executable(${PROJECT_NAME})
 target_sources(${PROJECT_NAME} PRIVATE ./src/main.cpp)
@@ -30,5 +30,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     cglm::cglm
     imgui::imgui
     imguizmo::imguizmo
-    ${PXR_LIBRARIES}
+    #${PXR_LIBRARIES}
     )
