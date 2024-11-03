@@ -37,33 +37,63 @@ const char *fragmentShaderSource = "#version 330 core\n"
         "}\n\0";
 
 
-int main(){
-    
-    // glfw : 초기화, 설정
+GLFWwindow* initGlfw(){
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    
-    // MAC OSX
+    #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    
-    // glfw window 생성
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", nullptr, nullptr);
+    #endif
+
+    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "KangEngine", nullptr, nullptr);
     if(window ==NULL){
         cout << "Failed to create GLFW window" << endl;
         glfwTerminate();
-        return -1;
+        return NULL;
     }
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    
+    return window;
+}
+
+void initGlad(){
     // OpenGL 함수 포인터 로드
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)){
         cout << "Failed to initialize GLAD" << endl;
-        return -1;
+    }
+}
+
+unsigned int* deFineShader(string option, const char* shaderSource){
+    if(option == "vertex"){
+        unsigned int shader = glCreateShader(GL_VERTEX_SHADER);
+    }
+    else{
+        unsigned int shader = glCreateShader(GL_FRAGMENT_SHADER);
+    }
+    glShaderSource(shader, 1, &shaderSource, NULL);
+    glCompileShader(shader);
+
+    int success;
+    char infoLog[512];
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+    if(!success){
+        glGetShaderInfoLog(shader, 512, NULL, infoLog);
+        if(option == "vertex"){
+            cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << endl;
+        }
+        else{
+            cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << endl;
+        } 
     }
     
+
+    return shader
+}
+
+
+int main(){
+        
     
     //vertex shader
     unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
