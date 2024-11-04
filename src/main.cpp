@@ -1,10 +1,13 @@
-#include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
+//#include "imgui.h"
+//#include "imgui_impl_glfw.h"
+//#include "imgui_impl_opengl3.h"
 #include <iostream>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-
+#include "shader/shader.hpp"
+#include "ui/panel_manager.hpp"
+#include "ui/base_panel.hpp"
+#include <memory>
 using namespace std;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -14,33 +17,10 @@ void processInput(GLFWwindow *window);
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
 
-//각 shader GLSL 코드
-const char *vertexShaderSource = "#version 330 core\n"
-        "layout (location = 0) in vec3 aPos;\n"
-        "uniform float size;\n"
-        //out vec4 vertexColor;\n" //// chap - Shader
-    "void main()\n"
-    "{\n"
-    "   gl_Position = vec4(size*aPos.x, size*aPos.y, size*aPos.z, 1.0);\n"
-        //"vertexColor = vec4(0.5, 0.0, 0.0, 1.0);\n" //// chap - Shader
-    "}\0";
-
-const char *fragmentShaderSource = "#version 330 core\n"
-        "out vec4 FragColor;\n"
-        "uniform vec4 color;\n"
-        //"in vec4 vertexColor;"
-
-        "void main() {\n"
-            //"FragColor = vertexColor;\n" // chap - Shader
-            //"FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-            "FragColor = color;\n "
-        "}\n\0";
-
-
 GLFWwindow* initGlfw(){
     glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -58,80 +38,22 @@ GLFWwindow* initGlfw(){
 }
 
 void initGlad(){
-    // OpenGL 함수 포인터 로드
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)){
         cout << "Failed to initialize GLAD" << endl;
     }
 }
 
-unsigned int* deFineShader(string option, const char* shaderSource){
-    if(option == "vertex"){
-        unsigned int shader = glCreateShader(GL_VERTEX_SHADER);
-    }
-    else{
-        unsigned int shader = glCreateShader(GL_FRAGMENT_SHADER);
-    }
-    glShaderSource(shader, 1, &shaderSource, NULL);
-    glCompileShader(shader);
-
-    int success;
-    char infoLog[512];
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if(!success){
-        glGetShaderInfoLog(shader, 512, NULL, infoLog);
-        if(option == "vertex"){
-            cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << endl;
-        }
-        else{
-            cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << endl;
-        } 
-    }
-    
-
-    return shader
-}
-
-
 int main(){
-        
-    
-    //vertex shader
-    unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    glCompileShader(vertexShader);
-    // 컴파일 에러 체크
-    int success;
-    char infoLog[512];
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-    if(!success){
-        glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-        cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << endl;
-    }
-    //fragment shader
-    unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    glCompileShader(fragmentShader);
-    //  컴파일 에러 체크
-    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-    if(!success){
-        glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-        cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << endl;
-    }
-    // link shaders
-    unsigned int shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-    // 링킹 에러 체크
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-    if(!success){
-        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-        cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << endl;
-    }
-    //링크 했으니 shader 객체는 제거
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-    
+    GLFWwindow* window = initGlfw();
+    initGlad();
+
+    std::string default_path = "/home/asaid/Dev/KangEngine/assets/shaders/";
+    Shader shader_program = Shader(default_path+"test.vs", default_path+"test.fs");
+    PanelManager main_panel = PanelManager(window);
+    BasePanel base_panel = BasePanel();
+    main_panel.addPanel(&base_panel); // TODO: preventing memory leak 
+    //main_panel.addPanel(std::make_unique<BasePanel>());
+
     // 정점 데이터( vertex data) 세팅
     float vertices[] = {
         -0.5f, -0.5f, 0.0f,
@@ -164,6 +86,7 @@ int main(){
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     
+    /*
     //ImGui 초기화
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -173,11 +96,11 @@ int main(){
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     // Setup Dear ImGui style
-    ImGui::StyleColorsDark();
-    //ImGui::StyleColorsClassic();
+    //ImGui::StyleColorsDark();
+    ImGui::StyleColorsClassic();
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init("#version 330");
+    ImGui_ImplOpenGL3_Init("#version 410");
 
     float xscale, yscale;
     GLFWmonitor* monitor = glfwGetWindowMonitor(window);
@@ -193,16 +116,16 @@ int main(){
     //config.SizePixels = 16.0f * dpi_scale;
     //io.Fonts->AddFontDefault(&config);
     //io.Fonts->Build();
-    
+    */
     //ImGui를 통해 조절할 변수
     bool drawTriangle = true;
     float size = 1.0f;
     float color[4] = {0.8f, 0.3f, 0.02f, 1.0f };
     
     // 변수를 쉐이더에 export
-    glUseProgram(shaderProgram);
-    glUniform1f(glGetUniformLocation(shaderProgram, "size"), size);
-    glUniform4f(glGetUniformLocation(shaderProgram, "color"), color[0], color[1], color[2], color[3]);
+    shader_program.use();
+    shader_program.setFloat("size", size);
+    shader_program.setColor("color", color[0], color[1], color[2], color[3]);
     
     //렌더링 루프
     while(!glfwWindowShouldClose(window)){
@@ -215,43 +138,41 @@ int main(){
         
         // OpenGL에게 ImGui시작 알림
         // Start the Dear ImGui frame
+        /*
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-        
-        
-        if (!io.WantCaptureMouse){
-            // Your input functions here
-        }
-        
-        glUseProgram(shaderProgram);
+        */
+        main_panel.render();
+        shader_program.use();
         glBindVertexArray(VAO);
         
-        //체크되어야만 그림
+        /*
         if (drawTriangle)
             glDrawArrays(GL_TRIANGLES, 0, 3);
         
-        //ImGui 윈도우 생성
         ImGui::Begin("Hello, world!");
-        //텍스트
         ImGui::Text("This is some useful text.");
-        //체크박스
         ImGui::Checkbox("Draw Triangle", &drawTriangle);
-        //슬라이더
         ImGui::SliderFloat("Size", &size, 0.5f, 2.0f);
-        //컬러 에디터
         ImGui::ColorEdit4("Color", color);
-        //ImGui 종료
         ImGui::End();
-        
-        
-        glUseProgram(shaderProgram);
-        glUniform1f(glGetUniformLocation(shaderProgram, "size"), size);
-        glUniform4f(glGetUniformLocation(shaderProgram, "color"), color[0], color[1], color[2], color[3]);
-        
+
+        ImGui::Begin("Hello, world2");
+        ImGui::Text("This is some useful text.");
+        ImGui::Checkbox("Draw Triangle", &drawTriangle);
+        ImGui::SliderFloat("Size", &size, 0.5f, 2.0f);
+        ImGui::ColorEdit4("Color", color);
+        ImGui::End();
+
         // Rendering
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        */
+        
+        shader_program.use();
+        shader_program.setFloat("size", size);
+        shader_program.setColor("color", color[0], color[1], color[2], color[3]);
         
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -266,7 +187,6 @@ int main(){
     
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
-    glDeleteProgram(shaderProgram);
     
     glfwTerminate();
     return 0;
