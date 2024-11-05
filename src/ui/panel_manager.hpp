@@ -53,9 +53,19 @@ public:
     //void addPanel(std::unique_ptr<Panel> panel);
 
     ///
-    /// @brief Render function. This should be called in main render loop.
+    /// @brief prepare new frames. This should be called on top of main render loop.
+    /// 
+    void preRender();
+
+    ///
+    /// @brief actual render function. This should be called in main render loop.
     /// 
     void render();
+
+    ///
+    /// @brief finalize imgui's render function. This should be called on bottom of main render loop.
+    /// 
+    void postRender();
 
 };
 

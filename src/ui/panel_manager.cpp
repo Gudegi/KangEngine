@@ -52,13 +52,16 @@ void PanelManager::addPanel(Panel* panel)
     m_panels.push_back(panel);
 }
 
-void PanelManager::render()
+void PanelManager::preRender()
 {
-    ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+}
 
+void PanelManager::render()
+{
+    ImGuiIO& io = ImGui::GetIO();
     if (!io.WantCaptureMouse)
     {
         // Your input functions here
@@ -76,7 +79,10 @@ void PanelManager::render()
     //ImGui::SliderFloat("Size", &size, 0.5f, 2.0f);
     //ImGui::ColorEdit4("Color", color);
     ImGui::End();
+}
 
+void PanelManager::postRender()
+{
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }

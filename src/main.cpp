@@ -47,7 +47,7 @@ int main(){
     GLFWwindow* window = initGlfw();
     initGlad();
 
-    std::string default_path = "/home/asaid/Dev/KangEngine/assets/shaders/";
+    std::string default_path = "./build/assets/shaders/";
     Shader shader_program = Shader(default_path+"test.vs", default_path+"test.fs");
     PanelManager main_panel = PanelManager(window);
     BasePanel base_panel = BasePanel();
@@ -80,43 +80,11 @@ int main(){
     
     // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
     // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
-    glBindVertexArray(0);
+    //glBindVertexArray(0);
     
     //wireframe 모드
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-    
-    /*
-    //ImGui 초기화
-    // Setup Dear ImGui context
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    // Setup Dear ImGui style
-    //ImGui::StyleColorsDark();
-    ImGui::StyleColorsClassic();
-    // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init("#version 410");
-
-    float xscale, yscale;
-    GLFWmonitor* monitor = glfwGetWindowMonitor(window);
-    if (!monitor) {
-        monitor = glfwGetPrimaryMonitor();
-    }
-    glfwGetMonitorContentScale(monitor, &xscale, &yscale);
-    float dpi_scale = (xscale + yscale) * 0.5f;
-    ImGuiStyle& style = ImGui::GetStyle();
-    style.ScaleAllSizes(dpi_scale);
-    io.FontGlobalScale = dpi_scale;
-    //ImFontConfig config;
-    //config.SizePixels = 16.0f * dpi_scale;
-    //io.Fonts->AddFontDefault(&config);
-    //io.Fonts->Build();
-    */
     //ImGui를 통해 조절할 변수
     bool drawTriangle = true;
     float size = 1.0f;
@@ -129,61 +97,33 @@ int main(){
     
     //렌더링 루프
     while(!glfwWindowShouldClose(window)){
-        
-        
         processInput(window);
         
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         
-        // OpenGL에게 ImGui시작 알림
-        // Start the Dear ImGui frame
-        /*
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-        */
-        main_panel.render();
-        shader_program.use();
-        glBindVertexArray(VAO);
+        main_panel.preRender();
         
-        /*
+        main_panel.render();
+        //glBindVertexArray(VAO);
+        
         if (drawTriangle)
             glDrawArrays(GL_TRIANGLES, 0, 3);
-        
-        ImGui::Begin("Hello, world!");
-        ImGui::Text("This is some useful text.");
+
+        ImGui::Begin("Custom New Panel");
+        ImGui::Text("You can create a panel in main loop.");
         ImGui::Checkbox("Draw Triangle", &drawTriangle);
         ImGui::SliderFloat("Size", &size, 0.5f, 2.0f);
         ImGui::ColorEdit4("Color", color);
         ImGui::End();
-
-        ImGui::Begin("Hello, world2");
-        ImGui::Text("This is some useful text.");
-        ImGui::Checkbox("Draw Triangle", &drawTriangle);
-        ImGui::SliderFloat("Size", &size, 0.5f, 2.0f);
-        ImGui::ColorEdit4("Color", color);
-        ImGui::End();
-
-        // Rendering
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-        */
         
-        shader_program.use();
         shader_program.setFloat("size", size);
         shader_program.setColor("color", color[0], color[1], color[2], color[3]);
         
+        main_panel.postRender();
         glfwSwapBuffers(window);
         glfwPollEvents();
-        
-        
     }
-    
-    // 인스턴스 삭제
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
     
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
