@@ -1,3 +1,7 @@
+///
+/// Author Kyungwon Kang, 2024/11
+///
+
 #ifndef _PANEL_MANAGER_HPP_
 #define _PANEL_MANAGER_HPP_
 
@@ -8,7 +12,8 @@
 #include "panel.hpp"
 #include <memory>
 
-class PanelManager{
+class PanelManager
+{
 
 ///
 /// @brief Define panel manager 
@@ -20,7 +25,7 @@ private:
     /// @brief list contains the each panels.
     /// @todo memory leak protection is need.
     ///
-    std::list<Panel*> m_panels;
+    std::list<Panel*> _panels;
     //std::list<std::unique_ptr<Panel>> m_panels;
 
     ///

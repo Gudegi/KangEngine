@@ -1,15 +1,15 @@
 #include "shader.hpp"
 
-Shader::Shader(std::string vs_path, std::string fs_path)
+Shader::Shader(std::string vsPath, std::string fsPath)
 {
-    m_v_shader = compile(vs_path, GL_VERTEX_SHADER);
-    m_f_shader = compile(fs_path, GL_FRAGMENT_SHADER);
-    m_shader_program = link();
+    _vertexShader = compile(vsPath, GL_VERTEX_SHADER);
+    _fragmentShader = compile(fsPath, GL_FRAGMENT_SHADER);
+    _shaderProgram = link();
 }
 
 Shader::~Shader()
 {
-    glDeleteProgram(m_shader_program);
+    glDeleteProgram(_shaderProgram);
 }
 
 std::string Shader::loadFile(const std::string path)
@@ -47,14 +47,14 @@ GLuint Shader::compile(const std::string path, GLenum type)
 
 GLuint Shader::link()
 {
-    GLuint shader_program = glCreateProgram();
-    glAttachShader(shader_program, m_v_shader);
-    glAttachShader(shader_program, m_f_shader);
-    glLinkProgram(shader_program);
-    checkLinkError(shader_program);
-    glDeleteShader(m_v_shader);
-    glDeleteShader(m_f_shader);
-    return shader_program;
+    GLuint shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, _vertexShader);
+    glAttachShader(shaderProgram, _fragmentShader);
+    glLinkProgram(shaderProgram);
+    checkLinkError(shaderProgram);
+    glDeleteShader(_vertexShader);
+    glDeleteShader(_fragmentShader);
+    return shaderProgram;
 }
 
 void Shader::checkCompileError(GLuint shader)
@@ -68,13 +68,13 @@ void Shader::checkCompileError(GLuint shader)
     }
 }
 
-void Shader::checkLinkError(GLuint shader_program)
+void Shader::checkLinkError(GLuint shaderProgram)
 {
     int success;
     char infoLog[512];
-    glGetProgramiv(shader_program, GL_LINK_STATUS, &success);
+    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
     if(!success){
-        glGetProgramInfoLog(shader_program, 512, NULL, infoLog);
+        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
         std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
     }
 
@@ -82,30 +82,30 @@ void Shader::checkLinkError(GLuint shader_program)
 
 void Shader::use() const
 {
-    glUseProgram(m_shader_program);
+    glUseProgram(_shaderProgram);
 }
 
 void Shader::setBool(const std::string &name, bool value) const
 {         
-    glUniform1i(glGetUniformLocation(m_shader_program, name.c_str()), (int)value); 
+    glUniform1i(glGetUniformLocation(_shaderProgram, name.c_str()), (int)value); 
 }
 
 void Shader::setInt(const std::string &name, int value) const
 { 
-    glUniform1i(glGetUniformLocation(m_shader_program, name.c_str()), value); 
+    glUniform1i(glGetUniformLocation(_shaderProgram, name.c_str()), value); 
 }
 
 void Shader::setFloat(const std::string &name, float value) const
 { 
-    glUniform1f(glGetUniformLocation(m_shader_program, name.c_str()), value); 
+    glUniform1f(glGetUniformLocation(_shaderProgram, name.c_str()), value); 
 }
 
 void Shader::setVec3(const std::string name, float x, float y, float z) const
 {
-    glUniform3f(glGetUniformLocation(m_shader_program, name.c_str()), x, y, z);
+    glUniform3f(glGetUniformLocation(_shaderProgram, name.c_str()), x, y, z);
 }
 
 void Shader::setColor(const std::string name, float r, float g, float b, float a) const
 {
-    glUniform4f(glGetUniformLocation(m_shader_program, name.c_str()), r, g, b, a);
+    glUniform4f(glGetUniformLocation(_shaderProgram, name.c_str()), r, g, b, a);
 }

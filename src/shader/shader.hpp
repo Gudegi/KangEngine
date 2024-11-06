@@ -1,3 +1,7 @@
+///
+/// Author Kyungwon Kang, 2024/11
+///
+
 #ifndef _SHADER_HPP_
 #define _SHADER_HPP_
 
@@ -7,7 +11,8 @@
 #include <fstream>
 #include <sstream>
 
-class Shader{
+class Shader
+{
 
 ///
 /// @brief  The use of one shader program by receiving the vs and fs file paths.
@@ -18,8 +23,8 @@ private:
     ///
     /// @brief Variables conatin shader programs and complied shaders.
     ///
-    GLuint m_shader_program, m_v_shader, m_f_shader;
-    const std::string m_vs_path, m_fs_path;
+    GLuint _shaderProgram, _vertexShader, _fragmentShader;
+    const std::string _vsPath, _fsPath;
 
     ///
     /// @brief Load file from string path. This function is called in "compile" function.
@@ -47,7 +52,7 @@ private:
     ///
     /// @brief Check link error.
     ///
-    void checkLinkError(GLuint shader_program);
+    void checkLinkError(GLuint shaderProgram);
 
 public:
 
@@ -56,7 +61,7 @@ public:
     /// @param The paths of vertex and fragment shader.
     /// @todo Support another shader (ig, geometry shader).
     ///
-    Shader(std::string vs_path, std::string fs_path);
+    Shader(std::string vsPath, std::string fsPath);
 
     ///
     /// @brief Destruct object.

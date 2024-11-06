@@ -29,18 +29,18 @@ void PanelManager::scaleDPI(GLFWwindow* window)
 {
     // TODO: could make better
     ImGuiIO& io = ImGui::GetIO();
-    float xscale, yscale;
+    float xScale, yScale;
     GLFWmonitor* monitor = glfwGetWindowMonitor(window);
     if (!monitor) {
         monitor = glfwGetPrimaryMonitor();
     }
-    glfwGetMonitorContentScale(monitor, &xscale, &yscale);
-    float dpi_scale = (xscale + yscale) * 0.5f;
+    glfwGetMonitorContentScale(monitor, &xScale, &yScale);
+    float dpiScale = (xScale + yScale) * 0.5f;
     ImGuiStyle& style = ImGui::GetStyle();
-    style.ScaleAllSizes(dpi_scale);
-    io.FontGlobalScale = dpi_scale;
+    style.ScaleAllSizes(dpiScale);
+    io.FontGlobalScale = dpiScale;
     //ImFontConfig config;
-    //config.SizePixels = 16.0f * dpi_scale;
+    //config.SizePixels = 16.0f * dpiScale;
     //io.Fonts->AddFontDefault(&config);
     //io.Fonts->Build();
 }
@@ -48,8 +48,8 @@ void PanelManager::scaleDPI(GLFWwindow* window)
 void PanelManager::addPanel(Panel* panel)
 //void PanelManager::addPanel(std::unique_ptr<Panel> panel)
 {
-    //m_panels.push_back(std::move(panel));
-    m_panels.push_back(panel);
+    //_panels.push_back(std::move(panel));
+    _panels.push_back(panel);
 }
 
 void PanelManager::preRender()
@@ -67,7 +67,7 @@ void PanelManager::render()
         // Your input functions here
     }
 
-    for (auto &panel : m_panels) 
+    for (auto &panel : _panels) 
     {   
         panel->buildPanel();
     }

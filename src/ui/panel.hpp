@@ -1,11 +1,12 @@
 #ifndef _PANEL_HPP_
 #define _PANEL_HPP_
 
-class Panel{
+class Panel
+{
 
-/*
-    Define panel to inherit
-*/
+///
+/// @brief Define panel to inherit
+///
 
 private:
 
