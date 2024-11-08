@@ -13,7 +13,7 @@ add_definitions(-DSTB_IMAGE_IMPLEMENTATION)
 find_package(OpenGL REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
 find_package(glad CONFIG REQUIRED)
-find_package(cglm CONFIG REQUIRED)
+find_package(glm CONFIG REQUIRED)
 find_package(Stb REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 find_package(imguizmo CONFIG REQUIRED)
@@ -33,7 +33,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 target_link_libraries(${PROJECT_NAME} PRIVATE
     glfw
     glad::glad
-    cglm::cglm
+    glm::glm
     imgui::imgui
     imguizmo::imguizmo
     #${PXR_LIBRARIES}

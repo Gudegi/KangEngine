@@ -2,7 +2,7 @@
   "name": "vcpkg-example",
   "version": "0.0.1",
   "dependencies": [
-    "cglm",
+    "glm",
     "glad",
     "glfw3",
     {
