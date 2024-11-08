@@ -3,7 +3,33 @@
         "CMAKE_TOOLCHAIN_FILE": "${HOME}/vcpkg/scripts/buildsystems/vcpkg.cmake"
     },
     "files.associations": {
-        "functional": "cpp"
+        "functional": "cpp",
+        "stdexcept": "cpp",
+        "string": "cpp",
+        "__config": "cpp",
+        "__threading_support": "cpp",
+        "__verbose_abort": "cpp",
+        "cctype": "cpp",
+        "cmath": "cpp",
+        "cstddef": "cpp",
+        "cstdint": "cpp",
+        "cstdio": "cpp",
+        "cstdlib": "cpp",
+        "cstring": "cpp",
+        "ctime": "cpp",
+        "cwchar": "cpp",
+        "cwctype": "cpp",
+        "execution": "cpp",
+        "initializer_list": "cpp",
+        "iosfwd": "cpp",
+        "limits": "cpp",
+        "new": "cpp",
+        "ratio": "cpp",
+        "string_view": "cpp",
+        "tuple": "cpp",
+        "typeinfo": "cpp",
+        "variant": "cpp",
+        "algorithm": "cpp"
     },
     //"C_Cpp.errorSquiggles": "disabled"
 }

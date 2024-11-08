@@ -1,6 +1,3 @@
-//#include "imgui.h"
-//#include "imgui_impl_glfw.h"
-//#include "imgui_impl_opengl3.h"
 #include <iostream>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -9,6 +6,7 @@
 #include "ui/base_panel.hpp"
 #include "mesh/vao.hpp"
 #include "mesh/buffer.hpp"
+#include "texture/texture.hpp"
 //#include <memory>
 using namespace std;
 
@@ -49,8 +47,8 @@ int main(){
     GLFWwindow* window = initGlfw();
     initGlad();
 
-    std::string defaultPath = "./build/assets/shaders/";
-    Shader shaderProgram = Shader(defaultPath+"test.vs", defaultPath+"test.fs");
+    std::string defaultPath = "./build/assets/";
+    Shader shaderProgram = Shader(defaultPath+"shaders/test.vs", defaultPath+"shaders/test.fs");
     PanelManager mainPanel = PanelManager(window);
     BasePanel basePanel = BasePanel();
     mainPanel.addPanel(&basePanel); // TODO: preventing memory leak 
@@ -58,10 +56,11 @@ int main(){
 
     // 정점 데이터( vertex data) 세팅
     float vertices[] = {
-        -0.5f, -0.5f, 0.0f,
-        -0.5f, 0.5f, 0.0f,
-         0.5f, 0.5f, 0.0f,
-         0.5f, -0.5f, 0.0f,
+        // positions          // colors           // texture coords
+        0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
+        0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // bottom right
+        -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // bottom left
+        -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // top left 
     };
 
     unsigned int indices[] = {
@@ -72,37 +71,18 @@ int main(){
     VAO vao = VAO();
     Buffer vbo = Buffer(GL_ARRAY_BUFFER);
     Buffer ebo = Buffer(GL_ELEMENT_ARRAY_BUFFER);
+    Texture texture = Texture(defaultPath+"textures/crowdEditing.tga", false);
+    texture.setWarpParam();
+    texture.setFilterParam();
+    texture.createTexture2D();
 
-    vao.bind();
-    vbo.bind();
     vbo.setData(sizeof(vertices), vertices, GL_STATIC_DRAW);
-    ebo.bind();
     ebo.setData(sizeof(indices), indices, GL_STATIC_DRAW);
-    vao.setVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), (void*)0);
+    vao.setVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)0);
+    vao.setVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(3 * sizeof(float)));
+    vao.setVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(6 * sizeof(float)));
     vbo.unBind();
     vao.unBind();
-    /*
-    GLuint VBO, VAO, EBO; //VBO를 통해 메모리를 관리한다. VAO를 통해 효율적인 렌더링을 수행한다.
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO); //VBO에게 unique 한 ID 부여
-    glGenBuffers(1, &EBO); 
-    
-    //VAO 바인드 후 vertex buffer 를 세팅하고, vertex attribute 를 구성한다.
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO); //생성된 버퍼를 GL_ARRAY_BUFFER 유형으로 바인드
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW); //초기화 한 정점들을 버퍼의 메모리에 복사(메모리 할당, 데이터 저장)
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-    
-    //vertex attribute location 이 0, vec3 타입이니까 3, 정규화 NO, stride 는 float(4byte) 3개, 12도 가능, tightly packed 되어있다면 0으로도 가능, offset 은 0 void* 형으로 형변환.
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3* sizeof(float), (void*)0);
-    //vertex attribute 사용할 수 있게
-    glEnableVertexAttribArray(0);
-    
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-    */
     
     //wireframe 모드
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -115,7 +95,8 @@ int main(){
     // 변수를 쉐이더에 export
     shaderProgram.use();
     shaderProgram.setFloat("size", size);
-    shaderProgram.setColor("color", color[0], color[1], color[2], color[3]);
+    //shaderProgram.setColor("color", color[0], color[1], color[2], color[3]);
+    //shaderProgram.setInt("texture._textureID", 0);
     
     //렌더링 루프
     while(!glfwWindowShouldClose(window)){
@@ -127,6 +108,7 @@ int main(){
         mainPanel.preRender();
         
         mainPanel.render();
+        texture.bind(GL_TEXTURE0);
         shaderProgram.use();
         //glBindVertexArray(VAO);
         vao.bind();
@@ -143,7 +125,7 @@ int main(){
         ImGui::End();
         
         shaderProgram.setFloat("size", size);
-        shaderProgram.setColor("color", color[0], color[1], color[2], color[3]);
+        //shaderProgram.setColor("color", color[0], color[1], color[2], color[3]);
         
         mainPanel.postRender();
         glfwSwapBuffers(window);

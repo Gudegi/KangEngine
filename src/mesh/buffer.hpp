@@ -22,6 +22,7 @@ public:
     Buffer(GLenum target): _target(target)
     {
         glGenBuffers(1, &_buffer);
+        this->bind();
     }
 
     ~Buffer()

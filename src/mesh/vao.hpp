@@ -19,6 +19,7 @@ public:
     VAO()
     {
         glGenVertexArrays(1, &_vao);
+        this->bind();
     }
 
     ~VAO()
