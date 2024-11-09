@@ -6,7 +6,7 @@
 void Texture::_loadImage(const std::string path, bool flip=false)
 {
     stbi_set_flip_vertically_on_load(flip);
-    _data = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
+    _data = stbi_load(path.c_str(), &_width, &_height, &_nChannels, 0);
     if (!_data)
     {
         std::cout << "Failed to load texture" << std::endl;
@@ -53,14 +53,14 @@ void Texture::setFilterParam(GLfloat minParam, GLfloat maxParam) const
 void Texture::createTexture2D()
 {
     GLenum format;
-    if (this->nrChannels == 1)
+    if (this->_nChannels == 1)
         format = GL_RED;
-    else if (this->nrChannels == 3)
+    else if (this->_nChannels == 3)
         format = GL_RGB;
-    else if (this->nrChannels == 4)
+    else if (this->_nChannels == 4)
         format = GL_RGBA;
 
-    glTexImage2D(_target, 0, format, this->width, this->height, 0, format, GL_UNSIGNED_BYTE, _data);
+    glTexImage2D(_target, 0, format, this->_width, this->_height, 0, format, GL_UNSIGNED_BYTE, _data);
     glGenerateMipmap(_target);
     stbi_image_free(_data);
 }

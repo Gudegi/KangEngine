@@ -9,6 +9,7 @@
 #include "mesh/vao.hpp"
 #include "mesh/buffer.hpp"
 #include "texture/texture.hpp"
+#include "camera/camera.hpp"
 //#include <memory>
 using namespace std;
 
@@ -170,6 +171,10 @@ int main(){
     shaderProgram.setInt("texture1", 0);
     shaderProgram.setInt("texture2", 1);
     
+    glm::vec3 cameraPos = glm::vec3(2, -2, -5);
+    glm::vec3 cameraTarget = glm::vec3(0, 0, 0);
+    Camera camera = Camera(cameraPos, cameraTarget);
+
     //렌더링 루프
     while(!glfwWindowShouldClose(window)){
         processInput(window);
@@ -185,7 +190,14 @@ int main(){
         glm::mat4 view = glm::mat4(1.0f);
         glm::mat4 projection = glm::mat4(1.0f);
         //model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-        view  = glm::translate(view, glm::vec3(0.0f, 0.0f, -13.0f));
+        //view  = glm::translate(view, glm::vec3(0.0f, 0.0f, -13.0f));
+        glm::vec3 cPos = camera.getCameraPos();
+        const float radius = 10.0f;
+        float camX = sin(glfwGetTime()) * radius;
+        float camZ = cos(glfwGetTime()) * radius;
+        cPos = glm::vec3(camX, cPos.y, camZ);
+        //camera.setCameraPos(cPos);
+        view = camera.getViewMatrix();
         projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         shaderProgram.setMat4("view", view);
         shaderProgram.setMat4("projection", projection);

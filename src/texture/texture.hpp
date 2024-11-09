@@ -11,14 +11,13 @@ private:
 
     GLuint _textureID;
     GLenum _target = GL_TEXTURE_2D;
+    int _width, _height, _nChannels;
     unsigned char* _data;
     void _loadImage(const std::string path, bool flip);
 
 public:
 
     const std::string imgPath;
-
-    int width, height, nrChannels;
 
     Texture(const std::string path, bool flip=false);
 

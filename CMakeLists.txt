@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.16)
 project(KangEngine)
 
 set(CMAKE_CXX_STANDARD 17)
-
+set(VCPKG_BUILD_TYPE release)
 set(pxr_DIR "$ENV{HOME}/usd_build")
 set(ASSETS_DIR "${CMAKE_SOURCE_DIR}/assets")
 set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
