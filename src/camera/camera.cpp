@@ -1,5 +1,6 @@
 #include "camera.hpp"
 #include <glm/gtc/matrix_transform.hpp>
+#include <cmath>
 
 void Camera::updateViewMatrix()
 {   
@@ -32,6 +33,7 @@ void Camera::updateViewMatrix()
 
 Camera::Camera(glm::vec3 cameraPos, glm::vec3 targetPos, char upAxis): _cameraPos(cameraPos), _targetPos(targetPos)
 {
+    _FoV = 45.0f;
     if (upAxis == 'y')
     {
         _upAxis = glm::vec3(0.0, 1.0, 0.0f);
@@ -63,6 +65,21 @@ glm::mat4 Camera::getViewMatrix()
     return _viewMatrix;
 }
 
+glm::mat4 Camera::getProjMatrix(const unsigned int scrWidth, const unsigned int scrHeight, const float zNear, const float zFar)
+{   
+    return glm::perspective(glm::radians(_FoV), (float)scrWidth / (float)scrHeight, zNear, zFar);
+}
+
+void Camera::setFoV(const float FoV)
+{
+    _FoV = FoV;
+}
+
+float Camera::getFoV()
+{
+    return _FoV;    
+}
+
 void Camera::setCameraPos(glm::vec3 cameraPos)
 {
     _cameraPos = cameraPos;
@@ -73,6 +90,23 @@ void Camera::setTargetPos(glm::vec3 targetPos)
 {
     _targetPos = targetPos;
     updateViewMatrix();
+}
+
+glm::vec3 Camera::calcSpherePos()
+{
+    glm::vec3 sub = _targetPos - _cameraPos;
+    float r = std::sqrt(std::pow(sub.x, 2) + std::pow(sub.y, 2) + std::pow(sub.z, 2));
+    glm::vec3 a;
+
+    a.x = r * glm::sin(glm::radians(_theta)) * glm::sin(glm::radians(_phi)); 
+    a.y = r * glm::cos(glm::radians(_theta));
+    a.z = r * glm::sin(glm::radians(_theta)) * glm::cos(glm::radians(_phi));
+    /*
+    a.x = r * glm::sin(glm::radians(_phi)) * glm::cos(glm::radians(_theta));
+    a.y = r * glm::sin(glm::radians(_theta)); 
+    a.z = r * glm::cos(glm::radians(_phi)) * glm::cos(glm::radians(_theta)); 
+    */
+    return a;
 }
 
 glm::vec3 Camera::getCameraLookDir()
