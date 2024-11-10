@@ -14,7 +14,7 @@
 using namespace std;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void processInput(GLFWwindow *window);
+void processInput(GLFWwindow *window, Camera* camera);
 
 // 창 크기 설정
 const unsigned int SCR_WIDTH = 1920;
@@ -46,7 +46,12 @@ void initGlad(){
     }
 }
 
+float deltaTime = 0.0f;
+float lastFrame = 0.0f;
+bool lookModeTarget = true;
+
 int main(){
+    
     GLFWwindow* window = initGlfw();
     initGlad();
     glEnable(GL_DEPTH_TEST);
@@ -171,13 +176,16 @@ int main(){
     shaderProgram.setInt("texture1", 0);
     shaderProgram.setInt("texture2", 1);
     
-    glm::vec3 cameraPos = glm::vec3(2, -2, -5);
+    glm::vec3 cameraPos = glm::vec3(3, 2, -1);
     glm::vec3 cameraTarget = glm::vec3(0, 0, 0);
     Camera camera = Camera(cameraPos, cameraTarget);
 
     //렌더링 루프
     while(!glfwWindowShouldClose(window)){
-        processInput(window);
+        float currentFrame = static_cast<float>(glfwGetTime());
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+        processInput(window, &camera);
         
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -191,11 +199,11 @@ int main(){
         glm::mat4 projection = glm::mat4(1.0f);
         //model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
         //view  = glm::translate(view, glm::vec3(0.0f, 0.0f, -13.0f));
-        glm::vec3 cPos = camera.getCameraPos();
-        const float radius = 10.0f;
-        float camX = sin(glfwGetTime()) * radius;
-        float camZ = cos(glfwGetTime()) * radius;
-        cPos = glm::vec3(camX, cPos.y, camZ);
+        //glm::vec3 cPos = camera.getCameraPos();
+        //const float radius = 10.0f;
+        //float camX = sin(glfwGetTime()) * radius;
+        //float camZ = cos(glfwGetTime()) * radius;
+        //cPos = glm::vec3(camX, cPos.y, camZ);
         //camera.setCameraPos(cPos);
         view = camera.getViewMatrix();
         projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
@@ -222,6 +230,7 @@ int main(){
         ImGui::Begin("Custom New Panel");
         ImGui::Text("You can create a panel in main loop.");
         ImGui::Checkbox("Draw Triangle", &drawTriangle);
+        ImGui::Checkbox("Target Look Mode", &lookModeTarget);
         ImGui::SliderFloat("Size", &size, 0.5f, 2.0f);
         ImGui::ColorEdit4("Color", color);
         ImGui::End();
@@ -246,7 +255,75 @@ int main(){
         glViewport(0, 0, width, height);
     }
     
-    void processInput(GLFWwindow* window) {
+    void processInput(GLFWwindow* window, Camera* camera) {
+        float cameraSpeed = static_cast<float>(5.0 * deltaTime);
+        glm::vec3 cameraPos = camera->getCameraPos();
+        glm::vec3 cameraFront = camera->getCameraLookDir();
+        glm::vec3 cameraUp = camera->getCameraUpDir();
+        glm::vec3 cameraRight = camera->getCameraRightDir();
+        glm::vec3 globalUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
         if( glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(window, true);
+        // look at specifc target or // look at forward direction 
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            {
+                if (lookModeTarget == true)
+                {
+                    camera->setTargetPos(glm::vec3(0,0,0));
+                    cameraPos += cameraSpeed * cameraFront;
+                }
+                else
+                {
+                    camera->setTargetPos(cameraPos + cameraFront);
+                    cameraPos += cameraSpeed * cameraFront;
+                    camera->setTargetPos(cameraPos + cameraFront); // 다시 업데이트해서 안끊기게
+                }
+                camera->setCameraPos(cameraPos);
+            }
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            {        
+                if (lookModeTarget == true)
+                {
+                    camera->setTargetPos(glm::vec3(0,0,0));
+                    cameraPos -= cameraSpeed * cameraFront;
+                }
+                else
+                {
+                    camera->setTargetPos(cameraPos + cameraFront);
+                    cameraPos -= cameraSpeed * cameraFront;
+                    camera->setTargetPos(cameraPos + cameraFront);
+                }
+                camera->setCameraPos(cameraPos);
+            }
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            {
+                if (lookModeTarget == true)
+                {
+                    camera->setTargetPos(glm::vec3(0,0,0));
+                    cameraPos -= cameraRight * cameraSpeed;
+                }
+                else
+                {
+                    camera->setTargetPos(cameraPos + cameraFront);
+                    cameraPos -= cameraSpeed * glm::normalize(glm::cross(cameraFront, globalUp));
+                    camera->setTargetPos(cameraPos + cameraFront);
+                }
+                camera->setCameraPos(cameraPos);
+            }
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            {
+                if (lookModeTarget == true)
+                {
+                    camera->setTargetPos(glm::vec3(0,0,0));
+                    cameraPos += cameraRight * cameraSpeed;
+                }
+                else
+                {
+                    camera->setTargetPos(cameraPos + cameraFront);
+                    cameraPos += cameraSpeed * glm::normalize(glm::cross(cameraFront, globalUp));
+                    camera->setTargetPos(cameraPos + cameraFront);
+                }
+                camera->setCameraPos(cameraPos);
+            }
     }
