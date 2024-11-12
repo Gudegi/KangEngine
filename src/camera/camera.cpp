@@ -33,6 +33,8 @@ void Camera::updateViewMatrix()
 
 Camera::Camera(glm::vec3 cameraPos, glm::vec3 targetPos, char upAxis): _cameraPos(cameraPos), _targetPos(targetPos)
 {
+     glm::vec3 tmpVec3 = (targetPos - cameraPos);
+    _camToLookDistance = sqrt(pow(tmpVec3.x, 2) + pow(tmpVec3.y, 2) + pow(tmpVec3.z, 2));
     _FoV = 45.0f;
     if (upAxis == 'y')
     {
@@ -60,6 +62,19 @@ glm::vec3 Camera::getTargetPos()
     return _targetPos;
 }
 
+glm::vec3 Camera::getCameraLookDir()
+{
+    return _cameraLookDir;
+}
+glm::vec3 Camera::getCameraUpDir()
+{
+    return _cameraUpDir;
+}
+glm::vec3 Camera::getCameraRightDir()
+{
+    return _cameraRightDir;
+}
+
 glm::mat4 Camera::getViewMatrix()
 {
     return _viewMatrix;
@@ -80,6 +95,11 @@ float Camera::getFoV()
     return _FoV;    
 }
 
+float Camera::getCamToLookDistance()
+{
+    return _camToLookDistance;
+}
+
 void Camera::setCameraPos(glm::vec3 cameraPos)
 {
     _cameraPos = cameraPos;
@@ -90,35 +110,5 @@ void Camera::setTargetPos(glm::vec3 targetPos)
 {
     _targetPos = targetPos;
     updateViewMatrix();
-}
-
-glm::vec3 Camera::calcSpherePos()
-{
-    glm::vec3 sub = _targetPos - _cameraPos;
-    float r = std::sqrt(std::pow(sub.x, 2) + std::pow(sub.y, 2) + std::pow(sub.z, 2));
-    glm::vec3 a;
-
-    a.x = r * glm::sin(glm::radians(_theta)) * glm::sin(glm::radians(_phi)); 
-    a.y = r * glm::cos(glm::radians(_theta));
-    a.z = r * glm::sin(glm::radians(_theta)) * glm::cos(glm::radians(_phi));
-    /*
-    a.x = r * glm::sin(glm::radians(_phi)) * glm::cos(glm::radians(_theta));
-    a.y = r * glm::sin(glm::radians(_theta)); 
-    a.z = r * glm::cos(glm::radians(_phi)) * glm::cos(glm::radians(_theta)); 
-    */
-    return a;
-}
-
-glm::vec3 Camera::getCameraLookDir()
-{
-    return _cameraLookDir;
-}
-glm::vec3 Camera::getCameraUpDir()
-{
-    return _cameraUpDir;
-}
-glm::vec3 Camera::getCameraRightDir()
-{
-    return _cameraRightDir;
 }
 

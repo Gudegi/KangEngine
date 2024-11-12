@@ -15,7 +15,7 @@ private:
     glm::vec3 _cameraPos, _targetPos, _cameraLookDir, _cameraUpDir, _cameraRightDir;
     glm::mat4 _viewMatrix;
     glm::vec3 _upAxis;
-    float _FoV, _theta, _phi;
+    float _FoV, _camToLookDistance;
     void updateViewMatrix();
 
 public:
@@ -29,11 +29,8 @@ public:
     void setTargetPos(glm::vec3 targetPos);
     void setFoV(float Fov);
     float getFoV();
-    void setTheta(float theta){_theta = theta;}
-    float getTheta(){return _theta;}
-    void setPhi(float phi){ _phi = phi;}
-    float getPhi(){return _phi;}
-    //std::vector<glm::vec3> 
+    float getCamToLookDistance();
+    
     glm::vec3 calcSpherePos();
     glm::vec3 getCameraLookDir();
     glm::vec3 getCameraUpDir();
