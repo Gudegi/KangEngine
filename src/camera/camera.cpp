@@ -2,6 +2,39 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <cmath>
 
+Camera::Camera(glm::vec3 cameraPos, glm::vec3 targetPos, char upAxis): _cameraPos(cameraPos), _targetPos(targetPos)
+{
+     glm::vec3 tmpVec3 = (targetPos - cameraPos);
+    _camToLookDistance = sqrt(pow(tmpVec3.x, 2) + pow(tmpVec3.y, 2) + pow(tmpVec3.z, 2));
+    _FoV = 45.0f;
+    if (upAxis == 'y')
+    {
+        _upAxis = glm::vec3(0.0, 1.0, 0.0f);
+    }
+    else if (upAxis == 'z')
+    {
+        _upAxis = glm::vec3(0.0, 0.0, 1.0f);
+    }
+    this->updateViewMatrix();
+}
+
+Camera::Camera()
+{
+    glm::vec3 cameraPos = glm::vec3(0, 1, -5);
+    glm::vec3 targetPos = glm::vec3(0, 0, 0);
+    glm::vec3 tmpVec3 = (targetPos - cameraPos);
+    _camToLookDistance = sqrt(pow(tmpVec3.x, 2) + pow(tmpVec3.y, 2) + pow(tmpVec3.z, 2));
+    _FoV = 45.0f;
+    _upAxis = glm::vec3(0.0, 1.0, 0.0f);
+    this->updateViewMatrix();
+}
+
+
+Camera::~Camera()
+{
+
+}
+
 void Camera::updateViewMatrix()
 {   
     _cameraLookDir = glm::normalize(_targetPos - _cameraPos); // z
@@ -29,27 +62,6 @@ void Camera::updateViewMatrix()
     _viewMatrix[3][0] = -glm::dot(_cameraRightDir, _cameraPos);
     _viewMatrix[3][1] = -glm::dot(_cameraUpDir, _cameraPos);
     _viewMatrix[3][2] = glm::dot(_cameraLookDir, _cameraPos);
-}
-
-Camera::Camera(glm::vec3 cameraPos, glm::vec3 targetPos, char upAxis): _cameraPos(cameraPos), _targetPos(targetPos)
-{
-     glm::vec3 tmpVec3 = (targetPos - cameraPos);
-    _camToLookDistance = sqrt(pow(tmpVec3.x, 2) + pow(tmpVec3.y, 2) + pow(tmpVec3.z, 2));
-    _FoV = 45.0f;
-    if (upAxis == 'y')
-    {
-        _upAxis = glm::vec3(0.0, 1.0, 0.0f);
-    }
-    else if (upAxis == 'z')
-    {
-        _upAxis = glm::vec3(0.0, 0.0, 1.0f);
-    }
-    this->updateViewMatrix();
-}
-
-Camera::~Camera()
-{
-
 }
 
 glm::vec3 Camera::getCameraPos()

@@ -1,79 +1,68 @@
 #include "app.hpp"
-
-App::App(int width, int height, bool hideUi): _width(width), _height(height), _hideUi(hideUi)
+#include "ui/base_panel.hpp"
+struct App::IO
 {
-    this->initGlfw();
-    this->initGlad();
+    bool isMouseMiddleClicked = false;
+    bool isMouseLeftClicked = false;
+    bool isMouseRightClicked = false;
+    double mouseX = 0.0;
+    double mouseY = 0.0;
+    double prevMouseX = 0.0;
+    double prevMouseY = 0.0;
+    double deltaMouseX = 0.0;
+    double deltaMouseY = 0.0;
+};
 
+struct App::RenderVariable
+{
+    float deltaTime = 0.0f;
+    float lastFrameTime = 0.0f;
+};
+
+
+App::App(int width, int height, bool hideUi): 
+    _width(width), _height(height), _hideUi(hideUi), _window(), _camera(), _io(new App::IO),
+    _renderVariable(new App::RenderVariable)
+{   
+    _window = Window(_width, _height);
+    BasePanel basePanel = BasePanel();
+    _mainPanel.addPanel(&basePanel);
+    // GL function
     glEnable(GL_DEPTH_TEST);
-
 }
 
-GLFWwindow* App::initGlfw(){
-    glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    #ifdef __APPLE__
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    #endif
-
-    GLFWwindow* window = glfwCreateWindow(_width, _height, "KangEngine", nullptr, nullptr);
-    if(window ==NULL){
-        std::cout << "Failed to create GLFW window" << std::endl;
-        glfwTerminate();
-        return NULL;
-    }
-    glfwMakeContextCurrent(window);
-    glfwSetWindowUserPointer(window, this);
-    glfwSetFramebufferSizeCallback(window, this->framebufferSizeCallbackWrapper);
-    glfwSetScrollCallback(window, this->scrollCallbackWrapper);
-    glfwSetCursorPosCallback(window, this->cursorPositionCallbackWrapper);
-    glfwSetMouseButtonCallback(window, this->mouseButtonCallbackWrapper);
-    glfwSwapInterval(1);
-    return window;
-}
-
-void App::initGlad(){
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)){
-        std::cout << "Failed to initialize GLAD" << std::endl;
-    }
-}
-
-void App::framebufferSizeCallbackWrapper(GLFWwindow* window, int width, int height)
+App::~App()
 {
-    App* app = static_cast<App*>(glfwGetWindowUserPointer(window));
-    if (app)
-    {
-        app->framebufferSizeCallback(window, width, height);
-    }
+
 }
 
-void App::scrollCallbackWrapper(GLFWwindow* window, double xoffset, double yoffset)
+void App::start()
 {
-    App* app = static_cast<App*>(glfwGetWindowUserPointer(window));
-    if (app)
-    {
-        app->scrollCallback(window, xoffset, yoffset);
-    }
-}
+    setUp();
+    GLFWwindow* window = _window.getGlfwWindow();
+    while(!glfwWindowShouldClose(window)){
+        float currentFrame = static_cast<float>(glfwGetTime());
+        _renderVariable->deltaTime = currentFrame - _renderVariable->lastFrameTime;
+        _renderVariable->lastFrameTime = currentFrame;
+        //processInput(window, &camera);
+        
+        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        
+        _mainPanel.preRender();
+        this->preRender();
 
-void App::cursorPositionCallbackWrapper(GLFWwindow* window, double xpos, double ypos)
-{
-    App* app = static_cast<App*>(glfwGetWindowUserPointer(window));
-    if (app)
-    {
-        app->cursorPositionCallback(window, xpos, ypos);
-    }
-}
+        _mainPanel.render();
+        this->render();
+        
+        _mainPanel.postRender();
+        this->postRender();
 
-void App::mouseButtonCallbackWrapper(GLFWwindow* window, int button, int action, int mods)
-{
-    App* app = static_cast<App*>(glfwGetWindowUserPointer(window));
-    if (app)
-    {
-        app->mouseButtonCallback(window, button, action, mods);
+        glfwSwapBuffers(window);
+        glfwPollEvents();
     }
+    glfwDestroyWindow(window);
+    glfwTerminate();
 }
 
 void App::framebufferSizeCallback(GLFWwindow* window, int width, int height)
@@ -83,50 +72,48 @@ void App::framebufferSizeCallback(GLFWwindow* window, int width, int height)
 
 void App::scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    //float fov = _camera.getFoV();
-    //fov -= (float)yoffset;
-    //if (fov < 1.0f)
-    //    fov = 1.0f;
-    //    glm::vec3 cameraPos = _camera.getCameraPos();
-    //    glm::vec3 cameraFront = _camera.getCameraLookDir();
-    //    float cameraSpeed = static_cast<float>(10.0 * deltaTime);
-    //    cameraPos -= cameraSpeed * cameraFront;
-    //    _camera.setCameraPos(cameraPos);
-    //if (fov > 60.0f)
-    //    fov = 60.0f; 
-    //_camera.setFoV(fov);
+    float fov = _camera.getFoV();
+    fov -= (float)yoffset;
+    if (fov < 1.0f)
+        fov = 1.0f;
+        glm::vec3 cameraPos = _camera.getCameraPos();
+        glm::vec3 cameraFront = _camera.getCameraLookDir();
+        float cameraSpeed = static_cast<float>(10.0 * this->_renderVariable->deltaTime);
+        cameraPos -= cameraSpeed * cameraFront;
+        _camera.setCameraPos(cameraPos);
+    if (fov > 60.0f)
+        fov = 60.0f; 
+    _camera.setFoV(fov);
 }
 
 void App::cursorPositionCallback(GLFWwindow* window, double xpos, double ypos)
 {
-    /*
-    mouseX = xpos;
-    mouseY = ypos;
-    if (isCameraRotate == true || isCameraTranlate == true)
+    _io->mouseX = xpos;
+    _io->mouseY = ypos;
+    if (_io->isMouseLeftClicked == true || _io->isMouseMiddleClicked == true)
     {
-        deltaMouseX = mouseX - prevMouseX;
-        deltaMouseY = mouseY - prevMouseY;
+        _io->deltaMouseX = _io->mouseX - _io->prevMouseX;
+        _io->deltaMouseY = _io->mouseY - _io->prevMouseY;
     }
     else
     {
-        deltaMouseX = 0;
-        deltaMouseY = 0;
+        _io->deltaMouseX = 0;
+        _io->deltaMouseY = 0;
     }
-    prevMouseX = xpos;
-    prevMouseY = ypos;
-    */
+    _io->prevMouseX = xpos;
+    _io->prevMouseY = ypos;
 }
 
 void App::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 {
-    /*deltaMouseX = 0;
-    deltaMouseY = 0;
+    _io->deltaMouseX = 0;
+    _io->deltaMouseY = 0;
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
-        isCameraRotate = true;
+        _io->isMouseLeftClicked = true;
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
-        isCameraRotate = false;
+        _io->isMouseLeftClicked = false;
     if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_PRESS)
-        isCameraTranlate = true;
+        _io->isMouseMiddleClicked = true;
     if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_RELEASE)
-        isCameraTranlate = false;    */
+        _io->isMouseMiddleClicked = false;
 }
