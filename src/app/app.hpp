@@ -2,8 +2,6 @@
 /// Author Kyungwon Kang, 2024/11
 ///
 
-// TODO: fix me (separate class)
-
 #ifndef _APP_HPP_
 #define _APP_HPP_
 
@@ -16,21 +14,37 @@
 #include <memory>
 class App
 {
-
 private:
+    class GLFWCallbackWrapper
+    {//https://stackoverflow.com/a/41089765
+    private:
+        static App* _app;
+    public:
+        GLFWCallbackWrapper() = delete;
+        GLFWCallbackWrapper(const GLFWCallbackWrapper&) = delete;
+        GLFWCallbackWrapper(GLFWCallbackWrapper&&) = delete;
+        ~GLFWCallbackWrapper() = delete;
+        static void framebufferSizeCallbackWrapper(GLFWwindow* window, int width, int height);
+        static void scrollCallbackWrapper(GLFWwindow* window, double xoffset, double yoffset);
+        static void cursorPositionCallbackWrapper(GLFWwindow* window, double xpos, double ypos);
+        static void mouseButtonCallbackWrapper(GLFWwindow* window, int button, int action, int mods);
+        static void setApp(App* app);
+    };
+public:
     int _width, _height;
     bool _hideUi;
     
     Window _window;
     Camera _camera;
-    PanelManager _mainPanel = PanelManager(this->getWindow());
+    PanelManager _mainPanel;// = PanelManager(this->getWindow());
     //Light _light;
-
     void start();
+    void registerCallbacks();
+    void initialize(int width, int height, bool hideUi);
+    void processInput();
 
-public:
-    App(int width, int height, bool hideUi);
-    ~App();
+    App();
+    virtual ~App();
 
 
     struct IO;

@@ -1,7 +1,18 @@
 #include "panel_manager.hpp"
 #include <GLFW/glfw3.h>
 
-PanelManager::PanelManager(GLFWwindow* window)
+PanelManager::PanelManager()
+{
+}
+
+PanelManager::~PanelManager()
+{
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+}
+
+void PanelManager::init(GLFWwindow* window)
 {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -16,13 +27,6 @@ PanelManager::PanelManager(GLFWwindow* window)
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 410");
     scaleDPI(window);
-}
-
-PanelManager::~PanelManager()
-{
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
 }
 
 void PanelManager::scaleDPI(GLFWwindow* window)
@@ -45,11 +49,11 @@ void PanelManager::scaleDPI(GLFWwindow* window)
     //io.Fonts->Build();
 }
 
-void PanelManager::addPanel(Panel* panel)
-//void PanelManager::addPanel(std::unique_ptr<Panel> panel)
+//void PanelManager::addPanel(Panel* panel)
+void PanelManager::addPanel(std::unique_ptr<Panel> panel)
 {
-    //_panels.push_back(std::move(panel));
-    _panels.push_back(panel);
+    _panels.push_back(std::move(panel));
+    //_panels.push_back(panel);
 }
 
 void PanelManager::preRender()

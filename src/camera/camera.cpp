@@ -2,9 +2,19 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <cmath>
 
-Camera::Camera(glm::vec3 cameraPos, glm::vec3 targetPos, char upAxis): _cameraPos(cameraPos), _targetPos(targetPos)
+Camera::Camera()
 {
-     glm::vec3 tmpVec3 = (targetPos - cameraPos);
+}
+
+
+Camera::~Camera()
+{
+
+}
+
+void Camera::init(glm::vec3 cameraPos, glm::vec3 targetPos, char upAxis)
+{   
+    glm::vec3 tmpVec3 = (targetPos - cameraPos);
     _camToLookDistance = sqrt(pow(tmpVec3.x, 2) + pow(tmpVec3.y, 2) + pow(tmpVec3.z, 2));
     _FoV = 45.0f;
     if (upAxis == 'y')
@@ -16,23 +26,6 @@ Camera::Camera(glm::vec3 cameraPos, glm::vec3 targetPos, char upAxis): _cameraPo
         _upAxis = glm::vec3(0.0, 0.0, 1.0f);
     }
     this->updateViewMatrix();
-}
-
-Camera::Camera()
-{
-    glm::vec3 cameraPos = glm::vec3(0, 1, -5);
-    glm::vec3 targetPos = glm::vec3(0, 0, 0);
-    glm::vec3 tmpVec3 = (targetPos - cameraPos);
-    _camToLookDistance = sqrt(pow(tmpVec3.x, 2) + pow(tmpVec3.y, 2) + pow(tmpVec3.z, 2));
-    _FoV = 45.0f;
-    _upAxis = glm::vec3(0.0, 1.0, 0.0f);
-    this->updateViewMatrix();
-}
-
-
-Camera::~Camera()
-{
-
 }
 
 void Camera::updateViewMatrix()

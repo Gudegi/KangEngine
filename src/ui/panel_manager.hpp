@@ -25,8 +25,8 @@ private:
     /// @brief list contains the each panels.
     /// @todo memory leak protection is need.
     ///
-    std::list<Panel*> _panels;
-    //std::list<std::unique_ptr<Panel>> m_panels;
+    //std::list<Panel*> _panels;
+    std::list<std::unique_ptr<Panel>> _panels;
 
     ///
     /// @brief Scale imgui contents correspondings to glfw monitor size.
@@ -43,7 +43,7 @@ public:
     ///
     /// @brief Construct the manager that initializes imgui, scales, and, sets theme.
     ///
-    PanelManager(GLFWwindow* window);
+    PanelManager();
 
     ///
     /// @brief Destruct panel manager
@@ -51,11 +51,13 @@ public:
     /// 
     ~PanelManager();
 
+    void init(GLFWwindow* window);
+
     ///
     /// @brief Add a panel to render info. 
     /// 
-    void addPanel(Panel* panel);
-    //void addPanel(std::unique_ptr<Panel> panel);
+    //void addPanel(Panel* panel);
+    void addPanel(std::unique_ptr<Panel> panel);
 
     ///
     /// @brief prepare new frames. This should be called on top of main render loop.

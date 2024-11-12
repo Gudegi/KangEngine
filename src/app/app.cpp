@@ -1,5 +1,44 @@
 #include "app.hpp"
 #include "ui/base_panel.hpp"
+#include "utils/glm_utils.hpp"
+
+void App::GLFWCallbackWrapper::framebufferSizeCallbackWrapper(GLFWwindow* window, int width, int height)
+{
+    _app->framebufferSizeCallback(window, width, height);
+}
+
+void App::GLFWCallbackWrapper::scrollCallbackWrapper(GLFWwindow* window, double xoffset, double yoffset)
+{
+    _app->scrollCallback(window, xoffset, yoffset);
+}
+
+void App::GLFWCallbackWrapper::cursorPositionCallbackWrapper(GLFWwindow* window, double xpos, double ypos)
+{
+    _app->cursorPositionCallback(window, xpos, ypos);
+}
+
+void App::GLFWCallbackWrapper::mouseButtonCallbackWrapper(GLFWwindow* window, int button, int action, int mods)
+{
+    _app->mouseButtonCallback(window, button, action, mods);
+}
+
+void App::GLFWCallbackWrapper::setApp(App* app)
+{
+    GLFWCallbackWrapper::_app = app;
+}
+
+App* App::GLFWCallbackWrapper::_app = nullptr;
+
+void App::registerCallbacks()
+{
+    GLFWCallbackWrapper::setApp(this);
+    GLFWwindow* window = _window.getGlfwWindow();
+    glfwSetWindowUserPointer(window, this);
+    glfwSetFramebufferSizeCallback(window, GLFWCallbackWrapper::framebufferSizeCallbackWrapper);
+    glfwSetScrollCallback(window, GLFWCallbackWrapper::scrollCallbackWrapper);
+    glfwSetCursorPosCallback(window, GLFWCallbackWrapper::cursorPositionCallbackWrapper);
+    glfwSetMouseButtonCallback(window, GLFWCallbackWrapper::mouseButtonCallbackWrapper);
+}
 struct App::IO
 {
     bool isMouseMiddleClicked = false;
@@ -20,20 +59,33 @@ struct App::RenderVariable
 };
 
 
-App::App(int width, int height, bool hideUi): 
-    _width(width), _height(height), _hideUi(hideUi), _window(), _camera(), _io(new App::IO),
+App::App(): 
+    _width(), _height(), _hideUi(), _window(), _camera(), _io(new App::IO),
     _renderVariable(new App::RenderVariable)
 {   
-    _window = Window(_width, _height);
-    BasePanel basePanel = BasePanel();
-    _mainPanel.addPanel(&basePanel);
-    // GL function
-    glEnable(GL_DEPTH_TEST);
+
 }
 
 App::~App()
 {
 
+}
+
+void App::initialize(int width, int height, bool hideUi)
+{
+    _width = width;
+    _height = height;
+    _hideUi = hideUi;
+    _window.init(_width, _height);
+    registerCallbacks();
+    glm::vec3 cameraPos = glm::vec3(3, 2, -1);
+    glm::vec3 cameraTarget = glm::vec3(0, 0, 0);
+    _camera.init(cameraPos, cameraTarget, 'y');
+    _mainPanel.init(this->getWindow());
+    BasePanel basePanel = BasePanel();
+    _mainPanel.addPanel(std::make_unique<BasePanel>());
+    // GL function
+    glEnable(GL_DEPTH_TEST);
 }
 
 void App::start()
@@ -44,17 +96,15 @@ void App::start()
         float currentFrame = static_cast<float>(glfwGetTime());
         _renderVariable->deltaTime = currentFrame - _renderVariable->lastFrameTime;
         _renderVariable->lastFrameTime = currentFrame;
-        //processInput(window, &camera);
+        processInput();
         
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
         _mainPanel.preRender();
         this->preRender();
-
         _mainPanel.render();
         this->render();
-        
         _mainPanel.postRender();
         this->postRender();
 
@@ -78,7 +128,7 @@ void App::scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
         fov = 1.0f;
         glm::vec3 cameraPos = _camera.getCameraPos();
         glm::vec3 cameraFront = _camera.getCameraLookDir();
-        float cameraSpeed = static_cast<float>(10.0 * this->_renderVariable->deltaTime);
+        float cameraSpeed = static_cast<float>(10.0 * _renderVariable->deltaTime);
         cameraPos -= cameraSpeed * cameraFront;
         _camera.setCameraPos(cameraPos);
     if (fov > 60.0f)
@@ -117,3 +167,164 @@ void App::mouseButtonCallback(GLFWwindow* window, int button, int action, int mo
     if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_RELEASE)
         _io->isMouseMiddleClicked = false;
 }
+
+void App::processInput() 
+    {
+        GLFWwindow* window = this->getWindow();
+        float cameraSpeed = static_cast<float>(15.0 * _renderVariable->deltaTime);
+        float scaleDistance = _camera.getCamToLookDistance();
+        glm::vec3 cameraPos = _camera.getCameraPos();
+        glm::vec3 cameraFront = _camera.getCameraLookDir();
+        glm::vec3 cameraUp = _camera.getCameraUpDir();
+        glm::vec3 cameraRight = _camera.getCameraRightDir();
+        glm::vec3 globalUp = glm::vec3(0.0f, 1.0f, 0.0f);
+    
+        if( glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+            glfwSetWindowShouldClose(window, true);
+        
+        // look at specifc target or // look at forward direction 
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            {
+                if (_io->isMouseLeftClicked == true)
+                {   
+                    glm::vec3 nextCameraPos = cameraPos + cameraSpeed * cameraUp;
+                    glm::vec3 nextCameraFront = _camera.getTargetPos() - nextCameraPos; // No normalize because it is just for sign checking.
+                    if (((nextCameraFront.x * cameraFront.x) < 0) && (nextCameraFront.z * cameraFront.z) < 0)
+                        return; // To prevent flipping, compare nextCameraFront with cameraFront.
+                    cameraPos = nextCameraPos;
+                }
+                else
+                {
+                    glm::vec3 scaledFront = scaleVec3(cameraFront, scaleDistance);
+                    _camera.setTargetPos(cameraPos + scaledFront);
+                    //cameraPos += cameraSpeed * cameraFront;
+                    cameraPos += cameraSpeed * cameraUp;
+                    _camera.setTargetPos(cameraPos + scaledFront); // prevent disconnect
+                }
+                _camera.setCameraPos(cameraPos);
+            }
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            {        
+                if (_io->isMouseLeftClicked == true)
+                {
+                    glm::vec3 nextCameraPos = cameraPos - cameraSpeed * cameraUp;
+                    glm::vec3 nextCameraFront = _camera.getTargetPos() - nextCameraPos;
+                    if (((nextCameraFront.x * cameraFront.x) < 0) && (nextCameraFront.z * cameraFront.z) < 0)
+                        return;
+                    cameraPos = nextCameraPos;
+                }
+                else
+                {
+                    glm::vec3 scaledFront = scaleVec3(cameraFront, scaleDistance);
+                    _camera.setTargetPos(cameraPos + scaledFront);
+                    //cameraPos -= cameraSpeed * cameraFront;
+                    cameraPos -= cameraSpeed * cameraUp;
+                    _camera.setTargetPos(cameraPos + scaledFront);
+                }
+                _camera.setCameraPos(cameraPos);
+            }
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            {
+                if (_io->isMouseLeftClicked == true)
+                {
+                    cameraPos -= cameraSpeed * cameraRight;
+                }
+                else
+                {
+                    glm::vec3 scaledFront = scaleVec3(cameraFront, scaleDistance);
+                    _camera.setTargetPos(cameraPos + scaledFront);
+                    cameraPos -= cameraSpeed * glm::normalize(glm::cross(cameraFront, globalUp));
+                    _camera.setTargetPos(cameraPos + scaledFront);
+                }
+                _camera.setCameraPos(cameraPos);
+            }
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            {
+                if (_io->isMouseLeftClicked == true)
+                {
+                    cameraPos += cameraSpeed * cameraRight;
+                }
+                else
+                {
+                    glm::vec3 scaledFront = scaleVec3(cameraFront, scaleDistance);
+                    _camera.setTargetPos(cameraPos + scaledFront);
+                    cameraPos += cameraSpeed * glm::normalize(glm::cross(cameraFront, globalUp));
+                    _camera.setTargetPos(cameraPos + scaledFront);
+                }
+                _camera.setCameraPos(cameraPos);
+            }
+    
+        if (_io->isMouseLeftClicked) 
+        {
+            const double DRAG_THRESHOLD = 2.0;
+            if (sqrt(_io->deltaMouseX * _io->deltaMouseX + _io->deltaMouseY * _io->deltaMouseY) < DRAG_THRESHOLD)
+            {
+                return;
+            }
+            if (_io->deltaMouseX > 0) 
+            {
+                cameraPos -= cameraSpeed * cameraRight;
+            }
+            if (_io->deltaMouseX < 0)
+            { 
+                cameraPos += cameraSpeed * cameraRight;
+            }
+            if (_io->deltaMouseY > 0) 
+            {
+                glm::vec3 nextCameraPos = cameraPos - cameraSpeed * cameraUp;
+                glm::vec3 nextCameraFront = _camera.getTargetPos() - nextCameraPos;
+                if (((nextCameraFront.x * cameraFront.x) < 0) && (nextCameraFront.z * cameraFront.z) < 0)
+                    return;
+                cameraPos = nextCameraPos;
+            }
+            if (_io->deltaMouseY < 0) 
+            {
+                glm::vec3 nextCameraPos = cameraPos + cameraSpeed * cameraUp;
+                glm::vec3 nextCameraFront = _camera.getTargetPos() - nextCameraPos; // No normalize because it is just for sign checking.
+                if (((nextCameraFront.x * cameraFront.x) < 0) && (nextCameraFront.z * cameraFront.z) < 0)
+                    return; // To prevent flipping, compare nextCameraFront with cameraFront.
+                cameraPos = nextCameraPos;
+            }
+            _camera.setCameraPos(cameraPos);
+        }
+    
+        if (_io->isMouseMiddleClicked) 
+        {
+            const double DRAG_THRESHOLD = 2.0;
+            if (sqrt(_io->deltaMouseX * _io->deltaMouseX + _io->deltaMouseY * _io->deltaMouseY) < DRAG_THRESHOLD)
+            {
+                return;
+            }
+            if (_io->deltaMouseX > 0) 
+            {
+                glm::vec3 scaledFront = scaleVec3(cameraFront, scaleDistance);
+                _camera.setTargetPos(cameraPos + scaledFront);
+                cameraPos -= cameraSpeed * glm::normalize(glm::cross(cameraFront, globalUp));
+                _camera.setTargetPos(cameraPos + scaledFront);
+            }
+            if (_io->deltaMouseX < 0)
+            { 
+                glm::vec3 scaledFront = scaleVec3(cameraFront, scaleDistance);
+                _camera.setTargetPos(cameraPos + scaledFront);
+                cameraPos += cameraSpeed * glm::normalize(glm::cross(cameraFront, globalUp));
+                _camera.setTargetPos(cameraPos + scaledFront);
+            }
+            if (_io->deltaMouseY > 0) 
+            {
+                glm::vec3 scaledFront = scaleVec3(cameraFront, scaleDistance);
+                _camera.setTargetPos(cameraPos + scaledFront);
+                //cameraPos += cameraSpeed * cameraFront;
+                cameraPos += cameraSpeed * cameraUp;
+                _camera.setTargetPos(cameraPos + scaledFront);
+            }
+            if (_io->deltaMouseY < 0) 
+            {
+                glm::vec3 scaledFront = scaleVec3(cameraFront, scaleDistance);
+                _camera.setTargetPos(cameraPos + scaledFront);
+                //cameraPos -= cameraSpeed * cameraFront;
+                cameraPos -= cameraSpeed * cameraUp;
+                _camera.setTargetPos(cameraPos + scaledFront);
+            }
+            _camera.setCameraPos(cameraPos);
+        }
+    }

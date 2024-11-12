@@ -20,8 +20,8 @@ private:
 
 public:
     Camera();
-    Camera(glm::vec3 cameraPos, glm::vec3 targetPos, char upAxis='y');
     ~Camera();
+    void init(glm::vec3 cameraPos, glm::vec3 targetPos, char upAxis);
     glm::vec3 getCameraPos();
     glm::vec3 getTargetPos();
     glm::mat4 getViewMatrix();

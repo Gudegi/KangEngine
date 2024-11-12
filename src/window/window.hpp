@@ -14,17 +14,12 @@ private:
     GLFWwindow* _window;
     void initGlfw();
     void initGlad();
-    static void framebufferSizeCallbackWrapper(GLFWwindow* window, int width, int height);
-    static void scrollCallbackWrapper(GLFWwindow* window, double xoffset, double yoffset);
-    static void cursorPositionCallbackWrapper(GLFWwindow* window, double xpos, double ypos);
-    static void mouseButtonCallbackWrapper(GLFWwindow* window, int button, int action, int mods);
 
 public:
     Window();
-    Window(int width, int height);
     ~Window();
+    void init(int width, int height);
     GLFWwindow* getGlfwWindow() {return _window;}
-
 };
 
 

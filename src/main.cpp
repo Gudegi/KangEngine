@@ -4,7 +4,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "kangEngine.hpp"
-//#include <memory>
+#include <memory>
 using namespace std;
 #include <iomanip>      // std::setprecision
 
@@ -63,20 +63,21 @@ double deltaMouseY = 0.0;
 
 glm::vec3 cameraPos = glm::vec3(3, 2, -1);
 glm::vec3 cameraTarget = glm::vec3(0, 0, 0);
-Camera camera = Camera(cameraPos, cameraTarget);
+Camera camera;
 
 int main(){
-    
+    camera.init(cameraPos, cameraTarget, 'y');
     GLFWwindow* window = initGlfw();
     initGlad();
     glEnable(GL_DEPTH_TEST);
 
     std::string defaultPath = "./build/assets/";
     Shader shaderProgram = Shader(defaultPath+"shaders/test.vs", defaultPath+"shaders/test.fs");
-    PanelManager mainPanel = PanelManager(window);
+    PanelManager mainPanel;
+    mainPanel.init(window);
     BasePanel basePanel = BasePanel();
-    mainPanel.addPanel(&basePanel); // TODO: preventing memory leak 
-    //mainPanel.addPanel(std::make_unique<BasePanel>());
+    //mainPanel.addPanel(&basePanel); // TODO: preventing memory leak 
+    mainPanel.addPanel(std::make_unique<BasePanel>());
 
     float vertices[] = {
         -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
@@ -472,10 +473,3 @@ void processInput(GLFWwindow* window, Camera* camera) {
     }
 }
 
-glm::vec3 scaleVec3(glm::vec3 vec3, const float s)
-{
-    vec3.x *= s;
-    vec3.y *= s;
-    vec3.z *= s;
-    return vec3;
-}
