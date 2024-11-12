@@ -49,11 +49,11 @@ void PanelManager::scaleDPI(GLFWwindow* window)
     //io.Fonts->Build();
 }
 
-//void PanelManager::addPanel(Panel* panel)
-void PanelManager::addPanel(std::unique_ptr<Panel> panel)
+void PanelManager::addPanel(Panel* panel)
+//void PanelManager::addPanel(std::unique_ptr<Panel> panel)
 {
-    _panels.push_back(std::move(panel));
-    //_panels.push_back(panel);
+    //_panels.push_back(std::move(panel));
+    _panels.push_back(panel);
 }
 
 void PanelManager::preRender()

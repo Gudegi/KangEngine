@@ -20,6 +20,7 @@ private:
 
 public:
     Camera();
+    Camera(glm::vec3 cameraPos, glm::vec3 targetPos, char upAxis);
     ~Camera();
     void init(glm::vec3 cameraPos, glm::vec3 targetPos, char upAxis);
     glm::vec3 getCameraPos();

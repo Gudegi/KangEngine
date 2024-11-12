@@ -14,7 +14,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void cursor_position_callback(GLFWwindow* window, double xpos, double ypos);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
-glm::vec3 scaleVec3(glm::vec3 vec3, const float s);
+
 // 창 크기 설정
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
@@ -63,10 +63,9 @@ double deltaMouseY = 0.0;
 
 glm::vec3 cameraPos = glm::vec3(3, 2, -1);
 glm::vec3 cameraTarget = glm::vec3(0, 0, 0);
-Camera camera;
+Camera camera = Camera(cameraPos, cameraTarget, 'y');
 
 int main(){
-    camera.init(cameraPos, cameraTarget, 'y');
     GLFWwindow* window = initGlfw();
     initGlad();
     glEnable(GL_DEPTH_TEST);
@@ -76,8 +75,8 @@ int main(){
     PanelManager mainPanel;
     mainPanel.init(window);
     BasePanel basePanel = BasePanel();
-    //mainPanel.addPanel(&basePanel); // TODO: preventing memory leak 
-    mainPanel.addPanel(std::make_unique<BasePanel>());
+    mainPanel.addPanel(&basePanel); // TODO: preventing memory leak 
+    //mainPanel.addPanel(std::make_unique<BasePanel>());
 
     float vertices[] = {
         -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
@@ -472,4 +471,3 @@ void processInput(GLFWwindow* window, Camera* camera) {
         camera->setCameraPos(cameraPos);
     }
 }
-

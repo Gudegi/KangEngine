@@ -13,6 +13,7 @@
 #include "camera/camera.hpp"
 #include "window/window.hpp"
 #include "app/app.hpp"
+#include "utils/glm_utils.hpp"
 
 
 #endif

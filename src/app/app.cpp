@@ -83,7 +83,8 @@ void App::initialize(int width, int height, bool hideUi)
     _camera.init(cameraPos, cameraTarget, 'y');
     _mainPanel.init(this->getWindow());
     BasePanel basePanel = BasePanel();
-    _mainPanel.addPanel(std::make_unique<BasePanel>());
+    _mainPanel.addPanel(&basePanel);
+    //_mainPanel.addPanel(std::make_unique<BasePanel>());
     // GL function
     glEnable(GL_DEPTH_TEST);
 }
