@@ -1,5 +1,6 @@
 #include "panel_manager.hpp"
 #include <GLFW/glfw3.h>
+#include <iostream>
 
 PanelManager::PanelManager()
 {
@@ -39,14 +40,19 @@ void PanelManager::scaleDPI(GLFWwindow* window)
         monitor = glfwGetPrimaryMonitor();
     }
     glfwGetMonitorContentScale(monitor, &xScale, &yScale);
+    std::cout << xScale << " " << yScale << std::endl;
     float dpiScale = (xScale + yScale) * 0.5f;
-    ImGuiStyle& style = ImGui::GetStyle();
-    style.ScaleAllSizes(dpiScale);
-    io.FontGlobalScale = dpiScale;
-    //ImFontConfig config;
-    //config.SizePixels = 16.0f * dpiScale;
-    //io.Fonts->AddFontDefault(&config);
-    //io.Fonts->Build();
+    //ImGuiStyle& style = ImGui::GetStyle();
+    //style.ScaleAllSizes(dpiScale);
+    //io.FontGlobalScale = dpiScale;
+    
+    float originalFontSize = 9.0f;
+    ImFontConfig config;
+    config.SizePixels = originalFontSize * dpiScale;
+    io.Fonts->Clear();
+    io.Fonts->AddFontDefault(&config);
+    //io.Fonts->AddFontFromFileTTF("path/to/your/font.ttf", originalFontSize * dpiScale);
+    io.Fonts->Build();
 }
 
 //void PanelManager::addPanel(Panel* panel)

@@ -17,7 +17,15 @@ void Window::init(int width, int height)
 {   
     _width = width;
     _height = height;
-    glfwSetWindowSize(_window, _width, _height);
+    GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+    if (!monitor) {
+        monitor = glfwGetPrimaryMonitor();
+    }
+    float xscale, yscale;
+    glfwGetMonitorContentScale(monitor, &xscale, &yscale);
+    int windowWidth = static_cast<int>(_width / xscale);
+    int windowHeight = static_cast<int>(_height / yscale);
+    glfwSetWindowSize(_window, windowWidth, windowHeight);
     glViewport(0, 0, _width, _height);
 }
 

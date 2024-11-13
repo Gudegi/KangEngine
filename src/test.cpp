@@ -1,14 +1,9 @@
 
-#include <iostream>
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 #include "kangEngine.hpp"
+#include <iostream>
 #include <memory>
-using namespace std;
 
-const unsigned int SCR_WIDTH = 1920;
+const unsigned int SCR_WIDTH = 2000;
 const unsigned int SCR_HEIGHT = 1080;
 
 class MyApp: public App
@@ -20,8 +15,8 @@ public:
     VAO vao = VAO();
     Buffer vbo = Buffer(GL_ARRAY_BUFFER);
     Buffer ebo = Buffer(GL_ELEMENT_ARRAY_BUFFER);
-    Texture texture = Texture(defaultPath+"textures/crowdEditing.tga", false);
-    Texture texture2 = Texture(defaultPath+"textures/awesomeface.png", true);
+    Texture* texture = new Texture(defaultPath+"textures/crowdEditing.tga", false, GL_REPEAT, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
+    Texture* texture2 = new Texture(defaultPath+"textures/awesomeface.png", true, GL_REPEAT, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
 
     bool drawTriangle = true;
     float size = 1.0f;
@@ -97,13 +92,6 @@ public:
             33, 34, 35 // 삼2
         };
         
-        texture.setWarpParam();
-        texture.setFilterParam();
-        texture.createTexture2D();
-        texture2.setWarpParam();
-        texture2.setFilterParam();
-        texture2.createTexture2D();
-
         vbo.setData(sizeof(vertices), vertices, GL_STATIC_DRAW);
         ebo.setData(sizeof(indices), indices, GL_STATIC_DRAW);
         vao.setVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)0);
@@ -127,8 +115,26 @@ public:
         projection = _camera.getProjMatrix(_width, _height, 0.1f, 100.0f);
         shaderProgram.setMat4("view", view);
         shaderProgram.setMat4("projection", projection);
-        texture.bind(GL_TEXTURE0); // TODO: buggy
-        texture2.bind(GL_TEXTURE1); // TODO: buggy
+
+        texture->bind(GL_TEXTURE0);
+        texture2->bind(GL_TEXTURE1);
+        GLenum err;
+        while((err = glGetError()) != GL_NO_ERROR)
+        {
+            std::string errStr = "";
+            switch (err)
+            {
+                case GL_NO_ERROR:          errStr = "No Errors"; break;
+                case GL_INVALID_ENUM:      errStr = "Invalid Enum"; break;
+                case GL_INVALID_VALUE:     errStr = "Invalid Value"; break;
+                case GL_INVALID_OPERATION: errStr = "Invalid Operation"; break;
+                case GL_INVALID_FRAMEBUFFER_OPERATION: errStr = "Invalid Framebuffer Operation"; break;
+                case GL_OUT_OF_MEMORY:   errStr = "Out of Memory"; break;
+                case GL_STACK_UNDERFLOW: errStr = "Stack Underflow"; break;
+                case GL_STACK_OVERFLOW:  errStr = "Stack Overflow"; break;
+            }
+            std::cout << errStr << std::endl;
+        }
         vao.bind();
     }
 
