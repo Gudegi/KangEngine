@@ -1,11 +1,10 @@
 #include "base_panel.hpp"
 #include "imgui.h"
 
-/*
 BasePanel::BasePanel() {}
 
 BasePanel::~BasePanel() {}
-*/
+
 void BasePanel::buildPanel()
 {
     ImGui::Text("Performance");

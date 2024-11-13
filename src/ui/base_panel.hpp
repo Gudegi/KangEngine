@@ -17,6 +17,8 @@ private:
 
 
 public:
+    BasePanel();
+    ~BasePanel();
     virtual void buildPanel();
 };
 

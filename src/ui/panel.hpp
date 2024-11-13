@@ -12,6 +12,8 @@ private:
 
 
 public:
+    Panel(){}
+    virtual ~Panel(){}
     virtual void buildPanel() = 0; // This function visualizes the specific panels inheriting this class.
 };
 
