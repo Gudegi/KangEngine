@@ -2,9 +2,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <cmath>
 
-Camera::Camera(glm::vec3 cameraPos, glm::vec3 targetPos, char upAxis)
+Camera::Camera(glm::vec3 cameraPos, glm::vec3 targetPos, char upAxis): _cameraPos(cameraPos), _targetPos(targetPos)
 {
-    glm::vec3 tmpVec3 = (targetPos - cameraPos);
+     glm::vec3 tmpVec3 = (_targetPos - _cameraPos);
     _camToLookDistance = sqrt(pow(tmpVec3.x, 2) + pow(tmpVec3.y, 2) + pow(tmpVec3.z, 2));
     _FoV = 45.0f;
     if (upAxis == 'y')
@@ -30,6 +30,8 @@ Camera::~Camera()
 
 void Camera::init(glm::vec3 cameraPos, glm::vec3 targetPos, char upAxis)
 {   
+    _cameraPos = cameraPos;
+    _targetPos = targetPos;
     glm::vec3 tmpVec3 = (targetPos - cameraPos);
     _camToLookDistance = sqrt(pow(tmpVec3.x, 2) + pow(tmpVec3.y, 2) + pow(tmpVec3.z, 2));
     _FoV = 45.0f;

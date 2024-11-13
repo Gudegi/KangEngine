@@ -17,7 +17,8 @@ void Window::init(int width, int height)
 {   
     _width = width;
     _height = height;
-    glViewport(0, 0, _width, _height); // TODO: doesn't work.. why??
+    glfwSetWindowSize(_window, _width, _height);
+    glViewport(0, 0, _width, _height);
 }
 
 void Window::initGlfw(){

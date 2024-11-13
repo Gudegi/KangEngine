@@ -46,6 +46,8 @@ public:
     App();
     virtual ~App();
 
+    int getWidth(){ return _width; }
+    int getHeight(){ return _height; }
 
     struct IO;
     struct RenderVariable;

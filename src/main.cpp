@@ -1,3 +1,4 @@
+/*
 #include <iostream>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -63,9 +64,12 @@ double deltaMouseY = 0.0;
 
 glm::vec3 cameraPos = glm::vec3(3, 2, -1);
 glm::vec3 cameraTarget = glm::vec3(0, 0, 0);
-Camera camera = Camera(cameraPos, cameraTarget, 'y');
+//Camera camera = Camera(cameraPos, cameraTarget, 'y');
+Camera camera = Camera();
+
 
 int main(){
+    camera.init(cameraPos, cameraTarget, 'y');
     GLFWwindow* window = initGlfw();
     initGlad();
     glEnable(GL_DEPTH_TEST);
@@ -471,3 +475,4 @@ void processInput(GLFWwindow* window, Camera* camera) {
         camera->setCameraPos(cameraPos);
     }
 }
+*/

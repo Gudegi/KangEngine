@@ -1,4 +1,4 @@
-/*
+
 #include <iostream>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -31,9 +31,6 @@ public:
     {
         //wireframe 모드
         //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        //BasePanel basePanel = BasePanel();
-        //_mainPanel.addPanel(&basePanel); // TODO: preventing memory leak 
-        //_mainPanel.addPanel(std::make_unique<BasePanel>());
 
         float vertices[] = {
             -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
@@ -116,7 +113,7 @@ public:
 
         shaderProgram.use();
         shaderProgram.setFloat("size", size);
-        //shaderProgram.setColor("color", color[0], color[1], color[2], color[3]);
+        shaderProgram.setColor("color", color[0], color[1], color[2], color[3]);
         shaderProgram.setInt("texture1", 0);
         shaderProgram.setInt("texture2", 1);
     }
@@ -127,16 +124,16 @@ public:
         glm::mat4 view = glm::mat4(1.0f);
         glm::mat4 projection = glm::mat4(1.0f);
         view = _camera.getViewMatrix();
-        projection = _camera.getProjMatrix(SCR_WIDTH, SCR_HEIGHT, 0.1f, 100.0f);
+        projection = _camera.getProjMatrix(_width, _height, 0.1f, 100.0f);
         shaderProgram.setMat4("view", view);
         shaderProgram.setMat4("projection", projection);
-        texture.bind(GL_TEXTURE0);
-        texture2.bind(GL_TEXTURE1);
+        texture.bind(GL_TEXTURE0); // TODO: buggy
+        texture2.bind(GL_TEXTURE1); // TODO: buggy
         vao.bind();
     }
 
     void render() override
-    {   
+    {
         glm::vec3 cubePositions[] = {
             glm::vec3( 0.0f,  0.0f,  0.0f),
             glm::vec3( 2.0f,  5.0f, -15.0f),
@@ -168,7 +165,7 @@ public:
         ImGui::End();
         
         shaderProgram.setFloat("size", size);
-        //shaderProgram.setColor("color", color[0], color[1], color[2], color[3]);
+        shaderProgram.setColor("color", color[0], color[1], color[2], color[3]);
     }
 
     void postRender() override
@@ -183,4 +180,3 @@ int main(){
     app.start();
     return 0;
 }
-*/

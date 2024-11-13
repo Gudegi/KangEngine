@@ -82,9 +82,9 @@ void App::initialize(int width, int height, bool hideUi)
     glm::vec3 cameraTarget = glm::vec3(0, 0, 0);
     _camera.init(cameraPos, cameraTarget, 'y');
     _mainPanel.init(this->getWindow());
-    BasePanel basePanel = BasePanel();
-    _mainPanel.addPanel(&basePanel);
-    //_mainPanel.addPanel(std::make_unique<BasePanel>());
+    //BasePanel basePanel = BasePanel();
+    //_mainPanel.addPanel(&basePanel);
+    _mainPanel.addPanel(std::make_unique<BasePanel>());
     // GL function
     glEnable(GL_DEPTH_TEST);
 }
@@ -101,14 +101,12 @@ void App::start()
         
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        
         _mainPanel.preRender();
         this->preRender();
         _mainPanel.render();
         this->render();
         _mainPanel.postRender();
         this->postRender();
-
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
@@ -118,6 +116,8 @@ void App::start()
 
 void App::framebufferSizeCallback(GLFWwindow* window, int width, int height)
 {
+    _width = width;
+    _height = height;
     glViewport(0, 0, _width, _height);
 }
 
