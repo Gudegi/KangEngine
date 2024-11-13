@@ -21,10 +21,14 @@ void Window::init(int width, int height)
     if (!monitor) {
         monitor = glfwGetPrimaryMonitor();
     }
+    int windowWidth = _width;
+    int windowHeight = _height;
+    #ifdef __APPLE__
     float xscale, yscale;
     glfwGetMonitorContentScale(monitor, &xscale, &yscale);
-    int windowWidth = static_cast<int>(_width / xscale);
-    int windowHeight = static_cast<int>(_height / yscale);
+    windowWidth = static_cast<int>(_width / xscale);
+    windowHeight = static_cast<int>(_height / yscale);
+    #endif
     glfwSetWindowSize(_window, windowWidth, windowHeight);
     glViewport(0, 0, _width, _height);
 }

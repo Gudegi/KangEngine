@@ -42,10 +42,11 @@ void PanelManager::scaleDPI(GLFWwindow* window)
     glfwGetMonitorContentScale(monitor, &xScale, &yScale);
     std::cout << xScale << " " << yScale << std::endl;
     float dpiScale = (xScale + yScale) * 0.5f;
-    //ImGuiStyle& style = ImGui::GetStyle();
-    //style.ScaleAllSizes(dpiScale);
-    //io.FontGlobalScale = dpiScale;
-    
+    #ifdef __linux__
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.ScaleAllSizes(dpiScale);
+    io.FontGlobalScale = dpiScale;
+    #endif
     float originalFontSize = 9.0f;
     ImFontConfig config;
     config.SizePixels = originalFontSize * dpiScale;

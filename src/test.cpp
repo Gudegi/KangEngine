@@ -3,8 +3,10 @@
 #include <iostream>
 #include <memory>
 
-const unsigned int SCR_WIDTH = 2000;
-const unsigned int SCR_HEIGHT = 1080;
+//const unsigned int SCR_WIDTH = 1920;
+//const unsigned int SCR_HEIGHT = 1080;
+const unsigned int SCR_WIDTH = 3840;
+const unsigned int SCR_HEIGHT = 2160;
 
 class MyApp: public App
 {
