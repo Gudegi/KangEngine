@@ -12,11 +12,15 @@ class MyApp: public App
 {
 public:
     std::string defaultPath = "./build/assets/";
-    Shader shaderProgram = Shader(defaultPath+"shaders/test.vs", defaultPath+"shaders/test.fs");
+    Shader cubeShader = Shader(defaultPath+"shaders/test.vs", defaultPath+"shaders/test.fs");
+    Shader lightShader = Shader(defaultPath+"shaders/light.vs", defaultPath+"shaders/light.fs");
     
-    VAO vao = VAO();
-    Buffer vbo = Buffer(GL_ARRAY_BUFFER);
-    Buffer ebo = Buffer(GL_ELEMENT_ARRAY_BUFFER);
+    VAO cubeVao = VAO();
+    Buffer cubeVbo = Buffer(GL_ARRAY_BUFFER);
+    Buffer cubeEbo = Buffer(GL_ELEMENT_ARRAY_BUFFER);
+
+    VAO lightVao = VAO();
+    Buffer lightEbo = Buffer(GL_ELEMENT_ARRAY_BUFFER);
     Texture* texture = new Texture(defaultPath+"textures/crowdEditing.tga", false, GL_REPEAT, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
     Texture* texture2 = new Texture(defaultPath+"textures/awesomeface.png", true, GL_REPEAT, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
 
@@ -93,41 +97,56 @@ public:
             30, 31, 32, // 삼1
             33, 34, 35 // 삼2
         };
-        
-        vbo.setData(sizeof(vertices), vertices, GL_STATIC_DRAW);
-        ebo.setData(sizeof(indices), indices, GL_STATIC_DRAW);
-        vao.setVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)0);
-        vao.setVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(3 * sizeof(float)));
-        vbo.unBind();
-        vao.unBind();
+        cubeVao.bind();
+        cubeVbo.bind();
+        cubeEbo.bind();
+        cubeVbo.setData(sizeof(vertices), vertices, GL_STATIC_DRAW);
+        cubeEbo.setData(sizeof(indices), indices, GL_STATIC_DRAW);
+        cubeVao.setVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)0);
+        cubeVao.setVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(3 * sizeof(float)));
+        cubeVao.unBind();//VAO::vaoUnBind();
 
-        shaderProgram.use();
-        shaderProgram.setFloat("size", size);
-        shaderProgram.setColor("color", color[0], color[1], color[2], color[3]);
-        shaderProgram.setInt("texture1", 0);
-        shaderProgram.setInt("texture2", 1);
+        lightVao.bind();
+        lightEbo.bind(); // vbo는 공유해도 되지만, ebo는 각 vao마다 만들어야함.
+        lightEbo.setData(sizeof(indices), indices, GL_STATIC_DRAW);
+        lightVao.setVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)0);
+        lightVao.setVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(3 * sizeof(float)));
+        lightVao.unBind();//VAO::vaoUnBind();
+
+        Buffer::vboUnBind();
+
+        cubeShader.use();
+        cubeShader.setFloat("size", size);
+        cubeShader.setColor("color", color[0], color[1], color[2], color[3]);
+        cubeShader.setInt("texture1", 0);
+        cubeShader.setInt("texture2", 1);
+        cubeShader.setVec3("lightColor",  1.0f, 1.0f, 1.0f);
+
+        //lightShader.use();
+        //lightShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
         
         checkError();
     }
 
     void preRender() override
     {   
-        shaderProgram.use();
-        glm::mat4 view = glm::mat4(1.0f);
-        glm::mat4 projection = glm::mat4(1.0f);
-        view = _camera.getViewMatrix();
-        projection = _camera.getProjMatrix(_width, _height, 0.1f, 100.0f);
-        shaderProgram.setMat4("view", view);
-        shaderProgram.setMat4("projection", projection);
-
-        texture->bind(GL_TEXTURE0);
-        texture2->bind(GL_TEXTURE1);
-        
-        vao.bind();
     }
 
     void render() override
     {
+        cubeShader.use();
+        glm::mat4 view = glm::mat4(1.0f);
+        glm::mat4 projection = glm::mat4(1.0f);
+        view = _camera.getViewMatrix();
+        projection = _camera.getProjMatrix(_width, _height, 0.1f, 100.0f);
+        cubeShader.setMat4("view", view);
+        cubeShader.setMat4("projection", projection);
+        cubeShader.setColor("color", color[0], color[1], color[2], color[3]);
+
+        texture->bind(GL_TEXTURE0);
+        texture2->bind(GL_TEXTURE1);
+        
+        cubeVao.bind();
         glm::vec3 cubePositions[] = {
             glm::vec3( 0.0f,  0.0f,  0.0f),
             glm::vec3( 2.0f,  5.0f, -15.0f),
@@ -146,10 +165,22 @@ public:
             model = glm::translate(model, cubePositions[i]);
             float angle = (i+1) * 20.0f;
             model = glm::rotate(model, (float)glfwGetTime() * glm::radians(angle), glm::vec3(0.5f, 1.0f, 0.0));
-            shaderProgram.setMat4("model", model);
+            cubeShader.setMat4("model", model);
             glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
         }
-        vao.unBind();
+        cubeVao.unBind();
+
+        lightVao.bind();
+        lightShader.use();
+        lightShader.setMat4("view", view);
+        lightShader.setMat4("projection", projection);
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(0, -2, 0));
+        model = glm::scale(model, glm::vec3(0.7f));
+        lightShader.setMat4("model", model);
+        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+        lightVao.unBind();
+
 
         ImGui::Begin("Custom New Panel");
         ImGui::Text("You can create a panel in main loop.");
@@ -158,8 +189,8 @@ public:
         ImGui::ColorEdit4("Color", color);
         ImGui::End();
         
-        shaderProgram.setFloat("size", size);
-        shaderProgram.setColor("color", color[0], color[1], color[2], color[3]);
+        cubeShader.setFloat("size", size);
+        cubeShader.setColor("color", color[0], color[1], color[2], color[3]);
     }
 
     void postRender() override

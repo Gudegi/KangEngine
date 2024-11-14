@@ -40,7 +40,7 @@ void PanelManager::scaleDPI(GLFWwindow* window)
         monitor = glfwGetPrimaryMonitor();
     }
     glfwGetMonitorContentScale(monitor, &xScale, &yScale);
-    std::cout << xScale << " " << yScale << std::endl;
+    //std::cout << xScale << " " << yScale << std::endl;
     float dpiScale = (xScale + yScale) * 0.5f;
     #ifdef __linux__
     ImGuiStyle& style = ImGui::GetStyle();

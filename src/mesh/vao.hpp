@@ -19,7 +19,6 @@ public:
     VAO()
     {
         glGenVertexArrays(1, &_vao);
-        this->bind();
     }
 
     ~VAO()
@@ -33,6 +32,11 @@ public:
     }
 
     void unBind()
+    {
+        glBindVertexArray(0);
+    }
+
+    static void vaoUnBind()
     {
         glBindVertexArray(0);
     }

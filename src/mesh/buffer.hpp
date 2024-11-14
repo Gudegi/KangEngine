@@ -22,7 +22,6 @@ public:
     Buffer(GLenum target): _target(target)
     {
         glGenBuffers(1, &_buffer);
-        this->bind();
     }
 
     ~Buffer()
@@ -39,6 +38,11 @@ public:
     {
         glBindBuffer(_target, 0);
     }   
+
+    static void vboUnBind()
+    {
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
 
     void setData(GLsizeiptr size, const void* data, GLenum usage) const
     {
