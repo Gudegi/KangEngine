@@ -42,6 +42,7 @@ public:
     void registerCallbacks();
     void initialize(int width, int height, bool hideUi);
     void processInput();
+    void checkError();
 
     App();
     virtual ~App();

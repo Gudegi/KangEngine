@@ -106,6 +106,8 @@ public:
         shaderProgram.setColor("color", color[0], color[1], color[2], color[3]);
         shaderProgram.setInt("texture1", 0);
         shaderProgram.setInt("texture2", 1);
+        
+        checkError();
     }
 
     void preRender() override
@@ -120,23 +122,7 @@ public:
 
         texture->bind(GL_TEXTURE0);
         texture2->bind(GL_TEXTURE1);
-        GLenum err;
-        while((err = glGetError()) != GL_NO_ERROR)
-        {
-            std::string errStr = "";
-            switch (err)
-            {
-                case GL_NO_ERROR:          errStr = "No Errors"; break;
-                case GL_INVALID_ENUM:      errStr = "Invalid Enum"; break;
-                case GL_INVALID_VALUE:     errStr = "Invalid Value"; break;
-                case GL_INVALID_OPERATION: errStr = "Invalid Operation"; break;
-                case GL_INVALID_FRAMEBUFFER_OPERATION: errStr = "Invalid Framebuffer Operation"; break;
-                case GL_OUT_OF_MEMORY:   errStr = "Out of Memory"; break;
-                case GL_STACK_UNDERFLOW: errStr = "Stack Underflow"; break;
-                case GL_STACK_OVERFLOW:  errStr = "Stack Overflow"; break;
-            }
-            std::cout << errStr << std::endl;
-        }
+        
         vao.bind();
     }
 
