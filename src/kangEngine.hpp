@@ -19,6 +19,7 @@
 #include "window/window.hpp"
 #include "app/app.hpp"
 #include "utils/glm_utils.hpp"
+#include "mesh/prim.hpp"
 
 
 #endif
