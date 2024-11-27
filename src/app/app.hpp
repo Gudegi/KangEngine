@@ -36,7 +36,8 @@ public:
     
     Window _window;
     Camera _camera;
-    PanelManager _mainPanel;// = PanelManager(this->getWindow());
+    PanelManager _panelManager;// = PanelManager(this->getWindow());
+    MeshManager _meshManager;
     //Light _light;
     void start();
     void registerCallbacks();

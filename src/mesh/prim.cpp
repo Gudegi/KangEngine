@@ -1,6 +1,6 @@
 #include "prim.hpp"
 
-static std::vector<VertexAttrib> toVertexArrtibData(std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals, std::vector<glm::vec2>& uvs)
+std::vector<VertexAttrib> Prim::toVertexArrtibData(std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals, std::vector<glm::vec2>& uvs)
 {
     int vnum = positions.size();
     std::vector<VertexAttrib> varray(vnum);
@@ -13,7 +13,7 @@ static std::vector<VertexAttrib> toVertexArrtibData(std::vector<glm::vec3>& posi
     return varray;
 }
 
-static All createSquareData(float scale)
+All Prim::createSquareData(float scale)
 {
     // Scale means the length of one side.
     float half = scale / 2;
@@ -70,7 +70,7 @@ static All createSquareData(float scale)
         20, 22, 21, 20, 23, 22, // front
     };
 
-    std::vector<VertexAttrib> attrib = toVertexArrtibData(positions, normals, uvs);
+    std::vector<VertexAttrib> attrib = Prim::toVertexArrtibData(positions, normals, uvs);
     All all;
     all.vertexAttrib = attrib;
     all.indices = indices;

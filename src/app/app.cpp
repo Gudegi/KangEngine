@@ -81,10 +81,10 @@ void App::initialize(int width, int height, bool hideUi)
     glm::vec3 cameraPos = glm::vec3(3, 2, -1);
     glm::vec3 cameraTarget = glm::vec3(0, 0, 0);
     _camera.init(cameraPos, cameraTarget, 'y');
-    _mainPanel.init(this->getWindow());
+    _panelManager.init(this->getWindow());
     //BasePanel basePanel = BasePanel();
-    //_mainPanel.addPanel(&basePanel);
-    _mainPanel.addPanel(std::make_unique<BasePanel>());
+    //_panelManager.addPanel(&basePanel);
+    _panelManager.addPanel(std::make_unique<BasePanel>());
     // GL function
     glEnable(GL_DEPTH_TEST);
 }
@@ -101,11 +101,11 @@ void App::start()
         
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        _mainPanel.preRender();
+        _panelManager.preRender();
         this->preRender();
-        _mainPanel.render();
+        _panelManager.render();
         this->render();
-        _mainPanel.postRender();
+        _panelManager.postRender();
         this->postRender();
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -117,7 +117,7 @@ void App::start()
 void App::checkError()
 {
     GLenum err;
-    if (err = glGetError() != GL_NO_ERROR)
+    if ((err = glGetError()) != GL_NO_ERROR)
     {
         std::string errStr = "";
         switch (err)

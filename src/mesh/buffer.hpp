@@ -51,4 +51,16 @@ public:
 
 };
 
+class VBO: public Buffer
+{
+public:
+    VBO() : Buffer(GL_ARRAY_BUFFER) {}
+};
+
+class EBO: public Buffer
+{
+public:
+    EBO() : Buffer(GL_ELEMENT_ARRAY_BUFFER) {}
+};
+
 #endif
