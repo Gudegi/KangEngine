@@ -35,13 +35,15 @@ void Camera::init(glm::vec3 cameraPos, glm::vec3 targetPos, char upAxis)
     glm::vec3 tmpVec3 = (targetPos - cameraPos);
     _camToLookDistance = sqrt(pow(tmpVec3.x, 2) + pow(tmpVec3.y, 2) + pow(tmpVec3.z, 2));
     _FoV = 45.0f;
+    _nearPlane = 0.1f;
+    _farPlane = 100.0f;
     if (upAxis == 'y')
     {
-        _upAxis = glm::vec3(0.0, 1.0, 0.0f);
+        _upAxis = glm::vec3(0.0f, 1.0f, 0.0f);
     }
     else if (upAxis == 'z')
     {
-        _upAxis = glm::vec3(0.0, 0.0, 1.0f);
+        _upAxis = glm::vec3(0.0f, 0.0f, 1.0f);
     }
     this->updateViewMatrix();
 }
@@ -103,9 +105,14 @@ glm::mat4 Camera::getViewMatrix()
     return _viewMatrix;
 }
 
-glm::mat4 Camera::getProjMatrix(const unsigned int scrWidth, const unsigned int scrHeight, const float zNear, const float zFar)
+void Camera::updateProjMatrix(const unsigned int scrWidth, const unsigned int scrHeight)
 {   
-    return glm::perspective(glm::radians(_FoV), (float)scrWidth / (float)scrHeight, zNear, zFar);
+    _projMatrix = glm::perspective(glm::radians(_FoV), (float)scrWidth / (float)scrHeight, _nearPlane, _farPlane);
+}
+
+glm::mat4 Camera::getProjMatrix()
+{   
+    return _projMatrix;
 }
 
 void Camera::setFoV(const float FoV)
@@ -113,9 +120,14 @@ void Camera::setFoV(const float FoV)
     _FoV = FoV;
 }
 
-float Camera::getFoV()
+void Camera::setNearPlane(const float dis)
 {
-    return _FoV;    
+    _nearPlane = dis;
+}
+
+void Camera::setFarPlane(const float dis)
+{
+    _farPlane = dis;
 }
 
 float Camera::getCamToLookDistance()

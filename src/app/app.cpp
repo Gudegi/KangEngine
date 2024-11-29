@@ -60,7 +60,9 @@ struct App::RenderVariable
 
 
 App::App(): 
-    _width(), _height(), _hideUi(), _window(), _camera(), _io(new App::IO),
+    _width(), _height(),
+    _hideUi(), _window(), _camera(), 
+    _io(new App::IO),
     _renderVariable(new App::RenderVariable)
 {   
 
@@ -81,6 +83,7 @@ void App::initialize(int width, int height, bool hideUi)
     glm::vec3 cameraPos = glm::vec3(3, 2, -1);
     glm::vec3 cameraTarget = glm::vec3(0, 0, 0);
     _camera.init(cameraPos, cameraTarget, 'y');
+    _camera.updateProjMatrix(_width, _height);
     _panelManager.init(this->getWindow());
     //BasePanel basePanel = BasePanel();
     //_panelManager.addPanel(&basePanel);
@@ -103,6 +106,7 @@ void App::start()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         _panelManager.preRender();
         this->preRender();
+        coreRender();
         _panelManager.render();
         this->render();
         _panelManager.postRender();
@@ -112,6 +116,32 @@ void App::start()
     }
     glfwDestroyWindow(window);
     glfwTerminate();
+}
+
+void App::coreRender()
+{
+    //int start_instance_idx = 0;
+    int a = 0;
+    for (const auto &buffer : _bufferLists) 
+    {   
+        std::cout << a << std::endl;
+        std::cout << "S----------------" << std::endl;
+        buffer->vao->bind();
+        std::cout << "1" << std::endl;
+        checkError();
+        glDrawElements(GL_TRIANGLES, buffer->numTri, GL_UNSIGNED_INT, 0);
+        //glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+        std::cout << "2" << std::endl;
+        checkError();
+        //start_instance_idx += num_instances;
+        buffer->vao->unBind();
+        //VAO::vaoUnBind();
+        std::cout << "3" << std::endl;
+        buffer->vao->bind();
+        checkError();
+        std::cout << "----------------" << std::endl;
+        a += 1;
+    }
 }
 
 void App::checkError()
@@ -134,11 +164,74 @@ void App::checkError()
     }
 }
 
+GLuint App::addShape(std::unique_ptr<All> infos)
+{
+    auto bufferInfos = std::make_unique<ShapeGlBuffer>();
+    bufferInfos->vao = new VAO;
+    bufferInfos->vao->bind();
+    bufferInfos->vbo = new VBO;
+    bufferInfos->vbo->bind();
+    bufferInfos->ebo = new EBO;
+    bufferInfos->ebo->bind();
+    bufferInfos->numTri = infos->indices.size();
+    std::cout << bufferInfos->numTri << std::endl;
+    checkError();
+    bufferInfos->vbo->setData(sizeof(infos->vertexAttrib), &infos->vertexAttrib[0], GL_STATIC_DRAW);
+    bufferInfos->ebo->setData(sizeof(infos->indices), &infos->indices[0], GL_STATIC_DRAW);
+    checkError();
+    bufferInfos->vao->setVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexAttrib), (void*)0);
+    bufferInfos->vao->setVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VertexAttrib), (void*)offsetof(VertexAttrib, normal));
+    bufferInfos->vao->setVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(VertexAttrib), (void*)offsetof(VertexAttrib, uv));
+    bufferInfos->vao->unBind();//VAO::vaoUnBind();
+    checkError();
+
+    /*
+    //VAO vao;
+    //vao.bind();
+    //VBO vbo;
+    //vbo.bind();
+    //EBO ebo;
+    //ebo.bind();
+
+    //vbo.setData(sizeof(vertices), vertices, GL_STATIC_DRAW);
+    vbo.setData(sizeof(infos->vertexAttrib), &infos->vertexAttrib[0], GL_STATIC_DRAW);
+    ebo.setData(sizeof(infos->indices), &infos->indices[0], GL_STATIC_DRAW);
+    //ebo.setData(sizeof(indices), indices, GL_STATIC_DRAW);
+    vao.setVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexAttrib), (void*)0);
+    // TODO: fixme 
+    vao.setVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VertexAttrib), (void*)offsetof(VertexAttrib, normal));
+    vao.setVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(VertexAttrib), (void*)offsetof(VertexAttrib, uv));
+    //vao.setVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)0);
+    //vao.setVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(3 * sizeof(float)));
+    vao.unBind();//VAO::vaoUnBind();
+    */
+    VAO::vaoUnBind();    
+    _shapeLists.push_back(std::move(infos));
+    _bufferLists.push_back(std::move(bufferInfos));
+
+    for (const auto &buffer : _bufferLists) 
+    {   
+        std::cout << "S----------------" << std::endl;
+        buffer->vao->bind();
+        buffer->vao->unBind();
+        checkError();
+        std::cout << "1" << std::endl;
+        checkError();
+        std::cout << "----------------" << std::endl;
+    }
+
+    GLuint shapeIdx = _shapeLists.size() - 1;
+    return shapeIdx;
+
+}
+
+//////////////// Call backs ////////////////////////////////////////////////////////
 void App::framebufferSizeCallback(GLFWwindow* window, int width, int height)
 {
     _width = width;
     _height = height;
     glViewport(0, 0, _width, _height);
+    _camera.updateProjMatrix(_width, _height);
 }
 
 void App::scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
@@ -155,6 +248,7 @@ void App::scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
     if (fov > 60.0f)
         fov = 60.0f; 
     _camera.setFoV(fov);
+    _camera.updateProjMatrix(_width, _height);
 }
 
 void App::cursorPositionCallback(GLFWwindow* window, double xpos, double ypos)
@@ -349,3 +443,5 @@ void App::processInput()
             _camera.setCameraPos(cameraPos);
         }
     }
+
+//////////////// Call backs ////////////////////////////////////////////////////////

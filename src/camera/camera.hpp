@@ -13,10 +13,9 @@ class Camera
 
 private:
     glm::vec3 _cameraPos, _targetPos, _cameraLookDir, _cameraUpDir, _cameraRightDir;
-    glm::mat4 _viewMatrix;
+    glm::mat4 _viewMatrix, _projMatrix;
     glm::vec3 _upAxis;
-    float _FoV, _camToLookDistance;
-    void updateViewMatrix();
+    float _FoV, _camToLookDistance, _nearPlane, _farPlane;
 
 public:
     Camera();
@@ -26,11 +25,19 @@ public:
     glm::vec3 getCameraPos();
     glm::vec3 getTargetPos();
     glm::mat4 getViewMatrix();
-    glm::mat4 getProjMatrix(const unsigned int scrWidth, const unsigned int scrHeight, const float zNear, const float zFar);
+    glm::mat4 getProjMatrix();
+    void updateViewMatrix();
+    void updateProjMatrix(const unsigned int scrWidth, const unsigned int scrHeight);
+
     void setCameraPos(glm::vec3 cameraPos);
     void setTargetPos(glm::vec3 targetPos);
-    void setFoV(float Fov);
-    float getFoV();
+    void setFoV(const float FoV);
+    void setNearPlane(const float dis);
+    void setFarPlane(const float dis);
+
+    float getFoV() {return _FoV;}
+    float getNearPlane() {return _nearPlane;}
+    float getFarPlane() {return _farPlane;}
     float getCamToLookDistance();
     
     glm::vec3 calcSpherePos();

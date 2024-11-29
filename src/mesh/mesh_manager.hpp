@@ -9,7 +9,7 @@
 
 // 메시 등록, 삭제, 재설정 등 관리 역할
 
-
+/*
 struct ShapeGlBuffer
 {
     VAO vao;
@@ -28,12 +28,12 @@ private:
 
 
 public:
-    MeshManager(/* args */);
+    MeshManager();
     ~MeshManager();
     void init();
     //GLuint addShape(All* infos); //return shape idx that means registed shape's index.
     GLuint addShape(std::unique_ptr<All> infos); //return shape idx that means registed shape's index.
 };
 
-
+*/
 #endif
