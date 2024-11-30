@@ -7,9 +7,9 @@
 struct VertexAttrib
 {
     // A mesh consists of these datas.
-    glm::vec3 position;
-    glm::vec3 normal;
-    glm::vec2 uv;
+    glm::vec3 position; // actual size 12(4*3)
+    glm::vec3 normal; // 12
+    glm::vec2 uv; // 8
 };
 
 struct All

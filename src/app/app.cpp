@@ -124,22 +124,12 @@ void App::coreRender()
     int a = 0;
     for (const auto &buffer : _bufferLists) 
     {   
-        std::cout << a << std::endl;
-        std::cout << "S----------------" << std::endl;
         buffer->vao->bind();
-        std::cout << "1" << std::endl;
-        checkError();
-        glDrawElements(GL_TRIANGLES, buffer->numTri, GL_UNSIGNED_INT, 0);
-        //glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-        std::cout << "2" << std::endl;
+        glDrawElements(GL_TRIANGLES, buffer->numIndices, GL_UNSIGNED_INT, 0);
         checkError();
         //start_instance_idx += num_instances;
-        buffer->vao->unBind();
-        //VAO::vaoUnBind();
-        std::cout << "3" << std::endl;
-        buffer->vao->bind();
+        VAO::vaoUnBind();
         checkError();
-        std::cout << "----------------" << std::endl;
         a += 1;
     }
 }
@@ -173,12 +163,11 @@ GLuint App::addShape(std::unique_ptr<All> infos)
     bufferInfos->vbo->bind();
     bufferInfos->ebo = new EBO;
     bufferInfos->ebo->bind();
-    bufferInfos->numTri = infos->indices.size();
-    std::cout << bufferInfos->numTri << std::endl;
-    checkError();
-    bufferInfos->vbo->setData(sizeof(infos->vertexAttrib), &infos->vertexAttrib[0], GL_STATIC_DRAW);
-    bufferInfos->ebo->setData(sizeof(infos->indices), &infos->indices[0], GL_STATIC_DRAW);
-    checkError();
+    bufferInfos->numIndices = infos->indices.size();
+    
+    bufferInfos->vbo->setData(sizeof(VertexAttrib) * infos->vertexAttrib.size(), &infos->vertexAttrib[0], GL_STATIC_DRAW); // the size of vector type * the number of vectors
+    bufferInfos->ebo->setData(sizeof(unsigned int) * infos->indices.size(), &infos->indices[0], GL_STATIC_DRAW);
+    
     bufferInfos->vao->setVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexAttrib), (void*)0);
     bufferInfos->vao->setVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VertexAttrib), (void*)offsetof(VertexAttrib, normal));
     bufferInfos->vao->setVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(VertexAttrib), (void*)offsetof(VertexAttrib, uv));
@@ -208,17 +197,6 @@ GLuint App::addShape(std::unique_ptr<All> infos)
     VAO::vaoUnBind();    
     _shapeLists.push_back(std::move(infos));
     _bufferLists.push_back(std::move(bufferInfos));
-
-    for (const auto &buffer : _bufferLists) 
-    {   
-        std::cout << "S----------------" << std::endl;
-        buffer->vao->bind();
-        buffer->vao->unBind();
-        checkError();
-        std::cout << "1" << std::endl;
-        checkError();
-        std::cout << "----------------" << std::endl;
-    }
 
     GLuint shapeIdx = _shapeLists.size() - 1;
     return shapeIdx;

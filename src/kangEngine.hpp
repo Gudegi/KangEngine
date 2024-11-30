@@ -20,7 +20,6 @@
 #include "app/app.hpp"
 #include "utils/glm_utils.hpp"
 #include "mesh/prim.hpp"
-#include "mesh/mesh_manager.hpp"
 
 
 #endif

@@ -39,7 +39,7 @@ All Prim::createSquareData(float scale)
         glm::vec3(-half, -half, -half), glm::vec3(-half, half, -half), glm::vec3(half, half, -half), glm::vec3(half, -half, -half),
         // v1, v2, v6, v5
         glm::vec3(-half, -half, half), glm::vec3(-half, half, half), glm::vec3(half, half, half), glm::vec3(half, -half, half),
-    };
+    }; // positions.size() == 24
 
     std::vector<glm::vec3> normals = 
     {

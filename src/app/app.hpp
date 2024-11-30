@@ -8,18 +8,22 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
+#include <list>
+#include <memory>
+
 #include "camera/camera.hpp"
 #include "window/window.hpp"
 #include "ui/panel_manager.hpp"
-#include "mesh/mesh_manager.hpp"
+#include "mesh/prim.hpp"
+#include "mesh/buffer.hpp"
+#include "mesh/vao.hpp"
 
-#include <memory>
 struct ShapeGlBuffer
 {
     VAO* vao;
     VBO* vbo;
     EBO* ebo;
-    int numTri;
+    int numIndices;
 };
 class App
 {
