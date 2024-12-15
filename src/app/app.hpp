@@ -17,9 +17,11 @@
 #include "mesh/prim.hpp"
 #include "mesh/buffer.hpp"
 #include "mesh/vao.hpp"
+#include "shader/shader.hpp"
 
 struct ShapeGlBuffer
 {
+    Shader* shader;
     VAO* vao;
     VBO* vbo;
     EBO* ebo;
@@ -45,7 +47,8 @@ private:
     };
 public:
     int _width, _height;
-    bool _hideUi;
+    bool _hideUi, _renderWireframe;
+    glm::mat4 _viewMatrix, _projectionMatrix; // variable to containing main camera's view and project matrix.
     
     Window _window;
     Camera _camera;
@@ -72,7 +75,7 @@ public:
     Camera& getCamera() { return _camera; }
     GLFWwindow* getWindow() { return _window.getGlfwWindow();}
 
-    virtual void setUp() {} // 처음에 사용
+    virtual void setup() {} // 처음에 사용
     virtual void preRender() {} // 루프 안에서 사용됨. 렌더 전에 사용
     virtual void render() {} // overrideable 실제 렌더링
     virtual void postRender() {} // 렌더링 이후 마무리
@@ -82,7 +85,7 @@ public:
     virtual void cursorPositionCallback(GLFWwindow* window, double xpos, double ypos);
     virtual void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 
-    GLuint addShape(std::unique_ptr<All> infos);
+    GLuint addShape(Shader* shader, std::unique_ptr<All> infos);
     std::list<std::unique_ptr<All>> _shapeLists;
     // _bufferLists // container for called in rendering loop;
     std::list<std::unique_ptr<ShapeGlBuffer>> _bufferLists;

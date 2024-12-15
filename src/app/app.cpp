@@ -61,7 +61,8 @@ struct App::RenderVariable
 
 App::App(): 
     _width(), _height(),
-    _hideUi(), _window(), _camera(), 
+    _hideUi(), _window(), _camera(),
+    _renderWireframe(false),
     _io(new App::IO),
     _renderVariable(new App::RenderVariable)
 {   
@@ -94,23 +95,26 @@ void App::initialize(int width, int height, bool hideUi)
 
 void App::start()
 {
-    setUp();
+    setup();
     GLFWwindow* window = _window.getGlfwWindow();
     while(!glfwWindowShouldClose(window)){
         float currentFrame = static_cast<float>(glfwGetTime());
         _renderVariable->deltaTime = currentFrame - _renderVariable->lastFrameTime;
         _renderVariable->lastFrameTime = currentFrame;
         processInput();
+        _viewMatrix = _camera.getViewMatrix();
+        _projectionMatrix = _camera.getProjMatrix();
         
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         _panelManager.preRender();
         this->preRender();
-        coreRender();
         _panelManager.render();
+        coreRender();
         this->render();
         _panelManager.postRender();
         this->postRender();
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
@@ -120,10 +124,19 @@ void App::start()
 
 void App::coreRender()
 {
+    ImGui::Checkbox("Wireframe", &_renderWireframe);
+
+    if (_renderWireframe == true)
+    {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    }
     //int start_instance_idx = 0;
     int a = 0;
     for (const auto &buffer : _bufferLists) 
     {   
+        buffer->shader->use();
+        buffer->shader->setMat4("view", _viewMatrix);
+        buffer->shader->setMat4("projection", _projectionMatrix);
         buffer->vao->bind();
         glDrawElements(GL_TRIANGLES, buffer->numIndices, GL_UNSIGNED_INT, 0);
         checkError();
@@ -154,9 +167,11 @@ void App::checkError()
     }
 }
 
-GLuint App::addShape(std::unique_ptr<All> infos)
+GLuint App::addShape(Shader* shader, std::unique_ptr<All> infos)
 {
     auto bufferInfos = std::make_unique<ShapeGlBuffer>();
+    bufferInfos->shader = shader;
+    bufferInfos->shader->use();
     bufferInfos->vao = new VAO;
     bufferInfos->vao->bind();
     bufferInfos->vbo = new VBO;
