@@ -2,14 +2,20 @@
   "name": "vcpkg-example",
   "version": "0.0.1",
   "dependencies": [
-    "glm",
     "glad",
     "glfw3",
+    "glm",
     {
       "name": "imgui",
-      "features": ["glfw-binding", "opengl3-binding", "docking-experimental"]
+      "features": [
+        "docking-experimental",
+        "glfw-binding",
+        "opengl3-binding"
+      ]
     },
     "imguizmo",
-    "stb"
+    "stb",
+    "python3",
+    "pybind11"
   ]
 }
