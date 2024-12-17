@@ -6,6 +6,9 @@ set(VCPKG_BUILD_TYPE release)
 set(pxr_DIR "$ENV{HOME}/usd_build")
 set(ASSETS_DIR "${CMAKE_SOURCE_DIR}/assets")
 set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
+set(MAIN_DIR "${CMAKE_SOURCE_DIR}/examples")
+set(BIND_DIR "${CMAKE_SOURCE_DIR}/bindings")
+set(IS_PYTHON_LIB true)
 
 add_definitions(-DSTB_IMAGE_IMPLEMENTATION)
 
@@ -20,18 +23,13 @@ find_package(Python COMPONENTS Interpreter Development REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
 
 file(GLOB_RECURSE SOURCE_FILES "${SRC_DIR}/*.cpp")
+file(GLOB_RECURSE HEADER_FILES "${SRC_DIR}/*.hpp")
+file(GLOB_RECURSE MAIN_FILES "${MAIN_DIR}/*.cpp")
 
 # Executable for KangEngine
-add_executable(${PROJECT_NAME} ${SOURCE_FILES})
+add_executable(${PROJECT_NAME} ${MAIN_FILES} ${SOURCE_FILES})
 add_custom_target(copy_assets ALL COMMAND ${CMAKE_COMMAND} -E copy_directory "${ASSETS_DIR}" "${CMAKE_BINARY_DIR}/assets")
 add_dependencies(${PROJECT_NAME} copy_assets)
-
-# Python Module for pybind11
-set(PYTHON_MODULE_NAME "kangengine")
-file(GLOB_RECURSE PYBIND_SOURCE_FILES "${SRC_DIR}/bindings/bind.cpp")
-pybind11_add_module(${PYTHON_MODULE_NAME} ${PYBIND_SOURCE_FILES} ${SOURCE_FILES})
-
-install(TARGETS ${PYTHON_MODULE_NAME} DESTINATION .)
 
 # Include directories
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -48,17 +46,36 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     imguizmo::imguizmo
 )
 
-# Link libraries for the Python module
-target_include_directories(${PYTHON_MODULE_NAME} PRIVATE
-    ${SRC_DIR}
-    ${Stb_INCLUDE_DIR}
-)
+# Python Module for pybind11
+if(IS_PYTHON_LIB)
+    set(PYTHON_MODULE_NAME "kangengine")
+    file(GLOB_RECURSE PYBIND_SOURCE_FILES "${BIND_DIR}/*.cpp")
+    message(STATUS "PY_SOURCE: ${PYBIND_SOURCE_FILES}")
+    
+    Python_add_library(${PYTHON_MODULE_NAME} 
+        ${PYBIND_SOURCE_FILES}
+        ${SOURCE_FILES}
+        ${HEADER_FILES}
+    )
+    target_include_directories(${PYTHON_MODULE_NAME} PRIVATE
+        ${SRC_DIR}
+        ${Stb_INCLUDE_DIR}
+    )
+    target_link_libraries(${PYTHON_MODULE_NAME} PRIVATE
+        pybind11::headers
+        glfw
+        glad::glad
+        glm::glm
+        imgui::imgui
+        imguizmo::imguizmo
+    )
+    set_target_properties(${PYTHON_MODULE_NAME} PROPERTIES
+        INTERPROCEDURAL_OPTIMIZATION ON
+        CXX_VISIBILITY_PRESET default
+        VISIBILITY_INLINES_HIDDEN ON
+    )
 
-target_link_libraries(${PYTHON_MODULE_NAME} PRIVATE
-    glfw
-    glad::glad
-    glm::glm
-    imgui::imgui
-    imguizmo::imguizmo
-    ${Python_LIBRARIES}
-)
+    install(TARGETS ${PYTHON_MODULE_NAME}
+        LIBRARY  DESTINATION ${BIND_DIR}
+    )
+endif()

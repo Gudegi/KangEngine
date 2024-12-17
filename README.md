@@ -22,3 +22,7 @@ install vckpg
 1. brew install ninja
 2. cmake --preset=vcpkg
 3. cmake --build build
+
+
+## Features
+1. python bind support. (set IS_PYTHON_LIB to true in CMakeLists.txt before build.)
