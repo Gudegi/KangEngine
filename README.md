@@ -7,9 +7,10 @@ I assume that you already installed basic tools like cmake.
 dependencies
 - OpenUSD 
 
-1. https://github.com/PixarAnimationStudios/OpenUSD.git
-2. Build
-3. Place built usd folder at ~/usd_build or change set(pxr_DIR "$ENV{HOME}/usd_build") to the appropriate path.
+1. Clone https://github.com/PixarAnimationStudios/OpenUSD.git at home directory.
+2. mkdir usd_build in home directory.
+3. Build "python3 OpenUSD/build_scripts/build_usd.py ./usd_build"
+4. Place built usd folder at ~/usd_build or change set(pxr_DIR "$ENV{HOME}/usd_build") to the appropriate path.
 
 install vckpg
 - [git clone https://github.com/microsoft/vcpkg.git](https://learn.microsoft.com/ko-kr/vcpkg/get_started/get-started?pivots=shell-bash)
@@ -30,6 +31,4 @@ install vckpg
 
 
 ## TODO
-1. Works only python 3.11.11.
-
-aa
+1. Works only python 3.11

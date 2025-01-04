@@ -8,7 +8,7 @@ set(ASSETS_DIR "${CMAKE_SOURCE_DIR}/assets")
 set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
 set(MAIN_DIR "${CMAKE_SOURCE_DIR}/examples")
 set(BIND_DIR "${CMAKE_SOURCE_DIR}/bindings")
-set(IS_PYTHON_LIB true)
+set(IS_PYTHON_LIB false) # TODO: support python after making base engine solid.
 
 add_definitions(-DSTB_IMAGE_IMPLEMENTATION)
 
@@ -27,7 +27,9 @@ file(GLOB_RECURSE HEADER_FILES "${SRC_DIR}/*.hpp")
 file(GLOB_RECURSE MAIN_FILES "${MAIN_DIR}/*.cpp")
 
 # Executable for KangEngine
-add_executable(${PROJECT_NAME} ${MAIN_FILES} ${SOURCE_FILES})
+#add_executable(${PROJECT_NAME} ${MAIN_FILES} ${SOURCE_FILES})
+file(GLOB MAIN_FILE "${MAIN_DIR}/light0.cpp")
+add_executable(${PROJECT_NAME} ${MAIN_FILE} ${SOURCE_FILES})
 add_custom_target(copy_assets ALL COMMAND ${CMAKE_COMMAND} -E copy_directory "${ASSETS_DIR}" "${CMAKE_BINARY_DIR}/assets")
 add_dependencies(${PROJECT_NAME} copy_assets)
 

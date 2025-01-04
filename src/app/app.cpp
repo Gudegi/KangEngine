@@ -93,6 +93,7 @@ void App::initialize(int width, int height, bool hideUi)
     glEnable(GL_DEPTH_TEST);
 }
 
+// for entire process in c++ //////////////////////////////////////////////////////////////////////
 void App::start()
 {
     setup();
@@ -146,6 +147,26 @@ void App::coreRender()
         a += 1;
     }
 }
+////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+/// for each step rendering for both c++ and python ////////////////////////////////////////////
+void App::draw()
+{
+    //TODO : update me
+    /*
+    float currentFrame = static_cast<float>(glfwGetTime());
+    _renderVariable->deltaTime = currentFrame - _renderVariable->lastFrameTime;
+    _renderVariable->lastFrameTime = currentFrame;
+    processInput();
+    _viewMatrix = _camera.getViewMatrix();
+    _projectionMatrix = _camera.getProjMatrix();
+    
+    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    */
+}
+////////////////////////////////////////////////////////////////////////////////////////////////
 
 void App::checkError()
 {

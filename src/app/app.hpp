@@ -55,7 +55,7 @@ public:
     PanelManager _panelManager;// = PanelManager(this->getWindow());
     //MeshManager _meshManager;
     //Light _light;
-    void start();
+    
     void registerCallbacks();
     void initialize(int width, int height, bool hideUi);
     void processInput();
@@ -75,10 +75,17 @@ public:
     Camera& getCamera() { return _camera; }
     GLFWwindow* getWindow() { return _window.getGlfwWindow();}
 
+    //////
+    void start();
     virtual void setup() {} // 처음에 사용
     virtual void preRender() {} // 루프 안에서 사용됨. 렌더 전에 사용
     virtual void render() {} // overrideable 실제 렌더링
     virtual void postRender() {} // 렌더링 이후 마무리
+    //////
+
+    //////
+    void draw();
+    //////
 
     virtual void framebufferSizeCallback(GLFWwindow* window, int width, int height);
     virtual void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
