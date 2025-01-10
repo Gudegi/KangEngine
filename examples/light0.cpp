@@ -16,9 +16,10 @@ const char* lightFs = R"(
 out vec4 FragColor;
 
 in vec2 TexCoord;
+uniform vec3 lightColor;
 
 void main() {
-   FragColor = vec4(1.0);
+   FragColor = vec4(lightColor, 1.0);
 }
 )";
 
@@ -51,11 +52,11 @@ out vec4 FragColor;
 in vec2 TexCoord;
 
 uniform sampler2D texture1, texture2;
-uniform vec4 color;
+uniform vec4 objColor;
 uniform vec3 lightColor;
 
 void main() {
-   FragColor = mix(texture(texture1, TexCoord), texture(texture2, TexCoord), 0.2) * vec4(color) * vec4(lightColor, 1.0f);
+   FragColor = mix(texture(texture1, TexCoord), texture(texture2, TexCoord), 0.2) * vec4(objColor) * vec4(lightColor, 1.0f);
 }
 )";
 
@@ -91,8 +92,9 @@ public:
     Texture* texture2 = new Texture(defaultPath+"textures/awesomeface.png", true, GL_REPEAT, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
 
     bool drawTriangle = true;
-    float size = 1.0f;
-    float color[4] = {0.8f, 0.3f, 0.02f, 1.0f };    
+    float size = 0.7f;
+    float color[4] = {0.8f, 0.3f, 0.02f, 1.0f }; 
+    float lightColor[3] = {1.0f, 1.0f, 1.0f};
     
     void setup() override
     {
@@ -101,17 +103,17 @@ public:
 
         cubeShader.use();
         cubeShader.setFloat("size", size);
-        cubeShader.setColor("color", color[0], color[1], color[2], color[3]);
+        cubeShader.setColor("objColor", color[0], color[1], color[2], color[3]);
         cubeShader.setInt("texture1", 0);
         cubeShader.setInt("texture2", 1);
-        cubeShader.setVec3("lightColor",  1.0f, 1.0f, 1.0f);
+        cubeShader.setVec3("lightColor",  lightColor[0], lightColor[1], lightColor[2]);
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(0, -1, 0));
-        model = glm::scale(model, glm::vec3(0.7f));
+        model = glm::scale(model, glm::vec3(size));
         cubeShader.setMat4("model", model);
 
         lightShader.use();
-        lightShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
+        lightShader.setVec3("lightColor",  lightColor[0], lightColor[1], lightColor[2]);
         model = glm::mat4(1.0f);
         //model = glm::translate(model, glm::vec3(0, -2, 0));
         //model = glm::scale(model, glm::vec3(1.0f));
@@ -147,8 +149,11 @@ public:
         ImGui::End();
         
         cubeShader.use();
-        cubeShader.setFloat("size", size);
-        cubeShader.setColor("color", color[0], color[1], color[2], color[3]);
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(0, -1, 0));
+        model = glm::scale(model, glm::vec3(size));
+        cubeShader.setMat4("model", model);
+        cubeShader.setColor("objColor", color[0], color[1], color[2], color[3]);
         checkError();
         std::cout << "render End" << std::endl;
     }
