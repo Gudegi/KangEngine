@@ -7,6 +7,20 @@ Shader::Shader(std::string vsPath, std::string fsPath)
     _shaderProgram = link();
 }
 
+Shader::Shader(const char* vsSource, const char* fsSource)
+{
+    _vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(_vertexShader, 1, &vsSource, NULL);
+    glCompileShader(_vertexShader);
+    checkCompileError(_vertexShader);
+
+    _fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(_fragmentShader, 1, &fsSource, NULL);
+    glCompileShader(_fragmentShader);
+    checkCompileError(_fragmentShader);
+    _shaderProgram = link();
+}
+
 Shader::~Shader()
 {
     glDeleteProgram(_shaderProgram);

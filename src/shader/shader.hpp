@@ -63,6 +63,7 @@ public:
     /// @todo Support another shader (ig, geometry shader).
     ///
     Shader(std::string vsPath, std::string fsPath);
+    Shader(const char* vsSource, const char* fsSource);
 
     ///
     /// @brief Destruct object.

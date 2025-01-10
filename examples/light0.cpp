@@ -10,12 +10,82 @@ const unsigned int SCR_HEIGHT = 1080;
 /// LearnOpenGL : Lighting - Colors
 ///
 
+const char* lightFs = R"(
+#version 410 core
+
+out vec4 FragColor;
+
+in vec2 TexCoord;
+
+void main() {
+   FragColor = vec4(1.0);
+}
+)";
+
+const char* lightVs = R"(
+#version 410 core
+
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aNormal;
+layout (location = 2) in vec2 aTexCoord;
+//layout (location = 1) in vec2 aTexCoord;
+
+out vec2 TexCoord;
+
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
+
+void main()
+{
+    gl_Position = projection * view * model * vec4(aPos, 1.0f);
+    TexCoord = vec2(aTexCoord.x, 1.0 - aTexCoord.y);
+}
+)";
+
+const char* testFs = R"(
+#version 410 core
+
+out vec4 FragColor;
+
+in vec2 TexCoord;
+
+uniform sampler2D texture1, texture2;
+uniform vec4 color;
+uniform vec3 lightColor;
+
+void main() {
+   FragColor = mix(texture(texture1, TexCoord), texture(texture2, TexCoord), 0.2) * vec4(color) * vec4(lightColor, 1.0f);
+}
+)";
+
+const char* testVs = R"(
+#version 410 core
+
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aNormal;
+layout (location = 2) in vec2 aTexCoord;
+
+out vec2 TexCoord;
+
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
+
+void main()
+{
+    gl_Position = projection * view * model * vec4(aPos, 1.0f);
+    TexCoord = vec2(aTexCoord.x, 1.0 - aTexCoord.y);
+}
+)";
+
 class MyApp: public App
 {
 public:
     std::string defaultPath = "./build/assets/";
-    Shader cubeShader = Shader(defaultPath+"shaders/test.vs", defaultPath+"shaders/test.fs");
-    Shader lightShader = Shader(defaultPath+"shaders/light.vs", defaultPath+"shaders/light.fs");
+    //Shader cubeShader = Shader(defaultPath+"shaders/test.vs", defaultPath+"shaders/test.fs");
+    Shader cubeShader = Shader(testVs, testFs);
+    Shader lightShader = Shader(lightVs, lightFs);
     
     Texture* texture = new Texture(defaultPath+"textures/crowdEditing.tga", false, GL_REPEAT, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
     Texture* texture2 = new Texture(defaultPath+"textures/awesomeface.png", true, GL_REPEAT, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
