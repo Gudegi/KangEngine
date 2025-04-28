@@ -3,12 +3,31 @@ project(KangEngine)
 
 set(CMAKE_CXX_STANDARD 17)
 set(VCPKG_BUILD_TYPE release)
-set(pxr_DIR "$ENV{HOME}/usd_build")
+set(pxr_DIR "$ENV{HOME}/usd_build") # User config path
+set(physx_DIR "$ENV{HOME}/Physics/PhysX/physx") # User config path
+
 set(ASSETS_DIR "${CMAKE_SOURCE_DIR}/assets")
 set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
 set(MAIN_DIR "${CMAKE_SOURCE_DIR}/examples")
 set(BIND_DIR "${CMAKE_SOURCE_DIR}/bindings")
 set(IS_PYTHON_LIB false) # TODO: support python after making base engine solid.
+
+if(NOT EXISTS "${pxr_DIR}")
+    message(FATAL_ERROR "pxr_DIR path '${pxr_DIR}' does not exist. Please check your USD build path.")
+endif()
+if(NOT EXISTS "${physx_DIR}")
+    message(FATAL_ERROR "physx_DIR path '${physx_DIR}' does not exist. Please check your Physx build path.")
+else()
+    message(STATUS "PhysX directory found. Linking PhysX libraries.")
+    #set(PHYSX_BUILD_TYPE "checked" CACHE STRING "The build type of PhysX")
+    set(PHYSX_BUILD_TYPE "release" CACHE STRING "The build type of PhysX")
+    set_property(CACHE PHYSX_BUILD_TYPE PROPERTY STRINGS debug checked profile release)
+    if(NOT CMAKE_BUILD_TYPE)
+        if(PHYSX_BUILD_TYPE STREQUAL "debug" OR PHYSX_BUILD_TYPE STREQUAL "checked")
+            set(CMAKE_BUILD_TYPE "Debug")
+        endif()
+    endif()
+endif()
 
 add_definitions(-DSTB_IMAGE_IMPLEMENTATION)
 
@@ -21,6 +40,24 @@ find_package(imgui CONFIG REQUIRED)
 find_package(imguizmo CONFIG REQUIRED)
 find_package(Python COMPONENTS Interpreter Development REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
+if(EXISTS "${physx_DIR}")
+    include_directories(${physx_DIR}/include)
+    if(APPLE)
+        link_directories("${physx_DIR}/bin/mac.x86_64/${PHYSX_BUILD_TYPE}") # TODO: actually it need to be not x86 but arm. fix build setting
+    elseif(UNIX)
+        link_directories("${physx_DIR}/bin/linux.x86_64/${PHYSX_BUILD_TYPE}") # This is the path where PhysX libraries are installed
+    else()
+        message("Not support OS setting for PhysX")
+    endif()
+
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        message("Building project in debug with PhysX ${PHYSX_BUILD_TYPE} configuration")
+        add_compile_definitions(_DEBUG)
+    else()
+        message("Building project in release configuration with PhysX ${PHYSX_BUILD_TYPE} configuration")
+        add_compile_definitions(NDEBUG)
+    endif()
+endif()
 
 file(GLOB_RECURSE SOURCE_FILES "${SRC_DIR}/*.cpp")
 file(GLOB_RECURSE HEADER_FILES "${SRC_DIR}/*.hpp")
@@ -47,6 +84,31 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     imgui::imgui
     imguizmo::imguizmo
 )
+if(EXISTS "${physx_DIR}")
+    if(APPLE)
+        target_link_libraries(${PROJECT_NAME} PRIVATE
+            PhysXExtensions_static_64
+            PhysX_static_64
+            PhysXPvdSDK_static_64
+            PhysXCommon_static_64
+            PhysXFoundation_static_64
+            pthread
+            dl
+        )
+    else(UNIX)
+        target_link_libraries(${PROJECT_NAME} PRIVATE
+            -Wl,--start-group
+            PhysXExtensions_static_64
+            PhysX_static_64
+            PhysXPvdSDK_static_64
+            PhysXCommon_static_64
+            PhysXFoundation_static_64
+            -Wl,--end-group
+            pthread
+            dl
+        )
+    endif()
+endif()
 
 # Python Module for pybind11
 if(IS_PYTHON_LIB)
