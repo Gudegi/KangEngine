@@ -3,7 +3,7 @@
 
 void PhysicsWorld::step()
 {
-    mScene->simulate(1.0f / _dt);
+    mScene->simulate(1.0f / mdt);
     mScene->fetchResults(true);
 }
 

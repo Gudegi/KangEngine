@@ -11,9 +11,9 @@ using namespace physx;
 
 struct PhysicsConfig
 {
-    float dt;
-    PxVec3 gravity; // gravity = PxVec3(0.0f, -9.81f, 0.0f);
-    PxVec3 friction;
+    float dt = 1.0 / 60.0f;
+    float gravity[3] = {0.0f, -9.81f, 0.0f};
+    float friction[3] = {1.0f, 1.0f, 1.0f};
 };
 
 class PhysicsWorld
@@ -27,21 +27,29 @@ private:
     PxPhysics*              mPhysics    = nullptr;
     PxScene*                mScene      = nullptr;
     PxMaterial*             mMaterial   = nullptr;
+    
+    float mdt;
+    PxVec3 mGravity;
+    PxVec3 mFriction;
 
 public:
 
     PhysicsWorld(PhysicsConfig config)
     {
+        mdt = config.dt;
+        mGravity = PxVec3(config.gravity[0], config.gravity[1], config.gravity[2]);
+        mFriction = PxVec3(config.friction[0], config.friction[1], config.friction[2]);
+
         mFoundation = PxCreateFoundation(PX_PHYSICS_VERSION, mAllocator, mErrorCallback);
         mPhysics = PxCreatePhysics(PX_PHYSICS_VERSION, *mFoundation, PxTolerancesScale(), true);
 
         PxSceneDesc sceneDesc(mPhysics->getTolerancesScale());
-        sceneDesc.gravity = PxVec3(0.0f, -9.81f, 0.0f); // TODO: change
+        sceneDesc.gravity = mGravity;
         sceneDesc.cpuDispatcher = PxDefaultCpuDispatcherCreate(2); // 2 threads
         sceneDesc.filterShader = PxDefaultSimulationFilterShader;
         mScene = mPhysics->createScene(sceneDesc);
 
-        gMaterial = mPhysics->createMaterial(0.5f, 0.5f, 0.6f); // staticFriction, dynamicFriction, restitution
+        mMaterial = mPhysics->createMaterial(mFriction[0], mFriction[1], mFriction[2]); // staticFriction, dynamicFriction, restitution
     }
 
     ~PhysicsWorld()
@@ -52,9 +60,11 @@ public:
         mFoundation->release();
     };
 
+    void setDt(float dt) {mdt = dt ;} 
+
     void addDefaultGround();
 
-    void addBox();
+    void addBox(float x, float y, float z);
 
     void fecthData();
 
