@@ -1,5 +1,7 @@
 #include "shader.hpp"
 
+namespace KE {
+
 Shader::Shader(std::string vsPath, std::string fsPath)
 {
     _vertexShader = compile(vsPath, GL_VERTEX_SHADER);
@@ -160,3 +162,5 @@ void Shader::setMat4(const std::string &name, const glm::mat4 &mat) const
 {
     glUniformMatrix4fv(glGetUniformLocation(_shaderProgram, name.c_str()), 1, GL_FALSE, &mat[0][0]);
 }
+
+} // namespace KE

@@ -1,5 +1,7 @@
 #include "prim.hpp"
 
+namespace KE {
+
 std::vector<VertexAttrib> Prim::toVertexArrtibData(std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals, std::vector<glm::vec2>& uvs)
 {
     int vnum = positions.size();
@@ -77,3 +79,5 @@ All Prim::createSquareData(float scale)
 
     return all;
 }
+
+} // namespace KE

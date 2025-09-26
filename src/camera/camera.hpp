@@ -8,6 +8,8 @@
 #include <glm/glm.hpp>
 #include <vector>
 
+namespace KE {
+
 class Camera
 {
 
@@ -46,5 +48,7 @@ public:
     glm::vec3 getCameraRightDir();
 
 };
+
+} // namespace KE
 
 #endif

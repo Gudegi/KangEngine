@@ -2,6 +2,8 @@
 #include "ui/base_panel.hpp"
 #include "utils/glm_utils.hpp"
 
+namespace KE {
+
 void App::GLFWCallbackWrapper::framebufferSizeCallbackWrapper(GLFWwindow* window, int width, int height)
 {
     _app->framebufferSizeCallback(window, width, height);
@@ -457,5 +459,7 @@ void App::processInput()
             _camera.setCameraPos(cameraPos);
         }
     }
+
+} // namespace KE
 
 //////////////// Call backs ////////////////////////////////////////////////////////

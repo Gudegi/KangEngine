@@ -18,6 +18,7 @@
 #include "mesh/buffer.hpp"
 #include "mesh/vao.hpp"
 #include "shader/shader.hpp"
+namespace KE {
 
 struct ShapeGlBuffer
 {
@@ -97,5 +98,7 @@ public:
     // _bufferLists // container for called in rendering loop;
     std::list<std::unique_ptr<ShapeGlBuffer>> _bufferLists;
 };
+
+} // namespace KE
 
 #endif

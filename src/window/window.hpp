@@ -5,6 +5,8 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 
+namespace KE {
+
 class Window
 
 {
@@ -22,5 +24,6 @@ public:
     GLFWwindow* getGlfwWindow() {return _window;}
 };
 
+} // namespace KE
 
 #endif

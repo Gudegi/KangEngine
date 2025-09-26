@@ -1,6 +1,8 @@
 #ifndef _PANEL_HPP_
 #define _PANEL_HPP_
 
+namespace KE {
+
 class Panel
 {
 
@@ -17,5 +19,6 @@ public:
     virtual void buildPanel() = 0; // This function visualizes the specific panels inheriting this class.
 };
 
+} // namespace KE
 
 #endif

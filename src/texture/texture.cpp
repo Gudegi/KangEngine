@@ -3,6 +3,8 @@
 #include "texture.hpp"
 #include <iostream>
 
+namespace KE {
+
 unsigned char* Texture::_loadImage(const std::string path, bool flip=false)
 {
     stbi_set_flip_vertically_on_load(flip);
@@ -81,3 +83,5 @@ void Texture::createTexture2D()
     glGenerateMipmap(_target);
     */
 }
+
+} // namespace KE

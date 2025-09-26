@@ -4,6 +4,8 @@
 #include <string>
 #include <glad/glad.h>
 
+namespace KE {
+
 class Texture
 {
 
@@ -41,5 +43,6 @@ public:
 };
 
 
+} // namespace KE
 
 #endif

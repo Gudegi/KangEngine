@@ -2,6 +2,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <cmath>
 
+namespace KE {
+
 Camera::Camera(glm::vec3 cameraPos, glm::vec3 targetPos, char upAxis): _cameraPos(cameraPos), _targetPos(targetPos)
 {
      glm::vec3 tmpVec3 = (_targetPos - _cameraPos);
@@ -146,4 +148,6 @@ void Camera::setTargetPos(glm::vec3 targetPos)
     _targetPos = targetPos;
     updateViewMatrix();
 }
+
+} // namespace KE
 

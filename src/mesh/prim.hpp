@@ -4,6 +4,8 @@
 #include <glm/glm.hpp>
 #include <vector>
 
+namespace KE {
+
 struct VertexAttrib
 {
     // A mesh consists of these datas.
@@ -34,5 +36,6 @@ public:
 
 };
 
+} // namespace KE
 
 #endif

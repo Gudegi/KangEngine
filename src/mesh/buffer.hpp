@@ -7,6 +7,8 @@
 
 #include <glad/glad.h>
 
+namespace KE {
+
 class Buffer 
 {
 
@@ -62,5 +64,7 @@ class EBO: public Buffer
 public:
     EBO() : Buffer(GL_ELEMENT_ARRAY_BUFFER) {}
 };
+
+} // namespace KE
 
 #endif

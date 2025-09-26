@@ -1,6 +1,8 @@
 #include "window.hpp"
 #include "app/app.hpp"
 
+namespace KE {
+
 Window::Window(){
     _width = 1920;
     _height = 1080;
@@ -57,3 +59,5 @@ void Window::initGlad(){
         std::cout << "Failed to initialize GLAD" << std::endl;
     }
 }
+
+} // namespace KE

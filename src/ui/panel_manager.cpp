@@ -2,6 +2,8 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 
+namespace KE {
+
 PanelManager::PanelManager()
 {
 }
@@ -176,3 +178,5 @@ void PanelManager::draculaTheme()
     style.PopupRounding = 4;
     style.ChildRounding = 4;
 }
+
+} // namespace KE

@@ -12,6 +12,8 @@
 #include "panel.hpp"
 #include <memory>
 
+namespace KE {
+
 class PanelManager
 {
 
@@ -75,5 +77,7 @@ public:
     void postRender();
 
 };
+
+} // namespace KE
 
 #endif

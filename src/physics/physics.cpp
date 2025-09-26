@@ -1,5 +1,6 @@
 #include "physics.hpp"
 
+namespace KE {
 
 void PhysicsWorld::step()
 {
@@ -26,4 +27,6 @@ void PhysicsWorld::addBox(float x, float y, float z)
     PxRigidDynamic* box = PxCreateDynamic(*mPhysics, boxPose, PxBoxGeometry(0.5f, 0.5f, 0.5f), *mMaterial, 1.0f);
     mScene->addActor(*box);
 }
+
+} // namespace KE
 

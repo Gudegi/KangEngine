@@ -4,5 +4,10 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+namespace KE {
+
 glm::vec3 scaleVec3(glm::vec3 vec3, const float s);
+
+} // namespace KE
+
 #endif

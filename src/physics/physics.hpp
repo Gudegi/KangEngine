@@ -9,6 +9,8 @@
 
 using namespace physx;
 
+namespace KE {
+
 struct PhysicsConfig
 {
     float dt = 1.0 / 60.0f;
@@ -71,5 +73,7 @@ public:
     void step();
 
 };
+
+} // namespace KE
 
 #endif

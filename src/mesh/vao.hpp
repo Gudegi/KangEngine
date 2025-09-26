@@ -7,6 +7,8 @@
 
 #include <glad/glad.h>
 
+namespace KE {
+
 class VAO
 {
 
@@ -48,5 +50,7 @@ public:
     }
 
 };
+
+} // namespace KE
 
 #endif

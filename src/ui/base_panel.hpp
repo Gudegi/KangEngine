@@ -6,6 +6,8 @@
 #define _BASE_PANEL_HPP_
 #include "panel.hpp"
 
+namespace KE {
+
 class BasePanel: public Panel
 {
 
@@ -22,5 +24,6 @@ public:
     virtual void buildPanel();
 };
 
+} // namespace KE
 
 #endif
