@@ -190,55 +190,73 @@ void App::checkError()
     }
 }
 
-GLuint App::addShape(Shader* shader, std::unique_ptr<All> infos)
+size_t App::addShape(Shader* shader, std::unique_ptr<All> infos)
 {
-    auto bufferInfos = std::make_unique<ShapeGlBuffer>();
-    bufferInfos->shader = shader;
-    bufferInfos->shader->use();
-    bufferInfos->vao = new VAO;
-    bufferInfos->vao->bind();
-    bufferInfos->vbo = new VBO;
-    bufferInfos->vbo->bind();
-    bufferInfos->ebo = new EBO;
-    bufferInfos->ebo->bind();
-    bufferInfos->numIndices = infos->indices.size();
-    
-    bufferInfos->vbo->setData(sizeof(VertexAttrib) * infos->vertexAttrib.size(), &infos->vertexAttrib[0], GL_STATIC_DRAW); // the size of vector type * the number of vectors
-    bufferInfos->ebo->setData(sizeof(unsigned int) * infos->indices.size(), &infos->indices[0], GL_STATIC_DRAW);
-    
-    bufferInfos->vao->setVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexAttrib), (void*)0);
-    bufferInfos->vao->setVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VertexAttrib), (void*)offsetof(VertexAttrib, normal));
-    bufferInfos->vao->setVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(VertexAttrib), (void*)offsetof(VertexAttrib, uv));
-    bufferInfos->vao->unBind();//VAO::vaoUnBind();
-    checkError();
+    if (!infos || infos->vertexAttrib.empty() || infos->indices.empty()) {
+        return static_cast<size_t>(-1); // Invalid shape ID
+    }
 
-    /*
-    //VAO vao;
-    //vao.bind();
-    //VBO vbo;
-    //vbo.bind();
-    //EBO ebo;
-    //ebo.bind();
+    try {
+        auto bufferInfos = std::make_unique<ShapeGlBuffer>();
+        bufferInfos->shader = shader;
 
-    //vbo.setData(sizeof(vertices), vertices, GL_STATIC_DRAW);
-    vbo.setData(sizeof(infos->vertexAttrib), &infos->vertexAttrib[0], GL_STATIC_DRAW);
-    ebo.setData(sizeof(infos->indices), &infos->indices[0], GL_STATIC_DRAW);
-    //ebo.setData(sizeof(indices), indices, GL_STATIC_DRAW);
-    vao.setVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexAttrib), (void*)0);
-    // TODO: fixme 
-    vao.setVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VertexAttrib), (void*)offsetof(VertexAttrib, normal));
-    vao.setVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(VertexAttrib), (void*)offsetof(VertexAttrib, uv));
-    //vao.setVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)0);
-    //vao.setVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(3 * sizeof(float)));
-    vao.unBind();//VAO::vaoUnBind();
-    */
-    VAO::vaoUnBind();    
-    _shapeLists.push_back(std::move(infos));
-    _bufferLists.push_back(std::move(bufferInfos));
+        if (shader) {
+            shader->use();
+        }
 
-    GLuint shapeIdx = _shapeLists.size() - 1;
-    return shapeIdx;
+        bufferInfos->vao = std::make_unique<VAO>();
+        bufferInfos->vao->bind();
+        bufferInfos->vbo = std::make_unique<VBO>();
+        bufferInfos->vbo->bind();
+        bufferInfos->ebo = std::make_unique<EBO>();
+        bufferInfos->ebo->bind();
+        bufferInfos->numIndices = infos->indices.size();
 
+        //bufferInfos->vbo->setData(sizeof(VertexAttrib) * infos->vertexAttrib.size(), &infos->vertexAttrib[0], GL_STATIC_DRAW); // the size of vector type * the number of vectors
+        bufferInfos->vbo->setData(
+            sizeof(VertexAttrib) * infos->vertexAttrib.size(),
+            infos->vertexAttrib.data(),
+            GL_STATIC_DRAW
+        );
+        bufferInfos->ebo->setData(
+            sizeof(unsigned int) * infos->indices.size(),
+            infos->indices.data(),
+            GL_STATIC_DRAW
+        );
+
+        constexpr int POSITION_ATTRIB = 0;
+        constexpr int NORMAL_ATTRIB = 1;
+        constexpr int UV_ATTRIB = 2;
+        constexpr int POSITION_SIZE = 3;
+        constexpr int NORMAL_SIZE = 3;
+        constexpr int UV_SIZE = 2;
+
+        bufferInfos->vao->setVertexAttribPointer(
+            POSITION_ATTRIB, POSITION_SIZE, GL_FLOAT, GL_FALSE,
+            sizeof(VertexAttrib), (void*)0
+        );
+        bufferInfos->vao->setVertexAttribPointer(
+            NORMAL_ATTRIB, NORMAL_SIZE, GL_FLOAT, GL_FALSE,
+            sizeof(VertexAttrib), (void*)offsetof(VertexAttrib, normal)
+        );
+        bufferInfos->vao->setVertexAttribPointer(
+            UV_ATTRIB, UV_SIZE, GL_FLOAT, GL_FALSE,
+            sizeof(VertexAttrib), (void*)offsetof(VertexAttrib, uv)
+        );
+
+        bufferInfos->vao->unBind();
+        checkError();
+
+        _shapeLists.push_back(std::move(infos));
+        _bufferLists.push_back(std::move(bufferInfos));
+
+        return _shapeLists.size() - 1;
+
+    } 
+    catch (const std::exception& e) {
+        std::cerr << "Failed to add shape: " << e.what() << std::endl;
+        return static_cast<size_t>(-1);
+    }
 }
 
 //////////////// Call backs ////////////////////////////////////////////////////////

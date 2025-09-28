@@ -23,9 +23,9 @@ namespace KE {
 struct ShapeGlBuffer
 {
     Shader* shader;
-    VAO* vao;
-    VBO* vbo;
-    EBO* ebo;
+    std::unique_ptr<VAO> vao;
+    std::unique_ptr<VBO> vbo;
+    std::unique_ptr<EBO> ebo;
     int numIndices;
 };
 class App
@@ -93,7 +93,8 @@ public:
     virtual void cursorPositionCallback(GLFWwindow* window, double xpos, double ypos);
     virtual void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 
-    GLuint addShape(Shader* shader, std::unique_ptr<All> infos);
+    //GLuint addShape(Shader* shader, std::unique_ptr<All> infos);
+    size_t addShape(Shader* shader, std::unique_ptr<All> infos);
     std::list<std::unique_ptr<All>> _shapeLists;
     // _bufferLists // container for called in rendering loop;
     std::list<std::unique_ptr<ShapeGlBuffer>> _bufferLists;
