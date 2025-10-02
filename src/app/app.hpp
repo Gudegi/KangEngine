@@ -18,15 +18,21 @@
 #include "mesh/buffer.hpp"
 #include "mesh/vao.hpp"
 #include "shader/shader.hpp"
+#include "backend/base/graphics_device.hpp"
+#include "backend/graphics_factory.hpp"
 namespace KE {
 
-struct ShapeGlBuffer
+struct ShapeRenderBuffer
 {
-    Shader* shader;
-    std::unique_ptr<VAO> vao;
-    std::unique_ptr<VBO> vbo;
-    std::unique_ptr<EBO> ebo;
+    Shader* shader;  // KE::Shader
+    Backend::Shader* backendShader;  // Backend::Shader
+    std::unique_ptr<Backend::VertexArray> vertexArray;
+    std::unique_ptr<Backend::Buffer> vertexBuffer;
+    std::unique_ptr<Backend::Buffer> indexBuffer;
     int numIndices;
+
+    // Constructor helpers
+    ShapeRenderBuffer() : shader(nullptr), backendShader(nullptr), numIndices(0) {}
 };
 class App
 {
@@ -50,15 +56,20 @@ public:
     int _width, _height;
     bool _hideUi, _renderWireframe;
     glm::mat4 _viewMatrix, _projectionMatrix; // variable to containing main camera's view and project matrix.
-    
+
     Window _window;
     Camera _camera;
     PanelManager _panelManager;// = PanelManager(this->getWindow());
     //MeshManager _meshManager;
     //Light _light;
+
+private:
+    std::unique_ptr<Backend::GraphicsDevice> _graphicsDevice;
     
     void registerCallbacks();
-    void initialize(int width, int height, bool hideUi);
+
+public:
+    void initialize(int width, int height, bool hideUi, Backend::BackendType backendType = Backend::BackendType::OpenGL);
     void processInput();
     void checkError();
     void coreRender();
@@ -75,6 +86,7 @@ public:
     std::unique_ptr<App::RenderVariable> _renderVariable;
     Camera& getCamera() { return _camera; }
     GLFWwindow* getWindow() { return _window.getGlfwWindow();}
+    Backend::GraphicsDevice* getGraphicsDevice() { return _graphicsDevice.get(); }
 
     //////
     void start();
@@ -95,9 +107,10 @@ public:
 
     //GLuint addShape(Shader* shader, std::unique_ptr<All> infos);
     size_t addShape(Shader* shader, std::unique_ptr<All> infos);
+    size_t addShape(Backend::Shader* shader, std::unique_ptr<All> infos);
     std::list<std::unique_ptr<All>> _shapeLists;
     // _bufferLists // container for called in rendering loop;
-    std::list<std::unique_ptr<ShapeGlBuffer>> _bufferLists;
+    std::list<std::unique_ptr<ShapeRenderBuffer>> _bufferLists;
 };
 
 } // namespace KE

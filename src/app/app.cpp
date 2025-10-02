@@ -76,23 +76,34 @@ App::~App()
 
 }
 
-void App::initialize(int width, int height, bool hideUi)
+void App::initialize(int width, int height, bool hideUi, Backend::BackendType backendType)
 {
     _width = width;
     _height = height;
     _hideUi = hideUi;
+
+    // Initialize graphics device first
+    _graphicsDevice = Backend::GraphicsFactory::createDevice(backendType);
+    if (!_graphicsDevice) {
+        std::cerr << "Failed to create graphics device" << std::endl;
+        return;
+    }
+
     _window.init(_width, _height);
     registerCallbacks();
+
+    // Initialize graphics device after OpenGL context is created
+    _graphicsDevice->initialize();
+
     glm::vec3 cameraPos = glm::vec3(3, 2, -1);
     glm::vec3 cameraTarget = glm::vec3(0, 0, 0);
     _camera.init(cameraPos, cameraTarget, 'y');
     _camera.updateProjMatrix(_width, _height);
     _panelManager.init(this->getWindow());
-    //BasePanel basePanel = BasePanel();
-    //_panelManager.addPanel(&basePanel);
     _panelManager.addPanel(std::make_unique<BasePanel>());
-    // GL function
-    glEnable(GL_DEPTH_TEST);
+
+    // Use backend abstraction instead of direct OpenGL
+    _graphicsDevice->setDepthTest(true);
 }
 
 // for entire process in c++ //////////////////////////////////////////////////////////////////////
@@ -108,8 +119,8 @@ void App::start()
         _viewMatrix = _camera.getViewMatrix();
         _projectionMatrix = _camera.getProjMatrix();
         
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        _graphicsDevice->setClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        _graphicsDevice->clear(0.2f, 0.3f, 0.3f, 1.0f);
         _panelManager.preRender();
         this->preRender();
         _panelManager.render();
@@ -117,7 +128,7 @@ void App::start()
         this->render();
         _panelManager.postRender();
         this->postRender();
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
@@ -131,22 +142,33 @@ void App::coreRender()
 
     if (_renderWireframe == true)
     {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        _graphicsDevice->setPolygonMode(Backend::PolygonMode::Line);
     }
-    //int start_instance_idx = 0;
-    int a = 0;
-    for (const auto &buffer : _bufferLists) 
-    {   
-        buffer->shader->use();
-        buffer->shader->setMat4("view", _viewMatrix);
-        buffer->shader->setMat4("projection", _projectionMatrix);
-        buffer->vao->bind();
-        glDrawElements(GL_TRIANGLES, buffer->numIndices, GL_UNSIGNED_INT, 0);
+    else
+    {
+        _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
+    }
+
+    for (const auto &buffer : _bufferLists)
+    {
+        // Backend::Shader와 KE::Shader 둘 다 지원
+        if (buffer->backendShader) {
+            // Backend::Shader 사용
+            buffer->backendShader->use();
+            buffer->backendShader->setMat4("view", _viewMatrix);
+            buffer->backendShader->setMat4("projection", _projectionMatrix);
+        } else if (buffer->shader) {
+            // KE::Shader 사용 (기존 방식)
+            buffer->shader->use();
+            buffer->shader->setMat4("view", _viewMatrix);
+            buffer->shader->setMat4("projection", _projectionMatrix);
+        }
+
+        buffer->vertexArray->bind();
+        _graphicsDevice->drawIndexed(buffer->numIndices);
         checkError();
-        //start_instance_idx += num_instances;
-        VAO::vaoUnBind();
+        buffer->vertexArray->unbind();
         checkError();
-        a += 1;
     }
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -197,33 +219,35 @@ size_t App::addShape(Shader* shader, std::unique_ptr<All> infos)
     }
 
     try {
-        auto bufferInfos = std::make_unique<ShapeGlBuffer>();
+        auto bufferInfos = std::make_unique<ShapeRenderBuffer>();
         bufferInfos->shader = shader;
 
         if (shader) {
             shader->use();
         }
 
-        bufferInfos->vao = std::make_unique<VAO>();
-        bufferInfos->vao->bind();
-        bufferInfos->vbo = std::make_unique<VBO>();
-        bufferInfos->vbo->bind();
-        bufferInfos->ebo = std::make_unique<EBO>();
-        bufferInfos->ebo->bind();
-        bufferInfos->numIndices = infos->indices.size();
-
-        //bufferInfos->vbo->setData(sizeof(VertexAttrib) * infos->vertexAttrib.size(), &infos->vertexAttrib[0], GL_STATIC_DRAW); // the size of vector type * the number of vectors
-        bufferInfos->vbo->setData(
+        // Create buffers using backend abstraction
+        bufferInfos->vertexBuffer = _graphicsDevice->createBuffer(
+            Backend::BufferType::Vertex,
             sizeof(VertexAttrib) * infos->vertexAttrib.size(),
-            infos->vertexAttrib.data(),
-            GL_STATIC_DRAW
-        );
-        bufferInfos->ebo->setData(
-            sizeof(unsigned int) * infos->indices.size(),
-            infos->indices.data(),
-            GL_STATIC_DRAW
+            infos->vertexAttrib.data()
         );
 
+        bufferInfos->indexBuffer = _graphicsDevice->createBuffer(
+            Backend::BufferType::Index,
+            sizeof(unsigned int) * infos->indices.size(),
+            infos->indices.data()
+        );
+
+        // Create and configure vertex array
+        bufferInfos->vertexArray = _graphicsDevice->createVertexArray();
+        bufferInfos->vertexArray->bind();
+
+        // Set vertex and index buffers
+        bufferInfos->vertexArray->setVertexBuffer(bufferInfos->vertexBuffer.get());
+        bufferInfos->vertexArray->setIndexBuffer(bufferInfos->indexBuffer.get());
+
+        // Define vertex attributes
         constexpr int POSITION_ATTRIB = 0;
         constexpr int NORMAL_ATTRIB = 1;
         constexpr int UV_ATTRIB = 2;
@@ -231,20 +255,26 @@ size_t App::addShape(Shader* shader, std::unique_ptr<All> infos)
         constexpr int NORMAL_SIZE = 3;
         constexpr int UV_SIZE = 2;
 
-        bufferInfos->vao->setVertexAttribPointer(
-            POSITION_ATTRIB, POSITION_SIZE, GL_FLOAT, GL_FALSE,
-            sizeof(VertexAttrib), (void*)0
-        );
-        bufferInfos->vao->setVertexAttribPointer(
-            NORMAL_ATTRIB, NORMAL_SIZE, GL_FLOAT, GL_FALSE,
-            sizeof(VertexAttrib), (void*)offsetof(VertexAttrib, normal)
-        );
-        bufferInfos->vao->setVertexAttribPointer(
-            UV_ATTRIB, UV_SIZE, GL_FLOAT, GL_FALSE,
-            sizeof(VertexAttrib), (void*)offsetof(VertexAttrib, uv)
-        );
+        Backend::VertexAttribute positionAttr = {
+            POSITION_ATTRIB, POSITION_SIZE, Backend::VertexAttributeType::Float,
+            false, sizeof(VertexAttrib), 0
+        };
+        bufferInfos->vertexArray->setVertexAttribute(positionAttr);
 
-        bufferInfos->vao->unBind();
+        Backend::VertexAttribute normalAttr = {
+            NORMAL_ATTRIB, NORMAL_SIZE, Backend::VertexAttributeType::Float,
+            false, sizeof(VertexAttrib), offsetof(VertexAttrib, normal)
+        };
+        bufferInfos->vertexArray->setVertexAttribute(normalAttr);
+
+        Backend::VertexAttribute uvAttr = {
+            UV_ATTRIB, UV_SIZE, Backend::VertexAttributeType::Float,
+            false, sizeof(VertexAttrib), offsetof(VertexAttrib, uv)
+        };
+        bufferInfos->vertexArray->setVertexAttribute(uvAttr);
+
+        bufferInfos->vertexArray->unbind();
+        bufferInfos->numIndices = infos->indices.size();
         checkError();
 
         _shapeLists.push_back(std::move(infos));
@@ -252,9 +282,86 @@ size_t App::addShape(Shader* shader, std::unique_ptr<All> infos)
 
         return _shapeLists.size() - 1;
 
-    } 
+    }
     catch (const std::exception& e) {
         std::cerr << "Failed to add shape: " << e.what() << std::endl;
+        return static_cast<size_t>(-1);
+    }
+}
+
+size_t App::addShape(Backend::Shader* shader, std::unique_ptr<All> infos)
+{
+    if (!infos || infos->vertexAttrib.empty() || infos->indices.empty()) {
+        return static_cast<size_t>(-1); // Invalid shape ID
+    }
+
+    try {
+        auto bufferInfos = std::make_unique<ShapeRenderBuffer>();
+        bufferInfos->backendShader = shader;  // Backend::Shader 사용
+
+        if (shader) {
+            shader->use();
+        }
+
+        // Create buffers using backend abstraction
+        bufferInfos->vertexBuffer = _graphicsDevice->createBuffer(
+            Backend::BufferType::Vertex,
+            sizeof(VertexAttrib) * infos->vertexAttrib.size(),
+            infos->vertexAttrib.data()
+        );
+
+        bufferInfos->indexBuffer = _graphicsDevice->createBuffer(
+            Backend::BufferType::Index,
+            sizeof(unsigned int) * infos->indices.size(),
+            infos->indices.data()
+        );
+
+        // Create and configure vertex array
+        bufferInfos->vertexArray = _graphicsDevice->createVertexArray();
+        bufferInfos->vertexArray->bind();
+
+        // Set vertex and index buffers
+        bufferInfos->vertexArray->setVertexBuffer(bufferInfos->vertexBuffer.get());
+        bufferInfos->vertexArray->setIndexBuffer(bufferInfos->indexBuffer.get());
+
+        // Define vertex attributes
+        constexpr int POSITION_ATTRIB = 0;
+        constexpr int NORMAL_ATTRIB = 1;
+        constexpr int UV_ATTRIB = 2;
+        constexpr int POSITION_SIZE = 3;
+        constexpr int NORMAL_SIZE = 3;
+        constexpr int UV_SIZE = 2;
+
+        Backend::VertexAttribute positionAttr = {
+            POSITION_ATTRIB, POSITION_SIZE, Backend::VertexAttributeType::Float,
+            false, sizeof(VertexAttrib), 0
+        };
+        bufferInfos->vertexArray->setVertexAttribute(positionAttr);
+
+        Backend::VertexAttribute normalAttr = {
+            NORMAL_ATTRIB, NORMAL_SIZE, Backend::VertexAttributeType::Float,
+            false, sizeof(VertexAttrib), offsetof(VertexAttrib, normal)
+        };
+        bufferInfos->vertexArray->setVertexAttribute(normalAttr);
+
+        Backend::VertexAttribute uvAttr = {
+            UV_ATTRIB, UV_SIZE, Backend::VertexAttributeType::Float,
+            false, sizeof(VertexAttrib), offsetof(VertexAttrib, uv)
+        };
+        bufferInfos->vertexArray->setVertexAttribute(uvAttr);
+
+        bufferInfos->vertexArray->unbind();
+        bufferInfos->numIndices = infos->indices.size();
+        checkError();
+
+        _shapeLists.push_back(std::move(infos));
+        _bufferLists.push_back(std::move(bufferInfos));
+
+        return _shapeLists.size() - 1;
+
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Failed to add shape with Backend::Shader: " << e.what() << std::endl;
         return static_cast<size_t>(-1);
     }
 }

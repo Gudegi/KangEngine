@@ -79,7 +79,10 @@
         "__split_buffer": "cpp",
         "ios": "cpp",
         "locale": "cpp",
-        "__assertion_handler": "cpp"
+        "__assertion_handler": "cpp",
+        "print": "cpp",
+        "queue": "cpp",
+        "stack": "cpp"
     },
     //"C_Cpp.errorSquiggles": "disabled"
 }

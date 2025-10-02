@@ -1,0 +1,184 @@
+///
+/// Author Kyungwon Kang, 2024/11
+///
+
+#ifndef _GRAPHICS_DEVICE_HPP_
+#define _GRAPHICS_DEVICE_HPP_
+
+#include <memory>
+#include <string>
+#include <vector>
+#include <glm/glm.hpp>
+
+namespace KE {
+namespace Backend {
+
+using std::string;
+using std::vector;
+using std::unique_ptr;
+
+enum class BackendType {
+    OpenGL,
+    Vulkan,
+    WebGPU
+};
+
+enum class BufferType {
+    Vertex,
+    Index,
+    Uniform
+};
+
+enum class ShaderType {
+    Vertex,
+    Fragment,
+    Geometry,
+    Compute
+};
+
+enum class UniformType {
+    Int,
+    Float,
+    Vec2,
+    Vec3,
+    Vec4,
+    Mat3,
+    Mat4
+};
+
+enum class VertexAttributeType {
+    Float,
+    Int,
+    UnsignedInt,
+    Byte,
+    UnsignedByte
+};
+
+enum class PolygonMode {
+    Fill,
+    Line,
+    Point
+};
+
+struct VertexAttribute {
+    int location;
+    int size;
+    VertexAttributeType type;
+    bool normalized;
+    size_t stride;
+    size_t offset;
+};
+
+struct ShaderStage {
+    std::string source;
+    ShaderType type;
+    std::string entryPoint = "main";
+};
+
+struct ShaderDesc {
+    std::vector<ShaderStage> stages;
+    std::string name;
+};
+
+struct TextureDesc {
+    int width, height;
+    int channels = 4;
+    const void* data = nullptr;
+    std::string name;
+};
+
+// Forward declarations
+class Buffer;
+class Shader;
+class Texture;
+class VertexArray;
+
+class GraphicsDevice {
+public:
+    virtual ~GraphicsDevice() = default;
+
+    virtual void initialize() = 0;
+    virtual void shutdown() = 0;
+    virtual BackendType getBackendType() const = 0;
+
+    // Rendering
+    virtual void beginFrame() = 0;
+    virtual void endFrame() = 0;
+    virtual void clear(float r, float g, float b, float a) = 0;
+    virtual void setViewport(int x, int y, int width, int height) = 0;
+    virtual void drawIndexed(int indexCount) = 0;
+
+    // Render State
+    virtual void setDepthTest(bool enable) = 0;
+    virtual void setPolygonMode(PolygonMode mode) = 0;
+    virtual void setClearColor(float r, float g, float b, float a) = 0;
+
+    // Resource creation
+    virtual std::unique_ptr<Buffer> createBuffer(BufferType type, size_t size, const void* data = nullptr) = 0;
+    virtual std::unique_ptr<Shader> createShader(const ShaderDesc& desc) = 0;
+    virtual std::unique_ptr<Texture> createTexture(const TextureDesc& desc) = 0;
+    virtual std::unique_ptr<VertexArray> createVertexArray() = 0;
+
+    // Convenience shader creation methods (KE::Shader compatible)
+    virtual std::unique_ptr<Shader> createShader(const char* vertexSource, const char* fragmentSource) = 0;
+    virtual std::unique_ptr<Shader> createShader(const std::string& vertexSource, const std::string& fragmentSource) = 0;
+};
+
+class Buffer {
+public:
+    virtual ~Buffer() = default;
+    virtual void bind() = 0;
+    virtual void unbind() = 0;
+    virtual void setData(const void* data, size_t size, size_t offset = 0) = 0;
+    virtual BufferType getType() const = 0;
+};
+
+class Shader {
+public:
+    virtual ~Shader() = default;
+    virtual void bind() = 0;
+    virtual void unbind() = 0;
+
+    // KE::Shader compatibility
+    virtual void use() = 0;  // Alias for bind()
+
+    // Uniform setters - KE::Shader compatible
+    virtual void setBool(const std::string& name, bool value) = 0;
+    virtual void setInt(const std::string& name, int value) = 0;
+    virtual void setFloat(const std::string& name, float value) = 0;
+    virtual void setColor(const std::string& name, float r, float g, float b, float a) = 0;
+
+    virtual void setVec2(const std::string& name, const glm::vec2& value) = 0;
+    virtual void setVec2(const std::string& name, float x, float y) = 0;
+    virtual void setVec3(const std::string& name, const glm::vec3& value) = 0;
+    virtual void setVec3(const std::string& name, float x, float y, float z) = 0;
+    virtual void setVec4(const std::string& name, const glm::vec4& value) = 0;
+    virtual void setVec4(const std::string& name, float x, float y, float z, float w) = 0;
+    virtual void setMat2(const std::string& name, const glm::mat2& value) = 0;
+    virtual void setMat3(const std::string& name, const glm::mat3& value) = 0;
+    virtual void setMat4(const std::string& name, const glm::mat4& value) = 0;
+};
+
+class Texture {
+public:
+    virtual ~Texture() = default;
+    virtual void bind(int slot = 0) = 0;
+    virtual void unbind() = 0;
+    virtual int getWidth() const = 0;
+    virtual int getHeight() const = 0;
+};
+
+class VertexArray {
+public:
+    virtual ~VertexArray() = default;
+    virtual void bind() = 0;
+    virtual void unbind() = 0;
+    virtual void setVertexAttribute(const VertexAttribute& attribute) = 0;
+    virtual void setVertexBuffer(Buffer* buffer) = 0;
+    virtual void setIndexBuffer(Buffer* buffer) = 0;
+};
+
+} // namespace Backend
+} // namespace KE
+
+#endif
