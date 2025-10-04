@@ -410,7 +410,11 @@ void App::mouseButtonCallback(GLFWwindow* window, int button, int action, int mo
 }
 
 void App::processInput() 
-    {
+    {   
+        // Prevent manipulations while ImGui using the mouse.
+        if (ImGui::GetIO().WantCaptureMouse) {
+            return;
+        }
         GLFWwindow* window = this->getWindow();
         float cameraSpeed = static_cast<float>(15.0 * _renderVariable->deltaTime);
         float scaleDistance = _camera.getCamToLookDistance();
