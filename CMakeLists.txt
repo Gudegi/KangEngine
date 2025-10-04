@@ -29,7 +29,9 @@ else()
     endif()
 endif()
 
-add_definitions(-DSTB_IMAGE_IMPLEMENTATION)
+#add_definitions(-DSTB_IMAGE_IMPLEMENTATION)
+# STB_IMAGE_IMPLEMENTATION is defined only in src/backend/base/base_utils.cpp
+# Do not define it globally to avoid duplicate symbol errors
 
 find_package(OpenGL REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
@@ -67,7 +69,8 @@ file(GLOB_RECURSE MAIN_FILES "${MAIN_DIR}/*.cpp")
 #add_executable(${PROJECT_NAME} ${MAIN_FILES} ${SOURCE_FILES})
 #file(GLOB MAIN_FILE "${MAIN_DIR}/light0.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/standalone_physx_hello.cpp")
-file(GLOB MAIN_FILE "${MAIN_DIR}/backend_example.cpp")
+#file(GLOB MAIN_FILE "${MAIN_DIR}/backend_example.cpp")
+file(GLOB MAIN_FILE "${MAIN_DIR}/backend_light0.cpp")
 add_executable(${PROJECT_NAME} ${MAIN_FILE} ${SOURCE_FILES})
 add_custom_target(copy_assets ALL COMMAND ${CMAKE_COMMAND} -E copy_directory "${ASSETS_DIR}" "${CMAKE_BINARY_DIR}/assets")
 add_dependencies(${PROJECT_NAME} copy_assets)

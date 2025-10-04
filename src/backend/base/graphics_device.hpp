@@ -5,6 +5,7 @@
 #ifndef _GRAPHICS_DEVICE_HPP_
 #define _GRAPHICS_DEVICE_HPP_
 
+#include <glad/glad.h>
 #include <memory>
 #include <string>
 #include <vector>
@@ -107,6 +108,7 @@ public:
     virtual void clear(float r, float g, float b, float a) = 0;
     virtual void setViewport(int x, int y, int width, int height) = 0;
     virtual void drawIndexed(int indexCount) = 0;
+    virtual void checkError() = 0;
 
     // Render State
     virtual void setDepthTest(bool enable) = 0;
@@ -119,9 +121,11 @@ public:
     virtual std::unique_ptr<Texture> createTexture(const TextureDesc& desc) = 0;
     virtual std::unique_ptr<VertexArray> createVertexArray() = 0;
 
-    // Convenience shader creation methods (KE::Shader compatible)
+    // OpenGL specific functions
     virtual std::unique_ptr<Shader> createShader(const char* vertexSource, const char* fragmentSource) = 0;
     virtual std::unique_ptr<Shader> createShader(const std::string& vertexSource, const std::string& fragmentSource) = 0;
+    virtual std::unique_ptr<Texture> createTexture(const std::string path, bool flip=false) = 0;
+    virtual std::unique_ptr<Texture> createTexture(const std::string path, bool flip, float warpParam, float minFilferParam, float maxFilterParam) = 0;
 };
 
 class Buffer {

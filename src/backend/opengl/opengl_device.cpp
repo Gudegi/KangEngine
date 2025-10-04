@@ -3,10 +3,12 @@
 ///
 
 #include "opengl_device.hpp"
+#include "../base/base_utils.hpp"
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <glm/gtc/type_ptr.hpp>
+#include <stb_image.h>
 
 namespace KE {
 namespace Backend {
@@ -192,35 +194,77 @@ void OpenGLShader::setMat2(const std::string& name, const glm::mat2& value) {
 OpenGLTexture::OpenGLTexture(const TextureDesc& desc)
     : _width(desc.width), _height(desc.height), _channels(desc.channels) {
 
-    glGenTextures(1, &_texture);
-    glBindTexture(GL_TEXTURE_2D, _texture);
+    glGenTextures(1, &_textureID);
+    glBindTexture(_target, _textureID);
 
-    GLenum format = GL_RGBA;
-    if (_channels == 3) format = GL_RGB;
-    else if (_channels == 1) format = GL_RED;
+    GLenum format;
+    switch (_channels) {
+    case 4: format = GL_RGBA; break;
+    case 3: format = GL_RGB; break;
+    case 1: format = GL_RED; break;
+    default:
+        std::cerr << "Unsupported channel count: " << _channels << std::endl;
+        format = GL_RGBA; 
+    }
 
-    glTexImage2D(GL_TEXTURE_2D, 0, format, _width, _height, 0, format, GL_UNSIGNED_BYTE, desc.data);
-    glGenerateMipmap(GL_TEXTURE_2D);
+    glTexImage2D(_target, 0, format, _width, _height, 0, format, GL_UNSIGNED_BYTE, desc.data);
+    glGenerateMipmap(_target);
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    setWarpParam();
+    setFilterParam(); 
 
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(_target, 0);
+}
+
+OpenGLTexture::OpenGLTexture(const TextureDesc& desc, float warpParam, float filterMinParam, float filterMaxParam)
+    : _width(desc.width), _height(desc.height), _channels(desc.channels), 
+        _warpParam(warpParam), _filterMinParam(filterMinParam), _filterMaxParam(filterMaxParam) {
+
+    glGenTextures(1, &_textureID);
+    glBindTexture(_target, _textureID);
+
+    GLenum format;
+    switch (_channels) {
+    case 4: format = GL_RGBA; break;
+    case 3: format = GL_RGB; break;
+    case 1: format = GL_RED; break;
+    default:
+        std::cerr << "Unsupported channel count: " << _channels << std::endl;
+        format = GL_RGBA; 
+    }
+
+    glTexImage2D(_target, 0, format, _width, _height, 0, format, GL_UNSIGNED_BYTE, desc.data);
+    glGenerateMipmap(_target);
+
+    setWarpParam((GLfloat)_warpParam);
+    setFilterParam((GLfloat)_filterMinParam, (GLfloat)_filterMaxParam); 
+
+    glBindTexture(_target, 0);
 }
 
 OpenGLTexture::~OpenGLTexture() {
-    glDeleteTextures(1, &_texture);
+    glDeleteTextures(1, &_textureID);
 }
 
 void OpenGLTexture::bind(int slot) {
     glActiveTexture(GL_TEXTURE0 + slot);
-    glBindTexture(GL_TEXTURE_2D, _texture);
+    glBindTexture(_target, _textureID);
 }
 
 void OpenGLTexture::unbind() {
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(_target, 0);
+}
+
+void OpenGLTexture::setWarpParam(GLfloat warpParam) const
+{
+    glTexParameteri(_target, GL_TEXTURE_WRAP_S, warpParam);
+    glTexParameteri(_target, GL_TEXTURE_WRAP_T, warpParam);
+}
+
+void OpenGLTexture::setFilterParam(GLfloat filterMinParam, GLfloat filterMaxParam) const
+{
+    glTexParameteri(_target, GL_TEXTURE_MIN_FILTER, filterMinParam);
+    glTexParameteri(_target, GL_TEXTURE_MAG_FILTER, filterMaxParam);
 }
 
 // OpenGLDevice Implementation
@@ -271,6 +315,25 @@ void OpenGLDevice::drawIndexed(int indexCount) {
     glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
 }
 
+void OpenGLDevice::checkError() {
+    GLenum err;
+    if ((err = glGetError()) != GL_NO_ERROR)
+    {
+        std::string errStr = "";
+        switch (err)
+        {
+            case GL_INVALID_ENUM:      errStr = "GL_INVALID_ENUM"; break;
+            case GL_INVALID_VALUE:     errStr = "GL_INVALID_VALUE"; break;
+            case GL_INVALID_OPERATION: errStr = "GL_INVALID_OPERATION"; break;
+            case GL_INVALID_FRAMEBUFFER_OPERATION: errStr = "GL_INVALID_FRAMEBUFFER_OPERATION"; break;
+            case GL_OUT_OF_MEMORY:   errStr = "GL_OUT_OF_MEMORY"; break;
+            case GL_STACK_UNDERFLOW: errStr = "GL_STACK_UNDERFLOW"; break;
+            case GL_STACK_OVERFLOW:  errStr = "GL_STACK_OVERFLOW"; break;
+        }
+        std::cout << errStr << std::endl;
+    }
+}
+
 std::unique_ptr<Buffer> OpenGLDevice::createBuffer(BufferType type, size_t size, const void* data) {
     return std::make_unique<OpenGLBuffer>(type, size, data);
 }
@@ -299,6 +362,20 @@ std::unique_ptr<Shader> OpenGLDevice::createShader(const char* vertexSource, con
 
 std::unique_ptr<Shader> OpenGLDevice::createShader(const std::string& vertexSource, const std::string& fragmentSource) {
     return createShader(vertexSource.c_str(), fragmentSource.c_str());
+}
+
+std::unique_ptr<Texture> OpenGLDevice::createTexture(const std::string path, bool flip) {
+    TextureDesc desc = loadImage(path, flip);
+    auto texture = std::make_unique<OpenGLTexture>(desc);
+    stbi_image_free((void*)desc.data); // release memory
+    return texture;
+}
+
+std::unique_ptr<Texture> OpenGLDevice::createTexture(const std::string path, bool flip, float warpParam, float minFilferParam, float maxFilterParam) {
+    TextureDesc desc = loadImage(path, flip);
+    auto texture = std::make_unique<OpenGLTexture>(desc, warpParam, minFilferParam, maxFilterParam);
+    stbi_image_free((void*)desc.data); // release memory
+    return texture;
 }
 
 void OpenGLDevice::setDepthTest(bool enable) {

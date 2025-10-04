@@ -194,22 +194,7 @@ void App::draw()
 
 void App::checkError()
 {
-    GLenum err;
-    if ((err = glGetError()) != GL_NO_ERROR)
-    {
-        std::string errStr = "";
-        switch (err)
-        {
-            case GL_INVALID_ENUM:      errStr = "GL_INVALID_ENUM"; break;
-            case GL_INVALID_VALUE:     errStr = "GL_INVALID_VALUE"; break;
-            case GL_INVALID_OPERATION: errStr = "GL_INVALID_OPERATION"; break;
-            case GL_INVALID_FRAMEBUFFER_OPERATION: errStr = "GL_INVALID_FRAMEBUFFER_OPERATION"; break;
-            case GL_OUT_OF_MEMORY:   errStr = "GL_OUT_OF_MEMORY"; break;
-            case GL_STACK_UNDERFLOW: errStr = "GL_STACK_UNDERFLOW"; break;
-            case GL_STACK_OVERFLOW:  errStr = "GL_STACK_OVERFLOW"; break;
-        }
-        std::cout << errStr << std::endl;
-    }
+    _graphicsDevice->checkError();
 }
 
 size_t App::addShape(Shader* shader, std::unique_ptr<All> infos)
@@ -371,7 +356,7 @@ void App::framebufferSizeCallback(GLFWwindow* window, int width, int height)
 {
     _width = width;
     _height = height;
-    glViewport(0, 0, _width, _height);
+    _graphicsDevice->setViewport(0, 0, _width, _height);
     _camera.updateProjMatrix(_width, _height);
 }
 

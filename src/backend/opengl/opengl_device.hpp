@@ -68,16 +68,20 @@ public:
 
 class OpenGLTexture : public Texture {
 private:
-    GLuint _texture;
-    int _width, _height;
-    int _channels;
+    GLuint _textureID;
+    GLenum _target = GL_TEXTURE_2D;
+    int _width, _height, _channels;
+    float _warpParam, _filterMinParam, _filterMaxParam;
 
 public:
-    OpenGLTexture(const TextureDesc& desc);
+    OpenGLTexture(const TextureDesc& desc); 
+    OpenGLTexture(const TextureDesc& desc, float warpParam, float filterMinParam, float filterMaxParam);
     ~OpenGLTexture() override;
 
     void bind(int slot = 0) override;
     void unbind() override;
+    void setWarpParam(GLfloat warpParam=GL_REPEAT) const;
+    void setFilterParam(GLfloat filterMinParam=GL_LINEAR_MIPMAP_LINEAR, GLfloat filterMaxParam=GL_LINEAR) const;
     int getWidth() const override { return _width; }
     int getHeight() const override { return _height; }
 };
@@ -115,6 +119,7 @@ public:
     void clear(float r, float g, float b, float a) override;
     void setViewport(int x, int y, int width, int height) override;
     void drawIndexed(int indexCount) override;
+    void checkError() override;
 
     // Render State
     void setDepthTest(bool enable) override;
@@ -130,6 +135,8 @@ public:
     // Convenience shader creation methods (KE::Shader compatible)
     std::unique_ptr<Shader> createShader(const char* vertexSource, const char* fragmentSource) override;
     std::unique_ptr<Shader> createShader(const std::string& vertexSource, const std::string& fragmentSource) override;
+    std::unique_ptr<Texture> createTexture(const std::string path, bool flip=false) override;
+    std::unique_ptr<Texture> createTexture(const std::string path, bool flip=false, float warpParam=GL_REPEAT, float minFilferParam=GL_LINEAR_MIPMAP_LINEAR, float maxFilterParam=GL_LINEAR) override;
 };
 
 } // namespace Backend
