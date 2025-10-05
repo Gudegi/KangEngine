@@ -118,7 +118,8 @@ endif()
 # Python Module for pybind11
 if(IS_PYTHON_LIB)
     set(PYTHON_MODULE_NAME "kangengine")
-    file(GLOB_RECURSE PYBIND_SOURCE_FILES "${BIND_DIR}/*.cpp")
+    #file(GLOB_RECURSE PYBIND_SOURCE_FILES "${BIND_DIR}/*.cpp")
+    file(GLOB_RECURSE PYBIND_SOURCE_FILES "${BIND_DIR}/bind_new.cpp")
     message(STATUS "PY_SOURCE: ${PYBIND_SOURCE_FILES}")
     
     Python_add_library(${PYTHON_MODULE_NAME} 
@@ -138,6 +139,33 @@ if(IS_PYTHON_LIB)
         imgui::imgui
         imguizmo::imguizmo
     )
+
+    # Link PhysX libraries for Python module
+    if(EXISTS "${physx_DIR}")
+        if(APPLE)
+            target_link_libraries(${PYTHON_MODULE_NAME} PRIVATE
+                PhysXExtensions_static_64
+                PhysX_static_64
+                PhysXPvdSDK_static_64
+                PhysXCommon_static_64
+                PhysXFoundation_static_64
+                pthread
+                dl
+            )
+        else(UNIX)
+            target_link_libraries(${PYTHON_MODULE_NAME} PRIVATE
+                -Wl,--start-group
+                PhysXExtensions_static_64
+                PhysX_static_64
+                PhysXPvdSDK_static_64
+                PhysXCommon_static_64
+                PhysXFoundation_static_64
+                -Wl,--end-group
+                pthread
+                dl
+            )
+        endif()
+    endif()
     set_target_properties(${PYTHON_MODULE_NAME} PROPERTIES
         INTERPROCEDURAL_OPTIMIZATION ON
         CXX_VISIBILITY_PRESET default
