@@ -18,6 +18,7 @@ private:
     glm::mat4 _viewMatrix, _projMatrix;
     glm::vec3 _upAxis;
     float _FoV, _camToLookDistance, _nearPlane, _farPlane;
+    unsigned int _screenWidth, _screenHeight;
 
 public:
     Camera();
@@ -41,8 +42,7 @@ public:
     float getNearPlane() {return _nearPlane;}
     float getFarPlane() {return _farPlane;}
     float getCamToLookDistance();
-    
-    glm::vec3 calcSpherePos();
+
     glm::vec3 getCameraLookDir();
     glm::vec3 getCameraUpDir();
     glm::vec3 getCameraRightDir();
