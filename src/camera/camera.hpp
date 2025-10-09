@@ -21,6 +21,7 @@ private:
     unsigned int _screenWidth, _screenHeight;
 
 public:
+    float pole, azimuth;
     Camera();
     Camera(glm::vec3 cameraPos, glm::vec3 targetPos, char upAxis);
     ~Camera();

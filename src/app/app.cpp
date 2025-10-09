@@ -381,7 +381,7 @@ void App::cursorPositionCallback(GLFWwindow* window, double xpos, double ypos)
 {
     _io->mouseX = xpos;
     _io->mouseY = ypos;
-    if (_io->isMouseLeftClicked == true || _io->isMouseMiddleClicked == true)
+    if (_io->isMouseLeftClicked == true || _io->isMouseMiddleClicked == true || _io->isMouseRightClicked == true)
     {
         _io->deltaMouseX = _io->mouseX - _io->prevMouseX;
         _io->deltaMouseY = _io->mouseY - _io->prevMouseY;
@@ -407,6 +407,10 @@ void App::mouseButtonCallback(GLFWwindow* window, int button, int action, int mo
         _io->isMouseMiddleClicked = true;
     if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_RELEASE)
         _io->isMouseMiddleClicked = false;
+    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS)
+        _io->isMouseRightClicked = true;
+    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE)
+        _io->isMouseRightClicked = false;
 }
 
 void App::processInput() 
@@ -500,40 +504,32 @@ void App::processInput()
             }
     
         if (_io->isMouseLeftClicked) 
-        {
-            const double DRAG_THRESHOLD = 2.0;
-            if (sqrt(_io->deltaMouseX * _io->deltaMouseX + _io->deltaMouseY * _io->deltaMouseY) < DRAG_THRESHOLD)
-            {
-                return;
-            }
-            if (_io->deltaMouseX > 0) 
-            {
-                cameraPos -= cameraSpeed * cameraRight;
-            }
-            if (_io->deltaMouseX < 0)
-            { 
-                cameraPos += cameraSpeed * cameraRight;
-            }
-            if (_io->deltaMouseY > 0) 
-            {
-                glm::vec3 nextCameraPos = cameraPos - cameraSpeed * cameraUp;
-                glm::vec3 nextCameraFront = _camera.getTargetPos() - nextCameraPos;
-                if (((nextCameraFront.x * cameraFront.x) < 0) && (nextCameraFront.z * cameraFront.z) < 0)
-                    return;
-                cameraPos = nextCameraPos;
-            }
-            if (_io->deltaMouseY < 0) 
-            {
-                glm::vec3 nextCameraPos = cameraPos + cameraSpeed * cameraUp;
-                glm::vec3 nextCameraFront = _camera.getTargetPos() - nextCameraPos; // No normalize because it is just for sign checking.
-                if (((nextCameraFront.x * cameraFront.x) < 0) && (nextCameraFront.z * cameraFront.z) < 0)
-                    return; // To prevent flipping, compare nextCameraFront with cameraFront.
-                cameraPos = nextCameraPos;
-            }
-            _camera.setCameraPos(cameraPos);
+        {   
+            // Orbit cam
+            float dx = _io->deltaMouseX * 0.1f;
+            float dy = _io->deltaMouseY * 0.1f;
+
+            _camera.azimuth += dx;
+            _camera.pole -= dy; // (mouse down -> cam up)
+
+            const float EPSILON = 0.01f;
+            _camera.pole = glm::clamp(_camera.pole, EPSILON, 180.0f - EPSILON);
+
+            float phi = glm::radians(_camera.azimuth);  
+            float theta = glm::radians(_camera.pole); 
+            float r = scaleDistance;
+
+            glm::vec3 targetPos = _camera.getTargetPos();
+            glm::vec3 newCameraPos;
+
+            // Y-up
+            newCameraPos.x = targetPos.x + r * glm::sin(theta) * glm::cos(phi);
+            newCameraPos.y = targetPos.y + r * glm::cos(theta);
+            newCameraPos.z = targetPos.z + r * glm::sin(theta) * glm::sin(phi);
+            _camera.setCameraPos(newCameraPos);
         }
     
-        if (_io->isMouseMiddleClicked) 
+        if (_io->isMouseRightClicked)
         {
             const double DRAG_THRESHOLD = 2.0;
             if (sqrt(_io->deltaMouseX * _io->deltaMouseX + _io->deltaMouseY * _io->deltaMouseY) < DRAG_THRESHOLD)
@@ -570,7 +566,18 @@ void App::processInput()
                 cameraPos -= cameraSpeed * cameraUp;
                 _camera.setTargetPos(cameraPos + scaledFront);
             }
+            /*
+            // panning
+            glm::vec3 rightMove = static_cast<float>(-_io->deltaMouseX) * cameraSpeed * glm::normalize(glm::cross(cameraFront, globalUp));
+            glm::vec3 upMove = static_cast<float>(-_io->deltaMouseY) * cameraSpeed * cameraUp;
+            glm::vec3 totalMove = rightMove + upMove;
+
+            cameraPos += totalMove;
+            glm::vec3 newTargetPos = _camera.getTargetPos() + totalMove;
+
             _camera.setCameraPos(cameraPos);
+            _camera.setTargetPos(newTargetPos);
+            */
         }
     }
 
