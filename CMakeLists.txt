@@ -10,10 +10,27 @@ set(ASSETS_DIR "${CMAKE_SOURCE_DIR}/assets")
 set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
 set(MAIN_DIR "${CMAKE_SOURCE_DIR}/examples")
 set(BIND_DIR "${CMAKE_SOURCE_DIR}/bindings")
-set(IS_PYTHON_LIB false) # TODO: support python after making base engine solid.
+option(IS_PYTHON_LIB "Build Python bindings" OFF) # Use -DIS_PYTHON_LIB=ON to enable
+option(USE_USD "Enable USD support" OFF) # Use -DUSE_USD=ON to enable
 
-if(NOT EXISTS "${pxr_DIR}")
-    message(FATAL_ERROR "pxr_DIR path '${pxr_DIR}' does not exist. Please check your USD build path.")
+if(USE_USD)
+    if(NOT EXISTS "${pxr_DIR}")
+        message(FATAL_ERROR "pxr_DIR path '${pxr_DIR}' does not exist. Please check your USD build path.")
+    endif()
+
+    # USD 경로 설정
+    set(CMAKE_PREFIX_PATH "${pxr_DIR}" ${CMAKE_PREFIX_PATH})
+    find_package(pxr REQUIRED)
+
+    add_compile_definitions(KANGENGINE_USE_USD)
+
+    # USD include 경로 추가
+    include_directories(${pxr_DIR}/include)
+    link_directories(${pxr_DIR}/lib)
+
+    message(STATUS "USD support enabled")
+    message(STATUS "USD include dir: ${pxr_DIR}/include")
+    message(STATUS "USD lib dir: ${pxr_DIR}/lib")
 endif()
 if(NOT EXISTS "${physx_DIR}")
     message(FATAL_ERROR "physx_DIR path '${physx_DIR}' does not exist. Please check your Physx build path.")
@@ -40,8 +57,10 @@ find_package(glm CONFIG REQUIRED)
 find_package(Stb REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 find_package(imguizmo CONFIG REQUIRED)
-find_package(Python COMPONENTS Interpreter Development REQUIRED)
-find_package(pybind11 CONFIG REQUIRED)
+if(IS_PYTHON_LIB)
+    find_package(Python COMPONENTS Interpreter Development REQUIRED)
+    find_package(pybind11 CONFIG REQUIRED)
+endif()
 if(EXISTS "${physx_DIR}")
     include_directories(${physx_DIR}/include)
     if(APPLE)
@@ -71,6 +90,9 @@ file(GLOB_RECURSE MAIN_FILES "${MAIN_DIR}/*.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/standalone_physx_hello.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/backend_example.cpp")
 file(GLOB MAIN_FILE "${MAIN_DIR}/backend_light0.cpp")
+#file(GLOB MAIN_FILE "${MAIN_DIR}/usd_example.cpp")
+#file(GLOB MAIN_FILE "${MAIN_DIR}/scene_graph_example.cpp")
+#file(GLOB MAIN_FILE "${MAIN_DIR}/scene_usd_example.cpp")
 add_executable(${PROJECT_NAME} ${MAIN_FILE} ${SOURCE_FILES})
 add_custom_target(copy_assets ALL COMMAND ${CMAKE_COMMAND} -E copy_directory "${ASSETS_DIR}" "${CMAKE_BINARY_DIR}/assets")
 add_dependencies(${PROJECT_NAME} copy_assets)
@@ -89,6 +111,17 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     imgui::imgui
     imguizmo::imguizmo
 )
+
+# Link USD
+if(USE_USD)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        usd
+        usdGeom
+        sdf
+        tf
+    )
+endif()
+
 if(EXISTS "${physx_DIR}")
     if(APPLE)
         target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -100,7 +133,7 @@ if(EXISTS "${physx_DIR}")
             pthread
             dl
         )
-    else(UNIX)
+    elseif(UNIX)
         target_link_libraries(${PROJECT_NAME} PRIVATE
             -Wl,--start-group
             PhysXExtensions_static_64
@@ -119,7 +152,10 @@ endif()
 if(IS_PYTHON_LIB)
     set(PYTHON_MODULE_NAME "kangengine")
     #file(GLOB_RECURSE PYBIND_SOURCE_FILES "${BIND_DIR}/*.cpp")
-    file(GLOB_RECURSE PYBIND_SOURCE_FILES "${BIND_DIR}/bind_new.cpp")
+    file(GLOB PYBIND_SOURCE_FILES
+        "${BIND_DIR}/bind_new.cpp"
+        "${BIND_DIR}/bind_scene.cpp"
+    )
     message(STATUS "PY_SOURCE: ${PYBIND_SOURCE_FILES}")
     
     Python_add_library(${PYTHON_MODULE_NAME} 
@@ -140,6 +176,16 @@ if(IS_PYTHON_LIB)
         imguizmo::imguizmo
     )
 
+    # Link USD libraries for Python module
+    if(USE_USD)
+        target_link_libraries(${PYTHON_MODULE_NAME} PRIVATE
+            usd
+            usdGeom
+            sdf
+            tf
+        )
+    endif()
+
     # Link PhysX libraries for Python module
     if(EXISTS "${physx_DIR}")
         if(APPLE)
@@ -152,7 +198,7 @@ if(IS_PYTHON_LIB)
                 pthread
                 dl
             )
-        else(UNIX)
+        elseif(UNIX)
             target_link_libraries(${PYTHON_MODULE_NAME} PRIVATE
                 -Wl,--start-group
                 PhysXExtensions_static_64

@@ -49,3 +49,5 @@ CMakeUserPresets.json
 build
 .*
 imgui.ini
+
+*.usda

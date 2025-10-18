@@ -14,6 +14,9 @@
 namespace py = pybind11;
 using namespace KE;
 
+// Forward declaration for scene bindings
+void bind_scene(py::module& m);
+
 // Trampoline class for App - allows Python to override virtual methods
 class PyApp: public App
 {
@@ -137,4 +140,7 @@ PYBIND11_MODULE(kangengine, m) {
 		.def("getCamera", &App::getCamera, py::return_value_policy::reference)
 		.def("getWidth", &App::getWidth)
 		.def("getHeight", &App::getHeight);
+
+	// Bind scene system
+	bind_scene(m);
 }
