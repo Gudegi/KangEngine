@@ -20,11 +20,11 @@ std::unique_ptr<SceneBackend> SceneFactory::createBackend(BackendType type) {
             return std::make_unique<NativeScene>();
 
         case BackendType::USD:
-#ifdef KANGENGINE_USE_USD
+        #ifdef KANGENGINE_USE_USD
             return std::make_unique<USDScene>();
-#else
+        #else
             throw std::runtime_error("USD support not compiled. Rebuild with -DUSE_USD=ON");
-#endif
+        #endif
 
         default:
             throw std::runtime_error("Unknown scene backend type");

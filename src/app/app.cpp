@@ -76,16 +76,21 @@ App::~App()
 
 }
 
-void App::initialize(int width, int height, bool hideUi, Backend::BackendType backendType)
+void App::initialize(int width, int height, bool hideUi, Backend::BackendType graphicsBackendType, Scene::BackendType sceneBackendType)
 {
     _width = width;
     _height = height;
     _hideUi = hideUi;
 
     // Initialize graphics device first
-    _graphicsDevice = Backend::GraphicsFactory::createDevice(backendType);
+    _graphicsDevice = Backend::GraphicsFactory::createDevice(graphicsBackendType);
     if (!_graphicsDevice) {
         std::cerr << "Failed to create graphics device" << std::endl;
+        return;
+    }
+    _scene = Scene::SceneFactory::createBackend(sceneBackendType);
+    if (!_scene) {
+        std::cerr << "Failed to create scene" << std::endl;
         return;
     }
 
@@ -149,26 +154,41 @@ void App::coreRender()
         _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
     }
 
-    for (const auto &buffer : _bufferLists)
-    {
-        // Backend::Shader와 KE::Shader 둘 다 지원
-        if (buffer->backendShader) {
-            // Backend::Shader 사용
-            buffer->backendShader->use();
-            buffer->backendShader->setMat4("view", _viewMatrix);
-            buffer->backendShader->setMat4("projection", _projectionMatrix);
-        } else if (buffer->shader) {
-            // KE::Shader 사용 (기존 방식)
-            buffer->shader->use();
-            buffer->shader->setMat4("view", _viewMatrix);
-            buffer->shader->setMat4("projection", _projectionMatrix);
+    if (_scene) {
+        const auto& sceneBuffers = _scene->getBufferLists();
+        for (const auto& buffer : sceneBuffers) {
+            if (buffer && buffer->backendShader) {
+                buffer->backendShader->use();
+                buffer->backendShader->setMat4("view", _viewMatrix);
+                buffer->backendShader->setMat4("projection", _projectionMatrix);
+                
+                buffer->vertexArray->bind();
+                _graphicsDevice->drawIndexed(buffer->numIndices);
+                buffer->vertexArray->unbind();
+                checkError();
+            }
         }
+    } else {
+        for (const auto &buffer : _bufferLists) {
+            // Backend::Shader와 KE::Shader 둘 다 지원
+            if (buffer->backendShader) {
+                // Backend::Shader method
+                buffer->backendShader->use();
+                buffer->backendShader->setMat4("view", _viewMatrix);
+                buffer->backendShader->setMat4("projection", _projectionMatrix);
+            } else if (buffer->shader) {
+                // KE::Shader method
+                buffer->shader->use();
+                buffer->shader->setMat4("view", _viewMatrix);
+                buffer->shader->setMat4("projection", _projectionMatrix);
+            }
 
-        buffer->vertexArray->bind();
-        _graphicsDevice->drawIndexed(buffer->numIndices);
-        checkError();
-        buffer->vertexArray->unbind();
-        checkError();
+            buffer->vertexArray->bind();
+            _graphicsDevice->drawIndexed(buffer->numIndices);
+            checkError();
+            buffer->vertexArray->unbind();
+            checkError();
+        }
     }
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -347,6 +367,111 @@ size_t App::addShape(Backend::Shader* shader, std::unique_ptr<All> infos)
     }
     catch (const std::exception& e) {
         std::cerr << "Failed to add shape with Backend::Shader: " << e.what() << std::endl;
+        return static_cast<size_t>(-1);
+    }
+}
+
+size_t App::addShape(Backend::Shader* shader, std::shared_ptr<Scene::MeshData> meshData)
+{
+    if (!meshData || meshData->vertices.empty() || meshData->indices.empty()) {
+        return static_cast<size_t>(-1); // Invalid shape ID
+    }
+
+    try {
+        auto bufferInfos = std::make_shared<Scene::ShapeRenderBuffer>();
+        bufferInfos->backendShader = shader;
+
+        if (shader) {
+            shader->use();
+        }
+
+        // Create separate buffers for each attribute using meshData directly
+        // Position buffer (location 0)
+        auto positionBuffer = _graphicsDevice->createBuffer(
+            Backend::BufferType::Vertex,
+            sizeof(glm::vec3) * meshData->vertices.size(),
+            meshData->vertices.data()
+        );
+
+        // Normal buffer (location 1) - if exists
+        std::unique_ptr<Backend::Buffer> normalBuffer;
+        if (!meshData->normals.empty()) {
+            normalBuffer = _graphicsDevice->createBuffer(
+                Backend::BufferType::Vertex,
+                sizeof(glm::vec3) * meshData->normals.size(),
+                meshData->normals.data()
+            );
+        }
+
+        // UV buffer (location 2) - if exists
+        std::unique_ptr<Backend::Buffer> uvBuffer;
+        if (!meshData->uvs.empty()) {
+            uvBuffer = _graphicsDevice->createBuffer(
+                Backend::BufferType::Vertex,
+                sizeof(glm::vec2) * meshData->uvs.size(),
+                meshData->uvs.data()
+            );
+        }
+
+        // Index buffer
+        bufferInfos->indexBuffer = _graphicsDevice->createBuffer(
+            Backend::BufferType::Index,
+            sizeof(unsigned int) * meshData->indices.size(),
+            meshData->indices.data()
+        );
+
+        // Create and configure vertex array
+        bufferInfos->vertexArray = _graphicsDevice->createVertexArray();
+        bufferInfos->vertexArray->bind();
+
+        // Set index buffer
+        bufferInfos->vertexArray->setIndexBuffer(bufferInfos->indexBuffer.get());
+
+        // Position attribute (location 0)
+        positionBuffer->bind();
+        Backend::VertexAttribute positionAttr = {
+            0, 3, Backend::VertexAttributeType::Float,
+            false, sizeof(glm::vec3), 0
+        };
+        bufferInfos->vertexArray->setVertexAttribute(positionAttr);
+
+        // Normal attribute (location 1)
+        if (normalBuffer) {
+            normalBuffer->bind();
+            Backend::VertexAttribute normalAttr = {
+                1, 3, Backend::VertexAttributeType::Float,
+                false, sizeof(glm::vec3), 0
+            };
+            bufferInfos->vertexArray->setVertexAttribute(normalAttr);
+        }
+
+        // UV attribute (location 2)
+        if (uvBuffer) {
+            uvBuffer->bind();
+            Backend::VertexAttribute uvAttr = {
+                2, 2, Backend::VertexAttributeType::Float,
+                false, sizeof(glm::vec2), 0
+            };
+            bufferInfos->vertexArray->setVertexAttribute(uvAttr);
+        }
+
+        bufferInfos->vertexArray->unbind();
+        bufferInfos->numIndices = meshData->indices.size();
+
+        // Store position buffer (we need to keep at least one buffer alive)
+        bufferInfos->vertexBuffer = std::move(positionBuffer);
+        // Note: normalBuffer and uvBuffer will be destroyed here,
+        // but OpenGL has already copied the data
+
+        checkError();
+
+        //_bufferLists.push_back(std::move(bufferInfos));
+        _scene->addRenderable(bufferInfos);
+        return _scene->getBufferLists().size() - 1; 
+
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Failed to add shape with Scene::MeshData: " << e.what() << std::endl;
         return static_cast<size_t>(-1);
     }
 }

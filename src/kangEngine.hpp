@@ -22,5 +22,7 @@
 #include "mesh/prim.hpp"
 //#include "physics/physics.hpp"
 
+#include "scene/native/prim.hpp"
+
 
 #endif

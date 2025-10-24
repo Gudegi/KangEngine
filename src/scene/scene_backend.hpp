@@ -9,9 +9,21 @@
 #include <memory>
 #include <vector>
 #include <glm/glm.hpp>
+#include "../backend/graphics_factory.hpp"
 
 namespace KE {
 namespace Scene {
+
+struct ShapeRenderBuffer {
+    Backend::Shader* backendShader;  // Backend::Shader
+    std::unique_ptr<Backend::VertexArray> vertexArray;
+    std::unique_ptr<Backend::Buffer> vertexBuffer;
+    std::unique_ptr<Backend::Buffer> indexBuffer;
+    int numIndices;
+
+    // Constructor helpers
+    ShapeRenderBuffer() : backendShader(nullptr), numIndices(0) {}
+};
 
 // Mesh 데이터 구조
 struct MeshData {
@@ -29,6 +41,8 @@ enum class BackendType {
 
 // Scene Backend 추상 인터페이스
 class SceneBackend {
+private:
+    std::vector<std::shared_ptr<ShapeRenderBuffer>> _bufferLists;
 public:
     virtual ~SceneBackend() = default;
 
@@ -44,6 +58,17 @@ public:
 
     // Scene 쿼리
     virtual std::vector<std::string> listMeshes() = 0;
+
+    // Render 가능한 정보 쿼리
+    //virtual std::vector<ShapeRenderBuffer> getRenderables() = 0;
+    //virtual bool addRenderable(const std::string& path = "") = 0;
+    const std::vector<std::shared_ptr<ShapeRenderBuffer>>& getBufferLists() const {
+        return _bufferLists;
+    }
+    void addRenderable(std::shared_ptr<ShapeRenderBuffer> buffer){
+        _bufferLists.push_back(buffer);
+    }
+
 };
 
 // Factory

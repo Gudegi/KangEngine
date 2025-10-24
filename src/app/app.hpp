@@ -20,6 +20,7 @@
 #include "shader/shader.hpp"
 #include "backend/base/graphics_device.hpp"
 #include "backend/graphics_factory.hpp"
+#include "scene/scene_backend.hpp"
 namespace KE {
 
 struct ShapeRenderBuffer
@@ -65,11 +66,18 @@ public:
 
 private:
     std::unique_ptr<Backend::GraphicsDevice> _graphicsDevice;
+    std::unique_ptr<Scene::SceneBackend> _scene = nullptr;
     
     void registerCallbacks();
 
 public:
-    void initialize(int width, int height, bool hideUi, Backend::BackendType backendType = Backend::BackendType::OpenGL);
+    void initialize(
+        int width, 
+        int height, 
+        bool hideUi, 
+        Backend::BackendType graphicsBackendType = Backend::BackendType::OpenGL, 
+        Scene::BackendType sceneBackendType = Scene::BackendType::Native
+    );
     void processInput();
     void checkError();
     void coreRender();
@@ -108,6 +116,7 @@ public:
     //GLuint addShape(Shader* shader, std::unique_ptr<All> infos);
     size_t addShape(Shader* shader, std::unique_ptr<All> infos);
     size_t addShape(Backend::Shader* shader, std::unique_ptr<All> infos);
+    size_t addShape(Backend::Shader* shader, std::shared_ptr<Scene::MeshData> infos);
     std::list<std::unique_ptr<All>> _shapeLists;
     // _bufferLists // container for called in rendering loop;
     std::list<std::unique_ptr<ShapeRenderBuffer>> _bufferLists;

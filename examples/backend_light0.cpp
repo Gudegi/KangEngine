@@ -139,8 +139,13 @@ public:
         //model = glm::scale(model, glm::vec3(1.0f));
         lightShader->setMat4("model", model);
 
-        GLuint s1 = addShape(cubeShader.get(), std::make_unique<All>(asd));
-        GLuint s2 = addShape(lightShader.get(), std::make_unique<All>(asd));
+        //GLuint s1 = addShape(cubeShader.get(), std::make_unique<All>(asd));
+        //GLuint s2 = addShape(lightShader.get(), std::make_unique<All>(asd));
+        // Create mesh data using Scene::Prim
+        auto meshData = Scene::Prim::createSquareData(1.0f);
+        auto asdf = std::make_shared<Scene::MeshData>(std::move(meshData));
+        GLuint s1 = addShape(cubeShader.get(), asdf);
+        GLuint s2 = addShape(lightShader.get(), asdf);
         
         checkError();
         std::cout << "setUp End" << std::endl;
