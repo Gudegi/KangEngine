@@ -94,6 +94,8 @@ public:
     std::unique_ptr<App::RenderVariable> _renderVariable;
     Camera& getCamera() { return _camera; }
     GLFWwindow* getWindow() { return _window.getGlfwWindow();}
+    const glm::mat4& getViewMatrix() const { return _viewMatrix; }
+    const glm::mat4& getProjectionMatrix() const { return _projectionMatrix; }
     Backend::GraphicsDevice* getGraphicsDevice() { return _graphicsDevice.get(); }
 
     //////
