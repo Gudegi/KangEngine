@@ -2,6 +2,9 @@
 #include "kangEngine.hpp"
 #include <iostream>
 #include <memory>
+#include <fmt/base.h>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/string_cast.hpp>
 
 using namespace KE;
 
@@ -189,6 +192,7 @@ public:
     void render() override
     {
         std::cout << "render Called" << std::endl;
+        fmt::print("asdf\n");
 
         ImGui::Begin("Custom New Panel");
         ImGui::Text("You can create a panel in main loop.");
@@ -201,6 +205,7 @@ public:
         lightPos.x = cos(glfwGetTime()) * 3.0f;
         lightPos.y = sin(glfwGetTime()) * 3.0f;
         glm::mat4 model = glm::mat4(1.0f);
+        fmt::print("{}\n", glm::to_string(model));
         model = glm::translate(model, lightPos);
         model = glm::scale(model, glm::vec3(size));
         lightShader->setMat4("model", model);

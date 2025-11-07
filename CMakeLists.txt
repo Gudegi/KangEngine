@@ -57,6 +57,7 @@ find_package(glm CONFIG REQUIRED)
 find_package(Stb REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 find_package(imguizmo CONFIG REQUIRED)
+find_package(fmt CONFIG REQUIRED)
 if(IS_PYTHON_LIB)
     find_package(Python COMPONENTS Interpreter Development REQUIRED)
     find_package(pybind11 CONFIG REQUIRED)
@@ -111,6 +112,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     glm::glm
     imgui::imgui
     imguizmo::imguizmo
+    fmt::fmt
 )
 
 # Link USD

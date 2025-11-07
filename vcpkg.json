@@ -14,8 +14,9 @@
       ]
     },
     "imguizmo",
-    "stb",
+    "pybind11",
     "python3",
-    "pybind11"
+    "stb",
+    "fmt"
   ]
 }
