@@ -144,7 +144,6 @@ public:
     void setup() override
     {
         std::cout << "setUp called" << std::endl;
-        All asd = Prim::createSquareData(1.0);
 
         cubeShader = getGraphicsDevice()->createShader(testVs, testFs);
         lightShader = getGraphicsDevice()->createShader(testVs, lightFs);

@@ -14,10 +14,10 @@
 #include "camera/camera.hpp"
 #include "window/window.hpp"
 #include "ui/panel_manager.hpp"
-#include "mesh/prim.hpp"
-#include "mesh/buffer.hpp"
-#include "mesh/vao.hpp"
-#include "shader/shader.hpp"
+//#include "mesh/prim.hpp"
+//#include "mesh/buffer.hpp"
+//#include "mesh/vao.hpp"
+//#include "shader/shader.hpp"
 #include "backend/base/graphics_device.hpp"
 #include "backend/graphics_factory.hpp"
 #include "scene/scene_backend.hpp"
@@ -25,7 +25,6 @@ namespace KE {
 
 struct ShapeRenderBuffer
 {
-    Shader* shader;  // KE::Shader
     Backend::Shader* backendShader;  // Backend::Shader
     std::unique_ptr<Backend::VertexArray> vertexArray;
     std::unique_ptr<Backend::Buffer> vertexBuffer;
@@ -33,7 +32,7 @@ struct ShapeRenderBuffer
     int numIndices;
 
     // Constructor helpers
-    ShapeRenderBuffer() : shader(nullptr), backendShader(nullptr), numIndices(0) {}
+    ShapeRenderBuffer() : backendShader(nullptr), numIndices(0) {}
 };
 class App
 {
@@ -115,11 +114,7 @@ public:
     virtual void cursorPositionCallback(GLFWwindow* window, double xpos, double ypos);
     virtual void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 
-    //GLuint addShape(Shader* shader, std::unique_ptr<All> infos);
-    size_t addShape(Shader* shader, std::unique_ptr<All> infos);
-    size_t addShape(Backend::Shader* shader, std::unique_ptr<All> infos);
     size_t addShape(Backend::Shader* shader, std::shared_ptr<Scene::MeshData> infos);
-    std::list<std::unique_ptr<All>> _shapeLists;
     // _bufferLists // container for called in rendering loop;
     std::list<std::unique_ptr<ShapeRenderBuffer>> _bufferLists;
 };

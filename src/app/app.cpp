@@ -170,17 +170,13 @@ void App::coreRender()
         }
     } else {
         for (const auto &buffer : _bufferLists) {
-            // Backend::Shader와 KE::Shader 둘 다 지원
             if (buffer->backendShader) {
                 // Backend::Shader method
                 buffer->backendShader->use();
                 buffer->backendShader->setMat4("view", _viewMatrix);
                 buffer->backendShader->setMat4("projection", _projectionMatrix);
-            } else if (buffer->shader) {
-                // KE::Shader method
-                buffer->shader->use();
-                buffer->shader->setMat4("view", _viewMatrix);
-                buffer->shader->setMat4("projection", _projectionMatrix);
+            } else {
+                throw std::runtime_error("Unknown render type");
             }
 
             buffer->vertexArray->bind();
@@ -215,160 +211,6 @@ void App::draw()
 void App::checkError()
 {
     _graphicsDevice->checkError();
-}
-
-size_t App::addShape(Shader* shader, std::unique_ptr<All> infos)
-{
-    if (!infos || infos->vertexAttrib.empty() || infos->indices.empty()) {
-        return static_cast<size_t>(-1); // Invalid shape ID
-    }
-
-    try {
-        auto bufferInfos = std::make_unique<ShapeRenderBuffer>();
-        bufferInfos->shader = shader;
-
-        if (shader) {
-            shader->use();
-        }
-
-        // Create buffers using backend abstraction
-        bufferInfos->vertexBuffer = _graphicsDevice->createBuffer(
-            Backend::BufferType::Vertex,
-            sizeof(VertexAttrib) * infos->vertexAttrib.size(),
-            infos->vertexAttrib.data()
-        );
-
-        bufferInfos->indexBuffer = _graphicsDevice->createBuffer(
-            Backend::BufferType::Index,
-            sizeof(unsigned int) * infos->indices.size(),
-            infos->indices.data()
-        );
-
-        // Create and configure vertex array
-        bufferInfos->vertexArray = _graphicsDevice->createVertexArray();
-        bufferInfos->vertexArray->bind();
-
-        // Set vertex and index buffers
-        bufferInfos->vertexArray->setVertexBuffer(bufferInfos->vertexBuffer.get());
-        bufferInfos->vertexArray->setIndexBuffer(bufferInfos->indexBuffer.get());
-
-        // Define vertex attributes
-        constexpr int POSITION_ATTRIB = 0;
-        constexpr int NORMAL_ATTRIB = 1;
-        constexpr int UV_ATTRIB = 2;
-        constexpr int POSITION_SIZE = 3;
-        constexpr int NORMAL_SIZE = 3;
-        constexpr int UV_SIZE = 2;
-
-        Backend::VertexAttribute positionAttr = {
-            POSITION_ATTRIB, POSITION_SIZE, Backend::VertexAttributeType::Float,
-            false, sizeof(VertexAttrib), 0
-        };
-        bufferInfos->vertexArray->setVertexAttribute(positionAttr);
-
-        Backend::VertexAttribute normalAttr = {
-            NORMAL_ATTRIB, NORMAL_SIZE, Backend::VertexAttributeType::Float,
-            false, sizeof(VertexAttrib), offsetof(VertexAttrib, normal)
-        };
-        bufferInfos->vertexArray->setVertexAttribute(normalAttr);
-
-        Backend::VertexAttribute uvAttr = {
-            UV_ATTRIB, UV_SIZE, Backend::VertexAttributeType::Float,
-            false, sizeof(VertexAttrib), offsetof(VertexAttrib, uv)
-        };
-        bufferInfos->vertexArray->setVertexAttribute(uvAttr);
-
-        bufferInfos->vertexArray->unbind();
-        bufferInfos->numIndices = infos->indices.size();
-        checkError();
-
-        _shapeLists.push_back(std::move(infos));
-        _bufferLists.push_back(std::move(bufferInfos));
-
-        return _shapeLists.size() - 1;
-
-    }
-    catch (const std::exception& e) {
-        std::cerr << "Failed to add shape: " << e.what() << std::endl;
-        return static_cast<size_t>(-1);
-    }
-}
-
-size_t App::addShape(Backend::Shader* shader, std::unique_ptr<All> infos)
-{
-    if (!infos || infos->vertexAttrib.empty() || infos->indices.empty()) {
-        return static_cast<size_t>(-1); // Invalid shape ID
-    }
-
-    try {
-        auto bufferInfos = std::make_unique<ShapeRenderBuffer>();
-        bufferInfos->backendShader = shader;  // Backend::Shader 사용
-
-        if (shader) {
-            shader->use();
-        }
-
-        // Create buffers using backend abstraction
-        bufferInfos->vertexBuffer = _graphicsDevice->createBuffer(
-            Backend::BufferType::Vertex,
-            sizeof(VertexAttrib) * infos->vertexAttrib.size(),
-            infos->vertexAttrib.data()
-        );
-
-        bufferInfos->indexBuffer = _graphicsDevice->createBuffer(
-            Backend::BufferType::Index,
-            sizeof(unsigned int) * infos->indices.size(),
-            infos->indices.data()
-        );
-
-        // Create and configure vertex array
-        bufferInfos->vertexArray = _graphicsDevice->createVertexArray();
-        bufferInfos->vertexArray->bind();
-
-        // Set vertex and index buffers
-        bufferInfos->vertexArray->setVertexBuffer(bufferInfos->vertexBuffer.get());
-        bufferInfos->vertexArray->setIndexBuffer(bufferInfos->indexBuffer.get());
-
-        // Define vertex attributes
-        constexpr int POSITION_ATTRIB = 0;
-        constexpr int NORMAL_ATTRIB = 1;
-        constexpr int UV_ATTRIB = 2;
-        constexpr int POSITION_SIZE = 3;
-        constexpr int NORMAL_SIZE = 3;
-        constexpr int UV_SIZE = 2;
-
-        Backend::VertexAttribute positionAttr = {
-            POSITION_ATTRIB, POSITION_SIZE, Backend::VertexAttributeType::Float,
-            false, sizeof(VertexAttrib), 0
-        };
-        bufferInfos->vertexArray->setVertexAttribute(positionAttr);
-
-        Backend::VertexAttribute normalAttr = {
-            NORMAL_ATTRIB, NORMAL_SIZE, Backend::VertexAttributeType::Float,
-            false, sizeof(VertexAttrib), offsetof(VertexAttrib, normal)
-        };
-        bufferInfos->vertexArray->setVertexAttribute(normalAttr);
-
-        Backend::VertexAttribute uvAttr = {
-            UV_ATTRIB, UV_SIZE, Backend::VertexAttributeType::Float,
-            false, sizeof(VertexAttrib), offsetof(VertexAttrib, uv)
-        };
-        bufferInfos->vertexArray->setVertexAttribute(uvAttr);
-
-        bufferInfos->vertexArray->unbind();
-        bufferInfos->numIndices = infos->indices.size();
-        checkError();
-
-        _shapeLists.push_back(std::move(infos));
-        _bufferLists.push_back(std::move(bufferInfos));
-
-        return _shapeLists.size() - 1;
-
-    }
-    catch (const std::exception& e) {
-        std::cerr << "Failed to add shape with Backend::Shader: " << e.what() << std::endl;
-        return static_cast<size_t>(-1);
-    }
 }
 
 size_t App::addShape(Backend::Shader* shader, std::shared_ptr<Scene::MeshData> meshData)

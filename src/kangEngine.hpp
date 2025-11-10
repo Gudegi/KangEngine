@@ -9,17 +9,12 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include "shader/shader.hpp"
 #include "ui/panel_manager.hpp"
 #include "ui/base_panel.hpp"
-#include "mesh/vao.hpp"
-#include "mesh/buffer.hpp"
-#include "texture/texture.hpp"
 #include "camera/camera.hpp"
 #include "window/window.hpp"
 #include "app/app.hpp"
 #include "utils/glm_utils.hpp"
-#include "mesh/prim.hpp"
 //#include "physics/physics.hpp"
 
 #include "scene/native/prim.hpp"
