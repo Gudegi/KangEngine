@@ -318,6 +318,104 @@ size_t App::addShape(Backend::Shader* shader, std::shared_ptr<Scene::MeshData> m
     }
 }
 
+size_t App::addShape(PhongMaterial* material, std::shared_ptr<Scene::MeshData> meshData) 
+{
+     if (!meshData || meshData->vertices.empty() || meshData->indices.empty()) {
+        return static_cast<size_t>(-1); // Invalid shape ID
+    }
+
+    try {
+        auto bufferInfos = std::make_shared<Scene::ShapeRenderBuffer>();
+        bufferInfos->backendShader = material->getShader(); // TODO: need to fix?
+
+        if (bufferInfos->backendShader) {
+            material->bind();
+        }
+
+        // Create separate buffers for each attribute using meshData directly
+        // Position buffer (location 0)
+        auto positionBuffer = _graphicsDevice->createBuffer(
+            Backend::BufferType::Vertex,
+            sizeof(glm::vec3) * meshData->vertices.size(),
+            meshData->vertices.data()
+        );
+
+        // Normal buffer (location 1) - if exists
+        std::unique_ptr<Backend::Buffer> normalBuffer;
+        if (!meshData->normals.empty()) {
+            normalBuffer = _graphicsDevice->createBuffer(
+                Backend::BufferType::Vertex,
+                sizeof(glm::vec3) * meshData->normals.size(),
+                meshData->normals.data()
+            );
+        }
+
+        // UV buffer (location 2) - if exists
+        std::unique_ptr<Backend::Buffer> uvBuffer;
+        if (!meshData->uvs.empty()) {
+            uvBuffer = _graphicsDevice->createBuffer(
+                Backend::BufferType::Vertex,
+                sizeof(glm::vec2) * meshData->uvs.size(),
+                meshData->uvs.data()
+            );
+        }
+
+        // Index buffer
+        bufferInfos->indexBuffer = _graphicsDevice->createBuffer(
+            Backend::BufferType::Index,
+            sizeof(unsigned int) * meshData->indices.size(),
+            meshData->indices.data()
+        );
+
+        // Create and configure vertex array
+        bufferInfos->vertexArray = _graphicsDevice->createVertexArray();
+        bufferInfos->vertexArray->bind();
+
+        // Set index buffer
+        bufferInfos->vertexArray->setIndexBuffer(bufferInfos->indexBuffer.get());
+
+        // Position attribute (location 0)
+        positionBuffer->bind();
+        Backend::VertexAttribute positionAttr = {
+            0, 3, Backend::VertexAttributeType::Float,
+            false, sizeof(glm::vec3), 0
+        };
+        bufferInfos->vertexArray->setVertexAttribute(positionAttr);
+
+        // Normal attribute (location 1)
+        if (normalBuffer) {
+            normalBuffer->bind();
+            Backend::VertexAttribute normalAttr = {
+                1, 3, Backend::VertexAttributeType::Float,
+                false, sizeof(glm::vec3), 0
+            };
+            bufferInfos->vertexArray->setVertexAttribute(normalAttr);
+        }
+
+        // UV attribute (location 2)
+        if (uvBuffer) {
+            uvBuffer->bind();
+            Backend::VertexAttribute uvAttr = {
+                2, 2, Backend::VertexAttributeType::Float,
+                false, sizeof(glm::vec2), 0
+            };
+            bufferInfos->vertexArray->setVertexAttribute(uvAttr);
+        }
+
+        bufferInfos->vertexArray->unbind();
+        bufferInfos->numIndices = meshData->indices.size();
+        bufferInfos->vertexBuffer = std::move(positionBuffer);
+
+        checkError();
+        _scene->addRenderable(bufferInfos);
+        return _scene->getBufferLists().size() - 1;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Failed to add shape with PhongMaterial: " << e.what() << std::endl;
+        return static_cast<size_t>(-1);
+    }
+}
+
 //////////////// Call backs ////////////////////////////////////////////////////////
 void App::framebufferSizeCallback(GLFWwindow* window, int width, int height)
 {

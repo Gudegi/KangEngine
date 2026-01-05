@@ -21,6 +21,7 @@
 #include "backend/base/graphics_device.hpp"
 #include "backend/graphics_factory.hpp"
 #include "scene/scene_backend.hpp"
+#include "material/material.hpp"
 namespace KE {
 
 struct ShapeRenderBuffer
@@ -114,7 +115,8 @@ public:
     virtual void cursorPositionCallback(GLFWwindow* window, double xpos, double ypos);
     virtual void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 
-    size_t addShape(Backend::Shader* shader, std::shared_ptr<Scene::MeshData> infos);
+    size_t addShape(Backend::Shader* shader, std::shared_ptr<Scene::MeshData> meshData);
+    size_t addShape(PhongMaterial* material, std::shared_ptr<Scene::MeshData> meshData);
     // _bufferLists // container for called in rendering loop;
     std::list<std::unique_ptr<ShapeRenderBuffer>> _bufferLists;
 };
