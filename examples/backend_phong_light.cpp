@@ -1,8 +1,10 @@
 
-#include "kangEngine.hpp"
+#include <fmt/base.h>
+
 #include <iostream>
 #include <memory>
-#include <fmt/base.h>
+
+#include "kangEngine.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp>
 
@@ -119,70 +121,76 @@ void main()
 }
 )";
 
-class MyApp: public App
-{
-public:
+class MyApp : public App {
+  public:
     bool IS_VIEW_SPACE = true;
     std::string defaultPath = "./build/assets/";
-    
+
     std::unique_ptr<Backend::Shader> cubeShader;
     std::unique_ptr<Backend::Shader> lightShader;
-    
+
     std::unique_ptr<Backend::Texture> texture;
     std::unique_ptr<Backend::Texture> texture2;
 
     bool drawTriangle = true;
     float size = 0.3f;
-    float color[4] = {0.8f, 0.3f, 0.02f, 1.0f }; 
+    float color[4] = {0.8f, 0.3f, 0.02f, 1.0f};
     float lightColor[3] = {1.0f, 1.0f, 1.0f};
     float lightPo[3] = {-2.0f, 3.0f, 1.0f};
     glm::vec3 lightPos = glm::vec3(lightPo[0], lightPo[1], lightPo[2]);
 
     void initialize(int width, int height, Backend::BackendType backendType) {
-        std::cout << "Using " << Backend::GraphicsFactory::getBackendName(backendType) << " backend" << std::endl;
+        std::cout << "Using "
+                  << Backend::GraphicsFactory::getBackendName(backendType)
+                  << " backend" << std::endl;
 
         // Use App's built-in backend initialization
         App::initialize(width, height, false, backendType);
     }
-    
-    void setup() override
-    {
+
+    void setup() override {
         std::cout << "setUp called" << std::endl;
 
         cubeShader = getGraphicsDevice()->createShader(testVs, testFs);
         lightShader = getGraphicsDevice()->createShader(testVs, lightFs);
-        texture = getGraphicsDevice()->createTexture(defaultPath+"textures/crowdEditing.tga", false, GL_REPEAT, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
-        texture2 = getGraphicsDevice()->createTexture(defaultPath+"textures/awesomeface.png", true, GL_REPEAT, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
+        texture = getGraphicsDevice()->createTexture(
+            defaultPath + "textures/crowdEditing.tga", false, GL_REPEAT,
+            GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
+        texture2 = getGraphicsDevice()->createTexture(
+            defaultPath + "textures/awesomeface.png", true, GL_REPEAT,
+            GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
 
         cubeShader->use();
-        cubeShader->setColor("objColor", color[0], color[1], color[2], color[3]);
+        cubeShader->setColor("objColor", color[0], color[1], color[2],
+                             color[3]);
         cubeShader->setInt("texture1", 0);
         cubeShader->setInt("texture2", 1);
-        cubeShader->setVec3("lightColor",  lightColor[0], lightColor[1], lightColor[2]);
+        cubeShader->setVec3("lightColor", lightColor[0], lightColor[1],
+                            lightColor[2]);
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(0, -1, 0));
         cubeShader->setMat4("model", model);
 
         lightShader->use();
-        lightShader->setVec3("lightColor",  lightColor[0], lightColor[1], lightColor[2]);
+        lightShader->setVec3("lightColor", lightColor[0], lightColor[1],
+                             lightColor[2]);
         model = glm::mat4(1.0f);
         model = glm::scale(model, glm::vec3(size));
         model = glm::translate(model, lightPos);
-        //model = glm::scale(model, glm::vec3(1.0f));
+        // model = glm::scale(model, glm::vec3(1.0f));
         lightShader->setMat4("model", model);
-        
+
         // Create mesh data using Scene::Prim
         auto meshData = Scene::Prim::createSquareData(1.0f);
         auto asdf = std::make_shared<Scene::MeshData>(std::move(meshData));
         GLuint s1 = addShape(cubeShader.get(), asdf);
         GLuint s2 = addShape(lightShader.get(), asdf);
-        
+
         checkError();
         std::cout << "setUp End" << std::endl;
     }
 
-    void preRender() override
-    {   
+    void preRender() override {
         std::cout << "preRender Called" << std::endl;
         cubeShader->use();
         cubeShader->setColor("color", color[0], color[1], color[2], color[3]);
@@ -192,8 +200,7 @@ public:
         std::cout << "preRender End" << std::endl;
     }
 
-    void render() override
-    {
+    void render() override {
         std::cout << "render Called" << std::endl;
         fmt::print("asdf\n");
 
@@ -212,24 +219,28 @@ public:
         model = glm::translate(model, lightPos);
         model = glm::scale(model, glm::vec3(size));
         lightShader->setMat4("model", model);
-        
+
         cubeShader->use();
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(0, -1, 0));
-        //model = glm::scale(model, glm::vec3(size));
+        // model = glm::scale(model, glm::vec3(size));
         cubeShader->setMat4("model", model);
-        cubeShader->setVec3("lightColor",  lightColor[0], lightColor[1], lightColor[2]);
-        cubeShader->setColor("objColor", color[0], color[1], color[2], color[3]);
+        cubeShader->setVec3("lightColor", lightColor[0], lightColor[1],
+                            lightColor[2]);
+        cubeShader->setColor("objColor", color[0], color[1], color[2],
+                             color[3]);
         cubeShader->setBool("IS_VIEW_SPACE", IS_VIEW_SPACE);
         if (IS_VIEW_SPACE) {
             auto view = this->getViewMatrix();
-            glm::mat3 normalMat = glm::mat3(transpose(inverse(view*model)));
-            //fmt::print("{}\n", glm::to_string(normalMat));
-            //fmt::print("{}\n", glm::to_string(view*model));
+            glm::mat3 normalMat = glm::mat3(transpose(inverse(view * model)));
+            // fmt::print("{}\n", glm::to_string(normalMat));
+            // fmt::print("{}\n", glm::to_string(view*model));
             cubeShader->setMat3("normalMat", normalMat);
-            cubeShader->setVec3("lightPos", glm::vec3(view*glm::vec4(lightPos, 1.0f)));
+            cubeShader->setVec3("lightPos",
+                                glm::vec3(view * glm::vec4(lightPos, 1.0f)));
             glm::vec3 camPos = glm::vec3(0, 0, 0);
-            cubeShader->setVec3("camPos", glm::vec3(view*glm::vec4(camPos, 1.0f)));
+            cubeShader->setVec3("camPos",
+                                glm::vec3(view * glm::vec4(camPos, 1.0f)));
         } else {
             glm::mat3 normalMat = glm::mat3(transpose(inverse(model)));
             cubeShader->setMat3("normalMat", normalMat);
@@ -241,13 +252,10 @@ public:
         std::cout << "render End" << std::endl;
     }
 
-    void postRender() override
-    {
-
-    }
+    void postRender() override {}
 };
 
-int main(){
+int main() {
     MyApp app;
     Backend::BackendType backend = Backend::BackendType::OpenGL;
     app.initialize(SCR_WIDTH, SCR_HEIGHT, backend);

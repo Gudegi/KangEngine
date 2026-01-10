@@ -2,6 +2,7 @@
   "name": "vcpkg-example",
   "version": "0.0.1",
   "dependencies": [
+    "fmt",
     "glad",
     "glfw3",
     "glm",
@@ -17,6 +18,6 @@
     "pybind11",
     "python3",
     "stb",
-    "fmt"
+    "eigen3"
   ]
 }

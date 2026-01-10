@@ -7,22 +7,23 @@
 
 #ifdef KANGENGINE_USE_USD
 
-#include "../scene_backend.hpp"
-#include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usd/prim.h>
-#include <pxr/usd/usdGeom/xform.h>
+#include <pxr/usd/usd/stage.h>
+#include <pxr/usd/usdGeom/cube.h>
 #include <pxr/usd/usdGeom/mesh.h>
 #include <pxr/usd/usdGeom/sphere.h>
-#include <pxr/usd/usdGeom/cube.h>
+#include <pxr/usd/usdGeom/xform.h>
+
+#include "../scene_backend.hpp"
 
 namespace KE {
 namespace Scene {
 
 class USDScene : public SceneBackend {
-private:
+  private:
     pxr::UsdStageRefPtr _stage;
 
-public:
+  public:
     USDScene();
     ~USDScene() override = default;
 
@@ -45,10 +46,15 @@ public:
     pxr::UsdPrim getPrim(const std::string& path) const;
 
     // USD creation helpers
-    pxr::UsdPrim createXform(const std::string& path);       // Returns UsdGeomXform prim
-    pxr::UsdPrim createMesh(const std::string& path);        // Returns UsdGeomMesh prim
-    pxr::UsdPrim createSphere(const std::string& path, double radius = 1.0);  // Returns UsdGeomSphere prim
-    pxr::UsdPrim createCube(const std::string& path, double size = 1.0);      // Returns UsdGeomCube prim
+    pxr::UsdPrim
+    createXform(const std::string& path); // Returns UsdGeomXform prim
+    pxr::UsdPrim
+    createMesh(const std::string& path); // Returns UsdGeomMesh prim
+    pxr::UsdPrim
+    createSphere(const std::string& path,
+                 double radius = 1.0); // Returns UsdGeomSphere prim
+    pxr::UsdPrim createCube(const std::string& path,
+                            double size = 1.0); // Returns UsdGeomCube prim
 
     // Utilities
     void printHierarchy() const;

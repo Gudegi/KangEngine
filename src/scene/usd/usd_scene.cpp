@@ -5,13 +5,13 @@
 #ifdef KANGENGINE_USE_USD
 
 #include "usd_scene.hpp"
-#include <pxr/usd/usd/primRange.h>
-#include <pxr/usd/usdGeom/mesh.h>
-#include <pxr/usd/usdGeom/xform.h>
-#include <pxr/usd/usdGeom/sphere.h>
-#include <pxr/usd/usdGeom/cube.h>
-#include <pxr/base/vt/array.h>
 #include <iostream>
+#include <pxr/base/vt/array.h>
+#include <pxr/usd/usd/primRange.h>
+#include <pxr/usd/usdGeom/cube.h>
+#include <pxr/usd/usdGeom/mesh.h>
+#include <pxr/usd/usdGeom/sphere.h>
+#include <pxr/usd/usdGeom/xform.h>
 
 namespace KE {
 namespace Scene {
@@ -114,7 +114,8 @@ void USDScene::createNew() {
     _stage = pxr::UsdStage::CreateInMemory();
     if (_stage) {
         // Create default root xform
-        pxr::UsdGeomXform root = pxr::UsdGeomXform::Define(_stage, pxr::SdfPath("/Root"));
+        pxr::UsdGeomXform root =
+            pxr::UsdGeomXform::Define(_stage, pxr::SdfPath("/Root"));
         _stage->SetDefaultPrim(root.GetPrim());
         std::cout << "Created new USD stage with /Root" << std::endl;
     }
@@ -132,7 +133,8 @@ pxr::UsdPrim USDScene::createXform(const std::string& path) {
         std::cerr << "No stage available" << std::endl;
         return pxr::UsdPrim();
     }
-    pxr::UsdGeomXform xform = pxr::UsdGeomXform::Define(_stage, pxr::SdfPath(path));
+    pxr::UsdGeomXform xform =
+        pxr::UsdGeomXform::Define(_stage, pxr::SdfPath(path));
     return xform.GetPrim();
 }
 
@@ -141,7 +143,8 @@ pxr::UsdPrim USDScene::createMesh(const std::string& path) {
         std::cerr << "No stage available" << std::endl;
         return pxr::UsdPrim();
     }
-    pxr::UsdGeomMesh mesh = pxr::UsdGeomMesh::Define(_stage, pxr::SdfPath(path));
+    pxr::UsdGeomMesh mesh =
+        pxr::UsdGeomMesh::Define(_stage, pxr::SdfPath(path));
     return mesh.GetPrim();
 }
 
@@ -150,7 +153,8 @@ pxr::UsdPrim USDScene::createSphere(const std::string& path, double radius) {
         std::cerr << "No stage available" << std::endl;
         return pxr::UsdPrim();
     }
-    pxr::UsdGeomSphere sphere = pxr::UsdGeomSphere::Define(_stage, pxr::SdfPath(path));
+    pxr::UsdGeomSphere sphere =
+        pxr::UsdGeomSphere::Define(_stage, pxr::SdfPath(path));
     sphere.GetRadiusAttr().Set(radius);
     return sphere.GetPrim();
 }
@@ -160,7 +164,8 @@ pxr::UsdPrim USDScene::createCube(const std::string& path, double size) {
         std::cerr << "No stage available" << std::endl;
         return pxr::UsdPrim();
     }
-    pxr::UsdGeomCube cube = pxr::UsdGeomCube::Define(_stage, pxr::SdfPath(path));
+    pxr::UsdGeomCube cube =
+        pxr::UsdGeomCube::Define(_stage, pxr::SdfPath(path));
     cube.GetSizeAttr().Set(size);
     return cube.GetPrim();
 }
@@ -175,26 +180,25 @@ void USDScene::printHierarchy() const {
 
     std::function<void(const pxr::UsdPrim&, int)> printPrim =
         [&](const pxr::UsdPrim& prim, int depth) {
+            // Indentation
+            for (int i = 0; i < depth; ++i) {
+                std::cout << "  ";
+            }
 
-        // Indentation
-        for (int i = 0; i < depth; ++i) {
-            std::cout << "  ";
-        }
+            // Prim info
+            std::cout << prim.GetName() << " [" << prim.GetTypeName() << "]";
 
-        // Prim info
-        std::cout << prim.GetName() << " [" << prim.GetTypeName() << "]";
+            if (prim == _stage->GetDefaultPrim()) {
+                std::cout << " (default)";
+            }
 
-        if (prim == _stage->GetDefaultPrim()) {
-            std::cout << " (default)";
-        }
+            std::cout << std::endl;
 
-        std::cout << std::endl;
-
-        // Children
-        for (const auto& child : prim.GetChildren()) {
-            printPrim(child, depth + 1);
-        }
-    };
+            // Children
+            for (const auto& child : prim.GetChildren()) {
+                printPrim(child, depth + 1);
+            }
+        };
 
     printPrim(_stage->GetPseudoRoot(), 0);
     std::cout << "===========================" << std::endl;
