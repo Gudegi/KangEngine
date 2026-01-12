@@ -3,17 +3,17 @@
 ///
 
 #include "prim.hpp"
+#include "scene/scene_backend.hpp"
 #include <sstream>
 
 namespace KE {
 namespace Scene {
 
 Prim::Prim(const std::string& name, PrimType type, Prim* parent)
-    : _name(name), _type(type), _parent(parent)
-{
-    // 경로 계산
+    : _name(name), _type(type), _parent(parent) {
+    // Initialize prim path
     if (parent == nullptr) {
-        _path = "/";  // 루트
+        _path = "/"; // root
     } else if (parent->getPath() == "/") {
         _path = "/" + name;
     } else {
@@ -48,7 +48,7 @@ Prim* Prim::getPrimAtPath(const std::string& path) {
     // "/World/Cube" 파싱
     std::string pathCopy = path;
     if (pathCopy[0] == '/') {
-        pathCopy = pathCopy.substr(1);  // "/" 제거
+        pathCopy = pathCopy.substr(1); // "/" 제거
     }
 
     // "World/Cube" → ["World", "Cube"]
@@ -66,7 +66,7 @@ Prim* Prim::getPrimAtPath(const std::string& path) {
     for (const auto& name : parts) {
         current = current->getChild(name);
         if (!current) {
-            return nullptr;  // 경로 없음
+            return nullptr; // 경로 없음
         }
     }
 
@@ -82,48 +82,63 @@ std::vector<Prim*> Prim::getChildren() const {
     return result;
 }
 
-void Prim::setMeshData(std::shared_ptr<MeshData> data) {
-    _meshData = data;
-}
+void Prim::setMeshData(std::shared_ptr<MeshData> data) { _meshData = data; }
 
-std::shared_ptr<MeshData> Prim::getMeshData() const {
-    return _meshData;
-}
+std::shared_ptr<MeshData> Prim::getMeshData() const { return _meshData; }
 
-MeshData Prim::createSquareData(float scale)
-{
+MeshData Prim::createSquareData(float scale) {
     // Scale means the length of one side.
     float half = scale / 2;
-    //    v3----- v7  
-    //   /|      /|   
-    //  v2------v6| 
-    //  | |     | |  
-    //  | v0----|-v4  
+    //    v3----- v7
+    //   /|      /|
+    //  v2------v6|
+    //  | |     | |
+    //  | v0----|-v4
     //  |/      |/
-    //  v1------v5 
-    //      
+    //  v1------v5
+    //
     std::vector<glm::vec3> positions = {
         // v0, v1, v2, v3
-        glm::vec3(-half, -half, -half), glm::vec3(-half, -half, half), glm::vec3(-half, half, half), glm::vec3(-half, half, -half),
+        glm::vec3(-half, -half, -half),
+        glm::vec3(-half, -half, half),
+        glm::vec3(-half, half, half),
+        glm::vec3(-half, half, -half),
         // v4, v5, v6, v7
-        glm::vec3(half, -half, -half), glm::vec3(half, -half, half), glm::vec3(half, half, half), glm::vec3(half, half, -half),
+        glm::vec3(half, -half, -half),
+        glm::vec3(half, -half, half),
+        glm::vec3(half, half, half),
+        glm::vec3(half, half, -half),
         // v0, v1, v5, v4
-        glm::vec3(-half, -half, -half), glm::vec3(-half, -half, half), glm::vec3(half, -half, half), glm::vec3(half, -half, -half),
+        glm::vec3(-half, -half, -half),
+        glm::vec3(-half, -half, half),
+        glm::vec3(half, -half, half),
+        glm::vec3(half, -half, -half),
         // v3, v2, v6, v7
-        glm::vec3(-half, half, -half), glm::vec3(-half, half, half), glm::vec3(half, half, half), glm::vec3(half, half, -half),
+        glm::vec3(-half, half, -half),
+        glm::vec3(-half, half, half),
+        glm::vec3(half, half, half),
+        glm::vec3(half, half, -half),
         // v0, v3, v7, v4
-        glm::vec3(-half, -half, -half), glm::vec3(-half, half, -half), glm::vec3(half, half, -half), glm::vec3(half, -half, -half),
+        glm::vec3(-half, -half, -half),
+        glm::vec3(-half, half, -half),
+        glm::vec3(half, half, -half),
+        glm::vec3(half, -half, -half),
         // v1, v2, v6, v5
-        glm::vec3(-half, -half, half), glm::vec3(-half, half, half), glm::vec3(half, half, half), glm::vec3(half, -half, half),
+        glm::vec3(-half, -half, half),
+        glm::vec3(-half, half, half),
+        glm::vec3(half, half, half),
+        glm::vec3(half, -half, half),
     }; // positions.size() == 24
 
     std::vector<glm::vec3> normals = {
-        glm::vec3(-1, 0, 0), glm::vec3(-1, 0, 0), glm::vec3(-1, 0, 0), glm::vec3(-1, 0, 0),
-        glm::vec3(1, 0, 0), glm::vec3(1, 0, 0), glm::vec3(1, 0, 0), glm::vec3(1, 0, 0),
-        glm::vec3(0, -1, 0), glm::vec3(0, -1, 0), glm::vec3(0, -1, 0), glm::vec3(0, -1, 0),
-        glm::vec3(0, 1, 0), glm::vec3(0, 1, 0), glm::vec3(0, 1, 0), glm::vec3(0, 1, 0),
-        glm::vec3(0, 0, -1), glm::vec3(0, 0, -1), glm::vec3(0, 0, -1), glm::vec3(0, 0, -1),
-        glm::vec3(0, 0, 1), glm::vec3(0, 0, 1), glm::vec3(0, 0, 1), glm::vec3(0, 0, 1),
+        glm::vec3(-1, 0, 0), glm::vec3(-1, 0, 0), glm::vec3(-1, 0, 0),
+        glm::vec3(-1, 0, 0), glm::vec3(1, 0, 0),  glm::vec3(1, 0, 0),
+        glm::vec3(1, 0, 0),  glm::vec3(1, 0, 0),  glm::vec3(0, -1, 0),
+        glm::vec3(0, -1, 0), glm::vec3(0, -1, 0), glm::vec3(0, -1, 0),
+        glm::vec3(0, 1, 0),  glm::vec3(0, 1, 0),  glm::vec3(0, 1, 0),
+        glm::vec3(0, 1, 0),  glm::vec3(0, 0, -1), glm::vec3(0, 0, -1),
+        glm::vec3(0, 0, -1), glm::vec3(0, 0, -1), glm::vec3(0, 0, 1),
+        glm::vec3(0, 0, 1),  glm::vec3(0, 0, 1),  glm::vec3(0, 0, 1),
     };
 
     std::vector<glm::vec2> uvs = {
@@ -136,13 +151,44 @@ MeshData Prim::createSquareData(float scale)
     };
 
     std::vector<unsigned int> indices = {
-        0, 1, 2, 0, 2, 3, // left 
-        4, 6, 5, 4, 7, 6, // right
-        8, 10, 9, 8, 11, 10, // down, v0,v5,v1, v0,v4,v5
+        0,  1,  2,  0,  2,  3,  // left
+        4,  6,  5,  4,  7,  6,  // right
+        8,  10, 9,  8,  11, 10, // down, v0,v5,v1, v0,v4,v5
         12, 13, 14, 12, 14, 15, // up
         16, 17, 18, 16, 18, 19, // back
         20, 22, 21, 20, 23, 22, // front
     };
+
+    MeshData meshData;
+    meshData.vertices = positions;
+    meshData.normals = normals;
+    meshData.uvs = uvs;
+    meshData.indices = indices;
+
+    return meshData;
+}
+
+MeshData Prim::createPlaneData(float scale) {
+    float half = scale / 2;
+    std::vector<glm::vec3> positions = {
+        glm::vec3(-half, 0, half),
+        glm::vec3(-half, 0, -half),
+        glm::vec3(half, 0, half),
+        glm::vec3(half, 0, -half),
+    };
+    std::vector<glm::vec3> normals = {
+        glm::vec3(0, 1, 0),
+        glm::vec3(0, 1, 0),
+        glm::vec3(0, 1, 0),
+        glm::vec3(0, 1, 0),
+    };
+    std::vector<glm::vec2> uvs = {
+        glm::vec2(0, 0),
+        glm::vec2(0, 1),
+        glm::vec2(1, 1),
+        glm::vec2(1, 0),
+    };
+    std::vector<unsigned int> indices = {0, 1, 2, 1, 2, 3};
 
     MeshData meshData;
     meshData.vertices = positions;

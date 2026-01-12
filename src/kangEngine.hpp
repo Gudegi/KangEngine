@@ -9,15 +9,18 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include "ui/panel_manager.hpp"
-#include "ui/base_panel.hpp"
-#include "camera/camera.hpp"
-#include "window/window.hpp"
+
 #include "app/app.hpp"
-#include "utils/glm_utils.hpp"
-//#include "physics/physics.hpp"
-
+#include "camera/camera.hpp"
 #include "scene/native/prim.hpp"
+#include "ui/base_panel.hpp"
+#include "ui/panel_manager.hpp"
+#include "utils/print_debug.hpp"
+#include "utils/glm_utils.hpp"
+#include "window/window.hpp"
 
+#ifndef KANGENGINE_USE_PHYSX
+#include "physics/physics.hpp"
+#endif
 
 #endif

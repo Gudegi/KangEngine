@@ -6,44 +6,44 @@
 #define _PHYSICS_HPP_
 
 #include "PxPhysicsAPI.h"
+#include <fmt/base.h>
 
 using namespace physx;
 
 namespace KE {
 
-struct PhysicsConfig
-{
+struct PhysicsConfig {
     float dt = 1.0 / 60.0f;
     float gravity[3] = {0.0f, -9.81f, 0.0f};
-    float friction[3] = {1.0f, 1.0f, 1.0f};
+    float friction[3] = {1.0f, 1.0f, 0.0f};
 };
 
-class PhysicsWorld
-{
+class PhysicsWorld {
 
-private:
+  private:
+    PxDefaultAllocator mAllocator;
+    PxDefaultErrorCallback mErrorCallback;
+    PxFoundation* mFoundation = nullptr;
+    PxPhysics* mPhysics = nullptr;
+    PxScene* mScene = nullptr;
+    PxMaterial* mMaterial = nullptr;
 
-    PxDefaultAllocator      mAllocator;
-    PxDefaultErrorCallback  mErrorCallback;
-    PxFoundation*           mFoundation = nullptr;
-    PxPhysics*              mPhysics    = nullptr;
-    PxScene*                mScene      = nullptr;
-    PxMaterial*             mMaterial   = nullptr;
-    
     float mdt;
     PxVec3 mGravity;
     PxVec3 mFriction;
 
-public:
-
-    PhysicsWorld(PhysicsConfig config)
-    {
+  public:
+    PhysicsWorld(PhysicsConfig config) {
         mdt = config.dt;
-        mGravity = PxVec3(config.gravity[0], config.gravity[1], config.gravity[2]);
-        mFriction = PxVec3(config.friction[0], config.friction[1], config.friction[2]);
+        mGravity =
+            PxVec3(config.gravity[0], config.gravity[1], config.gravity[2]);
+        mFriction =
+            PxVec3(config.friction[0], config.friction[1], config.friction[2]);
 
-        mFoundation = PxCreateFoundation(PX_PHYSICS_VERSION, mAllocator, mErrorCallback);
-        mPhysics = PxCreatePhysics(PX_PHYSICS_VERSION, *mFoundation, PxTolerancesScale(), true);
+        mFoundation =
+            PxCreateFoundation(PX_PHYSICS_VERSION, mAllocator, mErrorCallback);
+        mPhysics = PxCreatePhysics(PX_PHYSICS_VERSION, *mFoundation,
+                                   PxTolerancesScale(), true);
 
         PxSceneDesc sceneDesc(mPhysics->getTolerancesScale());
         sceneDesc.gravity = mGravity;
@@ -51,18 +51,20 @@ public:
         sceneDesc.filterShader = PxDefaultSimulationFilterShader;
         mScene = mPhysics->createScene(sceneDesc);
 
-        mMaterial = mPhysics->createMaterial(mFriction[0], mFriction[1], mFriction[2]); // staticFriction, dynamicFriction, restitution
+        mMaterial = mPhysics->createMaterial(
+            mFriction[0], mFriction[1],
+            mFriction[2]); // staticFriction, dynamicFriction, restitution
+        fmt::print("PhysX is initialized.\n");
     }
 
-    ~PhysicsWorld()
-    {
+    ~PhysicsWorld() {
         mScene->release();
         mMaterial->release();
         mPhysics->release();
         mFoundation->release();
     };
 
-    void setDt(float dt) {mdt = dt ;} 
+    void setDt(float dt) { mdt = dt; }
 
     void addDefaultGround();
 
@@ -72,6 +74,11 @@ public:
 
     void step();
 
+    PxU32 numBodyActors() {
+        return mScene->getNbActors(PxActorTypeFlag::eRIGID_DYNAMIC);
+    }
+
+    PxScene* getScene() { return mScene; }
 };
 
 } // namespace KE

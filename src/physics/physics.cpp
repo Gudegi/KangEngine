@@ -4,7 +4,7 @@ namespace KE {
 
 void PhysicsWorld::step()
 {
-    mScene->simulate(1.0f / mdt);
+    mScene->simulate(mdt);  // mdt is already deltaTime (1/60)
     mScene->fetchResults(true);
 }
 
