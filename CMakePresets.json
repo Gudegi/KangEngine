@@ -4,9 +4,37 @@
       {
         "name": "vcpkg",
         "generator": "Ninja",
-        "binaryDir": "${sourceDir}/build",
+        "binaryDir": "${sourceDir}/build/release",
         "cacheVariables": {
-          "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+          "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+          "CMAKE_BUILD_TYPE": "Release"
+        }
+      },
+      {
+        "name": "vcpkg-debug",
+        "generator": "Ninja",
+        "binaryDir": "${sourceDir}/build/debug",
+        "cacheVariables": {
+          "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+          "CMAKE_BUILD_TYPE": "Debug"
+        }
+      },
+      {
+        "name": "vcpkg-release",
+        "generator": "Ninja",
+        "binaryDir": "${sourceDir}/build/release",
+        "cacheVariables": {
+          "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+          "CMAKE_BUILD_TYPE": "Release"
+        }
+      },
+      {
+        "name": "vcpkg-performance",
+        "generator": "Ninja",
+        "binaryDir": "${sourceDir}/build/performance",
+        "cacheVariables": {
+          "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+          "CMAKE_BUILD_TYPE": "RelWithDebInfo"
         }
       }
     ]

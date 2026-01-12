@@ -3,6 +3,24 @@ project(KangEngine)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # For vscode-clangd
+
+# Build type configuration
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (Debug, Release, Performance)" FORCE)
+endif()
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+# Compiler flags for different build types
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DKE_DEBUG")
+    message(STATUS "Debug build: Debug symbols enabled, optimizations disabled")
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DKE_NDEBUG")
+    message(STATUS "Release build: Full optimizations, no debug symbols")
+elseif(CMAKE_BUILD_TYPE STREQUAL "Performance")
+    set(CMAKE_CXX_FLAGS_Performance "-O2 -g -DKE_NDEBUG")
+    message(STATUS "Release with debug info: Optimizations + debug symbols")
+endif()
+
 set(VCPKG_BUILD_TYPE release)
 set(pxr_DIR "$ENV{HOME}/usd_build") # User config path
 set(physx_DIR "$ENV{HOME}/Physics/PhysX/physx") # User config path
@@ -36,6 +54,7 @@ endif()
 if(NOT EXISTS "${physx_DIR}")
     message(FATAL_ERROR "physx_DIR path '${physx_DIR}' does not exist. Please check your Physx build path.")
 else()
+    add_compile_definitions(KANGENGINE_USE_PHYSX)
     message(STATUS "PhysX directory found. Linking PhysX libraries.")
     #set(PHYSX_BUILD_TYPE "checked" CACHE STRING "The build type of PhysX")
     set(PHYSX_BUILD_TYPE "release" CACHE STRING "The build type of PhysX")
@@ -94,7 +113,7 @@ file(GLOB_RECURSE MAIN_FILES "${MAIN_DIR}/*.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/backend_light0.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/backend_phong_light.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/backend_material.cpp")
-file(GLOB MAIN_FILE "${MAIN_DIR}/backend_material.cpp")
+file(GLOB MAIN_FILE "${MAIN_DIR}/physx_drop_box.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/usd_example.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/scene_graph_example.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/scene_usd_example.cpp")
