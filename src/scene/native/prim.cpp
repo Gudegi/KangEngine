@@ -170,11 +170,18 @@ MeshData Prim::createSquareData(float scale) {
 
 MeshData Prim::createPlaneData(float scale) {
     float half = scale / 2;
+    //
+    // v2 ----- v3
+    // |        |
+    // |        |
+    // v0 ----- v1
+    //
+
     std::vector<glm::vec3> positions = {
-        glm::vec3(-half, 0, half),
         glm::vec3(-half, 0, -half),
-        glm::vec3(half, 0, half),
         glm::vec3(half, 0, -half),
+        glm::vec3(-half, 0, half),
+        glm::vec3(half, 0, half),
     };
     std::vector<glm::vec3> normals = {
         glm::vec3(0, 1, 0),
@@ -184,11 +191,11 @@ MeshData Prim::createPlaneData(float scale) {
     };
     std::vector<glm::vec2> uvs = {
         glm::vec2(0, 0),
+        glm::vec2(1, 0),
         glm::vec2(0, 1),
         glm::vec2(1, 1),
-        glm::vec2(1, 0),
     };
-    std::vector<unsigned int> indices = {0, 1, 2, 1, 2, 3};
+    std::vector<unsigned int> indices = {0, 1, 3, 0, 2, 3};
 
     MeshData meshData;
     meshData.vertices = positions;

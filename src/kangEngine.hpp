@@ -18,6 +18,7 @@
 #include "utils/print_debug.hpp"
 #include "utils/glm_utils.hpp"
 #include "window/window.hpp"
+#include "material/colors.hpp"
 
 #ifndef KANGENGINE_USE_PHYSX
 #include "physics/physics.hpp"

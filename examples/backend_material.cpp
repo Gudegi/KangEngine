@@ -138,14 +138,14 @@ void main()
 }
 )";
 
-class MyApp: public App
-{
-public:
+class MyApp : public App {
+  public:
     bool IS_VIEW_SPACE = true;
     std::string defaultPath = "./build/assets/";
 
-    int selectedMaterialIndex = 0;  // Current selected material index
-    bool usePhongMaterialClass = true;  // Toggle between PhongMaterial class and PhongMaterialProperties
+    int selectedMaterialIndex = 0; // Current selected material index
+    bool usePhongMaterialClass =
+        true; // Toggle between PhongMaterial class and PhongMaterialProperties
 
     std::unique_ptr<Backend::Shader> cubeShader;
     std::unique_ptr<Backend::Shader> lightShader;
@@ -153,48 +153,56 @@ public:
     std::unique_ptr<Backend::Texture> texture;
     std::unique_ptr<Backend::Texture> texture2;
 
-    std::unique_ptr<PhongMaterial> material;  // PhongMaterial class approach
+    std::unique_ptr<PhongMaterial> material; // PhongMaterial class approach
 
     bool drawTriangle = true;
     float size = 0.3f;
-    float color[4] = {0.8f, 0.3f, 0.02f, 1.0f };
+    float color[4] = {0.8f, 0.3f, 0.02f, 1.0f};
     float lightColor[3] = {1.0f, 1.0f, 1.0f};
     float lightPo[3] = {-2.0f, 3.0f, 1.0f};
     glm::vec3 lightPos = glm::vec3(lightPo[0], lightPo[1], lightPo[2]);
 
     void initialize(int width, int height, Backend::BackendType backendType) {
-        std::cout << "Using " << Backend::GraphicsFactory::getBackendName(backendType) << " backend" << std::endl;
+        std::cout << "Using "
+                  << Backend::GraphicsFactory::getBackendName(backendType)
+                  << " backend" << std::endl;
 
         // Use App's built-in backend initialization
         App::initialize(width, height, false, backendType);
     }
-    
-    void setup() override
-    {
+
+    void setup() override {
         std::cout << "setUp called" << std::endl;
 
         cubeShader = getGraphicsDevice()->createShader(testVs, testFs);
         lightShader = getGraphicsDevice()->createShader(testVs, lightFs);
-        texture = getGraphicsDevice()->createTexture(defaultPath+"textures/crowdEditing.tga", false, GL_REPEAT, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
-        texture2 = getGraphicsDevice()->createTexture(defaultPath+"textures/awesomeface.png", true, GL_REPEAT, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
+        texture = getGraphicsDevice()->createTexture(
+            defaultPath + "textures/crowdEditing.tga", false, GL_REPEAT,
+            GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
+        texture2 = getGraphicsDevice()->createTexture(
+            defaultPath + "textures/awesomeface.png", true, GL_REPEAT,
+            GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
 
         cubeShader->use();
-        //cubeShader->setColor("objColor", color[0], color[1], color[2], color[3]);
+        // cubeShader->setColor("objColor", color[0], color[1], color[2],
+        // color[3]);
         cubeShader->setInt("texture1", 0);
         cubeShader->setInt("texture2", 1);
-        cubeShader->setVec3("lightColor",  lightColor[0], lightColor[1], lightColor[2]);
+        cubeShader->setVec3("lightColor", lightColor[0], lightColor[1],
+                            lightColor[2]);
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(0, -1, 0));
         cubeShader->setMat4("model", model);
 
         lightShader->use();
-        lightShader->setVec3("lightColor",  lightColor[0], lightColor[1], lightColor[2]);
+        lightShader->setVec3("lightColor", lightColor[0], lightColor[1],
+                             lightColor[2]);
         model = glm::mat4(1.0f);
         model = glm::scale(model, glm::vec3(size));
         model = glm::translate(model, lightPos);
-        //model = glm::scale(model, glm::vec3(1.0f));
+        // model = glm::scale(model, glm::vec3(1.0f));
         lightShader->setMat4("model", model);
-        
+
         // Create mesh data using Scene::Prim
         auto meshData = Scene::Prim::createSquareData(1.0f);
         auto asdf = std::make_shared<Scene::MeshData>(std::move(meshData));
@@ -211,26 +219,25 @@ public:
         std::cout << "setUp End" << std::endl;
     }
 
-    void preRender() override
-    {   
+    void preRender() override {
         std::cout << "preRender Called" << std::endl;
         cubeShader->use();
-        //cubeShader->setColor("color", color[0], color[1], color[2], color[3]);
+        // cubeShader->setColor("color", color[0], color[1], color[2],
+        // color[3]);
         texture->bind(0);
         texture2->bind(1);
         checkError();
         std::cout << "preRender End" << std::endl;
     }
 
-    void render() override
-    {
+    void render() override {
         fmt::print("render Called\n");
 
         ImGui::Begin("Custom New Panel");
         ImGui::Text("You can create a panel in main loop.");
         ImGui::Checkbox("Draw Triangle", &drawTriangle);
         ImGui::SliderFloat("Size", &size, 0.5f, 2.0f);
-        //ImGui::ColorEdit4("Color", color);
+        // ImGui::ColorEdit4("Color", color);
         ImGui::ColorEdit4("Light Color", lightColor);
 
         // Material mode toggle
@@ -239,18 +246,21 @@ public:
         if (ImGui::RadioButton("PhongMaterial Class", usePhongMaterialClass)) {
             usePhongMaterialClass = true;
         }
-        if (ImGui::RadioButton("PhongMaterialProperties", !usePhongMaterialClass)) {
+        if (ImGui::RadioButton("PhongMaterialProperties",
+                               !usePhongMaterialClass)) {
             usePhongMaterialClass = false;
         }
         ImGui::Separator();
 
         // Material selector combo
-        const char* current_material_name = PhongMaterialLibrary::getName(static_cast<PhongMaterialType>(selectedMaterialIndex));
+        const char* current_material_name = PhongMaterialLibrary::getName(
+            static_cast<PhongMaterialType>(selectedMaterialIndex));
         if (ImGui::BeginCombo("Material", current_material_name)) {
             for (size_t n = 0; n < PhongMaterialLibrary::getCount(); n++) {
                 PhongMaterialType type = static_cast<PhongMaterialType>(n);
                 const char* name = PhongMaterialLibrary::getName(type);
-                bool is_selected = (selectedMaterialIndex == static_cast<int>(n));
+                bool is_selected =
+                    (selectedMaterialIndex == static_cast<int>(n));
                 if (ImGui::Selectable(name, is_selected)) {
                     selectedMaterialIndex = n;
                 }
@@ -263,31 +273,36 @@ public:
 
         // Update material based on mode
         if (usePhongMaterialClass) {
-            material->loadFromPreset(static_cast<PhongMaterialType>(selectedMaterialIndex));
+            material->loadFromPreset(
+                static_cast<PhongMaterialType>(selectedMaterialIndex));
         }
 
         lightShader->use();
-        lightShader->setVec3("lightColor",  lightColor[0], lightColor[1], lightColor[2]);
+        lightShader->setVec3("lightColor", lightColor[0], lightColor[1],
+                             lightColor[2]);
         lightPos.x = cos(glfwGetTime()) * 3.0f;
         lightPos.y = sin(glfwGetTime()) * 3.0f;
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, lightPos);
         model = glm::scale(model, glm::vec3(size));
         lightShader->setMat4("model", model);
-        
+
         cubeShader->use();
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(0, -1, 0));
-        //model = glm::scale(model, glm::vec3(size));
+        // model = glm::scale(model, glm::vec3(size));
         cubeShader->setMat4("model", model);
-        cubeShader->setVec3("lightColor",  lightColor[0], lightColor[1], lightColor[2]);
-        //cubeShader->setColor("objColor", color[0], color[1], color[2], color[3]);
+        cubeShader->setVec3("lightColor", lightColor[0], lightColor[1],
+                            lightColor[2]);
+        // cubeShader->setColor("objColor", color[0], color[1], color[2],
+        // color[3]);
         cubeShader->setBool("IS_VIEW_SPACE", IS_VIEW_SPACE);
         if (IS_VIEW_SPACE) {
             auto view = this->getViewMatrix();
-            glm::mat3 normalMat = glm::mat3(transpose(inverse(view*model)));
+            glm::mat3 normalMat = glm::mat3(transpose(inverse(view * model)));
             cubeShader->setMat3("normalMat", normalMat);
-            cubeShader->setVec3("light.pos", glm::vec3(view*glm::vec4(lightPos, 1.0f)));
+            cubeShader->setVec3("light.pos",
+                                glm::vec3(view * glm::vec4(lightPos, 1.0f)));
             glm::vec3 camPos = glm::vec3(0, 0, 0);
             cubeShader->setVec3("camPos", camPos);
         } else {
@@ -300,34 +315,44 @@ public:
         // Set material properties based on mode
         if (usePhongMaterialClass) {
             // PhongMaterial class approach
-            cubeShader->setVec3("material.ambient", material->ambient.x, material->ambient.y, material->ambient.z);
-            cubeShader->setVec3("material.diffuse", material->diffuse.x, material->diffuse.y, material->diffuse.z);
-            cubeShader->setVec3("material.specular", material->specular.x, material->specular.y, material->specular.z);
+            cubeShader->setVec3("material.ambient", material->ambient.x,
+                                material->ambient.y, material->ambient.z);
+            cubeShader->setVec3("material.diffuse", material->diffuse.x,
+                                material->diffuse.y, material->diffuse.z);
+            cubeShader->setVec3("material.specular", material->specular.x,
+                                material->specular.y, material->specular.z);
             cubeShader->setFloat("material.shininess", material->shininess);
         } else {
             // PhongMaterialProperties approach
-            PhongMaterialProperties materialProps = PhongMaterialLibrary::get(static_cast<PhongMaterialType>(selectedMaterialIndex));
-            cubeShader->setVec3("material.ambient", materialProps.ambient[0], materialProps.ambient[1], materialProps.ambient[2]);
-            cubeShader->setVec3("material.diffuse", materialProps.diffuse[0], materialProps.diffuse[1], materialProps.diffuse[2]);
-            cubeShader->setVec3("material.specular", materialProps.specular[0], materialProps.specular[1], materialProps.specular[2]);
+            PhongMaterialProperties materialProps = PhongMaterialLibrary::get(
+                static_cast<PhongMaterialType>(selectedMaterialIndex));
+            cubeShader->setVec3("material.ambient", materialProps.ambient[0],
+                                materialProps.ambient[1],
+                                materialProps.ambient[2]);
+            cubeShader->setVec3("material.diffuse", materialProps.diffuse[0],
+                                materialProps.diffuse[1],
+                                materialProps.diffuse[2]);
+            cubeShader->setVec3("material.specular", materialProps.specular[0],
+                                materialProps.specular[1],
+                                materialProps.specular[2]);
             cubeShader->setFloat("material.shininess", materialProps.shininess);
         }
-        glm::vec3 diffuseColor = glm::vec3(lightColor[0], lightColor[1], lightColor[2]) * glm::vec3(0.5f); // decrease the influence
-        glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f); // low influence
+        glm::vec3 diffuseColor =
+            glm::vec3(lightColor[0], lightColor[1], lightColor[2]) *
+            glm::vec3(0.5f); // decrease the influence
+        glm::vec3 ambientColor =
+            diffuseColor * glm::vec3(0.2f); // low influence
         cubeShader->setVec3("light.ambient", ambientColor);
         cubeShader->setVec3("light.diffuse", diffuseColor);
-        cubeShader->setVec3("light.specular", 1.0f, 1.0f, 1.0f); 
+        cubeShader->setVec3("light.specular", 1.0f, 1.0f, 1.0f);
         checkError();
         std::cout << "render End" << std::endl;
     }
 
-    void postRender() override
-    {
-
-    }
+    void postRender() override {}
 };
 
-int main(){
+int main() {
     MyApp app;
     Backend::BackendType backend = Backend::BackendType::OpenGL;
     app.initialize(SCR_WIDTH, SCR_HEIGHT, backend);

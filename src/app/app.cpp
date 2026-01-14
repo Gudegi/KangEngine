@@ -421,15 +421,15 @@ void App::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
 void App::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
     float fov = _camera.getFoV();
     fov -= (float)yoffset;
-    if (fov < 1.0f)
-        fov = 1.0f;
+
+    /*
     glm::vec3 cameraPos = _camera.getCameraPos();
     glm::vec3 cameraFront = _camera.getCameraLookDir();
     float cameraSpeed = static_cast<float>(10.0 * _renderVariable->deltaTime);
     cameraPos -= cameraSpeed * cameraFront;
     _camera.setCameraPos(cameraPos);
-    if (fov > 60.0f)
-        fov = 60.0f;
+    */
+
     _camera.setFoV(fov);
     _camera.updateProjMatrix(_width, _height);
 }

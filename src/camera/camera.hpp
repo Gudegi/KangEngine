@@ -10,17 +10,17 @@
 
 namespace KE {
 
-class Camera
-{
+class Camera {
 
-private:
-    glm::vec3 _cameraPos, _targetPos, _cameraLookDir, _cameraUpDir, _cameraRightDir;
+  private:
+    glm::vec3 _cameraPos, _targetPos, _cameraLookDir, _cameraUpDir,
+        _cameraRightDir;
     glm::mat4 _viewMatrix, _projMatrix;
     glm::vec3 _upAxis;
     float _FoV, _camToLookDistance, _nearPlane, _farPlane;
     unsigned int _screenWidth, _screenHeight;
 
-public:
+  public:
     float pole, azimuth;
     Camera();
     Camera(glm::vec3 cameraPos, glm::vec3 targetPos, char upAxis);
@@ -31,23 +31,23 @@ public:
     glm::mat4 getViewMatrix();
     glm::mat4 getProjMatrix();
     void updateViewMatrix();
-    void updateProjMatrix(const unsigned int scrWidth, const unsigned int scrHeight);
+    void updateProjMatrix(const unsigned int scrWidth,
+                          const unsigned int scrHeight);
 
     void setCameraPos(glm::vec3 cameraPos);
     void setTargetPos(glm::vec3 targetPos);
-    void setFoV(const float FoV);
+    void setFoV(float FoV);
     void setNearPlane(const float dis);
     void setFarPlane(const float dis);
 
-    float getFoV() {return _FoV;}
-    float getNearPlane() {return _nearPlane;}
-    float getFarPlane() {return _farPlane;}
+    float getFoV() { return _FoV; }
+    float getNearPlane() { return _nearPlane; }
+    float getFarPlane() { return _farPlane; }
     float getCamToLookDistance();
 
     glm::vec3 getCameraLookDir();
     glm::vec3 getCameraUpDir();
     glm::vec3 getCameraRightDir();
-
 };
 
 } // namespace KE
