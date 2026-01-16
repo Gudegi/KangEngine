@@ -2,6 +2,7 @@
   "name": "vcpkg-example",
   "version": "0.0.1",
   "dependencies": [
+    "eigen3",
     "fmt",
     "glad",
     "glfw3",
@@ -18,6 +19,6 @@
     "pybind11",
     "python3",
     "stb",
-    "eigen3"
+    "tinyobjloader"
   ]
 }

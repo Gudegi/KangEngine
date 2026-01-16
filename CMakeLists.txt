@@ -78,6 +78,7 @@ find_package(Stb REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 find_package(imguizmo CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
+find_package(tinyobjloader CONFIG REQUIRED)
 if(IS_PYTHON_LIB)
     find_package(Python COMPONENTS Interpreter Development REQUIRED)
     find_package(pybind11 CONFIG REQUIRED)
@@ -113,12 +114,13 @@ file(GLOB_RECURSE MAIN_FILES "${MAIN_DIR}/*.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/backend_light0.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/backend_phong_light.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/backend_material.cpp")
-file(GLOB MAIN_FILE "${MAIN_DIR}/physx_drop_box.cpp")
+#file(GLOB MAIN_FILE "${MAIN_DIR}/physx_drop_box.cpp")
+file(GLOB MAIN_FILE "${MAIN_DIR}/test_obj.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/usd_example.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/scene_graph_example.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/scene_usd_example.cpp")
 add_executable(${PROJECT_NAME} ${MAIN_FILE} ${SOURCE_FILES})
-add_custom_target(copy_assets ALL COMMAND ${CMAKE_COMMAND} -E copy_directory "${ASSETS_DIR}" "${CMAKE_BINARY_DIR}/assets")
+add_custom_target(copy_assets ALL COMMAND ${CMAKE_COMMAND} -E copy_directory "${ASSETS_DIR}" "${CMAKE_BINARY_DIR}/../assets")
 add_dependencies(${PROJECT_NAME} copy_assets)
 
 # Include directories
@@ -135,6 +137,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     imgui::imgui
     imguizmo::imguizmo
     fmt::fmt
+    tinyobjloader::tinyobjloader
 )
 
 # Link USD
