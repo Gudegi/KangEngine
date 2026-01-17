@@ -148,6 +148,7 @@ void App::coreRender() {
         _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
     }
 
+    // TODO: 아이템 불러와서 저장된 transf와 color적용해서 렌더링.
     if (_scene) {
         const auto& sceneBuffers = _scene->getBufferLists();
         for (const auto& buffer : sceneBuffers) {
@@ -161,23 +162,6 @@ void App::coreRender() {
                 buffer->vertexArray->unbind();
                 checkError();
             }
-        }
-    } else {
-        for (const auto& buffer : _bufferLists) {
-            if (buffer->backendShader) {
-                // Backend::Shader method
-                buffer->backendShader->use();
-                buffer->backendShader->setMat4("view", _viewMatrix);
-                buffer->backendShader->setMat4("projection", _projectionMatrix);
-            } else {
-                throw std::runtime_error("Unknown render type");
-            }
-
-            buffer->vertexArray->bind();
-            _graphicsDevice->drawIndexed(buffer->numIndices);
-            checkError();
-            buffer->vertexArray->unbind();
-            checkError();
         }
     }
 }

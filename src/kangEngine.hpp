@@ -17,6 +17,7 @@
 #include "ui/panel_manager.hpp"
 #include "utils/print_debug.hpp"
 #include "utils/glm_utils.hpp"
+#include "utils/load_utils.hpp"
 #include "window/window.hpp"
 #include "material/colors.hpp"
 
