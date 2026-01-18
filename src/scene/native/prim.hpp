@@ -58,6 +58,8 @@ class Prim {
 
     static MeshData createSquareData(float scale);
     static MeshData createPlaneData(float scale);
+    static MeshData createSphereData(float radius, int numLongitudes,
+                                     int numLatitudes);
 
     // 순회
     void traverse(std::function<void(Prim*)> func);

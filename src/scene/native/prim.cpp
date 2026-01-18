@@ -4,6 +4,9 @@
 
 #include "prim.hpp"
 #include "scene/scene_backend.hpp"
+#include <glm/ext/scalar_constants.hpp>
+#include <glm/fwd.hpp>
+#include <glm/trigonometric.hpp>
 #include <sstream>
 
 namespace KE {
@@ -160,10 +163,10 @@ MeshData Prim::createSquareData(float scale) {
     };
 
     MeshData meshData;
-    meshData.vertices = positions;
-    meshData.normals = normals;
-    meshData.uvs = uvs;
-    meshData.indices = indices;
+    meshData.vertices = std::move(positions);
+    meshData.normals = std::move(normals);
+    meshData.uvs = std::move(uvs);
+    meshData.indices = std::move(indices);
 
     return meshData;
 }
@@ -198,12 +201,86 @@ MeshData Prim::createPlaneData(float scale) {
     std::vector<unsigned int> indices = {0, 1, 3, 0, 2, 3};
 
     MeshData meshData;
-    meshData.vertices = positions;
-    meshData.normals = normals;
-    meshData.uvs = uvs;
-    meshData.indices = indices;
+    meshData.vertices = std::move(positions);
+    meshData.normals = std::move(normals);
+    meshData.uvs = std::move(uvs);
+    meshData.indices = std::move(indices);
 
     return meshData;
+}
+
+MeshData Prim::createSphereData(float radius, int numLongitudes,
+                                int numLatitudes) {
+    std::vector<glm::vec3> positions;
+    std::vector<glm::vec3> normals;
+    std::vector<glm::vec2> uvs;
+    std::vector<unsigned int> indices;
+
+    int vertexCount = (numLatitudes) * (numLongitudes);
+    int indexCount = (numLatitudes - 1) * (numLongitudes - 1) * 6;
+    positions.reserve(vertexCount);
+    normals.reserve(vertexCount);
+    uvs.reserve(vertexCount);
+    indices.reserve(indexCount);
+
+    float thetaUnit = (glm::pi<float>() / (numLatitudes - 1));
+    float phiUnit = (2 * glm::pi<float>() / (numLongitudes - 1));
+
+    for (int i = 0; i < numLatitudes; i++) {
+        float theta = i * thetaUnit;
+        float sinTheta = glm::sin(theta);
+        float cosTheta = glm::cos(theta);
+
+        for (int j = 0; j < numLongitudes; j++) {
+            float phi = j * phiUnit;
+            float sinPhi = glm::sin(phi);
+            float cosPhi = glm::cos(phi);
+
+            float x = sinTheta * cosPhi;
+            float y = sinTheta * sinPhi;
+            float z = cosTheta;
+
+            float u =
+                static_cast<float>(j) / static_cast<float>(numLongitudes - 1);
+            float v =
+                static_cast<float>(i) / static_cast<float>(numLatitudes - 1);
+
+            // positions.emplace_back(
+            //     glm::vec3(radius * x, radius * y, radius * z));
+            // normals.emplace_back(glm::vec3(x, y, z));
+            // uvs.emplace_back(glm::vec2(u, v));
+            positions.emplace_back(radius * x, radius * y, radius * z);
+            normals.emplace_back(x, y, z);
+            uvs.emplace_back(u, v);
+        }
+    }
+
+    for (int i = 0; i < numLatitudes - 1; i++) {
+        for (int j = 0; j < numLongitudes - 1; j++) {
+            unsigned int first = i * numLongitudes + j;
+            unsigned int second = first + numLongitudes;
+
+            // reverse (left wind)
+            /*
+            indices.emplace_back(first);
+            indices.emplace_back(second);
+            indices.emplace_back(first + 1);
+            indices.emplace_back(second);
+            indices.emplace_back(second + 1);
+            indices.emplace_back(first + 1);
+            */
+
+            indices.emplace_back(first);
+            indices.emplace_back(first + 1);
+            indices.emplace_back(second);
+            indices.emplace_back(second);
+            indices.emplace_back(first + 1);
+            indices.emplace_back(second + 1);
+        }
+    }
+
+    return MeshData(std::move(positions), std::move(normals), std::move(uvs),
+                    std::move(indices));
 }
 
 void Prim::traverse(std::function<void(Prim*)> func) {

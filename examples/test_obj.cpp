@@ -228,8 +228,11 @@ class MyApp : public App {
         // Create mesh data using Scene::Prim
         auto meshData = Scene::Prim::createSquareData(1.0f);
         auto asdf = std::make_shared<Scene::MeshData>(std::move(meshData));
+
+        auto asdf3 = std::make_shared<Scene::MeshData>(
+            std::move(Scene::Prim::createSphereData(1.0f, 12, 11)));
         GLuint s1 = addShape(cubeShader.get(), asdf);
-        GLuint s2 = addShape(lightShader.get(), asdf);
+        GLuint s2 = addShape(lightShader.get(), asdf3);
 
         auto planeData = Scene::Prim::createPlaneData(30.f);
         auto planeMesh =
