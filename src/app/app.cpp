@@ -1,7 +1,13 @@
 #include "app.hpp"
+#include "backend/base/graphics_device.hpp"
+#include "scene/native/prim.hpp"
+#include "scene/scene_backend.hpp"
 #include "ui/base_panel.hpp"
 #include "utils/glm_utils.hpp"
 #include "utils/print_debug.hpp"
+#include <exception>
+#include <memory>
+#include <optional>
 
 namespace KE {
 
@@ -148,12 +154,29 @@ void App::coreRender() {
         _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
     }
 
-    // TODO: 아이템 불러와서 저장된 transf와 color적용해서 렌더링.
     if (_scene) {
         const auto& sceneBuffers = _scene->getBufferLists();
         for (const auto& buffer : sceneBuffers) {
             if (buffer && buffer->backendShader) {
                 buffer->backendShader->use();
+                if (buffer->prim != nullptr) {
+                    // fmt::print("prim address: {}, hasTranslate: {}\n",
+                    //             (void*)buffer->prim.get(),
+                    //             buffer->prim->hasAttribute("xformOp:translate"));
+                    auto model = buffer->prim->computeModelMatrix();
+                    buffer->backendShader->setMat4("model", model);
+
+                    auto view = this->getViewMatrix();
+                    glm::mat3 normalMat =
+                        glm::mat3(transpose(inverse(view * model)));
+                    buffer->backendShader->setMat3("normalMat", normalMat);
+
+                    if (std::optional<glm::vec4> color =
+                            buffer->prim->getDisplayColorAlpha()) {
+                        buffer->backendShader->setVec4("objColor", *color);
+                    }
+                }
+
                 buffer->backendShader->setMat4("view", _viewMatrix);
                 buffer->backendShader->setMat4("projection", _projectionMatrix);
 
@@ -388,6 +411,91 @@ size_t App::addShape(PhongMaterial* material,
         return _scene->getBufferLists().size() - 1;
     } catch (const std::exception& e) {
         std::cerr << "Failed to add shape with PhongMaterial: " << e.what()
+                  << std::endl;
+        return static_cast<size_t>(-1);
+    }
+}
+
+// Shader + Prim
+size_t App::addShape(Backend::Shader* shader,
+                     std::shared_ptr<Scene::Prim> prim) {
+
+    std::shared_ptr<Scene::MeshData> meshData = prim->getMeshData();
+    if (!meshData || meshData->vertices.empty() || meshData->indices.empty()) {
+        return static_cast<size_t>(-1); // Invalid shape ID
+    }
+
+    try {
+        auto bufferInfos = std::make_shared<Scene::ShapeRenderBuffer>();
+        bufferInfos->backendShader = shader;
+        bufferInfos->prim = prim;
+
+        if (shader) {
+            shader->use();
+        }
+
+        auto positionBuffer = _graphicsDevice->createBuffer(
+            Backend::BufferType::Vertex,
+            sizeof(glm::vec3) * meshData->vertices.size(),
+            meshData->vertices.data());
+
+        std::unique_ptr<Backend::Buffer> normalBuffer;
+        if (!meshData->normals.empty()) {
+            normalBuffer = _graphicsDevice->createBuffer(
+                Backend::BufferType::Vertex,
+                sizeof(glm::vec3) * meshData->normals.size(),
+                meshData->normals.data());
+        }
+
+        std::unique_ptr<Backend::Buffer> uvBuffer;
+        if (!meshData->uvs.empty()) {
+            uvBuffer = _graphicsDevice->createBuffer(
+                Backend::BufferType::Vertex,
+                sizeof(glm::vec2) * meshData->uvs.size(), meshData->uvs.data());
+        }
+
+        bufferInfos->indexBuffer = _graphicsDevice->createBuffer(
+            Backend::BufferType::Index,
+            sizeof(unsigned int) * meshData->indices.size(),
+            meshData->indices.data());
+
+        bufferInfos->vertexArray = _graphicsDevice->createVertexArray();
+        bufferInfos->vertexArray->bind();
+
+        bufferInfos->vertexArray->setIndexBuffer(
+            bufferInfos->indexBuffer.get());
+
+        positionBuffer->bind();
+        Backend::VertexAttribute positionAttr = {
+            0, 3, Backend::VertexAttributeType::Float, false, sizeof(glm::vec3),
+            0
+
+        };
+        bufferInfos->vertexArray->setVertexAttribute(positionAttr);
+
+        normalBuffer->bind();
+        Backend::VertexAttribute normalAttr = {
+            1, 3, Backend::VertexAttributeType::Float, false, sizeof(glm::vec3),
+            0};
+        bufferInfos->vertexArray->setVertexAttribute(normalAttr);
+
+        uvBuffer->bind();
+        Backend::VertexAttribute uvAttr = {
+            2, 2, Backend::VertexAttributeType::Float, false, sizeof(glm::vec2),
+            0};
+        bufferInfos->vertexArray->setVertexAttribute(uvAttr);
+
+        bufferInfos->vertexArray->unbind();
+        bufferInfos->numIndices = meshData->indices.size();
+
+        bufferInfos->vertexBuffer = std::move(positionBuffer);
+
+        checkError();
+        _scene->addRenderable(bufferInfos);
+        return _scene->getBufferLists().size() - 1;
+
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to add shape with Scene::Prim: " << e.what()
                   << std::endl;
         return static_cast<size_t>(-1);
     }

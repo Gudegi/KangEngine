@@ -5,14 +5,23 @@
 #ifndef _SCENE_PRIM_HPP_
 #define _SCENE_PRIM_HPP_
 
+#include <glm/fwd.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <variant>
+#include <unordered_map>
 #include <string>
 #include <memory>
 #include <vector>
 #include <map>
 #include "../scene_backend.hpp"
+#include "token.hpp"
 
 namespace KE {
 namespace Scene {
+
+using AttributeValue =
+    std::variant<bool, int, float, std::string, glm::vec3, glm::vec4, glm::mat4,
+                 glm::quat, std::vector<std::string>>;
 
 // Prim 타입
 enum class PrimType {
@@ -35,10 +44,21 @@ class Prim {
 
     // 데이터 (타입에 따라 다름)
     std::shared_ptr<MeshData> _meshData;
+    std::unordered_map<Token, AttributeValue, Token::Hash> _Attributes;
+
+    // cached TODO: refactoring
+    bool _isDirty = true; // true -> compute
+    glm::mat4 _cachedModelMat = glm::mat4(1.0f);
 
   public:
     Prim(const std::string& name, PrimType type, Prim* parent = nullptr);
     ~Prim() = default;
+
+    // 이동만 허용 (unique_ptr 멤버 때문에 복사 불가)
+    Prim(Prim&&) = default;
+    Prim& operator=(Prim&&) = default;
+    Prim(const Prim&) = delete;
+    Prim& operator=(const Prim&) = delete;
 
     // 계층 구조
     Prim* addChild(const std::string& name, PrimType type);
@@ -63,6 +83,94 @@ class Prim {
 
     // 순회
     void traverse(std::function<void(Prim*)> func);
+
+    template <typename T> void setAttribute(const Token& name, const T& value) {
+        _Attributes[name] = value;
+        this->onDirtyAttributeChanged();
+    }
+
+    template <typename T>
+    void setAttribute(const std::string& name, const T& value) {
+        setAttribute(Token(name), value);
+    }
+
+    template <typename T> T getAttribute(const Token& name) const {
+        return std::get<T>(_Attributes.at(name));
+    }
+
+    template <typename T> T getAttribute(const std::string& name) const {
+        return getAttribute<T>(Token(name));
+    }
+
+    template <typename T>
+    T getAttribute(const Token& name, const T& defaultValue) const {
+        auto it = _Attributes.find(name);
+        if (it == _Attributes.end())
+            return defaultValue;
+        return std::get<T>(it->second);
+    }
+
+    template <typename T>
+    T getAttribute(const std::string& name, const T& defaultValue) const {
+        return getAttribute<T>(Token(name), defaultValue);
+    }
+
+    bool hasAttribute(const Token& name) const {
+        return _Attributes.count(name) > 0;
+    }
+
+    bool hasAttribute(const std::string& name) const {
+        return hasAttribute(Token(name));
+    }
+
+    void setXformOpOrder(const std::vector<std::string>& order) {
+        this->setAttribute("xformOpOrder", order);
+    }
+
+    // TODO: maybe impractical saving vec3 rgb color and vec4 rgba color
+    void setDisplayColor(glm::vec3 color) {
+        this->setAttribute("primvars:displaycolor", color);
+    }
+
+    std::optional<glm::vec3> getDisplayColor() {
+        if (hasAttribute("primvars:displaycolor")) {
+            return getAttribute<glm::vec3>("primvars:displaycolor");
+        }
+        return std::nullopt;
+    }
+
+    void setDisplayColorAlpha(glm::vec4 color) {
+        this->setAttribute("primvars:displaycolorAlpha", color);
+    }
+
+    std::optional<glm::vec4> getDisplayColorAlpha() {
+        if (hasAttribute("primvars:displaycolorAlpha")) {
+            return getAttribute<glm::vec4>("primvars:displaycolorAlpha");
+        }
+        return std::nullopt;
+    }
+
+    void addTranslateOp(glm::vec3 trans) {
+        this->setAttribute("xformOp:translate", trans);
+    }
+
+    void addScaleOp(glm::vec3 scale) {
+        this->setAttribute("xformOp:scale", scale);
+    }
+
+    void addRotateQuaternionOp(glm::quat quat) {
+        this->setAttribute("xformOp:rotateQuaternion", quat);
+    }
+
+    glm::mat4 computeModelMatrix();
+
+    void onDirtyAttributeChanged() {
+        _isDirty = true;
+        // children are also Dirty
+        for (auto& child : _children) {
+            child->onDirtyAttributeChanged();
+        }
+    }
 };
 
 } // namespace Scene

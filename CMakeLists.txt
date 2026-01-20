@@ -43,6 +43,13 @@ if(USE_USD)
 
     add_compile_definitions(KANGENGINE_USE_USD)
 
+    # TBB macros required for USD headers
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        add_compile_definitions(TBB_USE_ASSERT=0)
+        add_compile_definitions(TBB_USE_THREADING_TOOLS=0)
+        add_compile_definitions(TBB_USE_PERFORMANCE_WARNINGS=0)
+    endif()
+
     # USD include 경로 추가
     include_directories(${pxr_DIR}/include)
     link_directories(${pxr_DIR}/lib)
@@ -108,14 +115,13 @@ file(GLOB_RECURSE MAIN_FILES "${MAIN_DIR}/*.cpp")
 
 # Executable for KangEngine
 #add_executable(${PROJECT_NAME} ${MAIN_FILES} ${SOURCE_FILES})
-#file(GLOB MAIN_FILE "${MAIN_DIR}/light0.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/standalone_physx_hello.cpp")
-#file(GLOB MAIN_FILE "${MAIN_DIR}/backend_example.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/backend_light0.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/backend_phong_light.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/backend_material.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physx_drop_box.cpp")
-file(GLOB MAIN_FILE "${MAIN_DIR}/test_obj.cpp")
+#file(GLOB MAIN_FILE "${MAIN_DIR}/test_obj.cpp")
+file(GLOB MAIN_FILE "${MAIN_DIR}/test_prim_scene.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/usd_example.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/scene_graph_example.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/scene_usd_example.cpp")

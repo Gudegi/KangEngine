@@ -22,6 +22,7 @@
 #include "backend/graphics_factory.hpp"
 #include "material/material.hpp"
 #include "scene/scene_backend.hpp"
+#include "scene/native/prim.hpp"
 namespace KE {
 
 struct ShapeRenderBuffer {
@@ -127,6 +128,7 @@ class App {
                     std::shared_ptr<Scene::MeshData> meshData);
     size_t addShape(PhongMaterial* material,
                     std::shared_ptr<Scene::MeshData> meshData);
+    size_t addShape(Backend::Shader* shader, std::shared_ptr<Scene::Prim> prim);
     // _bufferLists // container for called in rendering loop;
     std::list<std::unique_ptr<ShapeRenderBuffer>> _bufferLists;
 };

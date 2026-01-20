@@ -5,6 +5,7 @@
 #ifndef _OPENGL_DEVICE_HPP_
 #define _OPENGL_DEVICE_HPP_
 
+#include <cstddef>
 #include <glad/glad.h>
 #include "../base/graphics_device.hpp"
 
@@ -12,13 +13,13 @@ namespace KE {
 namespace Backend {
 
 class OpenGLBuffer : public Buffer {
-private:
+  private:
     GLuint _buffer;
     GLenum _target;
     BufferType _type;
     size_t _size;
 
-public:
+  public:
     OpenGLBuffer(BufferType type, size_t size, const void* data = nullptr);
     ~OpenGLBuffer() override;
 
@@ -29,7 +30,7 @@ public:
 };
 
 class OpenGLShader : public Shader {
-private:
+  private:
     GLuint _shaderProgram;
     std::string _name;
 
@@ -39,7 +40,7 @@ private:
     void checkCompileError(GLuint shader);
     void checkLinkError(GLuint shaderProgram);
 
-public:
+  public:
     OpenGLShader(const ShaderDesc& desc);
     ~OpenGLShader() override;
 
@@ -53,44 +54,48 @@ public:
     void setBool(const std::string& name, bool value) override;
     void setInt(const std::string& name, int value) override;
     void setFloat(const std::string& name, float value) override;
-    void setColor(const std::string& name, float r, float g, float b, float a) override;
+    void setColor(const std::string& name, float r, float g, float b,
+                  float a) override;
 
     void setVec2(const std::string& name, const glm::vec2& value) override;
     void setVec2(const std::string& name, float x, float y) override;
     void setVec3(const std::string& name, const glm::vec3& value) override;
     void setVec3(const std::string& name, float x, float y, float z) override;
     void setVec4(const std::string& name, const glm::vec4& value) override;
-    void setVec4(const std::string& name, float x, float y, float z, float w) override;
+    void setVec4(const std::string& name, float x, float y, float z,
+                 float w) override;
     void setMat2(const std::string& name, const glm::mat2& value) override;
     void setMat3(const std::string& name, const glm::mat3& value) override;
     void setMat4(const std::string& name, const glm::mat4& value) override;
 };
 
 class OpenGLTexture : public Texture {
-private:
+  private:
     GLuint _textureID;
     GLenum _target = GL_TEXTURE_2D;
     int _width, _height, _channels;
     float _warpParam, _filterMinParam, _filterMaxParam;
 
-public:
-    OpenGLTexture(const TextureDesc& desc); 
-    OpenGLTexture(const TextureDesc& desc, float warpParam, float filterMinParam, float filterMaxParam);
+  public:
+    OpenGLTexture(const TextureDesc& desc);
+    OpenGLTexture(const TextureDesc& desc, float warpParam,
+                  float filterMinParam, float filterMaxParam);
     ~OpenGLTexture() override;
 
     void bind(int slot = 0) override;
     void unbind() override;
-    void setWarpParam(GLfloat warpParam=GL_REPEAT) const;
-    void setFilterParam(GLfloat filterMinParam=GL_LINEAR_MIPMAP_LINEAR, GLfloat filterMaxParam=GL_LINEAR) const;
+    void setWarpParam(GLfloat warpParam = GL_REPEAT) const;
+    void setFilterParam(GLfloat filterMinParam = GL_LINEAR_MIPMAP_LINEAR,
+                        GLfloat filterMaxParam = GL_LINEAR) const;
     int getWidth() const override { return _width; }
     int getHeight() const override { return _height; }
 };
 
 class OpenGLVertexArray : public VertexArray {
-private:
+  private:
     GLuint _vao;
 
-public:
+  public:
     OpenGLVertexArray();
     ~OpenGLVertexArray() override;
 
@@ -102,10 +107,10 @@ public:
 };
 
 class OpenGLDevice : public GraphicsDevice {
-private:
+  private:
     bool _initialized;
 
-public:
+  public:
     OpenGLDevice();
     ~OpenGLDevice() override;
 
@@ -118,7 +123,8 @@ public:
     void endFrame() override;
     void clear(float r, float g, float b, float a) override;
     void setViewport(int x, int y, int width, int height) override;
-    void drawIndexed(int indexCount) override;
+    void drawIndexed(size_t indexCount) override;
+    void drawIndexedInstanced(size_t indexCount, size_t instanceCount) override;
     void checkError() override;
 
     // Render State
@@ -127,16 +133,25 @@ public:
     void setClearColor(float r, float g, float b, float a) override;
 
     // Resource creation
-    std::unique_ptr<Buffer> createBuffer(BufferType type, size_t size, const void* data = nullptr) override;
+    std::unique_ptr<Buffer> createBuffer(BufferType type, size_t size,
+                                         const void* data = nullptr) override;
     std::unique_ptr<Shader> createShader(const ShaderDesc& desc) override;
     std::unique_ptr<Texture> createTexture(const TextureDesc& desc) override;
     std::unique_ptr<VertexArray> createVertexArray() override;
 
     // Convenience shader creation methods (KE::Shader compatible)
-    std::unique_ptr<Shader> createShader(const char* vertexSource, const char* fragmentSource) override;
-    std::unique_ptr<Shader> createShader(const std::string& vertexSource, const std::string& fragmentSource) override;
-    std::unique_ptr<Texture> createTexture(const std::string path, bool flip=false) override;
-    std::unique_ptr<Texture> createTexture(const std::string path, bool flip=false, float warpParam=GL_REPEAT, float minFilferParam=GL_LINEAR_MIPMAP_LINEAR, float maxFilterParam=GL_LINEAR) override;
+    std::unique_ptr<Shader> createShader(const char* vertexSource,
+                                         const char* fragmentSource) override;
+    std::unique_ptr<Shader>
+    createShader(const std::string& vertexSource,
+                 const std::string& fragmentSource) override;
+    std::unique_ptr<Texture> createTexture(const std::string path,
+                                           bool flip = false) override;
+    std::unique_ptr<Texture>
+    createTexture(const std::string path, bool flip = false,
+                  float warpParam = GL_REPEAT,
+                  float minFilferParam = GL_LINEAR_MIPMAP_LINEAR,
+                  float maxFilterParam = GL_LINEAR) override;
 };
 
 } // namespace Backend

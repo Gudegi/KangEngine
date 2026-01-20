@@ -4,10 +4,14 @@
 
 #include "prim.hpp"
 #include "scene/scene_backend.hpp"
+#include <glm/ext/quaternion_transform.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <glm/ext/scalar_constants.hpp>
 #include <glm/fwd.hpp>
 #include <glm/trigonometric.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <sstream>
+#include "xform_token.hpp"
 
 namespace KE {
 namespace Scene {
@@ -288,6 +292,69 @@ void Prim::traverse(std::function<void(Prim*)> func) {
     for (auto& child : _children) {
         child->traverse(func);
     }
+}
+
+glm::mat4 Prim::computeModelMatrix() {
+    if (_isDirty) {
+        glm::mat4 result(1.0f);
+
+        const std::vector<Token>* orderPtr = &XformTokens::defaultOpOrder;
+
+        if (hasAttribute(XformTokens::opOrder)) {
+            std::vector<Token> customOrder;
+            const auto& strOrder =
+                getAttribute<std::vector<std::string>>(XformTokens::opOrder);
+            customOrder.reserve(strOrder.size());
+            for (const auto& s : strOrder) {
+                customOrder.emplace_back(s);
+            }
+            orderPtr = &customOrder;
+        }
+
+        for (const auto& opToken : *orderPtr) {
+            if (!this->hasAttribute(opToken))
+                continue;
+
+            XformOpType type = XformTokens::getXformOpType(opToken);
+            glm::mat4 opMat(1.0f);
+
+            switch (type) {
+            case XformOpType::Translate: {
+                auto t = getAttribute<glm::vec3>(opToken);
+                opMat = glm::translate(glm::mat4(1.0f), t);
+                break;
+            }
+            case XformOpType::RotateQuat: {
+                auto q = getAttribute<glm::quat>(opToken);
+                opMat = glm::mat4_cast(q);
+                break;
+            }
+            case XformOpType::RotateXYZ: {
+                auto r = getAttribute<glm::vec3>(opToken);
+                glm::mat4 rot =
+                    glm::rotate(glm::mat4(1.0f), glm::radians(r.x), {1, 0, 0});
+                rot = glm::rotate(rot, glm::radians(r.y), {0, 1, 0});
+                rot = glm::rotate(rot, glm::radians(r.z), {0, 0, 1});
+                opMat = rot;
+                break;
+            }
+            case XformOpType::Scale: {
+                auto s = getAttribute<glm::vec3>(opToken);
+                opMat = glm::scale(glm::mat4(1.0f), s);
+                break;
+            }
+            default:
+                // TODO: Unknown Op 혹은 지원하지 않는 타입 처리
+                break;
+            }
+
+            result = opMat * result; // T * R * S * vec right when using glm.
+            // result = result * opMat; // S * R * T * vec
+        }
+        _cachedModelMat = result;
+        _isDirty = false;
+    }
+    return _cachedModelMat;
 }
 
 } // namespace Scene

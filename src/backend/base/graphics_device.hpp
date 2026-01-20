@@ -15,51 +15,20 @@ namespace KE {
 namespace Backend {
 
 using std::string;
-using std::vector;
 using std::unique_ptr;
+using std::vector;
 
-enum class BackendType {
-    OpenGL,
-    Vulkan,
-    WebGPU
-};
+enum class BackendType { OpenGL, Vulkan, WebGPU };
 
-enum class BufferType {
-    Vertex,
-    Index,
-    Uniform
-};
+enum class BufferType { Vertex, Index, Uniform };
 
-enum class ShaderType {
-    Vertex,
-    Fragment,
-    Geometry,
-    Compute
-};
+enum class ShaderType { Vertex, Fragment, Geometry, Compute };
 
-enum class UniformType {
-    Int,
-    Float,
-    Vec2,
-    Vec3,
-    Vec4,
-    Mat3,
-    Mat4
-};
+enum class UniformType { Int, Float, Vec2, Vec3, Vec4, Mat3, Mat4 };
 
-enum class VertexAttributeType {
-    Float,
-    Int,
-    UnsignedInt,
-    Byte,
-    UnsignedByte
-};
+enum class VertexAttributeType { Float, Int, UnsignedInt, Byte, UnsignedByte };
 
-enum class PolygonMode {
-    Fill,
-    Line,
-    Point
-};
+enum class PolygonMode { Fill, Line, Point };
 
 struct VertexAttribute {
     int location;
@@ -95,7 +64,7 @@ class Texture;
 class VertexArray;
 
 class GraphicsDevice {
-public:
+  public:
     virtual ~GraphicsDevice() = default;
 
     virtual void initialize() = 0;
@@ -107,7 +76,10 @@ public:
     virtual void endFrame() = 0;
     virtual void clear(float r, float g, float b, float a) = 0;
     virtual void setViewport(int x, int y, int width, int height) = 0;
-    virtual void drawIndexed(int indexCount) = 0;
+    virtual void drawIndexed(size_t indexCount) = 0;
+    // instanced rendering
+    virtual void drawIndexedInstanced(size_t indexCount,
+                                      size_t instanceCount) = 0;
     virtual void checkError() = 0;
 
     // Render State
@@ -116,20 +88,28 @@ public:
     virtual void setClearColor(float r, float g, float b, float a) = 0;
 
     // Resource creation
-    virtual std::unique_ptr<Buffer> createBuffer(BufferType type, size_t size, const void* data = nullptr) = 0;
+    virtual std::unique_ptr<Buffer>
+    createBuffer(BufferType type, size_t size, const void* data = nullptr) = 0;
     virtual std::unique_ptr<Shader> createShader(const ShaderDesc& desc) = 0;
     virtual std::unique_ptr<Texture> createTexture(const TextureDesc& desc) = 0;
     virtual std::unique_ptr<VertexArray> createVertexArray() = 0;
 
     // OpenGL specific functions
-    virtual std::unique_ptr<Shader> createShader(const char* vertexSource, const char* fragmentSource) = 0;
-    virtual std::unique_ptr<Shader> createShader(const std::string& vertexSource, const std::string& fragmentSource) = 0;
-    virtual std::unique_ptr<Texture> createTexture(const std::string path, bool flip=false) = 0;
-    virtual std::unique_ptr<Texture> createTexture(const std::string path, bool flip, float warpParam, float minFilferParam, float maxFilterParam) = 0;
+    virtual std::unique_ptr<Shader>
+    createShader(const char* vertexSource, const char* fragmentSource) = 0;
+    virtual std::unique_ptr<Shader>
+    createShader(const std::string& vertexSource,
+                 const std::string& fragmentSource) = 0;
+    virtual std::unique_ptr<Texture> createTexture(const std::string path,
+                                                   bool flip = false) = 0;
+    virtual std::unique_ptr<Texture> createTexture(const std::string path,
+                                                   bool flip, float warpParam,
+                                                   float minFilferParam,
+                                                   float maxFilterParam) = 0;
 };
 
 class Buffer {
-public:
+  public:
     virtual ~Buffer() = default;
     virtual void bind() = 0;
     virtual void unbind() = 0;
@@ -138,33 +118,36 @@ public:
 };
 
 class Shader {
-public:
+  public:
     virtual ~Shader() = default;
     virtual void bind() = 0;
     virtual void unbind() = 0;
 
     // KE::Shader compatibility
-    virtual void use() = 0;  // Alias for bind()
+    virtual void use() = 0; // Alias for bind()
 
     // Uniform setters - KE::Shader compatible
     virtual void setBool(const std::string& name, bool value) = 0;
     virtual void setInt(const std::string& name, int value) = 0;
     virtual void setFloat(const std::string& name, float value) = 0;
-    virtual void setColor(const std::string& name, float r, float g, float b, float a) = 0;
+    virtual void setColor(const std::string& name, float r, float g, float b,
+                          float a) = 0;
 
     virtual void setVec2(const std::string& name, const glm::vec2& value) = 0;
     virtual void setVec2(const std::string& name, float x, float y) = 0;
     virtual void setVec3(const std::string& name, const glm::vec3& value) = 0;
-    virtual void setVec3(const std::string& name, float x, float y, float z) = 0;
+    virtual void setVec3(const std::string& name, float x, float y,
+                         float z) = 0;
     virtual void setVec4(const std::string& name, const glm::vec4& value) = 0;
-    virtual void setVec4(const std::string& name, float x, float y, float z, float w) = 0;
+    virtual void setVec4(const std::string& name, float x, float y, float z,
+                         float w) = 0;
     virtual void setMat2(const std::string& name, const glm::mat2& value) = 0;
     virtual void setMat3(const std::string& name, const glm::mat3& value) = 0;
     virtual void setMat4(const std::string& name, const glm::mat4& value) = 0;
 };
 
 class Texture {
-public:
+  public:
     virtual ~Texture() = default;
     virtual void bind(int slot = 0) = 0;
     virtual void unbind() = 0;
@@ -173,7 +156,7 @@ public:
 };
 
 class VertexArray {
-public:
+  public:
     virtual ~VertexArray() = default;
     virtual void bind() = 0;
     virtual void unbind() = 0;
