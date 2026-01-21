@@ -252,6 +252,7 @@ if(IS_PYTHON_LIB)
         VISIBILITY_INLINES_HIDDEN ON
     )
 
+    # cmake --build build/release --target install
     install(TARGETS ${PYTHON_MODULE_NAME}
         LIBRARY  DESTINATION ${BIND_DIR}
     )
