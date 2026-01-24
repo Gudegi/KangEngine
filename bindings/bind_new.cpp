@@ -32,7 +32,7 @@ class PyApp : public App {
     }
 };
 
-PYBIND11_MODULE(kangengine, m) {
+PYBIND11_MODULE(_kangengine, m) {
     m.doc() = "KangEngine Python bindings";
 
     // Bind scene system first (needed for Scene::BackendType in App.initialize)

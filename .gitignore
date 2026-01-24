@@ -52,3 +52,6 @@ imgui.ini
 
 *.usda
 references
+
+*.pyc
+*.egg-info

@@ -29,6 +29,7 @@ set(ASSETS_DIR "${CMAKE_SOURCE_DIR}/assets")
 set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
 set(MAIN_DIR "${CMAKE_SOURCE_DIR}/examples")
 set(BIND_DIR "${CMAKE_SOURCE_DIR}/bindings")
+set(PYTHON_DL_DIR "${CMAKE_SOURCE_DIR}/python/${PROJECT_NAME}")
 option(IS_PYTHON_LIB "Build Python bindings" OFF) # Use -DIS_PYTHON_LIB=ON to enable
 option(USE_USD "Enable USD support" OFF) # Use -DUSE_USD=ON to enable
 
@@ -87,7 +88,10 @@ find_package(imguizmo CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(tinyobjloader CONFIG REQUIRED)
 if(IS_PYTHON_LIB)
+    # Prefer system Python over vcpkg's Python
+    set(Python_FIND_STRATEGY LOCATION)
     find_package(Python COMPONENTS Interpreter Development REQUIRED)
+    message(STATUS "Python: ${Python_EXECUTABLE} (${Python_VERSION})")
     find_package(pybind11 CONFIG REQUIRED)
 endif()
 if(EXISTS "${physx_DIR}")
@@ -184,7 +188,7 @@ endif()
 
 # Python Module for pybind11
 if(IS_PYTHON_LIB)
-    set(PYTHON_MODULE_NAME "kangengine")
+    set(PYTHON_MODULE_NAME "_kangengine")
     #file(GLOB_RECURSE PYBIND_SOURCE_FILES "${BIND_DIR}/*.cpp")
     file(GLOB PYBIND_SOURCE_FILES
         "${BIND_DIR}/bind_new.cpp"
@@ -247,6 +251,8 @@ if(IS_PYTHON_LIB)
         endif()
     endif()
     set_target_properties(${PYTHON_MODULE_NAME} PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY "${PYTHON_DL_DIR}"  # Unix
+        # RUNTIME_OUTPUT_DIRECTORY "${PYTHON_DL_DIR}"  # Windows
         INTERPROCEDURAL_OPTIMIZATION ON
         CXX_VISIBILITY_PRESET default
         VISIBILITY_INLINES_HIDDEN ON
@@ -254,6 +260,6 @@ if(IS_PYTHON_LIB)
 
     # cmake --build build/release --target install
     install(TARGETS ${PYTHON_MODULE_NAME}
-        LIBRARY  DESTINATION ${BIND_DIR}
+        LIBRARY  DESTINATION ${PYTHON_DL_DIR}
     )
 endif()
