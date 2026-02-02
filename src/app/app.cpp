@@ -5,6 +5,7 @@
 #include "ui/base_panel.hpp"
 #include "utils/glm_utils.hpp"
 #include "utils/print_debug.hpp"
+#include "utils/asset_path.hpp"
 #include <exception>
 #include <memory>
 #include <optional>
@@ -108,6 +109,7 @@ void App::initialize(int width, int height, bool hideUi,
     _camera.init(cameraPos, cameraTarget, 'y');
     _camera.updateProjMatrix(_width, _height);
     _panelManager.init(this->getWindow());
+    _panelManager.loadFont(KE::getAssetPath("fonts/godoFont/GodoM.ttf"), true);
     _panelManager.addPanel(std::make_unique<BasePanel>());
 
     // Use backend abstraction instead of direct OpenGL

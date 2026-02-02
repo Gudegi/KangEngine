@@ -5,8 +5,6 @@ Demonstrates full rendering pipeline with Prim and shader system.
 
 import sys
 from pyglm import glm
-sys.path.insert(0, './bindings')
-
 import kangengine as ke
 from kangengine import scene
 

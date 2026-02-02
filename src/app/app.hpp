@@ -13,6 +13,7 @@
 
 #include "camera/camera.hpp"
 #include "ui/panel_manager.hpp"
+#include "utils/asset_path.hpp"
 #include "window/window.hpp"
 // #include "mesh/prim.hpp"
 // #include "mesh/buffer.hpp"

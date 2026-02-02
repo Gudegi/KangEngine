@@ -4,106 +4,138 @@
 
 namespace KE {
 
-PanelManager::PanelManager()
-{
-}
+PanelManager::PanelManager() {}
 
-PanelManager::~PanelManager()
-{
+PanelManager::~PanelManager() {
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 }
 
-void PanelManager::init(GLFWwindow* window)
-{
+void PanelManager::init(GLFWwindow* window) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    ImGuiIO& io = ImGui::GetIO();
+    (void)io;
+    io.ConfigFlags |=
+        ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+    // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable
+    // Gamepad Controls
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    //ImGui::StyleColorsDark();
-    //ImGui::StyleColorsClassic();
+    // ImGui::StyleColorsDark();
+    // ImGui::StyleColorsClassic();
     draculaTheme();
-    
+
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 410");
     scaleDPI(window);
+
+    // Load default font
+    float dpiScale = getDPIScale(window);
+#ifdef __APPLE__
+    // TODO: improve me.
+    _fontSize = 13.0f;
+#else
+    _fontSize = 11.0f * dpiScale;
+#endif
+    // loadFont("./assets/fonts/godoFont/GodoM.ttf", fontSize, true);
 }
 
-void PanelManager::scaleDPI(GLFWwindow* window)
-{
-    // TODO: could make better
-    ImGuiIO& io = ImGui::GetIO();
+float PanelManager::getDPIScale(GLFWwindow* window) {
     float xScale, yScale;
     GLFWmonitor* monitor = glfwGetWindowMonitor(window);
     if (!monitor) {
         monitor = glfwGetPrimaryMonitor();
     }
     glfwGetMonitorContentScale(monitor, &xScale, &yScale);
-    //std::cout << xScale << " " << yScale << std::endl;
-    float dpiScale = (xScale + yScale) * 0.5f;
-    #ifdef __linux__
+    return (xScale + yScale) * 0.5f;
+}
+
+void PanelManager::scaleDPI(GLFWwindow* window) {
+    float dpiScale = getDPIScale(window);
+
+#ifdef __linux__
+    ImGuiIO& io = ImGui::GetIO();
     ImGuiStyle& style = ImGui::GetStyle();
     style.ScaleAllSizes(dpiScale);
     io.FontGlobalScale = dpiScale;
-    #endif
-    float originalFontSize = 9.0f;
-    ImFontConfig config;
-    config.SizePixels = originalFontSize * dpiScale;
-    io.Fonts->Clear();
-    io.Fonts->AddFontDefault(&config);
-    //io.Fonts->AddFontFromFileTTF("path/to/your/font.ttf", originalFontSize * dpiScale);
-    io.Fonts->Build();
+#endif
 }
 
-//void PanelManager::addPanel(Panel* panel)
-void PanelManager::addPanel(std::unique_ptr<Panel> panel)
-{
+bool PanelManager::loadFont(const std::string& fontPath, bool loadKorean) {
+    return loadFont(fontPath, _fontSize, loadKorean);
+}
+
+bool PanelManager::loadFont(const std::string& fontPath, float fontSize,
+                            bool loadKorean) {
+    ImGuiIO& io = ImGui::GetIO();
+    io.Fonts->Clear();
+
+    ImFontConfig config;
+    config.OversampleH = 2;
+    config.OversampleV = 2;
+
+    ImFont* font = nullptr;
+    if (loadKorean) {
+        font = io.Fonts->AddFontFromFileTTF(fontPath.c_str(), fontSize, &config,
+                                            io.Fonts->GetGlyphRangesKorean());
+    } else {
+        font =
+            io.Fonts->AddFontFromFileTTF(fontPath.c_str(), fontSize, &config);
+    }
+
+    if (!font) {
+        std::cerr << "Failed to load font: " << fontPath
+                  << ", using default font" << std::endl;
+        io.Fonts->AddFontDefault();
+        io.Fonts->Build();
+        return false;
+    }
+
+    io.Fonts->Build();
+    return true;
+}
+
+// void PanelManager::addPanel(Panel* panel)
+void PanelManager::addPanel(std::unique_ptr<Panel> panel) {
     _panels.push_back(std::move(panel));
     //_panels.push_back(panel);
 }
 
-void PanelManager::preRender()
-{
+void PanelManager::preRender() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 }
 
-void PanelManager::render()
-{
+void PanelManager::render() {
     ImGuiIO& io = ImGui::GetIO();
-    if (!io.WantCaptureMouse)
-    {
+    if (!io.WantCaptureMouse) {
         // Your input functions here
     }
 
-    for (auto &panel : _panels) 
-    {   
+    for (auto& panel : _panels) {
         panel->buildPanel();
     }
 
     ImGui::Begin("Info");
     ImGui::Separator();
     ImGui::Text("tmp text.");
-    //ImGui::Checkbox("Draw Triangle", &drawTriangle);
-    //ImGui::SliderFloat("Size", &size, 0.5f, 2.0f);
-    //ImGui::ColorEdit4("Color", color);
+    // ImGui::Checkbox("Draw Triangle", &drawTriangle);
+    // ImGui::SliderFloat("Size", &size, 0.5f, 2.0f);
+    // ImGui::ColorEdit4("Color", color);
     ImGui::End();
 }
 
-void PanelManager::postRender()
-{
+void PanelManager::postRender() {
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-void PanelManager::draculaTheme()
-{
-    // reference : https://github.com/ocornut/imgui/issues/707#issuecomment-1372640066
-    auto &colors = ImGui::GetStyle().Colors;
+void PanelManager::draculaTheme() {
+    // reference :
+    // https://github.com/ocornut/imgui/issues/707#issuecomment-1372640066
+    auto& colors = ImGui::GetStyle().Colors;
     colors[ImGuiCol_WindowBg] = ImVec4{0.1f, 0.1f, 0.13f, 1.0f};
     colors[ImGuiCol_MenuBarBg] = ImVec4{0.16f, 0.16f, 0.21f, 1.0f};
 
@@ -169,7 +201,7 @@ void PanelManager::draculaTheme()
     // Docking
     colors[ImGuiCol_DockingPreview] = ImVec4{0.44f, 0.37f, 0.61f, 1.0f};
 
-    auto &style = ImGui::GetStyle();
+    auto& style = ImGui::GetStyle();
     style.TabRounding = 4;
     style.ScrollbarRounding = 9;
     style.WindowRounding = 7;

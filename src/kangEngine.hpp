@@ -15,6 +15,7 @@
 #include "scene/native/prim.hpp"
 #include "ui/base_panel.hpp"
 #include "ui/panel_manager.hpp"
+#include "utils/asset_path.hpp"
 #include "utils/print_debug.hpp"
 #include "utils/glm_utils.hpp"
 #include "utils/load_utils.hpp"

@@ -202,7 +202,7 @@ class MyApp : public App {
             Scene::Prim::createSquareData(1.0f));
         auto sphereMeshData = std::make_shared<Scene::MeshData>(
             Scene::Prim::createSphereData(1.0f, 12, 11));
-        std::string inputfile = "./build/assets/external/bunny.obj";
+        std::string inputfile = KE::getAssetPath("external/bunny.obj");
         tinyobj::ObjReaderConfig reader_config;
         reader_config.mtl_search_path = "./"; // Path to material files
         auto bunnyMeshData = std::make_shared<Scene::MeshData>(

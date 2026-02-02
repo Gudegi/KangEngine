@@ -30,7 +30,6 @@ set(ASSETS_SIMLINK_DIR "${CMAKE_BINARY_DIR}/../assets")
 set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
 set(MAIN_DIR "${CMAKE_SOURCE_DIR}/examples")
 set(BIND_DIR "${CMAKE_SOURCE_DIR}/bindings")
-set(PYTHON_DL_DIR "${CMAKE_SOURCE_DIR}/python/${PROJECT_NAME}")
 
 option(IS_PYTHON_LIB "Build Python bindings" OFF) # Use -DIS_PYTHON_LIB=ON to enable
 option(USE_USD "Enable USD support" OFF) # Use -DUSE_USD=ON to enable
@@ -185,6 +184,11 @@ file(GLOB MAIN_FILE "${MAIN_DIR}/test_prim_scene.cpp")
 add_executable(${PROJECT_NAME} ${MAIN_FILE})
 target_link_libraries(${PROJECT_NAME} PRIVATE engine_core)
 
+# Define asset path macro for C++ executable
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    KANGENGINE_ASSETS_ROOT="${CMAKE_SOURCE_DIR}/assets"
+)
+
 # Create asset folder simlink
 if(EXISTS "${ASSETS_SIMLINK_DIR}")
     file(REMOVE_RECURSE "${ASSETS_SIMLINK_DIR}")
@@ -198,6 +202,7 @@ file(CREATE_LINK
 # Python Module for pybind11
 if(IS_PYTHON_LIB)
     set(PYTHON_MODULE_NAME "_kangengine")
+    set(PYTHON_DL_DIR "${CMAKE_SOURCE_DIR}/python/${PROJECT_NAME}")
     #file(GLOB_RECURSE PYBIND_SOURCE_FILES "${BIND_DIR}/*.cpp")
     file(GLOB PYBIND_SOURCE_FILES
         "${BIND_DIR}/bind_new.cpp"
@@ -207,6 +212,10 @@ if(IS_PYTHON_LIB)
     
     Python_add_library(${PYTHON_MODULE_NAME} MODULE
         ${PYBIND_SOURCE_FILES}
+    )
+    # Define asset path macro for python lib
+    target_compile_definitions(${PYTHON_MODULE_NAME} PRIVATE
+        KANGENGINE_ASSETS_ROOT="${PYTHON_DL_DIR}/assets"
     )
     
     target_link_libraries(${PYTHON_MODULE_NAME} PRIVATE
@@ -224,7 +233,19 @@ if(IS_PYTHON_LIB)
         VISIBILITY_INLINES_HIDDEN ON
     )
 
+    set(PYTHON_ASSETS_DIR "${PYTHON_DL_DIR}/assets")
+    if(NOT EXISTS "${PYTHON_ASSETS_DIR}")
+        file(CREATE_LINK "${ASSETS_DIR}" "${PYTHON_ASSETS_DIR}" SYMBOLIC)
+    endif()
+    #add_custom_command(TARGET ${PYTHON_MODULE_NAME} POST_BUILD
+    #    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    #    "${ASSETS_DIR}" "PYTHON_ASSETS_DIR"
+    #    COMMENT "Copying assets to Python module directory"
+    #)
+
     # cmake --build build/release --target install
+    install(DIRECTORY "${ASSETS_DIR}/" 
+        DESTINATION "${PYTHON_ASSETS_DIR}")
     install(TARGETS ${PYTHON_MODULE_NAME}
         LIBRARY  DESTINATION ${PYTHON_DL_DIR}
     )
