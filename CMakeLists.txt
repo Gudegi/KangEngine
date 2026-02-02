@@ -2,68 +2,82 @@ cmake_minimum_required(VERSION 3.16)
 project(KangEngine)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # For vscode-clangd
 
 # Build type configuration
 if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (Debug, Release, Performance)" FORCE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (Debug, Release, RelWithDebInfo)" FORCE)
 endif()
-message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "----Build Start, type: ${CMAKE_BUILD_TYPE}")
+
 # Compiler flags for different build types
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DKE_DEBUG")
-    message(STATUS "Debug build: Debug symbols enabled, optimizations disabled")
-elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DKE_NDEBUG")
-    message(STATUS "Release build: Full optimizations, no debug symbols")
-elseif(CMAKE_BUILD_TYPE STREQUAL "Performance")
-    set(CMAKE_CXX_FLAGS_Performance "-O2 -g -DKE_NDEBUG")
-    message(STATUS "Release with debug info: Optimizations + debug symbols")
-endif()
+add_library(build_configs INTERFACE)
+target_compile_definitions(build_configs INTERFACE
+    $<$<CONFIG:Debug>:KE_DEBUG _DEBUG>
+    $<$<CONFIG:Release>:KE_NDEBUG NDEBUG>
+    $<$<CONFIG:RelWithDebInfo>:KE_NDEBUG NDEBUG>
+)
+target_compile_options(build_configs INTERFACE
+    $<$<CONFIG:Debug>:-O0 -g>
+    $<$<CONFIG:Release>:-O3>
+    $<$<CONFIG:RelWithDebInfo>:-O2 -g>
+)
 
 set(VCPKG_BUILD_TYPE release)
-set(pxr_DIR "$ENV{HOME}/usd_build") # User config path
-set(physx_DIR "$ENV{HOME}/Physics/PhysX/physx") # User config path
-
 set(ASSETS_DIR "${CMAKE_SOURCE_DIR}/assets")
+set(ASSETS_SIMLINK_DIR "${CMAKE_BINARY_DIR}/../assets")
 set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
 set(MAIN_DIR "${CMAKE_SOURCE_DIR}/examples")
 set(BIND_DIR "${CMAKE_SOURCE_DIR}/bindings")
 set(PYTHON_DL_DIR "${CMAKE_SOURCE_DIR}/python/${PROJECT_NAME}")
+
 option(IS_PYTHON_LIB "Build Python bindings" OFF) # Use -DIS_PYTHON_LIB=ON to enable
 option(USE_USD "Enable USD support" OFF) # Use -DUSE_USD=ON to enable
+option(USE_PHYSX "Enable Physx support" ON) # Use -DUSE_PHYSX=ON to enable
+
+
+##### Link pre-compiled libs #####
+add_library(pre_compiled_ext INTERFACE)
 
 if(USE_USD)
+    set(pxr_DIR "$ENV{HOME}/usd_build") # User config path
     if(NOT EXISTS "${pxr_DIR}")
         message(FATAL_ERROR "pxr_DIR path '${pxr_DIR}' does not exist. Please check your USD build path.")
     endif()
-
-    # USD 경로 설정
     set(CMAKE_PREFIX_PATH "${pxr_DIR}" ${CMAKE_PREFIX_PATH})
     find_package(pxr REQUIRED)
 
-    add_compile_definitions(KANGENGINE_USE_USD)
-
-    # TBB macros required for USD headers
+    target_compile_definitions(pre_compiled_ext INTERFACE KANGENGINE_USE_USD)
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        add_compile_definitions(TBB_USE_ASSERT=0)
-        add_compile_definitions(TBB_USE_THREADING_TOOLS=0)
-        add_compile_definitions(TBB_USE_PERFORMANCE_WARNINGS=0)
+        target_compile_definitions(pre_compiled_ext INTERFACE 
+            TBB_USE_ASSERT=0 
+            TBB_USE_THREADING_TOOLS=0 
+            TBB_USE_PERFORMANCE_WARNINGS=0
+        )
     endif()
 
-    # USD include 경로 추가
-    include_directories(${pxr_DIR}/include)
-    link_directories(${pxr_DIR}/lib)
+    target_include_directories(pre_compiled_ext INTERFACE ${pxr_DIR}/include)
+    target_link_directories(pre_compiled_ext INTERFACE ${pxr_DIR}/lib)
+    target_link_libraries(pre_compiled_ext INTERFACE
+        usd
+        usdGeom
+        sdf
+        tf
+    )
 
     message(STATUS "USD support enabled")
     message(STATUS "USD include dir: ${pxr_DIR}/include")
     message(STATUS "USD lib dir: ${pxr_DIR}/lib")
 endif()
-if(NOT EXISTS "${physx_DIR}")
-    message(FATAL_ERROR "physx_DIR path '${physx_DIR}' does not exist. Please check your Physx build path.")
-else()
-    add_compile_definitions(KANGENGINE_USE_PHYSX)
-    message(STATUS "PhysX directory found. Linking PhysX libraries.")
+
+if(USE_PHYSX)
+    set(physx_DIR "$ENV{HOME}/Physics/PhysX/physx") # User config path
+    if(NOT EXISTS "${physx_DIR}")
+        message(FATAL_ERROR "physx_DIR path '${physx_DIR}' does not exist. Please check your Physx build path.")
+    endif()
+    
+    target_compile_definitions(pre_compiled_ext INTERFACE KANGENGINE_USE_PHYSX)
     #set(PHYSX_BUILD_TYPE "checked" CACHE STRING "The build type of PhysX")
     set(PHYSX_BUILD_TYPE "release" CACHE STRING "The build type of PhysX")
     set_property(CACHE PHYSX_BUILD_TYPE PROPERTY STRINGS debug checked profile release)
@@ -72,7 +86,48 @@ else()
             set(CMAKE_BUILD_TYPE "Debug")
         endif()
     endif()
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        message("Building project in debug with PhysX ${PHYSX_BUILD_TYPE} configuration")
+        target_compile_definitions(pre_compiled_ext INTERFACE _DEBUG)
+    else()
+        message("Building project in release configuration with PhysX ${PHYSX_BUILD_TYPE} configuration")
+        target_compile_definitions(pre_compiled_ext INTERFACE NDEBUG)
+    endif()
+
+    target_include_directories(pre_compiled_ext INTERFACE ${physx_DIR}/include)
+    if(APPLE)
+        target_link_directories(pre_compiled_ext INTERFACE "${physx_DIR}/bin/mac.x86_64/${PHYSX_BUILD_TYPE}") # TODO: actually it need to be not x86 but arm. fix build setting
+    elseif(UNIX)
+        target_link_directories(pre_compiled_ext INTERFACE "${physx_DIR}/bin/linux.x86_64/${PHYSX_BUILD_TYPE}") # This is the path where PhysX libraries are installed
+    else()
+        message(FATAL_ERROR "Not support OS setting for PhysX")
+    endif()
+
+    if(APPLE)
+        target_link_libraries(pre_compiled_ext INTERFACE
+            PhysXExtensions_static_64
+            PhysX_static_64
+            PhysXPvdSDK_static_64
+            PhysXCommon_static_64
+            PhysXFoundation_static_64
+            pthread
+            dl
+        )
+    elseif(UNIX)
+        target_link_libraries(pre_compiled_ext INTERFACE
+            -Wl,--start-group
+            PhysXExtensions_static_64
+            PhysX_static_64
+            PhysXPvdSDK_static_64
+            PhysXCommon_static_64
+            PhysXFoundation_static_64
+            -Wl,--end-group
+            pthread
+            dl
+        )
+    endif()
 endif()
+##### Link pre-compiled libs END #####
 
 #add_definitions(-DSTB_IMAGE_IMPLEMENTATION)
 # STB_IMAGE_IMPLEMENTATION is defined only in src/backend/base/base_utils.cpp
@@ -94,31 +149,29 @@ if(IS_PYTHON_LIB)
     message(STATUS "Python: ${Python_EXECUTABLE} (${Python_VERSION})")
     find_package(pybind11 CONFIG REQUIRED)
 endif()
-if(EXISTS "${physx_DIR}")
-    include_directories(${physx_DIR}/include)
-    if(APPLE)
-        link_directories("${physx_DIR}/bin/mac.x86_64/${PHYSX_BUILD_TYPE}") # TODO: actually it need to be not x86 but arm. fix build setting
-    elseif(UNIX)
-        link_directories("${physx_DIR}/bin/linux.x86_64/${PHYSX_BUILD_TYPE}") # This is the path where PhysX libraries are installed
-    else()
-        message("Not support OS setting for PhysX")
-    endif()
 
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        message("Building project in debug with PhysX ${PHYSX_BUILD_TYPE} configuration")
-        add_compile_definitions(_DEBUG)
-    else()
-        message("Building project in release configuration with PhysX ${PHYSX_BUILD_TYPE} configuration")
-        add_compile_definitions(NDEBUG)
-    endif()
-endif()
 
+###### core libs ######
 file(GLOB_RECURSE SOURCE_FILES "${SRC_DIR}/*.cpp")
-file(GLOB_RECURSE HEADER_FILES "${SRC_DIR}/*.hpp")
-file(GLOB_RECURSE MAIN_FILES "${MAIN_DIR}/*.cpp")
+add_library(engine_core STATIC ${SOURCE_FILES})
+target_include_directories(engine_core PUBLIC
+    ${SRC_DIR}
+    ${Stb_INCLUDE_DIR}
+)
+target_link_libraries(engine_core PUBLIC
+    build_configs
+    glfw
+    glad::glad
+    glm::glm
+    imgui::imgui
+    imguizmo::imguizmo
+    fmt::fmt
+    tinyobjloader::tinyobjloader
+)
+target_link_libraries(engine_core PUBLIC pre_compiled_ext)
+###### core libs END ######
 
 # Executable for KangEngine
-#add_executable(${PROJECT_NAME} ${MAIN_FILES} ${SOURCE_FILES})
 #file(GLOB MAIN_FILE "${MAIN_DIR}/standalone_physx_hello.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/backend_light0.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/backend_phong_light.cpp")
@@ -129,62 +182,18 @@ file(GLOB MAIN_FILE "${MAIN_DIR}/test_prim_scene.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/usd_example.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/scene_graph_example.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/scene_usd_example.cpp")
-add_executable(${PROJECT_NAME} ${MAIN_FILE} ${SOURCE_FILES})
-add_custom_target(copy_assets ALL COMMAND ${CMAKE_COMMAND} -E copy_directory "${ASSETS_DIR}" "${CMAKE_BINARY_DIR}/../assets")
-add_dependencies(${PROJECT_NAME} copy_assets)
+add_executable(${PROJECT_NAME} ${MAIN_FILE})
+target_link_libraries(${PROJECT_NAME} PRIVATE engine_core)
 
-# Include directories
-target_include_directories(${PROJECT_NAME} PRIVATE
-    ${SRC_DIR}
-    ${Stb_INCLUDE_DIR}
-)
-
-# Link libraries for KangEngine
-target_link_libraries(${PROJECT_NAME} PRIVATE
-    glfw
-    glad::glad
-    glm::glm
-    imgui::imgui
-    imguizmo::imguizmo
-    fmt::fmt
-    tinyobjloader::tinyobjloader
-)
-
-# Link USD
-if(USE_USD)
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-        usd
-        usdGeom
-        sdf
-        tf
-    )
+# Create asset folder simlink
+if(EXISTS "${ASSETS_SIMLINK_DIR}")
+    file(REMOVE_RECURSE "${ASSETS_SIMLINK_DIR}")
 endif()
-
-if(EXISTS "${physx_DIR}")
-    if(APPLE)
-        target_link_libraries(${PROJECT_NAME} PRIVATE
-            PhysXExtensions_static_64
-            PhysX_static_64
-            PhysXPvdSDK_static_64
-            PhysXCommon_static_64
-            PhysXFoundation_static_64
-            pthread
-            dl
-        )
-    elseif(UNIX)
-        target_link_libraries(${PROJECT_NAME} PRIVATE
-            -Wl,--start-group
-            PhysXExtensions_static_64
-            PhysX_static_64
-            PhysXPvdSDK_static_64
-            PhysXCommon_static_64
-            PhysXFoundation_static_64
-            -Wl,--end-group
-            pthread
-            dl
-        )
-    endif()
-endif()
+file(CREATE_LINK 
+    "${ASSETS_DIR}"
+    "${ASSETS_SIMLINK_DIR}"
+    SYMBOLIC
+)
 
 # Python Module for pybind11
 if(IS_PYTHON_LIB)
@@ -196,61 +205,18 @@ if(IS_PYTHON_LIB)
     )
     message(STATUS "PY_SOURCE: ${PYBIND_SOURCE_FILES}")
     
-    Python_add_library(${PYTHON_MODULE_NAME} 
+    Python_add_library(${PYTHON_MODULE_NAME} MODULE
         ${PYBIND_SOURCE_FILES}
-        ${SOURCE_FILES}
-        ${HEADER_FILES}
     )
-    target_include_directories(${PYTHON_MODULE_NAME} PRIVATE
-        ${SRC_DIR}
-        ${Stb_INCLUDE_DIR}
-    )
+    
     target_link_libraries(${PYTHON_MODULE_NAME} PRIVATE
-        pybind11::headers
-        glfw
-        glad::glad
-        glm::glm
-        imgui::imgui
-        imguizmo::imguizmo
+        engine_core
+        pybind11::headers   
     )
 
-    # Link USD libraries for Python module
-    if(USE_USD)
-        target_link_libraries(${PYTHON_MODULE_NAME} PRIVATE
-            usd
-            usdGeom
-            sdf
-            tf
-        )
-    endif()
-
-    # Link PhysX libraries for Python module
-    if(EXISTS "${physx_DIR}")
-        if(APPLE)
-            target_link_libraries(${PYTHON_MODULE_NAME} PRIVATE
-                PhysXExtensions_static_64
-                PhysX_static_64
-                PhysXPvdSDK_static_64
-                PhysXCommon_static_64
-                PhysXFoundation_static_64
-                pthread
-                dl
-            )
-        elseif(UNIX)
-            target_link_libraries(${PYTHON_MODULE_NAME} PRIVATE
-                -Wl,--start-group
-                PhysXExtensions_static_64
-                PhysX_static_64
-                PhysXPvdSDK_static_64
-                PhysXCommon_static_64
-                PhysXFoundation_static_64
-                -Wl,--end-group
-                pthread
-                dl
-            )
-        endif()
-    endif()
     set_target_properties(${PYTHON_MODULE_NAME} PROPERTIES
+        PREFIX ""
+        SUFFIX ".so"
         LIBRARY_OUTPUT_DIRECTORY "${PYTHON_DL_DIR}"  # Unix
         # RUNTIME_OUTPUT_DIRECTORY "${PYTHON_DL_DIR}"  # Windows
         INTERPROCEDURAL_OPTIMIZATION ON

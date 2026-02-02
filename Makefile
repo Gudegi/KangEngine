@@ -1,13 +1,13 @@
-.PHONY: build build_debug build_release build_performance \
+.PHONY: build build_debug build_release build_relWithDebInfo \
         build_usd build_usd_debug build_python build_python_debug \
         build_usd_python build_usd_python_debug \
-        run run_debug run_release run_performance \
-        clean_all clean_debug clean_release clean_performance
+        run run_debug run_release run_relWithDebInfo \
+        clean_all clean_debug clean_release clean_relWithDebInfo
 
 BUILD_DIR := build
 RELEASE_DIR := $(BUILD_DIR)/release
 DEBUG_DIR := $(BUILD_DIR)/debug
-PERF_DIR := $(BUILD_DIR)/performance
+REL_DIR := $(BUILD_DIR)/relWithDebInfo
 EXECUTABLE := kangEngine
 
 # configure + build + copy compile_commands
@@ -29,9 +29,9 @@ build_debug:
 # Release build (explicit)
 build_release: build
 
-# Performance build
-build_performance:
-	$(call do_build,vcpkg-performance,$(PERF_DIR),)
+# RelWithDebInfo build
+build_relWithDebInfo:
+	$(call do_build,vcpkg-relWithDebInfo,$(REL_DIR),)
 
 # USD builds
 build_usd:
@@ -63,8 +63,8 @@ run_debug:
 run_release:
 	./$(RELEASE_DIR)/$(EXECUTABLE)
 
-run_performance:
-	./$(PERF_DIR)/$(EXECUTABLE)
+run_relWithDebInfo:
+	./$(REL_DIR)/$(EXECUTABLE)
 
 # Clean commands
 clean_all:
@@ -76,5 +76,5 @@ clean_debug:
 clean_release:
 	rm -rf ./$(RELEASE_DIR)
 
-clean_performance:
-	rm -rf ./$(PERF_DIR)
+clean_relWithDebInfo:
+	rm -rf ./$(REL_DIR)
