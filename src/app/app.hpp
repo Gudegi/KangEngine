@@ -79,7 +79,7 @@ class App {
 
   public:
     void initialize(
-        int width, int height, bool hideUi,
+        int width, int height, bool hideUi, UpAxis upAxis = UpAxis::Y,
         Backend::BackendType graphicsBackendType = Backend::BackendType::OpenGL,
         Scene::BackendType sceneBackendType = Scene::BackendType::Native);
     void processInput();
@@ -125,11 +125,13 @@ class App {
     virtual void mouseButtonCallback(GLFWwindow* window, int button, int action,
                                      int mods);
 
+    Scene::SceneBackend* getScene() { return _scene.get(); }
+
     size_t addShape(Backend::Shader* shader,
                     std::shared_ptr<Scene::MeshData> meshData);
     size_t addShape(PhongMaterial* material,
                     std::shared_ptr<Scene::MeshData> meshData);
-    size_t addShape(Backend::Shader* shader, std::shared_ptr<Scene::Prim> prim);
+    size_t addShape(Backend::Shader* shader, Scene::Prim* prim);
     // _bufferLists // container for called in rendering loop;
     std::list<std::unique_ptr<ShapeRenderBuffer>> _bufferLists;
 };

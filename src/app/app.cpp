@@ -78,7 +78,7 @@ App::App()
 
 App::~App() {}
 
-void App::initialize(int width, int height, bool hideUi,
+void App::initialize(int width, int height, bool hideUi, UpAxis upAxis,
                      Backend::BackendType graphicsBackendType,
                      Scene::BackendType sceneBackendType) {
     _width = width;
@@ -104,9 +104,15 @@ void App::initialize(int width, int height, bool hideUi,
     // Initialize graphics device after OpenGL context is created
     _graphicsDevice->initialize();
 
-    glm::vec3 cameraPos = glm::vec3(30, 15, 0);
-    glm::vec3 cameraTarget = glm::vec3(0, 0, 0);
-    _camera.init(cameraPos, cameraTarget, 'y');
+    glm::vec3 cameraPos, cameraTarget;
+    if (upAxis == UpAxis::Z) {
+        cameraPos = glm::vec3(3.0f, 0.0f, 1.5f); // 1.5m
+        cameraTarget = glm::vec3(0.0f, 0.0f, 0.85f);
+    } else {
+        cameraPos = glm::vec3(30.0f, 15.0f, 0.0f);
+        cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+    }
+    _camera.init(cameraPos, cameraTarget, upAxis);
     _camera.updateProjMatrix(_width, _height);
     _panelManager.init(this->getWindow());
     _panelManager.loadFont(KE::getAssetPath("fonts/godoFont/GodoM.ttf"), true);
@@ -418,9 +424,8 @@ size_t App::addShape(PhongMaterial* material,
     }
 }
 
-// Shader + Prim
-size_t App::addShape(Backend::Shader* shader,
-                     std::shared_ptr<Scene::Prim> prim) {
+// Shader + Prim (non-owning: scene graph owns the Prim)
+size_t App::addShape(Backend::Shader* shader, Scene::Prim* prim) {
 
     std::shared_ptr<Scene::MeshData> meshData = prim->getMeshData();
     if (!meshData || meshData->vertices.empty() || meshData->indices.empty()) {
@@ -475,17 +480,29 @@ size_t App::addShape(Backend::Shader* shader,
         };
         bufferInfos->vertexArray->setVertexAttribute(positionAttr);
 
-        normalBuffer->bind();
-        Backend::VertexAttribute normalAttr = {
-            1, 3, Backend::VertexAttributeType::Float, false, sizeof(glm::vec3),
-            0};
-        bufferInfos->vertexArray->setVertexAttribute(normalAttr);
+        if (!meshData->normals.empty()) {
+            normalBuffer->bind();
+            Backend::VertexAttribute normalAttr = {
+                1,
+                3,
+                Backend::VertexAttributeType::Float,
+                false,
+                sizeof(glm::vec3),
+                0};
+            bufferInfos->vertexArray->setVertexAttribute(normalAttr);
+        }
 
-        uvBuffer->bind();
-        Backend::VertexAttribute uvAttr = {
-            2, 2, Backend::VertexAttributeType::Float, false, sizeof(glm::vec2),
-            0};
-        bufferInfos->vertexArray->setVertexAttribute(uvAttr);
+        if (!meshData->uvs.empty()) {
+            uvBuffer->bind();
+            Backend::VertexAttribute uvAttr = {
+                2,
+                2,
+                Backend::VertexAttributeType::Float,
+                false,
+                sizeof(glm::vec2),
+                0};
+            bufferInfos->vertexArray->setVertexAttribute(uvAttr);
+        }
 
         bufferInfos->vertexArray->unbind();
         bufferInfos->numIndices = meshData->indices.size();
@@ -515,17 +532,19 @@ void App::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
 void App::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
     float fov = _camera.getFoV();
     fov -= (float)yoffset;
-
-    /*
-    glm::vec3 cameraPos = _camera.getCameraPos();
-    glm::vec3 cameraFront = _camera.getCameraLookDir();
-    float cameraSpeed = static_cast<float>(10.0 * _renderVariable->deltaTime);
-    cameraPos -= cameraSpeed * cameraFront;
-    _camera.setCameraPos(cameraPos);
-    */
-
     _camera.setFoV(fov);
     _camera.updateProjMatrix(_width, _height);
+    /*
+    // Dolly zoom: move camera along look direction
+    glm::vec3 cameraPos = _camera.getCameraPos();
+    glm::vec3 cameraFront = _camera.getCameraLookDir();
+    float zoomSpeed = _camera.getCamToLookDistance() * 0.1f;
+    cameraPos += static_cast<float>(yoffset) * zoomSpeed * cameraFront;
+
+    //float cameraSpeed = static_cast<float>(10.0 * _renderVariable->deltaTime);
+    //cameraPos -= cameraSpeed * cameraFront;
+    _camera.setCameraPos(cameraPos);
+    */
 }
 
 void App::cursorPositionCallback(GLFWwindow* window, double xpos, double ypos) {
@@ -573,7 +592,7 @@ void App::processInput() {
     glm::vec3 cameraFront = _camera.getCameraLookDir();
     glm::vec3 cameraUp = _camera.getCameraUpDir();
     glm::vec3 cameraRight = _camera.getCameraRightDir();
-    glm::vec3 globalUp = glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::vec3 globalUp = _camera.getUpVector();
 
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
@@ -647,7 +666,7 @@ void App::processInput() {
         float dx = _io->deltaMouseX * 0.1f;
         float dy = _io->deltaMouseY * 0.1f;
 
-        _camera.azimuth += dx;
+        _camera.azimuth += (_camera.getUpAxis() == UpAxis::Z) ? -dx : dx;
         _camera.pole -= dy; // (mouse down -> cam up)
 
         const float EPSILON = 0.01f;
@@ -660,10 +679,17 @@ void App::processInput() {
         glm::vec3 targetPos = _camera.getTargetPos();
         glm::vec3 newCameraPos;
 
-        // Y-up
-        newCameraPos.x = targetPos.x + r * glm::sin(theta) * glm::cos(phi);
-        newCameraPos.y = targetPos.y + r * glm::cos(theta);
-        newCameraPos.z = targetPos.z + r * glm::sin(theta) * glm::sin(phi);
+        if (_camera.getUpAxis() == UpAxis::Z) {
+            // Z-up: pole from +Z, azimuth in XY plane
+            newCameraPos.x = targetPos.x + r * glm::sin(theta) * glm::cos(phi);
+            newCameraPos.y = targetPos.y + r * glm::sin(theta) * glm::sin(phi);
+            newCameraPos.z = targetPos.z + r * glm::cos(theta);
+        } else {
+            // Y-up: pole from +Y, azimuth in XZ plane
+            newCameraPos.x = targetPos.x + r * glm::sin(theta) * glm::cos(phi);
+            newCameraPos.y = targetPos.y + r * glm::cos(theta);
+            newCameraPos.z = targetPos.z + r * glm::sin(theta) * glm::sin(phi);
+        }
         _camera.setCameraPos(newCameraPos);
     }
 

@@ -1,7 +1,158 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "load_utils.hpp"
+#include <cstdint>
+#include <cstring>
+#include <fstream>
+#include <sstream>
 
 namespace KE {
+
+namespace {
+
+bool isBinaryStl(const std::string& path) {
+    std::ifstream file(path, std::ios::binary);
+    if (!file.is_open())
+        return false;
+
+    // Read first 80 bytes (header), then check if "solid" prefix
+    // is followed by valid ASCII STL content
+    char header[80];
+    file.read(header, 80);
+    if (!file.good())
+        return false;
+
+    // Read triangle count
+    uint32_t triCount = 0;
+    file.read(reinterpret_cast<char*>(&triCount), sizeof(triCount));
+    if (!file.good())
+        return false;
+
+    // Check if file size matches binary STL format
+    // Binary: 80 header + 4 count + (50 bytes per triangle)
+    file.seekg(0, std::ios::end);
+    auto fileSize = file.tellg();
+    auto expectedSize = static_cast<std::streampos>(84 + triCount * 50);
+
+    return fileSize == expectedSize;
+}
+
+KE::Scene::MeshData loadBinaryStl(const std::string& path) {
+    std::ifstream file(path, std::ios::binary);
+    if (!file.is_open()) {
+        std::cerr << "Failed to open STL file: " << path << std::endl;
+        return {};
+    }
+
+    // Skip 80-byte header
+    file.seekg(80);
+
+    uint32_t triCount = 0;
+    file.read(reinterpret_cast<char*>(&triCount), sizeof(triCount));
+
+    std::vector<glm::vec3> positions;
+    std::vector<glm::vec3> normals;
+    std::vector<glm::vec2> uvs;
+    std::vector<unsigned int> indices;
+
+    positions.reserve(triCount * 3);
+    normals.reserve(triCount * 3);
+    indices.reserve(triCount * 3);
+
+    for (uint32_t i = 0; i < triCount; i++) {
+        float normal[3];
+        float v1[3], v2[3], v3[3];
+        uint16_t attrByteCount;
+
+        file.read(reinterpret_cast<char*>(normal), 12);
+        file.read(reinterpret_cast<char*>(v1), 12);
+        file.read(reinterpret_cast<char*>(v2), 12);
+        file.read(reinterpret_cast<char*>(v3), 12);
+        file.read(reinterpret_cast<char*>(&attrByteCount),
+                  sizeof(attrByteCount));
+
+        if (!file.good()) {
+            std::cerr << "STL read error at triangle " << i << std::endl;
+            break;
+        }
+
+        glm::vec3 n(normal[0], normal[1], normal[2]);
+
+        unsigned int baseIdx = static_cast<unsigned int>(positions.size());
+
+        positions.emplace_back(v1[0], v1[1], v1[2]);
+        positions.emplace_back(v2[0], v2[1], v2[2]);
+        positions.emplace_back(v3[0], v3[1], v3[2]);
+
+        normals.push_back(n);
+        normals.push_back(n);
+        normals.push_back(n);
+
+        indices.push_back(baseIdx);
+        indices.push_back(baseIdx + 1);
+        indices.push_back(baseIdx + 2);
+    }
+
+    Scene::MeshData meshData;
+    meshData.vertices = std::move(positions);
+    meshData.normals = std::move(normals);
+    meshData.uvs = std::move(uvs);
+    meshData.indices = std::move(indices);
+    return meshData;
+}
+
+KE::Scene::MeshData loadAsciiStl(const std::string& path) {
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        std::cerr << "Failed to open STL file: " << path << std::endl;
+        return {};
+    }
+
+    std::vector<glm::vec3> positions;
+    std::vector<glm::vec3> normals;
+    std::vector<glm::vec2> uvs;
+    std::vector<unsigned int> indices;
+
+    std::string line;
+    glm::vec3 currentNormal(0.0f, 1.0f, 0.0f);
+
+    while (std::getline(file, line)) {
+        std::istringstream iss(line);
+        std::string keyword;
+        iss >> keyword;
+
+        if (keyword == "facet") {
+            std::string normalStr;
+            iss >> normalStr; // "normal"
+            float nx, ny, nz;
+            iss >> nx >> ny >> nz;
+            currentNormal = glm::vec3(nx, ny, nz);
+        } else if (keyword == "vertex") {
+            float vx, vy, vz;
+            iss >> vx >> vy >> vz;
+
+            unsigned int idx = static_cast<unsigned int>(positions.size());
+            positions.emplace_back(vx, vy, vz);
+            normals.push_back(currentNormal);
+            indices.push_back(idx);
+        }
+    }
+
+    Scene::MeshData meshData;
+    meshData.vertices = std::move(positions);
+    meshData.normals = std::move(normals);
+    meshData.uvs = std::move(uvs);
+    meshData.indices = std::move(indices);
+    return meshData;
+}
+
+} // anonymous namespace
+
+KE::Scene::MeshData loadStl(const std::string& path) {
+    if (isBinaryStl(path)) {
+        return loadBinaryStl(path);
+    }
+    return loadAsciiStl(path);
+}
 
 KE::Scene::MeshData
 loadObj(std::string path,

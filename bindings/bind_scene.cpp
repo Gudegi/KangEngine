@@ -44,7 +44,7 @@ void bind_scene(py::module& m) {
         .export_values();
 
     // Prim class
-    py::class_<KE::Scene::Prim, std::shared_ptr<KE::Scene::Prim>>(scene, "Prim")
+    py::class_<KE::Scene::Prim>(scene, "Prim")
         .def(py::init<const std::string&, KE::Scene::PrimType,
                       KE::Scene::Prim*>(),
              py::arg("name"), py::arg("type"), py::arg("parent") = nullptr)

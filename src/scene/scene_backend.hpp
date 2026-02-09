@@ -15,8 +15,9 @@
 namespace KE {
 namespace Scene {
 
-// Forward declaration
+// Forward declarations
 class Prim;
+enum class PrimType;
 
 struct ShapeRenderBuffer {
     Backend::Shader* backendShader; // Backend::Shader
@@ -25,10 +26,10 @@ struct ShapeRenderBuffer {
     std::unique_ptr<Backend::Buffer> indexBuffer;
     int numIndices;
 
-    std::shared_ptr<Prim> prim;
+    Prim* prim; // non-owning, scene graph owns the Prim
 
     // Constructor helpers
-    ShapeRenderBuffer() : backendShader(nullptr), numIndices(0) {}
+    ShapeRenderBuffer() : backendShader(nullptr), numIndices(0), prim(nullptr) {}
 };
 
 // Mesh 데이터 구조
@@ -73,6 +74,14 @@ class SceneBackend {
 
     // Scene 쿼리
     virtual std::vector<std::string> listMeshes() = 0;
+
+    // Prim 생성 (Scene이 소유권을 가짐, USD Stage.DefinePrim처럼)
+    virtual Prim* definePrim(const std::string& path, PrimType type) {
+        return nullptr;
+    }
+
+    // Scene graph root
+    virtual Prim* getRootPrim() { return nullptr; }
 
     // Render 가능한 정보 쿼리
     // virtual std::vector<ShapeRenderBuffer> getRenderables() = 0;

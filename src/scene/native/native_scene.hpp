@@ -26,9 +26,10 @@ public:
     bool saveScene(const std::string& path) override;
     MeshData loadMesh(const std::string& primPath) override;
     std::vector<std::string> listMeshes() override;
+    Prim* definePrim(const std::string& path, PrimType type) override;
 
     // Scene Graph API
-    Prim* getRootPrim() { return _root.get(); }
+    Prim* getRootPrim() override { return _root.get(); }
     Prim* getPrimAtPath(const std::string& path);
     Prim* createPrim(const std::string& path, PrimType type);
 };

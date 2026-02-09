@@ -141,6 +141,8 @@ find_package(imgui CONFIG REQUIRED)
 find_package(imguizmo CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(tinyobjloader CONFIG REQUIRED)
+find_package(Eigen3 CONFIG REQUIRED)
+find_package(tinyxml2 CONFIG REQUIRED)
 if(IS_PYTHON_LIB)
     # Prefer system Python over vcpkg's Python
     set(Python_FIND_STRATEGY LOCATION)
@@ -166,6 +168,8 @@ target_link_libraries(engine_core PUBLIC
     imguizmo::imguizmo
     fmt::fmt
     tinyobjloader::tinyobjloader
+    Eigen3::Eigen
+    tinyxml2::tinyxml2
 )
 target_link_libraries(engine_core PUBLIC pre_compiled_ext)
 ###### core libs END ######
@@ -177,10 +181,13 @@ target_link_libraries(engine_core PUBLIC pre_compiled_ext)
 #file(GLOB MAIN_FILE "${MAIN_DIR}/backend_material.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physx_drop_box.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/test_obj.cpp")
-file(GLOB MAIN_FILE "${MAIN_DIR}/test_prim_scene.cpp")
+#file(GLOB MAIN_FILE "${MAIN_DIR}/test_prim_scene.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/usd_example.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/scene_graph_example.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/scene_usd_example.cpp")
+# Aboves are legacy.
+#file(GLOB MAIN_FILE "${MAIN_DIR}/test_stl.cpp")
+file(GLOB MAIN_FILE "${MAIN_DIR}/test_xml.cpp")
 add_executable(${PROJECT_NAME} ${MAIN_FILE})
 target_link_libraries(${PROJECT_NAME} PRIVATE engine_core)
 

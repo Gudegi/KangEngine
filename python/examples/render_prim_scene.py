@@ -240,7 +240,7 @@ class MyApp(ke.App):
 
 def main():
     app = MyApp()
-    app.initialize(SCR_WIDTH, SCR_HEIGHT, False, ke.BackendType.OpenGL)
+    app.initialize(SCR_WIDTH, SCR_HEIGHT, False, ke.UpAxis.Y, ke.BackendType.OpenGL)
     app.start()
 
 if __name__ == "__main__":

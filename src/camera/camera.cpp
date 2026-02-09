@@ -1,12 +1,12 @@
 #include "camera.hpp"
 #include <algorithm>
-#include <glm/gtc/matrix_transform.hpp>
 #include <cmath>
+#include <glm/gtc/matrix_transform.hpp>
 
 namespace KE {
 
-Camera::Camera(glm::vec3 cameraPos, glm::vec3 targetPos, char upAxis)
-    : _cameraPos(cameraPos), _targetPos(targetPos) {
+Camera::Camera(glm::vec3 cameraPos, glm::vec3 targetPos, UpAxis upAxis)
+    : _cameraPos(cameraPos), _targetPos(targetPos), _upAxis(upAxis) {
     _camToLookDistance = glm::length(_targetPos - _cameraPos);
     _FoV = 45.0f;
     _nearPlane = 0.1f;
@@ -14,24 +14,23 @@ Camera::Camera(glm::vec3 cameraPos, glm::vec3 targetPos, char upAxis)
     _screenWidth = 1920;
     _screenHeight = 1080;
 
-    if (upAxis == 'y') {
-        _upAxis = glm::vec3(0.0f, 1.0f, 0.0f);
-    } else if (upAxis == 'z') {
-        _upAxis = glm::vec3(0.0f, 0.0f, 1.0f);
-    } else {
-        // Default to Y-up if invalid axis provided
-        _upAxis = glm::vec3(0.0f, 1.0f, 0.0f);
-    }
+    _upVector = (_upAxis == UpAxis::Z) ? glm::vec3(0.0f, 0.0f, 1.0f)
+                                       : glm::vec3(0.0f, 1.0f, 0.0f);
 
     // calc pole, azimuth from curr pos
     glm::vec3 offset = cameraPos - targetPos;
     float r = glm::length(offset);
 
     if (r > 0.0001f) {
-        // pole: Y (0deg up, 180deg down)
-        pole = glm::degrees(glm::acos(offset.y / r));
-        // azimuth: XZ
-        azimuth = glm::degrees(glm::atan(offset.z, offset.x));
+        if (_upAxis == UpAxis::Z) {
+            pole = glm::degrees(glm::acos(offset.z / r));
+            azimuth = glm::degrees(glm::atan(offset.y, offset.x));
+        } else {
+            // pole: Y (0deg up, 180deg down)
+            pole = glm::degrees(glm::acos(offset.y / r));
+            // azimuth: XZ
+            azimuth = glm::degrees(glm::atan(offset.z, offset.x));
+        }
     } else {
         pole = 90.0f;
         azimuth = 0.0f;
@@ -40,13 +39,14 @@ Camera::Camera(glm::vec3 cameraPos, glm::vec3 targetPos, char upAxis)
     this->updateViewMatrix();
 }
 
-Camera::Camera() {}
+Camera::Camera() : _upAxis(UpAxis::Y) {}
 
 Camera::~Camera() {}
 
-void Camera::init(glm::vec3 cameraPos, glm::vec3 targetPos, char upAxis) {
+void Camera::init(glm::vec3 cameraPos, glm::vec3 targetPos, UpAxis upAxis) {
     _cameraPos = cameraPos;
     _targetPos = targetPos;
+    _upAxis = upAxis;
     _camToLookDistance = glm::length(targetPos - cameraPos);
     _FoV = 45.0f;
     _nearPlane = 0.1f;
@@ -54,21 +54,20 @@ void Camera::init(glm::vec3 cameraPos, glm::vec3 targetPos, char upAxis) {
     _screenWidth = 1920;
     _screenHeight = 1080;
 
-    if (upAxis == 'y') {
-        _upAxis = glm::vec3(0.0f, 1.0f, 0.0f);
-    } else if (upAxis == 'z') {
-        _upAxis = glm::vec3(0.0f, 0.0f, 1.0f);
-    } else {
-        // Default to Y-up if invalid axis provided
-        _upAxis = glm::vec3(0.0f, 1.0f, 0.0f);
-    }
+    _upVector = (_upAxis == UpAxis::Z) ? glm::vec3(0.0f, 0.0f, 1.0f)
+                                       : glm::vec3(0.0f, 1.0f, 0.0f);
 
     glm::vec3 offset = cameraPos - targetPos;
     float r = glm::length(offset);
 
     if (r > 0.0001f) {
-        pole = glm::degrees(glm::acos(offset.y / r));
-        azimuth = glm::degrees(glm::atan(offset.z, offset.x));
+        if (_upAxis == UpAxis::Z) {
+            pole = glm::degrees(glm::acos(offset.z / r));
+            azimuth = glm::degrees(glm::atan(offset.y, offset.x));
+        } else {
+            pole = glm::degrees(glm::acos(offset.y / r));
+            azimuth = glm::degrees(glm::atan(offset.z, offset.x));
+        }
     } else {
         pole = 90.0f;
         azimuth = 0.0f;
@@ -101,12 +100,13 @@ void Camera::updateViewMatrix() {
     _cameraLookDir = glm::normalize(lookVec);
 
     // Check for gimbal lock (camera looking parallel to up axis)
-    glm::vec3 crossResult = glm::cross(_cameraLookDir, _upAxis);
+    glm::vec3 crossResult = glm::cross(_cameraLookDir, _upVector);
     if (glm::length(crossResult) < 0.0001f) {
         // Camera is looking straight up or down, use alternative right vector
         glm::vec3 altRight = glm::vec3(1.0f, 0.0f, 0.0f);
         if (glm::abs(glm::dot(_cameraLookDir, altRight)) > 0.99f) {
-            altRight = glm::vec3(0.0f, 0.0f, 1.0f);
+            altRight = (_upAxis == UpAxis::Z) ? glm::vec3(0.0f, 1.0f, 0.0f)
+                                              : glm::vec3(0.0f, 0.0f, 1.0f);
         }
         _cameraRightDir = glm::normalize(glm::cross(_cameraLookDir, altRight));
     } else {
@@ -145,7 +145,6 @@ void Camera::updateProjMatrix(const unsigned int scrWidth,
     _screenWidth = scrWidth;
     _screenHeight = scrHeight;
 
-    // Prevent division by zero
     if (_screenHeight == 0) {
         _projMatrix =
             glm::perspective(glm::radians(_FoV), 1.0f, _nearPlane, _farPlane);
@@ -160,7 +159,7 @@ void Camera::updateProjMatrix(const unsigned int scrWidth,
 glm::mat4 Camera::getProjMatrix() { return _projMatrix; }
 
 void Camera::setFoV(float FoV) {
-    FoV = std::clamp(FoV, 10.f, 120.0f);
+    FoV = std::clamp(FoV, 10.f, 90.0f);
     _FoV = FoV;
     updateProjMatrix(_screenWidth, _screenHeight);
 }

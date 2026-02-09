@@ -38,6 +38,12 @@ PYBIND11_MODULE(_kangengine, m) {
     // Bind scene system first (needed for Scene::BackendType in App.initialize)
     bind_scene(m);
 
+    // UpAxis enum
+    py::enum_<UpAxis>(m, "UpAxis")
+        .value("Y", UpAxis::Y)
+        .value("Z", UpAxis::Z)
+        .export_values();
+
     // Backend type enum
     py::enum_<Backend::BackendType>(m, "BackendType")
         .value("OpenGL", Backend::BackendType::OpenGL)
@@ -424,6 +430,7 @@ py::class_<glm::vec3>(m, "vec3")
         .def(py::init<>())
         .def("initialize", &App::initialize, py::arg("width"),
              py::arg("height"), py::arg("hideUi") = false,
+             py::arg("upAxis") = UpAxis::Y,
              py::arg("graphicsBackendType") = Backend::BackendType::OpenGL,
              py::arg("sceneBackendType") = Scene::BackendType::Native)
         .def("start", &App::start)
@@ -439,8 +446,7 @@ py::class_<glm::vec3>(m, "vec3")
                  return self->addShape(shader, meshData);
              })
         .def("addShapePrim",
-             [](App* self, Backend::Shader* shader,
-                std::shared_ptr<Scene::Prim> prim) {
+             [](App* self, Backend::Shader* shader, Scene::Prim* prim) {
                  return self->addShape(shader, prim);
              })
         .def("checkError", &App::checkError)

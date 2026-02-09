@@ -49,6 +49,10 @@ std::vector<std::string> NativeScene::listMeshes() {
     return meshPaths;
 }
 
+Prim* NativeScene::definePrim(const std::string& path, PrimType type) {
+    return createPrim(path, type);
+}
+
 Prim* NativeScene::getPrimAtPath(const std::string& path) {
     return _root->getPrimAtPath(path);
 }

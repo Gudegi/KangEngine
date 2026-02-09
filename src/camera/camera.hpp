@@ -10,22 +10,25 @@
 
 namespace KE {
 
+enum class UpAxis { Y, Z };
+
 class Camera {
 
   private:
     glm::vec3 _cameraPos, _targetPos, _cameraLookDir, _cameraUpDir,
         _cameraRightDir;
     glm::mat4 _viewMatrix, _projMatrix;
-    glm::vec3 _upAxis;
+    glm::vec3 _upVector;
+    UpAxis _upAxis;
     float _FoV, _camToLookDistance, _nearPlane, _farPlane;
     unsigned int _screenWidth, _screenHeight;
 
   public:
     float pole, azimuth;
     Camera();
-    Camera(glm::vec3 cameraPos, glm::vec3 targetPos, char upAxis);
+    Camera(glm::vec3 cameraPos, glm::vec3 targetPos, UpAxis upAxis);
     ~Camera();
-    void init(glm::vec3 cameraPos, glm::vec3 targetPos, char upAxis);
+    void init(glm::vec3 cameraPos, glm::vec3 targetPos, UpAxis upAxis);
     glm::vec3 getCameraPos();
     glm::vec3 getTargetPos();
     glm::mat4 getViewMatrix();
@@ -44,6 +47,9 @@ class Camera {
     float getNearPlane() { return _nearPlane; }
     float getFarPlane() { return _farPlane; }
     float getCamToLookDistance();
+
+    UpAxis getUpAxis() const { return _upAxis; }
+    glm::vec3 getUpVector() const { return _upVector; }
 
     glm::vec3 getCameraLookDir();
     glm::vec3 getCameraUpDir();
