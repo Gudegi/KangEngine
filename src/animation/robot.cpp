@@ -18,8 +18,8 @@ Robot Robot::fromMJCF(const std::string& mjcfPath, Scene::SceneBackend* scene,
 
     // 1. Load MJCF
     auto mjcfData = MJCFLoader::load(mjcfPath);
-    robot._skeleton = std::make_shared<const SkeletonTree>(
-        std::move(mjcfData.skeleton));
+    robot._skeleton =
+        std::make_shared<const SkeletonTree>(std::move(mjcfData.skeleton));
     robot._skeleton->print();
 
     // 2. Zero pose (rest pose)
@@ -31,6 +31,14 @@ Robot Robot::fromMJCF(const std::string& mjcfPath, Scene::SceneBackend* scene,
     robot._bodyPrims.resize(robot._skeleton->numJoints(), nullptr);
 
     for (const auto& meshInfo : mjcfData.meshInfos) {
+        // Skip if this body already has a mesh (e.g. logo_link on torso)
+        if (robot._bodyPrims[meshInfo.bodyIndex] != nullptr) {
+            fmt::print("Skipping duplicate mesh [{}] {}: {}\n",
+                       meshInfo.bodyIndex, meshInfo.bodyName,
+                       meshInfo.meshFile);
+            continue;
+        }
+
         std::string stlPath = mjcfData.meshDir + meshInfo.meshFile;
         fmt::print("Loading mesh [{}] {}: {}\n", meshInfo.bodyIndex,
                    meshInfo.bodyName, stlPath);

@@ -170,6 +170,7 @@ class MyApp : public App {
     glm::vec3 lightPos = glm::vec3(0.5f, -2.0f, 3.0f); // meters
     float size = 0.05f;                                // light sphere radius
     float deg = 0.f;
+    glm::vec3 robotPos = glm::vec3(0.0f, 0.0f, 1.5f);
 
     void initialize(int width, int height, UpAxis upAxis,
                     Backend::BackendType backendType) {
@@ -179,6 +180,7 @@ class MyApp : public App {
 
     void setup() override {
         KE_TRACE_FUNCTION();
+        this->setRenderHz(1.0f / 30.0f);
         stlShader = getGraphicsDevice()->createShader(stlVs, stlFs);
         lightShader = getGraphicsDevice()->createShader(testVs, lightFs);
         planeShader = getGraphicsDevice()->createShader(testVs, checkerBoardFs);
@@ -255,8 +257,12 @@ class MyApp : public App {
         ImGui::End();
 
         glm::quat q = glm::quat(glm::vec3(glm::radians(deg), 0, 0));
+        robot.setRootTranslation(
+            Eigen::Vector3f(robotPos.x, robotPos.y, robotPos.z));
         robot.setJointRotation(2, Eigen::Quaternionf(q.w, q.x, q.y, q.z));
         robot.applyPose();
+
+        robotPos.z += 0.01;
 
         glm::mat4 view = this->getViewMatrix();
         stlShader->use();

@@ -25,11 +25,11 @@ namespace Animation {
 
 class Robot {
   public:
+    Robot() {}
     // Factory: MJCF 로드 + Scene에 Prim 생성 + STL 메시 로드
     static Robot fromMJCF(const std::string& mjcfPath,
-                          Scene::SceneBackend* scene,
-                          Backend::Shader* shader, App* app,
-                          const std::string& primBasePath = "/robot",
+                          Scene::SceneBackend* scene, Backend::Shader* shader,
+                          App* app, const std::string& primBasePath = "/robot",
                           float scale = 1.0f);
 
     // FK 계산 후 모든 body Prim의 xformOp 업데이트

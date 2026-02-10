@@ -17,12 +17,13 @@ SkeletonState SkeletonState::fromRotationAndRootTranslation(
     return state;
 }
 
-SkeletonState SkeletonState::zeroPose(
-    std::shared_ptr<const SkeletonTree> tree) {
-    std::vector<Eigen::Quaternionf> rotations(
-        tree->numJoints(), Eigen::Quaternionf::Identity());
-    return fromRotationAndRootTranslation(std::move(tree), rotations,
-                                          Eigen::Vector3f::Zero(), true);
+SkeletonState
+SkeletonState::zeroPose(std::shared_ptr<const SkeletonTree> tree) {
+    std::vector<Eigen::Quaternionf> rotations(tree->numJoints(),
+                                              Eigen::Quaternionf::Identity());
+    Eigen::Vector3f rootPos = tree->localTranslation(0);
+    return fromRotationAndRootTranslation(std::move(tree), rotations, rootPos,
+                                          true);
 }
 
 std::vector<Transform> SkeletonState::computeGlobalTransforms() const {
@@ -37,7 +38,8 @@ std::vector<Transform> SkeletonState::computeGlobalTransforms() const {
         if (parent == -1) {
             // Root node: use root translation + local offset
             global[i].rotation = localRot;
-            global[i].translation = _rootTranslation + localRot * localTrans;
+            // global[i].translation = _rootTranslation + localRot * localTrans;
+            global[i].translation = _rootTranslation;
         } else {
             // Child: compose with parent's global transform
             // global_rot = parent_rot * local_rot
