@@ -17,8 +17,8 @@
     },
     "imguizmo",
     "pybind11",
-    "python3",
     "stb",
-    "tinyobjloader"
+    "tinyobjloader",
+    "tinyxml2"
   ]
 }
