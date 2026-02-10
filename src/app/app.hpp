@@ -112,6 +112,15 @@ class App {
     virtual void postRender() {} // 렌더링 이후 마무리
     //////
 
+    // Frame rate control
+    float getDeltaTime() const;
+    void setRenderHz(float renderHz);
+    float getRenderHz() const { return _renderHz; }
+
+  private:
+    float _renderHz = 0;
+
+  public:
     //////
     void draw();
     //////

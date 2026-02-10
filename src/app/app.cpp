@@ -6,9 +6,11 @@
 #include "utils/glm_utils.hpp"
 #include "utils/print_debug.hpp"
 #include "utils/asset_path.hpp"
+#include <chrono>
 #include <exception>
 #include <memory>
 #include <optional>
+#include <thread>
 
 namespace KE {
 
@@ -131,6 +133,17 @@ void App::start() {
         float currentFrame = static_cast<float>(glfwGetTime());
         _renderVariable->deltaTime =
             currentFrame - _renderVariable->lastFrameTime;
+
+        if (_renderVariable->deltaTime < _renderHz) {
+            float remaining = _renderHz - _renderVariable->deltaTime;
+            if (remaining > 0.002f) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(
+                    static_cast<int>((remaining - 0.001f) * 1000)));
+            }
+            glfwPollEvents();
+            continue;
+        }
+
         _renderVariable->lastFrameTime = currentFrame;
         processInput();
         _viewMatrix = _camera.getViewMatrix();
@@ -152,6 +165,12 @@ void App::start() {
     glfwDestroyWindow(window);
     glfwTerminate();
 }
+
+void App::setRenderHz(float renderHz) {
+    _renderHz = (renderHz > 0.0f) ? renderHz : 0.0f;
+}
+
+float App::getDeltaTime() const { return _renderVariable->deltaTime; }
 
 void App::coreRender() {
     ImGui::Checkbox("Wireframe", &_renderWireframe);
