@@ -169,7 +169,11 @@ void bind_scene(py::module& m) {
         .def("load_scene", &KE::Scene::SceneBackend::loadScene)
         .def("save_scene", &KE::Scene::SceneBackend::saveScene)
         .def("load_mesh", &KE::Scene::SceneBackend::loadMesh)
-        .def("list_meshes", &KE::Scene::SceneBackend::listMeshes);
+        .def("list_meshes", &KE::Scene::SceneBackend::listMeshes)
+        .def("define_prim", &KE::Scene::SceneBackend::definePrim,
+             py::return_value_policy::reference)
+        .def("get_root_prim", &KE::Scene::SceneBackend::getRootPrim,
+             py::return_value_policy::reference);
 
 #ifdef KANGENGINE_USE_USD
     // USDScene with direct USD Stage access!

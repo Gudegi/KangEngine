@@ -16,8 +16,9 @@
 namespace py = pybind11;
 using namespace KE;
 
-// Forward declaration for scene bindings
+// Forward declarations for submodule bindings
 void bind_scene(py::module& m);
+void bind_animation(py::module& m);
 
 // Trampoline class for App - allows Python to override virtual methods
 class PyApp : public App {
@@ -37,6 +38,7 @@ PYBIND11_MODULE(_kangengine, m) {
 
     // Bind scene system first (needed for Scene::BackendType in App.initialize)
     bind_scene(m);
+    bind_animation(m);
 
     // UpAxis enum
     py::enum_<UpAxis>(m, "UpAxis")
@@ -433,6 +435,7 @@ py::class_<glm::vec3>(m, "vec3")
              py::arg("upAxis") = UpAxis::Y,
              py::arg("graphicsBackendType") = Backend::BackendType::OpenGL,
              py::arg("sceneBackendType") = Scene::BackendType::Native)
+        .def("setRenderHz", &App::setRenderHz, py::arg("renderHz"))
         .def("start", &App::start)
         .def("setup", &App::setup)
         .def("preRender", &App::preRender)
@@ -454,5 +457,6 @@ py::class_<glm::vec3>(m, "vec3")
         .def("getViewMatrix", &App::getViewMatrix)
         .def("getProjectionMatrix", &App::getProjectionMatrix)
         .def("getWidth", &App::getWidth)
-        .def("getHeight", &App::getHeight);
+        .def("getHeight", &App::getHeight)
+        .def("getScene", &App::getScene, py::return_value_policy::reference);
 }

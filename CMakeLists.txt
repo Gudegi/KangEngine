@@ -179,7 +179,6 @@ target_link_libraries(engine_core PUBLIC pre_compiled_ext)
 #file(GLOB MAIN_FILE "${MAIN_DIR}/backend_light0.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/backend_phong_light.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/backend_material.cpp")
-#file(GLOB MAIN_FILE "${MAIN_DIR}/physx_drop_box.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/test_obj.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/test_prim_scene.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/usd_example.cpp")
@@ -187,7 +186,8 @@ target_link_libraries(engine_core PUBLIC pre_compiled_ext)
 #file(GLOB MAIN_FILE "${MAIN_DIR}/scene_usd_example.cpp")
 # Aboves are legacy.
 #file(GLOB MAIN_FILE "${MAIN_DIR}/test_stl.cpp")
-file(GLOB MAIN_FILE "${MAIN_DIR}/test_xml.cpp")
+#file(GLOB MAIN_FILE "${MAIN_DIR}/test_xml.cpp")
+file(GLOB MAIN_FILE "${MAIN_DIR}/physx_drop_box.cpp")
 add_executable(${PROJECT_NAME} ${MAIN_FILE})
 target_link_libraries(${PROJECT_NAME} PRIVATE engine_core)
 
@@ -214,6 +214,7 @@ if(IS_PYTHON_LIB)
     file(GLOB PYBIND_SOURCE_FILES
         "${BIND_DIR}/bind_new.cpp"
         "${BIND_DIR}/bind_scene.cpp"
+        "${BIND_DIR}/bind_animation.cpp"
     )
     message(STATUS "PY_SOURCE: ${PYBIND_SOURCE_FILES}")
     

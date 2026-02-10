@@ -165,19 +165,39 @@ void main() {
 }
 )";
 
+static constexpr int NUM_BOXES = 10;
+
+struct BoxSpawn {
+    glm::vec3 pos;
+    glm::vec4 color;
+};
+
+static const BoxSpawn boxSpawns[NUM_BOXES] = {
+    {{0.0f, 8.0f, 0.0f}, {0.8f, 0.3f, 0.02f, 1.0f}},
+    {{0.3f, 10.0f, 0.2f}, {0.2f, 0.6f, 0.9f, 1.0f}},
+    {{-0.5f, 12.0f, 0.1f}, {0.9f, 0.2f, 0.3f, 1.0f}},
+    {{0.1f, 14.0f, -0.3f}, {0.3f, 0.9f, 0.3f, 1.0f}},
+    {{-0.2f, 6.0f, -0.1f}, {0.9f, 0.9f, 0.2f, 1.0f}},
+    {{0.4f, 16.0f, 0.4f}, {0.6f, 0.2f, 0.8f, 1.0f}},
+    {{-0.3f, 9.0f, -0.4f}, {0.2f, 0.8f, 0.7f, 1.0f}},
+    {{0.6f, 11.0f, -0.2f}, {1.0f, 0.5f, 0.0f, 1.0f}},
+    {{-0.1f, 13.0f, 0.5f}, {0.5f, 0.3f, 0.7f, 1.0f}},
+    {{0.2f, 7.0f, -0.5f}, {0.1f, 0.5f, 0.9f, 1.0f}},
+};
+
 class MyApp : public App {
   public:
     std::unique_ptr<Backend::Shader> cubeShader;
     std::unique_ptr<Backend::Shader> lightShader;
     std::unique_ptr<Backend::Shader> planeShader;
 
-    bool drawTriangle = true;
     float size = 1.3f;
-    float color[4] = {0.8f, 0.3f, 0.02f, 1.0f};
     float lightColor[3] = {1.0f, 1.0f, 1.0f};
-    float lightPo[3] = {-2.0f, 3.0f, 1.0f};
-    glm::vec3 lightPos = glm::vec3(lightPo[0], lightPo[1], lightPo[2]);
-    glm::vec3 boxPos = glm::vec3(0, 5, 0);
+    glm::vec3 lightPos = glm::vec3(-2.0f, 3.0f, 1.0f);
+
+    Scene::Prim* boxPrims[NUM_BOXES] = {};
+    bool paused = false;
+    bool spaceWasPressed = false;
 
     PhysicsWorld physics = PhysicsWorld(PhysicsConfig());
 
@@ -187,7 +207,7 @@ class MyApp : public App {
                   << Backend::GraphicsFactory::getBackendName(backendType)
                   << " backend" << std::endl;
 
-        App::initialize(width, height, false, backendType);
+        App::initialize(width, height, false, UpAxis::Y, backendType);
     }
 
     void setup() override {
@@ -196,112 +216,123 @@ class MyApp : public App {
         lightShader = getGraphicsDevice()->createShader(testVs, lightFs);
         planeShader = getGraphicsDevice()->createShader(testVs, checkerBoardFs);
 
-        cubeShader->use();
-        cubeShader->setColor("objColor", color[0], color[1], color[2],
-                             color[3]);
-        cubeShader->setVec3("lightColor", lightColor[0], lightColor[1],
-                            lightColor[2]);
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, boxPos);
-        cubeShader->setMat4("model", model);
-
+        // Light shader
         lightShader->use();
         lightShader->setVec3("lightColor", lightColor[0], lightColor[1],
                              lightColor[2]);
-        model = glm::mat4(1.0f);
+        glm::mat4 model = glm::mat4(1.0f);
         model = glm::scale(model, glm::vec3(size));
         model = glm::translate(model, lightPos);
         lightShader->setMat4("model", model);
 
-        const Color& pastelPink =
+        // Plane shader
+        const Color& pastelGreen =
             ColorLibrary::get(KE::ColorType::PASTEL_GREEN);
         planeShader->use();
         planeShader->setVec4("checkerColor1", glm::vec4(1.f, 1.f, 1.f, 1.0f));
-        planeShader->setVec4(
-            "checkerColor2",
-            glm::vec4(pastelPink.r, pastelPink.g, pastelPink.b, pastelPink.a));
+        planeShader->setVec4("checkerColor2",
+                             glm::vec4(pastelGreen.r, pastelGreen.g,
+                                       pastelGreen.b, pastelGreen.a));
+        planeShader->setMat4("model", glm::mat4(1.0f));
 
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0, 0, 0));
-        planeShader->setMat4("model", model);
+        // Light sphere mesh (raw, no prim)
+        auto cubeMesh = Scene::Prim::createSquareData(1.0f);
+        auto cubeMeshPtr =
+            std::make_shared<Scene::MeshData>(std::move(cubeMesh));
+        addShape(lightShader.get(), cubeMeshPtr);
 
-        // Create mesh data using Scene::Prim
-        auto meshData = Scene::Prim::createSquareData(1.0f);
-        auto asdf = std::make_shared<Scene::MeshData>(std::move(meshData));
-        GLuint s1 = addShape(cubeShader.get(), asdf);
-        GLuint s2 = addShape(lightShader.get(), asdf);
-
+        // Ground plane mesh (raw, no prim)
         auto planeData = Scene::Prim::createPlaneData(30.f);
         auto planeMesh =
             std::make_shared<Scene::MeshData>(std::move(planeData));
-        GLuint s3 = addShape(planeShader.get(), planeMesh);
+        addShape(planeShader.get(), planeMesh);
 
+        // Create box mesh data (shared by all boxes)
+        auto boxMesh = Scene::Prim::createSquareData(1.0f);
+        auto boxMeshPtr = std::make_shared<Scene::MeshData>(std::move(boxMesh));
+
+        // Create 10 box prims + physics bodies
         physics.addDefaultGround();
-        physics.addBox(boxPos.x, boxPos.y, boxPos.z);
+        for (int i = 0; i < NUM_BOXES; ++i) {
+            std::string primPath = "/box_" + std::to_string(i);
+            auto* prim =
+                getScene()->definePrim(primPath, Scene::PrimType::Mesh);
+            prim->setMeshData(boxMeshPtr);
+            prim->setAttribute("primvars:displaycolorAlpha",
+                               boxSpawns[i].color);
+            prim->setAttribute("xformOp:translate", boxSpawns[i].pos);
+
+            addShape(cubeShader.get(), prim);
+            physics.addBox(boxSpawns[i].pos.x, boxSpawns[i].pos.y,
+                           boxSpawns[i].pos.z);
+            boxPrims[i] = prim;
+        }
+
         checkError();
     }
 
     void preRender() override {
         KE_TRACE_FUNCTION();
+
+        // Set cube shader lighting (before coreRender draws prims)
+        auto view = this->getViewMatrix();
+        glm::vec3 camPos = glm::vec3(0, 0, 0);
+
         cubeShader->use();
-        cubeShader->setColor("objColor", color[0], color[1], color[2],
-                             color[3]);
-        physics.step();
+        cubeShader->setVec3("lightColor", lightColor[0], lightColor[1],
+                            lightColor[2]);
+        cubeShader->setVec3("lightPos",
+                            glm::vec3(view * glm::vec4(lightPos, 1.0f)));
+        cubeShader->setVec3("camPos",
+                            glm::vec3(view * glm::vec4(camPos, 1.0f)));
+
+        // Spacebar toggle
+        bool spaceDown = glfwGetKey(getWindow(), GLFW_KEY_SPACE) == GLFW_PRESS;
+        if (spaceDown && !spaceWasPressed)
+            paused = !paused;
+        spaceWasPressed = spaceDown;
+
+        if (!paused)
+            physics.step();
+
+        // Update box prim transforms from physics
+        auto pxScene = physics.getScene();
+        PxU32 nbActors = pxScene->getNbActors(PxActorTypeFlag::eRIGID_DYNAMIC);
+        std::vector<PxActor*> actors(nbActors);
+        pxScene->getActors(PxActorTypeFlag::eRIGID_DYNAMIC, actors.data(),
+                           nbActors);
+
+        for (PxU32 i = 0; i < nbActors && i < NUM_BOXES; ++i) {
+            auto* actor = static_cast<PxRigidActor*>(actors[i]);
+            PxTransform pose = actor->getGlobalPose();
+            boxPrims[i]->setAttribute("xformOp:translate",
+                                      glm::vec3(pose.p.x, pose.p.y, pose.p.z));
+            boxPrims[i]->setAttribute(
+                "xformOp:rotateQuaternion",
+                glm::quat(pose.q.w, pose.q.x, pose.q.y, pose.q.z));
+        }
+
         checkError();
     }
 
     void render() override {
         KE_TRACE_FUNCTION();
-        ImGui::Begin("Custom New Panel");
-        ImGui::Text("You can create a panel in main loop.");
-        ImGui::Checkbox("Draw Triangle", &drawTriangle);
-        ImGui::SliderFloat("Size", &size, 0.5f, 2.0f);
-        ImGui::ColorEdit4("Color", color);
+        ImGui::Begin("PhysX Drop Boxes");
+        ImGui::Text("%d boxes simulated", NUM_BOXES);
+        ImGui::SliderFloat("Light Size", &size, 0.5f, 2.0f);
         ImGui::End();
 
         lightShader->use();
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::scale(model, glm::vec3(size));
         model = glm::translate(model, lightPos);
+        model = glm::scale(model, glm::vec3(size));
         lightShader->setMat4("model", model);
 
-        cubeShader->use();
-        model = glm::mat4(1.0f);
-
-        auto scene = physics.getScene();
-        PxU32 nbActors = scene->getNbActors(PxActorTypeFlag::eRIGID_DYNAMIC);
-        if (nbActors) {
-            fmt::print("Num of Dynamic actors : {}\n", nbActors);
-        }
-
-        PxActor* actors[1];
-        scene->getActors(PxActorTypeFlag::eRIGID_DYNAMIC, actors, 1);
-        PxRigidActor* actor = static_cast<PxRigidActor*>(actors[0]);
-        PxTransform pose = actor->getGlobalPose();
-
-        model = glm::translate(model, glm::vec3(pose.p.x, pose.p.y, pose.p.z));
-        fmt::print("model : {}\n",
-                   glm::to_string(glm::vec3(pose.p.x, pose.p.y, pose.p.z)));
-        // model = glm::scale(model, glm::vec3(size));
-        cubeShader->setMat4("model", model);
-        cubeShader->setVec3("lightColor", lightColor[0], lightColor[1],
-                            lightColor[2]);
-        cubeShader->setColor("objColor", color[0], color[1], color[2],
-                             color[3]);
-
+        // Ground lighting
         auto view = this->getViewMatrix();
-        glm::mat3 normalMat = glm::mat3(transpose(inverse(view * model)));
-        cubeShader->setMat3("normalMat", normalMat);
-        cubeShader->setVec3("lightPos",
-                            glm::vec3(view * glm::vec4(lightPos, 1.0f)));
-        glm::vec3 camPos = glm::vec3(0, 0, 0);
-        cubeShader->setVec3("camPos",
-                            glm::vec3(view * glm::vec4(camPos, 1.0f)));
-
-        // Ground
         planeShader->use();
-        model = glm::mat4(1.0f);
-        normalMat = glm::mat3(transpose(inverse(view * model)));
+        glm::mat4 groundModel = glm::mat4(1.0f);
+        glm::mat3 normalMat = glm::mat3(transpose(inverse(view * groundModel)));
         planeShader->setMat3("normalMat", normalMat);
         planeShader->setVec3("lightPos",
                              glm::vec3(view * glm::vec4(lightPos, 1.0f)));
