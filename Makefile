@@ -1,7 +1,7 @@
 .PHONY: build build_debug build_release build_relWithDebInfo \
         build_usd build_usd_debug build_python build_python_debug \
         build_usd_python build_usd_python_debug \
-        run run_debug run_release run_relWithDebInfo \
+        run run2 run_debug run_release run_relWithDebInfo \
         clean_all clean_debug clean_release clean_relWithDebInfo
 
 BUILD_DIR := build
@@ -56,6 +56,10 @@ build_usd_python_debug:
 
 # Run commands
 run: run_release
+
+run2:
+	cmake --build ./build/release
+	$(MAKE) run_release
 
 run_debug:
 	./$(DEBUG_DIR)/$(EXECUTABLE)
