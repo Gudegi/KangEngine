@@ -193,12 +193,13 @@ MeshData Prim::createPlaneData(float scale, UpAxis upAxis) {
     std::vector<glm::vec3> normals;
 
     if (upAxis == UpAxis::Y) {
-        // XZ plane, Y-up normal
+        // XZ plane, Y-up normal, CCW from +Y with indices {0,1,3,0,3,2}
+        // (v1-v0)x(v3-v0) = (2h,0,0)x(2h,0,-2h) -> +Y
         positions = {
-            glm::vec3(-half, 0, -half),
-            glm::vec3(half, 0, -half),
             glm::vec3(-half, 0, half),
             glm::vec3(half, 0, half),
+            glm::vec3(-half, 0, -half),
+            glm::vec3(half, 0, -half),
         };
         normals = {
             glm::vec3(0, 1, 0),
@@ -242,7 +243,7 @@ MeshData Prim::createPlaneData(float scale, UpAxis upAxis) {
         glm::vec2(0, 1),
         glm::vec2(1, 1),
     };
-    std::vector<unsigned int> indices = {0, 3, 1, 0, 2, 3};
+    std::vector<unsigned int> indices = {0, 1, 3, 0, 3, 2};
 
     MeshData meshData;
     meshData.vertices = std::move(positions);

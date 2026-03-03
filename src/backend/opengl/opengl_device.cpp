@@ -291,6 +291,10 @@ void OpenGLDevice::initialize() {
 
     // OpenGL context should already be created by Window
     glEnable(GL_DEPTH_TEST);
+    // TODO: need material-wise different culling
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW);
     _initialized = true;
 
     std::cout << "OpenGL Device initialized" << std::endl;
