@@ -15,8 +15,10 @@
 #include <map>
 #include "../scene_backend.hpp"
 #include "token.hpp"
+#include "utils/types.hpp"
 
 namespace KE {
+
 namespace Scene {
 
 using AttributeValue =
@@ -77,9 +79,21 @@ class Prim {
     std::shared_ptr<MeshData> getMeshData() const;
 
     static MeshData createSquareData(float scale);
-    static MeshData createPlaneData(float scale);
+    static MeshData createPlaneData(float scale); // Y-up by default
+    static MeshData createPlaneData(float scale, UpAxis upAxis);
     static MeshData createSphereData(float radius, int numLongitudes,
                                      int numLatitudes);
+    static MeshData createRectangleData(float xScale, float yScale,
+                                        float zScale);
+    static MeshData createCylinderData(float radius, float length,
+                                       int segments = 32);
+    static MeshData createCylinderData(float radius, float length,
+                                       UpAxis upAxis, int segments = 32);
+    static MeshData createArrowData(float baseRadius, float baseHeight,
+                                    int segments = 32);
+    static MeshData createArrowData(float baseRadius, float baseHeight,
+                                    UpAxis upAxis, float capRadius = -1.0f,
+                                    float capHeight = -1.0f, int segments = 32);
 
     // 순회
     void traverse(std::function<void(Prim*)> func);

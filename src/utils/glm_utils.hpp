@@ -4,7 +4,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/quaternion.hpp>
-#include "camera/camera.hpp"
+#include "utils/types.hpp"
 
 namespace KE {
 
@@ -17,7 +17,11 @@ inline glm::quat upAxisRotation(UpAxis upAxis) {
         // Rotate +90 degrees around X: Y-up(+Y) -> Z-up(+Z)
         return glm::angleAxis(glm::radians(90.0f), glm::vec3(1, 0, 0));
     }
-    return glm::quat(1, 0, 0, 0); // identity
+    if (upAxis == UpAxis::X) {
+        // Rotate -90 degrees around Z: Y-up(+Y) -> X-up(+X)
+        return glm::angleAxis(glm::radians(-90.0f), glm::vec3(0, 0, 1));
+    }
+    return glm::quat(1, 0, 0, 0); // identity (Y-up)
 }
 
 } // namespace KE

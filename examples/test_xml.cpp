@@ -212,9 +212,7 @@ class MyApp : public App {
         auto* groundPrim =
             getScene()->definePrim("/ground", Scene::PrimType::Mesh);
         groundPrim->setMeshData(std::make_shared<Scene::MeshData>(
-            Scene::Prim::createPlaneData(10.f))); // 10m x 10m
-        groundPrim->addRotateQuaternionOp(
-            upAxisRotation(getCamera().getUpAxis()));
+            Scene::Prim::createPlaneData(10.f, UpAxis::Z))); // 10m x 10m
         addShape(planeShader.get(), groundPrim);
 
         // Load MJCF robot

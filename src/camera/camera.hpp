@@ -8,9 +8,9 @@
 #include <glm/glm.hpp>
 #include <vector>
 
-namespace KE {
+#include "utils/types.hpp"
 
-enum class UpAxis { Y, Z };
+namespace KE {
 
 class Camera {
 
