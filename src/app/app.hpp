@@ -8,7 +8,6 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
-#include <list>
 #include <memory>
 
 #include "camera/camera.hpp"
@@ -26,16 +25,6 @@
 #include "scene/native/prim.hpp"
 namespace KE {
 
-struct ShapeRenderBuffer {
-    Backend::Shader* backendShader; // Backend::Shader
-    std::unique_ptr<Backend::VertexArray> vertexArray;
-    std::unique_ptr<Backend::Buffer> vertexBuffer;
-    std::unique_ptr<Backend::Buffer> indexBuffer;
-    int numIndices;
-
-    // Constructor helpers
-    ShapeRenderBuffer() : backendShader(nullptr), numIndices(0) {}
-};
 class App {
   private:
     class GLFWCallbackWrapper { // https://stackoverflow.com/a/41089765
@@ -141,8 +130,11 @@ class App {
     size_t addShape(PhongMaterial* material,
                     std::shared_ptr<Scene::MeshData> meshData);
     size_t addShape(Backend::Shader* shader, Scene::Prim* prim);
-    // _bufferLists // container for called in rendering loop;
-    std::list<std::unique_ptr<ShapeRenderBuffer>> _bufferLists;
+
+  private:
+    std::shared_ptr<Scene::ShapeRenderBuffer>
+    createRenderBuffer(Backend::Shader* shader,
+                       const std::shared_ptr<Scene::MeshData>& meshData);
 };
 
 } // namespace KE

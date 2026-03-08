@@ -274,6 +274,7 @@ class MyApp : public App {
             "external/retargetted/unitree_h1/assets/pelvis.stl");
         auto stlMeshData =
             std::make_shared<Scene::MeshData>(loadStl(inputfile));
+        stlMeshData->fillMissingAttributes();
         fmt::print("STL loaded: vertices={}, normals={}, uvs={}, indices={}\n",
                    stlMeshData->vertices.size(), stlMeshData->normals.size(),
                    stlMeshData->uvs.size(), stlMeshData->indices.size());

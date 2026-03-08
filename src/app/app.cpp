@@ -237,6 +237,52 @@ void App::draw() {
 
 void App::checkError() { _graphicsDevice->checkError(); }
 
+std::shared_ptr<Scene::ShapeRenderBuffer>
+App::createRenderBuffer(Backend::Shader* shader,
+                        const std::shared_ptr<Scene::MeshData>& meshData) {
+    auto bufferInfos = std::make_shared<Scene::ShapeRenderBuffer>();
+    bufferInfos->backendShader = shader;
+
+    // VAO
+    bufferInfos->vertexArray = _graphicsDevice->createVertexArray();
+    bufferInfos->vertexArray->bind();
+
+    // Index Buffer
+    bufferInfos->indexBuffer = _graphicsDevice->createBuffer(
+        Backend::BufferType::Index,
+        sizeof(unsigned int) * meshData->indices.size(),
+        meshData->indices.data());
+
+    bufferInfos->vertexArray->setIndexBuffer(
+        bufferInfos->indexBuffer.get()); // bind
+
+    // Helper to add attribute and keep buffer alive // TODO: use one buffer
+    auto addAttribute = [&](const auto& data, int location, int size) {
+        if (data.empty())
+            return;
+        auto buffer = _graphicsDevice->createBuffer(
+            Backend::BufferType::Vertex, sizeof(data[0]) * data.size(),
+            data.data());
+        // buffer->bind();
+        bufferInfos->vertexArray->setVertexBuffer(buffer.get());
+        Backend::VertexAttribute attr = {
+            location,        size, Backend::VertexAttributeType::Float, false,
+            sizeof(data[0]), 0};
+        bufferInfos->vertexArray->setVertexAttribute(attr);
+
+        bufferInfos->vertexBuffers.push_back(std::move(buffer));
+    };
+
+    addAttribute(meshData->vertices, 0, 3);
+    addAttribute(meshData->normals, 1, 3);
+    addAttribute(meshData->uvs, 2, 2);
+
+    bufferInfos->vertexArray->unbind();
+    bufferInfos->numIndices = static_cast<int>(meshData->indices.size());
+
+    return bufferInfos;
+}
+
 size_t App::addShape(Backend::Shader* shader,
                      std::shared_ptr<Scene::MeshData> meshData) {
     if (!meshData || meshData->vertices.empty() || meshData->indices.empty()) {
@@ -244,95 +290,14 @@ size_t App::addShape(Backend::Shader* shader,
     }
 
     try {
-        auto bufferInfos = std::make_shared<Scene::ShapeRenderBuffer>();
-        bufferInfos->backendShader = shader;
-
         if (shader) {
             shader->use();
         }
 
-        // Create separate buffers for each attribute using meshData directly
-        // Position buffer (location 0)
-        auto positionBuffer = _graphicsDevice->createBuffer(
-            Backend::BufferType::Vertex,
-            sizeof(glm::vec3) * meshData->vertices.size(),
-            meshData->vertices.data());
-
-        // Normal buffer (location 1) - if exists
-        std::unique_ptr<Backend::Buffer> normalBuffer;
-        if (!meshData->normals.empty()) {
-            normalBuffer = _graphicsDevice->createBuffer(
-                Backend::BufferType::Vertex,
-                sizeof(glm::vec3) * meshData->normals.size(),
-                meshData->normals.data());
-        }
-
-        // UV buffer (location 2) - if exists
-        std::unique_ptr<Backend::Buffer> uvBuffer;
-        if (!meshData->uvs.empty()) {
-            uvBuffer = _graphicsDevice->createBuffer(
-                Backend::BufferType::Vertex,
-                sizeof(glm::vec2) * meshData->uvs.size(), meshData->uvs.data());
-        }
-
-        // Index buffer
-        bufferInfos->indexBuffer = _graphicsDevice->createBuffer(
-            Backend::BufferType::Index,
-            sizeof(unsigned int) * meshData->indices.size(),
-            meshData->indices.data());
-
-        // Create and configure vertex array
-        bufferInfos->vertexArray = _graphicsDevice->createVertexArray();
-        bufferInfos->vertexArray->bind();
-
-        // Set index buffer
-        bufferInfos->vertexArray->setIndexBuffer(
-            bufferInfos->indexBuffer.get());
-
-        // Position attribute (location 0)
-        positionBuffer->bind();
-        Backend::VertexAttribute positionAttr = {
-            0, 3, Backend::VertexAttributeType::Float, false, sizeof(glm::vec3),
-            0};
-        bufferInfos->vertexArray->setVertexAttribute(positionAttr);
-
-        // Normal attribute (location 1)
-        if (normalBuffer) {
-            normalBuffer->bind();
-            Backend::VertexAttribute normalAttr = {
-                1,
-                3,
-                Backend::VertexAttributeType::Float,
-                false,
-                sizeof(glm::vec3),
-                0};
-            bufferInfos->vertexArray->setVertexAttribute(normalAttr);
-        }
-
-        // UV attribute (location 2)
-        if (uvBuffer) {
-            uvBuffer->bind();
-            Backend::VertexAttribute uvAttr = {
-                2,
-                2,
-                Backend::VertexAttributeType::Float,
-                false,
-                sizeof(glm::vec2),
-                0};
-            bufferInfos->vertexArray->setVertexAttribute(uvAttr);
-        }
-
-        bufferInfos->vertexArray->unbind();
-        bufferInfos->numIndices = meshData->indices.size();
-
-        // Store position buffer (we need to keep at least one buffer alive)
-        bufferInfos->vertexBuffer = std::move(positionBuffer);
-        // Note: normalBuffer and uvBuffer will be destroyed here,
-        // but OpenGL has already copied the data
+        auto bufferInfos = createRenderBuffer(shader, meshData);
 
         checkError();
 
-        //_bufferLists.push_back(std::move(bufferInfos));
         _scene->addRenderable(bufferInfos);
         return _scene->getBufferLists().size() - 1;
 
@@ -350,88 +315,13 @@ size_t App::addShape(PhongMaterial* material,
     }
 
     try {
-        auto bufferInfos = std::make_shared<Scene::ShapeRenderBuffer>();
-        bufferInfos->backendShader =
-            material->getShader(); // TODO: need to fix?
+        Backend::Shader* shader = material->getShader();
 
-        if (bufferInfos->backendShader) {
+        if (shader) {
             material->bind();
         }
 
-        // Create separate buffers for each attribute using meshData directly
-        // Position buffer (location 0)
-        auto positionBuffer = _graphicsDevice->createBuffer(
-            Backend::BufferType::Vertex,
-            sizeof(glm::vec3) * meshData->vertices.size(),
-            meshData->vertices.data());
-
-        // Normal buffer (location 1) - if exists
-        std::unique_ptr<Backend::Buffer> normalBuffer;
-        if (!meshData->normals.empty()) {
-            normalBuffer = _graphicsDevice->createBuffer(
-                Backend::BufferType::Vertex,
-                sizeof(glm::vec3) * meshData->normals.size(),
-                meshData->normals.data());
-        }
-
-        // UV buffer (location 2) - if exists
-        std::unique_ptr<Backend::Buffer> uvBuffer;
-        if (!meshData->uvs.empty()) {
-            uvBuffer = _graphicsDevice->createBuffer(
-                Backend::BufferType::Vertex,
-                sizeof(glm::vec2) * meshData->uvs.size(), meshData->uvs.data());
-        }
-
-        // Index buffer
-        bufferInfos->indexBuffer = _graphicsDevice->createBuffer(
-            Backend::BufferType::Index,
-            sizeof(unsigned int) * meshData->indices.size(),
-            meshData->indices.data());
-
-        // Create and configure vertex array
-        bufferInfos->vertexArray = _graphicsDevice->createVertexArray();
-        bufferInfos->vertexArray->bind();
-
-        // Set index buffer
-        bufferInfos->vertexArray->setIndexBuffer(
-            bufferInfos->indexBuffer.get());
-
-        // Position attribute (location 0)
-        positionBuffer->bind();
-        Backend::VertexAttribute positionAttr = {
-            0, 3, Backend::VertexAttributeType::Float, false, sizeof(glm::vec3),
-            0};
-        bufferInfos->vertexArray->setVertexAttribute(positionAttr);
-
-        // Normal attribute (location 1)
-        if (normalBuffer) {
-            normalBuffer->bind();
-            Backend::VertexAttribute normalAttr = {
-                1,
-                3,
-                Backend::VertexAttributeType::Float,
-                false,
-                sizeof(glm::vec3),
-                0};
-            bufferInfos->vertexArray->setVertexAttribute(normalAttr);
-        }
-
-        // UV attribute (location 2)
-        if (uvBuffer) {
-            uvBuffer->bind();
-            Backend::VertexAttribute uvAttr = {
-                2,
-                2,
-                Backend::VertexAttributeType::Float,
-                false,
-                sizeof(glm::vec2),
-                0};
-            bufferInfos->vertexArray->setVertexAttribute(uvAttr);
-        }
-
-        bufferInfos->vertexArray->unbind();
-        bufferInfos->numIndices = meshData->indices.size();
-        bufferInfos->vertexBuffer = std::move(positionBuffer);
+        auto bufferInfos = createRenderBuffer(shader, meshData);
 
         checkError();
         _scene->addRenderable(bufferInfos);
@@ -452,81 +342,12 @@ size_t App::addShape(Backend::Shader* shader, Scene::Prim* prim) {
     }
 
     try {
-        auto bufferInfos = std::make_shared<Scene::ShapeRenderBuffer>();
-        bufferInfos->backendShader = shader;
-        bufferInfos->prim = prim;
-
         if (shader) {
             shader->use();
         }
 
-        auto positionBuffer = _graphicsDevice->createBuffer(
-            Backend::BufferType::Vertex,
-            sizeof(glm::vec3) * meshData->vertices.size(),
-            meshData->vertices.data());
-
-        std::unique_ptr<Backend::Buffer> normalBuffer;
-        if (!meshData->normals.empty()) {
-            normalBuffer = _graphicsDevice->createBuffer(
-                Backend::BufferType::Vertex,
-                sizeof(glm::vec3) * meshData->normals.size(),
-                meshData->normals.data());
-        }
-
-        std::unique_ptr<Backend::Buffer> uvBuffer;
-        if (!meshData->uvs.empty()) {
-            uvBuffer = _graphicsDevice->createBuffer(
-                Backend::BufferType::Vertex,
-                sizeof(glm::vec2) * meshData->uvs.size(), meshData->uvs.data());
-        }
-
-        bufferInfos->indexBuffer = _graphicsDevice->createBuffer(
-            Backend::BufferType::Index,
-            sizeof(unsigned int) * meshData->indices.size(),
-            meshData->indices.data());
-
-        bufferInfos->vertexArray = _graphicsDevice->createVertexArray();
-        bufferInfos->vertexArray->bind();
-
-        bufferInfos->vertexArray->setIndexBuffer(
-            bufferInfos->indexBuffer.get());
-
-        positionBuffer->bind();
-        Backend::VertexAttribute positionAttr = {
-            0, 3, Backend::VertexAttributeType::Float, false, sizeof(glm::vec3),
-            0
-
-        };
-        bufferInfos->vertexArray->setVertexAttribute(positionAttr);
-
-        if (!meshData->normals.empty()) {
-            normalBuffer->bind();
-            Backend::VertexAttribute normalAttr = {
-                1,
-                3,
-                Backend::VertexAttributeType::Float,
-                false,
-                sizeof(glm::vec3),
-                0};
-            bufferInfos->vertexArray->setVertexAttribute(normalAttr);
-        }
-
-        if (!meshData->uvs.empty()) {
-            uvBuffer->bind();
-            Backend::VertexAttribute uvAttr = {
-                2,
-                2,
-                Backend::VertexAttributeType::Float,
-                false,
-                sizeof(glm::vec2),
-                0};
-            bufferInfos->vertexArray->setVertexAttribute(uvAttr);
-        }
-
-        bufferInfos->vertexArray->unbind();
-        bufferInfos->numIndices = meshData->indices.size();
-
-        bufferInfos->vertexBuffer = std::move(positionBuffer);
+        auto bufferInfos = createRenderBuffer(shader, meshData);
+        bufferInfos->prim = prim;
 
         checkError();
         _scene->addRenderable(bufferInfos);

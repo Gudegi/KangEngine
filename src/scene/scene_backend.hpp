@@ -10,6 +10,7 @@
 #include <memory>
 #include <vector>
 #include <glm/glm.hpp>
+#include <glm/geometric.hpp>
 #include "../backend/graphics_factory.hpp"
 
 namespace KE {
@@ -22,14 +23,16 @@ enum class PrimType;
 struct ShapeRenderBuffer {
     Backend::Shader* backendShader; // Backend::Shader
     std::unique_ptr<Backend::VertexArray> vertexArray;
-    std::unique_ptr<Backend::Buffer> vertexBuffer;
+    std::vector<std::unique_ptr<Backend::Buffer>>
+        vertexBuffers; // TODO: use one VBO
     std::unique_ptr<Backend::Buffer> indexBuffer;
     int numIndices;
 
     Prim* prim; // non-owning, scene graph owns the Prim
 
     // Constructor helpers
-    ShapeRenderBuffer() : backendShader(nullptr), numIndices(0), prim(nullptr) {}
+    ShapeRenderBuffer()
+        : backendShader(nullptr), numIndices(0), prim(nullptr) {}
 };
 
 // Mesh 데이터 구조
@@ -46,6 +49,25 @@ struct MeshData {
              std::vector<unsigned int>&& indices)
         : vertices(std::move(vertices)), normals(std::move(normals)),
           uvs(std::move(uvs)), indices(std::move(indices)) {}
+
+    // Fill missing normals (flat shading from triangles) and UVs (zeros).
+    void fillMissingAttributes() {
+        if (normals.empty() && !vertices.empty() && !indices.empty()) {
+            normals.resize(vertices.size(), glm::vec3(0.0f));
+            for (size_t i = 0; i + 2 < indices.size(); i += 3) {
+                const glm::vec3& v0 = vertices[indices[i]];
+                const glm::vec3& v1 = vertices[indices[i + 1]];
+                const glm::vec3& v2 = vertices[indices[i + 2]];
+                glm::vec3 n = glm::normalize(glm::cross(v1 - v0, v2 - v0));
+                normals[indices[i]] = n;
+                normals[indices[i + 1]] = n;
+                normals[indices[i + 2]] = n;
+            }
+        }
+        if (uvs.empty() && !vertices.empty()) {
+            uvs.assign(vertices.size(), glm::vec2(0.0f));
+        }
+    }
 };
 
 // Scene Backend 타입
