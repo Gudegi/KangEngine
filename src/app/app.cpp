@@ -393,11 +393,8 @@ void App::cursorPositionCallback(GLFWwindow* window, double xpos, double ypos) {
     _io->mouseY = ypos;
     if (_io->isMouseLeftClicked == true || _io->isMouseMiddleClicked == true ||
         _io->isMouseRightClicked == true) {
-        _io->deltaMouseX = _io->mouseX - _io->prevMouseX;
-        _io->deltaMouseY = _io->mouseY - _io->prevMouseY;
-    } else {
-        _io->deltaMouseX = 0;
-        _io->deltaMouseY = 0;
+        _io->deltaMouseX += _io->mouseX - _io->prevMouseX;
+        _io->deltaMouseY += _io->mouseY - _io->prevMouseY;
     }
     _io->prevMouseX = xpos;
     _io->prevMouseY = ypos;
@@ -422,6 +419,12 @@ void App::mouseButtonCallback(GLFWwindow* window, int button, int action,
 }
 
 void App::processInput() {
+    // Capture accumulated deltas, reset for next frame.
+    double deltaMouseX = _io->deltaMouseX;
+    double deltaMouseY = _io->deltaMouseY;
+    _io->deltaMouseX = 0;
+    _io->deltaMouseY = 0;
+
     // Prevent manipulations while ImGui using the mouse.
     if (ImGui::GetIO().WantCaptureMouse) {
         return;
@@ -504,8 +507,8 @@ void App::processInput() {
 
     if (_io->isMouseLeftClicked) {
         // Orbit cam
-        float dx = _io->deltaMouseX * 0.1f;
-        float dy = _io->deltaMouseY * 0.1f;
+        float dx = deltaMouseX * 0.1f;
+        float dy = deltaMouseY * 0.1f;
 
         _camera.azimuth += (_camera.getUpAxis() == UpAxis::Z) ? -dx : dx;
         _camera.pole -= dy; // (mouse down -> cam up)
@@ -535,13 +538,13 @@ void App::processInput() {
     }
 
     if (_io->isMouseRightClicked) {
-        const double DRAG_MAG_THRESHOLD = 2.0;
-        if (sqrt(_io->deltaMouseX * _io->deltaMouseX +
-                 _io->deltaMouseY * _io->deltaMouseY) >= DRAG_MAG_THRESHOLD) {
+        // Look Around: Camera fixed, Target moves
+        const double DRAG_MAG_THRESHOLD = 1.0;
+        if (sqrt(deltaMouseX * deltaMouseX + deltaMouseY * deltaMouseY) >=
+            DRAG_MAG_THRESHOLD) {
 
-            // Look Around: Camera fixed, Target moves
-            float dx = _io->deltaMouseX * 0.1f;
-            float dy = _io->deltaMouseY * 0.1f;
+            float dx = deltaMouseX * 0.2f;
+            float dy = deltaMouseY * 0.2f;
 
             _camera.azimuth += (_camera.getUpAxis() == UpAxis::Z) ? -dx : dx;
             _camera.pole -= dy;
@@ -563,7 +566,6 @@ void App::processInput() {
                 offset.y = r * glm::cos(theta);
                 offset.z = r * glm::sin(theta) * glm::sin(phi);
             }
-
             _camera.setTargetPos(cameraPos - offset);
         }
     }
