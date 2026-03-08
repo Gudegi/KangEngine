@@ -370,21 +370,22 @@ void App::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
 }
 
 void App::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
+    /*
     float fov = _camera.getFoV();
     fov -= (float)yoffset;
     _camera.setFoV(fov);
     _camera.updateProjMatrix(_width, _height);
-    /*
+    */
     // Dolly zoom: move camera along look direction
     glm::vec3 cameraPos = _camera.getCameraPos();
     glm::vec3 cameraFront = _camera.getCameraLookDir();
-    float zoomSpeed = _camera.getCamToLookDistance() * 0.1f;
+    float distance = _camera.getCamToLookDistance();
+    float zoomSpeed = distance * 0.05f;
+    if (distance > 60 && yoffset < 0) {
+        zoomSpeed = 0;
+    }
     cameraPos += static_cast<float>(yoffset) * zoomSpeed * cameraFront;
-
-    //float cameraSpeed = static_cast<float>(10.0 * _renderVariable->deltaTime);
-    //cameraPos -= cameraSpeed * cameraFront;
     _camera.setCameraPos(cameraPos);
-    */
 }
 
 void App::cursorPositionCallback(GLFWwindow* window, double xpos, double ypos) {
@@ -534,52 +535,37 @@ void App::processInput() {
     }
 
     if (_io->isMouseRightClicked) {
-        const double DRAG_THRESHOLD = 2.0;
+        const double DRAG_MAG_THRESHOLD = 2.0;
         if (sqrt(_io->deltaMouseX * _io->deltaMouseX +
-                 _io->deltaMouseY * _io->deltaMouseY) < DRAG_THRESHOLD) {
-            return;
-        }
-        if (_io->deltaMouseX > 0) {
-            glm::vec3 scaledFront = scaleVec3(cameraFront, scaleDistance);
-            _camera.setTargetPos(cameraPos + scaledFront);
-            cameraPos -=
-                cameraSpeed * glm::normalize(glm::cross(cameraFront, globalUp));
-            _camera.setTargetPos(cameraPos + scaledFront);
-        }
-        if (_io->deltaMouseX < 0) {
-            glm::vec3 scaledFront = scaleVec3(cameraFront, scaleDistance);
-            _camera.setTargetPos(cameraPos + scaledFront);
-            cameraPos +=
-                cameraSpeed * glm::normalize(glm::cross(cameraFront, globalUp));
-            _camera.setTargetPos(cameraPos + scaledFront);
-        }
-        if (_io->deltaMouseY > 0) {
-            glm::vec3 scaledFront = scaleVec3(cameraFront, scaleDistance);
-            _camera.setTargetPos(cameraPos + scaledFront);
-            // cameraPos += cameraSpeed * cameraFront;
-            cameraPos += cameraSpeed * cameraUp;
-            _camera.setTargetPos(cameraPos + scaledFront);
-        }
-        if (_io->deltaMouseY < 0) {
-            glm::vec3 scaledFront = scaleVec3(cameraFront, scaleDistance);
-            _camera.setTargetPos(cameraPos + scaledFront);
-            // cameraPos -= cameraSpeed * cameraFront;
-            cameraPos -= cameraSpeed * cameraUp;
-            _camera.setTargetPos(cameraPos + scaledFront);
-        }
-        /*
-        // panning
-        glm::vec3 rightMove = static_cast<float>(-_io->deltaMouseX) *
-        cameraSpeed * glm::normalize(glm::cross(cameraFront, globalUp));
-        glm::vec3 upMove = static_cast<float>(-_io->deltaMouseY) * cameraSpeed *
-        cameraUp; glm::vec3 totalMove = rightMove + upMove;
+                 _io->deltaMouseY * _io->deltaMouseY) >= DRAG_MAG_THRESHOLD) {
 
-        cameraPos += totalMove;
-        glm::vec3 newTargetPos = _camera.getTargetPos() + totalMove;
+            // Look Around: Camera fixed, Target moves
+            float dx = _io->deltaMouseX * 0.1f;
+            float dy = _io->deltaMouseY * 0.1f;
 
-        _camera.setCameraPos(cameraPos);
-        _camera.setTargetPos(newTargetPos);
-        */
+            _camera.azimuth += (_camera.getUpAxis() == UpAxis::Z) ? -dx : dx;
+            _camera.pole -= dy;
+
+            const float EPSILON = 0.01f;
+            _camera.pole = glm::clamp(_camera.pole, EPSILON, 180.0f - EPSILON);
+
+            float phi = glm::radians(_camera.azimuth);
+            float theta = glm::radians(_camera.pole);
+            float r = scaleDistance;
+
+            glm::vec3 offset;
+            if (_camera.getUpAxis() == UpAxis::Z) {
+                offset.x = r * glm::sin(theta) * glm::cos(phi);
+                offset.y = r * glm::sin(theta) * glm::sin(phi);
+                offset.z = r * glm::cos(theta);
+            } else {
+                offset.x = r * glm::sin(theta) * glm::cos(phi);
+                offset.y = r * glm::cos(theta);
+                offset.z = r * glm::sin(theta) * glm::sin(phi);
+            }
+
+            _camera.setTargetPos(cameraPos - offset);
+        }
     }
 }
 
