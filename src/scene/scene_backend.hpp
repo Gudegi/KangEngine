@@ -101,8 +101,6 @@ class SceneBackend {
 
     // Scene graph root
     virtual Prim* getRootPrim() { return nullptr; }
-
-
 };
 
 // Factory

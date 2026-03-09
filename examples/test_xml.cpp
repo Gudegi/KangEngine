@@ -234,26 +234,6 @@ class MyApp : public App {
         ImGui::SliderAngle("asdf", &deg, 0.0f, 180.0f);
         ImGui::End();
 
-        ImGui::Begin("Scene");
-        if (auto* root = getScene()->getRootPrim()) {
-            std::function<void(Scene::Prim*)> drawPrimTree =
-                [&](Scene::Prim* prim) {
-                    auto children = prim->getChildren();
-                    if (children.empty()) {
-                        ImGui::Text("%s", prim->getName().c_str());
-                    } else if (ImGui::TreeNode(prim->getName().c_str())) {
-                        for (auto* child : children) {
-                            drawPrimTree(child);
-                        }
-                        ImGui::TreePop();
-                    }
-                };
-            for (auto* child : root->getChildren()) {
-                drawPrimTree(child);
-            }
-        }
-        ImGui::End();
-
         glm::quat q = glm::quat(glm::vec3(glm::radians(deg), 0, 0));
         robot.setRootTranslation(
             Eigen::Vector3f(robotPos.x, robotPos.y, robotPos.z));

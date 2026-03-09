@@ -112,10 +112,6 @@ class App {
     float _renderHz = 0;
 
   public:
-    //////
-    void draw();
-    //////
-
     virtual void framebufferSizeCallback(GLFWwindow* window, int width,
                                          int height);
     virtual void scrollCallback(GLFWwindow* window, double xoffset,

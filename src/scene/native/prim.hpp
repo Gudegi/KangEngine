@@ -78,8 +78,9 @@ class Prim {
     void setMeshData(std::shared_ptr<MeshData> data);
     std::shared_ptr<MeshData> getMeshData() const;
 
-    static MeshData createSquareData(float scale);
-    static MeshData createPlaneData(float scale); // Y-up by default
+    static MeshData createCubeData(float scale);
+    static MeshData createSquareData(float scale); // Deprecated.
+    static MeshData createPlaneData(float scale);  // Y-up by default
     static MeshData createPlaneData(float scale, UpAxis upAxis);
     static MeshData createSphereData(float radius, int numLongitudes,
                                      int numLatitudes);
@@ -94,6 +95,23 @@ class Prim {
     static MeshData createArrowData(float baseRadius, float baseHeight,
                                     UpAxis upAxis, float capRadius = -1.0f,
                                     float capHeight = -1.0f, int segments = 32);
+    static MeshData createCapsuleData(float radius, float height,
+                                      UpAxis upAxis = UpAxis::Y,
+                                      int segments = 32);
+    static MeshData createConeData(float radius, float height,
+                                   UpAxis upAxis = UpAxis::Y,
+                                   int segments = 32);
+    // Points: each point rendered as a small sphere (radius = pointRadius)
+    // TODO: instanced render
+    static MeshData createPointsData(const std::vector<glm::vec3>& points,
+                                     float pointRadius = 0.01f,
+                                     int segments = 8);
+    // Lines: each segment rendered as a capsule (radius = lineRadius)
+    // TODO: instanced render
+    static MeshData createLinesData(const std::vector<glm::vec3>& vertices,
+                                    const std::vector<unsigned int>& indices,
+                                    float lineRadius = 0.005f,
+                                    int segments = 8);
 
     // 순회
     void traverse(std::function<void(Prim*)> func);
@@ -180,10 +198,8 @@ class Prim {
 
     void onDirtyAttributeChanged() {
         _isDirty = true;
-        // children are also Dirty
-        for (auto& child : _children) {
-            child->onDirtyAttributeChanged();
-        }
+        // Note: Children are not dirty because _cachedModelMat represents
+        // the Local transform, which is independent of the parent.
     }
 };
 

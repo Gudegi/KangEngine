@@ -192,6 +192,52 @@ class PrimShowcaseApp : public App {
             {8.f, 10.f, 0.f}, {0.95f, 0.35f, 0.75f, 1.f},
             "Arrow (Z-up, fat cap)");
 
+        // Row y=15 — capsules (Y / Z / X)
+        add("/shapes/capsule_y", Prim::createCapsuleData(0.35f, 1.0f),
+            {-4.f, 15.f, 0.35f}, {0.60f, 0.90f, 0.50f, 1.f},
+            "Capsule (Y-up, lying)");
+
+        add("/shapes/capsule_z",
+            Prim::createCapsuleData(0.35f, 1.0f, UpAxis::Z), {0.f, 15.f, 0.85f},
+            {0.40f, 0.60f, 0.95f, 1.f}, "Capsule (Z-up, standing)");
+
+        add("/shapes/capsule_x",
+            Prim::createCapsuleData(0.35f, 1.0f, UpAxis::X), {4.f, 15.f, 0.35f},
+            {0.95f, 0.55f, 0.30f, 1.f}, "Capsule (X-up, sideways)");
+
+        // Row y=15 — cones (Y / Z / X)
+        add("/shapes/cone_y", Prim::createConeData(0.40f, 1.2f),
+            {-8.f, 15.f, 0.f}, {0.95f, 0.80f, 0.25f, 1.f},
+            "Cone (Y-up, horizontal)");
+
+        add("/shapes/cone_z", Prim::createConeData(0.40f, 1.2f, UpAxis::Z),
+            {8.f, 15.f, 0.f}, {0.30f, 0.90f, 0.70f, 1.f},
+            "Cone (Z-up, pointing up)");
+
+        // Row y=20 — points and lines
+        {
+            std::vector<glm::vec3> pts = {
+                {-1.f, 0.f, 0.f},   {0.f, 0.f, 0.f},   {1.f, 0.f, 0.f},
+                {-0.5f, 0.f, 0.8f}, {0.5f, 0.f, 0.8f},
+            };
+            add("/shapes/points", Prim::createPointsData(pts, 0.12f, 12),
+                {-4.f, 20.f, 0.f}, {0.95f, 0.35f, 0.55f, 1.f},
+                "Points (5 spheres)");
+        }
+        {
+            std::vector<glm::vec3> verts = {
+                {0.f, 0.f, 0.f},   {1.f, 0.f, 0.f}, {1.f, 0.f, 0.f},
+                {1.f, 0.f, 1.f},   {1.f, 0.f, 1.f}, {0.f, 0.f, 1.f},
+                {0.f, 0.f, 1.f},   {0.f, 0.f, 0.f}, {0.5f, 0.f, 0.5f},
+                {0.5f, 0.f, 1.2f},
+            };
+            std::vector<unsigned int> lineIdx = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+            add("/shapes/lines",
+                Prim::createLinesData(verts, lineIdx, 0.04f, 8),
+                {2.f, 20.f, 0.f}, {0.35f, 0.75f, 0.95f, 1.f},
+                "Lines (5 capsule segments)");
+        }
+
         checkError();
     }
 

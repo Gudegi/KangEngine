@@ -185,27 +185,28 @@ void App::coreRender() {
         _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
     }
 
+    ImGui::Begin("Scene");
+    if (auto* root = getScene()->getRootPrim()) {
+        auto drawPrimTree = [&](auto& self, Scene::Prim* prim) -> void {
+            const auto& children = prim->getChildren();
+            if (children.empty()) {
+                ImGui::Text("%s", prim->getName().c_str());
+            } else if (ImGui::TreeNode(prim->getName().c_str())) {
+                for (auto* child : children)
+                    self(self, child);
+                ImGui::TreePop();
+            }
+        };
+        for (auto* child : root->getChildren())
+            drawPrimTree(drawPrimTree, child);
+    }
+    ImGui::End();
+
     if (_rasterizer)
         _rasterizer->render(_viewMatrix, _projectionMatrix);
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
-/// for each step rendering for both c++ and python
-/// ////////////////////////////////////////////
-void App::draw() {
-    // TODO : update me
-    /*
-    float currentFrame = static_cast<float>(glfwGetTime());
-    _renderVariable->deltaTime = currentFrame - _renderVariable->lastFrameTime;
-    _renderVariable->lastFrameTime = currentFrame;
-    processInput();
-    _viewMatrix = _camera.getViewMatrix();
-    _projectionMatrix = _camera.getProjMatrix();
-
-    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    */
-}
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
 void App::checkError() { _graphicsDevice->checkError(); }

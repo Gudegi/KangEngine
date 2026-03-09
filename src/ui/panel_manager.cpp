@@ -117,14 +117,6 @@ void PanelManager::render() {
     for (auto& panel : _panels) {
         panel->buildPanel();
     }
-
-    ImGui::Begin("Info");
-    ImGui::Separator();
-    ImGui::Text("tmp text.");
-    // ImGui::Checkbox("Draw Triangle", &drawTriangle);
-    // ImGui::SliderFloat("Size", &size, 0.5f, 2.0f);
-    // ImGui::ColorEdit4("Color", color);
-    ImGui::End();
 }
 
 void PanelManager::postRender() {

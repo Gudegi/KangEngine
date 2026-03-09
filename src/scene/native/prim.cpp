@@ -5,6 +5,7 @@
 #include "prim.hpp"
 #include "scene/scene_backend.hpp"
 #include "utils/types.hpp"
+#include <Eigen/Geometry>
 #include <glm/ext/quaternion_transform.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/ext/scalar_constants.hpp>
@@ -34,7 +35,7 @@ Prim* Prim::addChild(const std::string& name, PrimType type) {
     Prim* childPtr = child.get();
 
     _childrenMap[name] = childPtr;
-    _children.push_back(std::move(child));
+    _children.emplace_back(std::move(child));
 
     return childPtr;
 }
@@ -59,25 +60,27 @@ Prim* Prim::getPrimAtPath(const std::string& path) {
         pathCopy = pathCopy.substr(1); // "/" 제거
     }
 
-    // "World/Cube" → ["World", "Cube"]
-    std::vector<std::string> parts;
-    std::stringstream ss(pathCopy);
-    std::string part;
-    while (std::getline(ss, part, '/')) {
-        if (!part.empty()) {
-            parts.push_back(part);
-        }
-    }
-
     // 순차 탐색
     Prim* current = this;
-    for (const auto& name : parts) {
-        current = current->getChild(name);
-        if (!current) {
-            return nullptr; // 경로 없음
+    size_t start = 0;
+    size_t end = pathCopy.find('/');
+
+    while (end != std::string::npos) {
+        std::string part = pathCopy.substr(start, end - start);
+        if (!part.empty()) {
+            current = current->getChild(part);
+            if (!current)
+                return nullptr;
         }
+        start = end + 1;
+        end = pathCopy.find('/', start);
     }
 
+    // Last part
+    std::string part = pathCopy.substr(start);
+    if (!part.empty()) {
+        current = current->getChild(part);
+    }
     return current;
 }
 
@@ -85,7 +88,7 @@ std::vector<Prim*> Prim::getChildren() const {
     std::vector<Prim*> result;
     result.reserve(_children.size());
     for (const auto& child : _children) {
-        result.push_back(child.get());
+        result.emplace_back(child.get());
     }
     return result;
 }
@@ -94,7 +97,9 @@ void Prim::setMeshData(std::shared_ptr<MeshData> data) { _meshData = data; }
 
 std::shared_ptr<MeshData> Prim::getMeshData() const { return _meshData; }
 
-MeshData Prim::createSquareData(float scale) {
+MeshData Prim::createSquareData(float scale) { return createCubeData(scale); }
+
+MeshData Prim::createCubeData(float scale) {
     // Scale means the length of one side.
     float half = scale / 2;
     //    v3----- v7
@@ -351,12 +356,12 @@ static MeshData makeCylinderMesh(float radius, float halfLength,
     std::vector<unsigned int> indices;
 
     // Cap vertices: [0] bottom center, [1] top center
-    positions.push_back(P(0.0f, -halfLength, 0.0f));
-    normals.push_back(P(0.0f, -1.0f, 0.0f));
+    positions.emplace_back(P(0.0f, -halfLength, 0.0f));
+    normals.emplace_back(P(0.0f, -1.0f, 0.0f));
     uvs.emplace_back(0.5f, 0.5f);
 
-    positions.push_back(P(0.0f, halfLength, 0.0f));
-    normals.push_back(P(0.0f, 1.0f, 0.0f));
+    positions.emplace_back(P(0.0f, halfLength, 0.0f));
+    normals.emplace_back(P(0.0f, 1.0f, 0.0f));
     uvs.emplace_back(0.5f, 0.5f);
 
     for (int j : {-1, 1}) {
@@ -369,8 +374,8 @@ static MeshData makeCylinderMesh(float radius, float halfLength,
             float c = glm::cos(theta);
             float s = glm::sin(theta);
 
-            positions.push_back(P(r * c, y, r * s));
-            normals.push_back(P(0.0f, (float)j, 0.0f));
+            positions.emplace_back(P(r * c, y, r * s));
+            normals.emplace_back(P(0.0f, (float)j, 0.0f));
             uvs.emplace_back(c * 0.5f + 0.5f, s * 0.5f + 0.5f);
 
             int cs = ci * segments;
@@ -379,14 +384,14 @@ static MeshData makeCylinderMesh(float radius, float halfLength,
 
             if (j == -1) {
                 // bottom cap: CCW from -Y (outside)
-                indices.push_back(ci);
-                indices.push_back(v_curr);
-                indices.push_back(v_next);
+                indices.emplace_back(ci);
+                indices.emplace_back(v_curr);
+                indices.emplace_back(v_next);
             } else {
                 // top cap: CCW from +Y (outside)
-                indices.push_back(v_next);
-                indices.push_back(v_curr);
-                indices.push_back(ci);
+                indices.emplace_back(v_next);
+                indices.emplace_back(v_curr);
+                indices.emplace_back(ci);
             }
         }
     }
@@ -403,8 +408,8 @@ static MeshData makeCylinderMesh(float radius, float halfLength,
             float c = glm::cos(theta);
             float s = glm::sin(theta);
 
-            positions.push_back(P(r * c, y, r * s));
-            normals.push_back(glm::normalize(P(c, sideSlope, s)));
+            positions.emplace_back(P(r * c, y, r * s));
+            normals.emplace_back(glm::normalize(P(c, sideSlope, s)));
             float u = (float)i / (float)(segments - 1);
             uvs.emplace_back(u, v);
         }
@@ -416,12 +421,12 @@ static MeshData makeCylinderMesh(float radius, float halfLength,
         unsigned int bot_i = sideStart + i;
         unsigned int bot_next = sideStart + (i + 1) % segments;
 
-        indices.push_back(top_i);
-        indices.push_back(top_next);
-        indices.push_back(bot_i);
-        indices.push_back(top_next);
-        indices.push_back(bot_next);
-        indices.push_back(bot_i);
+        indices.emplace_back(top_i);
+        indices.emplace_back(top_next);
+        indices.emplace_back(bot_i);
+        indices.emplace_back(top_next);
+        indices.emplace_back(bot_next);
+        indices.emplace_back(bot_i);
     }
 
     return MeshData(std::move(positions), std::move(normals), std::move(uvs),
@@ -457,6 +462,18 @@ MeshData Prim::createArrowData(float baseRadius, float baseHeight,
                            segments);
 }
 
+// Helper: merge src into dst, offsetting src indices by dst.vertices.size()
+static void mergeMesh(MeshData& dst, MeshData&& src) {
+    auto base = static_cast<unsigned int>(dst.vertices.size());
+    dst.vertices.insert(dst.vertices.end(), src.vertices.begin(),
+                        src.vertices.end());
+    dst.normals.insert(dst.normals.end(), src.normals.begin(),
+                       src.normals.end());
+    dst.uvs.insert(dst.uvs.end(), src.uvs.begin(), src.uvs.end());
+    for (auto idx : src.indices)
+        dst.indices.emplace_back(idx + base);
+}
+
 MeshData Prim::createArrowData(float baseRadius, float baseHeight,
                                UpAxis upAxis, float capRadius, float capHeight,
                                int segments) {
@@ -465,19 +482,50 @@ MeshData Prim::createArrowData(float baseRadius, float baseHeight,
     if (capHeight < 0.0f)
         capHeight = baseHeight * 0.18f;
 
+    glm::vec3 axisDir;
+    if (upAxis == UpAxis::X)
+        axisDir = {1, 0, 0};
+    else if (upAxis == UpAxis::Z)
+        axisDir = {0, 0, 1};
+    else
+        axisDir = {0, 1, 0};
+
+    // Shaft: cylinder centered at origin → shift so bottom sits at 0
+    MeshData shaft =
+        createCylinderData(baseRadius, baseHeight, upAxis, segments);
+    for (auto& v : shaft.vertices)
+        v += axisDir * (baseHeight / 2.0f);
+
+    // Cone tip: shift to sit on top of shaft (small epsilon to avoid
+    // z-fighting)
+    MeshData cone = createConeData(capRadius, capHeight, upAxis, segments);
+    float coneCenter = baseHeight + capHeight / 2.0f - 1e-3f * baseHeight;
+    for (auto& v : cone.vertices)
+        v += axisDir * coneCenter;
+
+    mergeMesh(shaft, std::move(cone));
+    return shaft;
+}
+
+MeshData Prim::createCapsuleData(float radius, float height, UpAxis upAxis,
+                                 int segments) {
+    // rings per hemisphere (at least 4)
+    int rings = std::max(4, segments / 4);
+    float halfH = height * 0.5f;
+
     int perm[3];
     if (upAxis == UpAxis::X) {
         perm[0] = 1;
         perm[1] = 2;
-        perm[2] = 0; // long axis → X
+        perm[2] = 0;
     } else if (upAxis == UpAxis::Z) {
         perm[0] = 2;
         perm[1] = 0;
-        perm[2] = 1; // long axis → Z
+        perm[2] = 1;
     } else {
         perm[0] = 0;
         perm[1] = 1;
-        perm[2] = 2; // long axis → Y (default)
+        perm[2] = 2;
     }
 
     auto P = [&](float x, float y, float z) -> glm::vec3 {
@@ -485,44 +533,135 @@ MeshData Prim::createArrowData(float baseRadius, float baseHeight,
         return {v[perm[0]], v[perm[1]], v[perm[2]]};
     };
 
-    // Shaft: cylinder centered at origin → shift up so bottom sits at 0
-    MeshData shaft = makeCylinderMesh(baseRadius, baseHeight / 2.0f, baseRadius,
-                                      perm, segments);
-    glm::vec3 shaftOff = P(0.0f, baseHeight / 2.0f, 0.0f);
-    for (auto& p : shaft.vertices)
-        p += shaftOff;
-
-    // Cone tip: topRadius=0, shift to sit on top of shaft (-epsilon to avoid
-    // z-fighting)
-    MeshData cone =
-        makeCylinderMesh(capRadius, capHeight / 2.0f, 0.0f, perm, segments);
-    glm::vec3 coneOff =
-        P(0.0f, baseHeight + capHeight / 2.0f - 1e-3f * baseHeight, 0.0f);
-    for (auto& p : cone.vertices)
-        p += coneOff;
-
-    // Merge shaft + cone
     std::vector<glm::vec3> positions;
     std::vector<glm::vec3> normals;
     std::vector<glm::vec2> uvs;
     std::vector<unsigned int> indices;
 
-    positions.insert(positions.end(), shaft.vertices.begin(),
-                     shaft.vertices.end());
-    positions.insert(positions.end(), cone.vertices.begin(),
-                     cone.vertices.end());
-    normals.insert(normals.end(), shaft.normals.begin(), shaft.normals.end());
-    normals.insert(normals.end(), cone.normals.begin(), cone.normals.end());
-    uvs.insert(uvs.end(), shaft.uvs.begin(), shaft.uvs.end());
-    uvs.insert(uvs.end(), cone.uvs.begin(), cone.uvs.end());
+    // Layout (internal Y-up):
+    //   row 0        : top pole          (theta=0,      yOff=+halfH)
+    //   row 1..rings : top hemisphere    (theta→π/2,    yOff=+halfH)
+    //   row rings+1  : bottom equator    (theta=π/2,    yOff=-halfH)
+    //   row rings+2..2*rings+1: bottom hemisphere→pole (theta→π, yOff=-halfH)
+    // The quad strip between row 'rings' and 'rings+1' forms the cylinder wall.
+    int totalRings = 2 * rings + 2;
+    int vertsPerRing = segments + 1;
 
-    auto baseCount = (unsigned int)shaft.vertices.size();
-    indices.insert(indices.end(), shaft.indices.begin(), shaft.indices.end());
-    for (auto idx : cone.indices)
-        indices.push_back(idx + baseCount);
+    for (int r = 0; r < totalRings; ++r) {
+        float theta, yOff;
+        if (r <= rings) {
+            // top hemisphere: theta 0 → π/2
+            theta = glm::half_pi<float>() * r / rings;
+            yOff = halfH;
+        } else {
+            // bottom hemisphere: theta π/2 → π
+            int br = r - rings - 1; // 0..rings
+            theta = glm::half_pi<float>() + glm::half_pi<float>() * br / rings;
+            yOff = -halfH;
+        }
+
+        float sinT = glm::sin(theta);
+        float cosT = glm::cos(theta);
+        float ringY = yOff + radius * cosT;
+        float ringR = radius * sinT;
+
+        float vCoord = (float)r / (totalRings - 1);
+        for (int s = 0; s <= segments; ++s) {
+            float phi = glm::two_pi<float>() * s / segments;
+            float cosP = glm::cos(phi);
+            float sinP = glm::sin(phi);
+
+            positions.emplace_back(P(ringR * cosP, ringY, ringR * sinP));
+            normals.emplace_back(P(sinT * cosP, cosT, sinT * sinP));
+            uvs.emplace_back((float)s / segments, vCoord);
+        }
+    }
+
+    for (int r = 0; r < totalRings - 1; ++r) {
+        for (int s = 0; s < segments; ++s) {
+            unsigned int a = r * vertsPerRing + s;
+            unsigned int b = a + 1;
+            unsigned int c = a + vertsPerRing;
+            unsigned int d = c + 1;
+
+            // CCW from outside
+            indices.emplace_back(a);
+            indices.emplace_back(b);
+            indices.emplace_back(c);
+            indices.emplace_back(b);
+            indices.emplace_back(d);
+            indices.emplace_back(c);
+        }
+    }
 
     return MeshData(std::move(positions), std::move(normals), std::move(uvs),
                     std::move(indices));
+}
+
+MeshData Prim::createConeData(float radius, float height, UpAxis upAxis,
+                              int segments) {
+    int perm[3];
+    if (upAxis == UpAxis::X) {
+        perm[0] = 1;
+        perm[1] = 2;
+        perm[2] = 0;
+    } else if (upAxis == UpAxis::Z) {
+        perm[0] = 2;
+        perm[1] = 0;
+        perm[2] = 1;
+    } else {
+        perm[0] = 0;
+        perm[1] = 1;
+        perm[2] = 2;
+    }
+    return makeCylinderMesh(radius, height / 2.0f, 0.0f, perm, segments);
+}
+
+MeshData Prim::createPointsData(const std::vector<glm::vec3>& points,
+                                float pointRadius, int segments) {
+    MeshData result;
+    for (const auto& p : points) {
+        auto sphere = createSphereData(pointRadius, segments, segments / 2 + 1);
+        // shift sphere to point position
+        for (auto& v : sphere.vertices)
+            v += p;
+        mergeMesh(result, std::move(sphere));
+    }
+    return result;
+}
+
+MeshData Prim::createLinesData(const std::vector<glm::vec3>& vertices,
+                               const std::vector<unsigned int>& indices,
+                               float lineRadius, int segments) {
+    MeshData result;
+    for (size_t i = 0; i + 1 < indices.size(); i += 2) {
+        const glm::vec3& a = vertices[indices[i]];
+        const glm::vec3& b = vertices[indices[i + 1]];
+        glm::vec3 diff = b - a;
+        float len = glm::length(diff);
+        if (len < 1e-6f)
+            continue;
+
+        // Build capsule along Y-up then rotate to align with diff
+        auto capsule = createCapsuleData(lineRadius, len, UpAxis::Y, segments);
+
+        glm::vec3 dir = diff / len;
+        glm::vec3 center = (a + b) * 0.5f;
+
+        // Rotation: Y-axis → diff direction (Eigen handles all edge cases)
+        Eigen::Quaternionf eq = Eigen::Quaternionf::FromTwoVectors(
+            Eigen::Vector3f::UnitY(), Eigen::Vector3f(dir.x, dir.y, dir.z));
+        glm::quat rot(eq.w(), eq.x(), eq.y(), eq.z());
+        glm::mat3 rotMat = glm::mat3_cast(rot);
+
+        for (auto& v : capsule.vertices)
+            v = rotMat * v + center;
+        for (auto& n : capsule.normals)
+            n = rotMat * n;
+
+        mergeMesh(result, std::move(capsule));
+    }
+    return result;
 }
 
 MeshData Prim::createRectangleData(float xScale, float yScale, float zScale) {
@@ -670,6 +809,10 @@ glm::mat4 Prim::computeModelMatrix() {
                 break;
             }
 
+            // Apply operations in reverse order of the list
+            // (Pre-multiplication). If opOrder is {Scale, Rotate, Translate},
+            // this results in: Result = Translate * (Rotate * (Scale * I)) = T
+            // * R * S This produces the standard Local-to-Parent transform.
             result = opMat * result; // T * R * S * vec right when using glm.
             // result = result * opMat; // S * R * T * vec
         }
