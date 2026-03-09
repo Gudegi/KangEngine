@@ -1,5 +1,6 @@
 #include "app.hpp"
 #include "backend/base/graphics_device.hpp"
+#include "renderer/rasterizer.hpp"
 #include "scene/native/prim.hpp"
 #include "scene/scene_backend.hpp"
 #include "ui/base_panel.hpp"
@@ -122,6 +123,9 @@ void App::initialize(int width, int height, bool hideUi, UpAxis upAxis,
 
     // Use backend abstraction instead of direct OpenGL
     _graphicsDevice->setDepthTest(true);
+
+    _rasterizer =
+        std::make_unique<Rasterizer>(_graphicsDevice.get(), _scene.get());
 }
 
 // for entire process in c++
@@ -181,39 +185,8 @@ void App::coreRender() {
         _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
     }
 
-    if (_scene) {
-        const auto& sceneBuffers = _scene->getBufferLists();
-        for (const auto& buffer : sceneBuffers) {
-            if (buffer && buffer->backendShader) {
-                buffer->backendShader->use();
-                if (buffer->prim != nullptr) {
-                    // fmt::print("prim address: {}, hasTranslate: {}\n",
-                    //             (void*)buffer->prim.get(),
-                    //             buffer->prim->hasAttribute("xformOp:translate"));
-                    auto model = buffer->prim->computeModelMatrix();
-                    buffer->backendShader->setMat4("model", model);
-
-                    auto view = this->getViewMatrix();
-                    glm::mat3 normalMat =
-                        glm::mat3(transpose(inverse(view * model)));
-                    buffer->backendShader->setMat3("normalMat", normalMat);
-
-                    if (std::optional<glm::vec4> color =
-                            buffer->prim->getDisplayColorAlpha()) {
-                        buffer->backendShader->setVec4("objColor", *color);
-                    }
-                }
-
-                buffer->backendShader->setMat4("view", _viewMatrix);
-                buffer->backendShader->setMat4("projection", _projectionMatrix);
-
-                buffer->vertexArray->bind();
-                _graphicsDevice->drawIndexed(buffer->numIndices);
-                buffer->vertexArray->unbind();
-                checkError();
-            }
-        }
-    }
+    if (_rasterizer)
+        _rasterizer->render(_viewMatrix, _projectionMatrix);
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -237,127 +210,21 @@ void App::draw() {
 
 void App::checkError() { _graphicsDevice->checkError(); }
 
-std::shared_ptr<Scene::ShapeRenderBuffer>
-App::createRenderBuffer(Backend::Shader* shader,
-                        const std::shared_ptr<Scene::MeshData>& meshData) {
-    auto bufferInfos = std::make_shared<Scene::ShapeRenderBuffer>();
-    bufferInfos->backendShader = shader;
-
-    // VAO
-    bufferInfos->vertexArray = _graphicsDevice->createVertexArray();
-    bufferInfos->vertexArray->bind();
-
-    // Index Buffer
-    bufferInfos->indexBuffer = _graphicsDevice->createBuffer(
-        Backend::BufferType::Index,
-        sizeof(unsigned int) * meshData->indices.size(),
-        meshData->indices.data());
-
-    bufferInfos->vertexArray->setIndexBuffer(
-        bufferInfos->indexBuffer.get()); // bind
-
-    // Helper to add attribute and keep buffer alive // TODO: use one buffer
-    auto addAttribute = [&](const auto& data, int location, int size) {
-        if (data.empty())
-            return;
-        auto buffer = _graphicsDevice->createBuffer(
-            Backend::BufferType::Vertex, sizeof(data[0]) * data.size(),
-            data.data());
-        // buffer->bind();
-        bufferInfos->vertexArray->setVertexBuffer(buffer.get());
-        Backend::VertexAttribute attr = {
-            location,        size, Backend::VertexAttributeType::Float, false,
-            sizeof(data[0]), 0};
-        bufferInfos->vertexArray->setVertexAttribute(attr);
-
-        bufferInfos->vertexBuffers.push_back(std::move(buffer));
-    };
-
-    addAttribute(meshData->vertices, 0, 3);
-    addAttribute(meshData->normals, 1, 3);
-    addAttribute(meshData->uvs, 2, 2);
-
-    bufferInfos->vertexArray->unbind();
-    bufferInfos->numIndices = static_cast<int>(meshData->indices.size());
-
-    return bufferInfos;
-}
-
 size_t App::addShape(Backend::Shader* shader,
                      std::shared_ptr<Scene::MeshData> meshData) {
-    if (!meshData || meshData->vertices.empty() || meshData->indices.empty()) {
-        return static_cast<size_t>(-1); // Invalid shape ID
-    }
-
-    try {
-        if (shader) {
-            shader->use();
-        }
-
-        auto bufferInfos = createRenderBuffer(shader, meshData);
-
-        checkError();
-
-        _scene->addRenderable(bufferInfos);
-        return _scene->getBufferLists().size() - 1;
-
-    } catch (const std::exception& e) {
-        std::cerr << "Failed to add shape with Scene::MeshData: " << e.what()
-                  << std::endl;
-        return static_cast<size_t>(-1);
-    }
+    return _rasterizer ? _rasterizer->addShape(shader, meshData)
+                       : static_cast<size_t>(-1);
 }
 
 size_t App::addShape(PhongMaterial* material,
                      std::shared_ptr<Scene::MeshData> meshData) {
-    if (!meshData || meshData->vertices.empty() || meshData->indices.empty()) {
-        return static_cast<size_t>(-1); // Invalid shape ID
-    }
-
-    try {
-        Backend::Shader* shader = material->getShader();
-
-        if (shader) {
-            material->bind();
-        }
-
-        auto bufferInfos = createRenderBuffer(shader, meshData);
-
-        checkError();
-        _scene->addRenderable(bufferInfos);
-        return _scene->getBufferLists().size() - 1;
-    } catch (const std::exception& e) {
-        std::cerr << "Failed to add shape with PhongMaterial: " << e.what()
-                  << std::endl;
-        return static_cast<size_t>(-1);
-    }
+    return _rasterizer ? _rasterizer->addShape(material, meshData)
+                       : static_cast<size_t>(-1);
 }
 
-// Shader + Prim (non-owning: scene graph owns the Prim)
 size_t App::addShape(Backend::Shader* shader, Scene::Prim* prim) {
-
-    std::shared_ptr<Scene::MeshData> meshData = prim->getMeshData();
-    if (!meshData || meshData->vertices.empty() || meshData->indices.empty()) {
-        return static_cast<size_t>(-1); // Invalid shape ID
-    }
-
-    try {
-        if (shader) {
-            shader->use();
-        }
-
-        auto bufferInfos = createRenderBuffer(shader, meshData);
-        bufferInfos->prim = prim;
-
-        checkError();
-        _scene->addRenderable(bufferInfos);
-        return _scene->getBufferLists().size() - 1;
-
-    } catch (const std::exception& e) {
-        std::cerr << "Failed to add shape with Scene::Prim: " << e.what()
-                  << std::endl;
-        return static_cast<size_t>(-1);
-    }
+    return _rasterizer ? _rasterizer->addShape(shader, prim)
+                       : static_cast<size_t>(-1);
 }
 
 //////////////// Call backs

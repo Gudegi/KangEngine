@@ -78,9 +78,6 @@ enum class BackendType {
 
 // Scene Backend 추상 인터페이스
 class SceneBackend {
-  private:
-    std::vector<std::shared_ptr<ShapeRenderBuffer>> _bufferLists;
-
   public:
     virtual ~SceneBackend() = default;
 
@@ -105,16 +102,7 @@ class SceneBackend {
     // Scene graph root
     virtual Prim* getRootPrim() { return nullptr; }
 
-    // Render 가능한 정보 쿼리
-    // virtual std::vector<ShapeRenderBuffer> getRenderables() = 0;
-    // virtual bool addRenderable(const std::string& path = "") = 0;
-    const std::vector<std::shared_ptr<ShapeRenderBuffer>>&
-    getBufferLists() const {
-        return _bufferLists;
-    }
-    void addRenderable(std::shared_ptr<ShapeRenderBuffer> buffer) {
-        _bufferLists.push_back(buffer);
-    }
+
 };
 
 // Factory

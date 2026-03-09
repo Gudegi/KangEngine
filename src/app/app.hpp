@@ -21,6 +21,7 @@
 #include "backend/base/graphics_device.hpp"
 #include "backend/graphics_factory.hpp"
 #include "material/material.hpp"
+#include "renderer/rasterizer.hpp"
 #include "scene/scene_backend.hpp"
 #include "scene/native/prim.hpp"
 namespace KE {
@@ -63,6 +64,7 @@ class App {
   private:
     std::unique_ptr<Backend::GraphicsDevice> _graphicsDevice;
     std::unique_ptr<Scene::SceneBackend> _scene = nullptr;
+    std::unique_ptr<Rasterizer> _rasterizer;
 
     void registerCallbacks();
 
@@ -131,10 +133,6 @@ class App {
                     std::shared_ptr<Scene::MeshData> meshData);
     size_t addShape(Backend::Shader* shader, Scene::Prim* prim);
 
-  private:
-    std::shared_ptr<Scene::ShapeRenderBuffer>
-    createRenderBuffer(Backend::Shader* shader,
-                       const std::shared_ptr<Scene::MeshData>& meshData);
 };
 
 } // namespace KE
