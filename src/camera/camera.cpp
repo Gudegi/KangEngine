@@ -130,18 +130,7 @@ void Camera::updateViewMatrix() {
     _viewMatrix[3][2] = glm::dot(_cameraLookDir, _cameraPos);
 }
 
-glm::vec3 Camera::getCameraPos() { return _cameraPos; }
-
-glm::vec3 Camera::getTargetPos() { return _targetPos; }
-
-glm::vec3 Camera::getCameraLookDir() { return _cameraLookDir; }
-glm::vec3 Camera::getCameraUpDir() { return _cameraUpDir; }
-glm::vec3 Camera::getCameraRightDir() { return _cameraRightDir; }
-
-glm::mat4 Camera::getViewMatrix() { return _viewMatrix; }
-
-void Camera::updateProjMatrix(const unsigned int scrWidth,
-                              const unsigned int scrHeight) {
+void Camera::updateProjMatrix(const int scrWidth, const int scrHeight) {
     _screenWidth = scrWidth;
     _screenHeight = scrHeight;
 
@@ -155,8 +144,6 @@ void Camera::updateProjMatrix(const unsigned int scrWidth,
                                    (float)_screenWidth / (float)_screenHeight,
                                    _nearPlane, _farPlane);
 }
-
-glm::mat4 Camera::getProjMatrix() { return _projMatrix; }
 
 void Camera::setFoV(float FoV) {
     FoV = std::clamp(FoV, 10.f, 90.0f);

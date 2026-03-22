@@ -9,6 +9,9 @@
 #include "utils/asset_path.hpp"
 #include <chrono>
 #include <exception>
+#include <fmt/base.h>
+#include <glm/fwd.hpp>
+#include <glm/geometric.hpp>
 #include <memory>
 #include <optional>
 #include <thread>
@@ -102,6 +105,8 @@ void App::initialize(int width, int height, bool hideUi, UpAxis upAxis,
     }
 
     _window.init(_width, _height);
+    _logicalWidth = _window.getLogicalWidth();
+    _logicalHeight = _window.getLogicalHeight();
     registerCallbacks();
 
     // Initialize graphics device after OpenGL context is created
@@ -233,6 +238,7 @@ size_t App::addShape(Backend::Shader* shader, Scene::Prim* prim) {
 void App::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
     _width = width;
     _height = height;
+    glfwGetWindowSize(window, &_logicalWidth, &_logicalHeight);
     _graphicsDevice->setViewport(0, 0, _width, _height);
     _camera.updateProjMatrix(_width, _height);
 }
@@ -439,6 +445,29 @@ void App::processInput() {
     }
 }
 
+glm::vec2 App::getScreenToNDC(float scrX, float scrY) {
+    // screen[0, 1] space to NDC[-1, 1] in xy-plane
+    float x = (scrX / _logicalWidth) * 2.0f - 1.0f;
+    float y = 1.0f - (scrY / _logicalHeight) * 2.0f;
+    return glm::vec2(x, y);
+}
+
+Ray App::getMouseRay() {
+    glm::vec2 ndc = getScreenToNDC(_io->mouseX, _io->mouseY);
+    glm::mat4 invProj = glm::inverse(_camera.getProjMatrix());
+    glm::mat4 invView = glm::inverse(_camera.getViewMatrix());
+    // ndc to cam space
+    glm::vec4 clipNear = glm::vec4(ndc.x, ndc.y, -1.0f, 1.0f);
+    glm::vec4 clipFar = glm::vec4(ndc.x, ndc.y, 1.0f, 1.0f);
+    glm::vec4 camNear = invProj * clipNear;
+    glm::vec4 camFar = invProj * clipFar;
+    camNear /= camNear.w;
+    camFar /= camFar.w;
+    // cam to world
+    glm::vec3 worldNear = glm::vec3(invView * camNear);
+    glm::vec3 worldFar = glm::vec3(invView * camFar);
+    return Ray(_camera.getCameraPos(), glm::normalize(worldFar - worldNear));
+}
 } // namespace KE
 
 //////////////// Call backs

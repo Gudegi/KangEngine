@@ -21,7 +21,7 @@ class Camera {
     glm::vec3 _upVector;
     UpAxis _upAxis;
     float _FoV, _camToLookDistance, _nearPlane, _farPlane;
-    unsigned int _screenWidth, _screenHeight;
+    int _screenWidth, _screenHeight;
 
   public:
     float pole, azimuth;
@@ -29,13 +29,12 @@ class Camera {
     Camera(glm::vec3 cameraPos, glm::vec3 targetPos, UpAxis upAxis);
     ~Camera();
     void init(glm::vec3 cameraPos, glm::vec3 targetPos, UpAxis upAxis);
-    glm::vec3 getCameraPos();
-    glm::vec3 getTargetPos();
-    glm::mat4 getViewMatrix();
-    glm::mat4 getProjMatrix();
+    glm::vec3 getCameraPos() { return _cameraPos; };
+    glm::vec3 getTargetPos() { return _targetPos; };
+    glm::mat4 getViewMatrix() { return _viewMatrix; }
+    glm::mat4 getProjMatrix() { return _projMatrix; }
     void updateViewMatrix();
-    void updateProjMatrix(const unsigned int scrWidth,
-                          const unsigned int scrHeight);
+    void updateProjMatrix(const int scrWidth, const int scrHeight);
 
     void setCameraPos(glm::vec3 cameraPos);
     void setTargetPos(glm::vec3 targetPos);
@@ -51,9 +50,9 @@ class Camera {
     UpAxis getUpAxis() const { return _upAxis; }
     glm::vec3 getUpVector() const { return _upVector; }
 
-    glm::vec3 getCameraLookDir();
-    glm::vec3 getCameraUpDir();
-    glm::vec3 getCameraRightDir();
+    glm::vec3 getCameraLookDir() { return _cameraLookDir; };
+    glm::vec3 getCameraUpDir() { return _cameraUpDir; };
+    glm::vec3 getCameraRightDir() { return _cameraRightDir; }
 };
 
 } // namespace KE

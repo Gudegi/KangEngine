@@ -11,17 +11,20 @@ class Window
 
 {
 
-private:
-    int _width, _height;
+  private:
+    int _width, _height;               // framebuffer pixels
+    int _logicalWidth, _logicalHeight; // screen/logical pixels
     GLFWwindow* _window;
     void initGlfw();
     void initGlad();
 
-public:
+  public:
     Window();
     ~Window();
     void init(int width, int height);
-    GLFWwindow* getGlfwWindow() {return _window;}
+    GLFWwindow* getGlfwWindow() { return _window; }
+    int getLogicalWidth() const { return _logicalWidth; }
+    int getLogicalHeight() const { return _logicalHeight; }
 };
 
 } // namespace KE

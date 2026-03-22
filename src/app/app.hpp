@@ -13,6 +13,7 @@
 #include "camera/camera.hpp"
 #include "ui/panel_manager.hpp"
 #include "utils/asset_path.hpp"
+#include "utils/ray.hpp"
 #include "window/window.hpp"
 // #include "mesh/prim.hpp"
 // #include "mesh/buffer.hpp"
@@ -49,7 +50,9 @@ class App {
     };
 
   public:
-    int _width, _height;
+    int _width, _height; // framebuffer pixels
+    int _logicalWidth,
+        _logicalHeight; // screen/logical pixels (matches mouse coords)
     bool _hideUi, _renderWireframe;
     glm::mat4 _viewMatrix,
         _projectionMatrix; // variable to containing main camera's view and
@@ -82,6 +85,8 @@ class App {
 
     int getWidth() { return _width; }
     int getHeight() { return _height; }
+    int getLogicalWidth() { return _logicalWidth; }
+    int getLogicalHeight() { return _logicalHeight; }
 
     struct IO;
     struct RenderVariable;
@@ -97,9 +102,9 @@ class App {
 
     //////
     void start();
-    virtual void setup() {}     // 처음에 사용
-    virtual void preRender() {} // 루프 안에서 사용됨. 렌더 전에 사용
-    virtual void render() {}    // overrideable 실제 렌더링
+    virtual void setup() {}      // 처음에 사용
+    virtual void preRender() {}  // 루프 안에서 사용됨. 렌더 전에 사용
+    virtual void render() {}     // overrideable 실제 렌더링
     virtual void postRender() {} // 렌더링 이후 마무리
     //////
 
@@ -129,6 +134,10 @@ class App {
                     std::shared_ptr<Scene::MeshData> meshData);
     size_t addShape(Backend::Shader* shader, Scene::Prim* prim);
 
+    glm::vec2 getScreenToNDC(float x, float y);
+
+    // 마우스 위치로부터 3D 월드 공간의 Ray 객체 생성
+    Ray getMouseRay();
 };
 
 } // namespace KE
