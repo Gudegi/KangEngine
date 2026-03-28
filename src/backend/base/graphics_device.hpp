@@ -57,11 +57,19 @@ struct TextureDesc {
     std::string name;
 };
 
+struct FramebufferDesc {
+    int width, height;
+    bool depthOnly = false; // shadow FBO: no color attachment
+    bool stencil = false;   // use depth+stencil
+    int msaaSamples = 0;    // 0 means No MSAA
+};
+
 // Forward declarations
 class Buffer;
 class Shader;
 class Texture;
 class VertexArray;
+class Framebuffer;
 
 class GraphicsDevice {
   public:
@@ -84,6 +92,7 @@ class GraphicsDevice {
 
     // Render State
     virtual void setDepthTest(bool enable) = 0;
+    virtual void setStencilTest(bool enable) = 0;
     virtual void setPolygonMode(PolygonMode mode) = 0;
     virtual void setClearColor(float r, float g, float b, float a) = 0;
 
@@ -106,6 +115,9 @@ class GraphicsDevice {
                                                    bool flip, float warpParam,
                                                    float minFilferParam,
                                                    float maxFilterParam) = 0;
+
+    virtual std::unique_ptr<Framebuffer>
+    createFramebuffer(const FramebufferDesc& desc) = 0;
 };
 
 class Buffer {
@@ -115,6 +127,18 @@ class Buffer {
     virtual void unbind() = 0;
     virtual void setData(const void* data, size_t size, size_t offset = 0) = 0;
     virtual BufferType getType() const = 0;
+};
+
+class Framebuffer {
+  public:
+    virtual ~Framebuffer() = default;
+    virtual void bind() = 0;
+    virtual void unbind() = 0;
+    virtual void resize(int scrWidth, int scrHeight) = 0;
+    virtual Texture* getColorTexture() = 0;
+    virtual Texture* getDepthTexture() = 0;
+    virtual Texture* getStencilTexture() = 0;
+    virtual Texture* getDepthStencilTexture() = 0;
 };
 
 class Shader {

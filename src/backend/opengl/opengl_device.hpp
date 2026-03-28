@@ -7,6 +7,7 @@
 
 #include <cstddef>
 #include <glad/glad.h>
+#include <memory>
 #include "../base/graphics_device.hpp"
 
 namespace KE {
@@ -106,6 +107,43 @@ class OpenGLVertexArray : public VertexArray {
     void setIndexBuffer(Buffer* buffer) override;
 };
 
+class OpenGLFramebuffer : public Framebuffer {
+  private:
+    // --- Texture FBO (non-MSAA scene FBO) ---
+    GLuint _fbo = 0;
+    GLuint _colorTex = 0; // GL_RGB   color texture
+    GLuint _depthTex = 0; // GL_DEPTH_COMPONENT32 depth texture
+
+    // --- [SIMPLE RBO] non-MSAA depth+stencil renderbuffer ---
+    // GLuint _rbo = 0; // GL_DEPTH24_STENCIL8
+    // attach: glFramebufferRenderbuffer(GL_DEPTH_STENCIL_ATTACHMENT, _rbo)
+    // faster than texture when depth sampling not needed
+
+    // --- MSAA FBO (RBO-based) ---
+    GLuint _msaaFbo = 0;
+    GLuint _msaaColorRbo = 0; // GL_RGB8
+    GLuint _msaaDepthRbo = 0; // GL_DEPTH_COMPONENT32
+
+    FramebufferDesc _desc;
+
+  public:
+    OpenGLFramebuffer(const FramebufferDesc& desc);
+    ~OpenGLFramebuffer() override;
+
+    void bind() override;
+    void unbind() override;
+    void resize(int scrWidth, int scrHeight) override;
+    Texture* getColorTexture() override;
+    Texture* getDepthTexture() override;
+    Texture* getStencilTexture() override;
+    Texture* getDepthStencilTexture() override;
+
+    // MSAA resolve: blit _msaaFbo -> _fbo (msaaSamples == 0이면 no-op)
+    void resolve();
+    // Final blit: _fbo -> default framebuffer (screen)
+    void blitToScreen(int scrWidth, int scrHeight);
+};
+
 class OpenGLDevice : public GraphicsDevice {
   private:
     bool _initialized;
@@ -129,6 +167,7 @@ class OpenGLDevice : public GraphicsDevice {
 
     // Render State
     void setDepthTest(bool enable) override;
+    void setStencilTest(bool enable) override;
     void setPolygonMode(PolygonMode mode) override;
     void setClearColor(float r, float g, float b, float a) override;
 
@@ -152,6 +191,8 @@ class OpenGLDevice : public GraphicsDevice {
                   float warpParam = GL_REPEAT,
                   float minFilferParam = GL_LINEAR_MIPMAP_LINEAR,
                   float maxFilterParam = GL_LINEAR) override;
+    std::unique_ptr<Framebuffer>
+    createFramebuffer(const FramebufferDesc& desc) override;
 };
 
 } // namespace Backend

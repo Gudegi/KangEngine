@@ -112,6 +112,10 @@ void App::initialize(int width, int height, bool hideUi, UpAxis upAxis,
     // Initialize graphics device after OpenGL context is created
     _graphicsDevice->initialize();
 
+    _framebuffer = _graphicsDevice->createFramebuffer(
+        {_width, _height, false, true,
+         4}); // stencil=true for outline rendering
+
     glm::vec3 cameraPos, cameraTarget;
     if (upAxis == UpAxis::Z) {
         cameraPos = glm::vec3(3.0f, 0.0f, 1.5f); // 1.5m
@@ -158,16 +162,29 @@ void App::start() {
         _viewMatrix = _camera.getViewMatrix();
         _projectionMatrix = _camera.getProjMatrix();
 
+        // ImGui::NewFrame() must come before any ImGui widget calls
+        _panelManager.preRender();
+
+        // Scene pass: render into FBO (MSAA if enabled)
+        _framebuffer->bind();
         _graphicsDevice->setClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         _graphicsDevice->clear(0.2f, 0.3f, 0.3f, 1.0f);
-        _panelManager.preRender();
         this->preRender();
-        _panelManager.render();
-        coreRender();
+        coreRender(); // records ImGui widgets, no GL ImGui draw yet
         this->render();
+        _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
+
+        // Resolve MSAA → texture FBO, blit to default framebuffer
+        auto* fbo =
+            static_cast<Backend::OpenGLFramebuffer*>(_framebuffer.get());
+        fbo->resolve();
+        fbo->blitToScreen(_width, _height);
+        _framebuffer->unbind();
+
+        // default framebuffer
+        _panelManager.render();
         _panelManager.postRender();
         this->postRender();
-        _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
         glfwSwapBuffers(window);
         glfwPollEvents();
     }

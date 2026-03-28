@@ -420,11 +420,11 @@ std::unique_ptr<Texture> OpenGLDevice::createTexture(const std::string path,
 }
 
 void OpenGLDevice::setDepthTest(bool enable) {
-    if (enable) {
-        glEnable(GL_DEPTH_TEST);
-    } else {
-        glDisable(GL_DEPTH_TEST);
-    }
+    enable ? glEnable(GL_DEPTH_TEST) : glDisable(GL_DEPTH_TEST);
+}
+
+void OpenGLDevice::setStencilTest(bool enable) {
+    enable ? glEnable(GL_STENCIL_TEST) : glDisable(GL_STENCIL_TEST);
 }
 
 void OpenGLDevice::setPolygonMode(PolygonMode mode) {
@@ -445,6 +445,11 @@ void OpenGLDevice::setPolygonMode(PolygonMode mode) {
 
 void OpenGLDevice::setClearColor(float r, float g, float b, float a) {
     glClearColor(r, g, b, a);
+}
+
+std::unique_ptr<Framebuffer>
+OpenGLDevice::createFramebuffer(const FramebufferDesc& desc) {
+    return std::make_unique<OpenGLFramebuffer>(desc);
 }
 
 // OpenGLVertexArray Implementation
@@ -494,6 +499,176 @@ void OpenGLVertexArray::setIndexBuffer(Buffer* buffer) {
     bind();
     buffer->bind();
 }
+
+// OpenGLFramebuffer Impl
+OpenGLFramebuffer::OpenGLFramebuffer(const FramebufferDesc& desc)
+    : _desc(desc) {
+    // ----------------------------------------------------------------
+    // Texture FBO — always created; MSAA case uses this as resolve target
+    // ----------------------------------------------------------------
+    glGenFramebuffers(1, &_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, _fbo);
+
+    // color texture (GL_RGB)
+    glGenTextures(1, &_colorTex);
+    glBindTexture(GL_TEXTURE_2D, _colorTex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, _desc.width, _desc.height, 0, GL_RGB,
+                 GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                           _colorTex, 0);
+
+    // depth (or depth+stencil) texture — required for shadow map sampling
+    // stencil=true: GL_DEPTH24_STENCIL8 + GL_DEPTH_STENCIL_ATTACHMENT
+    // stencil=false: GL_DEPTH_COMPONENT32 + GL_DEPTH_ATTACHMENT
+    GLenum depthFmt =
+        _desc.stencil ? GL_DEPTH24_STENCIL8 : GL_DEPTH_COMPONENT32;
+    GLenum depthAtt =
+        _desc.stencil ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT;
+    GLenum depthBase = _desc.stencil ? GL_DEPTH_STENCIL : GL_DEPTH_COMPONENT;
+    GLenum depthType = _desc.stencil ? GL_UNSIGNED_INT_24_8 : GL_FLOAT;
+
+    glGenTextures(1, &_depthTex);
+    glBindTexture(GL_TEXTURE_2D, _depthTex);
+    glTexImage2D(GL_TEXTURE_2D, 0, depthFmt, _desc.width, _desc.height, 0,
+                 depthBase, depthType, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, depthAtt, GL_TEXTURE_2D, _depthTex,
+                           0);
+
+    // [SIMPLE RBO] depth+stencil renderbuffer (faster, but no shader sampling)
+    // GLuint rbo;
+    // glGenRenderbuffers(1, &rbo);
+    // glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+    // glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8,
+    //                       _desc.width, _desc.height);
+    // glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
+    //                           GL_RENDERBUFFER, rbo);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "ERROR::FRAMEBUFFER:: Texture FBO incomplete!"
+                  << std::endl;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // ----------------------------------------------------------------
+    // MSAA FBO
+    // ----------------------------------------------------------------
+    if (_desc.msaaSamples > 0) {
+        // color RBO
+        glGenRenderbuffers(1, &_msaaColorRbo);
+        glBindRenderbuffer(GL_RENDERBUFFER, _msaaColorRbo);
+        glRenderbufferStorageMultisample(GL_RENDERBUFFER, _desc.msaaSamples,
+                                         GL_RGB8, _desc.width, _desc.height);
+
+        // depth (or depth+stencil) RBO — format mirrors texture FBO
+        GLenum msaaDepthFmt =
+            _desc.stencil ? GL_DEPTH24_STENCIL8 : GL_DEPTH_COMPONENT32;
+        GLenum msaaDepthAtt =
+            _desc.stencil ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT;
+
+        glGenRenderbuffers(1, &_msaaDepthRbo);
+        glBindRenderbuffer(GL_RENDERBUFFER, _msaaDepthRbo);
+        glRenderbufferStorageMultisample(GL_RENDERBUFFER, _desc.msaaSamples,
+                                         msaaDepthFmt, _desc.width,
+                                         _desc.height);
+
+        // MSAA FBO
+        glGenFramebuffers(1, &_msaaFbo);
+        glBindFramebuffer(GL_FRAMEBUFFER, _msaaFbo);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                  GL_RENDERBUFFER, _msaaColorRbo);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, msaaDepthAtt, GL_RENDERBUFFER,
+                                  _msaaDepthRbo);
+
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+            std::cout << "ERROR::FRAMEBUFFER:: MSAA FBO incomplete!"
+                      << std::endl;
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+}
+
+OpenGLFramebuffer::~OpenGLFramebuffer() {
+    if (_msaaFbo)
+        glDeleteFramebuffers(1, &_msaaFbo);
+    if (_msaaColorRbo)
+        glDeleteRenderbuffers(1, &_msaaColorRbo);
+    if (_msaaDepthRbo)
+        glDeleteRenderbuffers(1, &_msaaDepthRbo);
+    if (_colorTex)
+        glDeleteTextures(1, &_colorTex);
+    if (_depthTex)
+        glDeleteTextures(1, &_depthTex);
+    if (_fbo)
+        glDeleteFramebuffers(1, &_fbo);
+}
+
+void OpenGLFramebuffer::bind() {
+    // Render into MSAA FBO if available, otherwise directly into texture FBO
+    glBindFramebuffer(GL_FRAMEBUFFER, _desc.msaaSamples > 0 ? _msaaFbo : _fbo);
+}
+
+void OpenGLFramebuffer::unbind() { glBindFramebuffer(GL_FRAMEBUFFER, 0); }
+
+void OpenGLFramebuffer::resolve() {
+    if (_desc.msaaSamples == 0)
+        return;
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, _msaaFbo);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, _fbo);
+    glBlitFramebuffer(0, 0, _desc.width, _desc.height, 0, 0, _desc.width,
+                      _desc.height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void OpenGLFramebuffer::resize(int w, int h) {
+    _desc.width = w;
+    _desc.height = h;
+
+    // Resize texture FBO attachments
+    glBindTexture(GL_TEXTURE_2D, _colorTex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE,
+                 nullptr);
+    glBindTexture(GL_TEXTURE_2D, _depthTex);
+    {
+        GLenum depthFmt =
+            _desc.stencil ? GL_DEPTH24_STENCIL8 : GL_DEPTH_COMPONENT32;
+        GLenum depthBase =
+            _desc.stencil ? GL_DEPTH_STENCIL : GL_DEPTH_COMPONENT;
+        GLenum depthType = _desc.stencil ? GL_UNSIGNED_INT_24_8 : GL_FLOAT;
+        glTexImage2D(GL_TEXTURE_2D, 0, depthFmt, w, h, 0, depthBase, depthType,
+                     nullptr);
+    }
+
+    // Resize MSAA RBOs
+    if (_desc.msaaSamples > 0) {
+        glBindRenderbuffer(GL_RENDERBUFFER, _msaaColorRbo);
+        glRenderbufferStorageMultisample(GL_RENDERBUFFER, _desc.msaaSamples,
+                                         GL_RGB8, w, h);
+        glBindRenderbuffer(GL_RENDERBUFFER, _msaaDepthRbo);
+        GLenum msaaDepthFmt =
+            _desc.stencil ? GL_DEPTH24_STENCIL8 : GL_DEPTH_COMPONENT32;
+        glRenderbufferStorageMultisample(GL_RENDERBUFFER, _desc.msaaSamples,
+                                         msaaDepthFmt, w, h);
+    }
+}
+
+void OpenGLFramebuffer::blitToScreen(int scrWidth, int scrHeight) {
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, _fbo);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    glBlitFramebuffer(0, 0, _desc.width, _desc.height, 0, 0, scrWidth,
+                      scrHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+Texture* OpenGLFramebuffer::getColorTexture() {
+    return nullptr;
+} // TODO: wrap _colorTex
+Texture* OpenGLFramebuffer::getDepthTexture() {
+    return nullptr;
+} // TODO: wrap _depthTex
+Texture* OpenGLFramebuffer::getStencilTexture() { return nullptr; }
+Texture* OpenGLFramebuffer::getDepthStencilTexture() { return nullptr; }
 
 } // namespace Backend
 } // namespace KE

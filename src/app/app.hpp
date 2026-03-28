@@ -66,6 +66,7 @@ class App {
 
   private:
     std::unique_ptr<Backend::GraphicsDevice> _graphicsDevice;
+    std::unique_ptr<Backend::Framebuffer> _framebuffer;
     std::unique_ptr<Scene::SceneBackend> _scene = nullptr;
     std::unique_ptr<Rasterizer> _rasterizer;
 
