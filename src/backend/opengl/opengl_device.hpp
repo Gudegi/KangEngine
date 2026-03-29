@@ -138,10 +138,10 @@ class OpenGLFramebuffer : public Framebuffer {
     Texture* getStencilTexture() override;
     Texture* getDepthStencilTexture() override;
 
-    // MSAA resolve: blit _msaaFbo -> _fbo (msaaSamples == 0이면 no-op)
-    void resolve();
+    // MSAA resolve: blit _msaaFbo -> _fbo (If msaaSamples == 0, no-op)
+    void resolve() override;
     // Final blit: _fbo -> default framebuffer (screen)
-    void blitToScreen(int scrWidth, int scrHeight);
+    void blitToScreen(int scrWidth, int scrHeight) override;
 };
 
 class OpenGLDevice : public GraphicsDevice {

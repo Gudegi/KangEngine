@@ -135,6 +135,8 @@ class Framebuffer {
     virtual void bind() = 0;
     virtual void unbind() = 0;
     virtual void resize(int scrWidth, int scrHeight) = 0;
+    virtual void resolve() = 0;
+    virtual void blitToScreen(int scrWidth, int scrHeight) = 0;
     virtual Texture* getColorTexture() = 0;
     virtual Texture* getDepthTexture() = 0;
     virtual Texture* getStencilTexture() = 0;

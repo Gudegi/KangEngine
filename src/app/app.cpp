@@ -130,8 +130,8 @@ void App::initialize(int width, int height, bool hideUi, UpAxis upAxis,
     _panelManager.loadFont(KE::getAssetPath("fonts/godoFont/GodoM.ttf"), true);
     _panelManager.addPanel(std::make_unique<BasePanel>());
 
-    // Use backend abstraction instead of direct OpenGL
     _graphicsDevice->setDepthTest(true);
+    _graphicsDevice->setStencilTest(true);
 
     _rasterizer =
         std::make_unique<Rasterizer>(_graphicsDevice.get(), _scene.get());
@@ -167,18 +167,13 @@ void App::start() {
 
         // Scene pass: render into FBO (MSAA if enabled)
         _framebuffer->bind();
-        _graphicsDevice->setClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         _graphicsDevice->clear(0.2f, 0.3f, 0.3f, 1.0f);
         this->preRender();
         coreRender(); // records ImGui widgets, no GL ImGui draw yet
         this->render();
         _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
-
-        // Resolve MSAA → texture FBO, blit to default framebuffer
-        auto* fbo =
-            static_cast<Backend::OpenGLFramebuffer*>(_framebuffer.get());
-        fbo->resolve();
-        fbo->blitToScreen(_width, _height);
+        _framebuffer->resolve();
+        _framebuffer->blitToScreen(_width, _height);
         _framebuffer->unbind();
 
         // default framebuffer
