@@ -17,7 +17,8 @@ void PhysicsWorld::fecthData()
 
 void PhysicsWorld::addDefaultGround()
 {
-    PxRigidStatic* groundPlane = PxCreatePlane(*mPhysics, PxPlane(0, 1, 0, 0), *mMaterial); // TODO: set exact up-axis
+    PxVec3 normal = (mUpAxis == UpAxis::Z) ? PxVec3(0, 0, 1) : PxVec3(0, 1, 0);
+    PxRigidStatic* groundPlane = PxCreatePlane(*mPhysics, PxPlane(normal, 0), *mMaterial);
     mScene->addActor(*groundPlane);
 }
 

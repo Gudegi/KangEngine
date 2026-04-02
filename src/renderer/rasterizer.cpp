@@ -160,4 +160,31 @@ void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
     }
 }
 
+/*
+void Rasterizer::renderOutline(const glm::mat4& view, const glm::mat4& proj,
+                               Backend::Shader* outlineShader, float thickness,
+                               const glm::vec4& color) {
+    if (!outlineShader)
+        return;
+    outlineShader->use();
+    outlineShader->setMat4("view", view);
+    outlineShader->setMat4("projection", proj);
+    outlineShader->setFloat("outlineThickness", thickness);
+    outlineShader->setVec4("outlineColor", color);
+    for (const auto& buffer : _renderList) {
+        if (!buffer || !buffer->prim || !buffer->outlined)
+            continue;
+        auto model = buffer->prim->computeModelMatrix();
+        outlineShader->setMat4("model", model);
+        buffer->vertexArray->bind();
+        _graphicsDevice->drawIndexed(buffer->numIndices);
+        buffer->vertexArray->unbind();
+    }
+}
+
+void Rasterizer::setOutlined(size_t idx, bool outlined) {
+    if (idx < _renderList.size())
+        _renderList[idx]->outlined = outlined;
+}*/
+
 } // namespace KE

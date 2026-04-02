@@ -28,6 +28,16 @@ class Rasterizer : public Renderer {
     size_t addShape(Backend::Shader* shader, Scene::Prim* prim);
 
     void render(const glm::mat4& view, const glm::mat4& proj) override;
+
+    /*
+    // Render outlined shapes with given shader
+    void renderOutline(const glm::mat4& view, const glm::mat4& proj,
+                       Backend::Shader* outlineShader, float thickness,
+                       const glm::vec4& color);
+
+    // Mark a shape as excluded from outline rendering (e.g. ground plane)
+    void setOutlined(size_t idx, bool outlined);
+    */
 };
 } // namespace KE
 
