@@ -25,9 +25,28 @@ struct MJCFLoadResult {
 
 class MJCFLoader {
   public:
-    // Load MJCF file and extract skeleton + mesh info
-    static MJCFLoadResult load(const std::string& mjcfPath);
+    // Load MJCF file and extract skeleton + mesh info.
+    // order: "BFS" or "DFS"
+    static MJCFLoadResult loadSkelMesh(const std::string& mjcfPath,
+                                       const std::string& order = "DFS");
 };
+
+// ── Joint definitions
+// ────────────────────────────────────────────────────────
+
+struct Joint {
+    enum class Type { Revolute }; // TODO: support more types
+    Type type = Type::Revolute;
+    Eigen::Vector3f axis = Eigen::Vector3f::UnitZ();
+    float loLimit = -3.14159f;
+    float hiLimit = 3.14159f;
+    std::string name;
+};
+
+//  collect one Joint per body that has a <joint> child. Result is indexed by
+//  SkeletonTree body index.
+std::vector<Joint> parseMJCFJoints(const std::string& mjcfPath,
+                                   const SkeletonTree& tree);
 
 // ── Collision geometry
 // ────────────────────────────────────────────────────────

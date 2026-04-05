@@ -6,6 +6,11 @@
 #include <unordered_map>
 #include <vector>
 
+// forward declaration
+namespace tinyxml2 {
+class XMLElement;
+}
+
 namespace KE {
 namespace Animation {
 
@@ -17,8 +22,13 @@ class SkeletonTree {
                  std::vector<Eigen::Vector3f> localTranslations,
                  std::vector<int> numJointsInBody);
 
-    // Factory: parse MJCF XML using BFS traversal
-    static SkeletonTree fromMJCF(const std::string& path);
+    // Parse MJCF file (opens and parses XML internally)
+    static SkeletonTree skelFromMJCF(const std::string& path,
+                                     const std::string& order = "DFS");
+
+    // Parse from an already-open XML root element (avoids re-parsing the file)
+    static SkeletonTree skelFromMJCFElement(tinyxml2::XMLElement* mjcfRoot,
+                                            const std::string& order = "DFS");
 
     // Accessors
     int numJoints() const { return static_cast<int>(_nodeNames.size()); }

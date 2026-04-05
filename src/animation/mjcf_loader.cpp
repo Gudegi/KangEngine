@@ -37,7 +37,8 @@ static std::string resolveMeshDir(const std::string& mjcfPath,
     return dir + md;
 }
 
-MJCFLoadResult MJCFLoader::load(const std::string& mjcfPath) {
+MJCFLoadResult MJCFLoader::loadSkelMesh(const std::string& mjcfPath,
+                                        const std::string& order) {
     tinyxml2::XMLDocument doc;
     if (doc.LoadFile(mjcfPath.c_str()) != tinyxml2::XML_SUCCESS) {
         throw std::runtime_error(
@@ -66,62 +67,122 @@ MJCFLoadResult MJCFLoader::load(const std::string& mjcfPath) {
         }
     }
 
-    // Parse skeleton via BFS
-    SkeletonTree skeleton = SkeletonTree::fromMJCF(mjcfPath);
+    SkeletonTree skeleton = SkeletonTree::skelFromMJCFElement(root, order);
 
-    // BFS again to extract visual geom mesh references per body
-    // (Matches skeleton BFS order)
+    // Extract visual geom mesh references
     auto* worldbody = root->FirstChildElement("worldbody");
+    if (!worldbody)
+        throw std::runtime_error("MJCF: missing <worldbody> element");
     auto* bodyRoot = worldbody->FirstChildElement("body");
+    if (!bodyRoot)
+        throw std::runtime_error("MJCF: missing root <body> element");
 
     std::vector<MJCFMeshInfo> meshInfos;
-
-    struct BFSEntry {
-        tinyxml2::XMLElement* element;
-        int bodyIndex;
-    };
-
-    std::queue<BFSEntry> queue;
-    int bodyIndex = 0;
-    queue.push({bodyRoot, bodyIndex});
+    std::queue<tinyxml2::XMLElement*> queue;
+    queue.push(bodyRoot);
 
     while (!queue.empty()) {
-        auto [element, idx] = queue.front();
+        auto* element = queue.front();
         queue.pop();
 
         const char* bodyName = element->Attribute("name");
-
-        // Find visual geom with mesh reference
-        for (auto* geom = element->FirstChildElement("geom"); geom;
-             geom = geom->NextSiblingElement("geom")) {
-            const char* cls = geom->Attribute("class");
-            const char* meshName = geom->Attribute("mesh");
-
-            if (cls && std::string(cls) == "visual" && meshName) {
-                auto it = meshNameToFile.find(meshName);
-                if (it != meshNameToFile.end()) {
-                    MJCFMeshInfo info;
-                    info.bodyName =
-                        bodyName ? bodyName : fmt::format("body_{}", idx);
-                    info.meshFile = it->second;
-                    info.bodyIndex = idx;
-                    meshInfos.push_back(std::move(info));
+        if (bodyName) {
+            try {
+                int idx = skeleton.index(bodyName);
+                for (auto* geom = element->FirstChildElement("geom"); geom;
+                     geom = geom->NextSiblingElement("geom")) {
+                    const char* cls = geom->Attribute("class");
+                    const char* meshName = geom->Attribute("mesh");
+                    if (cls && std::string(cls) == "visual" && meshName) {
+                        auto it = meshNameToFile.find(meshName);
+                        if (it != meshNameToFile.end()) {
+                            MJCFMeshInfo info;
+                            info.bodyName = bodyName;
+                            info.meshFile = it->second;
+                            info.bodyIndex = idx;
+                            meshInfos.push_back(std::move(info));
+                        }
+                    }
                 }
+            } catch (const std::exception& e) {
+                fmt::print(stderr, "Warning: body '{}' not in skeleton — {}\n",
+                           bodyName, e.what());
             }
         }
 
-        // Enqueue children in same BFS order
         for (auto* child = element->FirstChildElement("body"); child;
-             child = child->NextSiblingElement("body")) {
-            ++bodyIndex;
-            queue.push({child, bodyIndex});
-        }
+             child = child->NextSiblingElement("body"))
+            queue.push(child);
     }
 
     MJCFLoadResult result;
     result.skeleton = std::move(skeleton);
     result.meshInfos = std::move(meshInfos);
     result.meshDir = std::move(meshDir);
+    return result;
+}
+
+// ── Joint parsing
+// ──────────────────────────────────────────────────────────
+
+std::vector<Joint> parseMJCFJoints(const std::string& path,
+                                   const SkeletonTree& tree) {
+    tinyxml2::XMLDocument doc;
+    doc.LoadFile(path.c_str());
+
+    std::vector<Joint> result(tree.numJoints());
+
+    auto* worldbody = doc.RootElement()->FirstChildElement("worldbody");
+    if (!worldbody)
+        return result;
+
+    struct Entry {
+        tinyxml2::XMLElement* elem;
+    };
+    std::queue<Entry> q;
+    if (auto* b = worldbody->FirstChildElement("body"))
+        q.push({b});
+
+    while (!q.empty()) {
+        auto [elem] = q.front();
+        q.pop();
+
+        const char* bodyName = elem->Attribute("name");
+        if (bodyName) {
+            try {
+                int idx = tree.index(bodyName);
+                auto* jElem = elem->FirstChildElement("joint");
+                if (jElem) {
+                    Joint jd;
+                    jd.name = jElem->Attribute("name")
+                                  ? jElem->Attribute("name")
+                                  : "";
+                    jd.type =
+                        Joint::Type::Revolute; // TODO: extend other joints
+
+                    const char* axisStr = jElem->Attribute("axis");
+                    if (axisStr) {
+                        float ax = 0, ay = 0, az = 1;
+                        std::istringstream ss(axisStr);
+                        ss >> ax >> ay >> az;
+                        jd.axis = Eigen::Vector3f(ax, ay, az).normalized();
+                    }
+                    const char* rangeStr = jElem->Attribute("range");
+                    if (rangeStr) {
+                        std::istringstream ss(rangeStr);
+                        ss >> jd.loLimit >> jd.hiLimit;
+                    }
+                    result[idx] = jd;
+                }
+            } catch (...) {
+            }
+        }
+
+        for (auto* c = elem->FirstChildElement("body"); c;
+             c = c->NextSiblingElement("body"))
+            q.push({c});
+    }
+
     return result;
 }
 

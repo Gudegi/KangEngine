@@ -17,7 +17,7 @@ Robot Robot::fromMJCF(const std::string& mjcfPath, Scene::SceneBackend* scene,
     robot._scale = scale;
 
     // 1. Load MJCF
-    auto mjcfData = MJCFLoader::load(mjcfPath);
+    auto mjcfData = MJCFLoader::loadSkelMesh(mjcfPath);
     robot._skeleton =
         std::make_shared<const SkeletonTree>(std::move(mjcfData.skeleton));
     robot._skeleton->print();

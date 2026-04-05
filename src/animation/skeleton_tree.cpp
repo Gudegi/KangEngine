@@ -42,73 +42,110 @@ static Eigen::Vector3f parsePos(const char* posStr) {
     return Eigen::Vector3f(x, y, z);
 }
 
-SkeletonTree SkeletonTree::fromMJCF(const std::string& path) {
-    tinyxml2::XMLDocument doc;
-    if (doc.LoadFile(path.c_str()) != tinyxml2::XML_SUCCESS) {
-        throw std::runtime_error(
-            fmt::format("Failed to load MJCF file: {}", path));
-    }
-
-    auto* root = doc.RootElement();
-    auto* worldbody = root->FirstChildElement("worldbody");
-    if (!worldbody) {
+SkeletonTree SkeletonTree::skelFromMJCFElement(tinyxml2::XMLElement* mjcfRoot,
+                                               const std::string& order) {
+    auto* worldbody = mjcfRoot->FirstChildElement("worldbody");
+    if (!worldbody)
         throw std::runtime_error("MJCF: missing <worldbody> element");
-    }
 
     auto* bodyRoot = worldbody->FirstChildElement("body");
-    if (!bodyRoot) {
+    if (!bodyRoot)
         throw std::runtime_error("MJCF: missing root <body> element");
-    }
 
-    // BFS traversal (matching my_poselib's from_mjcf)
     std::vector<std::string> nodeNames;
     std::vector<int> parentIndices;
     std::vector<Eigen::Vector3f> localTranslations;
     std::vector<int> numJointsInBody;
 
-    struct BFSEntry {
-        tinyxml2::XMLElement* element;
-        int parentIndex;
-        int currentIndex;
-    };
+    if (order == "BFS") {
+        struct BFSEntry {
+            tinyxml2::XMLElement* element;
+            int parentIndex;
+            int currentIndex;
+        };
 
-    std::queue<BFSEntry> queue;
-    int nodeIndex = 0;
-    queue.push({bodyRoot, -1, nodeIndex});
+        std::queue<BFSEntry> queue;
+        int nodeIndex = 0;
+        queue.push({bodyRoot, -1, nodeIndex});
 
-    while (!queue.empty()) {
-        auto [element, parentIdx, currentIdx] = queue.front();
-        queue.pop();
+        while (!queue.empty()) {
+            auto [element, parentIdx, currentIdx] = queue.front();
+            queue.pop();
 
-        const char* name = element->Attribute("name");
-        nodeNames.push_back(name ? name : fmt::format("body_{}", currentIdx));
-        parentIndices.push_back(parentIdx);
-        localTranslations.push_back(parsePos(element->Attribute("pos")));
+            const char* name = element->Attribute("name");
+            nodeNames.push_back(name ? name
+                                     : fmt::format("body_{}", currentIdx));
+            parentIndices.push_back(parentIdx);
+            localTranslations.push_back(parsePos(element->Attribute("pos")));
 
-        // Count joint children
-        int jointCount = 0;
-        for (auto* joint = element->FirstChildElement("joint"); joint;
-             joint = joint->NextSiblingElement("joint")) {
-            ++jointCount;
+            // Count joint children
+            int jointCount = 0;
+            for (auto* joint = element->FirstChildElement("joint"); joint;
+                 joint = joint->NextSiblingElement("joint")) {
+                ++jointCount;
+            }
+            // Also count freejoint
+            for (auto* fj = element->FirstChildElement("freejoint"); fj;
+                 fj = fj->NextSiblingElement("freejoint")) {
+                ++jointCount;
+            }
+            numJointsInBody.push_back(jointCount);
+
+            // Enqueue child bodies
+            for (auto* child = element->FirstChildElement("body"); child;
+                 child = child->NextSiblingElement("body")) {
+                ++nodeIndex;
+                queue.push({child, currentIdx, nodeIndex});
+            }
         }
-        // Also count freejoint
-        for (auto* fj = element->FirstChildElement("freejoint"); fj;
-             fj = fj->NextSiblingElement("freejoint")) {
-            ++jointCount;
-        }
-        numJointsInBody.push_back(jointCount);
+    } else if (order == "DFS") {
+        int nodeIndex = 0;
+        std::function<void(tinyxml2::XMLElement*, int, int)> dfs;
+        dfs = [&](tinyxml2::XMLElement* element, int parentIdx,
+                  int currentIdx) {
+            const char* name = element->Attribute("name");
+            nodeNames.push_back(name ? name
+                                     : fmt::format("body_{}", currentIdx));
+            parentIndices.push_back(parentIdx);
+            localTranslations.push_back(parsePos(element->Attribute("pos")));
 
-        // Enqueue child bodies
-        for (auto* child = element->FirstChildElement("body"); child;
-             child = child->NextSiblingElement("body")) {
-            ++nodeIndex;
-            queue.push({child, currentIdx, nodeIndex});
-        }
+            // Count joint children
+            int jointCount = 0;
+            for (auto* joint = element->FirstChildElement("joint"); joint;
+                 joint = joint->NextSiblingElement("joint")) {
+                ++jointCount;
+            }
+            // Also count freejoint
+            for (auto* fj = element->FirstChildElement("freejoint"); fj;
+                 fj = fj->NextSiblingElement("freejoint")) {
+                ++jointCount;
+            }
+            numJointsInBody.push_back(jointCount);
+
+            for (auto* child = element->FirstChildElement("body"); child;
+                 child = child->NextSiblingElement("body")) {
+                ++nodeIndex;
+                dfs(child, currentIdx, nodeIndex);
+            }
+        };
+        dfs(bodyRoot, -1, 0);
+
+    } else {
+        throw std::runtime_error("MJCF: order must be 'BFS' or 'DFS'");
     }
 
     return SkeletonTree(std::move(nodeNames), std::move(parentIndices),
                         std::move(localTranslations),
                         std::move(numJointsInBody));
+}
+
+SkeletonTree SkeletonTree::skelFromMJCF(const std::string& path,
+                                        const std::string& order) {
+    tinyxml2::XMLDocument doc;
+    if (doc.LoadFile(path.c_str()) != tinyxml2::XML_SUCCESS)
+        throw std::runtime_error(
+            fmt::format("Failed to load MJCF file: {}", path));
+    return skelFromMJCFElement(doc.RootElement(), order);
 }
 
 void SkeletonTree::print() const {
