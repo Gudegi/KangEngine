@@ -30,6 +30,15 @@ enum class VertexAttributeType { Float, Int, UnsignedInt, Byte, UnsignedByte };
 
 enum class PolygonMode { Fill, Line, Point };
 
+enum class BlendFactor {
+    Zero,
+    One,
+    SrcAlpha,
+    OneMinusSrcAlpha,
+    DstAlpha,
+    OneMinusDstAlpha,
+};
+
 struct VertexAttribute {
     int location;
     int size;
@@ -92,6 +101,9 @@ class GraphicsDevice {
 
     // Render State
     virtual void setDepthTest(bool enable) = 0;
+    virtual void setDepthWrite(bool enable) = 0;
+    virtual void setBlend(bool enable) = 0;
+    virtual void setBlendFunc(BlendFactor src, BlendFactor dst) = 0;
     virtual void setStencilTest(bool enable) = 0;
     virtual void setPolygonMode(PolygonMode mode) = 0;
     virtual void setClearColor(float r, float g, float b, float a) = 0;

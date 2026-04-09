@@ -167,6 +167,9 @@ class OpenGLDevice : public GraphicsDevice {
 
     // Render State
     void setDepthTest(bool enable) override;
+    void setDepthWrite(bool enable) override;
+    void setBlend(bool enable) override;
+    void setBlendFunc(BlendFactor src, BlendFactor dst) override;
     void setStencilTest(bool enable) override;
     void setPolygonMode(PolygonMode mode) override;
     void setClearColor(float r, float g, float b, float a) override;

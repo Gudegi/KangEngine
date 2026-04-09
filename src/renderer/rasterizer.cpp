@@ -132,11 +132,15 @@ size_t Rasterizer::addShape(Backend::Shader* shader, Scene::Prim* prim) {
 }
 
 void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
-    for (const auto& buffer : _renderList) {
-        if (!buffer || !buffer->backendShader)
-            continue;
+    Backend::Shader* lastShader = nullptr;
 
-        buffer->backendShader->use();
+    auto drawBuffer = [&](const auto& buffer) {
+        if (lastShader != buffer->backendShader) {
+            buffer->backendShader->use();
+            buffer->backendShader->setMat4("view", view);
+            buffer->backendShader->setMat4("projection", proj);
+            lastShader = buffer->backendShader;
+        }
 
         if (buffer->prim) {
             // fmt::print("prim address: {}, hasTranslate: {}\n",
@@ -150,14 +154,57 @@ void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
             if (auto color = buffer->prim->getDisplayColorAlpha())
                 buffer->backendShader->setVec4("objColor", *color);
         }
-
-        buffer->backendShader->setMat4("view", view);
-        buffer->backendShader->setMat4("projection", proj);
-
         buffer->vertexArray->bind();
         _graphicsDevice->drawIndexed(buffer->numIndices);
         buffer->vertexArray->unbind();
+    };
+
+    // TODO: implement Transparency in material.
+    auto isTransparent = [](const auto& buffer) -> bool {
+        if (!buffer->prim)
+            return false;
+        auto col = buffer->prim->getDisplayColorAlpha();
+        return col && (col->a < 0.99f);
+    };
+
+    // Render Pass 1, opaque
+    for (const auto& buffer : _renderList) {
+        if (!buffer || !buffer->backendShader)
+            continue;
+        if (buffer->prim && !buffer->prim->isVisible())
+            continue;
+        if (isTransparent(buffer))
+            continue;
+        drawBuffer(buffer);
     }
+
+    // Render Pass 2: transparent, back-to-front sorted by view-space z
+    // View space: camera looks toward -z, more negative = further away
+    using Entry = std::pair<float, Scene::ShapeRenderBuffer*>;
+    std::vector<Entry> transparents;
+    for (const auto& buffer : _renderList) {
+        if (!buffer || !buffer->backendShader)
+            continue;
+        if (buffer->prim && !buffer->prim->isVisible())
+            continue;
+        if (!isTransparent(buffer))
+            continue;
+        glm::vec4 worldPos = buffer->prim->computeModelMatrix()[3];
+        float viewZ = (view * worldPos).z;
+        transparents.emplace_back(viewZ, buffer.get());
+    }
+    // ascending sort: most negative z (furthest) first → back-to-front
+    std::sort(transparents.begin(), transparents.end(),
+              [](const Entry& a, const Entry& b) { return a.first < b.first; });
+
+    _graphicsDevice->setBlend(true);
+    _graphicsDevice->setBlendFunc(Backend::BlendFactor::SrcAlpha,
+                                  Backend::BlendFactor::OneMinusSrcAlpha);
+    _graphicsDevice->setDepthWrite(false);
+    for (auto& [z, buf] : transparents)
+        drawBuffer(buf);
+    _graphicsDevice->setDepthWrite(true);
+    _graphicsDevice->setBlend(false);
 }
 
 /*

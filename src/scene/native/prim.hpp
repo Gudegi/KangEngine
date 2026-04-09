@@ -40,13 +40,17 @@ class Prim {
     std::string _name; // "Cube"
     std::string _path; // "/World/Cube"
     PrimType _type;
-    Prim* _parent; // 부모 (소유하지 않음)
+    Prim* _parent;                                // 부모 (소유하지 않음)
     std::vector<std::unique_ptr<Prim>> _children; // 자식들
     std::map<std::string, Prim*> _childrenMap;    // 빠른 탐색용
 
     // 데이터 (타입에 따라 다름)
     std::shared_ptr<MeshData> _meshData;
     std::unordered_map<Token, AttributeValue, Token::Hash> _Attributes;
+
+    bool _renderable = true; // whether can render or not  TODO: true only when
+                             // you use proper PrimType
+    bool _visible = true;    // runtime show/hide toggle
 
     // cached TODO: refactoring
     bool _isDirty = true; // true -> compute
@@ -154,6 +158,10 @@ class Prim {
     bool hasAttribute(const std::string& name) const {
         return hasAttribute(Token(name));
     }
+
+    bool isRenderable() const { return _renderable; }
+    bool isVisible() const { return _visible; }
+    void setVisible(bool v) { _visible = v; }
 
     void setXformOpOrder(const std::vector<std::string>& order) {
         this->setAttribute("xformOpOrder", order);

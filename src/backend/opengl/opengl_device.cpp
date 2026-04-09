@@ -423,6 +423,27 @@ void OpenGLDevice::setDepthTest(bool enable) {
     enable ? glEnable(GL_DEPTH_TEST) : glDisable(GL_DEPTH_TEST);
 }
 
+void OpenGLDevice::setDepthWrite(bool enable) { glDepthMask(enable); }
+
+void OpenGLDevice::setBlend(bool enable) {
+    enable ? glEnable(GL_BLEND) : glDisable(GL_BLEND);
+}
+
+void OpenGLDevice::setBlendFunc(BlendFactor src, BlendFactor dst) {
+    auto toGL = [](BlendFactor f) -> GLenum {
+        switch (f) {
+        case BlendFactor::Zero:             return GL_ZERO;
+        case BlendFactor::One:              return GL_ONE;
+        case BlendFactor::SrcAlpha:         return GL_SRC_ALPHA;
+        case BlendFactor::OneMinusSrcAlpha: return GL_ONE_MINUS_SRC_ALPHA;
+        case BlendFactor::DstAlpha:         return GL_DST_ALPHA;
+        case BlendFactor::OneMinusDstAlpha: return GL_ONE_MINUS_DST_ALPHA;
+        }
+        return GL_ONE;
+    };
+    glBlendFunc(toGL(src), toGL(dst));
+}
+
 void OpenGLDevice::setStencilTest(bool enable) {
     enable ? glEnable(GL_STENCIL_TEST) : glDisable(GL_STENCIL_TEST);
 }
