@@ -30,9 +30,11 @@ OpenGLBuffer::OpenGLBuffer(BufferType type, size_t size, const void* data)
         break;
     }
 
+    GLenum usage =
+        (type == BufferType::Uniform) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW;
     glGenBuffers(1, &_buffer);
     glBindBuffer(_target, _buffer);
-    glBufferData(_target, size, data, GL_STATIC_DRAW);
+    glBufferData(_target, size, data, usage);
     glBindBuffer(_target, 0);
 }
 
@@ -43,6 +45,11 @@ void OpenGLBuffer::bind() { glBindBuffer(_target, _buffer); }
 void OpenGLBuffer::unbind() { glBindBuffer(_target, 0); }
 
 void OpenGLBuffer::setData(const void* data, size_t size, size_t offset) {
+    if (offset + size > _size) {
+        std::cerr << "OpenGLBuffer::setData: out of bounds (offset=" << offset
+                  << " size=" << size << " buffer_size=" << _size << ")\n";
+        return;
+    }
     glBindBuffer(_target, _buffer);
     glBufferSubData(_target, offset, size, data);
     glBindBuffer(_target, 0);
@@ -186,6 +193,18 @@ void OpenGLShader::setVec4(const std::string& name, float x, float y, float z,
 void OpenGLShader::setMat2(const std::string& name, const glm::mat2& value) {
     glUniformMatrix2fv(glGetUniformLocation(_shaderProgram, name.c_str()), 1,
                        GL_FALSE, &value[0][0]);
+}
+
+void OpenGLShader::setUniformBlockBinding(const std::string& blockName,
+                                          int slot) {
+    GLuint uniformBlockIndex =
+        glGetUniformBlockIndex(_shaderProgram, blockName.c_str());
+    if (uniformBlockIndex == GL_INVALID_INDEX) {
+        std::cerr << "OpenGLShader::setUniformBlockBinding: block '"
+                  << blockName << "' not found in shader\n";
+        return;
+    }
+    glUniformBlockBinding(_shaderProgram, uniformBlockIndex, slot);
 }
 
 // OpenGLTexture Implementation
@@ -373,6 +392,11 @@ std::unique_ptr<Buffer> OpenGLDevice::createBuffer(BufferType type, size_t size,
     return std::make_unique<OpenGLBuffer>(type, size, data);
 }
 
+void OpenGLDevice::bindUniformBuffer(Buffer* buffer, int slot) {
+    auto* glBuf = static_cast<OpenGLBuffer*>(buffer);
+    glBindBufferBase(GL_UNIFORM_BUFFER, slot, glBuf->getHandle());
+}
+
 std::unique_ptr<Shader> OpenGLDevice::createShader(const ShaderDesc& desc) {
     return std::make_unique<OpenGLShader>(desc);
 }
@@ -432,12 +456,18 @@ void OpenGLDevice::setBlend(bool enable) {
 void OpenGLDevice::setBlendFunc(BlendFactor src, BlendFactor dst) {
     auto toGL = [](BlendFactor f) -> GLenum {
         switch (f) {
-        case BlendFactor::Zero:             return GL_ZERO;
-        case BlendFactor::One:              return GL_ONE;
-        case BlendFactor::SrcAlpha:         return GL_SRC_ALPHA;
-        case BlendFactor::OneMinusSrcAlpha: return GL_ONE_MINUS_SRC_ALPHA;
-        case BlendFactor::DstAlpha:         return GL_DST_ALPHA;
-        case BlendFactor::OneMinusDstAlpha: return GL_ONE_MINUS_DST_ALPHA;
+        case BlendFactor::Zero:
+            return GL_ZERO;
+        case BlendFactor::One:
+            return GL_ONE;
+        case BlendFactor::SrcAlpha:
+            return GL_SRC_ALPHA;
+        case BlendFactor::OneMinusSrcAlpha:
+            return GL_ONE_MINUS_SRC_ALPHA;
+        case BlendFactor::DstAlpha:
+            return GL_DST_ALPHA;
+        case BlendFactor::OneMinusDstAlpha:
+            return GL_ONE_MINUS_DST_ALPHA;
         }
         return GL_ONE;
     };

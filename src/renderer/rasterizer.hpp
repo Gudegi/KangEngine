@@ -13,6 +13,9 @@ namespace KE {
 class Rasterizer : public Renderer {
     std::vector<std::shared_ptr<Scene::ShapeRenderBuffer>> _renderList;
 
+    std::unique_ptr<Backend::Buffer> _cameraUBO;
+    std::unique_ptr<Backend::Buffer> _lightUBO;
+
   public:
     Rasterizer(Backend::GraphicsDevice* graphicsDevice,
                Scene::SceneBackend* scene);

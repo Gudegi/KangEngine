@@ -28,6 +28,7 @@ class OpenGLBuffer : public Buffer {
     void unbind() override;
     void setData(const void* data, size_t size, size_t offset = 0) override;
     BufferType getType() const override { return _type; }
+    GLuint getHandle() const { return _buffer; }
 };
 
 class OpenGLShader : public Shader {
@@ -68,6 +69,7 @@ class OpenGLShader : public Shader {
     void setMat2(const std::string& name, const glm::mat2& value) override;
     void setMat3(const std::string& name, const glm::mat3& value) override;
     void setMat4(const std::string& name, const glm::mat4& value) override;
+    void setUniformBlockBinding(const std::string& blockName, int slot) override;
 };
 
 class OpenGLTexture : public Texture {
@@ -196,6 +198,8 @@ class OpenGLDevice : public GraphicsDevice {
                   float maxFilterParam = GL_LINEAR) override;
     std::unique_ptr<Framebuffer>
     createFramebuffer(const FramebufferDesc& desc) override;
+
+    void bindUniformBuffer(Buffer* buffer, int slot) override;
 };
 
 } // namespace Backend

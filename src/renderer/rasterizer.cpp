@@ -6,12 +6,22 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <memory>
 
+constexpr int CAMERA_UBO_BIND_SLOT = 0;
+constexpr int LIGHT_UBO_BIND_SLOT = 1;
+
 namespace KE {
 
 Rasterizer::Rasterizer(Backend::GraphicsDevice* graphicsDevice,
                        Scene::SceneBackend* scene) {
     _graphicsDevice = graphicsDevice;
     _scene = scene;
+    _cameraUBO =
+        _graphicsDevice->createBuffer(Backend::BufferType::Uniform,
+                                      2 * sizeof(glm::mat4)); // view, proj
+    _graphicsDevice->bindUniformBuffer(_cameraUBO.get(), CAMERA_UBO_BIND_SLOT);
+    _lightUBO = _graphicsDevice->createBuffer(Backend::BufferType::Uniform,
+                                              sizeof(glm::mat4));
+    _graphicsDevice->bindUniformBuffer(_lightUBO.get(), LIGHT_UBO_BIND_SLOT);
 }
 
 std::shared_ptr<Scene::ShapeRenderBuffer> Rasterizer::createRenderBuffer(
@@ -133,6 +143,9 @@ size_t Rasterizer::addShape(Backend::Shader* shader, Scene::Prim* prim) {
 
 void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
     Backend::Shader* lastShader = nullptr;
+
+    _cameraUBO->setData(&view, sizeof(view));
+    _cameraUBO->setData(&proj, sizeof(proj), sizeof(glm::mat4));
 
     auto drawBuffer = [&](const auto& buffer) {
         if (lastShader != buffer->backendShader) {

@@ -111,6 +111,7 @@ class GraphicsDevice {
     // Resource creation
     virtual std::unique_ptr<Buffer>
     createBuffer(BufferType type, size_t size, const void* data = nullptr) = 0;
+    virtual void bindUniformBuffer(Buffer* buffer, int slot) = 0;
     virtual std::unique_ptr<Shader> createShader(const ShaderDesc& desc) = 0;
     virtual std::unique_ptr<Texture> createTexture(const TextureDesc& desc) = 0;
     virtual std::unique_ptr<VertexArray> createVertexArray() = 0;
@@ -182,6 +183,10 @@ class Shader {
     virtual void setMat2(const std::string& name, const glm::mat2& value) = 0;
     virtual void setMat3(const std::string& name, const glm::mat3& value) = 0;
     virtual void setMat4(const std::string& name, const glm::mat4& value) = 0;
+
+    // for OpenGL UBO binding
+    virtual void setUniformBlockBinding(const std::string& blockName,
+                                        int slot) = 0;
 };
 
 class Texture {
