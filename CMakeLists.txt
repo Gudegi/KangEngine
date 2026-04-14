@@ -175,21 +175,12 @@ target_link_libraries(engine_core PUBLIC pre_compiled_ext)
 ###### core libs END ######
 
 # Executable for KangEngine
-#file(GLOB MAIN_FILE "${MAIN_DIR}/standalone_physx_hello.cpp")
-#file(GLOB MAIN_FILE "${MAIN_DIR}/backend_light0.cpp")
-#file(GLOB MAIN_FILE "${MAIN_DIR}/backend_phong_light.cpp")
-#file(GLOB MAIN_FILE "${MAIN_DIR}/backend_material.cpp")
-#file(GLOB MAIN_FILE "${MAIN_DIR}/test_obj.cpp")
-#file(GLOB MAIN_FILE "${MAIN_DIR}/test_prim_scene.cpp")
-#file(GLOB MAIN_FILE "${MAIN_DIR}/usd_example.cpp")
-#file(GLOB MAIN_FILE "${MAIN_DIR}/scene_graph_example.cpp")
-#file(GLOB MAIN_FILE "${MAIN_DIR}/scene_usd_example.cpp")
-# Aboves are legacy.
+#file(GLOB MAIN_FILE "${MAIN_DIR}/base_template.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/test_stl.cpp")
-#file(GLOB MAIN_FILE "${MAIN_DIR}/test_xml.cpp")
+file(GLOB MAIN_FILE "${MAIN_DIR}/test_xml.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physx_drop_box.cpp")
-file(GLOB MAIN_FILE "${MAIN_DIR}/test_prims.cpp")
-#file(GLOB MAIN_FILE "${MAIN_DIR}/physx_articulation.cpp")
+#file(GLOB MAIN_FILE "${MAIN_DIR}/test_prims.cpp")
+
 add_executable(${PROJECT_NAME} ${MAIN_FILE})
 target_link_libraries(${PROJECT_NAME} PRIVATE engine_core)
 

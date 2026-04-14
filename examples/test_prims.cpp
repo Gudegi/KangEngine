@@ -14,18 +14,27 @@ using namespace KE::Scene;
 
 static const char* phongVs = R"(
 #version 410 core
-layout (location = 0) in vec3 aPos;
-layout (location = 1) in vec3 aNormal;
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec3 aNormal;
+layout(location = 3) in vec4 aTransform0;
+layout(location = 4) in vec4 aTransform1;
+layout(location = 5) in vec4 aTransform2;
+layout(location = 6) in vec4 aTransform3;
+layout(location = 7) in vec4 aInstanceColor;
+layout(std140) uniform CameraUBO {
+    mat4 view;
+    mat4 proj;
+};
 out vec3 Normal;
 out vec3 FragPos;
-uniform mat4 model;
-uniform mat4 view;
-uniform mat4 projection;
-uniform mat3 normalMat;
+out vec4 vColor;
 void main() {
-    gl_Position = projection * view * model * vec4(aPos, 1.0);
-    FragPos = vec3(view * model * vec4(aPos, 1.0));
-    Normal = normalMat * aNormal;
+    mat4 model = mat4(aTransform0, aTransform1, aTransform2, aTransform3);
+    mat4 mv = view * model;
+    gl_Position = proj * mv * vec4(aPos, 1.0);
+    FragPos = vec3(mv * vec4(aPos, 1.0));
+    Normal = mat3(mv) * aNormal;
+    vColor = aInstanceColor;
 }
 )";
 
@@ -34,10 +43,9 @@ static const char* phongFs = R"(
 out vec4 FragColor;
 in vec3 Normal;
 in vec3 FragPos;
-uniform vec4 objColor;
+in vec4 vColor;
 uniform vec3 lightColor;
 uniform vec3 lightPos;
-uniform vec3 camPos;
 void main() {
     float ambientStrength = 0.15;
     vec3 ambient = ambientStrength * lightColor;
@@ -45,32 +53,37 @@ void main() {
     vec3 L = normalize(lightPos - FragPos);
     float diff = max(dot(N, L), 0.0);
     vec3 diffuse = diff * lightColor;
-    float specularStrength = 0.5;
-    vec3 V = normalize(camPos - FragPos);
+    vec3 V = normalize(-FragPos);  // view space: camera = origin
     vec3 R = reflect(-L, N);
-    float spec = pow(max(dot(V, R), 0.0), 32);
-    vec3 specular = specularStrength * spec * lightColor;
-    FragColor = objColor * vec4(ambient + diffuse + specular, 1.0);
+    float spec = pow(max(dot(V, R), 0.0), 32.0);
+    vec3 specular = 0.5 * spec * lightColor;
+    FragColor = vColor * vec4(ambient + diffuse + specular, 1.0);
 }
 )";
 
 static const char* groundVs = R"(
 #version 410 core
-layout (location = 0) in vec3 aPos;
-layout (location = 1) in vec3 aNormal;
-layout (location = 2) in vec2 aTexCoord;
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec3 aNormal;
+layout(location = 2) in vec2 aTexCoord;
+layout(location = 3) in vec4 aTransform0;
+layout(location = 4) in vec4 aTransform1;
+layout(location = 5) in vec4 aTransform2;
+layout(location = 6) in vec4 aTransform3;
+layout(std140) uniform CameraUBO {
+    mat4 view;
+    mat4 proj;
+};
 out vec2 TexCoord;
 out vec3 Normal;
 out vec3 FragPos;
-uniform mat4 model;
-uniform mat4 view;
-uniform mat4 projection;
-uniform mat3 normalMat;
 void main() {
-    gl_Position = projection * view * model * vec4(aPos, 1.0);
+    mat4 model = mat4(aTransform0, aTransform1, aTransform2, aTransform3);
+    mat4 mv = view * model;
+    gl_Position = proj * mv * vec4(aPos, 1.0);
     TexCoord = aTexCoord;
-    FragPos = vec3(view * model * vec4(aPos, 1.0));
-    Normal = normalMat * aNormal;
+    FragPos = vec3(mv * vec4(aPos, 1.0));
+    Normal = mat3(mv) * aNormal;
 }
 )";
 
@@ -82,7 +95,6 @@ in vec3 Normal;
 in vec3 FragPos;
 uniform vec3 lightColor;
 uniform vec3 lightPos;
-uniform vec3 camPos;
 float checker(vec2 uv) {
     return mod(floor(uv.x * 8.0) + floor(uv.y * 8.0), 2.0);
 }
@@ -119,6 +131,9 @@ class PrimShowcaseApp : public App {
     void setup() override {
         phongShader = getGraphicsDevice()->createShader(phongVs, phongFs);
         groundShader = getGraphicsDevice()->createShader(groundVs, groundFs);
+
+        phongShader->setUniformBlockBinding("CameraUBO", 0);
+        groundShader->setUniformBlockBinding("CameraUBO", 0);
 
         phongShader->use();
         phongShader->setVec3("lightColor", 1.f, 1.f, 1.f);
@@ -214,28 +229,35 @@ class PrimShowcaseApp : public App {
             {8.f, 15.f, 0.f}, {0.30f, 0.90f, 0.70f, 1.f},
             "Cone (Z-up, pointing up)");
 
-        // Row y=20 — points and lines
+        // Row y=20 — points and lines (instanced)
         {
             std::vector<glm::vec3> pts = {
-                {-1.f, 0.f, 0.f},   {0.f, 0.f, 0.f},   {1.f, 0.f, 0.f},
-                {-0.5f, 0.f, 0.8f}, {0.5f, 0.f, 0.8f},
+                {-5.f, 20.f, 0.f},   {-4.f, 20.f, 0.f},   {-3.f, 20.f, 0.f},
+                {-4.5f, 20.f, 0.8f}, {-3.5f, 20.f, 0.8f},
             };
-            add("/shapes/points", Prim::createPointsData(pts, 0.12f, 12),
-                {-4.f, 20.f, 0.f}, {0.95f, 0.35f, 0.55f, 1.f},
-                "Points (5 spheres)");
+            auto prims =
+                Prim::definePoints(getScene(), "/shapes/points", pts, 0.12f,
+                                   {0.95f, 0.35f, 0.55f, 1.f}, 12);
+            for (auto* p : prims)
+                addShape(phongShader.get(), p);
+            if (!prims.empty())
+                entries.push_back({prims[0], "Points (5 spheres, instanced)"});
         }
         {
             std::vector<glm::vec3> verts = {
-                {0.f, 0.f, 0.f},   {1.f, 0.f, 0.f}, {1.f, 0.f, 0.f},
-                {1.f, 0.f, 1.f},   {1.f, 0.f, 1.f}, {0.f, 0.f, 1.f},
-                {0.f, 0.f, 1.f},   {0.f, 0.f, 0.f}, {0.5f, 0.f, 0.5f},
-                {0.5f, 0.f, 1.2f},
+                {2.f, 20.f, 0.f},   {3.f, 20.f, 0.f}, {3.f, 20.f, 0.f},
+                {3.f, 20.f, 1.f},   {3.f, 20.f, 1.f}, {2.f, 20.f, 1.f},
+                {2.f, 20.f, 1.f},   {2.f, 20.f, 0.f}, {2.5f, 20.f, 0.5f},
+                {2.5f, 20.f, 1.2f},
             };
             std::vector<unsigned int> lineIdx = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-            add("/shapes/lines",
-                Prim::createLinesData(verts, lineIdx, 0.04f, 8),
-                {2.f, 20.f, 0.f}, {0.35f, 0.75f, 0.95f, 1.f},
-                "Lines (5 capsule segments)");
+            auto prims =
+                Prim::defineLines(getScene(), "/shapes/lines", verts, lineIdx,
+                                  0.04f, {0.35f, 0.75f, 0.95f, 1.f}, 8);
+            for (auto* p : prims)
+                addShape(phongShader.get(), p);
+            if (!prims.empty())
+                entries.push_back({prims[0], "Lines (5 capsules, instanced)"});
         }
 
         checkError();
@@ -250,13 +272,11 @@ class PrimShowcaseApp : public App {
         phongShader->setVec3("lightColor", lightColor[0], lightColor[1],
                              lightColor[2]);
         phongShader->setVec3("lightPos", lightViewPos);
-        phongShader->setVec3("camPos", glm::vec3(0.f));
 
         groundShader->use();
         groundShader->setVec3("lightColor", lightColor[0], lightColor[1],
                               lightColor[2]);
         groundShader->setVec3("lightPos", lightViewPos);
-        groundShader->setVec3("camPos", glm::vec3(0.f));
 
         // ImGui panel
         ImGui::Begin("Prim Showcase");
