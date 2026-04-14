@@ -129,11 +129,8 @@ class App {
 
     Scene::SceneBackend* getScene() { return _scene.get(); }
 
-    size_t addShape(Backend::Shader* shader,
-                    std::shared_ptr<Scene::MeshData> meshData);
-    size_t addShape(PhongMaterial* material,
-                    std::shared_ptr<Scene::MeshData> meshData);
     size_t addShape(Backend::Shader* shader, Scene::Prim* prim);
+    size_t addShape(PhongMaterial* material, Scene::Prim* prim);
 
     glm::vec2 getScreenToNDC(float x, float y);
 

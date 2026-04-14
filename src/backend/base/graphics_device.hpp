@@ -20,7 +20,7 @@ using std::vector;
 
 enum class BackendType { OpenGL, Vulkan, WebGPU };
 
-enum class BufferType { Vertex, Index, Uniform };
+enum class BufferType { Vertex, DynamicVertex, Index, Uniform };
 
 enum class ShaderType { Vertex, Fragment, Geometry, Compute };
 
@@ -46,6 +46,7 @@ struct VertexAttribute {
     bool normalized;
     size_t stride;
     size_t offset;
+    int divisor = 0; // 0=per-vertex, 1=per-instance
 };
 
 struct ShaderStage {

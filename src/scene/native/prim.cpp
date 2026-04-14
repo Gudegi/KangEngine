@@ -617,23 +617,39 @@ MeshData Prim::createConeData(float radius, float height, UpAxis upAxis,
     return makeCylinderMesh(radius, height / 2.0f, 0.0f, perm, segments);
 }
 
-MeshData Prim::createPointsData(const std::vector<glm::vec3>& points,
-                                float pointRadius, int segments) {
-    MeshData result;
-    for (const auto& p : points) {
-        auto sphere = createSphereData(pointRadius, segments, segments / 2 + 1);
-        // shift sphere to point position
-        for (auto& v : sphere.vertices)
-            v += p;
-        mergeMesh(result, std::move(sphere));
+std::vector<Prim*> Prim::definePoints(SceneBackend* scene,
+                                      const std::string& basePath,
+                                      const std::vector<glm::vec3>& points,
+                                      float radius, glm::vec4 color,
+                                      int segments) {
+    auto meshData = std::make_shared<MeshData>(
+        createSphereData(radius, segments, segments / 2 + 1));
+
+    std::vector<Prim*> result;
+    result.reserve(points.size());
+    for (size_t i = 0; i < points.size(); ++i) {
+        std::string path = basePath + "/" + std::to_string(i);
+        auto* prim = scene->definePrim(path, PrimType::Mesh);
+        prim->setMeshData(meshData);
+        prim->addTranslateOp(points[i]);
+        prim->setDisplayColorAlpha(color);
+        result.push_back(prim);
     }
     return result;
 }
 
-MeshData Prim::createLinesData(const std::vector<glm::vec3>& vertices,
-                               const std::vector<unsigned int>& indices,
-                               float lineRadius, int segments) {
-    MeshData result;
+std::vector<Prim*> Prim::defineLines(SceneBackend* scene,
+                                     const std::string& basePath,
+                                     const std::vector<glm::vec3>& vertices,
+                                     const std::vector<unsigned int>& indices,
+                                     float radius, glm::vec4 color,
+                                     int segments) {
+
+    auto meshData = std::make_shared<MeshData>(
+        createCapsuleData(radius, 1.0f, UpAxis::Y, segments));
+
+    std::vector<Prim*> result;
+    int segIdx = 0;
     for (size_t i = 0; i + 1 < indices.size(); i += 2) {
         const glm::vec3& a = vertices[indices[i]];
         const glm::vec3& b = vertices[indices[i + 1]];
@@ -642,24 +658,23 @@ MeshData Prim::createLinesData(const std::vector<glm::vec3>& vertices,
         if (len < 1e-6f)
             continue;
 
-        // Build capsule along Y-up then rotate to align with diff
-        auto capsule = createCapsuleData(lineRadius, len, UpAxis::Y, segments);
-
         glm::vec3 dir = diff / len;
         glm::vec3 center = (a + b) * 0.5f;
 
-        // Rotation: Y-axis → diff direction (Eigen handles all edge cases)
+        // Rotation: Y-axis -> diff direction
         Eigen::Quaternionf eq = Eigen::Quaternionf::FromTwoVectors(
             Eigen::Vector3f::UnitY(), Eigen::Vector3f(dir.x, dir.y, dir.z));
         glm::quat rot(eq.w(), eq.x(), eq.y(), eq.z());
-        glm::mat3 rotMat = glm::mat3_cast(rot);
 
-        for (auto& v : capsule.vertices)
-            v = rotMat * v + center;
-        for (auto& n : capsule.normals)
-            n = rotMat * n;
-
-        mergeMesh(result, std::move(capsule));
+        std::string path = basePath + "/" + std::to_string(segIdx++);
+        auto* prim = scene->definePrim(path, PrimType::Mesh);
+        prim->setMeshData(meshData);
+        prim->addTranslateOp(center);
+        prim->addRotateQuaternionOp(rot);
+        prim->addScaleOp(
+            glm::vec3(1.f, len, 1.f)); // Y-stretch = segment length
+        prim->setDisplayColorAlpha(color);
+        result.push_back(prim);
     }
     return result;
 }

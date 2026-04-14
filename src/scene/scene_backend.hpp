@@ -20,21 +20,6 @@ namespace Scene {
 class Prim;
 enum class PrimType;
 
-struct ShapeRenderBuffer {
-    Backend::Shader* backendShader; // Backend::Shader
-    std::unique_ptr<Backend::VertexArray> vertexArray;
-    std::vector<std::unique_ptr<Backend::Buffer>>
-        vertexBuffers; // TODO: use one VBO
-    std::unique_ptr<Backend::Buffer> indexBuffer;
-    int numIndices;
-
-    Prim* prim; // non-owning, scene graph owns the Prim
-
-    // Constructor helpers
-    ShapeRenderBuffer()
-        : backendShader(nullptr), numIndices(0), prim(nullptr) {}
-};
-
 // Mesh 데이터 구조
 struct MeshData {
     std::vector<glm::vec3> vertices;

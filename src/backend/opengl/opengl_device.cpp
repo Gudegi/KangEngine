@@ -20,6 +20,7 @@ OpenGLBuffer::OpenGLBuffer(BufferType type, size_t size, const void* data)
 
     switch (type) {
     case BufferType::Vertex:
+    case BufferType::DynamicVertex:
         _target = GL_ARRAY_BUFFER;
         break;
     case BufferType::Index:
@@ -30,8 +31,10 @@ OpenGLBuffer::OpenGLBuffer(BufferType type, size_t size, const void* data)
         break;
     }
 
-    GLenum usage =
-        (type == BufferType::Uniform) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW;
+    GLenum usage = (type == BufferType::Uniform ||
+                    type == BufferType::DynamicVertex)
+                       ? GL_DYNAMIC_DRAW
+                       : GL_STATIC_DRAW;
     glGenBuffers(1, &_buffer);
     glBindBuffer(_target, _buffer);
     glBufferData(_target, size, data, usage);
@@ -539,6 +542,8 @@ void OpenGLVertexArray::setVertexAttribute(const VertexAttribute& attribute) {
                           attribute.stride,
                           reinterpret_cast<void*>(attribute.offset));
     glEnableVertexAttribArray(attribute.location);
+    if (attribute.divisor > 0)
+        glVertexAttribDivisor(attribute.location, attribute.divisor);
 }
 
 void OpenGLVertexArray::setVertexBuffer(Buffer* buffer) {

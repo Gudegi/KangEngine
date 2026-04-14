@@ -228,20 +228,13 @@ void App::coreRender() {
 
 void App::checkError() { _graphicsDevice->checkError(); }
 
-size_t App::addShape(Backend::Shader* shader,
-                     std::shared_ptr<Scene::MeshData> meshData) {
-    return _rasterizer ? _rasterizer->addShape(shader, meshData)
-                       : static_cast<size_t>(-1);
-}
-
-size_t App::addShape(PhongMaterial* material,
-                     std::shared_ptr<Scene::MeshData> meshData) {
-    return _rasterizer ? _rasterizer->addShape(material, meshData)
-                       : static_cast<size_t>(-1);
-}
-
 size_t App::addShape(Backend::Shader* shader, Scene::Prim* prim) {
     return _rasterizer ? _rasterizer->addShape(shader, prim)
+                       : static_cast<size_t>(-1);
+}
+
+size_t App::addShape(PhongMaterial* material, Scene::Prim* prim) {
+    return _rasterizer ? _rasterizer->addShape(material, prim)
                        : static_cast<size_t>(-1);
 }
 

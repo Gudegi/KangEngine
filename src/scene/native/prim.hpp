@@ -105,17 +105,20 @@ class Prim {
     static MeshData createConeData(float radius, float height,
                                    UpAxis upAxis = UpAxis::Y,
                                    int segments = 32);
-    // Points: each point rendered as a small sphere (radius = pointRadius)
-    // TODO: instanced render
-    static MeshData createPointsData(const std::vector<glm::vec3>& points,
-                                     float pointRadius = 0.01f,
-                                     int segments = 8);
-    // Lines: each segment rendered as a capsule (radius = lineRadius)
-    // TODO: instanced render
-    static MeshData createLinesData(const std::vector<glm::vec3>& vertices,
-                                    const std::vector<unsigned int>& indices,
-                                    float lineRadius = 0.005f,
-                                    int segments = 8);
+    // Instanced points: 1 sphere MeshData shared -> 1 Prim per point
+    static std::vector<Prim*>
+    definePoints(SceneBackend* scene, const std::string& basePath,
+                 const std::vector<glm::vec3>& points, float radius = 0.01f,
+                 glm::vec4 color = glm::vec4(1.f), int segments = 8);
+
+    // Instanced lines: 1 unit capsule MeshData shared -> 1 Prim per segment
+    // Each prim: translate(center) * rotate(Y->dir) * scale(1, length, 1)
+    // Note: caps become ellipsoidal under non-uniform Y scale
+    static std::vector<Prim*>
+    defineLines(SceneBackend* scene, const std::string& basePath,
+                const std::vector<glm::vec3>& vertices,
+                const std::vector<unsigned int>& indices, float radius = 0.005f,
+                glm::vec4 color = glm::vec4(1.f), int segments = 8);
 
     // 순회
     void traverse(std::function<void(Prim*)> func);
