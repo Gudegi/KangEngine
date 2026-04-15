@@ -31,9 +31,7 @@ class MJCFLoader {
                                        const std::string& order = "DFS");
 };
 
-// ── Joint definitions
-// ────────────────────────────────────────────────────────
-
+//  Joint definitions
 struct Joint {
     enum class Type { Revolute }; // TODO: support more types
     Type type = Type::Revolute;
@@ -48,8 +46,25 @@ struct Joint {
 std::vector<Joint> parseMJCFJoints(const std::string& mjcfPath,
                                    const SkeletonTree& tree);
 
-// ── Collision geometry
-// ────────────────────────────────────────────────────────
+// Inertial properties
+struct MJCFInertial {
+    float mass = 1.f;
+    Eigen::Vector3f com =
+        Eigen::Vector3f::Zero(); // center of mass in body frame
+    Eigen::Quaternionf quat =
+        Eigen::Quaternionf::Identity(); // inertia frame orientation
+    Eigen::Vector3f diagInertia = Eigen::Vector3f(1e-4f, 1e-4f, 1e-4f);
+};
+
+// body index (SkeletonTree) -> inertial properties
+using InertialMap = std::unordered_map<int, MJCFInertial>;
+
+// Parse <inertial> element from each body. Bodies without <inertial> will not
+// have an entry.
+InertialMap parseMJCFInertial(const std::string& mjcfPath,
+                              const SkeletonTree& tree);
+
+// Collision geometry
 
 struct MJCFCollisionGeom {
     enum class Type { Capsule, Cylinder, Sphere, Box };

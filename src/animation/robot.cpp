@@ -3,36 +3,36 @@
 #include "utils/load_utils.hpp"
 #include "scene/scene_backend.hpp"
 #include "scene/native/prim.hpp"
-#include "app/app.hpp"
 
 #include <fmt/core.h>
 
 namespace KE {
 namespace Animation {
 
-Robot Robot::fromMJCF(const std::string& mjcfPath, Scene::SceneBackend* scene,
-                      Backend::Shader* shader, App* app,
-                      const std::string& primBasePath, float scale) {
-    Robot robot;
-    robot._scale = scale;
+SkelMesh SkelMesh::fromMJCF(const std::string& mjcfPath,
+                            Scene::SceneBackend* scene,
+                            const std::string& primBasePath, float scale,
+                            const std::string& order) {
+    SkelMesh skelMesh;
+    skelMesh._scale = scale;
 
     // 1. Load MJCF
-    auto mjcfData = MJCFLoader::loadSkelMesh(mjcfPath);
-    robot._skeleton =
+    auto mjcfData = MJCFLoader::loadSkelMesh(mjcfPath, order);
+    skelMesh._skeleton =
         std::make_shared<const SkeletonTree>(std::move(mjcfData.skeleton));
-    robot._skeleton->print();
+    skelMesh._skeleton->print();
 
     // 2. Zero pose (rest pose)
-    robot._state = SkeletonState::zeroPose(robot._skeleton);
-    auto globalTransforms = robot._state.computeGlobalTransforms();
-    robot._state.printGlobalPositions();
+    skelMesh._state = SkeletonState::zeroPose(skelMesh._skeleton);
+    auto globalTransforms = skelMesh._state.computeGlobalTransforms();
+    skelMesh._state.printGlobalPositions();
 
     // 3. Create prims per body with STL meshes
-    robot._bodyPrims.resize(robot._skeleton->numJoints(), nullptr);
+    skelMesh._bodyPrims.resize(skelMesh._skeleton->numJoints(), nullptr);
 
     for (const auto& meshInfo : mjcfData.meshInfos) {
         // Skip if this body already has a mesh (e.g. logo_link on torso)
-        if (robot._bodyPrims[meshInfo.bodyIndex] != nullptr) {
+        if (skelMesh._bodyPrims[meshInfo.bodyIndex] != nullptr) {
             fmt::print("Skipping duplicate mesh [{}] {}: {}\n",
                        meshInfo.bodyIndex, meshInfo.bodyName,
                        meshInfo.meshFile);
@@ -60,17 +60,16 @@ Robot Robot::fromMJCF(const std::string& mjcfPath, Scene::SceneBackend* scene,
         prim->setAttribute("xformOp:translate", pos);
         prim->setAttribute("xformOp:rotateQuaternion", rot);
 
-        app->addShape(shader, prim);
-        robot._bodyPrims[idx] = prim;
+        skelMesh._bodyPrims[idx] = prim;
     }
 
     fmt::print("Robot loaded: {} bodies, {} meshes\n",
-               robot._skeleton->numJoints(), mjcfData.meshInfos.size());
+               skelMesh._skeleton->numJoints(), mjcfData.meshInfos.size());
 
-    return robot;
+    return skelMesh;
 }
 
-void Robot::applyPose() {
+void SkelMesh::applyPose() {
     auto globals = _state.computeGlobalTransforms();
     for (int i = 0; i < _skeleton->numJoints(); ++i) {
         if (!_bodyPrims[i])
@@ -82,15 +81,15 @@ void Robot::applyPose() {
     }
 }
 
-void Robot::setJointRotation(int idx, const Eigen::Quaternionf& q) {
+void SkelMesh::setJointRotation(int idx, const Eigen::Quaternionf& q) {
     _state.setRotation(idx, q);
 }
 
-void Robot::setRootTranslation(const Eigen::Vector3f& t) {
+void SkelMesh::setRootTranslation(const Eigen::Vector3f& t) {
     _state.setRootTranslation(t);
 }
 
-void Robot::resetToZeroPose() {
+void SkelMesh::resetToZeroPose() {
     _state = SkeletonState::zeroPose(_skeleton);
     applyPose();
 }

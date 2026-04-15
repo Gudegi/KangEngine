@@ -8,6 +8,9 @@
 #include "PxPhysicsAPI.h"
 #include <fmt/base.h>
 #include "utils/types.hpp"
+#include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include "scene/scene_backend.hpp"
 
 using namespace physx;
 
@@ -19,7 +22,8 @@ struct PhysicsConfig {
     float gravity[3] = {0.0f, -9.81f, 0.0f};
     float friction[3] = {1.0f, 1.0f, 0.0f};
     PxSimulationFilterShader filterShader = PxDefaultSimulationFilterShader;
-    PxSolverType::Enum solverType = PxSolverType::ePGS;
+    // PxSolverType::Enum solverType = PxSolverType::ePGS;
+    PxSolverType::Enum solverType = PxSolverType::eTGS;
 
     static PhysicsConfig yUp() { return {}; }
 
@@ -35,55 +39,55 @@ struct PhysicsConfig {
 class PhysicsWorld {
 
   private:
-    PxDefaultAllocator mAllocator;
-    PxDefaultErrorCallback mErrorCallback;
-    PxFoundation* mFoundation = nullptr;
-    PxPhysics* mPhysics = nullptr;
-    PxScene* mScene = nullptr;
-    PxMaterial* mMaterial = nullptr;
+    PxDefaultAllocator _allocator;
+    PxDefaultErrorCallback _errorCallback;
+    PxFoundation* _foundation = nullptr;
+    PxPhysics* _physics = nullptr;
+    PxScene* _scene = nullptr;
+    PxMaterial* _material = nullptr;
 
-    float mdt;
-    UpAxis mUpAxis;
-    PxVec3 mGravity;
-    PxVec3 mFriction;
+    float _dt;
+    UpAxis _upAxis;
+    PxVec3 _gravity;
+    PxVec3 _friction;
 
   public:
     PhysicsWorld(PhysicsConfig config) {
-        mdt = config.dt;
-        mUpAxis = config.upAxis;
-        mGravity =
+        _dt = config.dt;
+        _upAxis = config.upAxis;
+        _gravity =
             PxVec3(config.gravity[0], config.gravity[1], config.gravity[2]);
-        mFriction =
+        _friction =
             PxVec3(config.friction[0], config.friction[1], config.friction[2]);
 
-        mFoundation =
-            PxCreateFoundation(PX_PHYSICS_VERSION, mAllocator, mErrorCallback);
-        mPhysics = PxCreatePhysics(PX_PHYSICS_VERSION, *mFoundation,
+        _foundation =
+            PxCreateFoundation(PX_PHYSICS_VERSION, _allocator, _errorCallback);
+        _physics = PxCreatePhysics(PX_PHYSICS_VERSION, *_foundation,
                                    PxTolerancesScale(), true);
-        PxInitExtensions(*mPhysics, nullptr);
+        PxInitExtensions(*_physics, nullptr);
 
-        PxSceneDesc sceneDesc(mPhysics->getTolerancesScale());
-        sceneDesc.gravity = mGravity;
+        PxSceneDesc sceneDesc(_physics->getTolerancesScale());
+        sceneDesc.gravity = _gravity;
         sceneDesc.cpuDispatcher = PxDefaultCpuDispatcherCreate(2);
         sceneDesc.filterShader = config.filterShader;
         sceneDesc.solverType = config.solverType;
-        mScene = mPhysics->createScene(sceneDesc);
+        _scene = _physics->createScene(sceneDesc);
 
-        mMaterial = mPhysics->createMaterial(
-            mFriction[0], mFriction[1],
-            mFriction[2]); // staticFriction, dynamicFriction, restitution
+        _material = _physics->createMaterial(
+            _friction[0], _friction[1],
+            _friction[2]); // staticFriction, dynamicFriction, restitution
         fmt::print("PhysX is initialized.\n");
     }
 
     ~PhysicsWorld() {
-        mScene->release();
-        mMaterial->release();
+        _scene->release();
+        _material->release();
         PxCloseExtensions();
-        mPhysics->release();
-        mFoundation->release();
+        _physics->release();
+        _foundation->release();
     };
 
-    void setDt(float dt) { mdt = dt; }
+    void setDt(float dt) { _dt = dt; }
 
     void addDefaultGround();
 
@@ -94,14 +98,31 @@ class PhysicsWorld {
     void step();
 
     PxU32 numBodyActors() {
-        return mScene->getNbActors(PxActorTypeFlag::eRIGID_DYNAMIC);
+        return _scene->getNbActors(PxActorTypeFlag::eRIGID_DYNAMIC);
     }
 
-    UpAxis getUpAxis() const { return mUpAxis; }
-    PxPhysics* getPhysics() { return mPhysics; }
-    PxMaterial* getMaterial() { return mMaterial; }
-    PxScene* getScene() { return mScene; }
+    UpAxis getUpAxis() const { return _upAxis; }
+    PxPhysics* getPhysics() { return _physics; }
+    PxMaterial* getMaterial() { return _material; }
+    PxScene* getScene() { return _scene; }
+
+    struct RigidVisual {
+        PxArticulationLink* link = nullptr;
+        PxRigidDynamic* rigid = nullptr;
+        Scene::Prim* prim = nullptr;
+    };
+    std::vector<RigidVisual> _rigidVisuals;
+    void registerRigidVisual(const RigidVisual& rigidVisual) {
+        _rigidVisuals.push_back(rigidVisual);
+    }
+    void syncAllVisuals();
 };
+
+// PhysX > GLM conversion
+inline glm::vec3 pxToGlm(const PxVec3& v) { return glm::vec3(v.x, v.y, v.z); }
+inline glm::quat pxToGlm(const PxQuat& q) {
+    return glm::quat(q.w, q.x, q.y, q.z);
+}
 
 } // namespace KE
 
