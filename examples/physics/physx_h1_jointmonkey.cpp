@@ -14,7 +14,7 @@
 #include "animation/skel_mesh.hpp"
 #include "animation/skeleton_math.hpp"
 #include "kangEngine.hpp"
-#include "material/colors.hpp"
+#include "engine/graphics/material/colors.hpp"
 #include "physics/articulation.hpp"
 #include "physics/physics.hpp"
 #include <Eigen/Geometry>

@@ -1,6 +1,6 @@
 #include "rasterizer.hpp"
-#include "backend/base/graphics_device.hpp"
-#include "material/material.hpp"
+#include "engine/graphics/backend/base/graphics_device.hpp"
+#include "engine/graphics/material/material.hpp"
 #include "scene/native/prim.hpp"
 #include "scene/scene_backend.hpp"
 #include <glm/glm.hpp>

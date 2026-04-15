@@ -11,7 +11,7 @@
 #include <vector>
 #include <glm/glm.hpp>
 #include <glm/geometric.hpp>
-#include "../backend/graphics_factory.hpp"
+#include "engine/graphics/backend/graphics_factory.hpp"
 
 namespace KE {
 namespace Scene {

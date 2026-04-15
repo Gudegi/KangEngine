@@ -11,20 +11,20 @@
 #include <memory>
 #include <string>
 
-#include "camera/camera.hpp"
-#include "ui/panel_manager.hpp"
+#include "engine/graphics/camera/camera.hpp"
+#include "engine/core/ui/panel_manager.hpp"
 #include "utils/asset_path.hpp"
 #include "utils/ray.hpp"
-#include "window/window.hpp"
+#include "engine/core/window/window.hpp"
 // #include "mesh/prim.hpp"
 // #include "mesh/buffer.hpp"
 // #include "mesh/vao.hpp"
 // #include "shader/shader.hpp"
-#include "backend/base/graphics_device.hpp"
-#include "backend/graphics_factory.hpp"
+#include "engine/graphics/backend/base/graphics_device.hpp"
+#include "engine/graphics/backend/graphics_factory.hpp"
 #include "utils/types.hpp"
-#include "material/material.hpp"
-#include "renderer/rasterizer.hpp"
+#include "engine/graphics/material/material.hpp"
+#include "engine/graphics/renderer/rasterizer.hpp"
 #include "scene/scene_backend.hpp"
 #include "scene/native/prim.hpp"
 namespace KE {

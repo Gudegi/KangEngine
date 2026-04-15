@@ -1,5 +1,5 @@
 #include "mesh_instancer.hpp"
-#include "material/material.hpp"
+#include "engine/graphics/material/material.hpp"
 #include <glm/glm.hpp>
 
 namespace KE {

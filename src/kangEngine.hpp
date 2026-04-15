@@ -11,16 +11,16 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "app/app.hpp"
-#include "camera/camera.hpp"
+#include "engine/graphics/camera/camera.hpp"
 #include "scene/native/prim.hpp"
-#include "ui/base_panel.hpp"
-#include "ui/panel_manager.hpp"
+#include "engine/core/ui/base_panel.hpp"
+#include "engine/core/ui/panel_manager.hpp"
 #include "utils/asset_path.hpp"
 #include "utils/print_debug.hpp"
 #include "utils/glm_utils.hpp"
 #include "utils/load_utils.hpp"
-#include "window/window.hpp"
-#include "material/colors.hpp"
+#include "engine/core/window/window.hpp"
+#include "engine/graphics/material/colors.hpp"
 
 #ifndef KANGENGINE_USE_PHYSX
 #include "physics/physics.hpp"

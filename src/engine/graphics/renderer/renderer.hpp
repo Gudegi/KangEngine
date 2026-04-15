@@ -2,7 +2,7 @@
 #define __RENDERER_HPP__
 
 #include "scene/scene_backend.hpp"
-#include "backend/base/graphics_device.hpp"
+#include "engine/graphics/backend/base/graphics_device.hpp"
 #include <glm/mat4x4.hpp>
 
 namespace KE {

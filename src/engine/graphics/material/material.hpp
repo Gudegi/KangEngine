@@ -3,9 +3,9 @@
 
 #include <glm/glm.hpp>
 
-#include "backend/base/graphics_device.hpp"
-#include "backend/graphics_factory.hpp"
-#include "material/phongMaterials.hpp"
+#include "engine/graphics/backend/base/graphics_device.hpp"
+#include "engine/graphics/backend/graphics_factory.hpp"
+#include "engine/graphics/material/phongMaterials.hpp"
 
 namespace KE
 {

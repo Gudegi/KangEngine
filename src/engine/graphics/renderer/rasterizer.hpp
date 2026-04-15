@@ -1,11 +1,11 @@
 #ifndef _RASTERIZER_HPP_
 #define _RASTERIZER_HPP_
 
-#include "renderer/renderer.hpp"
-#include "renderer/mesh_instancer.hpp"
-#include "backend/base/graphics_device.hpp"
+#include "engine/graphics/renderer/renderer.hpp"
+#include "engine/graphics/renderer/mesh_instancer.hpp"
+#include "engine/graphics/backend/base/graphics_device.hpp"
 #include "scene/scene_backend.hpp"
-#include "material/material.hpp"
+#include "engine/graphics/material/material.hpp"
 #include <glm/mat4x4.hpp>
 #include "utils/types.hpp"
 #include <map>
