@@ -3,8 +3,8 @@
 ///
 
 #include "kangEngine.hpp"
-#include "scene/native/native_scene.hpp"
-#include "scene/native/prim.hpp"
+#include "engine/scene/native/native_scene.hpp"
+#include "engine/scene/native/prim.hpp"
 #include <iostream>
 
 int main() {

@@ -25,8 +25,8 @@
 #include "utils/types.hpp"
 #include "engine/graphics/material/material.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
-#include "scene/scene_backend.hpp"
-#include "scene/native/prim.hpp"
+#include "engine/scene/scene_backend.hpp"
+#include "engine/scene/native/prim.hpp"
 namespace KE {
 
 class App {

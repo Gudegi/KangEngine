@@ -10,7 +10,7 @@
 #include "utils/types.hpp"
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
-#include "scene/scene_backend.hpp"
+#include "engine/scene/scene_backend.hpp"
 
 using namespace physx;
 

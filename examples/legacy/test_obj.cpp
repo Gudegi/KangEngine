@@ -8,7 +8,7 @@
 #include "kangEngine.hpp"
 #include "engine/graphics/material/colors.hpp"
 #include "physics/physics.hpp"
-#include "scene/scene_backend.hpp"
+#include "engine/scene/scene_backend.hpp"
 
 using namespace KE;
 

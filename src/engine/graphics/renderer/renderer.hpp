@@ -1,7 +1,7 @@
 #ifndef __RENDERER_HPP__
 #define __RENDERER_HPP__
 
-#include "scene/scene_backend.hpp"
+#include "engine/scene/scene_backend.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include <glm/mat4x4.hpp>
 

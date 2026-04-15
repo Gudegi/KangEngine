@@ -1,8 +1,8 @@
 #include "skel_mesh.hpp"
 #include "skeleton_math.hpp"
 #include "utils/load_utils.hpp"
-#include "scene/scene_backend.hpp"
-#include "scene/native/prim.hpp"
+#include "engine/scene/scene_backend.hpp"
+#include "engine/scene/native/prim.hpp"
 
 #include <fmt/core.h>
 

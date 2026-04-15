@@ -1,8 +1,8 @@
 #include "rasterizer.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/graphics/material/material.hpp"
-#include "scene/native/prim.hpp"
-#include "scene/scene_backend.hpp"
+#include "engine/scene/native/prim.hpp"
+#include "engine/scene/scene_backend.hpp"
 #include <glm/glm.hpp>
 #include <memory>
 

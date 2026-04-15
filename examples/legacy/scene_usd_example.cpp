@@ -5,10 +5,10 @@
 ///
 
 #include "kangEngine.hpp"
-#include "scene/scene_backend.hpp"
+#include "engine/scene/scene_backend.hpp"
 
 #ifdef KANGENGINE_USE_USD
-#include "scene/usd/usd_scene.hpp"
+#include "engine/scene/usd/usd_scene.hpp"
 #include <pxr/usd/usdGeom/xform.h>
 #include <pxr/usd/usdGeom/mesh.h>
 #include <pxr/usd/usdGeom/sphere.h>

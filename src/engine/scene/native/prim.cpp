@@ -3,7 +3,7 @@
 ///
 
 #include "prim.hpp"
-#include "scene/scene_backend.hpp"
+#include "engine/scene/scene_backend.hpp"
 #include "utils/types.hpp"
 #include <Eigen/Geometry>
 #include <glm/ext/quaternion_transform.hpp>

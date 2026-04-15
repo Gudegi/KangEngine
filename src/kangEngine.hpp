@@ -10,9 +10,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "app/app.hpp"
+#include "engine/core/app/app.hpp"
 #include "engine/graphics/camera/camera.hpp"
-#include "scene/native/prim.hpp"
+#include "engine/scene/native/prim.hpp"
 #include "engine/core/ui/base_panel.hpp"
 #include "engine/core/ui/panel_manager.hpp"
 #include "utils/asset_path.hpp"

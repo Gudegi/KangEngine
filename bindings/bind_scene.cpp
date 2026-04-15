@@ -7,12 +7,12 @@
 #include <pybind11/stl.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
-#include "scene/scene_backend.hpp"
-#include "scene/native/prim.hpp"
-#include "scene/native/token.hpp"
+#include "engine/scene/scene_backend.hpp"
+#include "engine/scene/native/prim.hpp"
+#include "engine/scene/native/token.hpp"
 
 #ifdef KANGENGINE_USE_USD
-#include "scene/usd/usd_scene.hpp"
+#include "engine/scene/usd/usd_scene.hpp"
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usd/prim.h>
 #endif

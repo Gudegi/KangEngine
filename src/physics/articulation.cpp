@@ -1,7 +1,7 @@
 #include "articulation.hpp"
 
-#include "scene/native/prim.hpp"
-#include "scene/scene_backend.hpp"
+#include "engine/scene/native/prim.hpp"
+#include "engine/scene/scene_backend.hpp"
 #include <Eigen/Geometry>
 #include <glm/gtc/quaternion.hpp>
 #include <utility>

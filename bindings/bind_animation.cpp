@@ -12,8 +12,8 @@
 #include "animation/skeleton_math.hpp"
 #include "animation/skeleton_state.hpp"
 #include "animation/skeleton_tree.hpp"
-#include "scene/scene_backend.hpp"
-#include "scene/native/prim.hpp"
+#include "engine/scene/scene_backend.hpp"
+#include "engine/scene/native/prim.hpp"
 
 namespace py = pybind11;
 using namespace KE;

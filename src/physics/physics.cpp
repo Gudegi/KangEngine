@@ -4,7 +4,7 @@
 #include <Eigen/Geometry>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
-#include "scene/native/prim.hpp"
+#include "engine/scene/native/prim.hpp"
 
 namespace KE {
 

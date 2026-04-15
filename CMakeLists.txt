@@ -177,9 +177,14 @@ target_link_libraries(engine_core PUBLIC pre_compiled_ext)
 # Executable for KangEngine
 #file(GLOB MAIN_FILE "${MAIN_DIR}/base_template.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/test_stl.cpp")
-file(GLOB MAIN_FILE "${MAIN_DIR}/test_xml.cpp")
+#file(GLOB MAIN_FILE "${MAIN_DIR}/test_xml.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physx_drop_box.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/test_prims.cpp")
+
+# Active Physics Examples
+#file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_articulation.cpp")
+#file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_jointmonkey.cpp")
+file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_ragdoll.cpp")
 
 add_executable(${PROJECT_NAME} ${MAIN_FILE})
 target_link_libraries(${PROJECT_NAME} PRIVATE engine_core)

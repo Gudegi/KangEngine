@@ -4,7 +4,7 @@
 #include <optional>
 #include <tiny_obj_loader.h>
 #include <string>
-#include "scene/scene_backend.hpp"
+#include "engine/scene/scene_backend.hpp"
 
 namespace KE {
 
