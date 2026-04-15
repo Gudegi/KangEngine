@@ -45,21 +45,24 @@ out vec4 FragColor;
 in vec3 Normal;
 in vec3 FragPos;
 in vec4 vColor;
-uniform vec3 lightColor;
-uniform vec3 lightPos;
+
+layout(std140) uniform lightUBO {
+    vec4 lightDir;   // xyz: view-space direction toward light
+    vec4 lightColor; // xyz: color * intensity
+    vec4 ambient;    // xyz: ambient color
+};
+
 void main() {
-    float ambientStrength = 0.15;
-    vec3 ambient = ambientStrength * lightColor;
     vec3 N = normalize(Normal);
-    vec3 L = normalize(lightPos - FragPos);
+    vec3 L = normalize(lightDir.xyz);
     float diff = max(dot(N, L), 0.0);
-    vec3 diffuse = diff * lightColor;
+    vec3 diffuse = diff * lightColor.rgb * vColor.rgb;
     float specularStrength = 0.5;
     vec3 V = normalize(-FragPos);
     vec3 R = reflect(-L, N);
     float spec = pow(max(dot(V, R), 0.0), 32);
-    vec3 specular = specularStrength * spec * lightColor;
-    FragColor = vec4(vColor.rgb * (ambient + diffuse + specular), vColor.a);
+    vec3 specular = specularStrength * spec * lightColor.rgb;
+    FragColor = vec4(ambient.rgb * vColor.rgb + diffuse + specular, vColor.a);
 }
 )";
 
@@ -99,8 +102,13 @@ out vec4 FragColor;
 in vec2 TexCoord;
 in vec3 Normal;
 in vec3 FragPos;
-uniform vec3 lightColor;
-uniform vec3 lightPos;
+
+layout(std140) uniform lightUBO {
+    vec4 lightDir;   // xyz: view-space direction toward light
+    vec4 lightColor; // xyz: color * intensity
+    vec4 ambient;    // xyz: ambient color
+};
+
 float checker(vec2 uv) {
     return mod(floor(uv.x * 8.0) + floor(uv.y * 8.0), 2.0);
 }
@@ -108,9 +116,9 @@ void main() {
     float t = checker(TexCoord);
     vec4 col = mix(vec4(0.85, 0.85, 0.85, 1.0), vec4(0.55, 0.75, 0.55, 1.0), t);
     vec3 N = normalize(Normal);
-    vec3 L = normalize(lightPos - FragPos);
+    vec3 L = normalize(lightDir.xyz);
     float diff = max(dot(N, L), 0.0);
-    vec3 light = 0.2 * lightColor + diff * lightColor;
+    vec3 light = ambient.rgb + diff * lightColor.rgb;
     FragColor = col * vec4(light, 1.0);
 }
 )";
@@ -143,9 +151,6 @@ class ScissorLiftApp : public App {
   public:
     std::unique_ptr<Backend::Shader> cubeShader;
     std::unique_ptr<Backend::Shader> planeShader;
-
-    glm::vec3 lightPos = {3.f, 6.f, 4.f};
-    float lightColor[3] = {1.f, 1.f, 1.f};
 
     PhysicsWorld physics{makeScissorConfig()};
 
@@ -467,9 +472,11 @@ class ScissorLiftApp : public App {
 
         cubeShader->use();
         cubeShader->setUniformBlockBinding("cameraUBO", 0);
+        cubeShader->setUniformBlockBinding("lightUBO", 1);
 
         planeShader->use();
         planeShader->setUniformBlockBinding("cameraUBO", 0);
+        planeShader->setUniformBlockBinding("lightUBO", 1);
 
         // Ground
         physics.addDefaultGround();
@@ -478,6 +485,12 @@ class ScissorLiftApp : public App {
         planePrim->setMeshData(std::make_shared<Scene::MeshData>(
             Scene::Prim::createPlaneData(30.f)));
         addShape(planeShader.get(), planePrim);
+
+        setLight(DirectionalLight{
+            .direction = glm::normalize(glm::vec3(0.5f, 1.f, 0.2f)),
+            .color = {1.f, 1.f, 1.f},
+            .intensity = 1.f,
+            .ambient = {0.15f, 0.15f, 0.15f}});
 
         // Articulation
         gArticulation =
@@ -489,20 +502,6 @@ class ScissorLiftApp : public App {
 
     // -----------------------------------------------------------------------
     void preRender() override {
-        // Lighting uniforms
-        auto view = getViewMatrix();
-        glm::vec3 lightViewPos = glm::vec3(view * glm::vec4(lightPos, 1.f));
-
-        cubeShader->use();
-        cubeShader->setVec3("lightColor", lightColor[0], lightColor[1],
-                            lightColor[2]);
-        cubeShader->setVec3("lightPos", lightViewPos);
-
-        planeShader->use();
-        planeShader->setVec3("lightColor", lightColor[0], lightColor[1],
-                             lightColor[2]);
-        planeShader->setVec3("lightPos", lightViewPos);
-
         // Spacebar: pause/resume
         bool spaceDown = glfwGetKey(getWindow(), GLFW_KEY_SPACE) == GLFW_PRESS;
         if (spaceDown && !spaceWasPressed)
@@ -538,14 +537,6 @@ class ScissorLiftApp : public App {
             prim->setAttribute("xformOp:rotateQuaternion", pxToGlm(p.q));
         }
 
-        // Ground plane lighting
-        planeShader->use();
-        planeShader->setVec3("lightColor", lightColor[0], lightColor[1],
-                             lightColor[2]);
-        planeShader->setVec3("lightPos", lightViewPos);
-        planeShader->setMat3("normalMat",
-                             glm::mat3(glm::transpose(glm::inverse(view))));
-
         checkError();
     }
 
@@ -564,16 +555,6 @@ class ScissorLiftApp : public App {
         ImGui::Text("Space: %s", paused ? "PAUSED" : "running");
         ImGui::Text("WASD / mouse: camera");
         ImGui::End();
-
-        auto view = this->getViewMatrix();
-        planeShader->use();
-        glm::mat4 groundModel = glm::mat4(1.0f);
-        glm::mat3 normalMat = glm::mat3(transpose(inverse(view * groundModel)));
-        planeShader->setMat3("normalMat", normalMat);
-        planeShader->setVec3("lightPos",
-                             glm::vec3(view * glm::vec4(lightPos, 1.0f)));
-        planeShader->setVec3("lightColor", lightColor[0], lightColor[1],
-                             lightColor[2]);
     }
 
     void postRender() override {}

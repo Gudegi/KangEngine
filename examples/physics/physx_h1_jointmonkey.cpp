@@ -69,21 +69,24 @@ out vec4 FragColor;
 in vec3 Normal;
 in vec3 FragPos;
 in vec4 vColor;
-uniform vec3 lightColor;
-uniform vec3 lightPos;
+
+layout(std140) uniform lightUBO {
+    vec4 lightDir;   // xyz: view-space direction toward light
+    vec4 lightColor; // xyz: color * intensity
+    vec4 ambient;    // xyz: ambient color
+};
+
 void main() {
-    float ambientStrength = 0.15;
-    vec3 ambient = ambientStrength * lightColor;
     vec3 N = normalize(Normal);
-    vec3 L = normalize(lightPos - FragPos);
+    vec3 L = normalize(lightDir.xyz);
     float diff = max(dot(N, L), 0.0);
-    vec3 diffuse = diff * lightColor;
+    vec3 diffuse = diff * lightColor.rgb * vColor.rgb;
     float specularStrength = 0.5;
     vec3 V = normalize(-FragPos);
     vec3 R = reflect(-L, N);
     float spec = pow(max(dot(V, R), 0.0), 32);
-    vec3 specular = specularStrength * spec * lightColor;
-    FragColor = vec4(vColor.rgb * (ambient + diffuse + specular), vColor.a);
+    vec3 specular = specularStrength * spec * lightColor.rgb;
+    FragColor = vec4(ambient.rgb * vColor.rgb + diffuse + specular, vColor.a);
 }
 )";
 
@@ -122,8 +125,13 @@ out vec4 FragColor;
 in vec2 TexCoord;
 in vec3 Normal;
 in vec3 FragPos;
-uniform vec3 lightColor;
-uniform vec3 lightPos;
+
+layout(std140) uniform lightUBO {
+    vec4 lightDir;   // xyz: view-space direction toward light
+    vec4 lightColor; // xyz: color * intensity
+    vec4 ambient;    // xyz: ambient color
+};
+
 float checker(vec2 uv) {
     return mod(floor(uv.x * 8.0) + floor(uv.y * 8.0), 2.0);
 }
@@ -131,9 +139,9 @@ void main() {
     float t = checker(TexCoord);
     vec4 col = mix(vec4(0.85, 0.85, 0.85, 1.0), vec4(0.55, 0.75, 0.55, 1.0), t);
     vec3 N = normalize(Normal);
-    vec3 L = normalize(lightPos - FragPos);
+    vec3 L = normalize(lightDir.xyz);
     float diff = max(dot(N, L), 0.0);
-    vec3 light = 0.2 * lightColor + diff * lightColor;
+    vec3 light = ambient.rgb + diff * lightColor.rgb;
     FragColor = col * vec4(light, 1.0);
 }
 )";
@@ -168,10 +176,10 @@ class H1PhysicsApp : public App {
 
         stlShader->use();
         stlShader->setUniformBlockBinding("cameraUBO", 0);
-        stlShader->setVec3("lightColor", 1.f, 1.f, 1.f);
-
+        stlShader->setUniformBlockBinding("lightUBO", 1);
         groundShader->use();
         groundShader->setUniformBlockBinding("cameraUBO", 0);
+        groundShader->setUniformBlockBinding("lightUBO", 1);
 
         // Ground
         physics.addDefaultGround();
@@ -211,17 +219,6 @@ class H1PhysicsApp : public App {
             physics.step();
             physicsBridge.syncAllVisuals();
         }
-
-        // Lighting
-        auto view = getViewMatrix();
-        glm::vec3 lv = glm::vec3(view * glm::vec4(lightPos, 1.f));
-        stlShader->use();
-        stlShader->setVec3("lightPos", lv);
-        stlShader->setVec3("lightColor", 1.f, 1.f, 1.f);
-
-        groundShader->use();
-        groundShader->setVec3("lightPos", lv);
-        groundShader->setVec3("lightColor", 1.f, 1.f, 1.f);
 
         checkError();
     }

@@ -25,6 +25,7 @@
 #include "utils/types.hpp"
 #include "engine/graphics/material/material.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
+#include "engine/graphics/renderer/light.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "engine/scene/native/prim.hpp"
 namespace KE {
@@ -62,9 +63,7 @@ class App {
 
     Window _window;
     Camera _camera;
-    PanelManager _panelManager; // = PanelManager(this->getWindow());
-                                // MeshManager _meshManager;
-                                // Light _light;
+    PanelManager _panelManager;
 
   private:
     std::unique_ptr<Backend::GraphicsDevice> _graphicsDevice;
@@ -96,6 +95,11 @@ class App {
     std::unique_ptr<App::IO> _io;
     std::unique_ptr<App::RenderVariable> _renderVariable;
     Camera& getCamera() { return _camera; }
+    void setLight(const DirectionalLight& light) {
+        if (_rasterizer)
+            _rasterizer->setLight(light);
+    }
+    const DirectionalLight& getLight() const { return _rasterizer->getLight(); }
     GLFWwindow* getWindow() { return _window.getGlfwWindow(); }
     const glm::mat4& getViewMatrix() const { return _viewMatrix; }
     const glm::mat4& getProjectionMatrix() const { return _projectionMatrix; }

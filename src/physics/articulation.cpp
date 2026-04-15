@@ -136,13 +136,13 @@ Articulation::~Articulation() {
         _artic->release();
 }
 
-Articulation Articulation::build(PhysicsWorld& physics,
-                                 std::shared_ptr<const Animation::SkeletonTree> tree,
-                                 const Animation::CollisionGeomMap& colGeoms,
-                                 const std::vector<Animation::Joint>& joints,
-                                 const Animation::InertialMap& inertials,
-                                 const ArticulationConfig& cfg) {
-    // Compute rest-pose global transforms — no copy, shared_ptr passed directly.
+Articulation Articulation::build(
+    PhysicsWorld& physics, std::shared_ptr<const Animation::SkeletonTree> tree,
+    const Animation::CollisionGeomMap& colGeoms,
+    const std::vector<Animation::Joint>& joints,
+    const Animation::InertialMap& inertials, const ArticulationConfig& cfg) {
+    // Compute rest-pose global transforms — no copy, shared_ptr passed
+    // directly.
     auto state = Animation::SkeletonState::zeroPose(tree);
     const auto globals = state.computeGlobalTransforms();
 
@@ -235,10 +235,8 @@ Articulation Articulation::build(PhysicsWorld& physics,
 // Drive
 void Articulation::setDriveTargets(const std::vector<float>& targets, float kp,
                                    float kd) {
-    PxArticulationDrive drive;
-    drive.stiffness = kp;
-    drive.damping = kd;
-    drive.maxForce = PX_MAX_F32;
+    PxArticulationDrive drive{kp, kd, PX_MAX_F32,
+                              PxArticulationDriveType::eFORCE};
 
     int n = static_cast<int>(_links.size());
     for (int i = 1; i < n; i++) {
@@ -247,6 +245,9 @@ void Articulation::setDriveTargets(const std::vector<float>& targets, float kp,
         joint->setDriveParams(PxArticulationAxis::eTWIST, drive);
         joint->setDriveTarget(PxArticulationAxis::eTWIST, targets[i - 1]);
     }
+
+    if (kp > 0.f && _artic->isSleeping())
+        _artic->wakeUp();
 }
 
 // Reset root

@@ -136,6 +136,10 @@ void App::initialize(int width, int height, bool hideUi, UpAxis upAxis,
 
     _rasterizer =
         std::make_unique<Rasterizer>(_graphicsDevice.get(), _scene.get());
+
+    _rasterizer->setLight(DirectionalLight{
+        (upAxis == UpAxis::Z) ? glm::normalize(glm::vec3(0.2f, 0.5f, 1.0f))
+                              : glm::normalize(glm::vec3(0.5f, 1.0f, 0.2f))});
 }
 
 // for entire process in c++

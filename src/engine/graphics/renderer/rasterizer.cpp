@@ -19,7 +19,7 @@ Rasterizer::Rasterizer(Backend::GraphicsDevice* graphicsDevice,
                                                2 * sizeof(glm::mat4));
     _graphicsDevice->bindUniformBuffer(_cameraUBO.get(), CAMERA_UBO_BIND_SLOT);
     _lightUBO = _graphicsDevice->createBuffer(Backend::BufferType::Uniform,
-                                              sizeof(glm::mat4));
+                                              3 * sizeof(glm::vec4));
     _graphicsDevice->bindUniformBuffer(_lightUBO.get(), LIGHT_UBO_BIND_SLOT);
 }
 
@@ -66,6 +66,19 @@ void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
     _cameraUBO->setData(&view, sizeof(view));
     _cameraUBO->setData(&proj, sizeof(proj), sizeof(glm::mat4));
 
+    glm::vec4 viewDir =
+        glm::vec4(glm::normalize(glm::mat3(view) * _light.direction), 0.f);
+    _lightUBO->setData(&viewDir, sizeof(glm::vec4), 0 * sizeof(glm::vec4));
+    if (_lightDirty) {
+        // std140 layout: vec4 direction | vec4 color | vec4 ambient
+        glm::vec4 lightColor = glm::vec4(_light.color * _light.intensity, 1.f);
+        glm::vec4 ambient = glm::vec4(_light.ambient, 0.f);
+        _lightUBO->setData(&lightColor, sizeof(glm::vec4),
+                           1 * sizeof(glm::vec4));
+        _lightUBO->setData(&ambient, sizeof(glm::vec4), 2 * sizeof(glm::vec4));
+        _lightDirty = false;
+    }
+
     // Update all instancers
     for (auto& [key, inst] : _instancers)
         inst.update();
@@ -80,6 +93,8 @@ void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
             inst.shader()->use();
         inst.render();
     }
+    // Skybox: drawn last, fills only pixels with no geometry
+    _graphicsDevice->drawSkybox(view, proj);
 
     // Pass 2: transparent instanced TODO: impl OIT
     _graphicsDevice->setBlend(true);
@@ -97,9 +112,6 @@ void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
     }
     _graphicsDevice->setDepthWrite(true);
     _graphicsDevice->setBlend(false);
-
-    // Skybox: drawn last, fills only pixels with no geometry
-    _graphicsDevice->drawSkybox(view, proj);
 }
 
 } // namespace KE

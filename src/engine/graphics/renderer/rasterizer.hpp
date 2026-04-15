@@ -3,6 +3,7 @@
 
 #include "engine/graphics/renderer/renderer.hpp"
 #include "engine/graphics/renderer/mesh_instancer.hpp"
+#include "engine/graphics/renderer/light.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "engine/graphics/material/material.hpp"
@@ -33,10 +34,18 @@ class Rasterizer : public Renderer {
 
     std::unique_ptr<Backend::Buffer> _cameraUBO;
     std::unique_ptr<Backend::Buffer> _lightUBO;
+    DirectionalLight _light;
+    bool _lightDirty = true;
 
   public:
     Rasterizer(Backend::GraphicsDevice* graphicsDevice,
                Scene::SceneBackend* scene);
+
+    void setLight(const DirectionalLight& light) {
+        _light = light;
+        _lightDirty = true;
+    }
+    const DirectionalLight& getLight() const { return _light; }
 
     size_t addShape(Backend::Shader* shader, Scene::Prim* prim);
     size_t addShape(PhongMaterial* material, Scene::Prim* prim);
