@@ -4,6 +4,7 @@
 #include "skeleton_tree.hpp"
 
 #include <Eigen/Geometry>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -17,20 +18,6 @@ struct MJCFMeshInfo {
     int bodyIndex;        // Index into SkeletonTree
 };
 
-struct MJCFLoadResult {
-    SkeletonTree skeleton;
-    std::vector<MJCFMeshInfo> meshInfos; // Visual mesh per body
-    std::string meshDir;                 // Resolved mesh directory path
-};
-
-class MJCFLoader {
-  public:
-    // Load MJCF file and extract skeleton + mesh info.
-    // order: "BFS" or "DFS"
-    static MJCFLoadResult loadSkelMesh(const std::string& mjcfPath,
-                                       const std::string& order = "DFS");
-};
-
 //  Joint definitions
 struct Joint {
     enum class Type { Revolute }; // TODO: support more types
@@ -40,11 +27,6 @@ struct Joint {
     float hiLimit = 3.14159f;
     std::string name;
 };
-
-//  collect one Joint per body that has a <joint> child. Result is indexed by
-//  SkeletonTree body index.
-std::vector<Joint> parseMJCFJoints(const std::string& mjcfPath,
-                                   const SkeletonTree& tree);
 
 // Inertial properties
 struct MJCFInertial {
@@ -58,11 +40,6 @@ struct MJCFInertial {
 
 // body index (SkeletonTree) -> inertial properties
 using InertialMap = std::unordered_map<int, MJCFInertial>;
-
-// Parse <inertial> element from each body. Bodies without <inertial> will not
-// have an entry.
-InertialMap parseMJCFInertial(const std::string& mjcfPath,
-                              const SkeletonTree& tree);
 
 // Collision geometry
 
@@ -91,10 +68,32 @@ struct MJCFCollisionGeom {
 using CollisionGeomMap =
     std::unordered_map<int, std::vector<MJCFCollisionGeom>>;
 
-// Parse all collision geoms from MJCF, respecting <default> class inheritance.
-// Bodies with no collision geoms will not have an entry in the map.
-CollisionGeomMap parseMJCFCollision(const std::string& mjcfPath,
-                                    const SkeletonTree& tree);
+struct MJCFData {
+    std::shared_ptr<const SkeletonTree> skeletonTree;
+    std::vector<MJCFMeshInfo> meshInfos;
+    std::string meshDir;
+    std::vector<Joint> joints;
+    CollisionGeomMap collisionGeoms;
+    InertialMap inertials;
+};
+
+class MJCFLoader {
+  public:
+    // Full single-pass parse: returns all data needed for visual + physics.
+    static MJCFData load(const std::string& mjcfPath, float scale = 1.0f,
+                         const std::string& order = "DFS");
+
+  private:
+    std::shared_ptr<const SkeletonTree> _skeletonTree;
+    std::vector<MJCFMeshInfo> _meshInfos;
+    std::string _meshDir;
+    std::vector<Joint> _joints;
+    CollisionGeomMap _collisionGeoms;
+    InertialMap _inertials;
+
+    void parse(const std::string& mjcfPath, float scale,
+               const std::string& order);
+};
 
 } // namespace Animation
 } // namespace KE

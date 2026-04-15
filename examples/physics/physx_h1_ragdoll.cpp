@@ -16,7 +16,8 @@
 ///
 
 #include "animation/mjcf_loader.hpp"
-#include "animation/skel_mesh.hpp"
+#include "bridge/physics_bridge.hpp"
+#include "bridge/skeleton_bridge.hpp"
 #include "foundation/Px.h"
 #include "kangEngine.hpp"
 #include "physics/articulation.hpp"
@@ -30,6 +31,7 @@
 
 using namespace KE;
 using namespace KE::Animation;
+using namespace KE::Bridge;
 using namespace physx;
 
 // ---------------------------------------------------------------------------
@@ -152,9 +154,10 @@ class H1RagdollApp : public App {
 
     glm::vec3 lightPos = {0.f, -2.f, 5.f};
 
-    SkelMesh robot;
+    SkeletonBridge robot;
     PhysicsWorld physics{PhysicsConfig::zUp()};
     Articulation artic;
+    Bridge::PhysicsBridge physicsBridge;
 
     std::vector<float> targets;
 
@@ -196,16 +199,20 @@ class H1RagdollApp : public App {
 
         const std::string mjcfPath =
             KE::getAssetPath("external/retargetted/unitree_h1/unitree_h1.xml");
-        robot = SkelMesh::fromMJCF(mjcfPath, getScene());
+        const auto mjcfData = MJCFLoader::load(mjcfPath);
+        robot = SkeletonBridge::fromData(mjcfData, getScene());
         for (auto* prim : robot.bodyPrims())
             addShape(stlShader.get(), prim);
 
         targets.assign(robot.numBodies() - 1, 0.f);
 
-        artic = Articulation::build(physics, robot, mjcfPath,
+        artic = Articulation::build(physics, mjcfData.skeletonTree,
+                                    mjcfData.collisionGeoms, mjcfData.joints,
+                                    mjcfData.inertials,
                                     ArticulationConfig::freeBase());
+        physicsBridge.registerArticulationVisuals(artic, robot);
 
-        auto colPrims = artic.buildCollisionVisuals(getScene());
+        auto colPrims = physicsBridge.buildCollisionVisuals(artic, getScene());
         for (auto* p : colPrims)
             addShape(stlShader.get(), p);
 
@@ -233,8 +240,8 @@ class H1RagdollApp : public App {
         if (!paused) {
             artic.setDriveTargets(targets, kp, kd);
             physics.step();
-            physics.syncAllVisuals();
-            artic.syncCollisionVisuals();
+            physicsBridge.syncAllVisuals();
+            physicsBridge.syncCollisionVisuals();
         }
 
         auto view = getViewMatrix();
@@ -252,7 +259,7 @@ class H1RagdollApp : public App {
 
     // -----------------------------------------------------------------------
     void render() override {
-        auto& tree = robot.skeleton();
+        auto& tree = robot.fk().skeleton();
         int n = tree.numJoints();
 
         ImGui::Begin("H1 Ragdoll");
@@ -275,7 +282,7 @@ class H1RagdollApp : public App {
             reset();
         ImGui::SameLine();
         if (ImGui::Checkbox("Show collision", &showCollision)) {
-            artic.setCollisionVisible(showCollision);
+            physicsBridge.setCollisionVisible(showCollision);
             float alpha = showCollision ? 0.12f : 1.0f;
             for (auto* p : robot.bodyPrims()) {
                 auto col = p->getDisplayColorAlpha().value_or(

@@ -1,9 +1,7 @@
 #include "articulation.hpp"
+#include "animation/skeleton_state.hpp"
 
-#include "engine/scene/native/prim.hpp"
-#include "engine/scene/scene_backend.hpp"
 #include <Eigen/Geometry>
-#include <glm/gtc/quaternion.hpp>
 #include <utility>
 
 namespace KE {
@@ -116,8 +114,7 @@ void applyInertial(PxArticulationLink* link,
 // Move semantics
 Articulation::Articulation(Articulation&& o) noexcept
     : _artic(o._artic), _links(std::move(o._links)),
-      _joints(std::move(o._joints)), _colGeoms(std::move(o._colGeoms)),
-      _colVisuals(std::move(o._colVisuals)) {
+      _joints(std::move(o._joints)), _colGeoms(std::move(o._colGeoms)) {
     o._artic = nullptr;
 }
 
@@ -129,7 +126,6 @@ Articulation& Articulation::operator=(Articulation&& o) noexcept {
         _links = std::move(o._links);
         _joints = std::move(o._joints);
         _colGeoms = std::move(o._colGeoms);
-        _colVisuals = std::move(o._colVisuals);
         o._artic = nullptr;
     }
     return *this;
@@ -141,19 +137,19 @@ Articulation::~Articulation() {
 }
 
 Articulation Articulation::build(PhysicsWorld& physics,
-                                 Animation::SkelMesh& skelMesh,
-                                 const std::string& mjcfPath,
+                                 std::shared_ptr<const Animation::SkeletonTree> tree,
+                                 const Animation::CollisionGeomMap& colGeoms,
+                                 const std::vector<Animation::Joint>& joints,
+                                 const Animation::InertialMap& inertials,
                                  const ArticulationConfig& cfg) {
-    const auto& skelTree = skelMesh.skeleton();
-    const auto joints = Animation::parseMJCFJoints(mjcfPath, skelTree);
-    const auto colGeoms = Animation::parseMJCFCollision(mjcfPath, skelTree);
-    const auto inertials = Animation::parseMJCFInertial(mjcfPath, skelTree);
-    const auto globals = skelMesh.state().computeGlobalTransforms();
+    // Compute rest-pose global transforms — no copy, shared_ptr passed directly.
+    auto state = Animation::SkeletonState::zeroPose(tree);
+    const auto globals = state.computeGlobalTransforms();
 
     Articulation artic;
     artic._joints = joints;
     artic._colGeoms = colGeoms;
-    int n = skelTree.numJoints();
+    int n = tree->numJoints();
 
     artic._artic = physics.getPhysics()->createArticulationReducedCoordinate();
     artic._artic->setArticulationFlag(PxArticulationFlag::eFIX_BASE,
@@ -188,7 +184,7 @@ Articulation Articulation::build(PhysicsWorld& physics,
 
     // Child links
     for (int i = 1; i < n; i++) {
-        int pi = skelTree.parentIndex(i);
+        int pi = tree->parentIndex(i);
         PxTransform childWorld(PxVec3(globals[i].translation.x(),
                                       globals[i].translation.y(),
                                       globals[i].translation.z()));
@@ -232,13 +228,6 @@ Articulation Articulation::build(PhysicsWorld& physics,
         joint->setLimit(PxArticulationAxis::eTWIST, jd.loLimit, jd.hiLimit);
     }
 
-    for (int i = 0; i < n; i++) {
-        PhysicsWorld::RigidVisual rv;
-        rv.link = artic._links[i];
-        rv.prim = skelMesh.bodyPrim(i);
-        physics.registerRigidVisual(rv);
-    }
-
     physics.getScene()->addArticulation(*artic._artic);
     return artic;
 }
@@ -272,102 +261,6 @@ void Articulation::resetRoot(const PxTransform& pose) {
     }
     _artic->applyCache(*cache, PxArticulationCacheFlag::eALL);
     cache->release();
-}
-
-// Collision visualization
-
-std::vector<Scene::Prim*>
-Articulation::buildCollisionVisuals(Scene::SceneBackend* scene,
-                                    const std::string& basePath) {
-    std::vector<Scene::Prim*> result;
-    _colVisuals.clear();
-
-    for (auto& [bodyIdx, geoms] : _colGeoms) {
-        if (bodyIdx >= static_cast<int>(_links.size()))
-            continue;
-        PxArticulationLink* lnk = _links[bodyIdx];
-
-        for (int gi = 0; gi < static_cast<int>(geoms.size()); gi++) {
-            const auto& geom = geoms[gi];
-            std::string path = basePath + "/b" + std::to_string(bodyIdx) +
-                               "_g" + std::to_string(gi);
-            auto* prim = scene->definePrim(path, Scene::PrimType::Mesh);
-
-            Scene::MeshData meshData;
-            glm::vec3 localPos{0.f};
-            glm::quat localQuat{1.f, 0.f, 0.f, 0.f};
-
-            if (geom.hasFromTo) {
-                Eigen::Vector3f center = (geom.from + geom.to) * 0.5f;
-                Eigen::Vector3f axis = (geom.to - geom.from).normalized();
-                float halfLen = (geom.to - geom.from).norm() * 0.5f;
-                Eigen::Quaternionf eq = Eigen::Quaternionf::FromTwoVectors(
-                    Eigen::Vector3f::UnitZ(), axis);
-                localPos = glm::vec3(center.x(), center.y(), center.z());
-                localQuat = glm::quat(eq.w(), eq.x(), eq.y(), eq.z());
-
-                float r = geom.size[0];
-                if (geom.type == Animation::MJCFCollisionGeom::Type::Capsule)
-                    meshData = Scene::Prim::createCapsuleData(r, halfLen * 2.f,
-                                                              UpAxis::Z, 12);
-                else
-                    meshData = Scene::Prim::createCylinderData(r, halfLen * 2.f,
-                                                               UpAxis::Z, 12);
-            } else {
-                localPos = glm::vec3(geom.pos.x(), geom.pos.y(), geom.pos.z());
-                localQuat = glm::quat(geom.quat.w(), geom.quat.x(),
-                                      geom.quat.y(), geom.quat.z());
-
-                switch (geom.type) {
-                case Animation::MJCFCollisionGeom::Type::Sphere:
-                    meshData =
-                        Scene::Prim::createSphereData(geom.size[0], 12, 8);
-                    break;
-                case Animation::MJCFCollisionGeom::Type::Capsule:
-                    meshData = Scene::Prim::createCapsuleData(
-                        geom.size[0], geom.size[1] * 2.f, UpAxis::Z, 12);
-                    break;
-                case Animation::MJCFCollisionGeom::Type::Cylinder:
-                    meshData = Scene::Prim::createCylinderData(
-                        geom.size[0], geom.size[1] * 2.f, UpAxis::Z, 12);
-                    break;
-                case Animation::MJCFCollisionGeom::Type::Box:
-                    meshData = Scene::Prim::createRectangleData(
-                        geom.size[0] * 2.f, geom.size[1] * 2.f,
-                        geom.size[2] * 2.f);
-                    break;
-                }
-            }
-
-            prim->setMeshData(
-                std::make_shared<Scene::MeshData>(std::move(meshData)));
-            prim->setDisplayColorAlpha(glm::vec4(1.f, 0.5f, 0.f, 0.8f));
-            prim->addTranslateOp(localPos);
-            prim->addRotateQuaternionOp(localQuat);
-            prim->setVisible(false);
-
-            _colVisuals.push_back({lnk, prim, localPos, localQuat});
-            result.push_back(prim);
-        }
-    }
-    return result;
-}
-
-void Articulation::syncCollisionVisuals() {
-    for (auto& cv : _colVisuals) {
-        PxTransform pose = cv.link->getGlobalPose();
-        glm::vec3 linkPos = pxToGlm(pose.p);
-        glm::quat linkRot = pxToGlm(pose.q);
-        cv.prim->setAttribute("xformOp:translate",
-                              linkPos + linkRot * cv.localPos);
-        cv.prim->setAttribute("xformOp:rotateQuaternion",
-                              linkRot * cv.localQuat);
-    }
-}
-
-void Articulation::setCollisionVisible(bool visible) {
-    for (auto& cv : _colVisuals)
-        cv.prim->setVisible(visible);
 }
 
 } // namespace KE

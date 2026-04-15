@@ -10,7 +10,6 @@
 #include "utils/types.hpp"
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
-#include "engine/scene/scene_backend.hpp"
 
 using namespace physx;
 
@@ -106,16 +105,6 @@ class PhysicsWorld {
     PxMaterial* getMaterial() { return _material; }
     PxScene* getScene() { return _scene; }
 
-    struct RigidVisual {
-        PxArticulationLink* link = nullptr;
-        PxRigidDynamic* rigid = nullptr;
-        Scene::Prim* prim = nullptr;
-    };
-    std::vector<RigidVisual> _rigidVisuals;
-    void registerRigidVisual(const RigidVisual& rigidVisual) {
-        _rigidVisuals.push_back(rigidVisual);
-    }
-    void syncAllVisuals();
 };
 
 // PhysX > GLM conversion

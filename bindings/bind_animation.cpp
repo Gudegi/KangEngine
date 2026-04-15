@@ -8,7 +8,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include "animation/skel_mesh.hpp"
+#include "bridge/skeleton_bridge.hpp"
 #include "animation/skeleton_math.hpp"
 #include "animation/skeleton_state.hpp"
 #include "animation/skeleton_tree.hpp"
@@ -18,6 +18,7 @@
 namespace py = pybind11;
 using namespace KE;
 using namespace KE::Animation;
+using namespace KE::Bridge;
 
 void bind_animation(py::module& m) {
     py::module anim = m.def_submodule("animation", "Skeleton animation system");
@@ -76,36 +77,42 @@ void bind_animation(py::module& m) {
              })
         .def("print_global_positions", &SkeletonState::printGlobalPositions);
 
-    // SkelMesh
-    py::class_<SkelMesh>(anim, "SkelMesh")
+    // SkeletonBridge
+    py::class_<SkeletonBridge>(anim, "SkeletonBridge")
         .def_static(
             "from_mjcf",
             [](const std::string& mjcfPath, Scene::SceneBackend* scene,
                const std::string& primBasePath, float scale,
                const std::string& order) {
-                return SkelMesh::fromMJCF(mjcfPath, scene, primBasePath, scale,
-                                          order);
+                return SkeletonBridge::fromMJCF(mjcfPath, scene, primBasePath,
+                                                scale, order);
             },
             py::arg("mjcf_path"), py::arg("scene"),
             py::arg("prim_base_path") = "/robot", py::arg("scale") = 1.0f,
             py::arg("order") = "DFS")
-        .def("apply_pose", &SkelMesh::applyPose)
+        .def("apply_pose", &SkeletonBridge::applyPose)
         .def("set_joint_rotation",
-             [](SkelMesh& self, int idx, const glm::quat& q) {
+             [](SkeletonBridge& self, int idx, const glm::quat& q) {
                  self.setJointRotation(idx, fromGlm(q));
              })
         .def("set_root_translation",
-             [](SkelMesh& self, const glm::vec3& t) {
+             [](SkeletonBridge& self, const glm::vec3& t) {
                  self.setRootTranslation(fromGlm(t));
              })
-        .def("reset_to_zero_pose", &SkelMesh::resetToZeroPose)
-        .def("skeleton", &SkelMesh::skeleton,
+        .def("reset_to_zero_pose", &SkeletonBridge::resetToZeroPose)
+        .def("skeleton",
+             [](SkeletonBridge& self) -> const SkeletonTree& {
+                 return self.fk().skeleton();
+             },
              py::return_value_policy::reference_internal)
-        .def("state", py::overload_cast<>(&SkelMesh::state),
+        .def("state",
+             [](SkeletonBridge& self) -> SkeletonState& {
+                 return self.fk().state();
+             },
              py::return_value_policy::reference_internal)
-        .def("body_prim", &SkelMesh::bodyPrim,
+        .def("body_prim", &SkeletonBridge::bodyPrim,
              py::return_value_policy::reference)
-        .def("body_prims", &SkelMesh::bodyPrims,
+        .def("body_prims", &SkeletonBridge::bodyPrims,
              py::return_value_policy::reference_internal)
-        .def("num_bodies", &SkelMesh::numBodies);
+        .def("num_bodies", &SkeletonBridge::numBodies);
 }

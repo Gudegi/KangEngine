@@ -2,16 +2,10 @@
 #define _ARTICULATION_HPP_
 
 #include "animation/mjcf_loader.hpp"
-#include "animation/skel_mesh.hpp"
 #include "physics.hpp"
-#include <glm/gtc/quaternion.hpp>
+#include <memory>
 #include <string>
 #include <vector>
-
-namespace KE::Scene {
-class SceneBackend;
-class Prim;
-} // namespace KE::Scene
 
 namespace KE {
 
@@ -54,20 +48,12 @@ struct ArticulationConfig {
     }
 };
 
-struct ColVisual {
-    PxArticulationLink* link = nullptr;
-    Scene::Prim* prim = nullptr;
-    glm::vec3 localPos{0.f};
-    glm::quat localQuat{1.f, 0.f, 0.f, 0.f};
-};
-
 class Articulation {
   private:
     PxArticulationReducedCoordinate* _artic = nullptr;
     std::vector<PxArticulationLink*> _links;
     std::vector<Animation::Joint> _joints; // indexed by body idx (root unused)
     Animation::CollisionGeomMap _colGeoms;
-    std::vector<ColVisual> _colVisuals;
 
   public:
     Articulation() = default;
@@ -79,26 +65,23 @@ class Articulation {
     Articulation& operator=(Articulation&&) noexcept;
 
     static Articulation build(PhysicsWorld& physics,
-                              Animation::SkelMesh& skelMesh,
-                              const std::string& mjcfPath,
+                              std::shared_ptr<const Animation::SkeletonTree> tree,
+                              const Animation::CollisionGeomMap& colGeoms,
+                              const std::vector<Animation::Joint>& joints,
+                              const Animation::InertialMap& inertials,
                               const ArticulationConfig& cfg = {});
 
     void setDriveTargets(const std::vector<float>& targets, float kp, float kd);
     void resetRoot(const PxTransform& pose);
 
-    // Collision visualization — call after build()
-    // Creates one Prim per collision geom (invisible by default).
-    // Returns the created prims so the caller can addShape(shader, prim).
-    std::vector<Scene::Prim*>
-    buildCollisionVisuals(Scene::SceneBackend* scene,
-                          const std::string& basePath = "/collision");
-    void syncCollisionVisuals();
-    void setCollisionVisible(bool visible);
-
     PxArticulationLink* link(int i) const { return _links[i]; }
     int numLinks() const { return static_cast<int>(_links.size()); }
     PxArticulationReducedCoordinate* raw() { return _artic; }
     const std::vector<Animation::Joint>& joints() const { return _joints; }
+
+    // Data accessors for PhysicsBridge
+    const std::vector<PxArticulationLink*>& links() const { return _links; }
+    const Animation::CollisionGeomMap& colGeoms() const { return _colGeoms; }
 };
 
 } // namespace KE

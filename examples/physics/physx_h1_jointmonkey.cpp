@@ -11,7 +11,8 @@
 ///   ImGui : PD gains, per-joint target angles
 ///
 
-#include "animation/skel_mesh.hpp"
+#include "bridge/physics_bridge.hpp"
+#include "bridge/skeleton_bridge.hpp"
 #include "animation/skeleton_math.hpp"
 #include "kangEngine.hpp"
 #include "engine/graphics/material/colors.hpp"
@@ -26,6 +27,7 @@
 
 using namespace KE;
 using namespace KE::Animation;
+using namespace KE::Bridge;
 using namespace physx;
 
 // ---------------------------------------------------------------------------
@@ -147,9 +149,10 @@ class H1PhysicsApp : public App {
 
     glm::vec3 lightPos = {0.f, -2.f, 4.f};
 
-    SkelMesh robot;
+    SkeletonBridge robot;
     PhysicsWorld physics{PhysicsConfig::zUp()};
     Articulation artic;
+    Bridge::PhysicsBridge physicsBridge;
 
     std::vector<float> targets; // joint target angles, size = n-1
 
@@ -180,14 +183,18 @@ class H1PhysicsApp : public App {
         // Load H1 visual (Robot handles Prim creation + STL mesh upload)
         const std::string mjcfPath =
             KE::getAssetPath("external/retargetted/unitree_h1/unitree_h1.xml");
-        robot = SkelMesh::fromMJCF(mjcfPath, getScene());
+        const auto mjcfData = MJCFLoader::load(mjcfPath);
+        robot = SkeletonBridge::fromData(mjcfData, getScene());
         for (auto* prim : robot.bodyPrims())
             addShape(stlShader.get(), prim);
 
         targets.assign(robot.numBodies() - 1, 0.f);
 
-        artic = Articulation::build(physics, robot, mjcfPath,
+        artic = Articulation::build(physics, mjcfData.skeletonTree,
+                                    mjcfData.collisionGeoms, mjcfData.joints,
+                                    mjcfData.inertials,
                                     ArticulationConfig::fixedBase());
+        physicsBridge.registerArticulationVisuals(artic, robot);
         checkError();
     }
 
@@ -202,7 +209,7 @@ class H1PhysicsApp : public App {
         if (!paused) {
             artic.setDriveTargets(targets, kp, kd);
             physics.step();
-            physics.syncAllVisuals();
+            physicsBridge.syncAllVisuals();
         }
 
         // Lighting
@@ -221,7 +228,7 @@ class H1PhysicsApp : public App {
 
     // -----------------------------------------------------------------------
     void render() override {
-        auto& tree = robot.skeleton();
+        auto& tree = robot.fk().skeleton();
         int n = tree.numJoints();
 
         ImGui::Begin("H1 PD Control");

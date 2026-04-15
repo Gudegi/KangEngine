@@ -1,6 +1,6 @@
 #include "kangEngine.hpp"
 #include "engine/graphics/material/colors.hpp"
-#include "animation/skel_mesh.hpp"
+#include "bridge/skeleton_bridge.hpp"
 #include <iostream>
 #include <memory>
 #include <string>
@@ -68,7 +68,7 @@ class MyApp : public App {
 
     float lightColor[3] = {1.0f, 1.0f, 1.0f};
     glm::vec3 lightPos = glm::vec3(-2.0f, 5.0f, 3.0f);
-    Animation::SkelMesh robot;
+    Bridge::SkeletonBridge robot;
 
     void initialize(int width, int height, Backend::BackendType backendType) {
         KE_TRACE_FUNCTION();
@@ -82,7 +82,7 @@ class MyApp : public App {
 
         const std::string mjcfPath =
             KE::getAssetPath("external/retargetted/unitree_h1/unitree_h1.xml");
-        robot = Animation::SkelMesh::fromMJCF(mjcfPath, getScene());
+        robot = Bridge::SkeletonBridge::fromMJCF(mjcfPath, getScene());
         for (auto* prim : robot.bodyPrims()) {
             if (prim)
                 addShape(meshShader.get(), prim);
