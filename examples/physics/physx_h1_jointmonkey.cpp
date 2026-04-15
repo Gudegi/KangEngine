@@ -11,7 +11,7 @@
 ///   ImGui : PD gains, per-joint target angles
 ///
 
-#include "animation/robot.hpp"
+#include "animation/skel_mesh.hpp"
 #include "animation/skeleton_math.hpp"
 #include "kangEngine.hpp"
 #include "material/colors.hpp"

@@ -1,6 +1,6 @@
 #include "kangEngine.hpp"
 #include "material/colors.hpp"
-#include "animation/robot.hpp"
+#include "animation/skel_mesh.hpp"
 #include <iostream>
 #include <memory>
 #include <string>

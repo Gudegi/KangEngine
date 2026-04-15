@@ -444,11 +444,6 @@ py::class_<glm::vec3>(m, "vec3")
         .def("getGraphicsDevice", &App::getGraphicsDevice,
              py::return_value_policy::reference)
         .def("addShape",
-             [](App* self, Backend::Shader* shader,
-                std::shared_ptr<Scene::MeshData> meshData) {
-                 return self->addShape(shader, meshData);
-             })
-        .def("addShapePrim",
              [](App* self, Backend::Shader* shader, Scene::Prim* prim) {
                  return self->addShape(shader, prim);
              })

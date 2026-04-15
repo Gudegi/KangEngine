@@ -2,7 +2,7 @@
 #define _ARTICULATION_HPP_
 
 #include "animation/mjcf_loader.hpp"
-#include "animation/robot.hpp"
+#include "animation/skel_mesh.hpp"
 #include "physics.hpp"
 #include <glm/gtc/quaternion.hpp>
 #include <string>

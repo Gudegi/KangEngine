@@ -16,7 +16,7 @@
 ///
 
 #include "animation/mjcf_loader.hpp"
-#include "animation/robot.hpp"
+#include "animation/skel_mesh.hpp"
 #include "foundation/Px.h"
 #include "kangEngine.hpp"
 #include "physics/articulation.hpp"
