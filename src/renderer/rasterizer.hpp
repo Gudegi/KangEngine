@@ -7,8 +7,10 @@
 #include "scene/scene_backend.hpp"
 #include "material/material.hpp"
 #include <glm/mat4x4.hpp>
+#include "utils/types.hpp"
 #include <map>
 #include <memory>
+#include <string>
 
 namespace KE {
 
@@ -38,6 +40,14 @@ class Rasterizer : public Renderer {
 
     size_t addShape(Backend::Shader* shader, Scene::Prim* prim);
     size_t addShape(PhongMaterial* material, Scene::Prim* prim);
+
+    void setSkybox(const std::string& path, UpAxis upAxis = UpAxis::Y) {
+        _graphicsDevice->setSkybox(path, upAxis);
+    }
+    void setSkybox(const std::vector<std::string>& paths,
+                   UpAxis upAxis = UpAxis::Y) {
+        _graphicsDevice->setSkybox(paths, upAxis);
+    }
 
     void render(const glm::mat4& view, const glm::mat4& proj) override;
 };

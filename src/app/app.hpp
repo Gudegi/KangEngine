@@ -9,6 +9,7 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <memory>
+#include <string>
 
 #include "camera/camera.hpp"
 #include "ui/panel_manager.hpp"
@@ -21,6 +22,7 @@
 // #include "shader/shader.hpp"
 #include "backend/base/graphics_device.hpp"
 #include "backend/graphics_factory.hpp"
+#include "utils/types.hpp"
 #include "material/material.hpp"
 #include "renderer/rasterizer.hpp"
 #include "scene/scene_backend.hpp"
@@ -131,6 +133,10 @@ class App {
 
     size_t addShape(Backend::Shader* shader, Scene::Prim* prim);
     size_t addShape(PhongMaterial* material, Scene::Prim* prim);
+
+    void setSkybox(const std::string& path, UpAxis upAxis = UpAxis::Y);
+    void setSkybox(const std::vector<std::string>& paths,
+                   UpAxis upAxis = UpAxis::Y);
 
     glm::vec2 getScreenToNDC(float x, float y);
 

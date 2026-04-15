@@ -8,6 +8,7 @@
 #include "utils/print_debug.hpp"
 #include "utils/asset_path.hpp"
 #include <chrono>
+#include <string>
 #include <exception>
 #include <fmt/base.h>
 #include <glm/fwd.hpp>
@@ -236,6 +237,16 @@ size_t App::addShape(Backend::Shader* shader, Scene::Prim* prim) {
 size_t App::addShape(PhongMaterial* material, Scene::Prim* prim) {
     return _rasterizer ? _rasterizer->addShape(material, prim)
                        : static_cast<size_t>(-1);
+}
+
+void App::setSkybox(const std::string& path, UpAxis upAxis) {
+    if (_rasterizer)
+        _rasterizer->setSkybox(path, upAxis);
+}
+
+void App::setSkybox(const std::vector<std::string>& paths, UpAxis upAxis) {
+    if (_rasterizer)
+        _rasterizer->setSkybox(paths, upAxis);
 }
 
 //////////////// Call backs

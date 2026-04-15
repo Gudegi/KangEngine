@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 #include <glm/glm.hpp>
+#include "utils/types.hpp"
 
 namespace KE {
 namespace Backend {
@@ -132,6 +133,13 @@ class GraphicsDevice {
 
     virtual std::unique_ptr<Framebuffer>
     createFramebuffer(const FramebufferDesc& desc) = 0;
+
+    // Skybox (optional — no-op on backends that don't support it)
+    virtual void setSkybox(const std::string& path, UpAxis upAxis = UpAxis::Y) {}
+    virtual void setSkybox(const std::vector<std::string>& paths,
+                           UpAxis upAxis = UpAxis::Y) {}
+    virtual void drawSkybox(const glm::mat4& view,
+                            const glm::mat4& proj) {}
 };
 
 class Buffer {

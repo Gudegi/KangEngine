@@ -31,10 +31,10 @@ OpenGLBuffer::OpenGLBuffer(BufferType type, size_t size, const void* data)
         break;
     }
 
-    GLenum usage = (type == BufferType::Uniform ||
-                    type == BufferType::DynamicVertex)
-                       ? GL_DYNAMIC_DRAW
-                       : GL_STATIC_DRAW;
+    GLenum usage =
+        (type == BufferType::Uniform || type == BufferType::DynamicVertex)
+            ? GL_DYNAMIC_DRAW
+            : GL_STATIC_DRAW;
     glGenBuffers(1, &_buffer);
     glBindBuffer(_target, _buffer);
     glBufferData(_target, size, data, usage);
@@ -302,9 +302,12 @@ void OpenGLTexture::setFilterParam(GLfloat filterMinParam,
 OpenGLDevice::OpenGLDevice() : _initialized(false) {}
 
 OpenGLDevice::~OpenGLDevice() {
-    if (_initialized) {
+    if (_skyboxVAO)
+        glDeleteVertexArrays(1, &_skyboxVAO);
+    if (_skyboxTex)
+        glDeleteTextures(1, &_skyboxTex);
+    if (_initialized)
         shutdown();
-    }
 }
 
 void OpenGLDevice::initialize() {
@@ -725,6 +728,254 @@ Texture* OpenGLFramebuffer::getDepthTexture() {
 } // TODO: wrap _depthTex
 Texture* OpenGLFramebuffer::getStencilTexture() { return nullptr; }
 Texture* OpenGLFramebuffer::getDepthStencilTexture() { return nullptr; }
+
+// ---------------------------------------------------------------------------
+// Skybox
+
+static const char* skyboxVs = R"(
+#version 410 core
+layout(location = 0) in vec3 aPos;
+out vec3 TexDir;
+uniform mat4 projection;
+uniform mat4 view;
+uniform bool zUp;
+void main() {
+    // Y-up world: cube coords map directly to cubemap coords.
+    // Z-up world: remap so that world +Z -> cubemap +Y (up),
+    //             world -Y -> cubemap +Z (south), world +X stays.
+    TexDir = zUp ? vec3(aPos.x, aPos.z, -aPos.y) : aPos;
+    vec4 pos = projection * mat4(mat3(view)) * vec4(aPos, 1.0); // remove trans of view
+    gl_Position = pos.xyww; // w / w = 1.0 early depth testing
+}
+)";
+
+static const char* skyboxFs = R"(
+#version 410 core
+in vec3 TexDir;
+out vec4 FragColor;
+uniform samplerCube skybox;
+void main() {
+    FragColor = texture(skybox, TexDir);
+}
+)";
+
+// Load a cross-layout(putting all images on one png) cubemap PNG and upload it
+// as GL_TEXTURE_CUBE_MAP. Supports both horizontal cross (4:3, W>H) and
+// vertical cross (3:4, H>W).
+//
+// Horizontal cross face layout (faceSize = W/4 = H/3):
+//   col: 0=-X  1=+Y  2=+X  3=-Y   (row 0 only: col1)
+//   row: 0=+Y  1=(-X,+Z,+X,-Z)   2=-Y
+//   Actually standard H-cross:
+//     row0,col1 = +Y
+//     row1,col0 = -X   col1 = +Z   col2 = +X   col3 = -Z
+//     row2,col1 = -Y
+//
+// Vertical cross face layout (faceSize = W/3 = H/4):
+//     row0,col1 = +Y
+//     row1,col0 = -X   col1 = +Z   col2 = +X
+//     row2,col1 = -Y
+//     row3,col1 = -Z
+GLuint OpenGLDevice::loadCubemapCross(const std::string& path) {
+    stbi_set_flip_vertically_on_load(false);
+    int w, h, ch;
+    unsigned char* img = stbi_load(path.c_str(), &w, &h, &ch, 4);
+    if (!img) {
+        fprintf(stderr, "Cubemap load failed: %s\n", path.c_str());
+        return 0;
+    }
+    ch = 4;
+
+    int faceW, faceH;
+    bool horizontal;
+    if (w * 3 == h * 4) { // 4:3 -> horizontal cross
+        faceW = w / 4;
+        faceH = h / 3;
+        horizontal = true;
+    } else if (w * 4 == h * 3) { // 3:4 -> vertical cross
+        faceW = w / 3;
+        faceH = h / 4;
+        horizontal = false;
+    } else {
+        // Fallback: assume horizontal cross, truncate
+        faceW = w / 4;
+        faceH = h / 3;
+        horizontal = true;
+        fprintf(stderr,
+                "Cubemap: unexpected aspect %dx%d, assuming horizontal cross\n",
+                w, h);
+    }
+
+    // face[i] = {col, row} in the cross grid
+    // GL order: +X,-X,+Y,-Y,+Z,-Z
+    int faceCol[6], faceRow[6];
+    if (horizontal) {
+        faceCol[0] = 2;
+        faceRow[0] = 1; // +X
+        faceCol[1] = 0;
+        faceRow[1] = 1; // -X
+        faceCol[2] = 1;
+        faceRow[2] = 0; // +Y
+        faceCol[3] = 1;
+        faceRow[3] = 2; // -Y
+        faceCol[4] = 1;
+        faceRow[4] = 1; // +Z
+        faceCol[5] = 3;
+        faceRow[5] = 1; // -Z
+    } else {
+        faceCol[0] = 2;
+        faceRow[0] = 1; // +X
+        faceCol[1] = 0;
+        faceRow[1] = 1; // -X
+        faceCol[2] = 1;
+        faceRow[2] = 0; // +Y
+        faceCol[3] = 1;
+        faceRow[3] = 2; // -Y
+        faceCol[4] = 1;
+        faceRow[4] = 1; // +Z
+        faceCol[5] = 1;
+        faceRow[5] = 3; // -Z
+    }
+
+    // Extract one face into a temporary buffer
+    std::vector<unsigned char> face(faceW * faceH * ch);
+
+    GLuint texID;
+    glGenTextures(1, &texID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, texID);
+
+    for (int f = 0; f < 6; f++) {
+        int ox = faceCol[f] * faceW;
+        int oy = faceRow[f] * faceH;
+        for (int row = 0; row < faceH; row++) {
+            memcpy(face.data() + row * faceW * ch,
+                   img + ((oy + row) * w + ox) * ch, faceW * ch);
+        }
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0, GL_RGBA, faceW,
+                     faceH, 0, GL_RGBA, GL_UNSIGNED_BYTE, face.data());
+    }
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    stbi_image_free(img);
+    return texID;
+}
+
+// Load 6 individual face images and upload as GL_TEXTURE_CUBE_MAP.
+// paths order: +X, -X, +Y, -Y, +Z, -Z (matches GL_TEXTURE_CUBE_MAP_POSITIVE_X +
+// i)
+GLuint OpenGLDevice::loadCubemap(const std::vector<std::string>& paths) {
+    if (paths.size() != 6) {
+        fprintf(stderr, "loadCubemap: expected 6 paths, got %zu\n",
+                paths.size());
+        return 0;
+    }
+    GLuint texID;
+    glGenTextures(1, &texID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, texID);
+
+    stbi_set_flip_vertically_on_load(false);
+    for (int f = 0; f < 6; f++) {
+        int w, h, ch;
+        unsigned char* img = stbi_load(paths[f].c_str(), &w, &h, &ch, 4);
+        if (!img) {
+            fprintf(stderr, "loadCubemap: failed to load face %d: %s\n", f,
+                    paths[f].c_str());
+            glDeleteTextures(1, &texID);
+            return 0;
+        }
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0, GL_RGBA, w, h, 0,
+                     GL_RGBA, GL_UNSIGNED_BYTE, img);
+        stbi_image_free(img);
+    }
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    return texID;
+}
+
+// Unit-cube VAO for skybox rendering
+GLuint OpenGLDevice::makeSkyboxVAO() {
+    static const float verts[] = {
+        -1, -1, -1, 1, -1, -1, 1, 1, -1, -1, 1, -1, // Back face vertices
+        -1, -1, 1,  1, -1, 1,  1, 1, 1,  -1, 1, 1   // Front face vertices
+    };
+    static const unsigned int indices[] = {
+        0, 1, 2, 2, 3, 0, // Front (looking from inside)
+        1, 5, 6, 6, 2, 1, // Right
+        5, 4, 7, 7, 6, 5, // Back
+        4, 0, 3, 3, 7, 4, // Left
+        3, 2, 6, 6, 7, 3, // Top
+        4, 5, 1, 1, 0, 4  // Bottom
+    };
+    GLuint vao, vbo, ebo;
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
+    glGenBuffers(1, &ebo);
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
+                 GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
+    glBindVertexArray(0);
+    return vao;
+}
+
+void OpenGLDevice::applySkyboxTex(GLuint tex, UpAxis upAxis) {
+    _skyboxUpAxis = upAxis;
+    if (_skyboxTex)
+        glDeleteTextures(1, &_skyboxTex);
+    if (!_skyboxVAO)
+        _skyboxVAO = makeSkyboxVAO();
+    if (!_skyboxShader)
+        _skyboxShader = createShader(skyboxVs, skyboxFs);
+    _skyboxTex = tex;
+    _skyboxShader->use();
+    _skyboxShader->setInt("skybox", 0);
+}
+
+void OpenGLDevice::setSkybox(const std::string& path, UpAxis upAxis) {
+    applySkyboxTex(loadCubemapCross(path), upAxis);
+}
+
+void OpenGLDevice::setSkybox(const std::vector<std::string>& paths,
+                             UpAxis upAxis) {
+    applySkyboxTex(loadCubemap(paths), upAxis);
+}
+
+void OpenGLDevice::drawSkybox(const glm::mat4& view, const glm::mat4& proj) {
+    if (!_skyboxTex || !_skyboxShader)
+        return;
+    glDepthFunc(GL_LEQUAL);
+    glDepthMask(GL_FALSE);
+    _skyboxShader->use();
+    _skyboxShader->setMat4("view", view);
+    _skyboxShader->setMat4("projection", proj);
+    _skyboxShader->setBool("zUp", _skyboxUpAxis == UpAxis::Z);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, _skyboxTex);
+    glBindVertexArray(_skyboxVAO);
+    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LESS);
+}
+
+// End Skybox
+// ---------------------------------------------------------------------------
 
 } // namespace Backend
 } // namespace KE

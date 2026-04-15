@@ -97,6 +97,9 @@ void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
     }
     _graphicsDevice->setDepthWrite(true);
     _graphicsDevice->setBlend(false);
+
+    // Skybox: drawn last, fills only pixels with no geometry
+    _graphicsDevice->drawSkybox(view, proj);
 }
 
 } // namespace KE
