@@ -144,7 +144,7 @@ float checker(vec2 uv) {
 }
 void main() {
     float t = checker(TexCoord);
-    vec4 col = mix(vec4(checkerColor1, 1.0), vec4(checkerColor2, 1.0), t);
+    vec4 col = mix(checkerColor1, checkerColor2, t);
     vec3 N = normalize(Normal);
     vec3 L = normalize(lightDir.xyz);
     float diff = max(dot(N, L), 0.0);
