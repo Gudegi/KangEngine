@@ -244,9 +244,9 @@ MeshData Prim::createPlaneData(float scale, UpAxis upAxis) {
 
     std::vector<glm::vec2> uvs = {
         glm::vec2(0, 0),
-        glm::vec2(1, 0),
-        glm::vec2(0, 1),
-        glm::vec2(1, 1),
+        glm::vec2(scale, 0),
+        glm::vec2(0, scale),
+        glm::vec2(scale, scale),
     };
     std::vector<unsigned int> indices = {0, 1, 3, 0, 3, 2};
 

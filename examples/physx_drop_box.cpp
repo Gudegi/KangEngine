@@ -103,7 +103,7 @@ uniform vec3 lightColor;
 uniform vec3 lightPos;
 
 float checkerboardPattern(vec2 uv) {
-    return mod(floor(uv.x * 10.0) + floor(uv.y * 10.0), 2.0);
+    return mod(floor(uv.x) + floor(uv.y), 2.0);
 }
 
 void main() {

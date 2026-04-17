@@ -130,6 +130,9 @@ in vec2 TexCoord;
 in vec3 Normal;
 in vec3 FragPos;
 
+uniform vec4 checkerColor1;
+uniform vec4 checkerColor2;
+
 layout(std140) uniform lightUBO {
     vec4 lightDir;   // xyz: view-space direction toward light
     vec4 lightColor; // xyz: color * intensity
@@ -137,11 +140,11 @@ layout(std140) uniform lightUBO {
 };
 
 float checker(vec2 uv) {
-    return mod(floor(uv.x * 8.0) + floor(uv.y * 8.0), 2.0);
+    return mod(floor(uv.x) + floor(uv.y), 2.0);
 }
 void main() {
     float t = checker(TexCoord);
-    vec4 col = mix(vec4(0.85, 0.85, 0.85, 1.0), vec4(0.55, 0.75, 0.55, 1.0), t);
+    vec4 col = mix(vec4(checkerColor1, 1.0), vec4(checkerColor2, 1.0), t);
     vec3 N = normalize(Normal);
     vec3 L = normalize(lightDir.xyz);
     float diff = max(dot(N, L), 0.0);
@@ -181,6 +184,12 @@ class H1RagdollApp : public App {
         groundShader->use();
         groundShader->setUniformBlockBinding("cameraUBO", 0);
         groundShader->setUniformBlockBinding("lightUBO", 1);
+        auto white = ColorLibrary::get(KE::ColorType::WHITE);
+        auto pG = ColorLibrary::get(KE::ColorType::PASTEL_GREEN);
+        groundShader->setVec4("checkerColor1",
+                              glm::vec4(white.r, white.g, white.b, white.a));
+        groundShader->setVec4("checkerColor2",
+                              glm::vec4(pG.r, pG.g, pG.b, pG.a));
         stlShader->use();
         stlShader->setUniformBlockBinding("cameraUBO", 0);
         stlShader->setUniformBlockBinding("lightUBO", 1);
@@ -200,7 +209,7 @@ class H1RagdollApp : public App {
         physics.addDefaultGround();
         auto* gnd = getScene()->definePrim("/ground", Scene::PrimType::Mesh);
         gnd->setMeshData(std::make_shared<Scene::MeshData>(
-            Scene::Prim::createPlaneData(10.f, UpAxis::Z)));
+            Scene::Prim::createPlaneData(100.f, UpAxis::Z)));
         addShape(groundShader.get(), gnd);
 
         const std::string mjcfPath =

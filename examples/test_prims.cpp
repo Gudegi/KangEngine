@@ -96,7 +96,7 @@ in vec3 FragPos;
 uniform vec3 lightColor;
 uniform vec3 lightPos;
 float checker(vec2 uv) {
-    return mod(floor(uv.x * 8.0) + floor(uv.y * 8.0), 2.0);
+    return mod(floor(uv.x) + floor(uv.y), 2.0);
 }
 void main() {
     float t = checker(TexCoord);
