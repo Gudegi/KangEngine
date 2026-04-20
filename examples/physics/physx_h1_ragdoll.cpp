@@ -195,7 +195,7 @@ class H1RagdollApp : public App {
         stlShader->setUniformBlockBinding("lightUBO", 1);
 
         std::string basePath = "textures/skybox";
-        setSkybox(KE::getAssetPath(basePath + "/Cubemap_Sky_08-512x512.png"),
+        setSkybox(KE::getAssetPath(basePath + "/Cubemap_Sky_08-512x512.png")
                   /*{
                     KE::getAssetPath(basePath + "/right.jpg"),
                     KE::getAssetPath(basePath + "/left.jpg"),
@@ -203,8 +203,7 @@ class H1RagdollApp : public App {
                     KE::getAssetPath(basePath + "/bottom.jpg"),
                     KE::getAssetPath(basePath + "/front.jpg"),
                     KE::getAssetPath(basePath + "/back.jpg"),
-                  },*/
-                  UpAxis::Z);
+                  },*/);
 
         physics.addDefaultGround();
         auto* gnd = getScene()->definePrim("/ground", Scene::PrimType::Mesh);

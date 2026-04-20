@@ -21,8 +21,14 @@ class PanelManager {
     /// @brief Define panel manager
     ///
 
+  public:
+    static constexpr const char* PANEL_SCENE = "Scene";
+
   private:
     float _fontSize = 12.0f;
+    bool _layoutInitialized = false;
+    ImVec2 _lastViewportSize = {0, 0};
+
     ///
     /// @brief list contains the each panels.
     /// @todo memory leak protection is need.
@@ -44,6 +50,11 @@ class PanelManager {
     /// @brief Get DPI scale factor from window
     ///
     float getDPIScale(GLFWwindow* window);
+
+    ///
+    /// @brief Build the initial dock layout. Re-runs on viewport resize.
+    ///
+    void initLayout(ImGuiID dockspace_id);
 
   public:
     ///

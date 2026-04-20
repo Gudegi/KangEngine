@@ -71,6 +71,7 @@ struct App::IO {
     double prevMouseY = 0.0;
     double deltaMouseX = 0.0;
     double deltaMouseY = 0.0;
+    bool isHKeyPressed = false;
 };
 
 struct App::RenderVariable {
@@ -79,18 +80,19 @@ struct App::RenderVariable {
 };
 
 App::App()
-    : _width(), _height(), _hideUi(), _window(), _camera(),
+    : _width(), _height(), _hideUI(), _window(), _camera(),
       _renderWireframe(false), _io(new App::IO),
       _renderVariable(new App::RenderVariable) {}
 
 App::~App() {}
 
-void App::initialize(int width, int height, bool hideUi, UpAxis upAxis,
+void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
                      Backend::BackendType graphicsBackendType,
                      Scene::BackendType sceneBackendType) {
     _width = width;
     _height = height;
-    _hideUi = hideUi;
+    _hideUI = hideUI;
+    _upAxis = upAxis;
 
     // Initialize graphics device first
     _graphicsDevice =
@@ -118,17 +120,19 @@ void App::initialize(int width, int height, bool hideUi, UpAxis upAxis,
          4}); // stencil=true for outline rendering
 
     glm::vec3 cameraPos, cameraTarget;
-    if (upAxis == UpAxis::Z) {
+    if (_upAxis == UpAxis::Z) {
         cameraPos = glm::vec3(3.0f, 0.0f, 1.5f); // 1.5m
         cameraTarget = glm::vec3(0.0f, 0.0f, 0.85f);
     } else {
         cameraPos = glm::vec3(30.0f, 15.0f, 0.0f);
         cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
     }
-    _camera.init(cameraPos, cameraTarget, upAxis);
+    _camera.init(cameraPos, cameraTarget, _upAxis);
     _camera.updateProjMatrix(_width, _height);
     _panelManager.init(this->getWindow());
     _panelManager.loadFont(KE::getAssetPath("fonts/godoFont/GodoM.ttf"), true);
+    _panelManager.addPanel(std::make_unique<MenuBarPanel>(this));
+    _panelManager.addPanel(std::make_unique<ScenePanel>(this));
     _panelManager.addPanel(std::make_unique<BasePanel>());
 
     _graphicsDevice->setDepthTest(true);
@@ -138,8 +142,8 @@ void App::initialize(int width, int height, bool hideUi, UpAxis upAxis,
         std::make_unique<Rasterizer>(_graphicsDevice.get(), _scene.get());
 
     _rasterizer->setLight(DirectionalLight{
-        (upAxis == UpAxis::Z) ? glm::normalize(glm::vec3(0.2f, 0.5f, 1.0f))
-                              : glm::normalize(glm::vec3(0.5f, 1.0f, 0.2f))});
+        (_upAxis == UpAxis::Z) ? glm::normalize(glm::vec3(0.2f, 0.5f, 1.0f))
+                               : glm::normalize(glm::vec3(0.5f, 1.0f, 0.2f))});
 }
 
 // for entire process in c++
@@ -168,7 +172,9 @@ void App::start() {
         _projectionMatrix = _camera.getProjMatrix();
 
         // ImGui::NewFrame() must come before any ImGui widget calls
-        _panelManager.preRender();
+        if (!_hideUI) {
+            _panelManager.preRender();
+        }
 
         // Scene pass: render into FBO (MSAA if enabled)
         _framebuffer->bind();
@@ -182,8 +188,10 @@ void App::start() {
         _framebuffer->unbind();
 
         // default framebuffer
-        _panelManager.render();
-        _panelManager.postRender();
+        if (!_hideUI) {
+            _panelManager.render();
+            _panelManager.postRender();
+        }
         this->postRender();
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -199,7 +207,9 @@ void App::setRenderHz(float renderHz) {
 float App::getDeltaTime() const { return _renderVariable->deltaTime; }
 
 void App::coreRender() {
-    ImGui::Checkbox("Wireframe", &_renderWireframe);
+    if (!_hideUI) {
+        ImGui::Checkbox("Wireframe", &_renderWireframe);
+    }
 
     if (_renderWireframe == true) {
         _graphicsDevice->setPolygonMode(Backend::PolygonMode::Line);
@@ -207,29 +217,9 @@ void App::coreRender() {
         _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
     }
 
-    ImGui::Begin("Scene");
-    if (auto* root = getScene()->getRootPrim()) {
-        auto drawPrimTree = [&](auto& self, Scene::Prim* prim) -> void {
-            const auto& children = prim->getChildren();
-            if (children.empty()) {
-                ImGui::Text("%s", prim->getName().c_str());
-            } else if (ImGui::TreeNode(prim->getName().c_str())) {
-                for (auto* child : children)
-                    self(self, child);
-                ImGui::TreePop();
-            }
-        };
-        for (auto* child : root->getChildren())
-            drawPrimTree(drawPrimTree, child);
-    }
-    ImGui::End();
-
     if (_rasterizer)
         _rasterizer->render(_viewMatrix, _projectionMatrix);
 }
-////////////////////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////////////////////
 
 void App::checkError() { _graphicsDevice->checkError(); }
 
@@ -243,14 +233,14 @@ size_t App::addShape(PhongMaterial* material, Scene::Prim* prim) {
                        : static_cast<size_t>(-1);
 }
 
-void App::setSkybox(const std::string& path, UpAxis upAxis) {
+void App::setSkybox(const std::string& path) {
     if (_rasterizer)
-        _rasterizer->setSkybox(path, upAxis);
+        _rasterizer->setSkybox(path, _upAxis);
 }
 
-void App::setSkybox(const std::vector<std::string>& paths, UpAxis upAxis) {
+void App::setSkybox(const std::vector<std::string>& paths) {
     if (_rasterizer)
-        _rasterizer->setSkybox(paths, upAxis);
+        _rasterizer->setSkybox(paths, _upAxis);
 }
 
 //////////////// Call backs
@@ -319,11 +309,18 @@ void App::processInput() {
     _io->deltaMouseX = 0;
     _io->deltaMouseY = 0;
 
+    GLFWwindow* window = this->getWindow();
+
+    // Hide UI
+    bool hPressed = glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS;
+    if (hPressed && !_io->isHKeyPressed)
+        _hideUI = !_hideUI;
+    _io->isHKeyPressed = hPressed;
+
     // Prevent manipulations while ImGui using the mouse.
     if (ImGui::GetIO().WantCaptureMouse) {
         return;
     }
-    GLFWwindow* window = this->getWindow();
     float cameraSpeed = static_cast<float>(15.0 * _renderVariable->deltaTime);
     float scaleDistance = _camera.getCamToLookDistance();
     glm::vec3 cameraPos = _camera.getCameraPos();

@@ -1,6 +1,7 @@
 #include "panel_manager.hpp"
 #include <GLFW/glfw3.h>
 #include <iostream>
+#include <imgui_internal.h>
 
 namespace KE {
 
@@ -99,13 +100,46 @@ bool PanelManager::loadFont(const std::string& fontPath, float fontSize,
 // void PanelManager::addPanel(Panel* panel)
 void PanelManager::addPanel(std::unique_ptr<Panel> panel) {
     _panels.push_back(std::move(panel));
-    //_panels.push_back(panel);
 }
 
 void PanelManager::preRender() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+    /*
+    // Docking panel
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable) {
+        ImGuiID dockspace_id = ImGui::GetID("MainDockSpace");
+        ImGui::DockSpaceOverViewport(dockspace_id, ImGui::GetMainViewport(),
+                                     ImGuiDockNodeFlags_PassthruCentralNode);
+
+        ImVec2 viewportSize = ImGui::GetMainViewport()->Size;
+        if (!_layoutInitialized || viewportSize.x != _lastViewportSize.x ||
+            viewportSize.y != _lastViewportSize.y) {
+            initLayout(dockspace_id);
+            _layoutInitialized = true;
+            _lastViewportSize = viewportSize;
+        }
+    }
+    */
+}
+
+void PanelManager::initLayout(ImGuiID dockspace_id) {
+    ImGui::DockBuilderRemoveNode(dockspace_id);
+    ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
+    ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->Size);
+
+    ImGuiID dock_main_id = dockspace_id;
+    ImGuiID dock_id_right = ImGui::DockBuilderSplitNode(
+        dock_main_id, ImGuiDir_Right, 0.15f, nullptr, &dock_main_id);
+
+    ImGuiID dock_id_right_top;
+    ImGui::DockBuilderSplitNode(dock_id_right, ImGuiDir_Up, 0.25f,
+                                &dock_id_right_top, nullptr);
+
+    ImGui::DockBuilderDockWindow(PANEL_SCENE, dock_id_right_top);
+    ImGui::DockBuilderFinish(dockspace_id);
 }
 
 void PanelManager::render() {

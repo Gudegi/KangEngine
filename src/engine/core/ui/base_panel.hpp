@@ -8,19 +8,38 @@
 
 namespace KE {
 
-class BasePanel: public Panel
-{
+class App;
 
-/*
-    Define basic panel to inherit
-*/
+class BasePanel : public Panel {
 
-private:
+    /*
+        Define basic panel to inherit
+    */
 
-
-public:
+  private:
+  public:
     BasePanel();
     ~BasePanel();
+    virtual void buildPanel();
+};
+
+class MenuBarPanel : public Panel {
+  private:
+    App* _app;
+
+  public:
+    MenuBarPanel(App* app);
+    ~MenuBarPanel();
+    virtual void buildPanel();
+};
+
+class ScenePanel : public Panel {
+  private:
+    App* _app;
+
+  public:
+    ScenePanel(App* app);
+    ~ScenePanel();
     virtual void buildPanel();
 };
 

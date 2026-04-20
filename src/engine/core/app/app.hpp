@@ -56,10 +56,11 @@ class App {
     int _width, _height; // framebuffer pixels
     int _logicalWidth,
         _logicalHeight; // screen/logical pixels (matches mouse coords)
-    bool _hideUi, _renderWireframe;
+    bool _hideUI, _renderWireframe;
     glm::mat4 _viewMatrix,
         _projectionMatrix; // variable to containing main camera's view and
                            // project matrix.
+    UpAxis _upAxis;
 
     Window _window;
     Camera _camera;
@@ -138,9 +139,8 @@ class App {
     size_t addShape(Backend::Shader* shader, Scene::Prim* prim);
     size_t addShape(PhongMaterial* material, Scene::Prim* prim);
 
-    void setSkybox(const std::string& path, UpAxis upAxis = UpAxis::Y);
-    void setSkybox(const std::vector<std::string>& paths,
-                   UpAxis upAxis = UpAxis::Y);
+    void setSkybox(const std::string& path);
+    void setSkybox(const std::vector<std::string>& paths);
 
     glm::vec2 getScreenToNDC(float x, float y);
 
