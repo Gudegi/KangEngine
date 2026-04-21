@@ -27,4 +27,30 @@ void PhysicsWorld::addBox(float x, float y, float z) {
     _scene->addActor(*box);
 }
 
+PxRigidDynamic* PhysicsWorld::createDynamicBox(const glm::vec3& halfExtents,
+                                               const glm::vec3& pos,
+                                               const glm::quat& rot,
+                                               float density) {
+    PxTransform pose(PxVec3(pos.x, pos.y, pos.z),
+                     PxQuat(rot.x, rot.y, rot.z, rot.w));
+    PxRigidDynamic* actor = PxCreateDynamic(
+        *_physics, pose,
+        PxBoxGeometry(halfExtents.x, halfExtents.y, halfExtents.z), *_material,
+        density);
+    _scene->addActor(*actor);
+    return actor;
+}
+
+PxRigidDynamic* PhysicsWorld::createDynamicSphere(float radius,
+                                                  const glm::vec3& pos,
+                                                  const glm::quat& rot,
+                                                  float density) {
+    PxTransform pose(PxVec3(pos.x, pos.y, pos.z),
+                     PxQuat(rot.x, rot.y, rot.z, rot.w));
+    PxRigidDynamic* actor = PxCreateDynamic(
+        *_physics, pose, PxSphereGeometry(radius), *_material, density);
+    _scene->addActor(*actor);
+    return actor;
+}
+
 } // namespace KE

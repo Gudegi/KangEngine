@@ -92,6 +92,16 @@ class PhysicsWorld {
 
     void addBox(float x, float y, float z);
 
+    physx::PxRigidDynamic*
+    createDynamicBox(const glm::vec3& halfExtents, const glm::vec3& pos,
+                     const glm::quat& rot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+                     float density = 1.0f);
+
+    physx::PxRigidDynamic* createDynamicSphere(
+        float radius, const glm::vec3& pos,
+        const glm::quat& rot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+        float density = 1.0f);
+
     void fecthData();
 
     void step();
@@ -104,13 +114,17 @@ class PhysicsWorld {
     PxPhysics* getPhysics() { return _physics; }
     PxMaterial* getMaterial() { return _material; }
     PxScene* getScene() { return _scene; }
-
 };
 
 // PhysX > GLM conversion
 inline glm::vec3 pxToGlm(const PxVec3& v) { return glm::vec3(v.x, v.y, v.z); }
 inline glm::quat pxToGlm(const PxQuat& q) {
     return glm::quat(q.w, q.x, q.y, q.z);
+}
+inline glm::mat4 pxToMat4(const PxTransform& t) {
+    glm::mat4 m = glm::mat4_cast(pxToGlm(t.q));
+    m[3] = glm::vec4(pxToGlm(t.p), 1.f);
+    return m;
 }
 
 } // namespace KE
