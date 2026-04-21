@@ -6,6 +6,8 @@
 #include "engine/scene/scene_backend.hpp"
 #include "engine/scene/native/prim.hpp"
 #include <glm/glm.hpp>
+#include <glm/mat4x4.hpp>
+#include <glm/vec4.hpp>
 #include <memory>
 #include <vector>
 
@@ -33,6 +35,7 @@ class MeshInstancer {
     int _allocatedInstances = 0;
     int _visibleCount = 0;
     bool _hasTransparent = false;
+    bool _externalUpdate = false;
 
     std::vector<Scene::Prim*> _prims;
 
@@ -51,10 +54,20 @@ class MeshInstancer {
               const Scene::MeshData& mesh, PhongMaterial* material = nullptr);
 
     void addPrim(Scene::Prim* prim);
+    void removePrim(Scene::Prim* prim);
 
     // Collect visible prim transforms + colors, upload to instance VBOs.
     // Call once per frame before render().
     void update();
+
+    // Bypass Prim loop: directly upload transforms (and optionally colors).
+    // When called, update() becomes a no-op for that frame.
+    // colors == nullptr: skip color upload (use previously set colors).
+    void updateFromTransforms(const std::vector<glm::mat4>& transforms,
+                              const std::vector<glm::vec4>* colors = nullptr);
+
+    // One-time color upload. Call once in setup instead of passing colors every frame.
+    void setColors(const std::vector<glm::vec4>& colors);
 
     void render();
 

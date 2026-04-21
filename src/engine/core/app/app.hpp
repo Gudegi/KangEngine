@@ -136,8 +136,15 @@ class App {
 
     Scene::SceneBackend* getScene() { return _scene.get(); }
 
-    size_t addShape(Backend::Shader* shader, Scene::Prim* prim);
-    size_t addShape(PhongMaterial* material, Scene::Prim* prim);
+    MeshHandle addShape(Backend::Shader* shader, Scene::Prim* prim);
+    MeshHandle addShape(PhongMaterial* material, Scene::Prim* prim);
+    void removePrim(MeshHandle handle, Scene::Prim* prim);
+
+    void updateShapeTransforms(MeshHandle handle,
+                               const std::vector<glm::mat4>& transforms,
+                               const std::vector<glm::vec4>* colors = nullptr);
+    void setShapeColors(MeshHandle handle,
+                        const std::vector<glm::vec4>& colors);
 
     void setSkybox(const std::string& path);
     void setSkybox(const std::vector<std::string>& paths);

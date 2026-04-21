@@ -4,17 +4,18 @@
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include <glm/glm.hpp>
+#include <glm/mat4x4.hpp>
+#include <glm/vec4.hpp>
 #include <memory>
+#include <vector>
 
 constexpr int CAMERA_UBO_BIND_SLOT = 0;
 constexpr int LIGHT_UBO_BIND_SLOT = 1;
 
 namespace KE {
 
-Rasterizer::Rasterizer(Backend::GraphicsDevice* graphicsDevice,
-                       Scene::SceneBackend* scene) {
+Rasterizer::Rasterizer(Backend::GraphicsDevice* graphicsDevice) {
     _graphicsDevice = graphicsDevice;
-    _scene = scene;
     _cameraUBO = _graphicsDevice->createBuffer(Backend::BufferType::Uniform,
                                                2 * sizeof(glm::mat4));
     _graphicsDevice->bindUniformBuffer(_cameraUBO.get(), CAMERA_UBO_BIND_SLOT);
@@ -25,10 +26,10 @@ Rasterizer::Rasterizer(Backend::GraphicsDevice* graphicsDevice,
 
 // Prim-based (instanced)
 
-size_t Rasterizer::addShape(Backend::Shader* shader, Scene::Prim* prim) {
+MeshHandle Rasterizer::addShape(Backend::Shader* shader, Scene::Prim* prim) {
     auto meshData = prim->getMeshData();
     if (!meshData || meshData->vertices.empty() || meshData->indices.empty())
-        return static_cast<size_t>(-1);
+        return InvalidHandle;
 
     InstancerKey key{shader, meshData.get(), nullptr};
     auto it = _instancers.find(key);
@@ -38,14 +39,22 @@ size_t Rasterizer::addShape(Backend::Shader* shader, Scene::Prim* prim) {
         it = newIt;
     }
     it->second.addPrim(prim);
-    return 0;
+
+    auto hIt = _handleMap.find(key);
+    if (hIt == _handleMap.end()) {
+        MeshHandle h = static_cast<MeshHandle>(_handleTable.size());
+        _handleMap[key] = h;
+        _handleTable.push_back(&it->second);
+        return h;
+    }
+    return hIt->second;
 }
 
-size_t Rasterizer::addShape(PhongMaterial* material, Scene::Prim* prim) {
+MeshHandle Rasterizer::addShape(PhongMaterial* material, Scene::Prim* prim) {
     auto meshData = prim->getMeshData();
     if (!material || !meshData || meshData->vertices.empty() ||
         meshData->indices.empty())
-        return static_cast<size_t>(-1);
+        return InvalidHandle;
 
     auto* shader = material->getShader();
     InstancerKey key{shader, meshData.get(), material};
@@ -56,7 +65,36 @@ size_t Rasterizer::addShape(PhongMaterial* material, Scene::Prim* prim) {
         it = newIt;
     }
     it->second.addPrim(prim);
-    return 0;
+
+    auto hIt = _handleMap.find(key);
+    if (hIt == _handleMap.end()) {
+        MeshHandle h = static_cast<MeshHandle>(_handleTable.size());
+        _handleMap[key] = h;
+        _handleTable.push_back(&it->second);
+        return h;
+    }
+    return hIt->second;
+}
+
+void Rasterizer::removePrim(MeshHandle handle, Scene::Prim* prim) {
+    if (handle >= _handleTable.size())
+        return;
+    _handleTable[handle]->removePrim(prim);
+}
+
+void Rasterizer::updateShapeTransforms(MeshHandle handle,
+                                       const std::vector<glm::mat4>& transforms,
+                                       const std::vector<glm::vec4>* colors) {
+    if (handle >= _handleTable.size())
+        return;
+    _handleTable[handle]->updateFromTransforms(transforms, colors);
+}
+
+void Rasterizer::setShapeColors(MeshHandle handle,
+                                const std::vector<glm::vec4>& colors) {
+    if (handle >= _handleTable.size())
+        return;
+    _handleTable[handle]->setColors(colors);
 }
 
 // Render

@@ -1,6 +1,10 @@
 #include "mesh_instancer.hpp"
 #include "engine/graphics/material/material.hpp"
+#include <algorithm>
 #include <glm/glm.hpp>
+#include <glm/mat4x4.hpp>
+#include <glm/vec4.hpp>
+#include <vector>
 
 namespace KE {
 
@@ -43,6 +47,10 @@ void MeshInstancer::init(Backend::GraphicsDevice* device,
 
 void MeshInstancer::addPrim(Scene::Prim* prim) { _prims.push_back(prim); }
 
+void MeshInstancer::removePrim(Scene::Prim* prim) {
+    _prims.erase(std::remove(_prims.begin(), _prims.end(), prim), _prims.end());
+}
+
 void MeshInstancer::_setupInstanceAttribs() {
     // Transform mat4: locations 3-6 (4 × vec4, stride = sizeof(mat4))
     _vao->setVertexBuffer(_transformVBO.get());
@@ -74,7 +82,33 @@ void MeshInstancer::_reallocate(int newMax) {
     _setupInstanceAttribs();
 }
 
+void MeshInstancer::setColors(const std::vector<glm::vec4>& colors) {
+    int n = (int)colors.size();
+    if (n > _allocatedInstances)
+        _reallocate(n * 2);
+    _colorVBO->setData(colors.data(), sizeof(glm::vec4) * n);
+}
+
+void MeshInstancer::updateFromTransforms(
+    const std::vector<glm::mat4>& transforms,
+    const std::vector<glm::vec4>* colors) {
+    _visibleCount = (int)transforms.size();
+    if (_visibleCount == 0)
+        return;
+    if (_visibleCount > _allocatedInstances)
+        _reallocate(_visibleCount * 2);
+    _transformVBO->setData(transforms.data(),
+                           sizeof(glm::mat4) * _visibleCount);
+    if (colors)
+        _colorVBO->setData(colors->data(), sizeof(glm::vec4) * _visibleCount);
+    _externalUpdate = true;
+}
+
 void MeshInstancer::update() {
+    if (_externalUpdate) {
+        _externalUpdate = false;
+        return;
+    }
     std::vector<glm::mat4> transforms;
     std::vector<glm::vec4> colors;
     _hasTransparent = false;

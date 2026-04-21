@@ -138,8 +138,7 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     _graphicsDevice->setDepthTest(true);
     _graphicsDevice->setStencilTest(true);
 
-    _rasterizer =
-        std::make_unique<Rasterizer>(_graphicsDevice.get(), _scene.get());
+    _rasterizer = std::make_unique<Rasterizer>(_graphicsDevice.get());
 
     _rasterizer->setLight(DirectionalLight{
         (_upAxis == UpAxis::Z) ? glm::normalize(glm::vec3(0.2f, 0.5f, 1.0f))
@@ -223,14 +222,30 @@ void App::coreRender() {
 
 void App::checkError() { _graphicsDevice->checkError(); }
 
-size_t App::addShape(Backend::Shader* shader, Scene::Prim* prim) {
-    return _rasterizer ? _rasterizer->addShape(shader, prim)
-                       : static_cast<size_t>(-1);
+MeshHandle App::addShape(Backend::Shader* shader, Scene::Prim* prim) {
+    return _rasterizer ? _rasterizer->addShape(shader, prim) : InvalidHandle;
 }
 
-size_t App::addShape(PhongMaterial* material, Scene::Prim* prim) {
-    return _rasterizer ? _rasterizer->addShape(material, prim)
-                       : static_cast<size_t>(-1);
+MeshHandle App::addShape(PhongMaterial* material, Scene::Prim* prim) {
+    return _rasterizer ? _rasterizer->addShape(material, prim) : InvalidHandle;
+}
+
+void App::removePrim(MeshHandle handle, Scene::Prim* prim) {
+    if (_rasterizer)
+        _rasterizer->removePrim(handle, prim);
+}
+
+void App::updateShapeTransforms(MeshHandle handle,
+                                const std::vector<glm::mat4>& transforms,
+                                const std::vector<glm::vec4>* colors) {
+    if (_rasterizer)
+        _rasterizer->updateShapeTransforms(handle, transforms, colors);
+}
+
+void App::setShapeColors(MeshHandle handle,
+                         const std::vector<glm::vec4>& colors) {
+    if (_rasterizer)
+        _rasterizer->setShapeColors(handle, colors);
 }
 
 void App::setSkybox(const std::string& path) {
