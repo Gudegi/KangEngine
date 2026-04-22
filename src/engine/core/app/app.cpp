@@ -1,6 +1,7 @@
 #include "app.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
+#include "engine/graphics/renderer/post_processor.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "engine/core/ui/base_panel.hpp"
@@ -139,6 +140,8 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     _graphicsDevice->setStencilTest(true);
 
     _rasterizer = std::make_unique<Rasterizer>(_graphicsDevice.get());
+    _postProcessor = std::make_unique<PostProcessor>();
+    _postProcessor->init(_graphicsDevice.get(), _width, _height);
 
     _rasterizer->setLight(DirectionalLight{
         (_upAxis == UpAxis::Z) ? glm::normalize(glm::vec3(0.2f, 0.5f, 1.0f))
@@ -183,8 +186,14 @@ void App::start() {
         this->render();
         _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
         _framebuffer->resolve();
-        _framebuffer->blitToScreen(_width, _height);
         _framebuffer->unbind();
+
+        if (_postProcessor) {
+            _postProcessor->process(_framebuffer->getColorTexture(), _gamma);
+            _postProcessor->blitToScreen(_width, _height);
+        } else {
+            _framebuffer->blitToScreen(_width, _height);
+        }
 
         // default framebuffer
         if (!_hideUI) {
@@ -208,6 +217,7 @@ float App::getDeltaTime() const { return _renderVariable->deltaTime; }
 void App::coreRender() {
     if (!_hideUI) {
         ImGui::Checkbox("Wireframe", &_renderWireframe);
+        ImGui::SliderFloat("GammaCorrection", &_gamma, 0.f, 5.f);
     }
 
     if (_renderWireframe == true) {

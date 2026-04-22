@@ -85,6 +85,8 @@ class OpenGLTexture : public Texture {
     OpenGLTexture(const TextureDesc& desc);
     OpenGLTexture(const TextureDesc& desc, float warpParam,
                   float filterMinParam, float filterMaxParam);
+    // Empty RGB texture for FBO color attachment
+    OpenGLTexture(int w, int h);
     ~OpenGLTexture() override;
 
     void bind(int slot = 0) override;
@@ -94,6 +96,7 @@ class OpenGLTexture : public Texture {
                         GLfloat filterMaxParam = GL_LINEAR) const;
     int getWidth() const override { return _width; }
     int getHeight() const override { return _height; }
+    GLuint getHandle() const { return _textureID; }
 };
 
 class OpenGLVertexArray : public VertexArray {
@@ -115,7 +118,7 @@ class OpenGLFramebuffer : public Framebuffer {
   private:
     // --- Texture FBO (non-MSAA scene FBO) ---
     GLuint _fbo = 0;
-    GLuint _colorTex = 0; // GL_RGB   color texture
+    std::unique_ptr<OpenGLTexture> _colorTexObj; // GL_RGB color texture
     GLuint _depthTex = 0; // GL_DEPTH_COMPONENT32 depth texture
 
     // --- [SIMPLE RBO] non-MSAA depth+stencil renderbuffer ---

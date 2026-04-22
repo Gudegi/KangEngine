@@ -278,6 +278,19 @@ OpenGLTexture::OpenGLTexture(const TextureDesc& desc, float warpParam,
     glBindTexture(_target, 0);
 }
 
+OpenGLTexture::OpenGLTexture(int w, int h)
+    : _width(w), _height(h), _channels(3) {
+    glGenTextures(1, &_textureID);
+    glBindTexture(GL_TEXTURE_2D, _textureID);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE,
+                 nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
 OpenGLTexture::~OpenGLTexture() { glDeleteTextures(1, &_textureID); }
 
 void OpenGLTexture::bind(int slot) {
@@ -569,14 +582,9 @@ OpenGLFramebuffer::OpenGLFramebuffer(const FramebufferDesc& desc)
     glBindFramebuffer(GL_FRAMEBUFFER, _fbo);
 
     // color texture (GL_RGB)
-    glGenTextures(1, &_colorTex);
-    glBindTexture(GL_TEXTURE_2D, _colorTex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, _desc.width, _desc.height, 0, GL_RGB,
-                 GL_UNSIGNED_BYTE, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    _colorTexObj = std::make_unique<OpenGLTexture>(_desc.width, _desc.height);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                           _colorTex, 0);
+                           _colorTexObj->getHandle(), 0);
 
     // depth (or depth+stencil) texture — required for shadow map sampling
     // stencil=true: GL_DEPTH24_STENCIL8 + GL_DEPTH_STENCIL_ATTACHMENT
@@ -655,8 +663,6 @@ OpenGLFramebuffer::~OpenGLFramebuffer() {
         glDeleteRenderbuffers(1, &_msaaColorRbo);
     if (_msaaDepthRbo)
         glDeleteRenderbuffers(1, &_msaaDepthRbo);
-    if (_colorTex)
-        glDeleteTextures(1, &_colorTex);
     if (_depthTex)
         glDeleteTextures(1, &_depthTex);
     if (_fbo)
@@ -685,7 +691,7 @@ void OpenGLFramebuffer::resize(int w, int h) {
     _desc.height = h;
 
     // Resize texture FBO attachments
-    glBindTexture(GL_TEXTURE_2D, _colorTex);
+    glBindTexture(GL_TEXTURE_2D, _colorTexObj->getHandle());
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE,
                  nullptr);
     glBindTexture(GL_TEXTURE_2D, _depthTex);
@@ -720,9 +726,7 @@ void OpenGLFramebuffer::blitToScreen(int scrWidth, int scrHeight) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-Texture* OpenGLFramebuffer::getColorTexture() {
-    return nullptr;
-} // TODO: wrap _colorTex
+Texture* OpenGLFramebuffer::getColorTexture() { return _colorTexObj.get(); }
 Texture* OpenGLFramebuffer::getDepthTexture() {
     return nullptr;
 } // TODO: wrap _depthTex

@@ -25,6 +25,7 @@
 #include "utils/types.hpp"
 #include "engine/graphics/material/material.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
+#include "engine/graphics/renderer/post_processor.hpp"
 #include "engine/graphics/renderer/light.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "engine/scene/native/prim.hpp"
@@ -57,6 +58,7 @@ class App {
     int _logicalWidth,
         _logicalHeight; // screen/logical pixels (matches mouse coords)
     bool _hideUI, _renderWireframe;
+    float _gamma = 2.2; // for Gamma Correction
     glm::mat4 _viewMatrix,
         _projectionMatrix; // variable to containing main camera's view and
                            // project matrix.
@@ -71,6 +73,7 @@ class App {
     std::unique_ptr<Backend::Framebuffer> _framebuffer;
     std::unique_ptr<Scene::SceneBackend> _scene = nullptr;
     std::unique_ptr<Rasterizer> _rasterizer;
+    std::unique_ptr<PostProcessor> _postProcessor;
 
     void registerCallbacks();
 
