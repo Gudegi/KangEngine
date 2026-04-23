@@ -513,6 +513,13 @@ void OpenGLDevice::setPolygonMode(PolygonMode mode) {
     glPolygonMode(GL_FRONT_AND_BACK, glMode);
 }
 
+void OpenGLDevice::setCullFace(bool enable) {
+    if (enable)
+        glEnable(GL_CULL_FACE);
+    else
+        glDisable(GL_CULL_FACE);
+}
+
 void OpenGLDevice::setClearColor(float r, float g, float b, float a) {
     glClearColor(r, g, b, a);
 }

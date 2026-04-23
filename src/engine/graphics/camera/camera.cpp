@@ -166,6 +166,17 @@ float Camera::getCamToLookDistance() { return _camToLookDistance; }
 void Camera::setCameraPos(glm::vec3 cameraPos) {
     _cameraPos = cameraPos;
     _camToLookDistance = glm::length(_targetPos - _cameraPos);
+    glm::vec3 offset = _cameraPos - _targetPos;
+    float r = glm::length(offset);
+    if (r > 0.0001f) {
+        if (_upAxis == UpAxis::Z) {
+            pole = glm::degrees(glm::acos(glm::clamp(offset.z / r, -1.f, 1.f)));
+            azimuth = glm::degrees(glm::atan(offset.y, offset.x));
+        } else {
+            pole = glm::degrees(glm::acos(glm::clamp(offset.y / r, -1.f, 1.f)));
+            azimuth = glm::degrees(glm::atan(offset.z, offset.x));
+        }
+    }
     updateViewMatrix();
 }
 

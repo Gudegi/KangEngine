@@ -192,6 +192,7 @@ class OpenGLDevice : public GraphicsDevice {
     void setBlendFunc(BlendFactor src, BlendFactor dst) override;
     void setStencilTest(bool enable) override;
     void setPolygonMode(PolygonMode mode) override;
+    void setCullFace(bool enable) override;
     void setClearColor(float r, float g, float b, float a) override;
 
     // Resource creation

@@ -10,16 +10,14 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <glm/vec3.hpp>
+#include <vector>
 
 #include "engine/graphics/camera/camera.hpp"
 #include "engine/core/ui/panel_manager.hpp"
 #include "utils/asset_path.hpp"
 #include "utils/ray.hpp"
 #include "engine/core/window/window.hpp"
-// #include "mesh/prim.hpp"
-// #include "mesh/buffer.hpp"
-// #include "mesh/vao.hpp"
-// #include "shader/shader.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/graphics/backend/graphics_factory.hpp"
 #include "utils/types.hpp"
@@ -148,6 +146,12 @@ class App {
                                const std::vector<glm::vec4>* colors = nullptr);
     void setShapeColors(MeshHandle handle,
                         const std::vector<glm::vec4>& colors);
+    void setShapeDoubleSided(MeshHandle handle, bool doubleSided = true);
+    void setShapeTexture(MeshHandle handle, Backend::Texture* tex,
+                         int slot = 0);
+    void updateMeshGeometry(MeshHandle handle,
+                            const std::vector<glm::vec3>& positions,
+                            const std::vector<glm::vec3>& normals);
 
     void setSkybox(const std::string& path);
     void setSkybox(const std::vector<std::string>& paths);

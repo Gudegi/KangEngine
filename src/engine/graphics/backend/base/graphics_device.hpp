@@ -6,6 +6,8 @@
 #define _GRAPHICS_DEVICE_HPP_
 
 #include <glad/glad.h>
+#include <fstream>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <vector>
@@ -108,6 +110,7 @@ class GraphicsDevice {
     virtual void setBlendFunc(BlendFactor src, BlendFactor dst) = 0;
     virtual void setStencilTest(bool enable) = 0;
     virtual void setPolygonMode(PolygonMode mode) = 0;
+    virtual void setCullFace(bool enable) = 0;
     virtual void setClearColor(float r, float g, float b, float a) = 0;
 
     // Resource creation
@@ -124,6 +127,15 @@ class GraphicsDevice {
     virtual std::unique_ptr<Shader>
     createShader(const std::string& vertexSource,
                  const std::string& fragmentSource) = 0;
+
+    std::unique_ptr<Shader> createShaderFromFile(const std::string& vertPath,
+                                                 const std::string& fragPath) {
+        auto read = [](const std::string& p) {
+            std::ifstream f(p);
+            return std::string(std::istreambuf_iterator<char>(f), {});
+        };
+        return createShader(read(vertPath), read(fragPath));
+    }
     virtual std::unique_ptr<Texture> createTexture(const std::string path,
                                                    bool flip = false) = 0;
     virtual std::unique_ptr<Texture> createTexture(const std::string path,

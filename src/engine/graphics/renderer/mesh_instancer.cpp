@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <glm/glm.hpp>
 #include <glm/mat4x4.hpp>
+#include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <vector>
 
@@ -134,6 +135,15 @@ void MeshInstancer::update() {
     _transformVBO->setData(transforms.data(),
                            sizeof(glm::mat4) * _visibleCount);
     _colorVBO->setData(colors.data(), sizeof(glm::vec4) * _visibleCount);
+}
+
+void MeshInstancer::updateGeometry(const std::vector<glm::vec3>& positions,
+                                   const std::vector<glm::vec3>& normals) {
+    // _vbos[0] = positions (location 0), _vbos[1] = normals (location 1)
+    if (!_vbos.empty())
+        _vbos[0]->setData(positions.data(), sizeof(glm::vec3) * positions.size());
+    if (_vbos.size() > 1 && !normals.empty())
+        _vbos[1]->setData(normals.data(), sizeof(glm::vec3) * normals.size());
 }
 
 void MeshInstancer::render() {

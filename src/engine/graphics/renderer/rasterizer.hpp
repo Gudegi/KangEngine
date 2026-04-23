@@ -8,6 +8,7 @@
 #include "engine/scene/scene_backend.hpp"
 #include "engine/graphics/material/material.hpp"
 #include <glm/mat4x4.hpp>
+#include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include "utils/types.hpp"
 #include <cstddef>
@@ -84,6 +85,15 @@ class Rasterizer : public Renderer {
 
     void setShapeColors(MeshHandle handle,
                         const std::vector<glm::vec4>& colors);
+
+    // Disable back-face culling for this instancer (e.g. cloth, thin surfaces).
+    void setShapeDoubleSided(MeshHandle handle, bool doubleSided = true);
+    void setShapeTexture(MeshHandle handle, Backend::Texture* tex, int slot = 0);
+
+    // Deformable mesh: update vertex positions + normals each frame.
+    void updateMeshGeometry(MeshHandle handle,
+                            const std::vector<glm::vec3>& positions,
+                            const std::vector<glm::vec3>& normals);
 
     void setSkybox(const std::string& path, UpAxis upAxis = UpAxis::Y) {
         _graphicsDevice->setSkybox(path, upAxis);

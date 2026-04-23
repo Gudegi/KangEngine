@@ -258,6 +258,23 @@ void App::setShapeColors(MeshHandle handle,
         _rasterizer->setShapeColors(handle, colors);
 }
 
+void App::setShapeDoubleSided(MeshHandle handle, bool doubleSided) {
+    if (_rasterizer)
+        _rasterizer->setShapeDoubleSided(handle, doubleSided);
+}
+
+void App::setShapeTexture(MeshHandle handle, Backend::Texture* tex, int slot) {
+    if (_rasterizer)
+        _rasterizer->setShapeTexture(handle, tex, slot);
+}
+
+void App::updateMeshGeometry(MeshHandle handle,
+                             const std::vector<glm::vec3>& positions,
+                             const std::vector<glm::vec3>& normals) {
+    if (_rasterizer)
+        _rasterizer->updateMeshGeometry(handle, positions, normals);
+}
+
 void App::setSkybox(const std::string& path) {
     if (_rasterizer)
         _rasterizer->setSkybox(path, _upAxis);

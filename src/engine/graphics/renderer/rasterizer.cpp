@@ -5,6 +5,7 @@
 #include "engine/scene/scene_backend.hpp"
 #include <glm/glm.hpp>
 #include <glm/mat4x4.hpp>
+#include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <memory>
 #include <vector>
@@ -97,6 +98,27 @@ void Rasterizer::setShapeColors(MeshHandle handle,
     _handleTable[handle]->setColors(colors);
 }
 
+void Rasterizer::setShapeDoubleSided(MeshHandle handle, bool doubleSided) {
+    if (handle >= _handleTable.size())
+        return;
+    _handleTable[handle]->setDoubleSided(doubleSided);
+}
+
+void Rasterizer::setShapeTexture(MeshHandle handle, Backend::Texture* tex,
+                                 int slot) {
+    if (handle >= _handleTable.size())
+        return;
+    _handleTable[handle]->setTexture(tex, slot);
+}
+
+void Rasterizer::updateMeshGeometry(MeshHandle handle,
+                                    const std::vector<glm::vec3>& positions,
+                                    const std::vector<glm::vec3>& normals) {
+    if (handle >= _handleTable.size())
+        return;
+    _handleTable[handle]->updateGeometry(positions, normals);
+}
+
 // Render
 
 void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
@@ -125,11 +147,16 @@ void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
     for (auto& [key, inst] : _instancers) {
         if (inst.hasTransparent() || inst.visibleCount() == 0)
             continue;
+        if (inst.isDoubleSided())
+            _graphicsDevice->setCullFace(false);
         if (inst.material())
             inst.material()->bind();
         else
             inst.shader()->use();
+        inst.bindTextures();
         inst.render();
+        if (inst.isDoubleSided())
+            _graphicsDevice->setCullFace(true);
     }
     // Skybox: drawn last, fills only pixels with no geometry
     _graphicsDevice->drawSkybox(view, proj);
@@ -142,11 +169,16 @@ void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
     for (auto& [key, inst] : _instancers) {
         if (!inst.hasTransparent() || inst.visibleCount() == 0)
             continue;
+        if (inst.isDoubleSided())
+            _graphicsDevice->setCullFace(false);
         if (inst.material())
             inst.material()->bind();
         else
             inst.shader()->use();
+        inst.bindTextures();
         inst.render();
+        if (inst.isDoubleSided())
+            _graphicsDevice->setCullFace(true);
     }
     _graphicsDevice->setDepthWrite(true);
     _graphicsDevice->setBlend(false);

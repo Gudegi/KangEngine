@@ -7,8 +7,10 @@
 #include "engine/scene/native/prim.hpp"
 #include <glm/glm.hpp>
 #include <glm/mat4x4.hpp>
+#include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace KE {
@@ -36,6 +38,8 @@ class MeshInstancer {
     int _visibleCount = 0;
     bool _hasTransparent = false;
     bool _externalUpdate = false;
+    bool _doubleSided = false;
+    std::vector<std::pair<Backend::Texture*, int>> _textures;
 
     std::vector<Scene::Prim*> _prims;
 
@@ -66,10 +70,31 @@ class MeshInstancer {
     void updateFromTransforms(const std::vector<glm::mat4>& transforms,
                               const std::vector<glm::vec4>* colors = nullptr);
 
-    // One-time color upload. Call once in setup instead of passing colors every frame.
+    // One-time color upload. Call once in setup instead of passing colors every
+    // frame.
     void setColors(const std::vector<glm::vec4>& colors);
 
+    // Update vertex positions and normals for deformable meshes (cloth, soft
+    // body). Vertex count must match the mesh passed to init().
+    void updateGeometry(const std::vector<glm::vec3>& positions,
+                        const std::vector<glm::vec3>& normals);
+
     void render();
+
+    // DoubleSided means the mesh can be seen both back and forward side.
+    void setDoubleSided(bool v) { _doubleSided = v; }
+    bool isDoubleSided() const { return _doubleSided; }
+
+    void setTexture(Backend::Texture* tex, int slot = 0) {
+        for (auto& [t, s] : _textures) {
+            if (s == slot) { t = tex; return; }
+        }
+        _textures.emplace_back(tex, slot);
+    }
+    void bindTextures() const {
+        for (auto& [tex, slot] : _textures)
+            if (tex) tex->bind(slot);
+    }
 
     Backend::Shader* shader() const { return _shader; }
     PhongMaterial* material() const { return _material; }
