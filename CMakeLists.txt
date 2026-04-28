@@ -217,6 +217,7 @@ if(IS_PYTHON_LIB)
         "${BIND_DIR}/bind_new.cpp"
         "${BIND_DIR}/bind_scene.cpp"
         "${BIND_DIR}/bind_animation.cpp"
+        "${BIND_DIR}/bind_physics.cpp"
     )
     message(STATUS "PY_SOURCE: ${PYBIND_SOURCE_FILES}")
     
