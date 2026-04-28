@@ -29,7 +29,7 @@ class SkeletonBridge {
                                    float scale = 1.0f,
                                    const std::string& order = "DFS");
 
-    static SkeletonBridge fromData(const Animation::MJCFData& data,
+    static SkeletonBridge fromData(const Animation::CharacterData& data,
                                    Scene::SceneBackend* scene,
                                    const std::string& primBasePath = "/robot",
                                    float scale = 1.0f);

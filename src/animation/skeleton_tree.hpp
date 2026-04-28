@@ -2,6 +2,7 @@
 #define _SKELETON_TREE_HPP_
 
 #include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <string>
 #include <unordered_map>
 #include <vector>

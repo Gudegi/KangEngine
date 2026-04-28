@@ -14,7 +14,6 @@ namespace Animation {
 
 namespace {
 
-// Helper to parse a space-separated string into a vector of floats.
 std::vector<float> splitFloats(const char* str) {
     if (!str)
         return {};
@@ -26,9 +25,25 @@ std::vector<float> splitFloats(const char* str) {
     return out;
 }
 
-// Helper to traverse MJCF <body> elements via BFS.
-// Invokes callback(xml_node, tree_index, name) for each valid body found in the
-// given SkeletonTree(sorted by DFS or BFS).
+std::string resolveMeshDir(const std::string& mjcfPath, const char* meshdir) {
+    std::string dir;
+    auto lastSlash = mjcfPath.find_last_of("/\\");
+    if (lastSlash != std::string::npos)
+        dir = mjcfPath.substr(0, lastSlash + 1);
+
+    if (!meshdir)
+        return dir;
+
+    std::string md(meshdir);
+    if (md.size() >= 2 && md[0] == '.' && md[1] == '/')
+        return dir + md.substr(2);
+    if (!md.empty() && md[0] == '/')
+        return md;
+    return dir + md;
+}
+
+// Invokes callback(xml_node, tree_index, name, effectiveClass) for each body.
+// effectiveClass is the childclass inherited from ancestor bodies.
 template <typename Func>
 void traverseBodies(tinyxml2::XMLElement* root, const SkeletonTree& tree,
                     bool logMissing, Func&& callback) {
@@ -36,66 +51,43 @@ void traverseBodies(tinyxml2::XMLElement* root, const SkeletonTree& tree,
     if (!worldbody)
         return;
 
-    std::queue<tinyxml2::XMLElement*> q;
+    struct Entry {
+        tinyxml2::XMLElement* element;
+        std::string inheritedClass;
+    };
+
+    std::queue<Entry> q;
     for (auto* b = worldbody->FirstChildElement("body"); b;
          b = b->NextSiblingElement("body"))
-        q.push(b);
+        q.push({b, ""});
 
     while (!q.empty()) {
-        auto* elem = q.front();
+        auto [elem, inherited] = q.front();
         q.pop();
+
+        std::string forChildren = inherited;
+        if (const char* cc = elem->Attribute("childclass"))
+            forChildren = cc;
+
         const char* bodyName = elem->Attribute("name");
         if (bodyName) {
             try {
                 int idx = tree.index(bodyName);
-                callback(elem, idx, bodyName);
+                callback(elem, idx, bodyName, forChildren);
             } catch (const std::exception& e) {
-                if (logMissing) {
+                if (logMissing)
                     fmt::print(stderr,
                                "Warning: body '{}' not in skeleton — {}\n",
                                bodyName, e.what());
-                }
             }
         }
         for (auto* c = elem->FirstChildElement("body"); c;
              c = c->NextSiblingElement("body"))
-            q.push(c);
+            q.push({c, forChildren});
     }
 }
 
-} // anonymous namespace
-
-// Resolve mesh directory relative to the MJCF file path
-static std::string resolveMeshDir(const std::string& mjcfPath,
-                                  const char* meshdir) {
-    // Find directory of the MJCF file
-    std::string dir;
-    auto lastSlash = mjcfPath.find_last_of("/\\");
-    if (lastSlash != std::string::npos) {
-        dir = mjcfPath.substr(0, lastSlash + 1);
-    }
-
-    if (!meshdir)
-        return dir;
-
-    std::string md(meshdir);
-    // If meshdir starts with ./, resolve relative to MJCF dir
-    if (md.size() >= 2 && md[0] == '.' && md[1] == '/') {
-        return dir + md.substr(2);
-    }
-    // If absolute, return as-is
-    if (!md.empty() && md[0] == '/') {
-        return md;
-    }
-    return dir + md;
-}
-
-
-
-// Collision geometry parsing
-namespace {
-
-// Accumulated geom attributes from a <default class="X"> chain
+// Accumulated geom attributes from a <default class="X"> chain.
 struct DefaultGeomAttrs {
     std::string type;
     std::vector<float> size;
@@ -105,9 +97,7 @@ struct DefaultGeomAttrs {
     std::string parentClass;
 };
 
-// Read <geom> child attributes into a DefaultGeomAttrs
-static void readGeomDefaults(tinyxml2::XMLElement* defElem,
-                             DefaultGeomAttrs& out) {
+void readGeomDefaults(tinyxml2::XMLElement* defElem, DefaultGeomAttrs& out) {
     auto* g = defElem->FirstChildElement("geom");
     if (!g)
         return;
@@ -127,10 +117,9 @@ static void readGeomDefaults(tinyxml2::XMLElement* defElem,
         out.fromto = ft;
 }
 
-// Recursively collect all <default class="X"> entries into map
-static void
-collectDefaults(tinyxml2::XMLElement* elem, const std::string& parentClass,
-                std::unordered_map<std::string, DefaultGeomAttrs>& map) {
+void collectDefaults(
+    tinyxml2::XMLElement* elem, const std::string& parentClass,
+    std::unordered_map<std::string, DefaultGeomAttrs>& map) {
     for (auto* def = elem->FirstChildElement("default"); def;
          def = def->NextSiblingElement("default")) {
         const char* cls = def->Attribute("class");
@@ -144,8 +133,8 @@ collectDefaults(tinyxml2::XMLElement* elem, const std::string& parentClass,
     }
 }
 
-// Walk class -> parent chain; first occurrence of each field wins
-static DefaultGeomAttrs
+// Walk class -> parent chain; first occurrence of each field wins.
+DefaultGeomAttrs
 resolveClass(const std::string& cls,
              const std::unordered_map<std::string, DefaultGeomAttrs>& map) {
     DefaultGeomAttrs out;
@@ -170,19 +159,18 @@ resolveClass(const std::string& cls,
     return out;
 }
 
-// Build one MJCFCollisionGeom from a <geom> element; returns false if the
-// geom should be skipped (visual, mesh, unknown type, etc.)
-static bool buildCollisionGeom(
+// Returns false if the geom should be skipped (visual, mesh, unknown type).
+bool buildCollisionGeom(
     tinyxml2::XMLElement* geomElem,
     const std::unordered_map<std::string, DefaultGeomAttrs>& defaultMap,
-    MJCFCollisionGeom& out) {
+    CollisionGeom& out, const std::string& inheritedClass = "") {
 
     const char* clsAttr = geomElem->Attribute("class");
+    std::string effectiveCls = clsAttr ? clsAttr : inheritedClass;
     DefaultGeomAttrs defs;
-    if (clsAttr)
-        defs = resolveClass(clsAttr, defaultMap);
+    if (!effectiveCls.empty())
+        defs = resolveClass(effectiveCls, defaultMap);
 
-    // Geom element attributes override class defaults
     auto typeStr = geomElem->Attribute("type")
                        ? std::string(geomElem->Attribute("type"))
                        : defs.type;
@@ -203,13 +191,13 @@ static bool buildCollisionGeom(
         fromto = defs.fromto;
 
     if (typeStr == "capsule")
-        out.type = MJCFCollisionGeom::Type::Capsule;
+        out.type = CollisionGeom::Type::Capsule;
     else if (typeStr == "cylinder")
-        out.type = MJCFCollisionGeom::Type::Cylinder;
+        out.type = CollisionGeom::Type::Cylinder;
     else if (typeStr == "sphere")
-        out.type = MJCFCollisionGeom::Type::Sphere;
+        out.type = CollisionGeom::Type::Sphere;
     else if (typeStr == "box")
-        out.type = MJCFCollisionGeom::Type::Box;
+        out.type = CollisionGeom::Type::Box;
     else
         return false;
 
@@ -236,10 +224,63 @@ static bool buildCollisionGeom(
     return true;
 }
 
+struct GeomMassData {
+    float mass;
+    Eigen::Vector3f center;
+    Eigen::Vector3f iDiag;
+};
+
+GeomMassData geomMassContribution(const CollisionGeom& g, float density) {
+    using Type = CollisionGeom::Type;
+    float V = 0.f;
+    Eigen::Vector3f center = g.pos;
+    Eigen::Vector3f iDiag = Eigen::Vector3f::Zero();
+
+    if (g.hasFromTo)
+        center = (g.from + g.to) * 0.5f;
+
+    switch (g.type) {
+    case Type::Sphere: {
+        float r = g.size[0];
+        V = (4.f / 3.f) * static_cast<float>(M_PI) * r * r * r;
+        float m = density * V;
+        float I = (2.f / 5.f) * m * r * r;
+        iDiag = Eigen::Vector3f(I, I, I);
+        break;
+    }
+    case Type::Capsule:
+    case Type::Cylinder: {
+        float r = g.size[0];
+        float halfLen =
+            g.hasFromTo ? (g.to - g.from).norm() * 0.5f : g.size[1];
+        float h = 2.f * halfLen;
+        float Vcyl = static_cast<float>(M_PI) * r * r * h;
+        float Vhemi = (g.type == Type::Capsule)
+                          ? (4.f / 3.f) * static_cast<float>(M_PI) * r * r * r
+                          : 0.f;
+        V = Vcyl + Vhemi;
+        float m = density * V;
+        float Iz = m * r * r / 2.f;
+        float Ixy = m * (3.f * r * r + h * h) / 12.f;
+        iDiag = Eigen::Vector3f(Ixy, Ixy, Iz);
+        break;
+    }
+    case Type::Box: {
+        float hx = g.size[0], hy = g.size[1], hz = g.size[2];
+        V = 8.f * hx * hy * hz;
+        float m = density * V;
+        iDiag = Eigen::Vector3f(m * (hy * hy + hz * hz) / 3.f,
+                                m * (hx * hx + hz * hz) / 3.f,
+                                m * (hx * hx + hy * hy) / 3.f);
+        break;
+    }
+    }
+    return {density * V, center, iDiag};
+}
+
 } // namespace
 
-// Single-pass parse: fills all member fields from one XML load.
-void MJCFLoader::parse(const std::string& mjcfPath, float /*scale*/,
+void MJCFLoader::parse(const std::string& mjcfPath, float scale,
                        const std::string& order) {
     tinyxml2::XMLDocument doc;
     if (doc.LoadFile(mjcfPath.c_str()) != tinyxml2::XML_SUCCESS)
@@ -248,12 +289,22 @@ void MJCFLoader::parse(const std::string& mjcfPath, float /*scale*/,
 
     auto* root = doc.RootElement();
 
-    // 1. Mesh directory
-    auto* compiler = root->FirstChildElement("compiler");
-    _meshDir = resolveMeshDir(
-        mjcfPath, compiler ? compiler->Attribute("meshdir") : nullptr);
+    // 1. Compiler options
+    float degToRad = 1.f;
+    bool inertiafromgeom = false;
+    if (auto* compiler = root->FirstChildElement("compiler")) {
+        _data.meshDir = resolveMeshDir(mjcfPath, compiler->Attribute("meshdir"));
+        const char* angle = compiler->Attribute("angle");
+        if (angle && std::string(angle) == "degree")
+            degToRad = static_cast<float>(M_PI) / 180.f;
+        const char* ifg = compiler->Attribute("inertiafromgeom");
+        if (ifg && std::string(ifg) == "true")
+            inertiafromgeom = true;
+    } else {
+        _data.meshDir = resolveMeshDir(mjcfPath, nullptr);
+    }
 
-    // 2. Asset name → file map
+    // 2. Asset name -> file map
     std::unordered_map<std::string, std::string> meshNameToFile;
     if (auto* asset = root->FirstChildElement("asset")) {
         for (auto* mesh = asset->FirstChildElement("mesh"); mesh;
@@ -267,8 +318,6 @@ void MJCFLoader::parse(const std::string& mjcfPath, float /*scale*/,
 
     // 3. Skeleton
     SkeletonTree skelTree = SkeletonTree::skelFromMJCFElement(root, order);
-    int n = skelTree.numJoints();
-    _joints.resize(n);
 
     // 4. Default class map for collision
     std::unordered_map<std::string, DefaultGeomAttrs> defaultMap;
@@ -278,7 +327,10 @@ void MJCFLoader::parse(const std::string& mjcfPath, float /*scale*/,
     // 5. Single traversal — mesh info, joints, collision, inertial
     traverseBodies(
         root, skelTree, true,
-        [&](tinyxml2::XMLElement* elem, int idx, const char* bodyName) {
+        [&](tinyxml2::XMLElement* elem, int idx, const char* bodyName,
+            const std::string& inheritedClass) {
+            std::vector<GeomMassData> geomMasses;
+
             for (auto* geom = elem->FirstChildElement("geom"); geom;
                  geom = geom->NextSiblingElement("geom")) {
                 const char* cls = geom->Attribute("class");
@@ -287,24 +339,39 @@ void MJCFLoader::parse(const std::string& mjcfPath, float /*scale*/,
                 // Visual mesh
                 if (cls && std::string(cls) == "visual" && meshName) {
                     auto it = meshNameToFile.find(meshName);
-                    if (it != meshNameToFile.end()) {
-                        MJCFMeshInfo info;
-                        info.bodyName = bodyName;
-                        info.meshFile = it->second;
-                        info.bodyIndex = idx;
-                        _meshInfos.push_back(std::move(info));
-                    }
-                    continue; // visual geoms are not collision
+                    if (it != meshNameToFile.end())
+                        _data.meshInfos.push_back({bodyName, it->second, idx});
+                    continue;
                 }
 
                 // Collision geom
-                MJCFCollisionGeom g;
-                if (buildCollisionGeom(geom, defaultMap, g))
-                    _collisionGeoms[idx].push_back(g);
+                CollisionGeom g;
+                if (!buildCollisionGeom(geom, defaultMap, g, inheritedClass))
+                    continue;
+
+                // Apply uniform scale to all spatial quantities
+                g.pos *= scale;
+                for (int i = 0; i < 3; i++)
+                    g.size[i] *= scale;
+                if (g.hasFromTo) {
+                    g.from *= scale;
+                    g.to *= scale;
+                }
+
+                if (inertiafromgeom) {
+                    float density = 1000.f;
+                    geom->QueryFloatAttribute("density", &density);
+                    auto gmd = geomMassContribution(g, density);
+                    if (gmd.mass > 1e-8f)
+                        geomMasses.push_back(gmd);
+                }
+
+                _data.collisionGeoms[idx].push_back(g);
             }
 
-            // Joint
-            if (auto* jElem = elem->FirstChildElement("joint")) {
+            // Joints for this body
+            for (auto* jElem = elem->FirstChildElement("joint"); jElem;
+                 jElem = jElem->NextSiblingElement("joint")) {
                 Joint jd;
                 jd.name =
                     jElem->Attribute("name") ? jElem->Attribute("name") : "";
@@ -316,19 +383,20 @@ void MJCFLoader::parse(const std::string& mjcfPath, float /*scale*/,
                             .normalized();
                 auto rangeVals = splitFloats(jElem->Attribute("range"));
                 if (rangeVals.size() >= 2) {
-                    jd.loLimit = rangeVals[0];
-                    jd.hiLimit = rangeVals[1];
+                    jd.loLimit = rangeVals[0] * degToRad;
+                    jd.hiLimit = rangeVals[1] * degToRad;
                 }
-                _joints[idx] = jd;
+                _data.joints[idx].push_back(jd);
             }
 
-            // Inertial
+            // Inertial: explicit element takes priority over geom-derived
             if (auto* ie = elem->FirstChildElement("inertial")) {
-                MJCFInertial inertial;
+                Inertial inertial;
                 ie->QueryFloatAttribute("mass", &inertial.mass);
                 auto pos = splitFloats(ie->Attribute("pos"));
                 if (pos.size() >= 3)
-                    inertial.com = Eigen::Vector3f(pos[0], pos[1], pos[2]);
+                    inertial.com =
+                        Eigen::Vector3f(pos[0], pos[1], pos[2]) * scale;
                 auto quat = splitFloats(ie->Attribute("quat"));
                 if (quat.size() >= 4) {
                     float w = quat[0], x = quat[1], y = quat[2], z = quat[3];
@@ -340,26 +408,44 @@ void MJCFLoader::parse(const std::string& mjcfPath, float /*scale*/,
                 auto di = splitFloats(ie->Attribute("diaginertia"));
                 if (di.size() >= 3)
                     inertial.diagInertia = Eigen::Vector3f(di[0], di[1], di[2]);
-                _inertials[idx] = inertial;
+                _data.inertials[idx] = inertial;
+            } else if (inertiafromgeom && !geomMasses.empty()) {
+                float totalMass = 0.f;
+                Eigen::Vector3f com = Eigen::Vector3f::Zero();
+                for (const auto& gmd : geomMasses) {
+                    totalMass += gmd.mass;
+                    com += gmd.mass * gmd.center;
+                }
+                com /= totalMass;
+
+                Eigen::Vector3f iTotal = Eigen::Vector3f::Zero();
+                for (const auto& gmd : geomMasses) {
+                    Eigen::Vector3f r = gmd.center - com;
+                    iTotal.x() += gmd.iDiag.x() +
+                                  gmd.mass * (r.y() * r.y() + r.z() * r.z());
+                    iTotal.y() += gmd.iDiag.y() +
+                                  gmd.mass * (r.x() * r.x() + r.z() * r.z());
+                    iTotal.z() += gmd.iDiag.z() +
+                                  gmd.mass * (r.x() * r.x() + r.y() * r.y());
+                }
+
+                Inertial inertial;
+                inertial.mass = totalMass;
+                inertial.com = com;
+                inertial.diagInertia = iTotal.cwiseMax(1e-4f);
+                _data.inertials[idx] = inertial;
             }
         });
 
-    _skeletonTree = std::make_shared<const SkeletonTree>(std::move(skelTree));
+    _data.skeletonTree =
+        std::make_shared<const SkeletonTree>(std::move(skelTree));
 }
 
-MJCFData MJCFLoader::load(const std::string& mjcfPath, float scale,
-                          const std::string& order) {
+CharacterData MJCFLoader::load(const std::string& mjcfPath, float scale,
+                               const std::string& order) {
     MJCFLoader loader;
     loader.parse(mjcfPath, scale, order);
-
-    MJCFData data;
-    data.skeletonTree = std::move(loader._skeletonTree);
-    data.meshInfos = std::move(loader._meshInfos);
-    data.meshDir = std::move(loader._meshDir);
-    data.joints = std::move(loader._joints);
-    data.collisionGeoms = std::move(loader._collisionGeoms);
-    data.inertials = std::move(loader._inertials);
-    return data;
+    return std::move(loader._data);
 }
 
 } // namespace Animation

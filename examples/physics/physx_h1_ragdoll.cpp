@@ -15,13 +15,8 @@
 ///   ImGui : PD gains, per-joint target angles, spawn height
 ///
 
-#include "animation/mjcf_loader.hpp"
-#include "bridge/physics_bridge.hpp"
-#include "bridge/skeleton_bridge.hpp"
-#include "foundation/Px.h"
 #include "kangEngine.hpp"
-#include "physics/articulation.hpp"
-#include "physics/physics.hpp"
+#include "foundation/Px.h"
 #include <Eigen/Geometry>
 #include <glm/glm.hpp>
 #include <imgui.h>
@@ -35,131 +30,12 @@ using namespace KE::Bridge;
 using namespace physx;
 
 // ---------------------------------------------------------------------------
-// Shaders
-// ---------------------------------------------------------------------------
-
-static const char* stlVs = R"(
-#version 410 core
-layout(location = 0) in vec3 aPos;
-layout(location = 1) in vec3 aNormal;
-layout(location = 3) in vec4 aInstanceTransform0;
-layout(location = 4) in vec4 aInstanceTransform1;
-layout(location = 5) in vec4 aInstanceTransform2;
-layout(location = 6) in vec4 aInstanceTransform3;
-layout(location = 7) in vec4 aInstanceColor;
-
-layout(std140) uniform cameraUBO {
-    mat4 view;
-    mat4 projection;
-};
-
-out vec3 Normal;
-out vec3 FragPos;
-out vec4 vColor;
-
-void main() {
-    mat4 model = mat4(aInstanceTransform0, aInstanceTransform1,
-                      aInstanceTransform2, aInstanceTransform3);
-    gl_Position = projection * view * model * vec4(aPos, 1.0);
-    FragPos = vec3(view * model * vec4(aPos, 1.0));
-    Normal = mat3(view * model) * aNormal;
-    vColor = aInstanceColor;
-}
-)";
-
-static const char* stlFs = R"(
-#version 410 core
-out vec4 FragColor;
-in vec3 Normal;
-in vec3 FragPos;
-in vec4 vColor;
-
-layout(std140) uniform lightUBO {
-    vec4 lightDir;   // xyz: view-space direction toward light
-    vec4 lightColor; // xyz: color * intensity
-    vec4 ambient;    // xyz: ambient color
-};
-
-void main() {
-    vec3 N = normalize(Normal);
-    vec3 L = normalize(lightDir.xyz);
-    float diff = max(dot(N, L), 0.0);
-    vec3 diffuse = diff * lightColor.rgb * vColor.rgb;
-    float specularStrength = 0.5;
-    vec3 V = normalize(-FragPos);
-    vec3 R = reflect(-L, N);
-    float spec = pow(max(dot(V, R), 0.0), 32);
-    vec3 specular = specularStrength * spec * lightColor.rgb;
-    FragColor = vec4(ambient.rgb * vColor.rgb + diffuse + specular, vColor.a);
-}
-)";
-
-static const char* groundVs = R"(
-#version 410 core
-layout(location = 0) in vec3 aPos;
-layout(location = 1) in vec3 aNormal;
-layout(location = 2) in vec2 aTexCoord;
-layout(location = 3) in vec4 aInstanceTransform0;
-layout(location = 4) in vec4 aInstanceTransform1;
-layout(location = 5) in vec4 aInstanceTransform2;
-layout(location = 6) in vec4 aInstanceTransform3;
-
-layout(std140) uniform cameraUBO {
-    mat4 view;
-    mat4 projection;
-};
-
-out vec2 TexCoord;
-out vec3 Normal;
-out vec3 FragPos;
-
-void main() {
-    mat4 model = mat4(aInstanceTransform0, aInstanceTransform1,
-                      aInstanceTransform2, aInstanceTransform3);
-    gl_Position = projection * view * model * vec4(aPos, 1.0);
-    TexCoord = aTexCoord;
-    FragPos = vec3(view * model * vec4(aPos, 1.0));
-    Normal = mat3(view * model) * aNormal;
-}
-)";
-
-static const char* groundFs = R"(
-#version 410 core
-out vec4 FragColor;
-in vec2 TexCoord;
-in vec3 Normal;
-in vec3 FragPos;
-
-uniform vec4 checkerColor1;
-uniform vec4 checkerColor2;
-
-layout(std140) uniform lightUBO {
-    vec4 lightDir;   // xyz: view-space direction toward light
-    vec4 lightColor; // xyz: color * intensity
-    vec4 ambient;    // xyz: ambient color
-};
-
-float checker(vec2 uv) {
-    return mod(floor(uv.x) + floor(uv.y), 2.0);
-}
-void main() {
-    float t = checker(TexCoord);
-    vec4 col = mix(checkerColor1, checkerColor2, t);
-    vec3 N = normalize(Normal);
-    vec3 L = normalize(lightDir.xyz);
-    float diff = max(dot(N, L), 0.0);
-    vec3 light = ambient.rgb + diff * lightColor.rgb;
-    FragColor = col * vec4(light, 1.0);
-}
-)";
-
-// ---------------------------------------------------------------------------
 // App
 // ---------------------------------------------------------------------------
 
 class H1RagdollApp : public App {
   public:
-    std::unique_ptr<Backend::Shader> stlShader;
+    std::unique_ptr<Backend::Shader> commonShader;
     std::unique_ptr<Backend::Shader> groundShader;
 
     SkeletonBridge robot;
@@ -179,8 +55,15 @@ class H1RagdollApp : public App {
     bool showCollision = false;
     // -----------------------------------------------------------------------
     void setup() override {
-        stlShader = getGraphicsDevice()->createShader(stlVs, stlFs);
-        groundShader = getGraphicsDevice()->createShader(groundVs, groundFs);
+        auto commonVSPath = KE::getAssetPath("shaders/common.vs");
+        auto commonFSPath = KE::getAssetPath("shaders/common.fs");
+        auto groundFSPath = KE::getAssetPath("shaders/checkerboard.fs");
+
+        commonShader = getGraphicsDevice()->createShaderFromFile(commonVSPath,
+                                                                 commonFSPath);
+        groundShader = getGraphicsDevice()->createShaderFromFile(commonVSPath,
+                                                                 groundFSPath);
+
         groundShader->use();
         groundShader->setUniformBlockBinding("cameraUBO", 0);
         groundShader->setUniformBlockBinding("lightUBO", 1);
@@ -190,11 +73,11 @@ class H1RagdollApp : public App {
                               glm::vec4(white.r, white.g, white.b, white.a));
         groundShader->setVec4("checkerColor2",
                               glm::vec4(pG.r, pG.g, pG.b, pG.a));
-        stlShader->use();
-        stlShader->setUniformBlockBinding("cameraUBO", 0);
-        stlShader->setUniformBlockBinding("lightUBO", 1);
+        commonShader->use();
+        commonShader->setUniformBlockBinding("cameraUBO", 0);
+        commonShader->setUniformBlockBinding("lightUBO", 1);
 
-        std::string basePath = "textures/skybox";
+        std::string basePath = "external/skybox";
         setSkybox(KE::getAssetPath(basePath + "/Cubemap_Sky_08-512x512.png")
                   /*{
                     KE::getAssetPath(basePath + "/right.jpg"),
@@ -211,24 +94,27 @@ class H1RagdollApp : public App {
             Scene::Prim::createPlaneData(100.f, UpAxis::Z)));
         addShape(groundShader.get(), gnd);
 
+        // const std::string mjcfPath =
+        //     KE::getAssetPath("external/retargetted/unitree_h1/unitree_h1.xml");
         const std::string mjcfPath =
-            KE::getAssetPath("external/retargetted/unitree_h1/unitree_h1.xml");
+            KE::getAssetPath("external/retargetted/kw/kw5.xml");
         const auto mjcfData = MJCFLoader::load(mjcfPath);
-        robot = SkeletonBridge::fromData(mjcfData, getScene());
-        for (auto* prim : robot.bodyPrims())
-            addShape(stlShader.get(), prim);
-
-        targets.assign(robot.numBodies() - 1, 0.f);
 
         artic = Articulation::build(physics, mjcfData.skeletonTree,
                                     mjcfData.collisionGeoms, mjcfData.joints,
                                     mjcfData.inertials,
                                     ArticulationConfig::freeBase());
-        physicsBridge.registerArticulationVisuals(artic, robot);
 
-        auto colPrims = physicsBridge.buildCollisionVisuals(artic, getScene());
+        robot = SkeletonBridge::fromData(mjcfData, getScene());
+        physicsBridge.add(artic, robot);
+        for (auto* prim : robot.bodyPrims())
+            addShape(commonShader.get(), prim);
+
+        auto colPrims = physicsBridge.addCollisionVisuals(artic, getScene());
         for (auto* p : colPrims)
-            addShape(stlShader.get(), p);
+            addShape(commonShader.get(), p);
+
+        targets.assign(artic.numDofs(), 0.f);
 
         reset();
         checkError();
@@ -254,8 +140,7 @@ class H1RagdollApp : public App {
         if (!paused) {
             artic.setDriveTargets(targets, kp, kd);
             physics.step();
-            physicsBridge.syncAllVisuals();
-            physicsBridge.syncCollisionVisuals();
+            physicsBridge.sync();
         }
 
         checkError();
@@ -263,11 +148,11 @@ class H1RagdollApp : public App {
 
     // -----------------------------------------------------------------------
     void render() override {
-        auto& tree = robot.fk().skeleton();
-        int n = tree.numJoints();
+        int n = artic.numLinks();
 
         ImGui::Begin("H1 Ragdoll");
-        ImGui::Text("Bodies: %d  |  %s", n, paused ? "PAUSED" : "running");
+        ImGui::Text("Bodies: %d  DOFs: %d  |  %s", n, artic.numDofs(),
+                    paused ? "PAUSED" : "running");
         ImGui::Text("Space: pause/resume    R: reset");
         ImGui::Separator();
 
@@ -299,12 +184,14 @@ class H1RagdollApp : public App {
         if (kp >= 1.f) {
             ImGui::Text("Joint targets (rad):");
             ImGui::BeginChild("joints", ImVec2(0, 350), true);
+            int dofIdx = 0;
             for (int i = 1; i < n; i++) {
-                const auto& jd = artic.joints()[i];
-                std::string label =
-                    jd.name.empty() ? tree.nodeName(i) : jd.name;
-                ImGui::SliderFloat(label.c_str(), &targets[i - 1], jd.loLimit,
-                                   jd.hiLimit);
+                auto jit = artic.joints().find(i);
+                if (jit == artic.joints().end())
+                    continue;
+                for (const auto& jd : jit->second)
+                    ImGui::SliderFloat(jd.name.c_str(), &targets[dofIdx++],
+                                       jd.loLimit, jd.hiLimit);
             }
             ImGui::EndChild();
         } else {
@@ -324,27 +211,28 @@ class H1RagdollApp : public App {
                         PxArticulationCacheFlag::eVELOCITY);
 
         ImGui::BeginChild("torques", ImVec2(0, 300), true);
-        for (int i = 1; i < n; i++) {
-            const auto& jd = artic.joints()[i];
-            std::string label = jd.name.empty() ? tree.nodeName(i) : jd.name;
-
-            // float torque = cache->jointSolverForces[i - 1];
-            // float torque = cache->jointForce[i - 1];
-            float currentPos = cache->jointPosition[i - 1];
-            float currentVel = cache->jointVelocity[i - 1];
-
-            // Is this same with physx's implicit pd control?
-            float targetVel = 0.0f; // for fix pose
-            float torque = kp * (targets[i - 1] - currentPos) +
-                           kd * (targetVel - currentVel);
-
-            float bar = (torque + 100.f) / 200.f;
-            bar = std::clamp(bar, 0.f, 1.f);
-            char overlay[64];
-            snprintf(overlay, sizeof(overlay), "%+.1f Nm", torque);
-            ImGui::Text("%s", label.c_str());
-            ImGui::SameLine();
-            ImGui::ProgressBar(bar, ImVec2(-1, 0), overlay);
+        {
+            int dofIdx = 0;
+            for (int i = 1; i < n; i++) {
+                auto jit = artic.joints().find(i);
+                if (jit == artic.joints().end())
+                    continue;
+                for (const auto& jd : jit->second) {
+                    // Is this same with physx's implicit pd control?
+                    float currentPos = cache->jointPosition[dofIdx];
+                    float currentVel = cache->jointVelocity[dofIdx];
+                    float torque = kp * (targets[dofIdx] - currentPos) +
+                                   kd * (0.f - currentVel);
+                    float bar = (torque + 100.f) / 200.f;
+                    bar = std::clamp(bar, 0.f, 1.f);
+                    char overlay[64];
+                    snprintf(overlay, sizeof(overlay), "%+.1f Nm", torque);
+                    ImGui::Text("%s", jd.name.c_str());
+                    ImGui::SameLine();
+                    ImGui::ProgressBar(bar, ImVec2(-1, 0), overlay);
+                    dofIdx++;
+                }
+            }
         }
         cache->release();
         ImGui::EndChild();

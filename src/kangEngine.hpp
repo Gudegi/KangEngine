@@ -22,8 +22,13 @@
 #include "engine/core/window/window.hpp"
 #include "engine/graphics/material/colors.hpp"
 
-#ifndef KANGENGINE_USE_PHYSX
+#include "animation/mjcf_loader.hpp"
+#include "bridge/physics_bridge.hpp"
+#include "bridge/skeleton_bridge.hpp"
+
+#ifdef KANGENGINE_USE_PHYSX
 #include "physics/physics.hpp"
+#include "physics/articulation.hpp"
 #endif
 
 #endif

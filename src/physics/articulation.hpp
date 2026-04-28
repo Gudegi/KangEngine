@@ -1,7 +1,7 @@
 #ifndef _ARTICULATION_HPP_
 #define _ARTICULATION_HPP_
 
-#include "animation/mjcf_loader.hpp"
+#include "animation/character_description.hpp"
 #include "physics.hpp"
 #include <memory>
 #include <string>
@@ -52,7 +52,7 @@ class Articulation {
   private:
     PxArticulationReducedCoordinate* _artic = nullptr;
     std::vector<PxArticulationLink*> _links;
-    std::vector<Animation::Joint> _joints; // indexed by body idx (root unused)
+    Animation::JointMap _joints; // body index -> joints (empty = fixed)
     Animation::CollisionGeomMap _colGeoms;
 
   public:
@@ -64,12 +64,13 @@ class Articulation {
     Articulation(Articulation&&) noexcept;
     Articulation& operator=(Articulation&&) noexcept;
 
-    static Articulation build(PhysicsWorld& physics,
-                              std::shared_ptr<const Animation::SkeletonTree> tree,
-                              const Animation::CollisionGeomMap& colGeoms,
-                              const std::vector<Animation::Joint>& joints,
-                              const Animation::InertialMap& inertials,
-                              const ArticulationConfig& cfg = {});
+    static Articulation
+    build(PhysicsWorld& physics,
+          std::shared_ptr<const Animation::SkeletonTree> tree,
+          const Animation::CollisionGeomMap& colGeoms,
+          const Animation::JointMap& joints,
+          const Animation::InertialMap& inertials,
+          const ArticulationConfig& cfg = {});
 
     void setDriveTargets(const std::vector<float>& targets, float kp, float kd);
     void resetRoot(const PxTransform& pose);
@@ -77,7 +78,13 @@ class Articulation {
     PxArticulationLink* link(int i) const { return _links[i]; }
     int numLinks() const { return static_cast<int>(_links.size()); }
     PxArticulationReducedCoordinate* raw() { return _artic; }
-    const std::vector<Animation::Joint>& joints() const { return _joints; }
+    const Animation::JointMap& joints() const { return _joints; }
+    int numDofs() const {
+        int total = 0;
+        for (const auto& kv : _joints)
+            total += static_cast<int>(kv.second.size());
+        return total;
+    }
 
     // Data accessors for PhysicsBridge
     const std::vector<PxArticulationLink*>& links() const { return _links; }

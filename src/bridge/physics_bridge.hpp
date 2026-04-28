@@ -1,25 +1,33 @@
 ///
 /// PhysicsBridge — syncs PhysX simulation results (pose) to scene Prim visuals.
-/// Also owns collision shape visualization (build + sync + visibility).
+///
+/// Usage:
+///   PhysicsBridge bridge{this};               // App* once at construction
+///   bridge.add(artic, skelBridge);            // single robot (Prim-based)
+///   bridge.addInstanced(artics, handles);     // N robots   (Handle-based)
+///   bridge.addCollisionVisuals(artic, scene); // collision debug (optional)
+///
+///   bridge.sync();                            // once per frame
 ///
 
 #ifndef _PHYSICS_BRIDGE_HPP_
 #define _PHYSICS_BRIDGE_HPP_
 
+#include "engine/graphics/renderer/rasterizer.hpp"
 #include "PxPhysicsAPI.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <glm/mat4x4.hpp>
 #include <string>
 #include <vector>
 
-using namespace physx;
-
 namespace KE {
 
-class Articulation; // forward — defined in physics/articulation.hpp
+class App;          // forward declaration
+class Articulation; // forward declaration
 
 namespace Bridge {
-class SkeletonBridge; // forward — defined in bridge/skeleton_bridge.hpp
+class SkeletonBridge; // forward declaration
 } // namespace Bridge
 
 namespace Scene {
@@ -31,46 +39,49 @@ namespace Bridge {
 
 class PhysicsBridge {
   public:
-    // --- Rigid body sync (skeleton FK visuals) ---
-    struct RigidVisual {
-        PxArticulationLink* link = nullptr;
-        PxRigidDynamic* rigid = nullptr;
-        Scene::Prim* prim = nullptr;
+    explicit PhysicsBridge(App* app = nullptr) : _app(app) {}
+
+    // Single articulation paired with skeleton visuals — Prim-based sync
+    void add(const Articulation& artic, const SkeletonBridge& skelBridge);
+
+    // N identical articulations, one handle per body type — instanced sync
+    void addInstanced(std::vector<Articulation*> artics,
+                      std::vector<MeshHandle> handles);
+
+    // Create one Prim per collision geom. Returns Prims for addShape().
+    // visibleByDefault=false: debug overlay (invisible until toggled)
+    std::vector<Scene::Prim*>
+    addCollisionVisuals(const Articulation& artic, Scene::SceneBackend* scene,
+                        const std::string& basePath = "/collision",
+                        bool visibleByDefault = false);
+
+    // Sync all registered visuals — call once per frame
+    void sync();
+
+    void setCollisionVisible(bool visible);
+
+  private:
+    App* _app = nullptr;
+
+    struct PrimVisual {
+        physx::PxArticulationLink* link;
+        Scene::Prim* prim;
     };
 
-    void registerRigidVisual(const RigidVisual& rv) {
-        _rigidVisuals.push_back(rv);
-    }
+    struct InstancedGroup {
+        std::vector<Articulation*> artics;
+        std::vector<MeshHandle> handles;
+    };
 
-    // Read PhysX poses → write to each Prim's xformOp attributes.
-    void syncAllVisuals();
-
-    // --- Collision shape visualization ---
     struct ColVisual {
-        PxArticulationLink* link = nullptr;
+        physx::PxArticulationLink* link = nullptr;
         Scene::Prim* prim = nullptr;
         glm::vec3 localPos{0.f};
         glm::quat localQuat{1.f, 0.f, 0.f, 0.f};
     };
 
-    // Create one Prim per collision geom from artic. Prims are invisible by
-    // default. Returns created prims so the caller can addShape(shader, prim).
-    std::vector<Scene::Prim*>
-    buildCollisionVisuals(const Articulation& artic, Scene::SceneBackend* scene,
-                          const std::string& basePath = "/collision");
-
-    // Sync collision Prim positions from PhysX link poses.
-    void syncCollisionVisuals();
-
-    void setCollisionVisible(bool visible);
-
-    // Register one RigidVisual per articulation link paired with the
-    // corresponding SkeletonBridge body Prim.
-    void registerArticulationVisuals(const Articulation& artic,
-                                     const SkeletonBridge& skelBridge);
-
-  private:
-    std::vector<RigidVisual> _rigidVisuals;
+    std::vector<PrimVisual> _primVisuals;
+    std::vector<InstancedGroup> _instancedGroups;
     std::vector<ColVisual> _colVisuals;
 };
 

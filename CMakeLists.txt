@@ -180,11 +180,15 @@ target_link_libraries(engine_core PUBLIC pre_compiled_ext)
 #file(GLOB MAIN_FILE "${MAIN_DIR}/test_xml.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physx_drop_box.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/test_prims.cpp")
+#file(GLOB MAIN_FILE "${MAIN_DIR}/physics/xpbd_cloth.cpp")
 
-# Active Physics Examples
+# Active PhysX Examples
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_articulation.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_jointmonkey.cpp")
-file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_ragdoll.cpp")
+#file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_ragdoll.cpp")
+#file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_box_instancing.cpp")
+file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_instancing.cpp")
+
 
 add_executable(${PROJECT_NAME} ${MAIN_FILE})
 target_link_libraries(${PROJECT_NAME} PRIVATE engine_core)

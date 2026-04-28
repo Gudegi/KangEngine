@@ -22,8 +22,8 @@ class SkeletonFK {
     static SkeletonFK fromMJCF(const std::string& mjcfPath, float scale = 1.0f,
                                const std::string& order = "DFS");
 
-    // Build from pre-parsed MJCFData (no extra file I/O).
-    static SkeletonFK fromData(const MJCFData& data, float scale = 1.0f);
+    // Build from pre-parsed CharacterData (no extra file I/O).
+    static SkeletonFK fromData(const CharacterData& data, float scale = 1.0f);
 
     void setJointRotation(int idx, const Eigen::Quaternionf& q);
     void setRootTranslation(const Eigen::Vector3f& t);

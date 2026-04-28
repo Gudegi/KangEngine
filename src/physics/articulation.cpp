@@ -40,9 +40,9 @@ PxQuat mjcfShapeRot(const Eigen::Quaternionf& mjcfQuat) {
 // Creates and attaches PhysX shapes for each MJCF collision geom on the link.
 // Cylinders are approximated as capsules (PhysX has no native cylinder shape).
 void attachCollisionShapes(PxArticulationLink* link, PxMaterial* mat,
-                           const Animation::MJCFCollisionGeom* geoms,
+                           const Animation::CollisionGeom* geoms,
                            std::size_t count) {
-    using Type = Animation::MJCFCollisionGeom::Type;
+    using Type = Animation::CollisionGeom::Type;
     for (std::size_t i = 0; i < count; ++i) {
         const auto& g = geoms[i];
         PxShape* shape = nullptr;
@@ -83,9 +83,8 @@ void attachCollisionShapes(PxArticulationLink* link, PxMaterial* mat,
 }
 
 // Convenience overload accepting a vector of geoms.
-void attachCollisionShapes(
-    PxArticulationLink* link, PxMaterial* mat,
-    const std::vector<Animation::MJCFCollisionGeom>& geoms) {
+void attachCollisionShapes(PxArticulationLink* link, PxMaterial* mat,
+                           const std::vector<Animation::CollisionGeom>& geoms) {
     attachCollisionShapes(link, mat, geoms.data(), geoms.size());
 }
 
@@ -139,8 +138,8 @@ Articulation::~Articulation() {
 Articulation Articulation::build(
     PhysicsWorld& physics, std::shared_ptr<const Animation::SkeletonTree> tree,
     const Animation::CollisionGeomMap& colGeoms,
-    const std::vector<Animation::Joint>& joints,
-    const Animation::InertialMap& inertials, const ArticulationConfig& cfg) {
+    const Animation::JointMap& joints, const Animation::InertialMap& inertials,
+    const ArticulationConfig& cfg) {
     // Compute rest-pose global transforms — no copy, shared_ptr passed
     // directly.
     auto state = Animation::SkeletonState::zeroPose(tree);
@@ -214,18 +213,47 @@ Articulation Articulation::build(
 
         auto* joint = static_cast<PxArticulationJointReducedCoordinate*>(
             artic._links[i]->getInboundJoint());
-        joint->setJointType(PxArticulationJointType::eREVOLUTE);
 
-        const auto& jd = joints[i];
-        PxQuat aq = axisAlignQuat(jd.axis);
-        PxTransform childPose(PxVec3(0.f), aq);
-        PxTransform parentPose =
-            parentWorld.getInverse() * childWorld * childPose;
-        joint->setParentPose(parentPose);
-        joint->setChildPose(childPose);
-        joint->setMotion(PxArticulationAxis::eTWIST,
-                         PxArticulationMotion::eLIMITED);
-        joint->setLimit(PxArticulationAxis::eTWIST, jd.loLimit, jd.hiLimit);
+        auto jit = joints.find(i);
+        int ndof = (jit != joints.end()) ? (int)jit->second.size() : 0;
+
+        if (ndof == 0) {
+            joint->setJointType(PxArticulationJointType::eFIX);
+            PxTransform childPose(PxIdentity);
+            PxTransform parentPose = parentWorld.getInverse() * childWorld;
+            joint->setParentPose(parentPose);
+            joint->setChildPose(childPose);
+        } else if (ndof == 1) {
+            const auto& jd = jit->second[0];
+            joint->setJointType(PxArticulationJointType::eREVOLUTE);
+            PxQuat aq = axisAlignQuat(jd.axis);
+            PxTransform childPose(PxVec3(0.f), aq);
+            PxTransform parentPose =
+                parentWorld.getInverse() * childWorld * childPose;
+            joint->setParentPose(parentPose);
+            joint->setChildPose(childPose);
+            joint->setMotion(PxArticulationAxis::eTWIST,
+                             PxArticulationMotion::eLIMITED);
+            joint->setLimit(PxArticulationAxis::eTWIST, jd.loLimit, jd.hiLimit);
+        } else {
+            // Multiple DOF -> spherical; assumes body-aligned x/y/z axes
+            joint->setJointType(PxArticulationJointType::eSPHERICAL);
+            PxTransform childPose(PxIdentity);
+            PxTransform parentPose = parentWorld.getInverse() * childWorld;
+            joint->setParentPose(parentPose);
+            joint->setChildPose(childPose);
+            for (const auto& jd : jit->second) {
+                PxArticulationAxis::Enum axis;
+                if (jd.axis.isApprox(Eigen::Vector3f::UnitX(), 0.01f))
+                    axis = PxArticulationAxis::eTWIST;
+                else if (jd.axis.isApprox(Eigen::Vector3f::UnitY(), 0.01f))
+                    axis = PxArticulationAxis::eSWING2;
+                else
+                    axis = PxArticulationAxis::eSWING1;
+                joint->setMotion(axis, PxArticulationMotion::eLIMITED);
+                joint->setLimit(axis, jd.loLimit, jd.hiLimit);
+            }
+        }
     }
 
     physics.getScene()->addArticulation(*artic._artic);
@@ -239,11 +267,31 @@ void Articulation::setDriveTargets(const std::vector<float>& targets, float kp,
                               PxArticulationDriveType::eFORCE};
 
     int n = static_cast<int>(_links.size());
+    int dofIdx = 0;
     for (int i = 1; i < n; i++) {
+        auto jit = _joints.find(i);
+        if (jit == _joints.end() || jit->second.empty())
+            continue;
+
         auto* joint = static_cast<PxArticulationJointReducedCoordinate*>(
             _links[i]->getInboundJoint());
-        joint->setDriveParams(PxArticulationAxis::eTWIST, drive);
-        joint->setDriveTarget(PxArticulationAxis::eTWIST, targets[i - 1]);
+
+        for (const auto& jd : jit->second) {
+            if (dofIdx >= static_cast<int>(targets.size()))
+                break;
+            PxArticulationAxis::Enum axis;
+            if (jit->second.size() == 1) {
+                axis = PxArticulationAxis::eTWIST;
+            } else if (jd.axis.isApprox(Eigen::Vector3f::UnitX(), 0.01f)) {
+                axis = PxArticulationAxis::eTWIST;
+            } else if (jd.axis.isApprox(Eigen::Vector3f::UnitY(), 0.01f)) {
+                axis = PxArticulationAxis::eSWING2;
+            } else {
+                axis = PxArticulationAxis::eSWING1;
+            }
+            joint->setDriveParams(axis, drive);
+            joint->setDriveTarget(axis, targets[dofIdx++]);
+        }
     }
 
     if (kp > 0.f && _artic->isSleeping())
