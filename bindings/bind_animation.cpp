@@ -1,6 +1,6 @@
 ///
 /// Animation System Python Bindings
-/// Robot, SkeletonTree, SkeletonState
+/// MJCFLoader, CharacterData, SkeletonTree, SkeletonState, SkeletonBridge
 ///
 
 #include <pybind11/pybind11.h>
@@ -8,12 +8,14 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include "bridge/skeleton_bridge.hpp"
+#include "animation/character_description.hpp"
+#include "animation/mjcf_loader.hpp"
 #include "animation/skeleton_math.hpp"
 #include "animation/skeleton_state.hpp"
 #include "animation/skeleton_tree.hpp"
-#include "engine/scene/scene_backend.hpp"
+#include "bridge/skeleton_bridge.hpp"
 #include "engine/scene/native/prim.hpp"
+#include "engine/scene/scene_backend.hpp"
 
 namespace py = pybind11;
 using namespace KE;
@@ -22,6 +24,38 @@ using namespace KE::Bridge;
 
 void bind_animation(py::module& m) {
     py::module anim = m.def_submodule("animation", "Skeleton animation system");
+
+    // Joint (from character_description.hpp)
+    py::class_<Joint>(anim, "Joint")
+        .def_readonly("name", &Joint::name)
+        .def_readonly("lo_limit", &Joint::loLimit)
+        .def_readonly("hi_limit", &Joint::hiLimit)
+        .def_property_readonly("axis",
+                               [](const Joint& j) { return toGlm(j.axis); });
+
+    // MeshInfo
+    py::class_<MeshInfo>(anim, "MeshInfo")
+        .def_readonly("body_name", &MeshInfo::bodyName)
+        .def_readonly("mesh_file", &MeshInfo::meshFile)
+        .def_readonly("body_index", &MeshInfo::bodyIndex);
+
+    // CharacterData — aggregate returned by MJCFLoader::load()
+    py::class_<CharacterData>(anim, "CharacterData")
+        .def_readonly("skeleton_tree", &CharacterData::skeletonTree)
+        .def_readonly("mesh_infos", &CharacterData::meshInfos)
+        .def_readonly("mesh_dir", &CharacterData::meshDir)
+        // joints: return dict[int, list[Joint]]
+        .def_property_readonly("joints", [](const CharacterData& d) {
+            py::dict result;
+            for (const auto& [idx, jvec] : d.joints)
+                result[py::int_(idx)] = jvec;
+            return result;
+        });
+
+    // MJCFLoader
+    py::class_<MJCFLoader>(anim, "MJCFLoader")
+        .def_static("load", &MJCFLoader::load, py::arg("mjcf_path"),
+                    py::arg("scale") = 1.0f, py::arg("order") = "DFS");
 
     // SkeletonTree (read-only after construction)
     py::class_<SkeletonTree, std::shared_ptr<SkeletonTree>>(anim,
@@ -100,16 +134,18 @@ void bind_animation(py::module& m) {
                  self.setRootTranslation(fromGlm(t));
              })
         .def("reset_to_zero_pose", &SkeletonBridge::resetToZeroPose)
-        .def("skeleton",
-             [](SkeletonBridge& self) -> const SkeletonTree& {
-                 return self.fk().skeleton();
-             },
-             py::return_value_policy::reference_internal)
-        .def("state",
-             [](SkeletonBridge& self) -> SkeletonState& {
-                 return self.fk().state();
-             },
-             py::return_value_policy::reference_internal)
+        .def(
+            "skeleton",
+            [](SkeletonBridge& self) -> const SkeletonTree& {
+                return self.fk().skeleton();
+            },
+            py::return_value_policy::reference_internal)
+        .def(
+            "state",
+            [](SkeletonBridge& self) -> SkeletonState& {
+                return self.fk().state();
+            },
+            py::return_value_policy::reference_internal)
         .def("body_prim", &SkeletonBridge::bodyPrim,
              py::return_value_policy::reference)
         .def("body_prims", &SkeletonBridge::bodyPrims,

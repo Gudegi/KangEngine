@@ -19,6 +19,7 @@ using namespace KE;
 // Forward declarations for submodule bindings
 void bind_scene(py::module& m);
 void bind_animation(py::module& m);
+void bind_physics(py::module& m);
 
 // Trampoline class for App - allows Python to override virtual methods
 class PyApp : public App {
@@ -36,22 +37,21 @@ class PyApp : public App {
 PYBIND11_MODULE(_kangengine, m) {
     m.doc() = "KangEngine Python bindings";
 
-    // Bind scene system first (needed for Scene::BackendType in App.initialize)
-    bind_scene(m);
-    bind_animation(m);
-
-    // UpAxis enum
+    // Enums first — submodule bindings may use them as default arguments
     py::enum_<UpAxis>(m, "UpAxis")
         .value("Y", UpAxis::Y)
         .value("Z", UpAxis::Z)
         .export_values();
 
-    // Backend type enum
     py::enum_<Backend::BackendType>(m, "BackendType")
         .value("OpenGL", Backend::BackendType::OpenGL)
         .value("Vulkan", Backend::BackendType::Vulkan)
         .value("WebGPU", Backend::BackendType::WebGPU)
         .export_values();
+
+    bind_scene(m);
+    bind_animation(m);
+    // bind_physics is called after GLM types are registered (uses glm defaults)
 
     // Backend::Shader
     py::class_<Backend::Shader>(m, "Shader")
@@ -78,7 +78,9 @@ PYBIND11_MODULE(_kangengine, m) {
                  &Backend::Shader::setVec4))
         .def("setMat2", &Backend::Shader::setMat2)
         .def("setMat3", &Backend::Shader::setMat3)
-        .def("setMat4", &Backend::Shader::setMat4);
+        .def("setMat4", &Backend::Shader::setMat4)
+        .def("setUniformBlockBinding", &Backend::Shader::setUniformBlockBinding,
+             py::arg("block_name"), py::arg("binding_point"));
 
     // Backend::Texture
     py::class_<Backend::Texture>(m, "Texture")
@@ -93,6 +95,10 @@ PYBIND11_MODULE(_kangengine, m) {
         .def("createShader",
              py::overload_cast<const std::string&, const std::string&>(
                  &Backend::GraphicsDevice::createShader),
+             py::return_value_policy::take_ownership)
+        .def("createShaderFromFile",
+             &Backend::GraphicsDevice::createShaderFromFile,
+             py::arg("vert_path"), py::arg("frag_path"),
              py::return_value_policy::take_ownership)
         .def("createTexture",
              py::overload_cast<const std::string, bool, float, float, float>(
@@ -137,38 +143,41 @@ py::class_<glm::vec3>(m, "vec3")
         .def(py::init<float, float, float>(), py::arg("x") = 0.0f,
              py::arg("y") = 0.0f, py::arg("z") = 0.0f)
         .def(py::init([](py::handle obj) {
-            // 1. 이미 ke.vec3 타입인 경우
-            if (py::isinstance<glm::vec3>(obj)) {
+            if (py::isinstance<glm::vec3>(obj))
                 return obj.cast<glm::vec3>();
-            }
 
-            // 2. Buffer Protocol (PyGLM, Numpy, etc.) - 가장 빠름
+            // Buffer protocol: numpy (float32 or float64), PyGLM, etc.
             try {
                 if (py::isinstance<py::buffer>(obj)) {
                     auto buf = obj.cast<py::buffer>().request();
                     if (buf.size == 3) {
-                        float* ptr = static_cast<float*>(buf.ptr);
-                        return glm::vec3(ptr[0], ptr[1], ptr[2]);
+                        auto read = [&](int i) -> float {
+                            const char* p = static_cast<const char*>(buf.ptr) +
+                                            i * buf.strides[0];
+                            if (buf.format ==
+                                py::format_descriptor<double>::format())
+                                return static_cast<float>(
+                                    *reinterpret_cast<const double*>(p));
+                            return *reinterpret_cast<const float*>(p);
+                        };
+                        return glm::vec3(read(0), read(1), read(2));
                     }
                 }
             } catch (...) {
             }
 
-            // 3. Attribute 접근 (PyGLM의 일반적인 객체 형태 또는 유저 정의
-            // 객체)
+            // Attribute access (PyGLM objects, etc.)
             if (py::hasattr(obj, "x") && py::hasattr(obj, "y") &&
-                py::hasattr(obj, "z")) {
+                py::hasattr(obj, "z"))
                 return glm::vec3(obj.attr("x").cast<float>(),
                                  obj.attr("y").cast<float>(),
                                  obj.attr("z").cast<float>());
-            }
 
-            // 4. Sequence (List, Tuple)
-            if (py::isinstance<py::sequence>(obj) && py::len(obj) == 3) {
-                auto seq = obj.cast<py::sequence>();
-                return glm::vec3(seq[0].cast<float>(), seq[1].cast<float>(),
-                                 seq[2].cast<float>());
-            }
+            // Sequence fallback (list, tuple, numpy array via __getitem__)
+            if (py::len_hint(obj) == 3)
+                return glm::vec3(obj[py::int_(0)].cast<float>(),
+                                 obj[py::int_(1)].cast<float>(),
+                                 obj[py::int_(2)].cast<float>());
 
             throw py::value_error("Cannot convert input to ke.vec3");
         }))
@@ -412,6 +421,10 @@ py::class_<glm::vec3>(m, "vec3")
 
     py::implicitly_convertible<py::object, glm::mat4>();
 
+    // Physics bindings after GLM types — reset_root uses glm::vec3/quat
+    // defaults
+    bind_physics(m);
+
     // GLM helper functions
     m.def(
         "translate",
@@ -447,6 +460,26 @@ py::class_<glm::vec3>(m, "vec3")
              [](App* self, Backend::Shader* shader, Scene::Prim* prim) {
                  return self->addShape(shader, prim);
              })
+        .def(
+            "updateShapeTransforms",
+            [](App* self, uint32_t handle,
+               const std::vector<glm::mat4>& transforms) {
+                self->updateShapeTransforms(handle, transforms);
+            },
+            py::arg("handle"), py::arg("transforms"))
+        .def(
+            "setShapeColors",
+            [](App* self, uint32_t handle,
+               const std::vector<glm::vec4>& colors) {
+                self->setShapeColors(handle, colors);
+            },
+            py::arg("handle"), py::arg("colors"))
+        .def(
+            "setShapeDoubleSided",
+            [](App* self, uint32_t handle, bool ds) {
+                self->setShapeDoubleSided(handle, ds);
+            },
+            py::arg("handle"), py::arg("double_sided") = true)
         .def("checkError", &App::checkError)
         .def("getCamera", &App::getCamera, py::return_value_policy::reference)
         .def("getViewMatrix", &App::getViewMatrix)

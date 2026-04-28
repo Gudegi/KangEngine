@@ -73,10 +73,11 @@ void bind_scene(py::module& m) {
                             KE::Scene::Prim::createSquareData(scale));
                     })
         .def_static("create_plane_data",
-                    [](float scale) {
+                    [](float scale, KE::UpAxis upAxis) {
                         return std::make_shared<KE::Scene::MeshData>(
-                            KE::Scene::Prim::createPlaneData(scale));
-                    })
+                            KE::Scene::Prim::createPlaneData(scale, upAxis));
+                    },
+                    py::arg("scale"), py::arg("up_axis") = KE::UpAxis::Y)
         .def_static(
             "create_sphere_data",
             [](float radius, int numLongitudes, int numLatitudes) {
