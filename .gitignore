@@ -57,3 +57,4 @@ references
 *.egg-info
 python/kangengine/assets
 assets/external/
+_private
