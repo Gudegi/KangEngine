@@ -1,12 +1,18 @@
 #ifndef _ASSET_PATH_HPP_
 #define _ASSET_PATH_HPP_
 
+#include <cstdlib>
 #include <filesystem>
 #include <string>
 
 namespace KE {
 
 inline std::string getAssetRoot() {
+    if (const char* envRoot = std::getenv("KANGENGINE_ASSETS_ROOT")) {
+        if (envRoot[0] != '\0')
+            return std::string(envRoot);
+    }
+
 #ifdef KANGENGINE_ASSETS_ROOT
     return std::string(KANGENGINE_ASSETS_ROOT);
 #else

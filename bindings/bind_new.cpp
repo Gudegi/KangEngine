@@ -11,6 +11,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <GLFW/glfw3.h>
+#include <imgui.h>
 #include <iomanip>
 
 namespace py = pybind11;
@@ -34,6 +36,146 @@ class PyApp : public App {
     }
 };
 
+void bind_imgui(py::module& m) {
+    py::module imgui =
+        m.def_submodule("imgui", "Small Dear ImGui wrapper for Python apps");
+
+    imgui.def("begin", [](const std::string& name) {
+        return ImGui::Begin(name.c_str());
+    });
+    imgui.def("end", []() { ImGui::End(); });
+    imgui.def(
+        "begin_child",
+        [](const std::string& id, float width, float height, bool border) {
+            return ImGui::BeginChild(id.c_str(), ImVec2(width, height), border);
+        },
+        py::arg("id"), py::arg("width") = 0.0f, py::arg("height") = 0.0f,
+        py::arg("border") = false);
+    imgui.def("end_child", []() { ImGui::EndChild(); });
+    imgui.def("text", [](const std::string& text) {
+        ImGui::TextUnformatted(text.c_str());
+    });
+    imgui.def("text_disabled", [](const std::string& text) {
+        ImGui::TextDisabled("%s", text.c_str());
+    });
+    imgui.def("separator", []() { ImGui::Separator(); });
+    imgui.def("same_line", []() { ImGui::SameLine(); });
+    imgui.def("button", [](const std::string& label) {
+        return ImGui::Button(label.c_str());
+    });
+    imgui.def(
+        "checkbox",
+        [](const std::string& label, bool value) {
+            bool v = value;
+            bool changed = ImGui::Checkbox(label.c_str(), &v);
+            return py::make_tuple(changed, v);
+        },
+        py::arg("label"), py::arg("value"));
+    imgui.def(
+        "slider_float",
+        [](const std::string& label, float value, float min, float max) {
+            float v = value;
+            bool changed = ImGui::SliderFloat(label.c_str(), &v, min, max);
+            return py::make_tuple(changed, v);
+        },
+        py::arg("label"), py::arg("value"), py::arg("min"), py::arg("max"));
+    imgui.def(
+        "progress_bar",
+        [](float fraction, float width, float height,
+           const std::string& overlay) {
+            ImGui::ProgressBar(fraction, ImVec2(width, height),
+                               overlay.empty() ? nullptr : overlay.c_str());
+        },
+        py::arg("fraction"), py::arg("width") = -1.0f, py::arg("height") = 0.0f,
+        py::arg("overlay") = "");
+}
+
+void bind_keys(py::module& m) {
+    py::module keys = m.def_submodule("keys", "GLFW keyboard key constants");
+
+    keys.attr("SPACE") = GLFW_KEY_SPACE;
+    keys.attr("APOSTROPHE") = GLFW_KEY_APOSTROPHE;
+    keys.attr("COMMA") = GLFW_KEY_COMMA;
+    keys.attr("MINUS") = GLFW_KEY_MINUS;
+    keys.attr("PERIOD") = GLFW_KEY_PERIOD;
+    keys.attr("SLASH") = GLFW_KEY_SLASH;
+    keys.attr("SEMICOLON") = GLFW_KEY_SEMICOLON;
+    keys.attr("EQUAL") = GLFW_KEY_EQUAL;
+    keys.attr("LEFT_BRACKET") = GLFW_KEY_LEFT_BRACKET;
+    keys.attr("BACKSLASH") = GLFW_KEY_BACKSLASH;
+    keys.attr("RIGHT_BRACKET") = GLFW_KEY_RIGHT_BRACKET;
+    keys.attr("GRAVE_ACCENT") = GLFW_KEY_GRAVE_ACCENT;
+    keys.attr("WORLD_1") = GLFW_KEY_WORLD_1;
+    keys.attr("WORLD_2") = GLFW_KEY_WORLD_2;
+
+    keys.attr("NUM_0") = GLFW_KEY_0;
+    keys.attr("NUM_1") = GLFW_KEY_1;
+    keys.attr("NUM_2") = GLFW_KEY_2;
+    keys.attr("NUM_3") = GLFW_KEY_3;
+    keys.attr("NUM_4") = GLFW_KEY_4;
+    keys.attr("NUM_5") = GLFW_KEY_5;
+    keys.attr("NUM_6") = GLFW_KEY_6;
+    keys.attr("NUM_7") = GLFW_KEY_7;
+    keys.attr("NUM_8") = GLFW_KEY_8;
+    keys.attr("NUM_9") = GLFW_KEY_9;
+
+    for (char c = 'A'; c <= 'Z'; ++c) {
+        keys.attr(std::string(1, c).c_str()) = GLFW_KEY_A + (c - 'A');
+    }
+
+    keys.attr("ESCAPE") = GLFW_KEY_ESCAPE;
+    keys.attr("ENTER") = GLFW_KEY_ENTER;
+    keys.attr("TAB") = GLFW_KEY_TAB;
+    keys.attr("BACKSPACE") = GLFW_KEY_BACKSPACE;
+    keys.attr("INSERT") = GLFW_KEY_INSERT;
+    keys.attr("DELETE") = GLFW_KEY_DELETE;
+    keys.attr("RIGHT") = GLFW_KEY_RIGHT;
+    keys.attr("LEFT") = GLFW_KEY_LEFT;
+    keys.attr("DOWN") = GLFW_KEY_DOWN;
+    keys.attr("UP") = GLFW_KEY_UP;
+    keys.attr("PAGE_UP") = GLFW_KEY_PAGE_UP;
+    keys.attr("PAGE_DOWN") = GLFW_KEY_PAGE_DOWN;
+    keys.attr("HOME") = GLFW_KEY_HOME;
+    keys.attr("END") = GLFW_KEY_END;
+    keys.attr("CAPS_LOCK") = GLFW_KEY_CAPS_LOCK;
+    keys.attr("SCROLL_LOCK") = GLFW_KEY_SCROLL_LOCK;
+    keys.attr("NUM_LOCK") = GLFW_KEY_NUM_LOCK;
+    keys.attr("PRINT_SCREEN") = GLFW_KEY_PRINT_SCREEN;
+    keys.attr("PAUSE") = GLFW_KEY_PAUSE;
+
+    for (int i = 1; i <= 25; ++i) {
+        keys.attr(("F" + std::to_string(i)).c_str()) = GLFW_KEY_F1 + (i - 1);
+    }
+
+    keys.attr("KP_0") = GLFW_KEY_KP_0;
+    keys.attr("KP_1") = GLFW_KEY_KP_1;
+    keys.attr("KP_2") = GLFW_KEY_KP_2;
+    keys.attr("KP_3") = GLFW_KEY_KP_3;
+    keys.attr("KP_4") = GLFW_KEY_KP_4;
+    keys.attr("KP_5") = GLFW_KEY_KP_5;
+    keys.attr("KP_6") = GLFW_KEY_KP_6;
+    keys.attr("KP_7") = GLFW_KEY_KP_7;
+    keys.attr("KP_8") = GLFW_KEY_KP_8;
+    keys.attr("KP_9") = GLFW_KEY_KP_9;
+    keys.attr("KP_DECIMAL") = GLFW_KEY_KP_DECIMAL;
+    keys.attr("KP_DIVIDE") = GLFW_KEY_KP_DIVIDE;
+    keys.attr("KP_MULTIPLY") = GLFW_KEY_KP_MULTIPLY;
+    keys.attr("KP_SUBTRACT") = GLFW_KEY_KP_SUBTRACT;
+    keys.attr("KP_ADD") = GLFW_KEY_KP_ADD;
+    keys.attr("KP_ENTER") = GLFW_KEY_KP_ENTER;
+    keys.attr("KP_EQUAL") = GLFW_KEY_KP_EQUAL;
+
+    keys.attr("LEFT_SHIFT") = GLFW_KEY_LEFT_SHIFT;
+    keys.attr("LEFT_CONTROL") = GLFW_KEY_LEFT_CONTROL;
+    keys.attr("LEFT_ALT") = GLFW_KEY_LEFT_ALT;
+    keys.attr("LEFT_SUPER") = GLFW_KEY_LEFT_SUPER;
+    keys.attr("RIGHT_SHIFT") = GLFW_KEY_RIGHT_SHIFT;
+    keys.attr("RIGHT_CONTROL") = GLFW_KEY_RIGHT_CONTROL;
+    keys.attr("RIGHT_ALT") = GLFW_KEY_RIGHT_ALT;
+    keys.attr("RIGHT_SUPER") = GLFW_KEY_RIGHT_SUPER;
+    keys.attr("MENU") = GLFW_KEY_MENU;
+}
+
 PYBIND11_MODULE(_kangengine, m) {
     m.doc() = "KangEngine Python bindings";
 
@@ -51,6 +193,8 @@ PYBIND11_MODULE(_kangengine, m) {
 
     bind_scene(m);
     bind_animation(m);
+    bind_imgui(m);
+    bind_keys(m);
     // bind_physics is called after GLM types are registered (uses glm defaults)
 
     // Backend::Shader
@@ -481,6 +625,12 @@ py::class_<glm::vec3>(m, "vec3")
             },
             py::arg("handle"), py::arg("double_sided") = true)
         .def("checkError", &App::checkError)
+        .def(
+            "is_key_pressed",
+            [](App& self, int key) {
+                return glfwGetKey(self.getWindow(), key) == GLFW_PRESS;
+            },
+            py::arg("key"))
         .def("getCamera", &App::getCamera, py::return_value_policy::reference)
         .def("getViewMatrix", &App::getViewMatrix)
         .def("getProjectionMatrix", &App::getProjectionMatrix)

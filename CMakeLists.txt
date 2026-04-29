@@ -211,7 +211,8 @@ file(CREATE_LINK
 # Python Module for pybind11
 if(IS_PYTHON_LIB)
     set(PYTHON_MODULE_NAME "_kangengine")
-    set(PYTHON_DL_DIR "${CMAKE_SOURCE_DIR}/python/${PROJECT_NAME}")
+    set(PYTHON_PACKAGE_NAME "kangengine")
+    set(PYTHON_DL_DIR "${CMAKE_SOURCE_DIR}/python/${PYTHON_PACKAGE_NAME}")
     #file(GLOB_RECURSE PYBIND_SOURCE_FILES "${BIND_DIR}/*.cpp")
     file(GLOB PYBIND_SOURCE_FILES
         "${BIND_DIR}/bind_new.cpp"
@@ -245,9 +246,14 @@ if(IS_PYTHON_LIB)
     )
 
     set(PYTHON_ASSETS_DIR "${PYTHON_DL_DIR}/assets")
-    if(NOT EXISTS "${PYTHON_ASSETS_DIR}")
-        file(CREATE_LINK "${ASSETS_DIR}" "${PYTHON_ASSETS_DIR}" SYMBOLIC)
+    if(EXISTS "${PYTHON_ASSETS_DIR}" OR IS_SYMLINK "${PYTHON_ASSETS_DIR}")
+        file(REMOVE_RECURSE "${PYTHON_ASSETS_DIR}")
     endif()
+    file(MAKE_DIRECTORY "${PYTHON_ASSETS_DIR}")
+    file(COPY "${ASSETS_DIR}/"
+        DESTINATION "${PYTHON_ASSETS_DIR}"
+        PATTERN ".git" EXCLUDE
+    )
     #add_custom_command(TARGET ${PYTHON_MODULE_NAME} POST_BUILD
     #    COMMAND ${CMAKE_COMMAND} -E copy_directory
     #    "${ASSETS_DIR}" "PYTHON_ASSETS_DIR"

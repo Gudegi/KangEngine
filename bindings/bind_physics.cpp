@@ -78,6 +78,7 @@ void bind_physics(py::module& m) {
             py::arg("cfg") = ArticulationConfig{})
         .def("num_links", &Articulation::numLinks)
         .def("num_dofs", &Articulation::numDofs)
+        .def("release", &Articulation::release)
         .def("set_drive_targets", &Articulation::setDriveTargets,
              py::arg("targets"), py::arg("kp"), py::arg("kd"))
         .def(

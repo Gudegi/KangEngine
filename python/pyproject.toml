@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "kangengine"
 version = "0.1.0"
@@ -5,3 +9,13 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
+
+[tool.setuptools]
+packages = ["kangengine"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+kangengine = [
+    "_kangengine.so",
+    "assets/**/*",
+]

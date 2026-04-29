@@ -1,0 +1,2 @@
+recursive-include kangengine/assets *
+include kangengine/_kangengine.so
