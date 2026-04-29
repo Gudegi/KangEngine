@@ -119,8 +119,7 @@ Articulation::Articulation(Articulation&& o) noexcept
 
 Articulation& Articulation::operator=(Articulation&& o) noexcept {
     if (this != &o) {
-        if (_artic)
-            _artic->release();
+        release();
         _artic = o._artic;
         _links = std::move(o._links);
         _joints = std::move(o._joints);
@@ -130,9 +129,16 @@ Articulation& Articulation::operator=(Articulation&& o) noexcept {
     return *this;
 }
 
-Articulation::~Articulation() {
-    if (_artic)
+Articulation::~Articulation() { release(); }
+
+void Articulation::release() {
+    if (_artic) {
         _artic->release();
+        _artic = nullptr;
+    }
+    _links.clear();
+    _joints.clear();
+    _colGeoms.clear();
 }
 
 Articulation Articulation::build(

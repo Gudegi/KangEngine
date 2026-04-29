@@ -72,6 +72,7 @@ class Articulation {
           const Animation::InertialMap& inertials,
           const ArticulationConfig& cfg = {});
 
+    void release();
     void setDriveTargets(const std::vector<float>& targets, float kp, float kd);
     void resetRoot(const PxTransform& pose);
 
