@@ -111,6 +111,8 @@ class App {
 
     //////
     void start();
+    void renderFrameOnce();
+    bool shouldClose();
     virtual void setup() {}      // 처음에 사용
     virtual void preRender() {}  // 루프 안에서 사용됨. 렌더 전에 사용
     virtual void render() {}     // overrideable 실제 렌더링
@@ -136,6 +138,9 @@ class App {
                                      int mods);
 
     Scene::SceneBackend* getScene() { return _scene.get(); }
+    Backend::Framebuffer* getShadowFbo() {
+        return _rasterizer ? _rasterizer->getShadowFbo() : nullptr;
+    }
 
     MeshHandle addShape(Backend::Shader* shader, Scene::Prim* prim);
     MeshHandle addShape(PhongMaterial* material, Scene::Prim* prim);

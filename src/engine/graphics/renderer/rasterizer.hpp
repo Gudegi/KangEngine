@@ -7,6 +7,7 @@
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "engine/graphics/material/material.hpp"
+#include "engine/graphics/camera/camera.hpp"
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -63,8 +64,23 @@ class Rasterizer : public Renderer {
 
     std::unique_ptr<Backend::Buffer> _cameraUBO;
     std::unique_ptr<Backend::Buffer> _lightUBO;
+    std::unique_ptr<Backend::Buffer> _shadowUBO;
     DirectionalLight _light;
     bool _lightDirty = true;
+
+    std::unique_ptr<Backend::Framebuffer> _shadowFbo; // depth-only
+    int _shadowMapWH = 2048;
+    std::unique_ptr<Backend::Shader> _shadowShader;
+    float _shadowRadius = 3.0f;
+    float _shadowExtents = 10.0f; // 0 = shadow disabled
+    glm::mat4 _lightSpaceMatrix{1.f};
+    Backend::Texture* _shadowMap = nullptr;
+
+    // shadow
+    void updateShadowUBO(float activeExtents);
+    void setShadowMap(Backend::Texture* tex, const glm::mat4& lightSpaceMat,
+                      float radius, float extents);
+    void drawShadowCasters();
 
   public:
     Rasterizer(Backend::GraphicsDevice* graphicsDevice);
@@ -74,6 +90,16 @@ class Rasterizer : public Renderer {
         _lightDirty = true;
     }
     const DirectionalLight& getLight() const { return _light; }
+
+    // shadow
+    void setShadowExtents(float extents) {
+        _shadowExtents = std::max(0.0f, extents);
+    }
+    float getShadowExtents() const { return _shadowExtents; }
+    void renderShadowMap(Camera& camera, UpAxis upAxis, int viewportWidth,
+                         int viewportHeight);
+    glm::mat4 computeLightSpaceMatrix(Camera& camera, const UpAxis upAxis);
+    Backend::Framebuffer* getShadowFbo() { return _shadowFbo.get(); }
 
     MeshHandle addShape(Backend::Shader* shader, Scene::Prim* prim);
     MeshHandle addShape(PhongMaterial* material, Scene::Prim* prim);
@@ -88,7 +114,8 @@ class Rasterizer : public Renderer {
 
     // Disable back-face culling for this instancer (e.g. cloth, thin surfaces).
     void setShapeDoubleSided(MeshHandle handle, bool doubleSided = true);
-    void setShapeTexture(MeshHandle handle, Backend::Texture* tex, int slot = 0);
+    void setShapeTexture(MeshHandle handle, Backend::Texture* tex,
+                         int slot = 0);
 
     // Deformable mesh: update vertex positions + normals each frame.
     void updateMeshGeometry(MeshHandle handle,
@@ -103,6 +130,7 @@ class Rasterizer : public Renderer {
         _graphicsDevice->setSkybox(paths, upAxis);
     }
 
+    void updateFrameData(const glm::mat4& view, const glm::mat4& proj);
     void render(const glm::mat4& view, const glm::mat4& proj) override;
 };
 

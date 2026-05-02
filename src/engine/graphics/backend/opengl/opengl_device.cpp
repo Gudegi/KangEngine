@@ -77,6 +77,15 @@ OpenGLShader::OpenGLShader(const ShaderDesc& desc) : _name(desc.name) {
 
     _shaderProgram = link(vertexShader, fragmentShader);
 
+    auto bindUniformBlockIfPresent = [&](const char* blockName, int slot) {
+        GLuint blockIndex = glGetUniformBlockIndex(_shaderProgram, blockName);
+        if (blockIndex != GL_INVALID_INDEX)
+            glUniformBlockBinding(_shaderProgram, blockIndex, slot);
+    };
+    bindUniformBlockIfPresent("cameraUBO", 0);
+    bindUniformBlockIfPresent("lightUBO", 1);
+    bindUniformBlockIfPresent("shadowUBO", 2);
+
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 }
@@ -288,6 +297,28 @@ OpenGLTexture::OpenGLTexture(int w, int h)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+OpenGLTexture::OpenGLTexture(int w, int h, bool stencil)
+    : _width(w), _height(h), _channels(1) {
+    GLenum internalFmt = stencil ? GL_DEPTH24_STENCIL8 : GL_DEPTH_COMPONENT32;
+    GLenum baseFmt = stencil ? GL_DEPTH_STENCIL : GL_DEPTH_COMPONENT;
+    GLenum dataType = stencil ? GL_UNSIGNED_INT_24_8 : GL_FLOAT;
+    glGenTextures(1, &_textureID);
+    glBindTexture(GL_TEXTURE_2D, _textureID);
+    glTexImage2D(GL_TEXTURE_2D, 0, internalFmt, w, h, 0, baseFmt, dataType,
+                 nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    // Swizzle R>RGB: ImGui::Image displays as grayscale.
+    // PCF only reads .r (= GL_RED = depth), unaffected.
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_RED);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_RED);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_RED);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ONE);
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -588,29 +619,25 @@ OpenGLFramebuffer::OpenGLFramebuffer(const FramebufferDesc& desc)
     glGenFramebuffers(1, &_fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, _fbo);
 
-    // color texture (GL_RGB)
-    _colorTexObj = std::make_unique<OpenGLTexture>(_desc.width, _desc.height);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                           _colorTexObj->getHandle(), 0);
+    if (!_desc.depthOnly) {
+        // color texture (GL_RGB)
+        _colorTexObj =
+            std::make_unique<OpenGLTexture>(_desc.width, _desc.height);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                               GL_TEXTURE_2D, _colorTexObj->getHandle(), 0);
+    } else {
+        // depth-only FBO (shadow map): no color writes or reads
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+    }
 
     // depth (or depth+stencil) texture — required for shadow map sampling
-    // stencil=true: GL_DEPTH24_STENCIL8 + GL_DEPTH_STENCIL_ATTACHMENT
-    // stencil=false: GL_DEPTH_COMPONENT32 + GL_DEPTH_ATTACHMENT
-    GLenum depthFmt =
-        _desc.stencil ? GL_DEPTH24_STENCIL8 : GL_DEPTH_COMPONENT32;
     GLenum depthAtt =
         _desc.stencil ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT;
-    GLenum depthBase = _desc.stencil ? GL_DEPTH_STENCIL : GL_DEPTH_COMPONENT;
-    GLenum depthType = _desc.stencil ? GL_UNSIGNED_INT_24_8 : GL_FLOAT;
-
-    glGenTextures(1, &_depthTex);
-    glBindTexture(GL_TEXTURE_2D, _depthTex);
-    glTexImage2D(GL_TEXTURE_2D, 0, depthFmt, _desc.width, _desc.height, 0,
-                 depthBase, depthType, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, depthAtt, GL_TEXTURE_2D, _depthTex,
-                           0);
+    _depthTexObj = std::make_unique<OpenGLTexture>(_desc.width, _desc.height,
+                                                   _desc.stencil);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, depthAtt, GL_TEXTURE_2D,
+                           _depthTexObj->getHandle(), 0);
 
     // [SIMPLE RBO] depth+stencil renderbuffer (faster, but no shader sampling)
     // GLuint rbo;
@@ -670,8 +697,6 @@ OpenGLFramebuffer::~OpenGLFramebuffer() {
         glDeleteRenderbuffers(1, &_msaaColorRbo);
     if (_msaaDepthRbo)
         glDeleteRenderbuffers(1, &_msaaDepthRbo);
-    if (_depthTex)
-        glDeleteTextures(1, &_depthTex);
     if (_fbo)
         glDeleteFramebuffers(1, &_fbo);
 }
@@ -698,10 +723,12 @@ void OpenGLFramebuffer::resize(int w, int h) {
     _desc.height = h;
 
     // Resize texture FBO attachments
-    glBindTexture(GL_TEXTURE_2D, _colorTexObj->getHandle());
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE,
-                 nullptr);
-    glBindTexture(GL_TEXTURE_2D, _depthTex);
+    if (!_desc.depthOnly) {
+        glBindTexture(GL_TEXTURE_2D, _colorTexObj->getHandle());
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB,
+                     GL_UNSIGNED_BYTE, nullptr);
+    }
+    glBindTexture(GL_TEXTURE_2D, _depthTexObj->getHandle());
     {
         GLenum depthFmt =
             _desc.stencil ? GL_DEPTH24_STENCIL8 : GL_DEPTH_COMPONENT32;
@@ -734,9 +761,7 @@ void OpenGLFramebuffer::blitToScreen(int scrWidth, int scrHeight) {
 }
 
 Texture* OpenGLFramebuffer::getColorTexture() { return _colorTexObj.get(); }
-Texture* OpenGLFramebuffer::getDepthTexture() {
-    return nullptr;
-} // TODO: wrap _depthTex
+Texture* OpenGLFramebuffer::getDepthTexture() { return _depthTexObj.get(); }
 Texture* OpenGLFramebuffer::getStencilTexture() { return nullptr; }
 Texture* OpenGLFramebuffer::getDepthStencilTexture() { return nullptr; }
 

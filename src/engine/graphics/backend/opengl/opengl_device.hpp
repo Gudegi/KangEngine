@@ -6,6 +6,7 @@
 #define _OPENGL_DEVICE_HPP_
 
 #include <cstddef>
+#include <cstdint>
 #include <glad/glad.h>
 #include <memory>
 #include "../base/graphics_device.hpp"
@@ -87,6 +88,8 @@ class OpenGLTexture : public Texture {
                   float filterMinParam, float filterMaxParam);
     // Empty RGB texture for FBO color attachment
     OpenGLTexture(int w, int h);
+    // Depth (or depth+stencil) texture for FBO attachment
+    OpenGLTexture(int w, int h, bool stencil);
     ~OpenGLTexture() override;
 
     void bind(int slot = 0) override;
@@ -97,6 +100,9 @@ class OpenGLTexture : public Texture {
     int getWidth() const override { return _width; }
     int getHeight() const override { return _height; }
     GLuint getHandle() const { return _textureID; }
+    uintptr_t getNativeHandle() const override {
+        return static_cast<uintptr_t>(_textureID);
+    }
 };
 
 class OpenGLVertexArray : public VertexArray {
@@ -119,7 +125,8 @@ class OpenGLFramebuffer : public Framebuffer {
     // --- Texture FBO (non-MSAA scene FBO) ---
     GLuint _fbo = 0;
     std::unique_ptr<OpenGLTexture> _colorTexObj; // GL_RGB color texture
-    GLuint _depthTex = 0; // GL_DEPTH_COMPONENT32 depth texture
+    std::unique_ptr<OpenGLTexture>
+        _depthTexObj; // depth (or depth+stencil) texture
 
     // --- [SIMPLE RBO] non-MSAA depth+stencil renderbuffer ---
     // GLuint _rbo = 0; // GL_DEPTH24_STENCIL8

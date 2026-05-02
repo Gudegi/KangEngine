@@ -8,12 +8,14 @@
 #include "utils/glm_utils.hpp"
 #include "utils/print_debug.hpp"
 #include "utils/asset_path.hpp"
+#include "utils/types.hpp"
 #include <chrono>
 #include <string>
 #include <exception>
 #include <fmt/base.h>
 #include <glm/fwd.hpp>
 #include <glm/geometric.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <memory>
 #include <optional>
 #include <thread>
@@ -155,11 +157,9 @@ void App::start() {
     GLFWwindow* window = _window.getGlfwWindow();
     while (!glfwWindowShouldClose(window)) {
         float currentFrame = static_cast<float>(glfwGetTime());
-        _renderVariable->deltaTime =
-            currentFrame - _renderVariable->lastFrameTime;
-
-        if (_renderVariable->deltaTime < _renderHz) {
-            float remaining = _renderHz - _renderVariable->deltaTime;
+        float deltaTime = currentFrame - _renderVariable->lastFrameTime;
+        if (deltaTime < _renderHz) {
+            float remaining = _renderHz - deltaTime;
             if (remaining > 0.002f) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(
                     static_cast<int>((remaining - 0.001f) * 1000)));
@@ -167,45 +167,65 @@ void App::start() {
             glfwPollEvents();
             continue;
         }
-
-        _renderVariable->lastFrameTime = currentFrame;
-        processInput();
-        _viewMatrix = _camera.getViewMatrix();
-        _projectionMatrix = _camera.getProjMatrix();
-
-        // ImGui::NewFrame() must come before any ImGui widget calls
-        if (!_hideUI) {
-            _panelManager.preRender();
-        }
-
-        // Scene pass: render into FBO (MSAA if enabled)
-        _framebuffer->bind();
-        _graphicsDevice->clear(0.2f, 0.3f, 0.3f, 1.0f);
-        this->preRender();
-        coreRender(); // records ImGui widgets, no GL ImGui draw yet
-        this->render();
-        _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
-        _framebuffer->resolve();
-        _framebuffer->unbind();
-
-        if (_postProcessor) {
-            _postProcessor->process(_framebuffer->getColorTexture(), _gamma);
-            _postProcessor->blitToScreen(_width, _height);
-        } else {
-            _framebuffer->blitToScreen(_width, _height);
-        }
-
-        // default framebuffer
-        if (!_hideUI) {
-            _panelManager.render();
-            _panelManager.postRender();
-        }
-        this->postRender();
-        glfwSwapBuffers(window);
-        glfwPollEvents();
+        renderFrameOnce();
     }
     glfwDestroyWindow(window);
     glfwTerminate();
+}
+
+bool App::shouldClose() {
+    GLFWwindow* window = _window.getGlfwWindow();
+    return window == nullptr || glfwWindowShouldClose(window);
+}
+
+void App::renderFrameOnce() {
+    GLFWwindow* window = _window.getGlfwWindow();
+    if (window == nullptr || glfwWindowShouldClose(window))
+        return;
+
+    float currentFrame = static_cast<float>(glfwGetTime());
+    _renderVariable->deltaTime = currentFrame - _renderVariable->lastFrameTime;
+    _renderVariable->lastFrameTime = currentFrame;
+
+    processInput();
+    _viewMatrix = _camera.getViewMatrix();
+    _projectionMatrix = _camera.getProjMatrix();
+
+    // ImGui::NewFrame() must come before any ImGui widget calls
+    if (!_hideUI) {
+        _panelManager.preRender();
+    }
+
+    this->preRender();
+    if (_rasterizer) {
+        _rasterizer->updateFrameData(_viewMatrix, _projectionMatrix);
+        _rasterizer->renderShadowMap(_camera, _upAxis, _width, _height);
+    }
+
+    // Scene pass: render into FBO (MSAA if enabled)
+    _framebuffer->bind();
+    _graphicsDevice->clear(0.2f, 0.3f, 0.3f, 1.0f);
+    coreRender(); // records ImGui widgets, no GL ImGui draw yet
+    this->render();
+    _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
+    _framebuffer->resolve();
+    _framebuffer->unbind();
+
+    if (_postProcessor) {
+        _postProcessor->process(_framebuffer->getColorTexture(), _gamma);
+        _postProcessor->blitToScreen(_width, _height);
+    } else {
+        _framebuffer->blitToScreen(_width, _height);
+    }
+
+    // default framebuffer
+    if (!_hideUI) {
+        _panelManager.render();
+        _panelManager.postRender();
+    }
+    this->postRender();
+    glfwSwapBuffers(window);
+    glfwPollEvents();
 }
 
 void App::setRenderHz(float renderHz) {
@@ -218,6 +238,30 @@ void App::coreRender() {
     if (!_hideUI) {
         ImGui::Checkbox("Wireframe", &_renderWireframe);
         ImGui::SliderFloat("GammaCorrection", &_gamma, 0.f, 5.f);
+        if (_rasterizer) {
+            float extents = _rasterizer->getShadowExtents();
+            if (ImGui::SliderFloat("Shadow Extents (Set 0 to disable shadow)",
+                                   &extents, 0.0f, 100.0f)) {
+                _rasterizer->setShadowExtents(extents);
+            }
+
+            auto* shadowFbo =
+                _rasterizer ? _rasterizer->getShadowFbo() : nullptr;
+            if (shadowFbo) {
+                auto* depthTex = shadowFbo->getDepthTexture();
+                if (depthTex) {
+                    ImGui::Begin("Shadow Map");
+                    ImGui::Text("%dx%d", depthTex->getWidth(),
+                                depthTex->getHeight());
+                    ImGui::Image(
+                        (ImTextureID)(uintptr_t)depthTex->getNativeHandle(),
+                        ImVec2(128, 128), ImVec2(0, 1),
+                        ImVec2(1,
+                               0)); // flip Y: GL bottom-left -> ImGui top-left
+                    ImGui::End();
+                }
+            }
+        }
     }
 
     if (_renderWireframe == true) {

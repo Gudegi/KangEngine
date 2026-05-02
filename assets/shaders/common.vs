@@ -15,14 +15,19 @@ layout(std140) uniform cameraUBO {
 
 out vec3 Normal;
 out vec3 FragPos;
+out vec3 WorldPos;
+out vec3 WorldNormal;
 out vec2 TexCoord;
 out vec4 vColor;
 
 void main() {
     mat4 model = mat4(aInstanceTransform0, aInstanceTransform1, aInstanceTransform2, aInstanceTransform3);
-    gl_Position = projection * view * model * vec4(aPos, 1.0);
-    FragPos = vec3(view * model * vec4(aPos, 1.0));
+    vec4 worldPos4 = model * vec4(aPos, 1.0);
+    gl_Position = projection * view * worldPos4;
+    FragPos = vec3(view * worldPos4);
     Normal = mat3(view * model) * aNormal;
+    WorldPos = vec3(worldPos4);
+    WorldNormal = normalize(mat3(model) * aNormal);
     TexCoord = aTexCoord;
     vColor = aInstanceColor;
 }
