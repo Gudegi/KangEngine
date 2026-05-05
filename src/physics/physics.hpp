@@ -44,6 +44,7 @@ class PhysicsWorld {
     PxPhysics* _physics = nullptr;
     PxScene* _scene = nullptr;
     PxMaterial* _material = nullptr;
+    PxDefaultCpuDispatcher* _dispatcher = nullptr;
 
     float _dt;
     UpAxis _upAxis;
@@ -67,7 +68,8 @@ class PhysicsWorld {
 
         PxSceneDesc sceneDesc(_physics->getTolerancesScale());
         sceneDesc.gravity = _gravity;
-        sceneDesc.cpuDispatcher = PxDefaultCpuDispatcherCreate(2);
+        _dispatcher = PxDefaultCpuDispatcherCreate(2);
+        sceneDesc.cpuDispatcher = _dispatcher;
         sceneDesc.filterShader = config.filterShader;
         sceneDesc.solverType = config.solverType;
         _scene = _physics->createScene(sceneDesc);
@@ -79,11 +81,17 @@ class PhysicsWorld {
     }
 
     ~PhysicsWorld() {
-        _scene->release();
-        _material->release();
+        if (_scene)
+            _scene->release();
+        if (_dispatcher)
+            _dispatcher->release();
+        if (_material)
+            _material->release();
         PxCloseExtensions();
-        _physics->release();
-        _foundation->release();
+        if (_physics)
+            _physics->release();
+        if (_foundation)
+            _foundation->release();
     };
 
     void setDt(float dt) { _dt = dt; }

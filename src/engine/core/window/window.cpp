@@ -16,6 +16,9 @@ Window::Window() {
 Window::~Window() {}
 
 void Window::init(int width, int height) {
+    if (_window == nullptr)
+        return;
+
     _width = width;
     _height = height;
     GLFWmonitor* monitor = glfwGetPrimaryMonitor();
@@ -49,6 +52,7 @@ void Window::initGlfw() {
     if (_window == NULL) {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
+        return;
     }
     glfwMakeContextCurrent(_window);
     // glfwSetWindowUserPointer(_window, this);
@@ -56,6 +60,9 @@ void Window::initGlfw() {
 }
 
 void Window::initGlad() {
+    if (_window == nullptr)
+        return;
+
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cout << "Failed to initialize GLAD" << std::endl;
     }

@@ -95,7 +95,8 @@
     "C_Cpp.clang_format_path": "clang-format",
     "C_Cpp.clang_format_style": "file",
     "clangd.arguments": [
-    "--background-index"
+    "--background-index",
+    "--compile-commands-dir=build/release"
     ],
     "editor.formatOnSave": true,
     "[cpp]": {

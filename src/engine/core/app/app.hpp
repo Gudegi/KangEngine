@@ -56,6 +56,7 @@ class App {
     int _logicalWidth,
         _logicalHeight; // screen/logical pixels (matches mouse coords)
     bool _hideUI, _renderWireframe;
+    bool _initialized = false;
     float _gamma = 2.2; // for Gamma Correction
     glm::mat4 _viewMatrix,
         _projectionMatrix; // variable to containing main camera's view and

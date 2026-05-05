@@ -8,7 +8,7 @@ BUILD_DIR := build
 RELEASE_DIR := $(BUILD_DIR)/release
 DEBUG_DIR := $(BUILD_DIR)/debug
 REL_DIR := $(BUILD_DIR)/relWithDebInfo
-EXECUTABLE := kangEngine
+EXECUTABLE := KangEngine
 
 # configure + build + copy compile_commands
 # $(1): preset, $(2): build dir, $(3): extra cmake flags

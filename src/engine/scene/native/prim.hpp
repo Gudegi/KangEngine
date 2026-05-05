@@ -13,6 +13,7 @@
 #include <memory>
 #include <vector>
 #include <map>
+#include <optional>
 #include "../scene_backend.hpp"
 #include "token.hpp"
 #include "utils/types.hpp"

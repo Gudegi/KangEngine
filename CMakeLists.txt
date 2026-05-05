@@ -97,7 +97,7 @@ if(USE_PHYSX)
     if(APPLE)
         target_link_directories(pre_compiled_ext INTERFACE "${physx_DIR}/bin/mac.x86_64/${PHYSX_BUILD_TYPE}") # TODO: actually it need to be not x86 but arm. fix build setting
     elseif(UNIX)
-        target_link_directories(pre_compiled_ext INTERFACE "${physx_DIR}/bin/linux.x86_64/${PHYSX_BUILD_TYPE}") # This is the path where PhysX libraries are installed
+        target_link_directories(pre_compiled_ext INTERFACE "${physx_DIR}/bin/linux.clang/${PHYSX_BUILD_TYPE}") # This is the path where PhysX libraries are installed
     else()
         message(FATAL_ERROR "Not support OS setting for PhysX")
     endif()

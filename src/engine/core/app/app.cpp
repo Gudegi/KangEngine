@@ -111,6 +111,11 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     }
 
     _window.init(_width, _height);
+    if (_window.getGlfwWindow() == nullptr) {
+        std::cerr << "Failed to initialize window" << std::endl;
+        return;
+    }
+
     _logicalWidth = _window.getLogicalWidth();
     _logicalHeight = _window.getLogicalHeight();
     registerCallbacks();
@@ -148,11 +153,17 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     _rasterizer->setLight(DirectionalLight{
         (_upAxis == UpAxis::Z) ? glm::normalize(glm::vec3(0.2f, 0.5f, 1.0f))
                                : glm::normalize(glm::vec3(0.5f, 1.0f, 0.2f))});
+    _initialized = true;
 }
 
 // for entire process in c++
 // //////////////////////////////////////////////////////////////////////
 void App::start() {
+    if (!_initialized) {
+        std::cerr << "App was not initialized" << std::endl;
+        return;
+    }
+
     setup();
     GLFWwindow* window = _window.getGlfwWindow();
     while (!glfwWindowShouldClose(window)) {
