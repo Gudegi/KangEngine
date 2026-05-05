@@ -281,6 +281,8 @@ void Rasterizer::renderShadowMap(Camera& camera, UpAxis upAxis,
 }
 
 void Rasterizer::drawShadowCasters() {
+    // Set front face culling to prevent peter panning artifact.
+    _graphicsDevice->setCullFaceMode(Backend::CullFaceMode::Front);
     _shadowShader->use();
     for (auto& [key, inst] : _instancers) {
         if (inst.visibleCount() == 0)
@@ -291,6 +293,7 @@ void Rasterizer::drawShadowCasters() {
         if (inst.isDoubleSided())
             _graphicsDevice->setCullFace(true);
     }
+    _graphicsDevice->setCullFaceMode(Backend::CullFaceMode::Back);
 }
 
 } // namespace KE

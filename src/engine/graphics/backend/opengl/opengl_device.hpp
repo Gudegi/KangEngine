@@ -200,6 +200,7 @@ class OpenGLDevice : public GraphicsDevice {
     void setStencilTest(bool enable) override;
     void setPolygonMode(PolygonMode mode) override;
     void setCullFace(bool enable) override;
+    void setCullFaceMode(CullFaceMode mode) override;
     void setClearColor(float r, float g, float b, float a) override;
 
     // Resource creation

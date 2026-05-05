@@ -34,6 +34,8 @@ enum class VertexAttributeType { Float, Int, UnsignedInt, Byte, UnsignedByte };
 
 enum class PolygonMode { Fill, Line, Point };
 
+enum class CullFaceMode { Front, Back };
+
 enum class BlendFactor {
     Zero,
     One,
@@ -112,6 +114,7 @@ class GraphicsDevice {
     virtual void setStencilTest(bool enable) = 0;
     virtual void setPolygonMode(PolygonMode mode) = 0;
     virtual void setCullFace(bool enable) = 0;
+    virtual void setCullFaceMode(CullFaceMode mode) = 0;
     virtual void setClearColor(float r, float g, float b, float a) = 0;
 
     // Resource creation

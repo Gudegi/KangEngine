@@ -551,6 +551,19 @@ void OpenGLDevice::setCullFace(bool enable) {
         glDisable(GL_CULL_FACE);
 }
 
+void OpenGLDevice::setCullFaceMode(CullFaceMode mode) {
+    GLenum glMode;
+    switch (mode) {
+    case CullFaceMode::Front:
+        glMode = GL_FRONT;
+        break;
+    case CullFaceMode::Back:
+        glMode = GL_BACK;
+        break;
+    }
+    glCullFace(glMode);
+}
+
 void OpenGLDevice::setClearColor(float r, float g, float b, float a) {
     glClearColor(r, g, b, a);
 }
@@ -639,13 +652,13 @@ OpenGLFramebuffer::OpenGLFramebuffer(const FramebufferDesc& desc)
     glFramebufferTexture2D(GL_FRAMEBUFFER, depthAtt, GL_TEXTURE_2D,
                            _depthTexObj->getHandle(), 0);
 
-    // [SIMPLE RBO] depth+stencil renderbuffer (faster, but no shader sampling)
-    // GLuint rbo;
-    // glGenRenderbuffers(1, &rbo);
+    // [SIMPLE RBO] depth+stencil renderbuffer (faster, but no shader
+    // sampling) GLuint rbo; glGenRenderbuffers(1, &rbo);
     // glBindRenderbuffer(GL_RENDERBUFFER, rbo);
     // glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8,
     //                       _desc.width, _desc.height);
-    // glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
+    // glFramebufferRenderbuffer(GL_FRAMEBUFFER,
+    // GL_DEPTH_STENCIL_ATTACHMENT,
     //                           GL_RENDERBUFFER, rbo);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -702,7 +715,8 @@ OpenGLFramebuffer::~OpenGLFramebuffer() {
 }
 
 void OpenGLFramebuffer::bind() {
-    // Render into MSAA FBO if available, otherwise directly into texture FBO
+    // Render into MSAA FBO if available, otherwise directly into texture
+    // FBO
     glBindFramebuffer(GL_FRAMEBUFFER, _desc.msaaSamples > 0 ? _msaaFbo : _fbo);
 }
 
@@ -795,8 +809,8 @@ void main() {
 }
 )";
 
-// Load a cross-layout(putting all images on one png) cubemap PNG and upload it
-// as GL_TEXTURE_CUBE_MAP. Supports both horizontal cross (4:3, W>H) and
+// Load a cross-layout(putting all images on one png) cubemap PNG and upload
+// it as GL_TEXTURE_CUBE_MAP. Supports both horizontal cross (4:3, W>H) and
 // vertical cross (3:4, H>W).
 //
 // Horizontal cross face layout (faceSize = W/4 = H/3):
@@ -903,8 +917,8 @@ GLuint OpenGLDevice::loadCubemapCross(const std::string& path) {
 }
 
 // Load 6 individual face images and upload as GL_TEXTURE_CUBE_MAP.
-// paths order: +X, -X, +Y, -Y, +Z, -Z (matches GL_TEXTURE_CUBE_MAP_POSITIVE_X +
-// i)
+// paths order: +X, -X, +Y, -Y, +Z, -Z (matches
+// GL_TEXTURE_CUBE_MAP_POSITIVE_X + i)
 GLuint OpenGLDevice::loadCubemap(const std::vector<std::string>& paths) {
     if (paths.size() != 6) {
         fprintf(stderr, "loadCubemap: expected 6 paths, got %zu\n",
