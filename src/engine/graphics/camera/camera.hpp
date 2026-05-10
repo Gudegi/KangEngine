@@ -12,12 +12,24 @@
 
 namespace KE {
 
+struct WorldFrustumPos {
+    glm::vec3 nearLB = {-1., -1., -1.};
+    glm::vec3 nearLT = {-1., +1., -1.};
+    glm::vec3 nearRB = {+1., -1., -1.};
+    glm::vec3 nearRT = {+1., +1., -1.};
+    glm::vec3 farLB = {-1., -1., +1.};
+    glm::vec3 farLT = {-1., +1., +1.};
+    glm::vec3 farRB = {+1., -1., +1.};
+    glm::vec3 farRT = {+1., +1., +1.};
+};
+
 class Camera {
 
   private:
     glm::vec3 _cameraPos, _targetPos, _cameraLookDir, _cameraUpDir,
         _cameraRightDir;
     glm::mat4 _viewMatrix, _projMatrix;
+    glm::mat4 _invViewMatrix, _invProjMatrix, _invViewProjMatrix;
     glm::vec3 _upVector;
     UpAxis _upAxis;
     float _FoV, _camToLookDistance, _nearPlane, _farPlane;
@@ -33,6 +45,9 @@ class Camera {
     glm::vec3 getTargetPos() { return _targetPos; };
     glm::mat4 getViewMatrix() { return _viewMatrix; }
     glm::mat4 getProjMatrix() { return _projMatrix; }
+    glm::mat4 getInvViewMatrix() { return _invViewMatrix; }
+    glm::mat4 getInvProjMatrix() { return _invProjMatrix; }
+    glm::mat4 getInvViewProjMatrix() { return _invViewProjMatrix; }
     void updateViewMatrix();
     void updateProjMatrix(const int scrWidth, const int scrHeight);
 
@@ -53,6 +68,9 @@ class Camera {
     glm::vec3 getCameraLookDir() { return _cameraLookDir; };
     glm::vec3 getCameraUpDir() { return _cameraUpDir; };
     glm::vec3 getCameraRightDir() { return _cameraRightDir; }
+    glm::vec3 ndcToWorld(glm::vec3 ndc);
+    WorldFrustumPos getFrustumPos();
+    WorldFrustumPos getFrustumPos(float nearPlane, float farPlane);
 };
 
 } // namespace KE

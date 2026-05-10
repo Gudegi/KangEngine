@@ -5,15 +5,14 @@
 #ifndef _GRAPHICS_DEVICE_HPP_
 #define _GRAPHICS_DEVICE_HPP_
 
+#include "shader_preprocessor.hpp"
+#include "utils/types.hpp"
+#include <glm/glm.hpp>
 #include <glad/glad.h>
 #include <cstdint>
-#include <fstream>
-#include <iterator>
 #include <memory>
 #include <string>
 #include <vector>
-#include <glm/glm.hpp>
-#include "utils/types.hpp"
 
 namespace KE {
 namespace Backend {
@@ -134,11 +133,8 @@ class GraphicsDevice {
 
     std::unique_ptr<Shader> createShaderFromFile(const std::string& vertPath,
                                                  const std::string& fragPath) {
-        auto read = [](const std::string& p) {
-            std::ifstream f(p);
-            return std::string(std::istreambuf_iterator<char>(f), {});
-        };
-        return createShader(read(vertPath), read(fragPath));
+        return createShader(loadShaderSource(vertPath),
+                            loadShaderSource(fragPath));
     }
     virtual std::unique_ptr<Texture> createTexture(const std::string path,
                                                    bool flip = false) = 0;

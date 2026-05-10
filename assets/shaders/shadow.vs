@@ -8,7 +8,7 @@ layout(location = 6) in vec4 aInstanceTransform3;
 layout(std140) uniform shadowUBO {
     mat4 lightSpaceMatrix;
     vec4 shadowParams;
-    vec4 shadowInfo; // x: shadow_extents, yzw: unused
+    vec4 shadowInfo; // x: ortho half-size, y: map width, z: PCF samples
 };
 
 void main() {

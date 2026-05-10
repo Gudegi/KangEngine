@@ -5,12 +5,14 @@
 #include "engine/scene/scene_backend.hpp"
 #include "utils/asset_path.hpp"
 #include "utils/types.hpp"
+#include <algorithm>
 #include <cmath>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
+#include <limits>
 #include <memory>
 #include <vector>
 
@@ -29,8 +31,8 @@ Rasterizer::Rasterizer(Backend::GraphicsDevice* graphicsDevice) {
                                               3 * sizeof(glm::vec4));
     _graphicsDevice->bindUniformBuffer(_lightUBO.get(), LIGHT_UBO_BIND_SLOT);
     // mat4 lightSpaceMatrix, vec4 shadowParams (xyz: sun_direction,
-    // w:shadow_radius), vec4 shadowInfo (x: shadowExtents, y: shadowMapWH, zw:
-    // unused)
+    // w:shadow_radius), vec4 shadowInfo (x: active shadow ortho half-size, y:
+    // shadowMapWH, z: PCF samples, w: unused)
     _shadowUBO = _graphicsDevice->createBuffer(Backend::BufferType::Uniform,
                                                sizeof(glm::mat4) +
                                                    2 * sizeof(glm::vec4));
@@ -165,7 +167,7 @@ void Rasterizer::updateFrameData(const glm::mat4& view, const glm::mat4& proj) {
 
 void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
     // Bind shadow map and upload shadow uniforms onto each instancer's shader
-    const bool hasShadow = (_shadowMap != nullptr && _shadowExtents > 0.0f);
+    const bool hasShadow = (_shadowMap != nullptr && _shadowDistance > 0.0f);
     if (hasShadow)
         _shadowMap->bind(1);
 
@@ -223,9 +225,10 @@ void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
 
 /////////////// Shadow Pass //////////////
 
-void Rasterizer::updateShadowUBO(float activeExtents) {
+void Rasterizer::updateShadowUBO(float activeOrthoHalfSize) {
     glm::vec4 shadowParams{_light.direction, _shadowRadius};
-    glm::vec4 shadowInfo{activeExtents, (float)(_shadowMapWH), 0.f, 0.f};
+    glm::vec4 shadowInfo{activeOrthoHalfSize, (float)(_shadowMapWH),
+                         static_cast<float>(_shadowPcfSamples), 0.f};
     _shadowUBO->setData(&_lightSpaceMatrix, sizeof(_lightSpaceMatrix));
     _shadowUBO->setData(&shadowParams, sizeof(shadowParams), sizeof(glm::mat4));
     _shadowUBO->setData(&shadowInfo, sizeof(shadowInfo),
@@ -234,12 +237,13 @@ void Rasterizer::updateShadowUBO(float activeExtents) {
 
 void Rasterizer::setShadowMap(Backend::Texture* tex,
                               const glm::mat4& lightSpaceMat, float radius,
-                              float extents) {
+                              float distance) {
     _shadowMap = tex;
     _lightSpaceMatrix = lightSpaceMat;
     _shadowRadius = radius;
-    _shadowExtents = extents;
-    updateShadowUBO(_shadowMap ? _shadowExtents : 0.0f);
+    _shadowDistance = distance;
+    _activeShadowOrthoHalfSize = distance;
+    updateShadowUBO(_shadowMap ? _activeShadowOrthoHalfSize : 0.0f);
 }
 
 glm::mat4 Rasterizer::computeLightSpaceMatrix(Camera& camera,
@@ -250,19 +254,82 @@ glm::mat4 Rasterizer::computeLightSpaceMatrix(Camera& camera,
     if (upAxis == UpAxis::Z)
         up = (std::abs(sunDir.z) < 0.99f) ? glm::vec3(0, 0, 1)
                                           : glm::vec3(1, 0, 0);
-    glm::vec3 sceneCenter = camera.getTargetPos();
-    glm::vec3 lightPos = sceneCenter + sunDir * _shadowExtents;
-    glm::mat4 lightView = glm::lookAt(lightPos, sceneCenter, up);
+
+    /*
+    // Fixed-box shadow fitting:
+    // glm::vec3 sceneCenter = camera.getTargetPos();
+    // glm::vec3 lightPos = sceneCenter + sunDir * _shadowDistance;
+    // glm::mat4 lightView = glm::lookAt(lightPos, sceneCenter, up);
+    // glm::mat4 lightProj =
+    //     glm::ortho(-_shadowDistance, _shadowDistance, -_shadowDistance,
+    //                _shadowDistance, 0.0f, 2.0f * _shadowDistance);
+    // return lightProj * lightView;
+    */
+
+    float shadowNear = camera.getNearPlane();
+    float shadowFar = std::min(camera.getFarPlane(), _shadowDistance);
+    WorldFrustumPos frustumPos = camera.getFrustumPos(shadowNear, shadowFar);
+    glm::vec3 corners[] = {
+        frustumPos.nearLB, frustumPos.nearLT, frustumPos.nearRB,
+        frustumPos.nearRT, frustumPos.farLB,  frustumPos.farLT,
+        frustumPos.farRB,  frustumPos.farRT,
+    };
+
+    glm::vec3 frustumCenter(0.0f);
+    for (const auto& corner : corners)
+        frustumCenter += corner;
+    frustumCenter /= 8.0f;
+
+    float frustumRadius = 0.0f;
+    for (const auto& corner : corners)
+        frustumRadius =
+            std::max(frustumRadius, glm::length(corner - frustumCenter));
+    const float casterMargin = std::max(2.0f, _shadowDistance * 0.25f);
+    frustumRadius += casterMargin;
+    _activeShadowOrthoHalfSize = frustumRadius;
+
+    glm::vec3 lightPos = frustumCenter + sunDir * frustumRadius;
+    glm::mat4 lightView = glm::lookAt(lightPos, frustumCenter, up);
+
+    float minZ = std::numeric_limits<float>::max();
+    float maxZ = std::numeric_limits<float>::lowest();
+    for (const auto& corner : corners) {
+        glm::vec3 lightSpaceCorner =
+            glm::vec3(lightView * glm::vec4(corner, 1.0f));
+        minZ = std::min(minZ, lightSpaceCorner.z);
+        maxZ = std::max(maxZ, lightSpaceCorner.z);
+    }
+
+    const float zPadding = std::max(5.0f, _shadowDistance * 0.25f);
+    // Use a square XY fit to reduce scaling shimmer.
     glm::mat4 lightProj =
-        glm::ortho(-_shadowExtents, _shadowExtents, -_shadowExtents,
-                   _shadowExtents, 0.0f, 2.0f * _shadowExtents);
+        glm::ortho(-frustumRadius, frustumRadius, -frustumRadius, frustumRadius,
+                   -maxZ - zPadding, -minZ + zPadding);
+
+    // Snap the projection to the shadow texel grid.
     glm::mat4 lightSpaceMatrix = lightProj * lightView;
-    return lightSpaceMatrix;
+    glm::vec4 shadowOrigin =
+        lightSpaceMatrix * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+
+    float halfSize = static_cast<float>(_shadowMapWH) / 2.0f;
+    glm::vec4 shadowOriginPixels = shadowOrigin * halfSize;
+    glm::vec4 roundedPixels = glm::round(shadowOriginPixels);
+    glm::vec4 offsetPixels = roundedPixels - shadowOriginPixels;
+
+    // Convert texel error back to NDC; depth does not need snapping.
+    glm::vec4 offsetNDC = offsetPixels / halfSize;
+    offsetNDC.z = 0.0f;
+    offsetNDC.w = 0.0f;
+
+    // Shift the projection onto the texel grid.
+    lightProj[3] += offsetNDC;
+
+    return lightProj * lightView;
 }
 
 void Rasterizer::renderShadowMap(Camera& camera, UpAxis upAxis,
                                  int viewportWidth, int viewportHeight) {
-    if (!_shadowFbo || !_shadowShader || _shadowExtents <= 0.0f) {
+    if (!_shadowFbo || !_shadowShader || _shadowDistance <= 0.0f) {
         _shadowMap = nullptr;
         updateShadowUBO(0.0f);
         return;
@@ -270,7 +337,7 @@ void Rasterizer::renderShadowMap(Camera& camera, UpAxis upAxis,
 
     _lightSpaceMatrix = computeLightSpaceMatrix(camera, upAxis);
     _shadowMap = _shadowFbo->getDepthTexture();
-    updateShadowUBO(_shadowMap ? _shadowExtents : 0.0f);
+    updateShadowUBO(_shadowMap ? _activeShadowOrthoHalfSize : 0.0f);
 
     _shadowFbo->bind();
     _graphicsDevice->setViewport(0, 0, _shadowMapWH, _shadowMapWH);
@@ -281,7 +348,8 @@ void Rasterizer::renderShadowMap(Camera& camera, UpAxis upAxis,
 }
 
 void Rasterizer::drawShadowCasters() {
-    // Set front face culling to prevent peter panning artifact.
+    // Front-face culling avoids storing the same front surfaces that receive
+    // the shadow, reducing acne on closed meshes.
     _graphicsDevice->setCullFaceMode(Backend::CullFaceMode::Front);
     _shadowShader->use();
     for (auto& [key, inst] : _instancers) {

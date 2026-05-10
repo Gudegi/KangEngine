@@ -12,6 +12,7 @@
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include "utils/types.hpp"
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <map>
@@ -72,14 +73,16 @@ class Rasterizer : public Renderer {
     int _shadowMapWH = 2048;
     std::unique_ptr<Backend::Shader> _shadowShader;
     float _shadowRadius = 3.0f;
-    float _shadowExtents = 10.0f; // 0 = shadow disabled
+    int _shadowPcfSamples = 8;
+    float _shadowDistance = 10.0f; // 0 = shadow disabled
+    float _activeShadowOrthoHalfSize = 0.0f;
     glm::mat4 _lightSpaceMatrix{1.f};
     Backend::Texture* _shadowMap = nullptr;
 
     // shadow
-    void updateShadowUBO(float activeExtents);
+    void updateShadowUBO(float activeOrthoHalfSize);
     void setShadowMap(Backend::Texture* tex, const glm::mat4& lightSpaceMat,
-                      float radius, float extents);
+                      float radius, float distance);
     void drawShadowCasters();
 
   public:
@@ -92,10 +95,15 @@ class Rasterizer : public Renderer {
     const DirectionalLight& getLight() const { return _light; }
 
     // shadow
-    void setShadowExtents(float extents) {
-        _shadowExtents = std::max(0.0f, extents);
+    void setShadowDistance(float distance) {
+        _shadowDistance = std::max(0.0f, distance);
     }
-    float getShadowExtents() const { return _shadowExtents; }
+    float getShadowDistance() const { return _shadowDistance; }
+    void setShadowPcfSamples(int samples) {
+        _shadowPcfSamples = std::clamp(samples, 1, 16);
+        updateShadowUBO(_shadowMap ? _activeShadowOrthoHalfSize : 0.0f);
+    }
+    int getShadowPcfSamples() const { return _shadowPcfSamples; }
     void renderShadowMap(Camera& camera, UpAxis upAxis, int viewportWidth,
                          int viewportHeight);
     glm::mat4 computeLightSpaceMatrix(Camera& camera, const UpAxis upAxis);

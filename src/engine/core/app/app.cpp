@@ -250,10 +250,14 @@ void App::coreRender() {
         ImGui::Checkbox("Wireframe", &_renderWireframe);
         ImGui::SliderFloat("GammaCorrection", &_gamma, 0.f, 5.f);
         if (_rasterizer) {
-            float extents = _rasterizer->getShadowExtents();
-            if (ImGui::SliderFloat("Shadow Extents (Set 0 to disable shadow)",
-                                   &extents, 0.0f, 100.0f)) {
-                _rasterizer->setShadowExtents(extents);
+            float distance = _rasterizer->getShadowDistance();
+            if (ImGui::SliderFloat("Shadow Distance (Set 0 to disable shadow)",
+                                   &distance, 0.0f, 100.0f)) {
+                _rasterizer->setShadowDistance(distance);
+            }
+            int pcfSamples = _rasterizer->getShadowPcfSamples();
+            if (ImGui::SliderInt("Shadow PCF Samples", &pcfSamples, 1, 16)) {
+                _rasterizer->setShadowPcfSamples(pcfSamples);
             }
 
             auto* shadowFbo =
