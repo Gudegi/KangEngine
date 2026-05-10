@@ -121,6 +121,9 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     _logicalWidth = _window.getLogicalWidth();
     _logicalHeight = _window.getLogicalHeight();
     registerCallbacks();
+    glfwGetFramebufferSize(_window.getGlfwWindow(), &_width, &_height);
+    glfwGetWindowSize(_window.getGlfwWindow(), &_logicalWidth,
+                      &_logicalHeight);
 
     // Initialize graphics device after OpenGL context is created
     _graphicsDevice->initialize();
@@ -556,11 +559,18 @@ void App::setSkybox(const std::vector<std::string>& paths) {
 //////////////// Call backs
 ///////////////////////////////////////////////////////////
 void App::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
+    if (width <= 0 || height <= 0)
+        return;
+
     _width = width;
     _height = height;
     glfwGetWindowSize(window, &_logicalWidth, &_logicalHeight);
     _graphicsDevice->setViewport(0, 0, _width, _height);
     _camera.updateProjMatrix(_width, _height);
+    if (_framebuffer)
+        _framebuffer->resize(_width, _height);
+    if (_postProcessor)
+        _postProcessor->resize(_width, _height);
 }
 
 void App::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
