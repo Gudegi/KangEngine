@@ -102,14 +102,13 @@ void MeshInstancer::updateFromTransforms(
                            sizeof(glm::mat4) * _visibleCount);
     if (colors)
         _colorVBO->setData(colors->data(), sizeof(glm::vec4) * _visibleCount);
-    _externalUpdate = true;
+    _useExternalTransforms = true;
 }
 
 void MeshInstancer::update() {
-    if (_externalUpdate) {
-        _externalUpdate = false;
+    if (_useExternalTransforms)
         return;
-    }
+
     std::vector<glm::mat4> transforms;
     std::vector<glm::vec4> colors;
     _hasTransparent = false;

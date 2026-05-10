@@ -40,7 +40,7 @@ static constexpr MeshHandle InvalidHandle = ~0u;
 //            per-frame external transform arrays
 //
 // The two tracks share the same instancer; switching is per-instancer via
-// the _externalUpdate flag in MeshInstancer.
+// the _useExternalTransforms flag in MeshInstancer.
 // ---------------------------------------------------------------------------
 
 class Rasterizer : public Renderer {
@@ -70,10 +70,10 @@ class Rasterizer : public Renderer {
     bool _lightDirty = true;
 
     std::unique_ptr<Backend::Framebuffer> _shadowFbo; // depth-only
-    int _shadowMapWH = 2048;
+    int _shadowMapWH = 4096;
     std::unique_ptr<Backend::Shader> _shadowShader;
     float _shadowRadius = 3.0f;
-    int _shadowPcfSamples = 8;
+    int _shadowPcfSamples = 16;
     float _shadowDistance = 10.0f; // 0 = shadow disabled
     float _activeShadowOrthoHalfSize = 0.0f;
     glm::mat4 _lightSpaceMatrix{1.f};
@@ -122,6 +122,7 @@ class Rasterizer : public Renderer {
 
     // Disable back-face culling for this instancer (e.g. cloth, thin surfaces).
     void setShapeDoubleSided(MeshHandle handle, bool doubleSided = true);
+    void setShapeCastsShadow(MeshHandle handle, bool castsShadow = true);
     void setShapeTexture(MeshHandle handle, Backend::Texture* tex,
                          int slot = 0);
 

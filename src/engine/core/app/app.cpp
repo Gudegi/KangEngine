@@ -4,6 +4,7 @@
 #include "engine/graphics/renderer/post_processor.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/scene_backend.hpp"
+#include "engine/scene/debug_draw.hpp"
 #include "engine/core/ui/base_panel.hpp"
 #include "utils/glm_utils.hpp"
 #include "utils/print_debug.hpp"
@@ -19,6 +20,7 @@
 #include <memory>
 #include <optional>
 #include <thread>
+#include <utility>
 
 namespace KE {
 
@@ -129,11 +131,11 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
 
     glm::vec3 cameraPos, cameraTarget;
     if (_upAxis == UpAxis::Z) {
-        cameraPos = glm::vec3(3.0f, 0.0f, 1.5f); // 1.5m
+        cameraPos = glm::vec3(10.0f, 0.0f, 5.0f); // 5.0m
         cameraTarget = glm::vec3(0.0f, 0.0f, 0.85f);
     } else {
-        cameraPos = glm::vec3(30.0f, 15.0f, 0.0f);
-        cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+        cameraPos = glm::vec3(0.0f, 5.0f, 10.0f);
+        cameraTarget = glm::vec3(0.0f, 0.85f, 0.0f);
     }
     _camera.init(cameraPos, cameraTarget, _upAxis);
     _camera.updateProjMatrix(_width, _height);
@@ -250,6 +252,26 @@ void App::coreRender() {
         ImGui::Checkbox("Wireframe", &_renderWireframe);
         ImGui::SliderFloat("GammaCorrection", &_gamma, 0.f, 5.f);
         if (_rasterizer) {
+            DirectionalLight light = getLight();
+            glm::vec3 direction = light.direction;
+            float color[3] = {light.color.r, light.color.g, light.color.b};
+            glm::vec3 ambient = light.ambient;
+
+            if (ImGui::DragFloat3("Sun Direction (toward light)", &direction.x,
+                                  0.02f)) {
+                setLightDirection(direction);
+            }
+            if (ImGui::ColorEdit3("Light Color", color)) {
+                setLightColor(glm::vec3(color[0], color[1], color[2]));
+            }
+            if (ImGui::SliderFloat("Light Intensity", &light.intensity, 0.0f,
+                                   2.0f)) {
+                setLightIntensity(light.intensity);
+            }
+            if (ImGui::ColorEdit3("Ambient", &ambient.x)) {
+                setLightAmbient(ambient);
+            }
+
             float distance = _rasterizer->getShadowDistance();
             if (ImGui::SliderFloat("Shadow Distance (Set 0 to disable shadow)",
                                    &distance, 0.0f, 100.0f)) {
@@ -265,15 +287,13 @@ void App::coreRender() {
             if (shadowFbo) {
                 auto* depthTex = shadowFbo->getDepthTexture();
                 if (depthTex) {
-                    ImGui::Begin("Shadow Map");
-                    ImGui::Text("%dx%d", depthTex->getWidth(),
+                    ImGui::Text("Shadow Map %dx%d", depthTex->getWidth(),
                                 depthTex->getHeight());
                     ImGui::Image(
                         (ImTextureID)(uintptr_t)depthTex->getNativeHandle(),
                         ImVec2(128, 128), ImVec2(0, 1),
                         ImVec2(1,
                                0)); // flip Y: GL bottom-left -> ImGui top-left
-                    ImGui::End();
                 }
             }
         }
@@ -304,6 +324,190 @@ void App::removePrim(MeshHandle handle, Scene::Prim* prim) {
         _rasterizer->removePrim(handle, prim);
 }
 
+App::MeshPrimResult App::addMeshPrim(MeshPrimDesc desc) {
+    MeshPrimResult result;
+    if (!desc.shader || !_scene || desc.path.empty())
+        return result;
+
+    auto* prim = _scene->definePrim(desc.path, Scene::PrimType::Mesh);
+    prim->setMeshData(
+        std::make_shared<Scene::MeshData>(std::move(desc.meshData)));
+    prim->addTranslateOp(desc.position);
+    prim->addRotateQuaternionOp(glm::normalize(desc.orientation));
+    prim->addScaleOp(desc.scale);
+    prim->setDisplayColorAlpha(desc.color);
+
+    MeshHandle handle = addShape(desc.shader, prim);
+    if (handle != InvalidHandle) {
+        setShapeDoubleSided(handle, desc.doubleSided);
+        setShapeCastsShadow(handle, desc.castsShadow);
+    }
+
+    result.prim = prim;
+    result.handle = handle;
+    return result;
+}
+
+App::MeshPrimResult App::addMeshPrim(Backend::Shader* shader,
+                                     const std::string& path,
+                                     Scene::MeshData meshData,
+                                     glm::vec3 position, glm::vec4 color,
+                                     bool castsShadow) {
+    MeshPrimDesc desc;
+    desc.shader = shader;
+    desc.path = path;
+    desc.meshData = std::move(meshData);
+    desc.position = position;
+    desc.color = color;
+    desc.castsShadow = castsShadow;
+    return addMeshPrim(std::move(desc));
+}
+
+glm::vec3 App::upPos(glm::vec3 pos, UpAxis from) const {
+    return axisPos(pos, from, _upAxis);
+}
+
+glm::vec3 App::upPos(float x, float y, float z, UpAxis from) const {
+    return axisPos(glm::vec3(x, y, z), from, _upAxis);
+}
+
+glm::vec3 App::axisPos(float x, float y, float z, UpAxis from,
+                       UpAxis to) const {
+    return axisPos(glm::vec3(x, y, z), from, to);
+}
+
+glm::vec3 App::axisPos(glm::vec3 pos, UpAxis from, UpAxis to) const {
+    if (from == to)
+        return pos;
+
+    // Convert 'from' to Z-Up
+    glm::vec3 zUpPos = pos;
+    if (from == UpAxis::X) {
+        zUpPos = glm::vec3(pos.y, pos.z, pos.x);
+    } else if (from == UpAxis::Y) {
+        zUpPos = glm::vec3(pos.z, pos.x, pos.y);
+    }
+
+    // Convert Z-Up to 'to'
+    if (to == UpAxis::X) {
+        return glm::vec3(zUpPos.z, zUpPos.x, zUpPos.y);
+    } else if (to == UpAxis::Y) {
+        return glm::vec3(zUpPos.y, zUpPos.z, zUpPos.x);
+    }
+    return zUpPos;
+}
+
+glm::quat App::upQuat(glm::quat ori, UpAxis from) const {
+    return axisQuat(ori, from, _upAxis);
+}
+
+glm::quat App::upQuat(float w, float x, float y, float z, UpAxis from) const {
+    return axisQuat(glm::quat(w, x, y, z), from, _upAxis);
+}
+
+glm::quat App::axisQuat(float w, float x, float y, float z, UpAxis from,
+                        UpAxis to) const {
+    return axisQuat(glm::quat(w, x, y, z), from, to);
+}
+
+glm::quat App::axisQuat(glm::quat ori, UpAxis from, UpAxis to) const {
+    if (from == to)
+        return ori;
+
+    glm::quat zUpOri = ori;
+    if (from == UpAxis::X) {
+        zUpOri = glm::quat(ori.w, ori.y, ori.z, ori.x);
+    } else if (from == UpAxis::Y) {
+        zUpOri = glm::quat(ori.w, ori.z, ori.x, ori.y);
+    }
+
+    if (to == UpAxis::X) {
+        return glm::quat(zUpOri.w, zUpOri.z, zUpOri.x, zUpOri.y);
+    } else if (to == UpAxis::Y) {
+        return glm::quat(zUpOri.w, zUpOri.y, zUpOri.z, zUpOri.x);
+    }
+    return zUpOri;
+}
+
+MeshHandle App::addCube(const std::string& path, float size, glm::vec3 pos,
+                        glm::quat ori, glm::vec4 color,
+                        Backend::Shader* shader) {
+    MeshPrimDesc desc;
+    desc.shader = shader;
+    desc.path = path;
+    desc.meshData = Scene::Prim::createSquareData(size);
+    desc.position = pos;
+    desc.orientation = ori;
+    desc.color = color;
+    return addMeshPrim(std::move(desc)).handle;
+}
+
+MeshHandle App::addSphere(const std::string& path, float radius, glm::vec3 pos,
+                          glm::vec4 color, Backend::Shader* shader) {
+    MeshPrimDesc desc;
+    desc.shader = shader;
+    desc.path = path;
+    desc.meshData = Scene::Prim::createSphereData(radius, 32, 16);
+    desc.position = pos;
+    desc.color = color;
+    return addMeshPrim(std::move(desc)).handle;
+}
+
+MeshHandle App::addPlane(const std::string& path, float size, glm::vec3 pos,
+                         glm::vec4 color, Backend::Shader* shader) {
+    MeshPrimDesc desc;
+    desc.shader = shader;
+    desc.path = path;
+    desc.meshData = Scene::Prim::createPlaneData(size, _upAxis);
+    desc.position = pos;
+    desc.color = color;
+    desc.doubleSided = true;
+    return addMeshPrim(std::move(desc)).handle;
+}
+
+void App::drawLine(const std::string& path, glm::vec3 start, glm::vec3 end,
+                   glm::vec4 color, float thickness, Backend::Shader* shader) {
+    Scene::DebugDraw::logLines(this, shader, path, {start}, {end}, {color},
+                               thickness);
+}
+
+void App::drawArrow(const std::string& path, glm::vec3 start, glm::vec3 end,
+                    glm::vec4 color, float thickness, Backend::Shader* shader) {
+    Scene::DebugDraw::logArrows(this, shader, path, {start}, {end}, {color},
+                                thickness);
+}
+
+void App::setLightDirection(const glm::vec3& dir) {
+    if (_rasterizer) {
+        DirectionalLight light = getLight();
+        if (glm::length(dir) < 1e-4f)
+            return;
+        light.direction = glm::normalize(dir);
+        setLight(light);
+    }
+}
+void App::setLightColor(const glm::vec3& color) {
+    if (_rasterizer) {
+        DirectionalLight light = getLight();
+        light.color = glm::clamp(color, glm::vec3(0.0f), glm::vec3(1.0f));
+        setLight(light);
+    }
+}
+void App::setLightIntensity(float intensity) {
+    if (_rasterizer) {
+        DirectionalLight light = getLight();
+        light.intensity = std::max(0.0f, intensity);
+        setLight(light);
+    }
+}
+void App::setLightAmbient(const glm::vec3& ambient) {
+    if (_rasterizer) {
+        DirectionalLight light = getLight();
+        light.ambient = glm::clamp(ambient, glm::vec3(0.0f), glm::vec3(1.0f));
+        setLight(light);
+    }
+}
+
 void App::updateShapeTransforms(MeshHandle handle,
                                 const std::vector<glm::mat4>& transforms,
                                 const std::vector<glm::vec4>* colors) {
@@ -320,6 +524,11 @@ void App::setShapeColors(MeshHandle handle,
 void App::setShapeDoubleSided(MeshHandle handle, bool doubleSided) {
     if (_rasterizer)
         _rasterizer->setShapeDoubleSided(handle, doubleSided);
+}
+
+void App::setShapeCastsShadow(MeshHandle handle, bool castsShadow) {
+    if (_rasterizer)
+        _rasterizer->setShapeCastsShadow(handle, castsShadow);
 }
 
 void App::setShapeTexture(MeshHandle handle, Backend::Texture* tex, int slot) {

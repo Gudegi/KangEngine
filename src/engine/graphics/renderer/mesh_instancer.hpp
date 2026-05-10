@@ -37,8 +37,9 @@ class MeshInstancer {
     int _allocatedInstances = 0;
     int _visibleCount = 0;
     bool _hasTransparent = false;
-    bool _externalUpdate = false;
+    bool _useExternalTransforms = false;
     bool _doubleSided = false;
+    bool _castsShadow = true;
     std::vector<std::pair<Backend::Texture*, int>> _textures;
 
     std::vector<Scene::Prim*> _prims;
@@ -64,8 +65,8 @@ class MeshInstancer {
     // Call once per frame before render().
     void update();
 
-    // Bypass Prim loop: directly upload transforms (and optionally colors).
-    // When called, update() becomes a no-op for that frame.
+    // Track B mode: directly upload transforms (and optionally colors), then
+    // keep using that external instance buffer instead of polling Prims.
     // colors == nullptr: skip color upload (use previously set colors).
     void updateFromTransforms(const std::vector<glm::mat4>& transforms,
                               const std::vector<glm::vec4>* colors = nullptr);
@@ -84,6 +85,8 @@ class MeshInstancer {
     // DoubleSided means the mesh can be seen both back and forward side.
     void setDoubleSided(bool v) { _doubleSided = v; }
     bool isDoubleSided() const { return _doubleSided; }
+    void setCastsShadow(bool v) { _castsShadow = v; }
+    bool castsShadow() const { return _castsShadow; }
 
     void setTexture(Backend::Texture* tex, int slot = 0) {
         for (auto& [t, s] : _textures) {

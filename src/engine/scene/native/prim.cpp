@@ -506,6 +506,42 @@ MeshData Prim::createArrowData(float baseRadius, float baseHeight,
     mergeMesh(shaft, std::move(cone));
     return shaft;
 }
+std::vector<Prim*>
+Prim::defineCoordinateAxes(SceneBackend* scene, const std::string& basePath,
+                           float length, float radius, int segments,
+                           glm::vec3 origin, glm::quat orientation) {
+    const float safeLength = std::max(length, 1e-4f);
+    const float safeRadius = std::max(radius, 1e-5f);
+    const float capHeight = safeLength * 0.22f;
+    const float shaftHeight = safeLength - capHeight;
+    const float capRadius = safeRadius * 2.4f;
+
+    struct AxisDesc {
+        const char* name;
+        UpAxis axis;
+        glm::vec4 color;
+    };
+    const AxisDesc axes[] = {
+        {"x", UpAxis::X, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)},
+        {"y", UpAxis::Y, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)},
+        {"z", UpAxis::Z, glm::vec4(0.0f, 0.0f, 1.0f, 1.0f)},
+    };
+
+    std::vector<Prim*> result;
+    result.reserve(3);
+    for (const auto& axis : axes) {
+        auto meshData = std::make_shared<MeshData>(createArrowData(
+            safeRadius, shaftHeight, axis.axis, capRadius, capHeight, segments));
+        auto* prim =
+            scene->definePrim(basePath + "/" + axis.name, PrimType::Mesh);
+        prim->setMeshData(meshData);
+        prim->addTranslateOp(origin);
+        prim->addRotateQuaternionOp(glm::normalize(orientation));
+        prim->setDisplayColorAlpha(axis.color);
+        result.push_back(prim);
+    }
+    return result;
+}
 
 MeshData Prim::createCapsuleData(float radius, float height, UpAxis upAxis,
                                  int segments) {

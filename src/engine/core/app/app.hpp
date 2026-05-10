@@ -7,10 +7,13 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <glm/fwd.hpp>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <vector>
 
 #include "engine/graphics/camera/camera.hpp"
@@ -147,12 +150,37 @@ class App {
     MeshHandle addShape(PhongMaterial* material, Scene::Prim* prim);
     void removePrim(MeshHandle handle, Scene::Prim* prim);
 
+    struct MeshPrimDesc {
+        Backend::Shader* shader = nullptr;
+        std::string path;
+        Scene::MeshData meshData;
+        glm::vec3 position = glm::vec3(0.0f);
+        glm::quat orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+        glm::vec3 scale = glm::vec3(1.0f);
+        glm::vec4 color = glm::vec4(1.0f);
+        bool doubleSided = false;
+        bool castsShadow = true;
+    };
+
+    struct MeshPrimResult {
+        Scene::Prim* prim = nullptr;
+        MeshHandle handle = InvalidHandle;
+    };
+
+    MeshPrimResult addMeshPrim(MeshPrimDesc desc);
+    MeshPrimResult addMeshPrim(Backend::Shader* shader, const std::string& path,
+                               Scene::MeshData meshData,
+                               glm::vec3 position = glm::vec3(0.0f),
+                               glm::vec4 color = glm::vec4(1.0f),
+                               bool castsShadow = true);
+
     void updateShapeTransforms(MeshHandle handle,
                                const std::vector<glm::mat4>& transforms,
                                const std::vector<glm::vec4>* colors = nullptr);
     void setShapeColors(MeshHandle handle,
                         const std::vector<glm::vec4>& colors);
     void setShapeDoubleSided(MeshHandle handle, bool doubleSided = true);
+    void setShapeCastsShadow(MeshHandle handle, bool castsShadow = true);
     void setShapeTexture(MeshHandle handle, Backend::Texture* tex,
                          int slot = 0);
     void updateMeshGeometry(MeshHandle handle,
@@ -166,6 +194,47 @@ class App {
 
     // 마우스 위치로부터 3D 월드 공간의 Ray 객체 생성
     Ray getMouseRay();
+
+    // Coordinate Conversion Utilities
+    glm::vec3 upPos(glm::vec3 pos, UpAxis from = UpAxis::Z) const;
+    glm::vec3 upPos(float x, float y, float z, UpAxis from = UpAxis::Z) const;
+    glm::quat upQuat(glm::quat ori, UpAxis from = UpAxis::Z) const;
+    glm::quat upQuat(float w, float x, float y, float z,
+                     UpAxis from = UpAxis::Z) const;
+    glm::vec3 axisPos(glm::vec3 pos, UpAxis from, UpAxis to) const;
+    glm::vec3 axisPos(float x, float y, float z, UpAxis from, UpAxis to) const;
+    glm::quat axisQuat(glm::quat ori, UpAxis from, UpAxis to) const;
+    glm::quat axisQuat(float w, float x, float y, float z, UpAxis from,
+                       UpAxis to) const;
+
+    // Primitive Creation Helpers
+    MeshHandle addCube(const std::string& path, float size = 1.0f,
+                       glm::vec3 pos = glm::vec3(0.0f),
+                       glm::quat ori = glm::quat(1, 0, 0, 0),
+                       glm::vec4 color = glm::vec4(1.0f),
+                       Backend::Shader* shader = nullptr);
+    MeshHandle addSphere(const std::string& path, float radius = 1.0f,
+                         glm::vec3 pos = glm::vec3(0.0f),
+                         glm::vec4 color = glm::vec4(1.0f),
+                         Backend::Shader* shader = nullptr);
+    MeshHandle addPlane(const std::string& path, float size = 10.0f,
+                        glm::vec3 pos = glm::vec3(0.0f),
+                        glm::vec4 color = glm::vec4(1.0f),
+                        Backend::Shader* shader = nullptr);
+
+    // Debug Drawing Helpers
+    void drawLine(const std::string& path, glm::vec3 start, glm::vec3 end,
+                  glm::vec4 color = glm::vec4(1.0f), float thickness = 0.02f,
+                  Backend::Shader* shader = nullptr);
+    void drawArrow(const std::string& path, glm::vec3 start, glm::vec3 end,
+                   glm::vec4 color = glm::vec4(1.0f), float thickness = 0.02f,
+                   Backend::Shader* shader = nullptr);
+
+    // Lighting & Environment Controls
+    void setLightDirection(const glm::vec3& dir);
+    void setLightColor(const glm::vec3& color);
+    void setLightIntensity(float intensity);
+    void setLightAmbient(const glm::vec3& ambient);
 };
 
 } // namespace KE

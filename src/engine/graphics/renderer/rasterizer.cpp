@@ -125,6 +125,12 @@ void Rasterizer::setShapeDoubleSided(MeshHandle handle, bool doubleSided) {
     _handleTable[handle]->setDoubleSided(doubleSided);
 }
 
+void Rasterizer::setShapeCastsShadow(MeshHandle handle, bool castsShadow) {
+    if (handle >= _handleTable.size())
+        return;
+    _handleTable[handle]->setCastsShadow(castsShadow);
+}
+
 void Rasterizer::setShapeTexture(MeshHandle handle, Backend::Texture* tex,
                                  int slot) {
     if (handle >= _handleTable.size())
@@ -354,6 +360,8 @@ void Rasterizer::drawShadowCasters() {
     _shadowShader->use();
     for (auto& [key, inst] : _instancers) {
         if (inst.visibleCount() == 0)
+            continue;
+        if (!inst.castsShadow())
             continue;
         if (inst.isDoubleSided())
             _graphicsDevice->setCullFace(false);

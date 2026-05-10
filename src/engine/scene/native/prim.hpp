@@ -106,6 +106,17 @@ class Prim {
     static MeshData createConeData(float radius, float height,
                                    UpAxis upAxis = UpAxis::Y,
                                    int segments = 32);
+
+    // Scene geometry axes: creates three colored arrow mesh prims that behave
+    // like normal scene objects.
+    static std::vector<Prim*>
+    defineCoordinateAxes(SceneBackend* scene, const std::string& basePath,
+                         float length = 1.0f, float radius = 0.025f,
+                         int segments = 16,
+                         glm::vec3 origin = glm::vec3(0.0f),
+                         glm::quat orientation = glm::quat(1.0f, 0.0f, 0.0f,
+                                                           0.0f));
+
     // Instanced points: 1 sphere MeshData shared -> 1 Prim per point
     static std::vector<Prim*>
     definePoints(SceneBackend* scene, const std::string& basePath,
