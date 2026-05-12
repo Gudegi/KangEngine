@@ -17,9 +17,9 @@
 
 #include "kangEngine.hpp"
 #include "foundation/Px.h"
-#include <Eigen/Geometry>
 #include <glm/glm.hpp>
 #include <imgui.h>
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
@@ -44,8 +44,11 @@ class H1RagdollApp : public App {
     Bridge::PhysicsBridge physicsBridge;
 
     std::vector<float> targets;
+    MeshHandle contactArrowHandle = InvalidHandle;
 
     float spawnHeightOffset = 1.5f;
+    float contactImpulseScale = 0.08f;
+    float contactMaxArrowLength = 0.6f;
 
     float kp = 0.f;
     float kd = 5.f;
@@ -53,6 +56,7 @@ class H1RagdollApp : public App {
     bool spaceWasDown = false;
     bool rWasDown = false;
     bool showCollision = false;
+    bool showContacts = true;
     // -----------------------------------------------------------------------
     void setup() override {
         auto commonVSPath = KE::getAssetPath("shaders/common.vs");
@@ -96,8 +100,7 @@ class H1RagdollApp : public App {
 
         // const std::string mjcfPath =
         //     KE::getAssetPath("external/retargetted/unitree_h1/unitree_h1.xml");
-        const std::string mjcfPath =
-            KE::getAssetPath("external/retargetted/kw/kw5.xml");
+        const std::string mjcfPath = KE::getAssetPath("characters/kw/kw5.xml");
         const auto mjcfData = MJCFLoader::load(mjcfPath);
 
         artic = Articulation::build(physics, mjcfData.skeletonTree,
@@ -113,6 +116,11 @@ class H1RagdollApp : public App {
         auto colPrims = physicsBridge.addCollisionVisuals(artic, getScene());
         for (auto* p : colPrims)
             addShape(commonShader.get(), p);
+
+        contactArrowHandle = Scene::DebugDraw::logArrows(
+            this, commonShader.get(), "/debug/contact_arrows",
+            {glm::vec3(0.0f)}, {glm::vec3(0.0f, 0.0f, 0.1f)},
+            {glm::vec4(1.0f, 0.2f, 0.05f, 1.0f)}, 0.025f, 12);
 
         targets.assign(artic.numDofs(), 0.f);
 
@@ -142,8 +150,47 @@ class H1RagdollApp : public App {
             physics.step();
             physicsBridge.sync();
         }
+        updateContactArrows();
 
         checkError();
+    }
+
+    void updateContactArrows() {
+        if (contactArrowHandle == InvalidHandle)
+            return;
+
+        std::vector<glm::mat4> transforms;
+        std::vector<glm::vec4> colors;
+        if (showContacts) {
+            const auto& contacts = physics.getContacts();
+            transforms.reserve(contacts.size());
+            colors.reserve(contacts.size());
+
+            for (const auto& contact : contacts) {
+                float impulseLen = glm::length(contact.impulse);
+                glm::vec3 dir = impulseLen > 1e-5f
+                                    ? glm::normalize(contact.impulse)
+                                    : contact.normal;
+                if (glm::length(dir) < 1e-5f)
+                    continue;
+
+                float arrowLen = std::clamp(impulseLen * contactImpulseScale,
+                                            0.05f, contactMaxArrowLength);
+                glm::vec3 start = contact.position;
+                glm::vec3 end = start + dir * arrowLen;
+                glm::mat4 transform(1.0f);
+                if (!Scene::DebugDraw::makeArrowTransform(start, end,
+                                                          transform))
+                    continue;
+                transforms.push_back(transform);
+
+                float heat =
+                    std::clamp(arrowLen / contactMaxArrowLength, 0.0f, 1.0f);
+                colors.push_back(
+                    glm::vec4(1.0f, 0.9f - 0.7f * heat, 0.05f, 1.0f));
+            }
+        }
+        updateShapeTransforms(contactArrowHandle, transforms, &colors);
     }
 
     // -----------------------------------------------------------------------
@@ -180,6 +227,12 @@ class H1RagdollApp : public App {
                 p->setDisplayColorAlpha(col);
             }
         }
+        ImGui::Checkbox("Show contacts", &showContacts);
+        ImGui::SliderFloat("Contact impulse scale", &contactImpulseScale,
+                           0.005f, 0.3f);
+        ImGui::SliderFloat("Contact max arrow length", &contactMaxArrowLength,
+                           0.05f, 2.0f);
+        ImGui::Text("Contacts: %u", physics.numContacts());
 
         if (kp >= 1.f) {
             ImGui::Text("Joint targets (rad):");
