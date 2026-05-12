@@ -3,6 +3,7 @@
 #include <fmt/core.h>
 #include <tinyxml2.h>
 
+#include <algorithm>
 #include <cmath>
 #include <queue>
 #include <sstream>
@@ -94,6 +95,9 @@ struct DefaultGeomAttrs {
     std::vector<float> pos;
     std::vector<float> quat;
     std::vector<float> fromto;
+    std::vector<float> friction;
+    int condim = -1;
+    float margin = -1.f;
     std::string parentClass;
 };
 
@@ -115,6 +119,11 @@ void readGeomDefaults(tinyxml2::XMLElement* defElem, DefaultGeomAttrs& out) {
     auto ft = splitFloats(g->Attribute("fromto"));
     if (!ft.empty())
         out.fromto = ft;
+    auto fr = splitFloats(g->Attribute("friction"));
+    if (!fr.empty())
+        out.friction = fr;
+    g->QueryIntAttribute("condim", &out.condim);
+    g->QueryFloatAttribute("margin", &out.margin);
 }
 
 void collectDefaults(
@@ -154,6 +163,12 @@ resolveClass(const std::string& cls,
             out.quat = a.quat;
         if (out.fromto.empty() && !a.fromto.empty())
             out.fromto = a.fromto;
+        if (out.friction.empty() && !a.friction.empty())
+            out.friction = a.friction;
+        if (out.condim < 0 && a.condim >= 0)
+            out.condim = a.condim;
+        if (out.margin < 0.f && a.margin >= 0.f)
+            out.margin = a.margin;
         cur = a.parentClass;
     }
     return out;
@@ -181,6 +196,7 @@ bool buildCollisionGeom(
     auto pos = splitFloats(geomElem->Attribute("pos"));
     auto quat = splitFloats(geomElem->Attribute("quat"));
     auto fromto = splitFloats(geomElem->Attribute("fromto"));
+    auto friction = splitFloats(geomElem->Attribute("friction"));
     if (size.empty())
         size = defs.size;
     if (pos.empty())
@@ -189,6 +205,8 @@ bool buildCollisionGeom(
         quat = defs.quat;
     if (fromto.empty())
         fromto = defs.fromto;
+    if (friction.empty())
+        friction = defs.friction;
 
     if (typeStr == "capsule")
         out.type = CollisionGeom::Type::Capsule;
@@ -220,6 +238,12 @@ bool buildCollisionGeom(
         out.from = Eigen::Vector3f(fromto[0], fromto[1], fromto[2]);
         out.to = Eigen::Vector3f(fromto[3], fromto[4], fromto[5]);
     }
+    if (!friction.empty())
+        out.friction = friction[0];
+    out.condim = defs.condim;
+    geomElem->QueryIntAttribute("condim", &out.condim);
+    out.margin = defs.margin;
+    geomElem->QueryFloatAttribute("margin", &out.margin);
 
     return true;
 }
@@ -358,7 +382,10 @@ void MJCFLoader::parse(const std::string& mjcfPath, float scale,
                     g.to *= scale;
                 }
 
-                if (inertiafromgeom) {
+                // MuJoCo assets commonly omit <inertial> and put density on
+                // geoms instead. Use those densities whenever they are present,
+                // even if compiler inertiafromgeom is not explicitly set.
+                if (inertiafromgeom || geom->Attribute("density")) {
                     float density = 1000.f;
                     geom->QueryFloatAttribute("density", &density);
                     auto gmd = geomMassContribution(g, density);
@@ -386,6 +413,15 @@ void MJCFLoader::parse(const std::string& mjcfPath, float scale,
                     jd.loLimit = rangeVals[0] * degToRad;
                     jd.hiLimit = rangeVals[1] * degToRad;
                 }
+                jElem->QueryFloatAttribute("stiffness", &jd.kp);
+                jElem->QueryFloatAttribute("damping", &jd.kd);
+                auto forceRangeVals =
+                    splitFloats(jElem->Attribute("actuatorfrcrange"));
+                if (forceRangeVals.size() >= 2) {
+                    jd.effortLimit =
+                        std::max(std::abs(forceRangeVals[0]),
+                                 std::abs(forceRangeVals[1]));
+                }
                 _data.joints[idx].push_back(jd);
             }
 
@@ -409,7 +445,7 @@ void MJCFLoader::parse(const std::string& mjcfPath, float scale,
                 if (di.size() >= 3)
                     inertial.diagInertia = Eigen::Vector3f(di[0], di[1], di[2]);
                 _data.inertials[idx] = inertial;
-            } else if (inertiafromgeom && !geomMasses.empty()) {
+            } else if (!geomMasses.empty()) {
                 float totalMass = 0.f;
                 Eigen::Vector3f com = Eigen::Vector3f::Zero();
                 for (const auto& gmd : geomMasses) {

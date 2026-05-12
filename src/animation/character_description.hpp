@@ -7,6 +7,7 @@
 
 #include "skeleton_tree.hpp"
 
+#include <cfloat>
 #include <Eigen/Geometry>
 #include <memory>
 #include <string>
@@ -33,6 +34,9 @@ struct Joint {
     Eigen::Vector3f axis = Eigen::Vector3f::UnitZ();
     float loLimit = -3.14159f;
     float hiLimit = 3.14159f;
+    float kp = 0.f;
+    float kd = 0.f;
+    float effortLimit = FLT_MAX;
 };
 
 struct Inertial {
@@ -60,6 +64,18 @@ struct CollisionGeom {
     bool hasFromTo = false;
     Eigen::Vector3f from = Eigen::Vector3f::Zero();
     Eigen::Vector3f to = Eigen::Vector3f::Zero();
+
+    // MuJoCo friction[0] is sliding friction. PhysX uses separate static and
+    // dynamic friction coefficients; KangEngine maps sliding friction to both.
+    float friction = 1.f;
+
+    // MuJoCo contact dimensionality. KangEngine parses it for diagnostics and
+    // future matching, but does not alter PhysX material behavior by default.
+    int condim = -1;
+
+    // MuJoCo geom margin controls the distance at which contacts become active.
+    // When present, KangEngine maps it to PhysX shape contactOffset.
+    float margin = -1.f;
 };
 
 // ---------------------------------------------------------------------------

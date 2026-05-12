@@ -10,10 +10,15 @@
 #include "utils/types.hpp"
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <memory>
+#include <unordered_set>
+#include <vector>
 
 using namespace physx;
 
 namespace KE {
+
+class Articulation;
 
 struct PhysicsConfig {
     UpAxis upAxis = UpAxis::Y;
@@ -21,6 +26,7 @@ struct PhysicsConfig {
     float gravity[3] = {0.0f, -9.81f, 0.0f};
     float friction[3] = {1.0f, 1.0f, 0.0f};
     PxSimulationFilterShader filterShader = PxDefaultSimulationFilterShader;
+    bool enableContactReports = true;
     // PxSolverType::Enum solverType = PxSolverType::ePGS;
     PxSolverType::Enum solverType = PxSolverType::eTGS;
 
@@ -35,9 +41,20 @@ struct PhysicsConfig {
     }
 };
 
+struct ContactPoint {
+    glm::vec3 position = glm::vec3(0.0f);
+    glm::vec3 normal = glm::vec3(0.0f);
+    glm::vec3 impulse = glm::vec3(0.0f);
+    float separation = 0.0f;
+    PxActor* actor0 = nullptr;
+    PxActor* actor1 = nullptr;
+};
+
 class PhysicsWorld {
 
   private:
+    class ContactReportCallback;
+
     PxDefaultAllocator _allocator;
     PxDefaultErrorCallback _errorCallback;
     PxFoundation* _foundation = nullptr;
@@ -50,53 +67,24 @@ class PhysicsWorld {
     UpAxis _upAxis;
     PxVec3 _gravity;
     PxVec3 _friction;
+    std::vector<ContactPoint> _contacts;
+    std::unordered_set<const PxActor*> _groundActors;
+    std::unique_ptr<ContactReportCallback> _contactCallback;
 
   public:
-    PhysicsWorld(PhysicsConfig config) {
-        _dt = config.dt;
-        _upAxis = config.upAxis;
-        _gravity =
-            PxVec3(config.gravity[0], config.gravity[1], config.gravity[2]);
-        _friction =
-            PxVec3(config.friction[0], config.friction[1], config.friction[2]);
-
-        _foundation =
-            PxCreateFoundation(PX_PHYSICS_VERSION, _allocator, _errorCallback);
-        _physics = PxCreatePhysics(PX_PHYSICS_VERSION, *_foundation,
-                                   PxTolerancesScale(), true);
-        PxInitExtensions(*_physics, nullptr);
-
-        PxSceneDesc sceneDesc(_physics->getTolerancesScale());
-        sceneDesc.gravity = _gravity;
-        _dispatcher = PxDefaultCpuDispatcherCreate(2);
-        sceneDesc.cpuDispatcher = _dispatcher;
-        sceneDesc.filterShader = config.filterShader;
-        sceneDesc.solverType = config.solverType;
-        _scene = _physics->createScene(sceneDesc);
-
-        _material = _physics->createMaterial(
-            _friction[0], _friction[1],
-            _friction[2]); // staticFriction, dynamicFriction, restitution
-        fmt::print("PhysX is initialized.\n");
-    }
-
-    ~PhysicsWorld() {
-        if (_scene)
-            _scene->release();
-        if (_dispatcher)
-            _dispatcher->release();
-        if (_material)
-            _material->release();
-        PxCloseExtensions();
-        if (_physics)
-            _physics->release();
-        if (_foundation)
-            _foundation->release();
-    };
+    PhysicsWorld(PhysicsConfig config);
+    ~PhysicsWorld();
 
     void setDt(float dt) { _dt = dt; }
 
     void addDefaultGround();
+    void registerGroundActor(const PxActor* actor);
+    void unregisterGroundActor(const PxActor* actor);
+    void clearGroundActors() { _groundActors.clear(); }
+    bool isGroundActor(const PxActor* actor) const;
+    PxU32 numGroundActors() const {
+        return static_cast<PxU32>(_groundActors.size());
+    }
 
     void addBox(float x, float y, float z);
 
@@ -113,6 +101,16 @@ class PhysicsWorld {
     void fecthData();
 
     void step();
+
+    const std::vector<ContactPoint>& getContacts() const { return _contacts; }
+    PxU32 numContacts() const { return static_cast<PxU32>(_contacts.size()); }
+    void clearContacts() { _contacts.clear(); }
+    std::vector<float> getContactForcesFlat(const Articulation& articulation,
+                                            bool groundOnly = false) const;
+    std::vector<float>
+    getGroundContactForcesFlat(const Articulation& articulation) const {
+        return getContactForcesFlat(articulation, true);
+    }
 
     PxU32 numBodyActors() {
         return _scene->getNbActors(PxActorTypeFlag::eRIGID_DYNAMIC);
