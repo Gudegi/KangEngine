@@ -40,6 +40,10 @@ void Window::init(int width, int height) {
 }
 
 void Window::initGlfw() {
+#ifdef __APPLE__
+    // Prevent changing current directory
+    glfwInitHint(GLFW_COCOA_CHDIR_RESOURCES, GLFW_FALSE);
+#endif
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
