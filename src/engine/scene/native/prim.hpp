@@ -28,11 +28,12 @@ using AttributeValue =
 
 // Prim 타입
 enum class PrimType {
-    Root,   // "/" 루트
-    Xform,  // Transform (그룹)
-    Mesh,   // Mesh 데이터
-    Camera, // Camera
-    Light   // Light
+    Root,         // "/" 루트
+    Xform,        // Transform (그룹)
+    Mesh,         // Mesh 데이터 owner
+    MeshInstance, // Mesh geometry reference with its own scene identity
+    Camera,       // Camera
+    Light         // Light
 };
 
 // Scene Graph Node (USD Prim처럼)
@@ -47,6 +48,7 @@ class Prim {
 
     // 데이터 (타입에 따라 다름)
     std::shared_ptr<MeshData> _meshData;
+    std::string _meshSourcePath;
     std::unordered_map<Token, AttributeValue, Token::Hash> _Attributes;
 
     bool _renderable = true; // whether can render or not  TODO: true only when
@@ -82,6 +84,9 @@ class Prim {
     // Mesh 데이터 (type == Mesh일 때만)
     void setMeshData(std::shared_ptr<MeshData> data);
     std::shared_ptr<MeshData> getMeshData() const;
+    void setMeshSourcePath(const std::string& path);
+    const std::string& getMeshSourcePath() const;
+    std::shared_ptr<MeshData> resolveMeshData() const;
 
     static MeshData createCubeData(float scale);
     static MeshData createSquareData(float scale); // Deprecated.

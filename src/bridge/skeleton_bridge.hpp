@@ -6,6 +6,7 @@
 #define _SKELETON_BRIDGE_HPP_
 
 #include "animation/skeleton_fk.hpp"
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -14,9 +15,12 @@ namespace KE {
 namespace Scene {
 class SceneBackend;
 class Prim;
+struct MeshData;
 } // namespace Scene
 
 namespace Bridge {
+
+class SkeletonBridgeAsset;
 
 class SkeletonBridge {
   public:
@@ -27,12 +31,14 @@ class SkeletonBridge {
                                    Scene::SceneBackend* scene,
                                    const std::string& primBasePath = "/robot",
                                    float scale = 1.0f,
-                                   const std::string& order = "DFS");
+                                   const std::string& order = "DFS",
+                                   const std::string& meshAssetBasePath = "");
 
     static SkeletonBridge fromData(const Animation::CharacterData& data,
                                    Scene::SceneBackend* scene,
                                    const std::string& primBasePath = "/robot",
-                                   float scale = 1.0f);
+                                   float scale = 1.0f,
+                                   const std::string& meshAssetBasePath = "");
 
     // Sync FK global transforms > update all body Prim xformOp attributes.
     void applyPose();
@@ -50,8 +56,36 @@ class SkeletonBridge {
     int numBodies() const { return _fk.numBodies(); }
 
   private:
+    friend class SkeletonBridgeAsset;
+
     Animation::SkeletonFK _fk;
     std::vector<Scene::Prim*> _bodyPrims; // non-owning, scene owns
+};
+
+class SkeletonBridgeAsset {
+  public:
+    SkeletonBridgeAsset() = default;
+
+    static SkeletonBridgeAsset fromMJCF(const std::string& mjcfPath,
+                                        float scale = 1.0f,
+                                        const std::string& order = "DFS");
+
+    static SkeletonBridgeAsset fromData(const Animation::CharacterData& data,
+                                        float scale = 1.0f);
+
+    void defineMeshAssets(Scene::SceneBackend* scene,
+                          const std::string& meshAssetBasePath) const;
+
+    SkeletonBridge instantiate(Scene::SceneBackend* scene,
+                               const std::string& primBasePath = "/robot",
+                               const std::string& meshAssetBasePath = "") const;
+
+    int numBodies() const { return static_cast<int>(_bodyMeshes.size()); }
+
+  private:
+    Animation::CharacterData _data;
+    float _scale = 1.0f;
+    std::vector<std::shared_ptr<Scene::MeshData>> _bodyMeshes;
 };
 
 } // namespace Bridge

@@ -5,6 +5,7 @@
 ///   PhysicsBridge bridge{this};               // App* once at construction
 ///   bridge.add(artic, skelBridge);            // single robot (Prim-based)
 ///   bridge.addInstanced(artics, handles);     // N robots   (Handle-based)
+///   bridge.addInstanced(artic, handles);      // append one robot to group
 ///   bridge.addCollisionVisuals(artic, scene); // collision debug (optional)
 ///
 ///   bridge.sync();                            // once per frame
@@ -47,6 +48,8 @@ class PhysicsBridge {
     // N identical articulations, one handle per body type — instanced sync
     void addInstanced(std::vector<Articulation*> artics,
                       std::vector<MeshHandle> handles);
+    void addInstanced(const Articulation& artic,
+                      const std::vector<MeshHandle>& handles);
 
     // Create one Prim per collision geom. Returns Prims for addShape().
     // visibleByDefault=false: debug overlay (invisible until toggled)
@@ -69,7 +72,7 @@ class PhysicsBridge {
     };
 
     struct InstancedGroup {
-        std::vector<Articulation*> artics;
+        std::vector<const Articulation*> artics;
         std::vector<MeshHandle> handles;
     };
 

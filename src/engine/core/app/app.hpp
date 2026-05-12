@@ -146,8 +146,10 @@ class App {
         return _rasterizer ? _rasterizer->getShadowFbo() : nullptr;
     }
 
-    MeshHandle addShape(Backend::Shader* shader, Scene::Prim* prim);
-    MeshHandle addShape(PhongMaterial* material, Scene::Prim* prim);
+    MeshHandle addShape(Backend::Shader* shader, Scene::Prim* prim,
+                        RenderTrack track = RenderTrack::SceneGraph);
+    MeshHandle addShape(PhongMaterial* material, Scene::Prim* prim,
+                        RenderTrack track = RenderTrack::SceneGraph);
     void removePrim(MeshHandle handle, Scene::Prim* prim);
 
     struct MeshPrimDesc {

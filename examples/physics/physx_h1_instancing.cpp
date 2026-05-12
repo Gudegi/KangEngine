@@ -39,7 +39,7 @@ class H1InstancingApp : public App {
     std::unique_ptr<Backend::Shader> groundShader;
 
     PhysicsWorld physics{PhysicsConfig::zUp()};
-    SkeletonBridge refRobot; // mesh reference — prims used for instancer setup
+    SkeletonBridge refRobot; // MeshInstance prims used for instancer setup
     std::vector<Articulation> _artics;
     Bridge::PhysicsBridge physicsBridge;
 
@@ -87,15 +87,27 @@ class H1InstancingApp : public App {
             Scene::Prim::createPlaneData(100.f, UpAxis::Z)));
         addShape(groundShader.get(), gnd);
 
-        // Load MJCF once — refRobot provides mesh data for all instancers
+        // Load MJCF once.
         const std::string mjcfPath =
             KE::getAssetPath("external/retargetted/unitree_h1/unitree_h1.xml");
         const auto mjcfData = MJCFLoader::load(mjcfPath);
-        refRobot = SkeletonBridge::fromData(mjcfData, getScene());
+
+        // Old pattern: create direct Mesh prims as a renderer setup reference.
+        // This still works, but every reference prim owns mesh data directly.
+        // refRobot = SkeletonBridge::fromData(mjcfData, getScene());
+
+        // Current pattern: create source Mesh prims once, then use
+        // MeshInstance body prims as the renderer setup reference.
+        auto refAsset = SkeletonBridgeAsset::fromData(mjcfData);
+        const std::string meshAssetBasePath = "/mesh_assets/h1";
+        refAsset.defineMeshAssets(getScene(), meshAssetBasePath);
+        refRobot =
+            refAsset.instantiate(getScene(), "/h1_ref", meshAssetBasePath);
 
         // One handle per body type — each instancer will hold N transforms
         for (auto* prim : refRobot.bodyPrims())
-            _bodyHandles.push_back(addShape(commonShader.get(), prim));
+            _bodyHandles.push_back(
+                addShape(commonShader.get(), prim, RenderTrack::Instanced));
 
         // Per-robot colors — same color for all bodies of one robot
         std::vector<glm::vec4> colors(N);

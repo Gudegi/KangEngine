@@ -83,6 +83,9 @@ class BoxInstancingApp : public App {
         //        BOX_HALF * 2, BOX_HALF * 2, BOX_HALF * 2));
         _boxMesh = std::make_shared<Scene::MeshData>(
             Scene::Prim::createSphereData(BOX_HALF, 32, 16));
+        auto* boxMeshAsset =
+            getScene()->definePrim("/mesh_assets/box", Scene::PrimType::Mesh);
+        boxMeshAsset->setMeshData(_boxMesh);
 
         _spawnPositions.resize(NUM_BOXES, 3);
         const int cols = 10;
@@ -117,14 +120,15 @@ class BoxInstancingApp : public App {
             _actors.push_back(actor);
 
             auto* prim = getScene()->definePrim("/boxes/b" + std::to_string(i),
-                                                Scene::PrimType::Mesh);
-            prim->setMeshData(_boxMesh);
+                                                Scene::PrimType::MeshInstance);
+            prim->setMeshSourcePath("/mesh_assets/box");
             float t = static_cast<float>(i) / NUM_BOXES;
             glm::vec4 color = glm::vec4(0.3f + 0.7f * t, 0.6f - 0.4f * t,
                                         1.0f - 0.6f * t, 1.0f);
             prim->setDisplayColorAlpha(color);
             _colors.push_back(color);
-            MeshHandle h = addShape(commonShader.get(), prim);
+            MeshHandle h =
+                addShape(commonShader.get(), prim, RenderTrack::Instanced);
             if (_boxHandle == InvalidHandle)
                 _boxHandle = h;
             _prims.push_back(prim);

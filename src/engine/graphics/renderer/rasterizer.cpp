@@ -48,12 +48,13 @@ Rasterizer::Rasterizer(Backend::GraphicsDevice* graphicsDevice) {
 
 // Prim-based (instanced)
 
-MeshHandle Rasterizer::addShape(Backend::Shader* shader, Scene::Prim* prim) {
-    auto meshData = prim->getMeshData();
+MeshHandle Rasterizer::addShape(Backend::Shader* shader, Scene::Prim* prim,
+                                RenderTrack track) {
+    auto meshData = prim->resolveMeshData();
     if (!meshData || meshData->vertices.empty() || meshData->indices.empty())
         return InvalidHandle;
 
-    InstancerKey key{shader, meshData.get(), nullptr};
+    InstancerKey key{shader, meshData.get(), nullptr, track};
     auto it = _instancers.find(key);
     if (it == _instancers.end()) {
         auto [newIt, inserted] = _instancers.emplace(key, MeshInstancer{});
@@ -72,14 +73,15 @@ MeshHandle Rasterizer::addShape(Backend::Shader* shader, Scene::Prim* prim) {
     return hIt->second;
 }
 
-MeshHandle Rasterizer::addShape(PhongMaterial* material, Scene::Prim* prim) {
-    auto meshData = prim->getMeshData();
+MeshHandle Rasterizer::addShape(PhongMaterial* material, Scene::Prim* prim,
+                                RenderTrack track) {
+    auto meshData = prim->resolveMeshData();
     if (!material || !meshData || meshData->vertices.empty() ||
         meshData->indices.empty())
         return InvalidHandle;
 
     auto* shader = material->getShader();
-    InstancerKey key{shader, meshData.get(), material};
+    InstancerKey key{shader, meshData.get(), material, track};
     auto it = _instancers.find(key);
     if (it == _instancers.end()) {
         auto [newIt, inserted] = _instancers.emplace(key, MeshInstancer{});

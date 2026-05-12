@@ -97,6 +97,31 @@ void Prim::setMeshData(std::shared_ptr<MeshData> data) { _meshData = data; }
 
 std::shared_ptr<MeshData> Prim::getMeshData() const { return _meshData; }
 
+void Prim::setMeshSourcePath(const std::string& path) {
+    _meshSourcePath = path;
+}
+
+const std::string& Prim::getMeshSourcePath() const { return _meshSourcePath; }
+
+std::shared_ptr<MeshData> Prim::resolveMeshData() const {
+    if (_meshData)
+        return _meshData;
+
+    if (_type != PrimType::MeshInstance || _meshSourcePath.empty())
+        return nullptr;
+
+    const Prim* root = this;
+    while (root->_parent)
+        root = root->_parent;
+
+    auto* source =
+        const_cast<Prim*>(root)->getPrimAtPath(_meshSourcePath);
+    if (!source || source == this)
+        return nullptr;
+
+    return source->resolveMeshData();
+}
+
 MeshData Prim::createSquareData(float scale) { return createCubeData(scale); }
 
 MeshData Prim::createCubeData(float scale) {

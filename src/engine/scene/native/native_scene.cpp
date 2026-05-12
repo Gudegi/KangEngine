@@ -27,8 +27,9 @@ bool NativeScene::saveScene(const std::string& path) {
 
 MeshData NativeScene::loadMesh(const std::string& primPath) {
     Prim* prim = _root->getPrimAtPath(primPath);
-    if (prim && prim->getType() == PrimType::Mesh) {
-        auto data = prim->getMeshData();
+    if (prim && (prim->getType() == PrimType::Mesh ||
+                 prim->getType() == PrimType::MeshInstance)) {
+        auto data = prim->resolveMeshData();
         if (data) {
             return *data;
         }
@@ -84,7 +85,10 @@ Prim* NativeScene::createPrim(const std::string& path, PrimType type) {
         current = child;
     }
 
-    // 마지막 prim 생성
+    // 마지막 prim 생성. DefinePrim-style calls are idempotent for an
+    // existing path; the first type wins.
+    if (Prim* existing = current->getChild(parts.back()))
+        return existing;
     return current->addChild(parts.back(), type);
 }
 

@@ -11,6 +11,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <memory>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -86,67 +87,36 @@ buildCollisionMesh(const std::vector<Animation::CollisionGeom>& geoms) {
     return combined;
 }
 
-SkeletonBridge SkeletonBridge::fromMJCF(const std::string& mjcfPath,
-                                        Scene::SceneBackend* scene,
-                                        const std::string& primBasePath,
-                                        float scale, const std::string& order) {
-    return fromData(Animation::MJCFLoader::load(mjcfPath, 1.0f, order), scene,
-                    primBasePath, scale);
-}
+static std::vector<std::shared_ptr<Scene::MeshData>>
+buildBodyMeshes(const Animation::CharacterData& data) {
+    int numBodies = data.skeletonTree ? data.skeletonTree->numJoints() : 0;
+    std::vector<std::shared_ptr<Scene::MeshData>> bodyMeshes(numBodies);
 
-SkeletonBridge SkeletonBridge::fromData(const Animation::CharacterData& data,
-                                        Scene::SceneBackend* scene,
-                                        const std::string& primBasePath,
-                                        float scale) {
-    SkeletonBridge bridge;
-    bridge._fk = Animation::SkeletonFK::fromData(data, scale);
-
-    auto globalTransforms = bridge._fk.state().computeGlobalTransforms();
-    int numBodies = bridge._fk.numBodies();
-    bridge._bodyPrims.resize(numBodies, nullptr);
-
-    // Collect which bodies have STL visual meshes
     std::unordered_set<int> stlBodies;
     for (const auto& m : data.meshInfos)
         stlBodies.insert(m.bodyIndex);
 
-    // Create one Prim per body
     for (int i = 0; i < numBodies; i++) {
-        std::string bodyName = bridge._fk.skeleton().nodeName(i);
-        std::string primPath = primBasePath + "/" + bodyName;
-        auto* prim = scene->definePrim(primPath, Scene::PrimType::Mesh);
-        prim->setAttribute("primvars:displaycolorAlpha",
-                           glm::vec4(0.15f, 0.15f, 0.15f, 1.0f));
-        prim->setAttribute("xformOp:scale", glm::vec3(scale));
-        glm::vec3 pos =
-            Animation::toGlm(globalTransforms[i].translation) * scale;
-        glm::quat rot = Animation::toGlm(globalTransforms[i].rotation);
-        prim->setAttribute("xformOp:translate", pos);
-        prim->setAttribute("xformOp:rotateQuaternion", rot);
-        bridge._bodyPrims[i] = prim;
-
-        // Fallback: build mesh from collision geoms if no STL
-        if (stlBodies.count(i) == 0) {
-            auto it = data.collisionGeoms.find(i);
-            if (it != data.collisionGeoms.end() && !it->second.empty()) {
-                auto colMesh = buildCollisionMesh(it->second);
-                if (!colMesh.vertices.empty())
-                    prim->setMeshData(
-                        std::make_shared<Scene::MeshData>(std::move(colMesh)));
-            }
-        }
+        if (stlBodies.count(i) != 0)
+            continue;
+        auto it = data.collisionGeoms.find(i);
+        if (it == data.collisionGeoms.end() || it->second.empty())
+            continue;
+        auto colMesh = buildCollisionMesh(it->second);
+        if (!colMesh.vertices.empty())
+            bodyMeshes[i] =
+                std::make_shared<Scene::MeshData>(std::move(colMesh));
     }
 
-    // Load STL mesh data, merging multiple visual geoms per body
-    std::unordered_map<int, Scene::MeshData> bodyMeshes;
+    std::unordered_map<int, Scene::MeshData> stlMeshes;
     for (const auto& meshInfo : data.meshInfos) {
         std::string stlPath = data.meshDir + meshInfo.meshFile;
         fmt::print("Loading mesh [{}] {}: {}\n", meshInfo.bodyIndex,
                    meshInfo.bodyName, stlPath);
         auto part = loadStl(stlPath);
-        auto it = bodyMeshes.find(meshInfo.bodyIndex);
-        if (it == bodyMeshes.end()) {
-            bodyMeshes[meshInfo.bodyIndex] = std::move(part);
+        auto it = stlMeshes.find(meshInfo.bodyIndex);
+        if (it == stlMeshes.end()) {
+            stlMeshes[meshInfo.bodyIndex] = std::move(part);
         } else {
             auto& dst = it->second;
             unsigned int offset = (unsigned int)dst.vertices.size();
@@ -160,12 +130,108 @@ SkeletonBridge SkeletonBridge::fromData(const Animation::CharacterData& data,
                                part.indices.end());
         }
     }
-    for (auto& [bodyIdx, mesh] : bodyMeshes)
-        bridge._bodyPrims[bodyIdx]->setMeshData(
-            std::make_shared<Scene::MeshData>(std::move(mesh)));
 
-    fmt::print("SkeletonBridge loaded: {} bodies, {} meshes\n",
-               bridge._fk.numBodies(), data.meshInfos.size());
+    for (auto& [bodyIdx, mesh] : stlMeshes) {
+        if (bodyIdx >= 0 && bodyIdx < static_cast<int>(bodyMeshes.size()))
+            bodyMeshes[bodyIdx] =
+                std::make_shared<Scene::MeshData>(std::move(mesh));
+    }
+
+    return bodyMeshes;
+}
+
+SkeletonBridge SkeletonBridge::fromMJCF(const std::string& mjcfPath,
+                                        Scene::SceneBackend* scene,
+                                        const std::string& primBasePath,
+                                        float scale, const std::string& order,
+                                        const std::string& meshAssetBasePath) {
+    auto asset = SkeletonBridgeAsset::fromMJCF(mjcfPath, scale, order);
+    return asset.instantiate(scene, primBasePath, meshAssetBasePath);
+}
+
+SkeletonBridge SkeletonBridge::fromData(const Animation::CharacterData& data,
+                                        Scene::SceneBackend* scene,
+                                        const std::string& primBasePath,
+                                        float scale,
+                                        const std::string& meshAssetBasePath) {
+    auto asset = SkeletonBridgeAsset::fromData(data, scale);
+    return asset.instantiate(scene, primBasePath, meshAssetBasePath);
+}
+
+SkeletonBridgeAsset
+SkeletonBridgeAsset::fromMJCF(const std::string& mjcfPath, float scale,
+                              const std::string& order) {
+    return fromData(Animation::MJCFLoader::load(mjcfPath, 1.0f, order), scale);
+}
+
+SkeletonBridgeAsset
+SkeletonBridgeAsset::fromData(const Animation::CharacterData& data,
+                              float scale) {
+    SkeletonBridgeAsset asset;
+    asset._data = data;
+    asset._scale = scale;
+    asset._bodyMeshes = buildBodyMeshes(data);
+    fmt::print("SkeletonBridgeAsset loaded: {} bodies, {} meshes\n",
+               asset.numBodies(), data.meshInfos.size());
+    return asset;
+}
+
+void SkeletonBridgeAsset::defineMeshAssets(
+    Scene::SceneBackend* scene, const std::string& meshAssetBasePath) const {
+    if (!scene || meshAssetBasePath.empty())
+        return;
+    for (int i = 0; i < static_cast<int>(_bodyMeshes.size()); i++) {
+        if (!_bodyMeshes[i])
+            continue;
+        auto* assetPrim = scene->definePrim(
+            meshAssetBasePath + "/body_" + std::to_string(i),
+            Scene::PrimType::Mesh);
+        if (!assetPrim->getMeshData())
+            assetPrim->setMeshData(_bodyMeshes[i]);
+    }
+}
+
+SkeletonBridge SkeletonBridgeAsset::instantiate(
+    Scene::SceneBackend* scene, const std::string& primBasePath,
+    const std::string& meshAssetBasePath) const {
+    SkeletonBridge bridge;
+    bridge._fk = Animation::SkeletonFK::fromData(_data, _scale);
+
+    auto globalTransforms = bridge._fk.state().computeGlobalTransforms();
+    int numBodies = bridge._fk.numBodies();
+    bridge._bodyPrims.resize(numBodies, nullptr);
+    const bool useMeshInstances = !meshAssetBasePath.empty();
+    if (useMeshInstances)
+        defineMeshAssets(scene, meshAssetBasePath);
+
+    // Create one Prim per body
+    for (int i = 0; i < numBodies; i++) {
+        std::string bodyName = bridge._fk.skeleton().nodeName(i);
+        std::string primPath = primBasePath + "/" + bodyName;
+        std::string meshSourcePath =
+            meshAssetBasePath + "/body_" + std::to_string(i);
+        auto* prim = scene->definePrim(
+            primPath, useMeshInstances ? Scene::PrimType::MeshInstance
+                                       : Scene::PrimType::Mesh);
+        if (useMeshInstances)
+            prim->setMeshSourcePath(meshSourcePath);
+        prim->setAttribute("primvars:displaycolorAlpha",
+                           glm::vec4(0.15f, 0.15f, 0.15f, 1.0f));
+        prim->setAttribute("xformOp:scale", glm::vec3(_scale));
+        glm::vec3 pos =
+            Animation::toGlm(globalTransforms[i].translation) * _scale;
+        glm::quat rot = Animation::toGlm(globalTransforms[i].rotation);
+        prim->setAttribute("xformOp:translate", pos);
+        prim->setAttribute("xformOp:rotateQuaternion", rot);
+        bridge._bodyPrims[i] = prim;
+
+        if (!useMeshInstances && i < static_cast<int>(_bodyMeshes.size()) &&
+            _bodyMeshes[i])
+            prim->setMeshData(_bodyMeshes[i]);
+    }
+
+    fmt::print("SkeletonBridge instantiated: {} bodies\n",
+               bridge._fk.numBodies());
     return bridge;
 }
 

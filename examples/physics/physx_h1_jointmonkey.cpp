@@ -162,7 +162,9 @@ class H1PhysicsApp : public App {
     Articulation artic;
     Bridge::PhysicsBridge physicsBridge;
 
-    std::vector<float> targets; // joint target angles, size = n-1
+    std::vector<float> targets; // joint target angles, size = numDofs()
+    std::vector<std::string> dofNames;
+    std::vector<std::array<float, 2>> dofLimits;
 
     float kp = 200.f;
     float kd = 20.f;
@@ -196,13 +198,15 @@ class H1PhysicsApp : public App {
         for (auto* prim : robot.bodyPrims())
             addShape(stlShader.get(), prim);
 
-        targets.assign(robot.numBodies() - 1, 0.f);
-
         artic = Articulation::build(physics, mjcfData.skeletonTree,
                                     mjcfData.collisionGeoms, mjcfData.joints,
                                     mjcfData.inertials,
                                     ArticulationConfig::fixedBase());
-        physicsBridge.registerArticulationVisuals(artic, robot);
+        targets.assign(artic.numDofs(), 0.f);
+        dofNames = artic.getDofNames();
+        dofLimits = artic.getDofLimits();
+
+        physicsBridge.add(artic, robot);
         checkError();
     }
 
@@ -217,7 +221,7 @@ class H1PhysicsApp : public App {
         if (!paused) {
             artic.setDriveTargets(targets, kp, kd);
             physics.step();
-            physicsBridge.syncAllVisuals();
+            physicsBridge.sync();
         }
 
         checkError();
@@ -242,11 +246,17 @@ class H1PhysicsApp : public App {
         // Per-joint target sliders (skip root at index 0)
         ImGui::Text("Joint targets (rad):");
         ImGui::BeginChild("joints", ImVec2(0, 400), true);
-        for (int i = 1; i < n; i++) {
-            const auto& jd = artic.joints()[i];
-            std::string label = jd.name.empty() ? tree.nodeName(i) : jd.name;
-            ImGui::SliderFloat(label.c_str(), &targets[i - 1], jd.loLimit,
-                               jd.hiLimit);
+        for (int i = 0; i < static_cast<int>(targets.size()); i++) {
+            std::string label =
+                i < static_cast<int>(dofNames.size()) ? dofNames[i]
+                                                      : "dof_" + std::to_string(i);
+            float lo = -3.14f;
+            float hi = 3.14f;
+            if (i < static_cast<int>(dofLimits.size())) {
+                lo = dofLimits[i][0];
+                hi = dofLimits[i][1];
+            }
+            ImGui::SliderFloat(label.c_str(), &targets[i], lo, hi);
         }
         ImGui::EndChild();
 
@@ -257,14 +267,15 @@ class H1PhysicsApp : public App {
         if (ImGui::Button("Stand pose")) {
             // Slight knee bend for a stable stand
             std::fill(targets.begin(), targets.end(), 0.f);
-            for (int i = 1; i < n; i++) {
-                const std::string& nm = artic.joints()[i].name;
+            for (int i = 0; i < static_cast<int>(targets.size()); i++) {
+                const std::string& nm =
+                    i < static_cast<int>(dofNames.size()) ? dofNames[i] : "";
                 if (nm == "left_knee" || nm == "right_knee")
-                    targets[i - 1] = 0.4f;
+                    targets[i] = 0.4f;
                 if (nm == "left_hip_pitch" || nm == "right_hip_pitch")
-                    targets[i - 1] = -0.2f;
+                    targets[i] = -0.2f;
                 if (nm == "left_ankle" || nm == "right_ankle")
-                    targets[i - 1] = -0.2f;
+                    targets[i] = -0.2f;
             }
         }
 

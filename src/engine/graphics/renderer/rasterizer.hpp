@@ -25,6 +25,11 @@ namespace KE {
 using MeshHandle = uint32_t;
 static constexpr MeshHandle InvalidHandle = ~0u;
 
+enum class RenderTrack {
+    SceneGraph, // Prim/scene graph owns transforms.
+    Instanced,  // Caller uploads transform/color arrays through the handle.
+};
+
 // ---------------------------------------------------------------------------
 // Two-track rendering
 //
@@ -39,8 +44,8 @@ static constexpr MeshHandle InvalidHandle = ~0u;
 //   Use for: PhysX rigid bodies, large instanced crowds, anything with
 //            per-frame external transform arrays
 //
-// The two tracks share the same instancer; switching is per-instancer via
-// the _useExternalTransforms flag in MeshInstancer.
+// Tracks are split at the Rasterizer key level, so a scene-graph draw group and
+// an instanced draw group can share shader/mesh/material without interfering.
 // ---------------------------------------------------------------------------
 
 class Rasterizer : public Renderer {
@@ -50,12 +55,15 @@ class Rasterizer : public Renderer {
         Backend::Shader* shader;
         const Scene::MeshData* mesh;
         PhongMaterial* material; // nullptr for shader-only path
+        RenderTrack track;
         bool operator<(const InstancerKey& o) const {
             if (shader != o.shader)
                 return shader < o.shader;
             if (mesh != o.mesh)
                 return mesh < o.mesh;
-            return material < o.material;
+            if (material != o.material)
+                return material < o.material;
+            return track < o.track;
         }
     };
     std::map<InstancerKey, MeshInstancer> _instancers;
@@ -109,8 +117,10 @@ class Rasterizer : public Renderer {
     glm::mat4 computeLightSpaceMatrix(Camera& camera, const UpAxis upAxis);
     Backend::Framebuffer* getShadowFbo() { return _shadowFbo.get(); }
 
-    MeshHandle addShape(Backend::Shader* shader, Scene::Prim* prim);
-    MeshHandle addShape(PhongMaterial* material, Scene::Prim* prim);
+    MeshHandle addShape(Backend::Shader* shader, Scene::Prim* prim,
+                        RenderTrack track = RenderTrack::SceneGraph);
+    MeshHandle addShape(PhongMaterial* material, Scene::Prim* prim,
+                        RenderTrack track = RenderTrack::SceneGraph);
     void removePrim(MeshHandle handle, Scene::Prim* prim);
 
     void updateShapeTransforms(MeshHandle handle,

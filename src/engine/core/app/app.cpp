@@ -314,12 +314,16 @@ void App::coreRender() {
 
 void App::checkError() { _graphicsDevice->checkError(); }
 
-MeshHandle App::addShape(Backend::Shader* shader, Scene::Prim* prim) {
-    return _rasterizer ? _rasterizer->addShape(shader, prim) : InvalidHandle;
+MeshHandle App::addShape(Backend::Shader* shader, Scene::Prim* prim,
+                         RenderTrack track) {
+    return _rasterizer ? _rasterizer->addShape(shader, prim, track)
+                       : InvalidHandle;
 }
 
-MeshHandle App::addShape(PhongMaterial* material, Scene::Prim* prim) {
-    return _rasterizer ? _rasterizer->addShape(material, prim) : InvalidHandle;
+MeshHandle App::addShape(PhongMaterial* material, Scene::Prim* prim,
+                         RenderTrack track) {
+    return _rasterizer ? _rasterizer->addShape(material, prim, track)
+                       : InvalidHandle;
 }
 
 void App::removePrim(MeshHandle handle, Scene::Prim* prim) {
