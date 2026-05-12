@@ -43,8 +43,26 @@ glm::quat rotationFromYTo(const glm::vec3& dir) {
     return glm::normalize(glm::quat(q.w(), q.x(), q.y(), q.z()));
 }
 
-bool makeLineTransform(const glm::vec3& start, const glm::vec3& end,
-                       glm::mat4& transform) {
+} // namespace
+
+bool DebugDraw::makeArrowTransform(const glm::vec3& start,
+                                   const glm::vec3& end,
+                                   glm::mat4& transform) {
+    glm::vec3 diff = end - start;
+    float len = glm::length(diff);
+    if (len < 1e-6f)
+        return false;
+
+    glm::vec3 dir = diff / len;
+    transform = glm::translate(glm::mat4(1.0f), start) *
+                glm::mat4_cast(rotationFromYTo(dir)) *
+                glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, len, 1.0f));
+    return true;
+}
+
+bool DebugDraw::makeLineTransform(const glm::vec3& start,
+                                  const glm::vec3& end,
+                                  glm::mat4& transform) {
     glm::vec3 diff = end - start;
     float len = glm::length(diff);
     if (len < 1e-6f)
@@ -58,22 +76,6 @@ bool makeLineTransform(const glm::vec3& start, const glm::vec3& end,
                 glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, len, 1.0f));
     return true;
 }
-
-bool makeArrowTransform(const glm::vec3& start, const glm::vec3& end,
-                        glm::mat4& transform) {
-    glm::vec3 diff = end - start;
-    float len = glm::length(diff);
-    if (len < 1e-6f)
-        return false;
-
-    glm::vec3 dir = diff / len;
-    transform = glm::translate(glm::mat4(1.0f), start) *
-                glm::mat4_cast(rotationFromYTo(dir)) *
-                glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, len, 1.0f));
-    return true;
-}
-
-} // namespace
 
 std::vector<Prim*> DebugDraw::logLines(SceneBackend* scene,
                                        const std::string& basePath,
@@ -137,7 +139,7 @@ std::vector<Prim*> DebugDraw::logArrows(SceneBackend* scene,
 
     for (size_t i = 0; i < arrowCount; ++i) {
         glm::mat4 transform(1.0f);
-        if (!makeArrowTransform(starts[i], ends[i], transform))
+        if (!DebugDraw::makeArrowTransform(starts[i], ends[i], transform))
             continue;
 
         auto* prim = scene->definePrim(basePath + "/" + std::to_string(i),
@@ -196,7 +198,7 @@ MeshHandle DebugDraw::logLines(App* app, Backend::Shader* shader,
 
     for (size_t i = 0; i < lineCount; ++i) {
         glm::mat4 transform(1.0f);
-        if (!makeLineTransform(starts[i], ends[i], transform))
+        if (!DebugDraw::makeLineTransform(starts[i], ends[i], transform))
             continue;
         transforms.push_back(transform);
         instanceColors.push_back(pickColor(colors, i));
@@ -219,6 +221,32 @@ MeshHandle DebugDraw::logLines(App* app, Backend::Shader* shader,
     return handle;
 }
 
+void DebugDraw::updateLines(App* app, MeshHandle handle,
+                            const std::vector<glm::vec3>& starts,
+                            const std::vector<glm::vec3>& ends,
+                            const std::vector<glm::vec4>& colors) {
+    if (!app || handle == InvalidHandle)
+        return;
+
+    validateLineInputs("DebugDraw::updateLines", starts, ends, colors);
+
+    const size_t lineCount = starts.size();
+    std::vector<glm::mat4> transforms;
+    std::vector<glm::vec4> instanceColors;
+    transforms.reserve(lineCount);
+    instanceColors.reserve(lineCount);
+
+    for (size_t i = 0; i < lineCount; ++i) {
+        glm::mat4 transform(1.0f);
+        if (!DebugDraw::makeLineTransform(starts[i], ends[i], transform))
+            continue;
+        transforms.push_back(transform);
+        instanceColors.push_back(pickColor(colors, i));
+    }
+
+    app->updateShapeTransforms(handle, transforms, &instanceColors);
+}
+
 MeshHandle DebugDraw::logArrows(App* app, Backend::Shader* shader,
                                 const std::string& path,
                                 const std::vector<glm::vec3>& starts,
@@ -238,7 +266,7 @@ MeshHandle DebugDraw::logArrows(App* app, Backend::Shader* shader,
 
     for (size_t i = 0; i < arrowCount; ++i) {
         glm::mat4 transform(1.0f);
-        if (!makeArrowTransform(starts[i], ends[i], transform))
+        if (!DebugDraw::makeArrowTransform(starts[i], ends[i], transform))
             continue;
         transforms.push_back(transform);
         instanceColors.push_back(pickColor(colors, i));

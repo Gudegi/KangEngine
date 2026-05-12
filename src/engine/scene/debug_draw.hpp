@@ -16,6 +16,13 @@ namespace Scene {
 
 class DebugDraw {
   public:
+    static bool makeArrowTransform(const glm::vec3& start,
+                                   const glm::vec3& end,
+                                   glm::mat4& transform);
+    static bool makeLineTransform(const glm::vec3& start,
+                                  const glm::vec3& end,
+                                  glm::mat4& transform);
+
     // Scene-backed debug lines. Useful when the caller wants explicit prims.
     static std::vector<Prim*>
     logLines(SceneBackend* scene, const std::string& basePath,
@@ -47,6 +54,11 @@ class DebugDraw {
              const std::vector<glm::vec3>& ends,
              const std::vector<glm::vec4>& colors = {},
              float radius = 0.005f, int segments = 8);
+
+    static void updateLines(App* app, MeshHandle handle,
+                            const std::vector<glm::vec3>& starts,
+                            const std::vector<glm::vec3>& ends,
+                            const std::vector<glm::vec4>& colors = {});
 
     static MeshHandle
     logArrows(App* app, Backend::Shader* shader, const std::string& path,
