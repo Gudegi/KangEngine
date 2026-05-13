@@ -3,6 +3,7 @@
 
 #include "engine/graphics/renderer/rasterizer.hpp"
 #include "engine/scene/scene_backend.hpp"
+#include <cstddef>
 #include <glm/gtc/quaternion.hpp>
 #include <string>
 #include <vector>
@@ -55,10 +56,20 @@ class DebugDraw {
              const std::vector<glm::vec4>& colors = {},
              float radius = 0.005f, int segments = 8);
 
+    static MeshHandle logLines(App* app, Backend::Shader* shader,
+                               const std::string& path, const float* starts,
+                               const float* ends, const float* colors,
+                               size_t count, size_t colorCount,
+                               float radius = 0.005f, int segments = 8);
+
     static void updateLines(App* app, MeshHandle handle,
                             const std::vector<glm::vec3>& starts,
                             const std::vector<glm::vec3>& ends,
                             const std::vector<glm::vec4>& colors = {});
+
+    static void updateLines(App* app, MeshHandle handle, const float* starts,
+                            const float* ends, const float* colors,
+                            size_t count, size_t colorCount);
 
     static MeshHandle
     logArrows(App* app, Backend::Shader* shader, const std::string& path,
@@ -66,6 +77,21 @@ class DebugDraw {
               const std::vector<glm::vec3>& ends,
               const std::vector<glm::vec4>& colors = {},
               float radius = 0.02f, int segments = 12);
+
+    static MeshHandle logArrows(App* app, Backend::Shader* shader,
+                                const std::string& path, const float* starts,
+                                const float* ends, const float* colors,
+                                size_t count, size_t colorCount,
+                                float radius = 0.02f, int segments = 12);
+
+    static void updateArrows(App* app, MeshHandle handle,
+                             const std::vector<glm::vec3>& starts,
+                             const std::vector<glm::vec3>& ends,
+                             const std::vector<glm::vec4>& colors = {});
+
+    static void updateArrows(App* app, MeshHandle handle, const float* starts,
+                             const float* ends, const float* colors,
+                             size_t count, size_t colorCount);
 
     static MeshHandle
     logCoordinateAxes(App* app, Backend::Shader* shader,

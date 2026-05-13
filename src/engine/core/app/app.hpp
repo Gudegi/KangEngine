@@ -184,8 +184,14 @@ class App {
     void updateShapeTransforms(MeshHandle handle,
                                const std::vector<glm::mat4>& transforms,
                                const std::vector<glm::vec4>* colors = nullptr);
+    // std::vector -> * functions for pybind
+    void updateShapeTransforms(MeshHandle handle, const float* transforms,
+                               const float* colors, size_t count,
+                               size_t colorCount);
     void setShapeColors(MeshHandle handle,
                         const std::vector<glm::vec4>& colors);
+    void setShapeColors(MeshHandle handle, const float* colors,
+                        size_t colorCount);
     void setShapeDoubleSided(MeshHandle handle, bool doubleSided = true);
     void setShapeCastsShadow(MeshHandle handle, bool castsShadow = true);
     void setShapeTexture(MeshHandle handle, Backend::Texture* tex,
@@ -193,6 +199,9 @@ class App {
     void updateMeshGeometry(MeshHandle handle,
                             const std::vector<glm::vec3>& positions,
                             const std::vector<glm::vec3>& normals);
+    void updateMeshGeometry(MeshHandle handle, const float* positions,
+                            const float* normals, size_t count,
+                            size_t normalCount);
 
     void setSkybox(const std::string& path);
     void setSkybox(const std::vector<std::string>& paths);

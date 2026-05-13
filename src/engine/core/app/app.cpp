@@ -13,6 +13,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 #include <chrono>
+#include <cstring>
 #include <ctime>
 #include <exception>
 #include <filesystem>
@@ -586,10 +587,57 @@ void App::updateShapeTransforms(MeshHandle handle,
         _rasterizer->updateShapeTransforms(handle, transforms, colors);
 }
 
+void App::updateShapeTransforms(MeshHandle handle, const float* transforms,
+                                const float* colors, size_t count,
+                                size_t colorCount) {
+    if (!_rasterizer)
+        return;
+    if (count > 0 && !transforms)
+        return;
+    if (colorCount > 0 && !colors)
+        return;
+    if (colorCount != 0 && colorCount != 1 && colorCount != count)
+        return;
+
+    std::vector<glm::mat4> transformVec;
+    transformVec.reserve(count);
+    for (size_t i = 0; i < count; ++i) {
+        glm::mat4 m(1.0f);
+        std::memcpy(&m[0][0], transforms + i * 16, sizeof(float) * 16);
+        transformVec.push_back(m);
+    }
+
+    std::vector<glm::vec4> colorVec;
+    const std::vector<glm::vec4>* colorPtr = nullptr;
+    if (colorCount > 0) {
+        colorVec.reserve(count);
+        for (size_t i = 0; i < count; ++i) {
+            const float* c = colors + (colorCount == 1 ? 0 : i * 4);
+            colorVec.emplace_back(c[0], c[1], c[2], c[3]);
+        }
+        colorPtr = &colorVec;
+    }
+
+    _rasterizer->updateShapeTransforms(handle, transformVec, colorPtr);
+}
+
 void App::setShapeColors(MeshHandle handle,
                          const std::vector<glm::vec4>& colors) {
     if (_rasterizer)
         _rasterizer->setShapeColors(handle, colors);
+}
+
+void App::setShapeColors(MeshHandle handle, const float* colors,
+                         size_t colorCount) {
+    if (!_rasterizer || (colorCount > 0 && !colors))
+        return;
+    std::vector<glm::vec4> colorVec;
+    colorVec.reserve(colorCount);
+    for (size_t i = 0; i < colorCount; ++i) {
+        const float* c = colors + i * 4;
+        colorVec.emplace_back(c[0], c[1], c[2], c[3]);
+    }
+    _rasterizer->setShapeColors(handle, colorVec);
 }
 
 void App::setShapeDoubleSided(MeshHandle handle, bool doubleSided) {
@@ -612,6 +660,35 @@ void App::updateMeshGeometry(MeshHandle handle,
                              const std::vector<glm::vec3>& normals) {
     if (_rasterizer)
         _rasterizer->updateMeshGeometry(handle, positions, normals);
+}
+
+void App::updateMeshGeometry(MeshHandle handle, const float* positions,
+                             const float* normals, size_t count,
+                             size_t normalCount) {
+    if (!_rasterizer)
+        return;
+    if (count > 0 && !positions)
+        return;
+    if (normalCount > 0 && !normals)
+        return;
+    if (normalCount != 0 && normalCount != count)
+        return;
+
+    std::vector<glm::vec3> positionVec;
+    positionVec.reserve(count);
+    for (size_t i = 0; i < count; ++i) {
+        const float* p = positions + i * 3;
+        positionVec.emplace_back(p[0], p[1], p[2]);
+    }
+
+    std::vector<glm::vec3> normalVec;
+    normalVec.reserve(normalCount);
+    for (size_t i = 0; i < normalCount; ++i) {
+        const float* n = normals + i * 3;
+        normalVec.emplace_back(n[0], n[1], n[2]);
+    }
+
+    _rasterizer->updateMeshGeometry(handle, positionVec, normalVec);
 }
 
 void App::setSkybox(const std::string& path) {

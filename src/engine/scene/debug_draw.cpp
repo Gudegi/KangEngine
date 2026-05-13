@@ -7,6 +7,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <memory>
 #include <stdexcept>
+#include <utility>
 
 namespace KE {
 namespace Scene {
@@ -18,6 +19,24 @@ glm::vec4 pickColor(const std::vector<glm::vec4>& colors, size_t i) {
     if (colors.size() == 1)
         return colors.front();
     return colors[std::min(i, colors.size() - 1)];
+}
+
+glm::vec3 vec3At(const float* data, size_t i) {
+    const float* p = data + i * 3;
+    return glm::vec3(p[0], p[1], p[2]);
+}
+
+glm::vec4 vec4At(const float* data, size_t i) {
+    const float* p = data + i * 4;
+    return glm::vec4(p[0], p[1], p[2], p[3]);
+}
+
+glm::vec4 pickColor(const float* colors, size_t colorCount, size_t i) {
+    if (!colors || colorCount == 0)
+        return glm::vec4(1.0f);
+    if (colorCount == 1)
+        return vec4At(colors, 0);
+    return vec4At(colors, std::min(i, colorCount - 1));
 }
 
 void validateLineInputs(const char* functionName,
@@ -37,16 +56,74 @@ void validateLineInputs(const char* functionName,
     }
 }
 
+void validateRawLineInputs(const char* functionName, const float* starts,
+                           const float* ends, const float* colors,
+                           size_t count, size_t colorCount) {
+    if (count > 0 && (!starts || !ends)) {
+        throw std::invalid_argument(std::string(functionName) +
+                                    " requires non-null starts and ends when "
+                                    "count is non-zero.");
+    }
+    if (colorCount > 0 && !colors) {
+        throw std::invalid_argument(std::string(functionName) +
+                                    " requires non-null colors when "
+                                    "colorCount is non-zero.");
+    }
+    if (colorCount != 0 && colorCount != 1 && colorCount != count) {
+        throw std::invalid_argument(std::string(functionName) +
+                                    " colorCount must be 0, 1, or match "
+                                    "count.");
+    }
+}
+
 glm::quat rotationFromYTo(const glm::vec3& dir) {
     Eigen::Quaternionf q = Eigen::Quaternionf::FromTwoVectors(
         Eigen::Vector3f::UnitY(), Eigen::Vector3f(dir.x, dir.y, dir.z));
     return glm::normalize(glm::quat(q.w(), q.x(), q.y(), q.z()));
 }
 
+using TransformFn = bool (*)(const glm::vec3&, const glm::vec3&, glm::mat4&);
+
+template <typename StartAt, typename EndAt, typename ColorAt>
+std::pair<std::vector<glm::mat4>, std::vector<glm::vec4>>
+buildTransforms(size_t count, StartAt startAt, EndAt endAt, ColorAt colorAt,
+                TransformFn makeFn) {
+    std::vector<glm::mat4> transforms;
+    std::vector<glm::vec4> instanceColors;
+    transforms.reserve(count);
+    instanceColors.reserve(count);
+    for (size_t i = 0; i < count; ++i) {
+        glm::mat4 t(1.0f);
+        if (!makeFn(startAt(i), endAt(i), t))
+            continue;
+        transforms.push_back(t);
+        instanceColors.push_back(colorAt(i));
+    }
+    return {std::move(transforms), std::move(instanceColors)};
+}
+
+std::pair<std::vector<glm::mat4>, std::vector<glm::vec4>>
+buildTransforms(const std::vector<glm::vec3>& starts,
+                const std::vector<glm::vec3>& ends,
+                const std::vector<glm::vec4>& colors, TransformFn makeFn) {
+    return buildTransforms(
+        starts.size(), [&](size_t i) { return starts[i]; },
+        [&](size_t i) { return ends[i]; },
+        [&](size_t i) { return pickColor(colors, i); }, makeFn);
+}
+
+std::pair<std::vector<glm::mat4>, std::vector<glm::vec4>>
+buildTransforms(const float* starts, const float* ends, const float* colors,
+                size_t count, size_t colorCount, TransformFn makeFn) {
+    return buildTransforms(
+        count, [&](size_t i) { return vec3At(starts, i); },
+        [&](size_t i) { return vec3At(ends, i); },
+        [&](size_t i) { return pickColor(colors, colorCount, i); }, makeFn);
+}
+
 } // namespace
 
-bool DebugDraw::makeArrowTransform(const glm::vec3& start,
-                                   const glm::vec3& end,
+bool DebugDraw::makeArrowTransform(const glm::vec3& start, const glm::vec3& end,
                                    glm::mat4& transform) {
     glm::vec3 diff = end - start;
     float len = glm::length(diff);
@@ -60,8 +137,7 @@ bool DebugDraw::makeArrowTransform(const glm::vec3& start,
     return true;
 }
 
-bool DebugDraw::makeLineTransform(const glm::vec3& start,
-                                  const glm::vec3& end,
+bool DebugDraw::makeLineTransform(const glm::vec3& start, const glm::vec3& end,
                                   glm::mat4& transform) {
     glm::vec3 diff = end - start;
     float len = glm::length(diff);
@@ -138,18 +214,17 @@ std::vector<Prim*> DebugDraw::logArrows(SceneBackend* scene,
         safeRadius, 0.78f, UpAxis::Y, safeRadius * 2.4f, 0.22f, segments));
 
     for (size_t i = 0; i < arrowCount; ++i) {
-        glm::mat4 transform(1.0f);
-        if (!DebugDraw::makeArrowTransform(starts[i], ends[i], transform))
+        glm::vec3 diff = ends[i] - starts[i];
+        float len = glm::length(diff);
+        if (len < 1e-6f)
             continue;
 
         auto* prim = scene->definePrim(basePath + "/" + std::to_string(i),
                                        PrimType::Mesh);
         prim->setMeshData(meshData);
         prim->addTranslateOp(starts[i]);
-        prim->addRotateQuaternionOp(
-            rotationFromYTo(glm::normalize(ends[i] - starts[i])));
-        prim->addScaleOp(
-            glm::vec3(1.0f, glm::length(ends[i] - starts[i]), 1.0f));
+        prim->addRotateQuaternionOp(rotationFromYTo(diff / len));
+        prim->addScaleOp(glm::vec3(1.0f, len, 1.0f));
         prim->setDisplayColorAlpha(pickColor(colors, i));
         result.push_back(prim);
     }
@@ -190,20 +265,38 @@ MeshHandle DebugDraw::logLines(App* app, Backend::Shader* shader,
 
     validateLineInputs("DebugDraw::logLines", starts, ends, colors);
 
-    const size_t lineCount = starts.size();
-    std::vector<glm::mat4> transforms;
-    std::vector<glm::vec4> instanceColors;
-    transforms.reserve(lineCount);
-    instanceColors.reserve(lineCount);
+    auto [transforms, instanceColors] =
+        buildTransforms(starts, ends, colors, makeLineTransform);
+    if (transforms.empty())
+        return InvalidHandle;
 
-    for (size_t i = 0; i < lineCount; ++i) {
-        glm::mat4 transform(1.0f);
-        if (!DebugDraw::makeLineTransform(starts[i], ends[i], transform))
-            continue;
-        transforms.push_back(transform);
-        instanceColors.push_back(pickColor(colors, i));
-    }
+    const float safeRadius = std::max(radius, 1e-5f);
+    auto* prim = app->getScene()->definePrim(path, PrimType::Mesh);
+    prim->setMeshData(std::make_shared<MeshData>(
+        Prim::createCapsuleData(safeRadius, 1.0f, UpAxis::Y, segments)));
 
+    MeshHandle handle = app->addShape(shader, prim);
+    if (handle == InvalidHandle)
+        return InvalidHandle;
+
+    app->updateShapeTransforms(handle, transforms, &instanceColors);
+    app->setShapeCastsShadow(handle, false);
+    return handle;
+}
+
+MeshHandle DebugDraw::logLines(App* app, Backend::Shader* shader,
+                               const std::string& path, const float* starts,
+                               const float* ends, const float* colors,
+                               size_t count, size_t colorCount, float radius,
+                               int segments) {
+    if (!app || !shader || !app->getScene())
+        return InvalidHandle;
+
+    validateRawLineInputs("DebugDraw::logLines", starts, ends, colors, count,
+                          colorCount);
+
+    auto [transforms, instanceColors] = buildTransforms(
+        starts, ends, colors, count, colorCount, makeLineTransform);
     if (transforms.empty())
         return InvalidHandle;
 
@@ -227,23 +320,21 @@ void DebugDraw::updateLines(App* app, MeshHandle handle,
                             const std::vector<glm::vec4>& colors) {
     if (!app || handle == InvalidHandle)
         return;
-
     validateLineInputs("DebugDraw::updateLines", starts, ends, colors);
+    auto [transforms, instanceColors] =
+        buildTransforms(starts, ends, colors, makeLineTransform);
+    app->updateShapeTransforms(handle, transforms, &instanceColors);
+}
 
-    const size_t lineCount = starts.size();
-    std::vector<glm::mat4> transforms;
-    std::vector<glm::vec4> instanceColors;
-    transforms.reserve(lineCount);
-    instanceColors.reserve(lineCount);
-
-    for (size_t i = 0; i < lineCount; ++i) {
-        glm::mat4 transform(1.0f);
-        if (!DebugDraw::makeLineTransform(starts[i], ends[i], transform))
-            continue;
-        transforms.push_back(transform);
-        instanceColors.push_back(pickColor(colors, i));
-    }
-
+void DebugDraw::updateLines(App* app, MeshHandle handle, const float* starts,
+                            const float* ends, const float* colors,
+                            size_t count, size_t colorCount) {
+    if (!app || handle == InvalidHandle)
+        return;
+    validateRawLineInputs("DebugDraw::updateLines", starts, ends, colors, count,
+                          colorCount);
+    auto [transforms, instanceColors] = buildTransforms(
+        starts, ends, colors, count, colorCount, makeLineTransform);
     app->updateShapeTransforms(handle, transforms, &instanceColors);
 }
 
@@ -258,20 +349,8 @@ MeshHandle DebugDraw::logArrows(App* app, Backend::Shader* shader,
 
     validateLineInputs("DebugDraw::logArrows", starts, ends, colors);
 
-    const size_t arrowCount = starts.size();
-    std::vector<glm::mat4> transforms;
-    std::vector<glm::vec4> instanceColors;
-    transforms.reserve(arrowCount);
-    instanceColors.reserve(arrowCount);
-
-    for (size_t i = 0; i < arrowCount; ++i) {
-        glm::mat4 transform(1.0f);
-        if (!DebugDraw::makeArrowTransform(starts[i], ends[i], transform))
-            continue;
-        transforms.push_back(transform);
-        instanceColors.push_back(pickColor(colors, i));
-    }
-
+    auto [transforms, instanceColors] =
+        buildTransforms(starts, ends, colors, makeArrowTransform);
     if (transforms.empty())
         return InvalidHandle;
 
@@ -287,6 +366,60 @@ MeshHandle DebugDraw::logArrows(App* app, Backend::Shader* shader,
     app->updateShapeTransforms(handle, transforms, &instanceColors);
     app->setShapeCastsShadow(handle, false);
     return handle;
+}
+
+MeshHandle DebugDraw::logArrows(App* app, Backend::Shader* shader,
+                                const std::string& path, const float* starts,
+                                const float* ends, const float* colors,
+                                size_t count, size_t colorCount, float radius,
+                                int segments) {
+    if (!app || !shader || !app->getScene())
+        return InvalidHandle;
+
+    validateRawLineInputs("DebugDraw::logArrows", starts, ends, colors, count,
+                          colorCount);
+
+    auto [transforms, instanceColors] = buildTransforms(
+        starts, ends, colors, count, colorCount, makeArrowTransform);
+    if (transforms.empty())
+        return InvalidHandle;
+
+    const float safeRadius = std::max(radius, 1e-5f);
+    auto* prim = app->getScene()->definePrim(path, PrimType::Mesh);
+    prim->setMeshData(std::make_shared<MeshData>(Prim::createArrowData(
+        safeRadius, 0.78f, UpAxis::Y, safeRadius * 2.4f, 0.22f, segments)));
+
+    MeshHandle handle = app->addShape(shader, prim);
+    if (handle == InvalidHandle)
+        return InvalidHandle;
+
+    app->updateShapeTransforms(handle, transforms, &instanceColors);
+    app->setShapeCastsShadow(handle, false);
+    return handle;
+}
+
+void DebugDraw::updateArrows(App* app, MeshHandle handle,
+                             const std::vector<glm::vec3>& starts,
+                             const std::vector<glm::vec3>& ends,
+                             const std::vector<glm::vec4>& colors) {
+    if (!app || handle == InvalidHandle)
+        return;
+    validateLineInputs("DebugDraw::updateArrows", starts, ends, colors);
+    auto [transforms, instanceColors] =
+        buildTransforms(starts, ends, colors, makeArrowTransform);
+    app->updateShapeTransforms(handle, transforms, &instanceColors);
+}
+
+void DebugDraw::updateArrows(App* app, MeshHandle handle, const float* starts,
+                             const float* ends, const float* colors,
+                             size_t count, size_t colorCount) {
+    if (!app || handle == InvalidHandle)
+        return;
+    validateRawLineInputs("DebugDraw::updateArrows", starts, ends, colors,
+                          count, colorCount);
+    auto [transforms, instanceColors] = buildTransforms(
+        starts, ends, colors, count, colorCount, makeArrowTransform);
+    app->updateShapeTransforms(handle, transforms, &instanceColors);
 }
 
 MeshHandle DebugDraw::logCoordinateAxes(App* app, Backend::Shader* shader,

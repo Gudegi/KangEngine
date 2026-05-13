@@ -4,10 +4,14 @@
 
 #include "../src/kangEngine.hpp"
 #include "../src/engine/graphics/backend/graphics_factory.hpp"
+#include "../src/engine/graphics/material/material.hpp"
+#include "../src/engine/graphics/material/colors.hpp"
+#include "py_array_view.hpp"
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/functional.h>
+#include <pybind11/numpy.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -181,6 +185,7 @@ PYBIND11_MODULE(_kangengine, m) {
 
     // Enums first — submodule bindings may use them as default arguments
     py::enum_<UpAxis>(m, "UpAxis")
+        .value("X", UpAxis::X)
         .value("Y", UpAxis::Y)
         .value("Z", UpAxis::Z)
         .export_values();
@@ -191,11 +196,36 @@ PYBIND11_MODULE(_kangengine, m) {
         .value("WebGPU", Backend::BackendType::WebGPU)
         .export_values();
 
+    py::enum_<RenderTrack>(m, "RenderTrack")
+        .value("SceneGraph", RenderTrack::SceneGraph)
+        .value("Instanced", RenderTrack::Instanced);
+
     bind_scene(m);
     bind_animation(m);
     bind_imgui(m);
     bind_keys(m);
     // bind_physics is called after GLM types are registered (uses glm defaults)
+
+    // Materials & Colors
+    py::class_<Color>(m, "Color")
+        .def(py::init<>())
+        .def_readwrite("r", &Color::r)
+        .def_readwrite("g", &Color::g)
+        .def_readwrite("b", &Color::b)
+        .def_readwrite("a", &Color::a);
+
+    py::enum_<ColorType>(m, "ColorType")
+        .value("WHITE", ColorType::WHITE)
+        .value("PASTEL_GREEN", ColorType::PASTEL_GREEN);
+    // TODO: If you want to use other colors in colors.hpp,
+    // add like this .value("BLACK", ColorType::BLACK) .value("RED",
+    // ColorType::RED)
+
+    py::class_<ColorLibrary>(m, "ColorLibrary")
+        .def_static("get", &ColorLibrary::get, py::arg("type"));
+
+    py::class_<PhongMaterial>(m, "PhongMaterial").def(py::init<>());
+    // .def_readwrite("diffuse", &PhongMaterial::diffuse)
 
     // Backend::Shader
     py::class_<Backend::Shader>(m, "Shader")
@@ -584,6 +614,15 @@ py::class_<glm::vec3>(m, "vec3")
         },
         "Scale a matrix by a vector");
 
+    py::class_<Camera>(m, "Camera")
+        .def("get_camera_pos", &Camera::getCameraPos)
+        .def("get_target_pos", &Camera::getTargetPos)
+        .def("get_camera_look_dir", &Camera::getCameraLookDir)
+        .def("get_camera_up_dir", &Camera::getCameraUpDir)
+        .def("get_camera_right_dir", &Camera::getCameraRightDir)
+        .def("set_camera_pos", &Camera::setCameraPos, py::arg("camera_pos"))
+        .def("set_target_pos", &Camera::setTargetPos, py::arg("target_pos"));
+
     // App class with trampoline for Python overrides
     py::class_<App, PyApp>(m, "App")
         .def(py::init<>())
@@ -591,9 +630,38 @@ py::class_<glm::vec3>(m, "vec3")
              py::arg("height"), py::arg("hideUi") = false,
              py::arg("upAxis") = UpAxis::Y,
              py::arg("graphicsBackendType") = Backend::BackendType::OpenGL,
-             py::arg("sceneBackendType") = Scene::BackendType::Native)
+             py::arg("sceneBackendType") = Scene::BackendType::Native,
+             py::arg("headless") = false)
         .def("setRenderHz", &App::setRenderHz, py::arg("renderHz"))
         .def("start", &App::start)
+        .def("render_frame_once", &App::renderFrameOnce)
+        .def(
+            "read_rgb_pixels",
+            [](App& self, bool flipY) {
+                const int width = self.getWidth();
+                const int height = self.getHeight();
+                py::array_t<uint8_t> out({height, width, 3});
+                auto view = out.mutable_unchecked<3>();
+
+                std::vector<uint8_t> pixels = self.readRgbPixels(flipY);
+                if (pixels.size() != static_cast<std::size_t>(width) *
+                                         static_cast<std::size_t>(height) * 3)
+                    return out;
+                for (int y = 0; y < height; ++y) {
+                    for (int x = 0; x < width; ++x) {
+                        const std::size_t src =
+                            (static_cast<std::size_t>(y) * width + x) * 3;
+                        view(y, x, 0) = pixels[src + 0];
+                        view(y, x, 1) = pixels[src + 1];
+                        view(y, x, 2) = pixels[src + 2];
+                    }
+                }
+                return out;
+            },
+            py::arg("flip_y") = true)
+        .def("write_pixels_png", &App::writePixelsPNG, py::arg("path"),
+             py::arg("flip_y") = true)
+        .def("should_close", &App::shouldClose)
         .def("setup", &App::setup)
         .def("preRender", &App::preRender)
         .def("render", &App::render)
@@ -601,9 +669,39 @@ py::class_<glm::vec3>(m, "vec3")
         .def("getGraphicsDevice", &App::getGraphicsDevice,
              py::return_value_policy::reference)
         .def("addShape",
-             [](App* self, Backend::Shader* shader, Scene::Prim* prim) {
-                 return self->addShape(shader, prim);
-             })
+             [](App* self, Backend::Shader* shader, Scene::Prim* prim,
+                RenderTrack track) { return self->addShape(shader, prim, track); },
+             py::arg("shader"), py::arg("prim"),
+             py::arg("track") = RenderTrack::SceneGraph)
+        .def("addShape",
+             [](App* self, PhongMaterial* material, Scene::Prim* prim,
+                RenderTrack track) {
+                 return self->addShape(material, prim, track);
+             },
+             py::arg("material"), py::arg("prim"),
+             py::arg("track") = RenderTrack::SceneGraph)
+        .def(
+            "updateShapeTransforms",
+            [](App* self, uint32_t handle, const FloatArray& transforms,
+               py::object colors) {
+                auto t = mat4ArrayView(transforms, "transforms");
+                const float* colorData = nullptr;
+                size_t colorCount = 0;
+                if (!colors.is_none()) {
+                    auto colorArray = colors.cast<FloatArray>();
+                    auto c = vec4ArrayView(colorArray, "colors");
+                    if (c.count != 1 && c.count != t.count) {
+                        throw py::value_error(
+                            "colors must have length 1 or match transforms");
+                    }
+                    colorData = c.data;
+                    colorCount = c.count;
+                }
+                self->updateShapeTransforms(handle, t.data, colorData, t.count,
+                                            colorCount);
+            },
+            py::arg("handle"), py::arg("transforms"),
+            py::arg("colors") = py::none())
         .def(
             "updateShapeTransforms",
             [](App* self, uint32_t handle,
@@ -611,6 +709,13 @@ py::class_<glm::vec3>(m, "vec3")
                 self->updateShapeTransforms(handle, transforms);
             },
             py::arg("handle"), py::arg("transforms"))
+        .def(
+            "setShapeColors",
+            [](App* self, uint32_t handle, const FloatArray& colors) {
+                auto c = vec4ArrayView(colors, "colors");
+                self->setShapeColors(handle, c.data, c.count);
+            },
+            py::arg("handle"), py::arg("colors"))
         .def(
             "setShapeColors",
             [](App* self, uint32_t handle,
@@ -624,6 +729,36 @@ py::class_<glm::vec3>(m, "vec3")
                 self->setShapeDoubleSided(handle, ds);
             },
             py::arg("handle"), py::arg("double_sided") = true)
+        .def(
+            "updateMeshGeometry",
+            [](App* self, uint32_t handle, const FloatArray& positions,
+               py::object normals) {
+                auto p = vec3ArrayView(positions, "positions");
+                const float* normalData = nullptr;
+                size_t normalCount = 0;
+                if (!normals.is_none()) {
+                    auto normalArray = normals.cast<FloatArray>();
+                    auto n = vec3ArrayView(normalArray, "normals");
+                    if (n.count != p.count) {
+                        throw py::value_error(
+                            "normals must match positions length");
+                    }
+                    normalData = n.data;
+                    normalCount = n.count;
+                }
+                self->updateMeshGeometry(handle, p.data, normalData, p.count,
+                                         normalCount);
+            },
+            py::arg("handle"), py::arg("positions"),
+            py::arg("normals") = py::none())
+        .def(
+            "updateMeshGeometry",
+            [](App* self, uint32_t handle,
+               const std::vector<glm::vec3>& positions,
+               const std::vector<glm::vec3>& normals) {
+                self->updateMeshGeometry(handle, positions, normals);
+            },
+            py::arg("handle"), py::arg("positions"), py::arg("normals"))
         .def("checkError", &App::checkError)
         .def(
             "is_key_pressed",

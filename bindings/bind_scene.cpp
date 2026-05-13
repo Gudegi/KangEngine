@@ -4,12 +4,17 @@
 ///
 
 #include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include "engine/scene/scene_backend.hpp"
+#include "engine/core/app/app.hpp"
+#include "engine/graphics/backend/base/graphics_device.hpp"
+#include "engine/scene/debug_draw.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/native/token.hpp"
+#include "py_array_view.hpp"
 
 #ifdef KANGENGINE_USE_USD
 #include "engine/scene/usd/usd_scene.hpp"
@@ -18,6 +23,7 @@
 #endif
 
 namespace py = pybind11;
+
 
 void bind_scene(py::module& m) {
     py::module scene = m.def_submodule("scene", "Scene loading backends");
@@ -39,6 +45,7 @@ void bind_scene(py::module& m) {
         .value("Root", KE::Scene::PrimType::Root)
         .value("Xform", KE::Scene::PrimType::Xform)
         .value("Mesh", KE::Scene::PrimType::Mesh)
+        .value("MeshInstance", KE::Scene::PrimType::MeshInstance)
         .value("Camera", KE::Scene::PrimType::Camera)
         .value("Light", KE::Scene::PrimType::Light)
         .export_values();
@@ -65,6 +72,9 @@ void bind_scene(py::module& m) {
         // Mesh data
         .def("set_mesh_data", &KE::Scene::Prim::setMeshData)
         .def("get_mesh_data", &KE::Scene::Prim::getMeshData)
+        .def("set_mesh_source_path", &KE::Scene::Prim::setMeshSourcePath)
+        .def("get_mesh_source_path", &KE::Scene::Prim::getMeshSourcePath)
+        .def("resolve_mesh_data", &KE::Scene::Prim::resolveMeshData)
         // Static mesh creation (returns shared_ptr for set_mesh_data
         // compatibility)
         .def_static("create_square_data",
@@ -72,12 +82,13 @@ void bind_scene(py::module& m) {
                         return std::make_shared<KE::Scene::MeshData>(
                             KE::Scene::Prim::createSquareData(scale));
                     })
-        .def_static("create_plane_data",
-                    [](float scale, KE::UpAxis upAxis) {
-                        return std::make_shared<KE::Scene::MeshData>(
-                            KE::Scene::Prim::createPlaneData(scale, upAxis));
-                    },
-                    py::arg("scale"), py::arg("up_axis") = KE::UpAxis::Y)
+        .def_static(
+            "create_plane_data",
+            [](float scale, KE::UpAxis upAxis) {
+                return std::make_shared<KE::Scene::MeshData>(
+                    KE::Scene::Prim::createPlaneData(scale, upAxis));
+            },
+            py::arg("scale"), py::arg("up_axis") = KE::UpAxis::Y)
         .def_static(
             "create_sphere_data",
             [](float radius, int numLongitudes, int numLatitudes) {
@@ -87,6 +98,32 @@ void bind_scene(py::module& m) {
             },
             py::arg("radius"), py::arg("num_longitudes"),
             py::arg("num_latitudes"))
+        .def_static(
+            "create_rectangle_data",
+            [](float xScale, float yScale, float zScale) {
+                return std::make_shared<KE::Scene::MeshData>(
+                    KE::Scene::Prim::createRectangleData(xScale, yScale,
+                                                         zScale));
+            },
+            py::arg("x_scale"), py::arg("y_scale"), py::arg("z_scale"))
+        .def_static(
+            "create_cylinder_data",
+            [](float radius, float length, KE::UpAxis upAxis, int segments) {
+                return std::make_shared<KE::Scene::MeshData>(
+                    KE::Scene::Prim::createCylinderData(radius, length, upAxis,
+                                                        segments));
+            },
+            py::arg("radius"), py::arg("length"),
+            py::arg("up_axis") = KE::UpAxis::Y, py::arg("segments") = 32)
+        .def_static(
+            "create_capsule_data",
+            [](float radius, float height, KE::UpAxis upAxis, int segments) {
+                return std::make_shared<KE::Scene::MeshData>(
+                    KE::Scene::Prim::createCapsuleData(radius, height, upAxis,
+                                                       segments));
+            },
+            py::arg("radius"), py::arg("height"),
+            py::arg("up_axis") = KE::UpAxis::Y, py::arg("segments") = 32)
         // Transform ops
         .def("add_translate_op", &KE::Scene::Prim::addTranslateOp)
         .def("add_scale_op", &KE::Scene::Prim::addScaleOp)
@@ -163,6 +200,212 @@ void bind_scene(py::module& m) {
         .def_readwrite("normals", &KE::Scene::MeshData::normals)
         .def_readwrite("uvs", &KE::Scene::MeshData::uvs)
         .def_readwrite("indices", &KE::Scene::MeshData::indices);
+
+    py::class_<KE::Scene::DebugDraw>(scene, "DebugDraw")
+        .def_static(
+            "log_lines",
+            [](KE::App* app, KE::Backend::Shader* shader,
+               const std::string& path, const FloatArray& starts,
+               const FloatArray& ends, const FloatArray& colors, float radius,
+               int segments) {
+                auto s = vec3ArrayView(starts, "starts");
+                auto e = vec3ArrayView(ends, "ends");
+                auto c = vec4ArrayView(colors, "colors");
+                if (s.count != e.count) {
+                    throw py::value_error(
+                        "starts and ends must have the same length");
+                }
+                return KE::Scene::DebugDraw::logLines(
+                    app, shader, path, s.data, e.data, c.data, s.count,
+                    c.count, radius, segments);
+            },
+            py::arg("app"), py::arg("shader"), py::arg("path"),
+            py::arg("starts"), py::arg("ends"), py::arg("colors"),
+            py::arg("radius") = 0.005f, py::arg("segments") = 8)
+        .def_static(
+            "log_lines",
+            [](KE::App* app, KE::Backend::Shader* shader,
+               const std::string& path, const std::vector<glm::vec3>& starts,
+               const std::vector<glm::vec3>& ends,
+               const std::vector<glm::vec4>& colors, float radius,
+               int segments) {
+                return KE::Scene::DebugDraw::logLines(
+                    app, shader, path, starts, ends, colors, radius, segments);
+            },
+            py::arg("app"), py::arg("shader"), py::arg("path"),
+            py::arg("starts"), py::arg("ends"), py::arg("colors"),
+            py::arg("radius") = 0.005f, py::arg("segments") = 8)
+        .def_static(
+            "update_lines",
+            [](KE::App* app, uint32_t handle, const FloatArray& starts,
+               const FloatArray& ends, const FloatArray& colors) {
+                auto s = vec3ArrayView(starts, "starts");
+                auto e = vec3ArrayView(ends, "ends");
+                auto c = vec4ArrayView(colors, "colors");
+                if (s.count != e.count) {
+                    throw py::value_error(
+                        "starts and ends must have the same length");
+                }
+                KE::Scene::DebugDraw::updateLines(app, handle, s.data, e.data,
+                                                  c.data, s.count, c.count);
+            },
+            py::arg("app"), py::arg("handle"), py::arg("starts"),
+            py::arg("ends"), py::arg("colors"))
+        .def_static(
+            "update_lines",
+            [](KE::App* app, uint32_t handle,
+               const std::vector<glm::vec3>& starts,
+               const std::vector<glm::vec3>& ends,
+               const std::vector<glm::vec4>& colors) {
+                KE::Scene::DebugDraw::updateLines(app, handle, starts, ends,
+                                                  colors);
+            },
+            py::arg("app"), py::arg("handle"), py::arg("starts"),
+            py::arg("ends"), py::arg("colors"))
+        .def_static(
+            "log_arrows",
+            [](KE::App* app, KE::Backend::Shader* shader,
+               const std::string& path, const FloatArray& starts,
+               const FloatArray& ends, const FloatArray& colors, float radius,
+               int segments) {
+                auto s = vec3ArrayView(starts, "starts");
+                auto e = vec3ArrayView(ends, "ends");
+                auto c = vec4ArrayView(colors, "colors");
+                if (s.count != e.count) {
+                    throw py::value_error(
+                        "starts and ends must have the same length");
+                }
+                return KE::Scene::DebugDraw::logArrows(
+                    app, shader, path, s.data, e.data, c.data, s.count,
+                    c.count, radius, segments);
+            },
+            py::arg("app"), py::arg("shader"), py::arg("path"),
+            py::arg("starts"), py::arg("ends"), py::arg("colors"),
+            py::arg("radius") = 0.02f, py::arg("segments") = 12)
+        .def_static(
+            "log_arrows",
+            [](KE::App* app, KE::Backend::Shader* shader,
+               const std::string& path, const std::vector<glm::vec3>& starts,
+               const std::vector<glm::vec3>& ends,
+               const std::vector<glm::vec4>& colors, float radius,
+               int segments) {
+                return KE::Scene::DebugDraw::logArrows(
+                    app, shader, path, starts, ends, colors, radius, segments);
+            },
+            py::arg("app"), py::arg("shader"), py::arg("path"),
+            py::arg("starts"), py::arg("ends"), py::arg("colors"),
+            py::arg("radius") = 0.02f, py::arg("segments") = 12)
+        .def_static(
+            "update_arrows",
+            [](KE::App* app, uint32_t handle, const FloatArray& starts,
+               const FloatArray& ends, const FloatArray& colors) {
+                auto s = vec3ArrayView(starts, "starts");
+                auto e = vec3ArrayView(ends, "ends");
+                auto c = vec4ArrayView(colors, "colors");
+                if (s.count != e.count) {
+                    throw py::value_error(
+                        "starts and ends must have the same length");
+                }
+                KE::Scene::DebugDraw::updateArrows(app, handle, s.data, e.data,
+                                                   c.data, s.count, c.count);
+            },
+            py::arg("app"), py::arg("handle"), py::arg("starts"),
+            py::arg("ends"), py::arg("colors"))
+        .def_static(
+            "update_arrows",
+            [](KE::App* app, uint32_t handle,
+               const std::vector<glm::vec3>& starts,
+               const std::vector<glm::vec3>& ends,
+               const std::vector<glm::vec4>& colors) {
+                KE::Scene::DebugDraw::updateArrows(app, handle, starts, ends,
+                                                   colors);
+            },
+            py::arg("app"), py::arg("handle"), py::arg("starts"),
+            py::arg("ends"), py::arg("colors"))
+        .def_static(
+            "log_coordinate_axes",
+            [](KE::App* app, KE::Backend::Shader* shader,
+               const std::string& path, glm::vec3 origin, glm::quat orientation,
+               float length, float radius, int segments) {
+                return KE::Scene::DebugDraw::logCoordinateAxes(
+                    app, shader, path, origin, orientation, length, radius,
+                    segments);
+            },
+            py::arg("app"), py::arg("shader"), py::arg("path"),
+            py::arg("origin"), py::arg("orientation"), py::arg("length") = 1.0f,
+            py::arg("radius") = 0.005f, py::arg("segments") = 8)
+        .def_static(
+            "log_scene_lines",
+            [](KE::Scene::SceneBackend* sceneBackend,
+               const std::string& basePath, const FloatArray& starts,
+               const FloatArray& ends, const FloatArray& colors, float radius,
+               int segments) {
+                return KE::Scene::DebugDraw::logLines(
+                    sceneBackend, basePath, vec3Array(starts, "starts"),
+                    vec3Array(ends, "ends"), vec4Array(colors, "colors"),
+                    radius, segments);
+            },
+            py::arg("scene"), py::arg("base_path"), py::arg("starts"),
+            py::arg("ends"), py::arg("colors"), py::arg("radius") = 0.005f,
+            py::arg("segments") = 8, py::return_value_policy::reference)
+        .def_static(
+            "log_scene_lines",
+            [](KE::Scene::SceneBackend* sceneBackend,
+               const std::string& basePath,
+               const std::vector<glm::vec3>& starts,
+               const std::vector<glm::vec3>& ends,
+               const std::vector<glm::vec4>& colors, float radius,
+               int segments) {
+                return KE::Scene::DebugDraw::logLines(sceneBackend, basePath,
+                                                      starts, ends, colors,
+                                                      radius, segments);
+            },
+            py::arg("scene"), py::arg("base_path"), py::arg("starts"),
+            py::arg("ends"), py::arg("colors"), py::arg("radius") = 0.005f,
+            py::arg("segments") = 8, py::return_value_policy::reference)
+        .def_static(
+            "log_scene_arrows",
+            [](KE::Scene::SceneBackend* sceneBackend,
+               const std::string& basePath, const FloatArray& starts,
+               const FloatArray& ends, const FloatArray& colors, float radius,
+               int segments) {
+                return KE::Scene::DebugDraw::logArrows(
+                    sceneBackend, basePath, vec3Array(starts, "starts"),
+                    vec3Array(ends, "ends"), vec4Array(colors, "colors"),
+                    radius, segments);
+            },
+            py::arg("scene"), py::arg("base_path"), py::arg("starts"),
+            py::arg("ends"), py::arg("colors"), py::arg("radius") = 0.02f,
+            py::arg("segments") = 12, py::return_value_policy::reference)
+        .def_static(
+            "log_scene_arrows",
+            [](KE::Scene::SceneBackend* sceneBackend,
+               const std::string& basePath,
+               const std::vector<glm::vec3>& starts,
+               const std::vector<glm::vec3>& ends,
+               const std::vector<glm::vec4>& colors, float radius,
+               int segments) {
+                return KE::Scene::DebugDraw::logArrows(sceneBackend, basePath,
+                                                       starts, ends, colors,
+                                                       radius, segments);
+            },
+            py::arg("scene"), py::arg("base_path"), py::arg("starts"),
+            py::arg("ends"), py::arg("colors"), py::arg("radius") = 0.02f,
+            py::arg("segments") = 12, py::return_value_policy::reference)
+        .def_static(
+            "log_scene_coordinate_axes",
+            [](KE::Scene::SceneBackend* sceneBackend,
+               const std::string& basePath, glm::vec3 origin,
+               glm::quat orientation, float length, float radius,
+               int segments) {
+                return KE::Scene::DebugDraw::logCoordinateAxes(
+                    sceneBackend, basePath, origin, orientation, length, radius,
+                    segments);
+            },
+            py::arg("scene"), py::arg("base_path"), py::arg("origin"),
+            py::arg("orientation"), py::arg("length") = 1.0f,
+            py::arg("radius") = 0.005f, py::arg("segments") = 8,
+            py::return_value_policy::reference);
 
     // SceneBackend interface
     py::class_<KE::Scene::SceneBackend>(scene, "SceneBackend")
