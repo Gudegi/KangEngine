@@ -19,6 +19,9 @@ using namespace physx;
 namespace KE {
 
 class Articulation;
+namespace Animation {
+struct CharacterData;
+}
 
 struct PhysicsConfig {
     UpAxis upAxis = UpAxis::Y;
@@ -98,6 +101,13 @@ class PhysicsWorld {
         const glm::quat& rot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
         float density = 1.0f);
 
+    physx::PxRigidDynamic* createDynamicRigid(
+        // TODO: CharacterData's naming is not good.
+        const Animation::CharacterData& data, const glm::vec3& pos,
+        const glm::quat& rot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+        float density = 1.0f, PxU32 collisionGroup = 0,
+        float contactOffset = 0.02f, float restOffset = 0.0f);
+
     void fecthData();
 
     void step();
@@ -110,6 +120,13 @@ class PhysicsWorld {
     std::vector<float>
     getGroundContactForcesFlat(const Articulation& articulation) const {
         return getContactForcesFlat(articulation, true);
+    }
+    std::vector<float>
+    getRigidContactForceFlat(const physx::PxRigidDynamic& rigid,
+                             bool groundOnly = false) const;
+    std::vector<float>
+    getRigidGroundContactForceFlat(const physx::PxRigidDynamic& rigid) const {
+        return getRigidContactForceFlat(rigid, true);
     }
 
     PxU32 numBodyActors() {

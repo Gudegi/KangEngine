@@ -1,10 +1,65 @@
 #include "physics.hpp"
+#include "animation/character_description.hpp"
 #include "articulation.hpp"
 #include "foundation/Px.h"
+#include <Eigen/Geometry>
+#include <algorithm>
+#include <cmath>
 #include <unordered_map>
 #include <vector>
 
 namespace KE {
+
+namespace {
+
+PxTransform rigidFromToPose(const Eigen::Vector3f& from,
+                            const Eigen::Vector3f& to) {
+    Eigen::Vector3f mid = (from + to) * 0.5f;
+    Eigen::Vector3f dir = to - from;
+    float len = dir.norm();
+    if (len < 1e-6f)
+        return PxTransform(PxVec3(mid.x(), mid.y(), mid.z()));
+    Eigen::Quaternionf q =
+        Eigen::Quaternionf::FromTwoVectors(Eigen::Vector3f::UnitX(), dir / len);
+    return PxTransform(PxVec3(mid.x(), mid.y(), mid.z()),
+                       PxQuat(q.x(), q.y(), q.z(), q.w()));
+}
+
+PxQuat rigidMjcfShapeRot(const Eigen::Quaternionf& mjcfQuat) {
+    Eigen::Vector3f axis = mjcfQuat * Eigen::Vector3f::UnitZ();
+    Eigen::Quaternionf q =
+        Eigen::Quaternionf::FromTwoVectors(Eigen::Vector3f::UnitX(), axis);
+    return PxQuat(q.x(), q.y(), q.z(), q.w());
+}
+
+void applyRigidContactOffsets(PxShape* shape, float contactOffset,
+                              float restOffset) {
+    if (!shape)
+        return;
+    shape->setRestOffset(restOffset);
+    shape->setContactOffset(std::max(contactOffset, restOffset + 1e-4f));
+}
+
+void setRigidCollisionFilterData(PxRigidActor* actor, PxU32 collisionGroup) {
+    if (!actor || collisionGroup == 0)
+        return;
+
+    PxFilterData filterData;
+    filterData.word2 = collisionGroup;
+    filterData.word3 = 1;
+
+    const PxU32 numShapes = actor->getNbShapes();
+    std::vector<PxShape*> shapes(numShapes);
+    actor->getShapes(shapes.data(), numShapes);
+    for (PxShape* shape : shapes) {
+        if (!shape)
+            continue;
+        shape->setSimulationFilterData(filterData);
+        shape->setQueryFilterData(filterData);
+    }
+}
+
+} // namespace
 
 static PxFilterFlags
 contactReportFilterShader(PxFilterObjectAttributes attributes0,
@@ -201,6 +256,101 @@ PxRigidDynamic* PhysicsWorld::createDynamicSphere(float radius,
     return actor;
 }
 
+PxRigidDynamic*
+PhysicsWorld::createDynamicRigid(const Animation::CharacterData& data,
+                                 const glm::vec3& pos, const glm::quat& rot,
+                                 float density, PxU32 collisionGroup,
+                                 float contactOffset, float restOffset) {
+    PxTransform pose(PxVec3(pos.x, pos.y, pos.z),
+                     PxQuat(rot.x, rot.y, rot.z, rot.w));
+    PxRigidDynamic* actor = _physics->createRigidDynamic(pose);
+    if (!actor)
+        return nullptr;
+
+    const std::vector<Animation::CollisionGeom>* geoms = nullptr;
+    auto rootIt = data.collisionGeoms.find(0);
+    if (rootIt != data.collisionGeoms.end() && !rootIt->second.empty()) {
+        geoms = &rootIt->second;
+    } else {
+        for (const auto& [bodyIdx, bodyGeoms] : data.collisionGeoms) {
+            PX_UNUSED(bodyIdx);
+            if (!bodyGeoms.empty()) {
+                geoms = &bodyGeoms;
+                break;
+            }
+        }
+    }
+
+    if (!geoms) {
+        PxShape* shape = PxRigidActorExt::createExclusiveShape(
+            *actor, PxSphereGeometry(0.1f), *_material);
+        applyRigidContactOffsets(shape, contactOffset, restOffset);
+    } else {
+        using Type = Animation::CollisionGeom::Type;
+        for (const auto& g : *geoms) {
+            PxMaterial* shapeMat = _material;
+            PxMaterial* ownedMat = nullptr;
+            if (_physics && std::abs(g.friction - 1.f) > 1e-6f) {
+                ownedMat =
+                    _physics->createMaterial(g.friction, g.friction, 0.f);
+                ownedMat->setFrictionCombineMode(PxCombineMode::eMIN);
+                shapeMat = ownedMat;
+            }
+
+            PxShape* shape = nullptr;
+            PxTransform localPose(PxIdentity);
+            switch (g.type) {
+            case Type::Capsule:
+            case Type::Cylinder: {
+                float radius = g.size[0];
+                if (g.hasFromTo) {
+                    float halfH = (g.to - g.from).norm() * 0.5f;
+                    shape = PxRigidActorExt::createExclusiveShape(
+                        *actor, PxCapsuleGeometry(radius, halfH), *shapeMat);
+                    localPose = rigidFromToPose(g.from, g.to);
+                } else {
+                    shape = PxRigidActorExt::createExclusiveShape(
+                        *actor, PxCapsuleGeometry(radius, g.size[1]),
+                        *shapeMat);
+                    localPose =
+                        PxTransform(PxVec3(g.pos.x(), g.pos.y(), g.pos.z()),
+                                    rigidMjcfShapeRot(g.quat));
+                }
+                break;
+            }
+            case Type::Sphere:
+                shape = PxRigidActorExt::createExclusiveShape(
+                    *actor, PxSphereGeometry(g.size[0]), *shapeMat);
+                localPose =
+                    PxTransform(PxVec3(g.pos.x(), g.pos.y(), g.pos.z()));
+                break;
+            case Type::Box:
+                shape = PxRigidActorExt::createExclusiveShape(
+                    *actor, PxBoxGeometry(g.size[0], g.size[1], g.size[2]),
+                    *shapeMat);
+                localPose = PxTransform(
+                    PxVec3(g.pos.x(), g.pos.y(), g.pos.z()),
+                    PxQuat(g.quat.x(), g.quat.y(), g.quat.z(), g.quat.w()));
+                break;
+            }
+
+            if (shape) {
+                shape->setLocalPose(localPose);
+                applyRigidContactOffsets(
+                    shape, g.margin >= 0.f ? g.margin : contactOffset,
+                    restOffset);
+            }
+            if (ownedMat)
+                ownedMat->release();
+        }
+    }
+
+    PxRigidBodyExt::updateMassAndInertia(*actor, density);
+    setRigidCollisionFilterData(actor, collisionGroup);
+    _scene->addActor(*actor);
+    return actor;
+}
+
 std::vector<float>
 PhysicsWorld::getContactForcesFlat(const Articulation& articulation,
                                    bool groundOnly) const {
@@ -241,6 +391,42 @@ PhysicsWorld::getContactForcesFlat(const Articulation& articulation,
         if (!groundOnly || actor0IsGround)
             addForce(contact.actor1, force1);
     }
+    return out;
+}
+
+std::vector<float>
+PhysicsWorld::getRigidContactForceFlat(const PxRigidDynamic& rigid,
+                                       bool groundOnly) const {
+    std::vector<float> out(3, 0.0f);
+    if (_contacts.empty() || _dt <= 0.0f)
+        return out;
+
+    const PxActor* rigidActor = &rigid;
+    auto addForce = [&out](const glm::vec3& force) {
+        out[0] += force.x;
+        out[1] += force.y;
+        out[2] += force.z;
+    };
+
+    for (const auto& contact : _contacts) {
+        const bool actor0IsRigid = contact.actor0 == rigidActor;
+        const bool actor1IsRigid = contact.actor1 == rigidActor;
+        if (!actor0IsRigid && !actor1IsRigid)
+            continue;
+
+        const bool actor0IsGround = isGroundActor(contact.actor0);
+        const bool actor1IsGround = isGroundActor(contact.actor1);
+        if (groundOnly && !actor0IsGround && !actor1IsGround)
+            continue;
+
+        const glm::vec3 force0 = contact.impulse / _dt;
+        const glm::vec3 force1 = -force0;
+        if (actor0IsRigid && (!groundOnly || actor1IsGround))
+            addForce(force0);
+        if (actor1IsRigid && (!groundOnly || actor0IsGround))
+            addForce(force1);
+    }
+
     return out;
 }
 
