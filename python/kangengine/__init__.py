@@ -7,15 +7,28 @@ _assets_dir = _Path(__file__).resolve().parent / "assets"
 if _assets_dir.exists():
     _os.environ.setdefault("KANGENGINE_ASSETS_ROOT", str(_assets_dir))
 
-from . import _kangengine as _ke
+from ._core import _ke
 from .app import App, NativeApp
+from .sim import ControlMode, KangSimWorld
+from .visual import KangWorldVisualBridge
+from .mimickit_engine import (
+    KangEngineEngine,
+    build_engine as build_mimickit_engine,
+    install_mimickit_engine_builder,
+)
 
 # Core engine API
 BackendType = _ke.BackendType
 GraphicsDevice = _ke.GraphicsDevice
 Shader = _ke.Shader
 Texture = _ke.Texture
+Camera = _ke.Camera
 UpAxis = _ke.UpAxis
+RenderTrack = _ke.RenderTrack
+ColorLibrary = _ke.ColorLibrary
+ColorType = _ke.ColorType
+Color = _ke.Color
+PhongMaterial = _ke.PhongMaterial
 
 # GLM-style math types and helpers exposed by the C++ extension.
 vec3 = _ke.vec3
@@ -33,6 +46,7 @@ imgui = _ke.imgui
 keys = _ke.keys
 
 # Enum values exported by pybind11's export_values().
+X = _ke.X
 Y = _ke.Y
 Z = _ke.Z
 OpenGL = _ke.OpenGL
@@ -42,11 +56,19 @@ WebGPU = _ke.WebGPU
 __all__ = [
     "App",
     "NativeApp",
+    "ControlMode",
+    "KangSimWorld",
+    "KangWorldVisualBridge",
+    "KangEngineEngine",
+    "build_mimickit_engine",
+    "install_mimickit_engine_builder",
     "BackendType",
     "GraphicsDevice",
     "Shader",
     "Texture",
+    "Camera",
     "UpAxis",
+    "RenderTrack",
     "vec3",
     "vec4",
     "quat",
@@ -58,11 +80,16 @@ __all__ = [
     "animation",
     "imgui",
     "keys",
+    "X",
     "Y",
     "Z",
     "OpenGL",
     "Vulkan",
     "WebGPU",
+    "ColorLibrary",
+    "ColorType",
+    "Color",
+    "PhongMaterial",
 ]
 
 _OPTIONAL_EXPORTS = [

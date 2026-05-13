@@ -58,3 +58,5 @@ references
 python/kangengine/assets
 assets/external/
 _private
+tmp
+python/examples/smoke_test

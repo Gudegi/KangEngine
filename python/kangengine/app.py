@@ -6,7 +6,7 @@ hooks and small input helpers so examples can inherit from `kangengine.App`
 without talking directly to the pybind class.
 """
 
-from . import _kangengine as _ke
+from ._core import _ke
 
 keys = _ke.keys
 scene = _ke.scene
@@ -61,6 +61,7 @@ class App(NativeApp):
         up_axis=None,
         graphics_backend_type=None,
         scene_backend_type=None,
+        headless=False,
     ):
         if up_axis is None:
             up_axis = _ke.UpAxis.Y
@@ -76,6 +77,7 @@ class App(NativeApp):
             up_axis,
             graphics_backend_type,
             scene_backend_type,
+            headless,
         )
 
     def is_key_down(self, key):
