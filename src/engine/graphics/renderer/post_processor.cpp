@@ -84,6 +84,10 @@ Backend::Texture* PostProcessor::getResult() {
     return _outputFBO->getColorTexture();
 }
 
+Backend::Framebuffer* PostProcessor::getOutputFramebuffer() {
+    return _outputFBO.get();
+}
+
 void PostProcessor::blitToScreen(int width, int height) {
     _outputFBO->blitToScreen(width, height);
 }

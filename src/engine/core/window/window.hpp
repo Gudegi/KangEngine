@@ -21,7 +21,7 @@ class Window
   public:
     Window();
     ~Window();
-    void init(int width, int height);
+    void init(int width, int height, bool headless = false);
     GLFWwindow* getGlfwWindow() { return _window; }
     int getLogicalWidth() const { return _logicalWidth; }
     int getLogicalHeight() const { return _logicalHeight; }

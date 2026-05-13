@@ -15,7 +15,7 @@ Window::Window() {
 
 Window::~Window() {}
 
-void Window::init(int width, int height) {
+void Window::init(int width, int height, bool headless) {
     if (_window == nullptr)
         return;
 
@@ -34,6 +34,10 @@ void Window::init(int width, int height) {
     windowHeight = static_cast<int>(_height / yscale);
 #endif
     glfwSetWindowSize(_window, windowWidth, windowHeight);
+    if (headless)
+        glfwHideWindow(_window);
+    else
+        glfwShowWindow(_window);
     // Read back actual logical size (differ due to DPI scaling)
     glfwGetWindowSize(_window, &_logicalWidth, &_logicalHeight);
     glViewport(0, 0, _width, _height); // TODO: Remove OpenGL dependency
@@ -48,6 +52,7 @@ void Window::initGlfw() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif

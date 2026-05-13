@@ -14,6 +14,7 @@
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <cstdint>
 #include <vector>
 
 #include "engine/graphics/camera/camera.hpp"
@@ -60,6 +61,8 @@ class App {
         _logicalHeight; // screen/logical pixels (matches mouse coords)
     bool _hideUI, _renderWireframe;
     bool _initialized = false;
+    bool _screenshotRequested = false;
+    uint64_t _frameIndex = 0;
     float _gamma = 2.2; // for Gamma Correction
     glm::mat4 _viewMatrix,
         _projectionMatrix; // variable to containing main camera's view and
@@ -78,12 +81,14 @@ class App {
     std::unique_ptr<PostProcessor> _postProcessor;
 
     void registerCallbacks();
+    bool writeScreenshotFrame();
 
   public:
     void initialize(
         int width, int height, bool hideUi, UpAxis upAxis = UpAxis::Y,
         Backend::BackendType graphicsBackendType = Backend::BackendType::OpenGL,
-        Scene::BackendType sceneBackendType = Scene::BackendType::Native);
+        Scene::BackendType sceneBackendType = Scene::BackendType::Native,
+        bool headless = false);
     void processInput();
     void checkError();
     void coreRender();
@@ -237,6 +242,10 @@ class App {
     void setLightColor(const glm::vec3& color);
     void setLightIntensity(float intensity);
     void setLightAmbient(const glm::vec3& ambient);
+
+    // Record
+    std::vector<uint8_t> readRgbPixels(bool flipY = true);
+    bool writePixelsPNG(const std::string& path, bool flipY = true);
 };
 
 } // namespace KE

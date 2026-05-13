@@ -4,6 +4,7 @@
 
 #include "opengl_device.hpp"
 #include "../base/base_utils.hpp"
+#include <algorithm>
 #include <cstddef>
 #include <iostream>
 #include <fstream>
@@ -772,6 +773,31 @@ void OpenGLFramebuffer::blitToScreen(int scrWidth, int scrHeight) {
     glBlitFramebuffer(0, 0, _desc.width, _desc.height, 0, 0, scrWidth,
                       scrHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+std::vector<uint8_t> OpenGLFramebuffer::readColorPixels(bool flipY) {
+    std::vector<uint8_t> pixels(static_cast<std::size_t>(_desc.width) *
+                                static_cast<std::size_t>(_desc.height) * 3);
+    if (_desc.depthOnly || _desc.width <= 0 || _desc.height <= 0)
+        return pixels;
+
+    std::vector<uint8_t> raw(pixels.size());
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, _fbo);
+    glReadBuffer(GL_COLOR_ATTACHMENT0);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    // TODO: more efficient color formats control for all system.
+    glReadPixels(0, 0, _desc.width, _desc.height, GL_RGB, GL_UNSIGNED_BYTE,
+                 raw.data());
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+
+    for (int y = 0; y < _desc.height; ++y) {
+        const int srcY = flipY ? (_desc.height - 1 - y) : y;
+        const auto src = static_cast<std::size_t>(srcY) * _desc.width * 3;
+        const auto dst = static_cast<std::size_t>(y) * _desc.width * 3;
+        std::copy(raw.begin() + src, raw.begin() + src + _desc.width * 3,
+                  pixels.begin() + dst);
+    }
+    return pixels;
 }
 
 Texture* OpenGLFramebuffer::getColorTexture() { return _colorTexObj.get(); }

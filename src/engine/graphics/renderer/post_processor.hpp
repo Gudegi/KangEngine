@@ -12,6 +12,7 @@ class PostProcessor {
     void init(Backend::GraphicsDevice* device, int width, int height);
     void process(Backend::Texture* src, float gamma);
     Backend::Texture* getResult();
+    Backend::Framebuffer* getOutputFramebuffer();
     void blitToScreen(int width, int height);
     void resize(int width, int height);
 

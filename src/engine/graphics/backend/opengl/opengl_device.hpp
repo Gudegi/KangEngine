@@ -156,6 +156,7 @@ class OpenGLFramebuffer : public Framebuffer {
     void resolve() override;
     // Final blit: _fbo -> default framebuffer (screen)
     void blitToScreen(int scrWidth, int scrHeight) override;
+    std::vector<uint8_t> readColorPixels(bool flipY = true) override;
 };
 
 class OpenGLDevice : public GraphicsDevice {

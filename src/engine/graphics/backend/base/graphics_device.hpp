@@ -171,6 +171,7 @@ class Framebuffer {
     virtual void resize(int scrWidth, int scrHeight) = 0;
     virtual void resolve() = 0;
     virtual void blitToScreen(int scrWidth, int scrHeight) = 0;
+    virtual std::vector<uint8_t> readColorPixels(bool flipY = true) = 0;
     virtual Texture* getColorTexture() = 0;
     virtual Texture* getDepthTexture() = 0;
     virtual Texture* getStencilTexture() = 0;

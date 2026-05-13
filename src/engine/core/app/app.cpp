@@ -10,15 +10,21 @@
 #include "utils/print_debug.hpp"
 #include "utils/asset_path.hpp"
 #include "utils/types.hpp"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
 #include <chrono>
-#include <string>
+#include <ctime>
 #include <exception>
+#include <filesystem>
 #include <fmt/base.h>
 #include <glm/fwd.hpp>
 #include <glm/geometric.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <iomanip>
 #include <memory>
 #include <optional>
+#include <sstream>
+#include <string>
 #include <thread>
 #include <utility>
 
@@ -77,6 +83,7 @@ struct App::IO {
     double deltaMouseX = 0.0;
     double deltaMouseY = 0.0;
     bool isHKeyPressed = false;
+    bool isScreenshotKeyPressed = false;
 };
 
 struct App::RenderVariable {
@@ -93,7 +100,7 @@ App::~App() {}
 
 void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
                      Backend::BackendType graphicsBackendType,
-                     Scene::BackendType sceneBackendType) {
+                     Scene::BackendType sceneBackendType, bool headless) {
     _width = width;
     _height = height;
     _hideUI = hideUI;
@@ -112,7 +119,7 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
         return;
     }
 
-    _window.init(_width, _height);
+    _window.init(_width, _height, headless);
     if (_window.getGlfwWindow() == nullptr) {
         std::cerr << "Failed to initialize window" << std::endl;
         return;
@@ -122,8 +129,7 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     _logicalHeight = _window.getLogicalHeight();
     registerCallbacks();
     glfwGetFramebufferSize(_window.getGlfwWindow(), &_width, &_height);
-    glfwGetWindowSize(_window.getGlfwWindow(), &_logicalWidth,
-                      &_logicalHeight);
+    glfwGetWindowSize(_window.getGlfwWindow(), &_logicalWidth, &_logicalHeight);
 
     // Initialize graphics device after OpenGL context is created
     _graphicsDevice->initialize();
@@ -234,6 +240,11 @@ void App::renderFrameOnce() {
         _framebuffer->blitToScreen(_width, _height);
     }
 
+    if (_screenshotRequested) {
+        writeScreenshotFrame();
+        _screenshotRequested = false;
+    }
+
     // default framebuffer
     if (!_hideUI) {
         _panelManager.render();
@@ -242,10 +253,63 @@ void App::renderFrameOnce() {
     this->postRender();
     glfwSwapBuffers(window);
     glfwPollEvents();
+    ++_frameIndex;
 }
 
 void App::setRenderHz(float renderHz) {
     _renderHz = (renderHz > 0.0f) ? renderHz : 0.0f;
+}
+
+std::vector<uint8_t> App::readRgbPixels(bool flipY) {
+    if (_postProcessor) {
+        Backend::Framebuffer* outputFbo =
+            _postProcessor->getOutputFramebuffer();
+        if (outputFbo)
+            return outputFbo->readColorPixels(flipY);
+    }
+    if (!_framebuffer)
+        return {};
+    return _framebuffer->readColorPixels(flipY);
+}
+
+bool App::writePixelsPNG(const std::string& path, bool flipY) {
+    auto pixels = this->readRgbPixels(flipY);
+    if (pixels.empty())
+        return false;
+    // If fail, stbi_write_png returns 0
+    return stbi_write_png(path.c_str(), _width, _height, 3, pixels.data(),
+                          _width * 3) != 0;
+}
+
+bool App::writeScreenshotFrame() {
+    namespace fs = std::filesystem;
+    fs::path outDir = fs::path(".") / "tmp";
+    std::error_code ec;
+    fs::create_directories(outDir, ec);
+    if (ec) {
+        fmt::print("Failed to create screenshot directory {}: {}\n",
+                   outDir.string(), ec.message());
+        return false;
+    }
+
+    const auto now = std::chrono::system_clock::now();
+    const auto nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                           now.time_since_epoch()) %
+                       1000;
+    const std::time_t nowTime = std::chrono::system_clock::to_time_t(now);
+    std::tm localTime{};
+    localtime_r(&nowTime, &localTime);
+
+    std::ostringstream name;
+    name << _frameIndex << "_" << std::put_time(&localTime, "%Y%m%d_%H%M%S")
+         << "_" << std::setw(3) << std::setfill('0') << nowMs.count() << ".png";
+    const fs::path outPath = outDir / name.str();
+    const bool ok = writePixelsPNG(outPath.string(), true);
+    if (ok)
+        fmt::print("Saved screenshot: {}\n", outPath.string());
+    else
+        fmt::print("Failed to save screenshot: {}\n", outPath.string());
+    return ok;
 }
 
 float App::getDeltaTime() const { return _renderVariable->deltaTime; }
@@ -640,6 +704,11 @@ void App::processInput() {
     if (hPressed && !_io->isHKeyPressed)
         _hideUI = !_hideUI;
     _io->isHKeyPressed = hPressed;
+
+    bool screenshotPressed = glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS;
+    if (screenshotPressed && !_io->isScreenshotKeyPressed)
+        _screenshotRequested = true;
+    _io->isScreenshotKeyPressed = screenshotPressed;
 
     // Prevent manipulations while ImGui using the mouse.
     if (ImGui::GetIO().WantCaptureMouse) {
