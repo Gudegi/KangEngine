@@ -362,6 +362,11 @@ class KangSimWorld:
                 )
             if reset.dof is not None:
                 cache.set_dofs(reset.dof.positions, reset.dof.velocities)
+                command = self.commands.get(key)
+                if command is not None and command.mode == ControlMode.POS:
+                    command.cmd = np.asarray(
+                        reset.dof.positions, dtype=np.float32
+                    ).reshape(-1).copy()
             self.resets[key] = ResetBuffer()
 
     def set_body_force(

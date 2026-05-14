@@ -12,6 +12,7 @@ from enum import Enum
 import os
 from pathlib import Path
 import tempfile
+import sys
 
 import numpy as np
 
@@ -442,12 +443,12 @@ class KangEngineEngine(_BaseEngine):
             if _ArticulationConfig is None:
                 raise RuntimeError("ArticulationConfig not available: build with USE_PHYSX=ON")
             cfg = _ke.ArticulationConfig.fixed_base() if fix_root else _ke.ArticulationConfig.free_base()
+            if "enable_self_collisions" in self._config:
+                enable_self_collisions = _parse_bool(
+                    self._config["enable_self_collisions"]
+                )
             cfg.disable_self_collision = not bool(enable_self_collisions)
-            # MimicKit's IsaacGym backend uses 0.02 globally, but KangEngine's
-            # current PhysX articulation/contact setup tracks trained policies
-            # more reliably with a slightly wider contact band. Keep this as a
-            # MimicKit adapter default so plain ArticulationConfig stays neutral.
-            cfg.contact_offset = float(self._config.get("contact_offset", 0.10))
+            cfg.contact_offset = float(self._config.get("contact_offset", 0.02))
             cfg.rest_offset = float(self._config.get("rest_offset", 0.0))
             self._world.add_articulation(data, env_id, obj_id, name, cfg)
             self._apply_drive_config(env_id, obj_id)
@@ -460,7 +461,7 @@ class KangEngineEngine(_BaseEngine):
                 pos=self._world_pos(env_id, start_pos),
                 rot_xyzw=start_rot,
                 density=float(self._config.get("rigid_density", 1.0)),
-                contact_offset=float(self._config.get("contact_offset", 0.10)),
+                contact_offset=float(self._config.get("contact_offset", 0.02)),
                 rest_offset=float(self._config.get("rest_offset", 0.0)),
             )
         obj = KangEngineObject(
@@ -546,7 +547,7 @@ class KangEngineEngine(_BaseEngine):
         if base_render is not None:
             base_render(self)
         if self._viewer.should_close():
-            return
+            sys.exit(0)
         self._world.step(substeps=0, apply_commands=False)
         self._viewer.sync()
         # ViewMotionEnv sends FK body transforms directly through set_body_pos/rot.
@@ -559,6 +560,8 @@ class KangEngineEngine(_BaseEngine):
         self._viewer.clear_unused_debug_lines(self._draw_line_count)
         self._draw_line_count = 0
         self._viewer.render_once()
+        if self._viewer.should_close():
+            sys.exit(0)
         if self._recorder is not None:
             self._recorder.write(self.get_rgb_pixels())
 
@@ -799,7 +802,10 @@ class KangEngineEngine(_BaseEngine):
         return
 
     def register_keyboard_callback(self, key_str, callback_func):
-        key = getattr(_ke.keys, str(key_str), None)
+        key_name = str(key_str)
+        if key_name == "ESC":
+            key_name = "ESCAPE"
+        key = getattr(_ke.keys, key_name, None)
         if key is not None:
             self._key_callbacks.append((key, callback_func))
 
@@ -808,6 +814,16 @@ class KangEngineEngine(_BaseEngine):
             return
         starts_np = self._as_numpy(start_verts).reshape(-1, 3)
         ends_np = self._as_numpy(end_verts).reshape(-1, 3)
+        env_ids = self._env_ids(env_id)
+        if len(env_ids) == 1:
+            starts_np = self._world_pos(env_ids[0], starts_np)
+            ends_np = self._world_pos(env_ids[0], ends_np)
+        elif starts_np.shape[0] == len(env_ids) and ends_np.shape[0] == len(env_ids):
+            offsets = np.asarray(
+                [self._env_offset(eid) for eid in env_ids], dtype=np.float32
+            )
+            starts_np = starts_np + offsets
+            ends_np = ends_np + offsets
         colors_np = self._as_numpy(cols)
         if colors_np.size == 0:
             colors_np = np.array([[1.0, 0.0, 0.0, 1.0]], dtype=np.float32)
