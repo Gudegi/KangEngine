@@ -2,12 +2,17 @@
 
 A lightweight C++ engine for computer graphics and robotics research, with a Python interface for simulation and control experiments.
 
-<!-- screenshot / demo GIF -->
-<!-- ![demo](docs/demo.gif) -->
+<table align="center">
+  <tr>
+    <td width="33%" align="center"><img src="images/instanced_robots.png" alt="Instanced robot simulation" style="width:100%;"></td>
+    <td width="33%" align="center"><img src="images/joint_monkey.png" alt="Robot joint control example" style="width:100%;"></td>
+    <td width="33%" align="center"><img src="images/ball_collisions.png" alt="Rigid body collision example" style="width:100%;"></td>
+  </tr>
+</table>
 
 ## Features
 
-- **Rendering** — OpenGL/GLFW renderer with ImGui panels, camera controls, materials, shadows, post-processing, and mesh instancing.
+- **Rendering** — OpenGL/GLFW renderer with ImGui panels, camera controls, materials, shadows, post-processing, and mesh instancing. (TODO : WebGPU support)
 - **Scene** — A lightweight native scene graph with USD-style prim paths, transforms, mesh data, visibility, and display color attributes.
 - **Physics** — Optional NVIDIA PhysX integration for rigid bodies, articulations, and robot simulation examples.
 - **Animation** — Skeleton data structures, forward kinematics, MJCF loading, and bridges from skeleton/physics state to scene visuals.
@@ -163,3 +168,83 @@ KangEngine exposes a Python module (`kangengine`) via pybind11. The extension is
     python examples/control_demo.py
     ```
 </details>
+
+## RL with MimicKit
+
+KangEngine can be used as a backend engine of [MimicKit](https://github.com/xbpeng/MimicKit) through KangEngine's Python
+package. Use the `backend_kangengine` branch of MimicKit and keep MimicKit in a
+separate Python environment.
+
+<table align="center">
+  <tr>
+    <td width="50%" align="center"><img src="images/Mimickit_kangengine_1.png" alt="MimicKit running with KangEngine" style="width:100%; height:260px; object-fit:cover;"></td>
+    <td width="50%" align="center"><img src="images/Mimickit_kangengine_2.png" alt="MimicKit policy visualization with KangEngine" style="width:100%; height:260px; object-fit:cover;"></td>
+  </tr>
+</table>
+
+1. Clone the KangEngine-enabled MimicKit fork branch.
+    ```bash
+    git clone -b backend_kangengine https://github.com/Gudegi/MimicKit.git
+    ```
+2. Create and activate a MimicKit Python environment with uv.
+    ```bash
+    cd MimicKit
+    uv venv .venv --python 3.12
+    source .venv/bin/activate
+    ```
+3. Build KangEngine's Python extension from the KangEngine repo.
+    ```bash
+    cd /path/to/KangEngine
+    make build_python
+    ```
+4. Install KangEngine's Python package into the MimicKit environment.
+    ```bash
+    cd python
+    uv pip install -e .
+    ```
+5. Install MimicKit dependencies.
+    ```bash
+    cd /path/to/MimicKit
+    source .venv/bin/activate
+    uv pip install -r requirements.txt
+    ```
+6. Run a small motion visualize test.
+    ```bash
+    python mimickit/run.py \
+      --mode test \
+      --num_envs 1 \
+      --engine_config data/engines/kangengine_engine.yaml \
+      --env_config data/envs/view_motion_humanoid_env.yaml \
+      --visualize true \
+      --devices cpu \
+      --test_episodes 10
+    ```
+7. Run pretrained policy inference with KangEngine.
+    ```bash
+    python mimickit/run.py \
+      --mode test \
+      --num_envs 4 \
+      --engine_config data/engines/kangengine_engine.yaml \
+      --env_config data/envs/amp_humanoid_env.yaml \
+      --agent_config data/agents/amp_humanoid_agent.yaml \
+      --visualize true \
+      --model_file data/models/amp_humanoid_spinkick_model.pt
+    ```
+    Currently, KangEngine has only been tested with pretrained MimicKit policy
+    inference, not full RL training.
+
+For reference, the MimicKit KangEngine backend uses an engine config like this:
+
+```yaml
+engine_name: "kangengine"
+
+control_mode: "pos"
+control_freq: 30
+sim_freq: 120
+env_spacing: 5
+enable_self_collisions: false
+```
+
+The `backend_kangengine` branch already includes
+`data/engines/kangengine_engine.yaml`, so you usually do not need to create it
+manually.
