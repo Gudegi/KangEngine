@@ -30,8 +30,10 @@ void Window::init(int width, int height, bool headless) {
 #ifdef __APPLE__
     float xscale, yscale;
     glfwGetMonitorContentScale(monitor, &xscale, &yscale);
-    windowWidth = static_cast<int>(_width / xscale);
-    windowHeight = static_cast<int>(_height / yscale);
+    if (xscale > 0.0f && yscale > 0.0f) {
+        windowWidth = static_cast<int>(_width / xscale);
+        windowHeight = static_cast<int>(_height / yscale);
+    }
 #endif
     glfwSetWindowSize(_window, windowWidth, windowHeight);
     if (headless)

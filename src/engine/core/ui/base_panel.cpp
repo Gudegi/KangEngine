@@ -49,11 +49,16 @@ void MenuBarPanel::buildPanel() {
         if (ImGui::Button("Pause")) {}
         */
 
-        float spacing = ImGui::GetStyle().ItemSpacing.x;
-        float right_margin = 50.0f;
-
-        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - right_margin);
-        ImGui::TextDisabled("FPS: %d", int(ImGui::GetIO().Framerate));
+        char fpsText[32];
+        std::snprintf(fpsText, sizeof(fpsText), "FPS: %d",
+                      int(ImGui::GetIO().Framerate));
+        float textWidth = ImGui::CalcTextSize(fpsText).x;
+        float rightPadding = ImGui::GetStyle().FramePadding.x;
+        float cursorX = ImGui::GetWindowWidth() - textWidth - rightPadding;
+        if (cursorX > ImGui::GetCursorPosX()) {
+            ImGui::SetCursorPosX(cursorX);
+        }
+        ImGui::TextDisabled("%s", fpsText);
         ImGui::Spacing();
         // if (ImGui::SmallButton("somthing")) {}
 
