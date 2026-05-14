@@ -155,6 +155,7 @@ endif()
 ###### core libs ######
 file(GLOB_RECURSE SOURCE_FILES "${SRC_DIR}/*.cpp")
 add_library(engine_core STATIC ${SOURCE_FILES})
+set_target_properties(engine_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(engine_core PUBLIC
     ${SRC_DIR}
     ${Stb_INCLUDE_DIR}

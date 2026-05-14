@@ -1,10 +1,25 @@
 # KangEngine
 
+A lightweight C++ engine for computer graphics and robotics research, with a Python interface for simulation and control experiments.
+
+<!-- screenshot / demo GIF -->
+<!-- ![demo](docs/demo.gif) -->
+
+## Features
+
+- **Rendering** — OpenGL/GLFW renderer with ImGui panels, camera controls, materials, shadows, post-processing, and mesh instancing.
+- **Scene** — A lightweight native scene graph with USD-style prim paths, transforms, mesh data, visibility, and display color attributes.
+- **Physics** — Optional NVIDIA PhysX integration for rigid bodies, articulations, and robot simulation examples.
+- **Animation** — Skeleton data structures, forward kinematics, MJCF loading, and bridges from skeleton/physics state to scene visuals.
+- **Simulation** — Experimental XPBD cloth simulation utilities.
+- **OpenUSD** — Optional OpenUSD backend when configured with `-DUSE_USD=ON`.
+- **Python** — Optional pybind11 module for using the engine, scene, animation, and physics APIs from Python.
 
 ## How to build
 Install CMake first, then follow the platform steps below.
 
-### vcpkg
+<details>
+<summary> vcpkg </summary>
 KangEngine uses vcpkg manifest mode for most third-party C++ dependencies.
 
 1. Clone and bootstrap vcpkg.
@@ -17,11 +32,10 @@ KangEngine uses vcpkg manifest mode for most third-party C++ dependencies.
     export VCPKG_ROOT=/path/to/vcpkg
     export PATH=$VCPKG_ROOT:$PATH
     ```
-
-### Platform Build
+</details>
 
 <details>
-<summary>Linux</summary>
+<summary> Linux (tested with Ubuntu 24.04)</summary>
 
 1. Install system packages.
     ```bash
@@ -69,7 +83,7 @@ KangEngine uses vcpkg manifest mode for most third-party C++ dependencies.
 </details>
 
 <details>
-<summary>macOS (tested with M4 mac)</summary>
+<summary> macOS (tested with M4 mac)</summary>
 
 1. Clone o3de PhysX under `$HOME/Physics/PhysX`.
     ```bash
@@ -102,7 +116,9 @@ KangEngine uses vcpkg manifest mode for most third-party C++ dependencies.
 
 </details>
 
-### Optional OpenUSD
+<details>
+<summary>OpenUSD (Optional)</summary>
+
 OpenUSD is only needed when configuring KangEngine with `-DUSE_USD=ON`.
 
 1. Clone OpenUSD.
@@ -117,5 +133,33 @@ OpenUSD is only needed when configuring KangEngine with `-DUSE_USD=ON`.
     ```
 3. If you build OpenUSD somewhere else, pass `-Dpxr_DIR=/path/to/usd_build` to your CMake configure command instead of modifying `CMakeLists.txt`.
 
-## Features
-1. Python bind support. (Pass `-DIS_PYTHON_LIB=ON` to your CMake configure command before building.)
+</details>
+
+<details>
+
+<summary> Python Bindings (Optional) </summary>
+KangEngine exposes a Python module (`kangengine`) via pybind11. The extension is built by CMake and must be compiled against the same Python that will run it.
+
+1. Create a virtual environment with Python 3.12 using [uv](https://github.com/astral-sh/uv).
+    ```bash
+    cd python
+    uv venv .venv --python 3.12
+    source .venv/bin/activate
+    ```
+2. Build the extension with CMake from the repo root.
+    ```bash
+    cd ..
+    make build_python
+    # or with USD support:
+    # make build_usd_python
+    ```
+3. Install the Python package in editable mode.
+    ```bash
+    cd python
+    uv pip install -e .
+    ```
+4. Run an example.
+    ```bash
+    python examples/control_demo.py
+    ```
+</details>
