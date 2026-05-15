@@ -145,6 +145,8 @@ class KangSimWorld:
         self.commands: dict[tuple[int, int], CommandBuffer] = {}
         self.resets: dict[tuple[int, int], ResetBuffer] = {}
         self.body_forces: dict[tuple[int, int], np.ndarray] = {}
+        self._pending_reset_keys: set[tuple[int, int]] = set()
+        self._active_body_force_keys: set[tuple[int, int]] = set()
         self._mjcf_cache: dict[tuple[str, float, str], object] = {}
         self._mjcf_load_count = 0
         self.sim_time = 0.0
@@ -348,7 +350,12 @@ class KangSimWorld:
                 )
 
     def apply_resets(self):
-        for key, reset in self.resets.items():
+        if not self._pending_reset_keys:
+            return
+        pending_keys = list(self._pending_reset_keys)
+        self._pending_reset_keys.clear()
+        for key in pending_keys:
+            reset = self.resets[key]
             if not reset.pending:
                 continue
             env_id, obj_id = key
@@ -386,11 +393,16 @@ class KangSimWorld:
                     f"body_id {body_idx} out of range for env={eid}, obj={obj_id}"
                 )
             forces[body_idx] = _as_float_array(force).reshape(3)
+            if np.any(forces[body_idx]):
+                self._active_body_force_keys.add(key)
+            elif not np.any(forces):
+                self._active_body_force_keys.discard(key)
 
     def apply_body_forces(self):
-        for key, forces in self.body_forces.items():
-            if not np.any(forces):
-                continue
+        if not self._active_body_force_keys:
+            return
+        for key in self._active_body_force_keys:
+            forces = self.body_forces[key]
             for body_id, force in enumerate(forces):
                 if np.any(force):
                     if key in self.articulations:
@@ -401,8 +413,11 @@ class KangSimWorld:
                         self.rigids[key].rigid.add_force(force)
 
     def clear_body_forces(self):
-        for forces in self.body_forces.values():
-            forces.fill(0.0)
+        if not self._active_body_force_keys:
+            return
+        for key in self._active_body_force_keys:
+            self.body_forces[key].fill(0.0)
+        self._active_body_force_keys.clear()
 
     def step(self, substeps: int = 1, refresh: bool = True, apply_commands: bool = True):
         self.apply_resets()
@@ -443,6 +458,8 @@ class KangSimWorld:
             env_ids = range(self.num_envs) if env_id is None else [int(env_id)]
             for eid in env_ids:
                 self.resets[(eid, int(obj_id))].root = None
+                if not self.resets[(eid, int(obj_id))].pending:
+                    self._pending_reset_keys.discard((eid, int(obj_id)))
             return
 
         env_ids = range(self.num_envs) if env_id is None else [int(env_id)]
@@ -461,6 +478,7 @@ class KangSimWorld:
             if key not in self.articulations and key not in self.rigids:
                 raise KeyError(f"no object registered at env={eid}, obj={obj_id}")
             self.resets[key].root = root
+            self._pending_reset_keys.add(key)
 
     def set_dof_state(
         self,
@@ -475,6 +493,8 @@ class KangSimWorld:
             env_ids = range(self.num_envs) if env_id is None else [int(env_id)]
             for eid in env_ids:
                 self.resets[(eid, int(obj_id))].dof = None
+                if not self.resets[(eid, int(obj_id))].pending:
+                    self._pending_reset_keys.discard((eid, int(obj_id)))
             return
 
         env_ids = range(self.num_envs) if env_id is None else [int(env_id)]
@@ -500,6 +520,7 @@ class KangSimWorld:
             self.resets[key].dof = DofStateReset(
                 pos.copy(), None if vel is None else vel.copy()
             )
+            self._pending_reset_keys.add(key)
 
     def release(self):
         if self._released:
@@ -511,6 +532,8 @@ class KangSimWorld:
         self.commands.clear()
         self.resets.clear()
         self.physics = None
+        self._pending_reset_keys.clear()
+        self._active_body_force_keys.clear()
         self._released = True
 
     def __del__(self):

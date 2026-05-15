@@ -13,8 +13,10 @@ import os
 from pathlib import Path
 import tempfile
 import sys
+from typing import Any, Literal, TypeAlias
 
 import numpy as np
+from numpy.typing import NDArray
 
 from ._core import _ke
 from .app import App
@@ -24,17 +26,17 @@ from .visual import KangWorldVisualBridge
 
 try:
     import torch as _torch
-except Exception:
+except ImportError:
     _torch = None
 
 try:
     import engines.engine as _mk_engine
-except Exception:
+except ImportError:
     _mk_engine = None
 
 try:
     _ArticulationConfig = _ke.ArticulationConfig
-except Exception:
+except AttributeError:
     _ArticulationConfig = None
 
 if _mk_engine is not None:
@@ -67,6 +69,14 @@ _CONTROL_MODE_MAP = {
     "pd_explicit": ControlMode.PD_EXPLICIT,
 }
 
+ArrayLike: TypeAlias = Any
+EnvIdLike: TypeAlias = (
+    int | np.integer[Any] | NDArray[np.integer[Any]] | list[int] | tuple[int, ...] | None
+)
+RootComponent: TypeAlias = Literal["pos", "rot", "vel", "ang_vel"]
+DofComponent: TypeAlias = Literal["pos", "vel"]
+BodyVelocityKind: TypeAlias = Literal["vel", "ang_vel"]
+
 
 @dataclass(slots=True)
 class KangEngineObject:
@@ -82,6 +92,33 @@ class KangEngineObject:
     fix_root: bool
     start_pos: np.ndarray
     start_rot: np.ndarray
+
+
+@dataclass(slots=True)
+class _BodyVelocityOverrideBuffers:
+    num_bodies: np.ndarray
+    visual_mask: np.ndarray
+    vel_values: np.ndarray
+    vel_masks: np.ndarray
+    ang_vel_values: np.ndarray
+    ang_vel_masks: np.ndarray
+
+
+@dataclass(slots=True)
+class _PendingStateBuffers:
+    root_pos: np.ndarray
+    root_rot: np.ndarray
+    root_vel: np.ndarray
+    root_ang_vel: np.ndarray
+    root_pos_mask: np.ndarray
+    root_rot_mask: np.ndarray
+    root_vel_mask: np.ndarray
+    root_ang_vel_mask: np.ndarray
+    dof_pos: np.ndarray
+    dof_vel: np.ndarray
+    dof_pos_mask: np.ndarray
+    dof_vel_mask: np.ndarray
+    dof_widths: np.ndarray
 
 
 def _asset_path(*parts):
@@ -373,8 +410,8 @@ class KangEngineEngine(_BaseEngine):
         self._visual_body_rot = {}
         self._visual_root_pos = {}
         self._visual_root_rot = {}
-        self._body_vel_override = {}
-        self._body_ang_vel_override = {}
+        self._body_velocity_overrides: _BodyVelocityOverrideBuffers | None = None
+        self._pending_state: _PendingStateBuffers | None = None
         self._debug_visual_pose = (
             os.environ.get("KANGENGINE_DEBUG_VISUAL_POSE") == "1"
             or _parse_bool(self._config.get("debug_visual_pose", False))
@@ -411,9 +448,9 @@ class KangEngineEngine(_BaseEngine):
         color=None,
         disable_motors=False,
     ):
-        obj_type_name = getattr(obj_type, "name", obj_type)
-        is_articulated = obj_type_name in ("articulated", MimicObjType.articulated)
-        is_rigid = obj_type_name in ("rigid", MimicObjType.rigid)
+        obj_type_name = str(getattr(obj_type, "name", obj_type)).lower()
+        is_articulated = obj_type_name == "articulated"
+        is_rigid = obj_type_name == "rigid"
         if not is_articulated and not is_rigid:
             raise NotImplementedError(
                 "only articulated and rigid MJCF objects are supported yet"
@@ -521,6 +558,8 @@ class KangEngineEngine(_BaseEngine):
                     obj.start_rot,
                 )
         self._world.step(substeps=0, apply_commands=False)
+        self._init_body_velocity_override_buffers()
+        self._init_state_pending_buffers()
         self._initialized = True
 
     def set_cmd(self, obj_id, cmd):
@@ -537,6 +576,7 @@ class KangEngineEngine(_BaseEngine):
 
     def step(self):
         self._world.step(substeps=self._sim_steps)
+        self._clear_state_pending_overrides()
         self._clear_dynamic_body_velocity_overrides()
         self._clear_dynamic_visual_body_overrides()
 
@@ -549,6 +589,7 @@ class KangEngineEngine(_BaseEngine):
         if self._viewer.should_close():
             sys.exit(0)
         self._world.step(substeps=0, apply_commands=False)
+        self._clear_state_pending_overrides()
         self._viewer.sync()
         # ViewMotionEnv sends FK body transforms directly through set_body_pos/rot.
         # Apply them after PhysicsBridge sync so the viewer shows MimicKit's
@@ -683,23 +724,21 @@ class KangEngineEngine(_BaseEngine):
     def get_body_vel(self, obj_id):
         if self._is_visual_obj(obj_id):
             return self._out(
-                self._body_velocity_override_batch(self._body_vel_override, obj_id)
+                self._body_velocity_override_batch("vel", obj_id)
             )
         values = self._world.state.get_body_vel(obj_id)
         return self._out(
-            self._body_velocity_override_batch(self._body_vel_override, obj_id, values)
+            self._body_velocity_override_batch("vel", obj_id, values)
         )
 
     def get_body_ang_vel(self, obj_id):
         if self._is_visual_obj(obj_id):
             return self._out(
-                self._body_velocity_override_batch(self._body_ang_vel_override, obj_id)
+                self._body_velocity_override_batch("ang_vel", obj_id)
             )
         values = self._world.state.get_body_ang_vel(obj_id)
         return self._out(
-            self._body_velocity_override_batch(
-                self._body_ang_vel_override, obj_id, values
-            )
+            self._body_velocity_override_batch("ang_vel", obj_id, values)
         )
 
     def get_contact_forces(self, obj_id):
@@ -708,7 +747,7 @@ class KangEngineEngine(_BaseEngine):
     def get_ground_contact_forces(self, obj_id):
         return self._out(self._world.state.get_ground_contact_forces(obj_id))
 
-    def set_root_pos(self, env_id, obj_id, root_pos):
+    def set_root_pos(self, env_id: EnvIdLike, obj_id: int, root_pos: ArrayLike) -> None:
         if self._is_visual_obj(obj_id):
             self._set_visual_root_override(
                 self._visual_root_pos, env_id, obj_id, root_pos, 3
@@ -720,7 +759,7 @@ class KangEngineEngine(_BaseEngine):
         root_ang_vel = self._root_component(None, obj_id, "ang_vel")
         self._set_root_state(env_id, obj_id, root_pos, root_rot, root_vel, root_ang_vel)
 
-    def set_root_rot(self, env_id, obj_id, root_rot):
+    def set_root_rot(self, env_id: EnvIdLike, obj_id: int, root_rot: ArrayLike) -> None:
         if self._is_visual_obj(obj_id):
             self._set_visual_root_override(
                 self._visual_root_rot, env_id, obj_id, root_rot, 4
@@ -732,7 +771,7 @@ class KangEngineEngine(_BaseEngine):
         root_ang_vel = self._root_component(None, obj_id, "ang_vel")
         self._set_root_state(env_id, obj_id, root_pos, root_rot, root_vel, root_ang_vel)
 
-    def set_root_vel(self, env_id, obj_id, root_vel):
+    def set_root_vel(self, env_id: EnvIdLike, obj_id: int, root_vel: ArrayLike) -> None:
         if self._is_visual_obj(obj_id):
             return
         root_pos = self._root_component(None, obj_id, "pos")
@@ -740,7 +779,9 @@ class KangEngineEngine(_BaseEngine):
         ang_vel = self._root_component(None, obj_id, "ang_vel")
         self._set_root_state(env_id, obj_id, root_pos, root_rot, root_vel, ang_vel)
 
-    def set_root_ang_vel(self, env_id, obj_id, root_ang_vel):
+    def set_root_ang_vel(
+        self, env_id: EnvIdLike, obj_id: int, root_ang_vel: ArrayLike
+    ) -> None:
         if self._is_visual_obj(obj_id):
             return
         root_pos = self._root_component(None, obj_id, "pos")
@@ -748,31 +789,39 @@ class KangEngineEngine(_BaseEngine):
         root_vel = self._root_component(None, obj_id, "vel")
         self._set_root_state(env_id, obj_id, root_pos, root_rot, root_vel, root_ang_vel)
 
-    def set_dof_pos(self, env_id, obj_id, dof_pos):
+    def set_dof_pos(self, env_id: EnvIdLike, obj_id: int, dof_pos: ArrayLike) -> None:
         if self._is_visual_obj(obj_id):
             return
         dof_vel = self._dof_component(None, obj_id, "vel")
         self._set_dof_state(env_id, obj_id, dof_pos, dof_vel)
 
-    def set_dof_vel(self, env_id, obj_id, dof_vel):
+    def set_dof_vel(self, env_id: EnvIdLike, obj_id: int, dof_vel: ArrayLike) -> None:
         if self._is_visual_obj(obj_id):
             return
         dof_pos = self._dof_component(None, obj_id, "pos")
         self._set_dof_state(env_id, obj_id, dof_pos, dof_vel)
 
-    def set_body_vel(self, env_id, obj_id, body_vel):
+    def set_body_vel(self, env_id: EnvIdLike, obj_id: int, body_vel: ArrayLike) -> None:
         self._set_body_velocity_override(
-            self._body_vel_override, env_id, obj_id, body_vel
+            "vel",
+            env_id,
+            obj_id,
+            body_vel,
         )
         return
 
-    def set_body_ang_vel(self, env_id, obj_id, body_ang_vel):
+    def set_body_ang_vel(
+        self, env_id: EnvIdLike, obj_id: int, body_ang_vel: ArrayLike
+    ) -> None:
         self._set_body_velocity_override(
-            self._body_ang_vel_override, env_id, obj_id, body_ang_vel
+            "ang_vel",
+            env_id,
+            obj_id,
+            body_ang_vel,
         )
         return
 
-    def set_body_pos(self, env_id, obj_id, body_pos):
+    def set_body_pos(self, env_id: EnvIdLike, obj_id: int, body_pos: ArrayLike) -> None:
         # MimicKit uses this in view_motion to publish global FK body positions
         # for visualization. Physics simulation state is still owned by root/DOF setters.
         if self._viewer is not None:
@@ -781,7 +830,7 @@ class KangEngineEngine(_BaseEngine):
             self._apply_visual_body_overrides()
         return
 
-    def set_body_rot(self, env_id, obj_id, body_rot):
+    def set_body_rot(self, env_id: EnvIdLike, obj_id: int, body_rot: ArrayLike) -> None:
         # MimicKit body rotations are xyzw quaternions in world space. Cache them
         # for the viewer path; the physics backend does not accept direct body poses.
         if self._viewer is not None:
@@ -789,7 +838,9 @@ class KangEngineEngine(_BaseEngine):
             self._apply_visual_body_overrides()
         return
 
-    def set_body_forces(self, env_id, obj_id, body_id, forces):
+    def set_body_forces(
+        self, env_id: EnvIdLike, obj_id: int, body_id: int, forces: ArrayLike
+    ) -> None:
         if self._is_visual_obj(obj_id):
             return
         env_ids = self._env_ids(env_id)
@@ -797,7 +848,7 @@ class KangEngineEngine(_BaseEngine):
         if arr.ndim == 0:
             arr = np.full(3, float(arr), dtype=np.float32)
         for local_id, eid in enumerate(env_ids):
-            force = self._select_value(arr, eid, 3, local_id, len(env_ids))
+            force = self._select_flat_value(arr, eid, 3, local_id, len(env_ids))
             self._world.set_body_force(eid, obj_id, int(body_id), force)
         return
 
@@ -974,21 +1025,18 @@ class KangEngineEngine(_BaseEngine):
             )
         return arr.astype(np.float32, copy=True)
 
-    def _root_component(self, env_id, obj_id, component):
-        pending_attr = {
-            "pos": "pos",
-            "rot": "rot_xyzw",
-            "vel": "linear_velocity",
-            "ang_vel": "angular_velocity",
-        }[component]
+    def _root_component(
+        self, env_id: EnvIdLike, obj_id: int, component: RootComponent
+    ) -> ArrayLike:
+        pending_values, pending_mask = self._root_pending_storage(component)
         if self._is_single_env_id(env_id):
-            reset = self._world.resets[(int(env_id), int(obj_id))].root
-            if reset is not None:
-                value = getattr(reset, pending_attr)
-                if value is not None:
-                    if component == "pos":
-                        return self._local_pos(int(env_id), value)
-                    return value
+            eid = int(env_id)
+            oid = int(obj_id)
+            if pending_mask is not None and pending_mask[eid, oid]:
+                value = pending_values[eid, oid]
+                if component == "pos":
+                    return self._local_pos(eid, value)
+                return value
 
         state_getters = {
             "pos": self.get_root_pos,
@@ -998,102 +1046,130 @@ class KangEngineEngine(_BaseEngine):
         }
         values = state_getters[component](obj_id)
         if not self._is_single_env_id(env_id):
-            values_np = self._as_numpy(values)
-            stacked = []
-            used_pending = False
-            for eid in range(self._num_envs):
-                reset = self._world.resets[(eid, int(obj_id))].root
-                value = None if reset is None else getattr(reset, pending_attr)
-                if value is None:
-                    value = values_np[eid]
-                else:
-                    if component == "pos":
-                        value = self._local_pos(eid, value)
-                    used_pending = True
-                stacked.append(value)
-            if used_pending:
-                return np.stack(stacked, axis=0)
-            return values
+            oid = int(obj_id)
+            if pending_mask is None:
+                return values
+            mask = pending_mask[:, oid]
+            if not bool(np.any(mask)):
+                return values
+            values_np = self._as_numpy(values).copy()
+            if component == "pos":
+                values_np[mask] = pending_values[:, oid][mask] - self._env_offsets[mask]
+            else:
+                values_np[mask] = pending_values[:, oid][mask]
+            return self._out(values_np)
         return values[int(env_id)]
 
-    def _dof_component(self, env_id, obj_id, component):
-        pending_attr = "positions" if component == "pos" else "velocities"
+    def _dof_component(
+        self, env_id: EnvIdLike, obj_id: int, component: DofComponent
+    ) -> ArrayLike:
+        pending_values, pending_mask = self._dof_pending_storage(component)
+        width = self.get_obj_num_dofs(obj_id)
         if self._is_single_env_id(env_id):
-            reset = self._world.resets[(int(env_id), int(obj_id))].dof
-            if reset is not None:
-                value = getattr(reset, pending_attr)
-                if value is not None:
-                    return value
+            eid = int(env_id)
+            oid = int(obj_id)
+            if pending_mask is not None and pending_mask[eid, oid]:
+                return pending_values[eid, oid, :width]
 
         values = self.get_dof_pos(obj_id) if component == "pos" else self.get_dof_vel(obj_id)
         if not self._is_single_env_id(env_id):
-            values_np = self._as_numpy(values)
-            stacked = []
-            used_pending = False
-            for eid in range(self._num_envs):
-                reset = self._world.resets[(eid, int(obj_id))].dof
-                value = None if reset is None else getattr(reset, pending_attr)
-                if value is None:
-                    value = values_np[eid]
-                else:
-                    used_pending = True
-                stacked.append(value)
-            if used_pending:
-                return np.stack(stacked, axis=0)
-            return values
+            oid = int(obj_id)
+            if pending_mask is None:
+                return values
+            mask = pending_mask[:, oid]
+            if not bool(np.any(mask)):
+                return values
+            values_np = self._as_numpy(values).copy()
+            values_np[mask] = pending_values[:, oid, :width][mask]
+            return self._out(values_np)
         return values[int(env_id)]
 
     def _set_root_state(
         self,
-        env_id,
-        obj_id,
-        root_pos,
-        root_rot,
-        root_vel=None,
-        root_ang_vel=None,
-    ):
+        env_id: EnvIdLike,
+        obj_id: int,
+        root_pos: ArrayLike,
+        root_rot: ArrayLike,
+        root_vel: ArrayLike | None = None,
+        root_ang_vel: ArrayLike | None = None,
+    ) -> None:
         env_ids = self._env_ids(env_id)
         for local_id, eid in enumerate(env_ids):
+            pos = self._world_pos(
+                eid,
+                self._select_flat_value(root_pos, eid, 3, local_id, len(env_ids)),
+            )
+            rot = self._select_flat_value(root_rot, eid, 4, local_id, len(env_ids))
+            vel = (
+                None
+                if root_vel is None
+                else self._select_flat_value(root_vel, eid, 3, local_id, len(env_ids))
+            )
+            ang_vel = (
+                None
+                if root_ang_vel is None
+                else self._select_flat_value(
+                    root_ang_vel, eid, 3, local_id, len(env_ids)
+                )
+            )
             self._world.set_root_state(
                 eid,
                 obj_id,
-                self._world_pos(
-                    eid,
-                    self._select_value(root_pos, eid, 3, local_id, len(env_ids)),
-                ),
-                self._select_value(root_rot, eid, 4, local_id, len(env_ids)),
-                None
-                if root_vel is None
-                else self._select_value(root_vel, eid, 3, local_id, len(env_ids)),
-                None
-                if root_ang_vel is None
-                else self._select_value(root_ang_vel, eid, 3, local_id, len(env_ids)),
+                pos,
+                rot,
+                vel,
+                ang_vel,
             )
+            self._set_root_pending_value(eid, obj_id, "pos", pos)
+            self._set_root_pending_value(eid, obj_id, "rot", rot)
+            if vel is not None:
+                self._set_root_pending_value(eid, obj_id, "vel", vel)
+            if ang_vel is not None:
+                self._set_root_pending_value(eid, obj_id, "ang_vel", ang_vel)
 
-    def _set_dof_state(self, env_id, obj_id, dof_pos, dof_vel=None):
+    def _set_dof_state(
+        self,
+        env_id: EnvIdLike,
+        obj_id: int,
+        dof_pos: ArrayLike,
+        dof_vel: ArrayLike | None = None,
+    ) -> None:
         width = self.get_obj_num_dofs(obj_id)
         env_ids = self._env_ids(env_id)
         for local_id, eid in enumerate(env_ids):
+            pos = self._select_flat_value(dof_pos, eid, width, local_id, len(env_ids))
+            vel = (
+                None
+                if dof_vel is None
+                else self._select_flat_value(
+                    dof_vel, eid, width, local_id, len(env_ids)
+                )
+            )
             self._world.set_dof_state(
                 eid,
                 obj_id,
-                self._select_value(dof_pos, eid, width, local_id, len(env_ids)),
-                None
-                if dof_vel is None
-                else self._select_value(dof_vel, eid, width, local_id, len(env_ids)),
+                pos,
+                vel,
             )
+            self._set_dof_pending_value(eid, obj_id, "pos", pos, width)
+            if vel is not None:
+                self._set_dof_pending_value(eid, obj_id, "vel", vel, width)
 
-    def _set_visual_body_override(self, storage, env_id, obj_id, value, width):
+    def _set_visual_body_override(
+        self,
+        storage: dict[tuple[int, int], np.ndarray],
+        env_id: EnvIdLike,
+        obj_id: int,
+        value: ArrayLike,
+        width: int,
+    ) -> None:
         # Normalize MimicKit scalar, per-env, or all-env body tensors into a
         # single [num_bodies, width] array per env/object for render-time use.
         num_bodies = self.get_obj_num_bodies(obj_id)
-        arr = self._as_numpy(value)
-        if arr.ndim == 0:
-            arr = np.full((num_bodies, width), float(arr), dtype=np.float32)
         env_ids = self._env_ids(env_id)
         for local_id, eid in enumerate(env_ids):
-            selected = self._select_value(
-                arr, eid, num_bodies * width, local_id, len(env_ids)
+            selected = self._select_body_vector_value(
+                value, eid, num_bodies, width, local_id, len(env_ids)
             )
             if width == 3:
                 selected = self._world_pos(eid, selected)
@@ -1102,37 +1178,187 @@ class KangEngineEngine(_BaseEngine):
                 dtype=np.float32,
             ).reshape(num_bodies, width)
 
-    def _set_body_velocity_override(self, storage, env_id, obj_id, value):
+    def _set_body_velocity_override(
+        self, kind: BodyVelocityKind, env_id: EnvIdLike, obj_id: int, value: ArrayLike
+    ) -> None:
         # PhysX reduced articulations do not support arbitrary per-link velocity
         # assignment. MimicKit still expects this setter to update the engine
         # state tensor around resets/reference characters, so expose it as a
         # MimicKit-facing transient cache. The cache is cleared after a real
         # physics step for simulated objects.
+        obj_id = int(obj_id)
         num_bodies = self.get_obj_num_bodies(obj_id)
-        arr = self._as_numpy(value)
-        if arr.ndim == 0:
-            arr = np.full((num_bodies, 3), float(arr), dtype=np.float32)
+        values, mask = self._body_velocity_override_storage(kind)
         env_ids = self._env_ids(env_id)
         for local_id, eid in enumerate(env_ids):
-            selected = self._select_value(
-                arr, eid, num_bodies * 3, local_id, len(env_ids)
+            selected = self._select_body_vector_value(
+                value, eid, num_bodies, 3, local_id, len(env_ids)
             )
-            storage[(eid, int(obj_id))] = np.asarray(
-                selected,
-                dtype=np.float32,
-            ).reshape(num_bodies, 3)
+            values[int(eid), obj_id, :num_bodies] = np.asarray(
+                selected, dtype=np.float32
+            ).reshape(
+                num_bodies, 3
+            )
+            mask[int(eid), obj_id] = True
 
-    def _body_velocity_override_batch(self, storage, obj_id, base=None):
+    def _init_body_velocity_override_buffers(self):
+        objs_per_env = self.get_objs_per_env()
+        if objs_per_env == 0:
+            max_bodies = 0
+            body_counts = np.zeros(0, dtype=np.int32)
+            visual_mask = np.zeros(0, dtype=bool)
+        else:
+            body_counts = np.asarray(
+                [self.get_obj_num_bodies(obj_id) for obj_id in range(objs_per_env)],
+                dtype=np.int32,
+            )
+            visual_mask = np.asarray(
+                [self._is_visual_obj(obj_id) for obj_id in range(objs_per_env)],
+                dtype=bool,
+            )
+            max_bodies = int(np.max(body_counts))
+        shape = (self._num_envs, objs_per_env, max_bodies, 3)
+        mask_shape = (self._num_envs, objs_per_env)
+        self._body_velocity_overrides = _BodyVelocityOverrideBuffers(
+            num_bodies=body_counts,
+            visual_mask=visual_mask,
+            vel_values=np.zeros(shape, dtype=np.float32),
+            vel_masks=np.zeros(mask_shape, dtype=bool),
+            ang_vel_values=np.zeros(shape, dtype=np.float32),
+            ang_vel_masks=np.zeros(mask_shape, dtype=bool),
+        )
+
+    def _body_velocity_override_storage(
+        self, kind: BodyVelocityKind
+    ) -> tuple[np.ndarray, np.ndarray]:
+        buffers = self._require_body_velocity_overrides()
+        if kind == "vel":
+            return buffers.vel_values, buffers.vel_masks
+        if kind == "ang_vel":
+            return buffers.ang_vel_values, buffers.ang_vel_masks
+        raise ValueError(f"unsupported body velocity override kind: {kind}")
+
+    def _require_body_velocity_overrides(self) -> _BodyVelocityOverrideBuffers:
+        if self._body_velocity_overrides is None:
+            raise RuntimeError(
+                "body velocity override buffers are not initialized; "
+                "call initialize_sim() before querying or mutating simulated state"
+            )
+        return self._body_velocity_overrides
+
+    def _body_velocity_override_batch(
+        self, kind: BodyVelocityKind, obj_id: int, base: ArrayLike | None = None
+    ) -> np.ndarray:
+        obj_id = int(obj_id)
         num_bodies = self.get_obj_num_bodies(obj_id)
+        values, masks = self._body_velocity_override_storage(kind)
+        mask = masks[:, obj_id]
+        if not bool(np.any(mask)):
+            if base is None:
+                return np.zeros((self._num_envs, num_bodies, 3), dtype=np.float32)
+            return base
         if base is None:
             out = np.zeros((self._num_envs, num_bodies, 3), dtype=np.float32)
         else:
             out = np.asarray(base, dtype=np.float32).copy()
-        for env_id in range(self._num_envs):
-            value = storage.get((env_id, int(obj_id)))
-            if value is not None:
-                out[env_id] = value
+        out[mask] = values[mask, obj_id, :num_bodies]
         return out
+
+    def _init_state_pending_buffers(self):
+        objs_per_env = self.get_objs_per_env()
+        if objs_per_env == 0:
+            max_dofs = 0
+            dof_widths = np.zeros(0, dtype=np.int32)
+        else:
+            dof_widths = np.asarray(
+                [self.get_obj_num_dofs(obj_id) for obj_id in range(objs_per_env)],
+                dtype=np.int32,
+            )
+            max_dofs = int(np.max(dof_widths)) if dof_widths.size else 0
+
+        root_shape3 = (self._num_envs, objs_per_env, 3)
+        root_shape4 = (self._num_envs, objs_per_env, 4)
+        root_mask_shape = (self._num_envs, objs_per_env)
+        dof_shape = (self._num_envs, objs_per_env, max_dofs)
+        self._pending_state = _PendingStateBuffers(
+            root_pos=np.zeros(root_shape3, dtype=np.float32),
+            root_rot=np.zeros(root_shape4, dtype=np.float32),
+            root_vel=np.zeros(root_shape3, dtype=np.float32),
+            root_ang_vel=np.zeros(root_shape3, dtype=np.float32),
+            root_pos_mask=np.zeros(root_mask_shape, dtype=bool),
+            root_rot_mask=np.zeros(root_mask_shape, dtype=bool),
+            root_vel_mask=np.zeros(root_mask_shape, dtype=bool),
+            root_ang_vel_mask=np.zeros(root_mask_shape, dtype=bool),
+            dof_pos=np.zeros(dof_shape, dtype=np.float32),
+            dof_vel=np.zeros(dof_shape, dtype=np.float32),
+            dof_pos_mask=np.zeros(root_mask_shape, dtype=bool),
+            dof_vel_mask=np.zeros(root_mask_shape, dtype=bool),
+            dof_widths=dof_widths,
+        )
+
+    def _root_pending_storage(
+        self, component: RootComponent
+    ) -> tuple[np.ndarray, np.ndarray]:
+        buffers = self._require_pending_state()
+        if component == "pos":
+            return buffers.root_pos, buffers.root_pos_mask
+        if component == "rot":
+            return buffers.root_rot, buffers.root_rot_mask
+        if component == "vel":
+            return buffers.root_vel, buffers.root_vel_mask
+        if component == "ang_vel":
+            return buffers.root_ang_vel, buffers.root_ang_vel_mask
+        raise ValueError(f"unsupported root component: {component}")
+
+    def _dof_pending_storage(
+        self, component: DofComponent
+    ) -> tuple[np.ndarray, np.ndarray]:
+        buffers = self._require_pending_state()
+        if component == "pos":
+            return buffers.dof_pos, buffers.dof_pos_mask
+        if component == "vel":
+            return buffers.dof_vel, buffers.dof_vel_mask
+        raise ValueError(f"unsupported dof component: {component}")
+
+    def _require_pending_state(self) -> _PendingStateBuffers:
+        if self._pending_state is None:
+            raise RuntimeError(
+                "pending state buffers are not initialized; call initialize_sim() "
+                "before querying or mutating simulated state"
+            )
+        return self._pending_state
+
+    def _set_root_pending_value(
+        self, env_id: int, obj_id: int, component: RootComponent, value: ArrayLike
+    ) -> None:
+        values, mask = self._root_pending_storage(component)
+        values[int(env_id), int(obj_id)] = np.asarray(value, dtype=np.float32)
+        mask[int(env_id), int(obj_id)] = True
+
+    def _set_dof_pending_value(
+        self,
+        env_id: int,
+        obj_id: int,
+        component: DofComponent,
+        value: ArrayLike,
+        width: int,
+    ) -> None:
+        values, mask = self._dof_pending_storage(component)
+        eid = int(env_id)
+        oid = int(obj_id)
+        values[eid, oid, :width] = np.asarray(value, dtype=np.float32).reshape(width)
+        mask[eid, oid] = True
+
+    def _clear_state_pending_overrides(self) -> None:
+        buffers = self._pending_state
+        if buffers is None:
+            return
+        buffers.root_pos_mask[:, :] = False
+        buffers.root_rot_mask[:, :] = False
+        buffers.root_vel_mask[:, :] = False
+        buffers.root_ang_vel_mask[:, :] = False
+        buffers.dof_pos_mask[:, :] = False
+        buffers.dof_vel_mask[:, :] = False
 
     def _visual_root_batch(self, storage, obj_id, width):
         default = (
@@ -1173,11 +1399,12 @@ class KangEngineEngine(_BaseEngine):
     def _clear_dynamic_body_velocity_overrides(self):
         # Keep visual/reference object overrides, but let simulated objects report
         # PhysX velocities after the next physics step.
-        for storage in (self._body_vel_override, self._body_ang_vel_override):
-            for key in list(storage):
-                _, obj_id = key
-                if not self._is_visual_obj(obj_id):
-                    del storage[key]
+        buffers = self._body_velocity_overrides
+        if buffers is None:
+            return
+        sim_obj_mask = ~buffers.visual_mask
+        buffers.vel_masks[:, sim_obj_mask] = False
+        buffers.ang_vel_masks[:, sim_obj_mask] = False
 
     def _clear_dynamic_visual_body_overrides(self):
         # Simulated objects may receive set_body_pos/rot during reset or
@@ -1190,7 +1417,14 @@ class KangEngineEngine(_BaseEngine):
                 if not self._is_visual_obj(obj_id):
                     del storage[key]
 
-    def _set_visual_root_override(self, storage, env_id, obj_id, value, width):
+    def _set_visual_root_override(
+        self,
+        storage: dict[tuple[int, int], np.ndarray],
+        env_id: EnvIdLike,
+        obj_id: int,
+        value: ArrayLike,
+        width: int,
+    ) -> None:
         # Visual-only reference characters do not exist in PhysX. Keep their
         # root values only as a fallback until MimicKit publishes body poses.
         arr = self._as_numpy(value)
@@ -1198,7 +1432,7 @@ class KangEngineEngine(_BaseEngine):
             arr = np.full(width, float(arr), dtype=np.float32)
         env_ids = self._env_ids(env_id)
         for local_id, eid in enumerate(env_ids):
-            selected = self._select_value(arr, eid, width, local_id, len(env_ids))
+            selected = self._select_flat_value(arr, eid, width, local_id, len(env_ids))
             if width == 3:
                 selected = self._world_pos(eid, selected)
             storage[(eid, int(obj_id))] = np.asarray(
@@ -1294,57 +1528,130 @@ class KangEngineEngine(_BaseEngine):
         obj_id = int(obj_id)
         return bool(self._objects and self._objects[0][obj_id].is_visual)
 
-    def _select_value(self, value, env_id, width, local_id=None, env_count=None):
+    def _select_flat_value(
+        self,
+        value: ArrayLike,
+        env_id: int,
+        width: int,
+        local_id: int | None = None,
+        env_count: int | None = None,
+    ) -> np.ndarray:
         arr = self._as_numpy(value)
         if arr.ndim == 0:
             return np.full(width, float(arr), dtype=np.float32)
-        if arr.ndim >= 2 and arr.shape[0] == self._num_envs:
-            return arr[env_id]
-        if (
-            local_id is not None
-            and env_count is not None
-            and arr.ndim >= 2
-            and arr.shape[0] == env_count
-        ):
-            return arr[local_id]
-        if arr.ndim == 1 and arr.shape[0] == self._num_envs and width == 1:
-            return arr[env_id]
-        if (
-            local_id is not None
-            and env_count is not None
-            and arr.ndim == 1
-            and arr.shape[0] == env_count
-            and width == 1
-        ):
-            return arr[local_id]
-        return arr
+        if arr.ndim == 1:
+            if arr.shape[0] == width:
+                return arr
+            if width == 1:
+                if arr.shape[0] == self._num_envs:
+                    return np.asarray([arr[int(env_id)]], dtype=np.float32)
+                if (
+                    local_id is not None
+                    and env_count is not None
+                    and arr.shape[0] == env_count
+                ):
+                    return np.asarray([arr[int(local_id)]], dtype=np.float32)
+        if arr.ndim >= 2:
+            if arr.shape[0] == self._num_envs:
+                return np.asarray(arr[int(env_id)], dtype=np.float32).reshape(width)
+            if (
+                local_id is not None
+                and env_count is not None
+                and arr.shape[0] == env_count
+            ):
+                return np.asarray(arr[int(local_id)], dtype=np.float32).reshape(width)
+        try:
+            return np.asarray(arr, dtype=np.float32).reshape(width)
+        except ValueError as exc:
+            raise ValueError(
+                f"Cannot select value with shape {arr.shape} as width {width}"
+            ) from exc
+
+    def _select_body_vector_value(
+        self,
+        value: ArrayLike,
+        env_id: int,
+        num_bodies: int,
+        width: int,
+        local_id: int | None = None,
+        env_count: int | None = None,
+    ) -> np.ndarray:
+        arr = self._as_numpy(value)
+        if arr.ndim == 0:
+            return np.full((num_bodies, width), float(arr), dtype=np.float32)
+        if arr.ndim == 1:
+            if arr.shape[0] == width:
+                return np.repeat(arr.reshape(1, width), num_bodies, axis=0)
+            if arr.shape[0] == num_bodies * width:
+                return arr.reshape(num_bodies, width)
+        if arr.ndim == 2:
+            if arr.shape == (num_bodies, width):
+                return arr
+            if arr.shape == (self._num_envs, width):
+                return np.repeat(
+                    arr[int(env_id)].reshape(1, width), num_bodies, axis=0
+                )
+            if (
+                local_id is not None
+                and env_count is not None
+                and arr.shape == (env_count, width)
+            ):
+                return np.repeat(
+                    arr[int(local_id)].reshape(1, width), num_bodies, axis=0
+                )
+            if arr.shape[0] == self._num_envs:
+                return self._select_body_vector_value(
+                    arr[int(env_id)], env_id, num_bodies, width
+                )
+            if (
+                local_id is not None
+                and env_count is not None
+                and arr.shape[0] == env_count
+            ):
+                return self._select_body_vector_value(
+                    arr[int(local_id)], env_id, num_bodies, width
+                )
+        if arr.ndim >= 3:
+            if arr.shape[0] == self._num_envs:
+                return np.asarray(arr[int(env_id)], dtype=np.float32).reshape(
+                    num_bodies, width
+                )
+            if (
+                local_id is not None
+                and env_count is not None
+                and arr.shape[0] == env_count
+            ):
+                return np.asarray(arr[int(local_id)], dtype=np.float32).reshape(
+                    num_bodies, width
+                )
+        return np.asarray(arr, dtype=np.float32).reshape(num_bodies, width)
 
     def _env_offset(self, env_id):
         return self._env_offsets[int(env_id)]
 
-    def _world_pos(self, env_id, value):
+    def _world_pos(self, env_id: int, value: ArrayLike) -> np.ndarray:
         arr = np.asarray(value, dtype=np.float32)
         return arr + self._env_offset(env_id)
 
-    def _world_pos_batch(self, values):
+    def _world_pos_batch(self, values: ArrayLike) -> np.ndarray:
         arr = np.asarray(values, dtype=np.float32).copy()
         if arr.ndim >= 2 and arr.shape[0] == self._num_envs:
             view_shape = (self._num_envs,) + (1,) * (arr.ndim - 2) + (3,)
             arr += self._env_offsets.reshape(view_shape)
         return arr
 
-    def _local_pos(self, env_id, value):
+    def _local_pos(self, env_id: int, value: ArrayLike) -> np.ndarray:
         arr = np.asarray(value, dtype=np.float32)
         return arr - self._env_offset(env_id)
 
-    def _local_pos_batch(self, values):
+    def _local_pos_batch(self, values: ArrayLike) -> np.ndarray:
         arr = np.asarray(values, dtype=np.float32).copy()
         if arr.ndim >= 2 and arr.shape[0] == self._num_envs:
             view_shape = (self._num_envs,) + (1,) * (arr.ndim - 2) + (3,)
             arr -= self._env_offsets.reshape(view_shape)
         return arr
 
-    def _env_ids(self, env_id):
+    def _env_ids(self, env_id: EnvIdLike) -> list[int]:
         if env_id is None:
             return list(range(self._num_envs))
         if self._is_single_env_id(env_id):
@@ -1352,15 +1659,15 @@ class KangEngineEngine(_BaseEngine):
         ids = self._as_numpy(env_id).reshape(-1)
         return [int(x) for x in ids]
 
-    def _is_single_env_id(self, env_id):
+    def _is_single_env_id(self, env_id: EnvIdLike) -> bool:
         return isinstance(env_id, (int, np.integer))
 
-    def _as_numpy(self, value):
+    def _as_numpy(self, value: ArrayLike) -> np.ndarray:
         if _torch is not None and _torch.is_tensor(value):
             value = value.detach().cpu().numpy()
         return np.asarray(value, dtype=np.float32)
 
-    def _out(self, value):
+    def _out(self, value: ArrayLike) -> ArrayLike:
         arr = np.asarray(value, dtype=np.float32)
         if _torch is not None and self._device is not None:
             return _torch.as_tensor(arr, dtype=_torch.float32, device=self._device)
