@@ -25,6 +25,9 @@ struct MeshInfo {
     std::string bodyName;
     std::string meshFile;
     int bodyIndex;
+    Eigen::Vector3f pos = Eigen::Vector3f::Zero();
+    Eigen::Quaternionf quat = Eigen::Quaternionf::Identity();
+    Eigen::Vector4f rgba = Eigen::Vector4f(0.15f, 0.15f, 0.15f, 1.0f);
 };
 
 struct Joint {

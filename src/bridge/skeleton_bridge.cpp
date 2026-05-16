@@ -7,10 +7,13 @@
 #include "utils/types.hpp"
 
 #include <Eigen/Geometry>
+#include <algorithm>
+#include <cctype>
 #include <fmt/core.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <memory>
+#include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -87,6 +90,50 @@ buildCollisionMesh(const std::vector<Animation::CollisionGeom>& geoms) {
     return combined;
 }
 
+static std::string lowerExtension(std::string path) {
+    auto pos = path.find_last_of('.');
+    if (pos == std::string::npos)
+        return "";
+    std::string ext = path.substr(pos);
+    std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+    return ext;
+}
+
+static Scene::MeshData loadVisualMesh(const std::string& path) {
+    std::string ext = lowerExtension(path);
+    if (ext == ".stl")
+        return loadStl(path);
+    if (ext == ".obj")
+        return loadObj(path);
+    throw std::runtime_error("Unsupported visual mesh extension: " + path);
+}
+
+static void applyMeshInfoTransform(Scene::MeshData& mesh,
+                                   const Animation::MeshInfo& meshInfo) {
+    glm::vec3 localPos(meshInfo.pos.x(), meshInfo.pos.y(), meshInfo.pos.z());
+    glm::quat localQuat(meshInfo.quat.w(), meshInfo.quat.x(), meshInfo.quat.y(),
+                        meshInfo.quat.z());
+    for (auto& v : mesh.vertices)
+        v = localQuat * v + localPos;
+    for (auto& n : mesh.normals)
+        n = localQuat * n;
+}
+
+static void appendMesh(Scene::MeshData& dst, Scene::MeshData&& part) {
+    unsigned int offset = static_cast<unsigned int>(dst.vertices.size());
+    for (auto& idx : part.indices)
+        idx += offset;
+    dst.vertices.insert(dst.vertices.end(), part.vertices.begin(),
+                        part.vertices.end());
+    dst.normals.insert(dst.normals.end(), part.normals.begin(),
+                       part.normals.end());
+    dst.uvs.insert(dst.uvs.end(), part.uvs.begin(), part.uvs.end());
+    dst.indices.insert(dst.indices.end(), part.indices.begin(),
+                       part.indices.end());
+}
+
 static std::vector<std::shared_ptr<Scene::MeshData>>
 buildBodyMeshes(const Animation::CharacterData& data) {
     int numBodies = data.skeletonTree ? data.skeletonTree->numJoints() : 0;
@@ -108,30 +155,22 @@ buildBodyMeshes(const Animation::CharacterData& data) {
                 std::make_shared<Scene::MeshData>(std::move(colMesh));
     }
 
-    std::unordered_map<int, Scene::MeshData> stlMeshes;
+    std::unordered_map<int, Scene::MeshData> visualMeshes;
     for (const auto& meshInfo : data.meshInfos) {
-        std::string stlPath = data.meshDir + meshInfo.meshFile;
+        std::string meshPath = data.meshDir + meshInfo.meshFile;
         fmt::print("Loading mesh [{}] {}: {}\n", meshInfo.bodyIndex,
-                   meshInfo.bodyName, stlPath);
-        auto part = loadStl(stlPath);
-        auto it = stlMeshes.find(meshInfo.bodyIndex);
-        if (it == stlMeshes.end()) {
-            stlMeshes[meshInfo.bodyIndex] = std::move(part);
+                   meshInfo.bodyName, meshPath);
+        auto part = loadVisualMesh(meshPath);
+        applyMeshInfoTransform(part, meshInfo);
+        auto it = visualMeshes.find(meshInfo.bodyIndex);
+        if (it == visualMeshes.end()) {
+            visualMeshes[meshInfo.bodyIndex] = std::move(part);
         } else {
-            auto& dst = it->second;
-            unsigned int offset = (unsigned int)dst.vertices.size();
-            for (auto& idx : part.indices)
-                idx += offset;
-            dst.vertices.insert(dst.vertices.end(), part.vertices.begin(),
-                                part.vertices.end());
-            dst.normals.insert(dst.normals.end(), part.normals.begin(),
-                               part.normals.end());
-            dst.indices.insert(dst.indices.end(), part.indices.begin(),
-                               part.indices.end());
+            appendMesh(it->second, std::move(part));
         }
     }
 
-    for (auto& [bodyIdx, mesh] : stlMeshes) {
+    for (auto& [bodyIdx, mesh] : visualMeshes) {
         if (bodyIdx >= 0 && bodyIdx < static_cast<int>(bodyMeshes.size()))
             bodyMeshes[bodyIdx] =
                 std::make_shared<Scene::MeshData>(std::move(mesh));
@@ -158,9 +197,9 @@ SkeletonBridge SkeletonBridge::fromData(const Animation::CharacterData& data,
     return asset.instantiate(scene, primBasePath, meshAssetBasePath);
 }
 
-SkeletonBridgeAsset
-SkeletonBridgeAsset::fromMJCF(const std::string& mjcfPath, float scale,
-                              const std::string& order) {
+SkeletonBridgeAsset SkeletonBridgeAsset::fromMJCF(const std::string& mjcfPath,
+                                                  float scale,
+                                                  const std::string& order) {
     return fromData(Animation::MJCFLoader::load(mjcfPath, 1.0f, order), scale);
 }
 
@@ -183,17 +222,18 @@ void SkeletonBridgeAsset::defineMeshAssets(
     for (int i = 0; i < static_cast<int>(_bodyMeshes.size()); i++) {
         if (!_bodyMeshes[i])
             continue;
-        auto* assetPrim = scene->definePrim(
-            meshAssetBasePath + "/body_" + std::to_string(i),
-            Scene::PrimType::Mesh);
+        auto* assetPrim =
+            scene->definePrim(meshAssetBasePath + "/body_" + std::to_string(i),
+                              Scene::PrimType::Mesh);
         if (!assetPrim->getMeshData())
             assetPrim->setMeshData(_bodyMeshes[i]);
     }
 }
 
-SkeletonBridge SkeletonBridgeAsset::instantiate(
-    Scene::SceneBackend* scene, const std::string& primBasePath,
-    const std::string& meshAssetBasePath) const {
+SkeletonBridge
+SkeletonBridgeAsset::instantiate(Scene::SceneBackend* scene,
+                                 const std::string& primBasePath,
+                                 const std::string& meshAssetBasePath) const {
     SkeletonBridge bridge;
     bridge._fk = Animation::SkeletonFK::fromData(_data, _scale);
 

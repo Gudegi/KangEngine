@@ -26,6 +26,34 @@ std::vector<float> splitFloats(const char* str) {
     return out;
 }
 
+Eigen::Vector3f parseVec3(const char* str,
+                          const Eigen::Vector3f& fallback =
+                              Eigen::Vector3f::Zero()) {
+    auto values = splitFloats(str);
+    if (values.size() < 3)
+        return fallback;
+    return Eigen::Vector3f(values[0], values[1], values[2]);
+}
+
+Eigen::Vector4f parseVec4(const char* str,
+                          const Eigen::Vector4f& fallback =
+                              Eigen::Vector4f(0.15f, 0.15f, 0.15f, 1.0f)) {
+    auto values = splitFloats(str);
+    if (values.size() < 4)
+        return fallback;
+    return Eigen::Vector4f(values[0], values[1], values[2], values[3]);
+}
+
+Eigen::Quaternionf parseQuatWxyz(
+    const char* str,
+    const Eigen::Quaternionf& fallback = Eigen::Quaternionf::Identity()) {
+    auto values = splitFloats(str);
+    if (values.size() < 4)
+        return fallback;
+    return Eigen::Quaternionf(values[0], values[1], values[2], values[3])
+        .normalized();
+}
+
 std::string resolveMeshDir(const std::string& mjcfPath, const char* meshdir) {
     std::string dir;
     auto lastSlash = mjcfPath.find_last_of("/\\");
@@ -359,12 +387,26 @@ void MJCFLoader::parse(const std::string& mjcfPath, float scale,
                  geom = geom->NextSiblingElement("geom")) {
                 const char* cls = geom->Attribute("class");
                 const char* meshName = geom->Attribute("mesh");
+                auto geomType = geom->Attribute("type")
+                                    ? std::string(geom->Attribute("type"))
+                                    : std::string();
 
                 // Visual mesh
-                if (cls && std::string(cls) == "visual" && meshName) {
+                if (meshName &&
+                    ((cls && std::string(cls) == "visual") ||
+                     geomType == "mesh")) {
                     auto it = meshNameToFile.find(meshName);
-                    if (it != meshNameToFile.end())
-                        _data.meshInfos.push_back({bodyName, it->second, idx});
+                    if (it != meshNameToFile.end()) {
+                        Eigen::Vector3f meshPos =
+                            parseVec3(geom->Attribute("pos")) * scale;
+                        Eigen::Quaternionf meshQuat =
+                            parseQuatWxyz(geom->Attribute("quat"));
+                        Eigen::Vector4f rgba =
+                            parseVec4(geom->Attribute("rgba"));
+                        _data.meshInfos.push_back(
+                            {bodyName, it->second, idx, meshPos, meshQuat,
+                             rgba});
+                    }
                     continue;
                 }
 
