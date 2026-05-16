@@ -70,7 +70,19 @@ void bind_animation(py::module& m) {
     py::class_<MeshInfo>(anim, "MeshInfo")
         .def_readonly("body_name", &MeshInfo::bodyName)
         .def_readonly("mesh_file", &MeshInfo::meshFile)
-        .def_readonly("body_index", &MeshInfo::bodyIndex);
+        .def_readonly("body_index", &MeshInfo::bodyIndex)
+        .def_property_readonly("pos",
+                               [](const MeshInfo& m) { return toGlm(m.pos); })
+        .def_property_readonly("quat",
+                               [](const MeshInfo& m) {
+                                   return glm::quat(m.quat.w(), m.quat.x(),
+                                                    m.quat.y(), m.quat.z());
+                               })
+        .def_property_readonly("rgba",
+                               [](const MeshInfo& m) {
+                                   return glm::vec4(m.rgba.x(), m.rgba.y(),
+                                                    m.rgba.z(), m.rgba.w());
+                               });
 
     py::enum_<CollisionGeom::Type>(anim, "CollisionGeomType")
         .value("Capsule", CollisionGeom::Type::Capsule)
