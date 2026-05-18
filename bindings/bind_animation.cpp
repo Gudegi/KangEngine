@@ -41,8 +41,8 @@ Eigen::Quaternionf eigenQuatXyzwFromArray(const FloatArray& array,
                               view.data[2]);
 }
 
-std::vector<Eigen::Quaternionf>
-eigenQuatXyzwArray(const FloatArray& array, const char* name) {
+std::vector<Eigen::Quaternionf> eigenQuatXyzwArray(const FloatArray& array,
+                                                   const char* name) {
     auto view = vec4ArrayView(array, name);
     std::vector<Eigen::Quaternionf> result;
     result.reserve(view.count);
@@ -78,11 +78,9 @@ void bind_animation(py::module& m) {
                                    return glm::quat(m.quat.w(), m.quat.x(),
                                                     m.quat.y(), m.quat.z());
                                })
-        .def_property_readonly("rgba",
-                               [](const MeshInfo& m) {
-                                   return glm::vec4(m.rgba.x(), m.rgba.y(),
-                                                    m.rgba.z(), m.rgba.w());
-                               });
+        .def_property_readonly("rgba", [](const MeshInfo& m) {
+            return glm::vec4(m.rgba.x(), m.rgba.y(), m.rgba.z(), m.rgba.w());
+        });
 
     py::enum_<CollisionGeom::Type>(anim, "CollisionGeomType")
         .value("Capsule", CollisionGeom::Type::Capsule)
@@ -93,28 +91,20 @@ void bind_animation(py::module& m) {
 
     py::class_<CollisionGeom>(anim, "CollisionGeom")
         .def_readonly("type", &CollisionGeom::type)
-        .def_property_readonly("pos",
-                               [](const CollisionGeom& g) {
-                                   return toGlm(g.pos);
-                               })
-        .def_property_readonly("quat",
-                               [](const CollisionGeom& g) {
-                                   return toGlm(g.quat);
-                               })
         .def_property_readonly(
-            "size",
-            [](const CollisionGeom& g) {
-                return std::vector<float>{g.size[0], g.size[1], g.size[2]};
-            })
+            "pos", [](const CollisionGeom& g) { return toGlm(g.pos); })
+        .def_property_readonly(
+            "quat", [](const CollisionGeom& g) { return toGlm(g.quat); })
+        .def_property_readonly("size",
+                               [](const CollisionGeom& g) {
+                                   return std::vector<float>{
+                                       g.size[0], g.size[1], g.size[2]};
+                               })
         .def_readonly("has_from_to", &CollisionGeom::hasFromTo)
-        .def_property_readonly("from_pos",
-                               [](const CollisionGeom& g) {
-                                   return toGlm(g.from);
-                               })
-        .def_property_readonly("to_pos",
-                               [](const CollisionGeom& g) {
-                                   return toGlm(g.to);
-                               })
+        .def_property_readonly(
+            "from_pos", [](const CollisionGeom& g) { return toGlm(g.from); })
+        .def_property_readonly(
+            "to_pos", [](const CollisionGeom& g) { return toGlm(g.to); })
         .def_readonly("friction", &CollisionGeom::friction)
         .def_readonly("condim", &CollisionGeom::condim)
         .def_readonly("margin", &CollisionGeom::margin);
@@ -125,12 +115,13 @@ void bind_animation(py::module& m) {
         .def_readonly("mesh_infos", &CharacterData::meshInfos)
         .def_readonly("mesh_dir", &CharacterData::meshDir)
         // joints: return dict[int, list[Joint]]
-        .def_property_readonly("joints", [](const CharacterData& d) {
-            py::dict result;
-            for (const auto& [idx, jvec] : d.joints)
-                result[py::int_(idx)] = jvec;
-            return result;
-        })
+        .def_property_readonly("joints",
+                               [](const CharacterData& d) {
+                                   py::dict result;
+                                   for (const auto& [idx, jvec] : d.joints)
+                                       result[py::int_(idx)] = jvec;
+                                   return result;
+                               })
         .def_property_readonly("collision_geoms", [](const CharacterData& d) {
             py::dict result;
             for (const auto& [idx, geoms] : d.collisionGeoms)
@@ -152,6 +143,10 @@ void bind_animation(py::module& m) {
         .def("local_translation",
              [](const SkeletonTree& self, int i) {
                  return toGlm(self.localTranslation(i));
+             })
+        .def("local_rotation",
+             [](const SkeletonTree& self, int i) {
+                 return toGlm(self.localRotation(i));
              })
         .def("node_names", &SkeletonTree::nodeNames)
         .def("parent_indices", &SkeletonTree::parentIndices)
@@ -181,8 +176,8 @@ void bind_animation(py::module& m) {
                     eigenVec3FromArray(rootTranslation, "root_translation"),
                     isLocal);
             },
-            py::arg("tree"), py::arg("rotations"),
-            py::arg("root_translation"), py::arg("is_local") = true)
+            py::arg("tree"), py::arg("rotations"), py::arg("root_translation"),
+            py::arg("is_local") = true)
         .def("num_joints", &SkeletonState::numJoints)
         .def("is_local", &SkeletonState::isLocal)
         .def("compute_global_transforms",
@@ -228,16 +223,14 @@ void bind_animation(py::module& m) {
             "from_mjcf",
             [](const std::string& mjcfPath, Scene::SceneBackend* scene,
                const std::string& primBasePath, float scale,
-               const std::string& order,
-               const std::string& meshAssetBasePath) {
+               const std::string& order, const std::string& meshAssetBasePath) {
                 return SkeletonBridge::fromMJCF(mjcfPath, scene, primBasePath,
                                                 scale, order,
                                                 meshAssetBasePath);
             },
             py::arg("mjcf_path"), py::arg("scene"),
             py::arg("prim_base_path") = "/robot", py::arg("scale") = 1.0f,
-            py::arg("order") = "DFS",
-            py::arg("mesh_asset_base_path") = "")
+            py::arg("order") = "DFS", py::arg("mesh_asset_base_path") = "")
         .def("apply_pose", &SkeletonBridge::applyPose)
         .def("set_joint_rotation",
              [](SkeletonBridge& self, int idx, const FloatArray& q) {
@@ -282,8 +275,8 @@ void bind_animation(py::module& m) {
                     py::arg("order") = "DFS")
         .def("define_mesh_assets", &SkeletonBridgeAsset::defineMeshAssets,
              py::arg("scene"), py::arg("mesh_asset_base_path"))
-        .def("instantiate", &SkeletonBridgeAsset::instantiate,
-             py::arg("scene"), py::arg("prim_base_path") = "/robot",
+        .def("instantiate", &SkeletonBridgeAsset::instantiate, py::arg("scene"),
+             py::arg("prim_base_path") = "/robot",
              py::arg("mesh_asset_base_path") = "")
         .def("num_bodies", &SkeletonBridgeAsset::numBodies);
 }

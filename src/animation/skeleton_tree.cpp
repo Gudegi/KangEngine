@@ -13,10 +13,12 @@ namespace Animation {
 SkeletonTree::SkeletonTree(std::vector<std::string> nodeNames,
                            std::vector<int> parentIndices,
                            std::vector<Eigen::Vector3f> localTranslations,
+                           std::vector<Eigen::Quaternionf> localRotations,
                            std::vector<int> numJointsInBody)
     : _nodeNames(std::move(nodeNames)),
       _parentIndices(std::move(parentIndices)),
       _localTranslations(std::move(localTranslations)),
+      _localRotations(std::move(localRotations)),
       _numJointsInBody(std::move(numJointsInBody)) {
     for (int i = 0; i < static_cast<int>(_nodeNames.size()); ++i) {
         _nodeIndices[_nodeNames[i]] = i;
@@ -42,6 +44,18 @@ static Eigen::Vector3f parsePos(const char* posStr) {
     return Eigen::Vector3f(x, y, z);
 }
 
+static Eigen::Quaternionf parseQuat(const char* quatStr) {
+    if (!quatStr)
+        return Eigen::Quaternionf::Identity();
+    float w = 1.f, x = 0.f, y = 0.f, z = 0.f;
+    std::istringstream ss(quatStr);
+    ss >> w >> x >> y >> z;
+    Eigen::Quaternionf q(w, x, y, z);
+    if (q.norm() <= 1e-6f)
+        return Eigen::Quaternionf::Identity();
+    return q.normalized();
+}
+
 SkeletonTree SkeletonTree::skelFromMJCFElement(tinyxml2::XMLElement* mjcfRoot,
                                                const std::string& order) {
     auto* worldbody = mjcfRoot->FirstChildElement("worldbody");
@@ -55,6 +69,7 @@ SkeletonTree SkeletonTree::skelFromMJCFElement(tinyxml2::XMLElement* mjcfRoot,
     std::vector<std::string> nodeNames;
     std::vector<int> parentIndices;
     std::vector<Eigen::Vector3f> localTranslations;
+    std::vector<Eigen::Quaternionf> localRotations;
     std::vector<int> numJointsInBody;
 
     if (order == "BFS") {
@@ -77,6 +92,7 @@ SkeletonTree SkeletonTree::skelFromMJCFElement(tinyxml2::XMLElement* mjcfRoot,
                                      : fmt::format("body_{}", currentIdx));
             parentIndices.push_back(parentIdx);
             localTranslations.push_back(parsePos(element->Attribute("pos")));
+            localRotations.push_back(parseQuat(element->Attribute("quat")));
 
             // Count joint children
             int jointCount = 0;
@@ -108,6 +124,7 @@ SkeletonTree SkeletonTree::skelFromMJCFElement(tinyxml2::XMLElement* mjcfRoot,
                                      : fmt::format("body_{}", currentIdx));
             parentIndices.push_back(parentIdx);
             localTranslations.push_back(parsePos(element->Attribute("pos")));
+            localRotations.push_back(parseQuat(element->Attribute("quat")));
 
             // Count joint children
             int jointCount = 0;
@@ -135,7 +152,7 @@ SkeletonTree SkeletonTree::skelFromMJCFElement(tinyxml2::XMLElement* mjcfRoot,
     }
 
     return SkeletonTree(std::move(nodeNames), std::move(parentIndices),
-                        std::move(localTranslations),
+                        std::move(localTranslations), std::move(localRotations),
                         std::move(numJointsInBody));
 }
 
@@ -152,10 +169,11 @@ void SkeletonTree::print() const {
     fmt::print("SkeletonTree ({} joints):\n", numJoints());
     for (int i = 0; i < numJoints(); ++i) {
         const auto& t = _localTranslations[i];
+        const auto& q = _localRotations[i];
         fmt::print("  [{}] {} (parent={}, pos=({:.3f}, {:.3f}, {:.3f}), "
-                   "joints={})\n",
+                   "quat=({:.3f}, {:.3f}, {:.3f}, {:.3f}), joints={})\n",
                    i, _nodeNames[i], _parentIndices[i], t.x(), t.y(), t.z(),
-                   _numJointsInBody[i]);
+                   q.w(), q.x(), q.y(), q.z(), _numJointsInBody[i]);
     }
 }
 

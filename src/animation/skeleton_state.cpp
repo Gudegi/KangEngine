@@ -19,8 +19,8 @@ SkeletonState SkeletonState::fromRotationAndRootTranslation(
 
 SkeletonState
 SkeletonState::zeroPose(std::shared_ptr<const SkeletonTree> tree) {
-    std::vector<Eigen::Quaternionf> rotations(tree->numJoints(),
-                                              Eigen::Quaternionf::Identity());
+    std::vector<Eigen::Quaternionf> rotations(tree->localRotations().begin(),
+                                              tree->localRotations().end());
     Eigen::Vector3f rootPos = tree->localTranslation(0);
     return fromRotationAndRootTranslation(std::move(tree), rotations, rootPos,
                                           true);

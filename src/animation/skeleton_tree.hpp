@@ -21,6 +21,7 @@ class SkeletonTree {
     SkeletonTree(std::vector<std::string> nodeNames,
                  std::vector<int> parentIndices,
                  std::vector<Eigen::Vector3f> localTranslations,
+                 std::vector<Eigen::Quaternionf> localRotations,
                  std::vector<int> numJointsInBody);
 
     // Parse MJCF file (opens and parses XML internally)
@@ -39,12 +40,18 @@ class SkeletonTree {
     const Eigen::Vector3f& localTranslation(int i) const {
         return _localTranslations[i];
     }
+    const Eigen::Quaternionf& localRotation(int i) const {
+        return _localRotations[i];
+    }
     int numJointsInBody(int i) const { return _numJointsInBody[i]; }
 
     const std::vector<std::string>& nodeNames() const { return _nodeNames; }
     const std::vector<int>& parentIndices() const { return _parentIndices; }
     const std::vector<Eigen::Vector3f>& localTranslations() const {
         return _localTranslations;
+    }
+    const std::vector<Eigen::Quaternionf>& localRotations() const {
+        return _localRotations;
     }
 
     // Debug print
@@ -54,6 +61,7 @@ class SkeletonTree {
     std::vector<std::string> _nodeNames;
     std::vector<int> _parentIndices; // -1 for root
     std::vector<Eigen::Vector3f> _localTranslations;
+    std::vector<Eigen::Quaternionf> _localRotations;
     std::vector<int> _numJointsInBody;
     std::unordered_map<std::string, int> _nodeIndices;
 };

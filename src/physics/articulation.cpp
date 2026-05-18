@@ -9,6 +9,10 @@
 namespace KE {
 namespace {
 
+PxQuat toPxQuat(const Eigen::Quaternionf& q) {
+    return PxQuat(q.x(), q.y(), q.z(), q.w());
+}
+
 // Returns a PhysX quaternion that rotates UnitX onto the given axis.
 PxQuat axisAlignQuat(Eigen::Vector3f axis) {
     axis.normalize();
@@ -413,7 +417,8 @@ Articulation Articulation::build(
     auto& g0 = globals[0];
     artic._links[0] = artic._artic->createLink(
         nullptr, PxTransform(PxVec3(g0.translation.x(), g0.translation.y(),
-                                    g0.translation.z())));
+                                    g0.translation.z()),
+                             toPxQuat(g0.rotation)));
     {
         auto it = colGeoms.find(0);
         if (it != colGeoms.end() && !it->second.empty())
@@ -441,10 +446,12 @@ Articulation Articulation::build(
         int pi = tree->parentIndex(i);
         PxTransform childWorld(PxVec3(globals[i].translation.x(),
                                       globals[i].translation.y(),
-                                      globals[i].translation.z()));
+                                      globals[i].translation.z()),
+                               toPxQuat(globals[i].rotation));
         PxTransform parentWorld(PxVec3(globals[pi].translation.x(),
                                        globals[pi].translation.y(),
-                                       globals[pi].translation.z()));
+                                       globals[pi].translation.z()),
+                                toPxQuat(globals[pi].rotation));
 
         artic._links[i] =
             artic._artic->createLink(artic._links[pi], childWorld);

@@ -9,6 +9,7 @@
 #include <Eigen/Geometry>
 #include <algorithm>
 #include <cctype>
+#include <filesystem>
 #include <fmt/core.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -21,6 +22,8 @@
 
 namespace KE {
 namespace Bridge {
+
+namespace fs = std::filesystem;
 
 // Build a merged MeshData from all collision geoms of one body,
 // with each geom's vertices/normals transformed into body-local space.
@@ -157,7 +160,9 @@ buildBodyMeshes(const Animation::CharacterData& data) {
 
     std::unordered_map<int, Scene::MeshData> visualMeshes;
     for (const auto& meshInfo : data.meshInfos) {
-        std::string meshPath = data.meshDir + meshInfo.meshFile;
+        std::string meshPath = (fs::path(data.meshDir) / meshInfo.meshFile)
+                                   .lexically_normal()
+                                   .string();
         fmt::print("Loading mesh [{}] {}: {}\n", meshInfo.bodyIndex,
                    meshInfo.bodyName, meshPath);
         auto part = loadVisualMesh(meshPath);

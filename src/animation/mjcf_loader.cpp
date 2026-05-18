@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 #include <queue>
 #include <sstream>
 #include <stdexcept>
@@ -69,6 +70,14 @@ std::string resolveMeshDir(const std::string& mjcfPath, const char* meshdir) {
     if (!md.empty() && md[0] == '/')
         return md;
     return dir + md;
+}
+
+std::string meshAssetName(const char* name, const char* file) {
+    if (name && name[0] != '\0')
+        return name;
+    if (!file || file[0] == '\0')
+        return {};
+    return std::filesystem::path(file).stem().string();
 }
 
 // Invokes callback(xml_node, tree_index, name, effectiveClass) for each body.
@@ -363,8 +372,9 @@ void MJCFLoader::parse(const std::string& mjcfPath, float scale,
              mesh = mesh->NextSiblingElement("mesh")) {
             const char* name = mesh->Attribute("name");
             const char* file = mesh->Attribute("file");
-            if (name && file)
-                meshNameToFile[name] = file;
+            const std::string assetName = meshAssetName(name, file);
+            if (!assetName.empty() && file)
+                meshNameToFile[assetName] = file;
         }
     }
 
@@ -390,11 +400,13 @@ void MJCFLoader::parse(const std::string& mjcfPath, float scale,
                 auto geomType = geom->Attribute("type")
                                     ? std::string(geom->Attribute("type"))
                                     : std::string();
+                bool isCollisionMesh =
+                    cls && std::string(cls) == "collision";
+                bool isVisualMesh = cls && std::string(cls) == "visual";
 
                 // Visual mesh
-                if (meshName &&
-                    ((cls && std::string(cls) == "visual") ||
-                     geomType == "mesh")) {
+                if (meshName && !isCollisionMesh &&
+                    (isVisualMesh || geomType == "mesh")) {
                     auto it = meshNameToFile.find(meshName);
                     if (it != meshNameToFile.end()) {
                         Eigen::Vector3f meshPos =
