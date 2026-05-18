@@ -87,6 +87,13 @@ void MeshInstancer::setColors(const std::vector<glm::vec4>& colors) {
     int n = (int)colors.size();
     if (n > _allocatedInstances)
         _reallocate(n * 2);
+    _hasTransparent = false;
+    for (const auto& color : colors) {
+        if (color.a < 1.0f) {
+            _hasTransparent = true;
+            break;
+        }
+    }
     _colorVBO->setData(colors.data(), sizeof(glm::vec4) * n);
 }
 
@@ -100,8 +107,16 @@ void MeshInstancer::updateFromTransforms(
         _reallocate(_visibleCount * 2);
     _transformVBO->setData(transforms.data(),
                            sizeof(glm::mat4) * _visibleCount);
-    if (colors)
+    if (colors) {
+        _hasTransparent = false;
+        for (const auto& color : *colors) {
+            if (color.a < 1.0f) {
+                _hasTransparent = true;
+                break;
+            }
+        }
         _colorVBO->setData(colors->data(), sizeof(glm::vec4) * _visibleCount);
+    }
     _useExternalTransforms = true;
 }
 
@@ -118,7 +133,7 @@ void MeshInstancer::update() {
             continue;
         auto col = prim->getDisplayColorAlpha();
         glm::vec4 c = col ? *col : glm::vec4(1.f);
-        if (c.a < 0.99f)
+        if (c.a < 1.0f)
             _hasTransparent = true;
         transforms.push_back(prim->computeModelMatrix());
         colors.push_back(c);
@@ -140,7 +155,8 @@ void MeshInstancer::updateGeometry(const std::vector<glm::vec3>& positions,
                                    const std::vector<glm::vec3>& normals) {
     // _vbos[0] = positions (location 0), _vbos[1] = normals (location 1)
     if (!_vbos.empty())
-        _vbos[0]->setData(positions.data(), sizeof(glm::vec3) * positions.size());
+        _vbos[0]->setData(positions.data(),
+                          sizeof(glm::vec3) * positions.size());
     if (_vbos.size() > 1 && !normals.empty())
         _vbos[1]->setData(normals.data(), sizeof(glm::vec3) * normals.size());
 }
