@@ -1,7 +1,7 @@
 #ifndef _MJCF_LOADER_HPP_
 #define _MJCF_LOADER_HPP_
 
-#include "character_description.hpp"
+#include "animation/character_description.hpp"
 
 #include <string>
 

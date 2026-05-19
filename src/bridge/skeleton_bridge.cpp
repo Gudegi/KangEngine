@@ -1,5 +1,5 @@
 #include "skeleton_bridge.hpp"
-#include "animation/mjcf_loader.hpp"
+#include "asset/mjcf_loader.hpp"
 #include "animation/skeleton_math.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/scene_backend.hpp"

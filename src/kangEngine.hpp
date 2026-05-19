@@ -23,7 +23,7 @@
 #include "engine/core/window/window.hpp"
 #include "engine/graphics/material/colors.hpp"
 
-#include "animation/mjcf_loader.hpp"
+#include "asset/mjcf_loader.hpp"
 #include "bridge/physics_bridge.hpp"
 #include "bridge/skeleton_bridge.hpp"
 

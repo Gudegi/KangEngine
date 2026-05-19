@@ -1,4 +1,4 @@
-#include "mjcf_loader.hpp"
+#include "asset/mjcf_loader.hpp"
 
 #include <fmt/core.h>
 #include <tinyxml2.h>

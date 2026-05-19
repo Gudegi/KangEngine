@@ -5,7 +5,7 @@
 #ifndef _SKELETON_FK_HPP_
 #define _SKELETON_FK_HPP_
 
-#include "mjcf_loader.hpp"
+#include "asset/mjcf_loader.hpp"
 #include "skeleton_state.hpp"
 
 #include <memory>

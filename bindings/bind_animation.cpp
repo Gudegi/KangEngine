@@ -10,7 +10,7 @@
 #include "py_array_view.hpp"
 
 #include "animation/character_description.hpp"
-#include "animation/mjcf_loader.hpp"
+#include "asset/mjcf_loader.hpp"
 #include "animation/skeleton_math.hpp"
 #include "animation/skeleton_state.hpp"
 #include "animation/skeleton_tree.hpp"
