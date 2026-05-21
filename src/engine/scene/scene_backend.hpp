@@ -6,15 +6,20 @@
 #define _SCENE_BACKEND_HPP_
 
 #include <glm/fwd.hpp>
+#include <cstddef>
 #include <string>
 #include <memory>
 #include <vector>
 #include <glm/glm.hpp>
 #include <glm/geometric.hpp>
+#include <glm/mat4x4.hpp>
+#include <glm/vec4.hpp>
 #include "engine/graphics/backend/graphics_factory.hpp"
 
 namespace KE {
 namespace Scene {
+
+constexpr std::size_t MaxSkinningBones = 128;
 
 // Forward declarations
 class Prim;
@@ -52,6 +57,29 @@ struct MeshData {
         if (uvs.empty() && !vertices.empty()) {
             uvs.assign(vertices.size(), glm::vec2(0.0f));
         }
+    }
+};
+
+// Mesh + skinning payload. use this only when vertex bone attributes are
+// actually needed.
+struct SkinnedMeshData {
+    MeshData mesh;
+    std::vector<glm::ivec4> boneIndices;
+    std::vector<glm::vec4> boneWeights;
+    std::vector<int> boneNodeIndices;
+    std::vector<glm::mat4> inverseBindMatrices;
+
+    SkinnedMeshData() = default;
+
+    SkinnedMeshData(MeshData&& mesh, std::vector<glm::ivec4>&& boneIndices,
+                    std::vector<glm::vec4>&& boneWeights)
+        : mesh(std::move(mesh)), boneIndices(std::move(boneIndices)),
+          boneWeights(std::move(boneWeights)) {}
+
+    bool hasValidVertexSkinning() const {
+        return !mesh.vertices.empty() &&
+               boneIndices.size() == mesh.vertices.size() &&
+               boneWeights.size() == mesh.vertices.size();
     }
 };
 

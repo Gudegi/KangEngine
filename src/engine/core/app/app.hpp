@@ -153,6 +153,9 @@ class App {
 
     MeshHandle addShape(Backend::Shader* shader, Scene::Prim* prim,
                         RenderTrack track = RenderTrack::SceneGraph);
+    MeshHandle addSkinnedShape(Backend::Shader* shader, Scene::Prim* prim,
+                               const Scene::SkinnedMeshData& skinnedMesh,
+                               RenderTrack track = RenderTrack::SceneGraph);
     MeshHandle addShape(PhongMaterial* material, Scene::Prim* prim,
                         RenderTrack track = RenderTrack::SceneGraph);
     void removePrim(MeshHandle handle, Scene::Prim* prim);
@@ -180,6 +183,11 @@ class App {
                                glm::vec3 position = glm::vec3(0.0f),
                                glm::vec4 color = glm::vec4(1.0f),
                                bool castsShadow = true);
+    MeshPrimResult addSkinnedMeshPrim(
+        Backend::Shader* shader, const std::string& path,
+        Scene::SkinnedMeshData skinnedMesh,
+        glm::vec3 position = glm::vec3(0.0f),
+        glm::vec4 color = glm::vec4(1.0f), bool castsShadow = true);
 
     void updateShapeTransforms(MeshHandle handle,
                                const std::vector<glm::mat4>& transforms,
@@ -202,6 +210,10 @@ class App {
     void updateMeshGeometry(MeshHandle handle, const float* positions,
                             const float* normals, size_t count,
                             size_t normalCount);
+    void updateSkinningMatrices(MeshHandle handle,
+                                const std::vector<glm::mat4>& boneMatrices);
+    void updateSkinningMatrices(MeshHandle handle, const float* rowMajorMatrices,
+                                size_t count);
 
     void setSkybox(const std::string& path);
     void setSkybox(const std::vector<std::string>& paths);

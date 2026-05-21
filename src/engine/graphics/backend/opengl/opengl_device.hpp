@@ -71,6 +71,8 @@ class OpenGLShader : public Shader {
     void setMat2(const std::string& name, const glm::mat2& value) override;
     void setMat3(const std::string& name, const glm::mat3& value) override;
     void setMat4(const std::string& name, const glm::mat4& value) override;
+    void setMat4Array(const std::string& name, const glm::mat4* values,
+                      size_t count) override;
     void setUniformBlockBinding(const std::string& blockName,
                                 int slot) override;
 };

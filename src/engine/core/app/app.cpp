@@ -385,6 +385,14 @@ MeshHandle App::addShape(Backend::Shader* shader, Scene::Prim* prim,
                        : InvalidHandle;
 }
 
+MeshHandle App::addSkinnedShape(Backend::Shader* shader, Scene::Prim* prim,
+                                const Scene::SkinnedMeshData& skinnedMesh,
+                                RenderTrack track) {
+    return _rasterizer
+               ? _rasterizer->addSkinnedShape(shader, prim, skinnedMesh, track)
+               : InvalidHandle;
+}
+
 MeshHandle App::addShape(PhongMaterial* material, Scene::Prim* prim,
                          RenderTrack track) {
     return _rasterizer ? _rasterizer->addShape(material, prim, track)
@@ -433,6 +441,30 @@ App::MeshPrimResult App::addMeshPrim(Backend::Shader* shader,
     desc.color = color;
     desc.castsShadow = castsShadow;
     return addMeshPrim(std::move(desc));
+}
+
+App::MeshPrimResult App::addSkinnedMeshPrim(
+    Backend::Shader* shader, const std::string& path,
+    Scene::SkinnedMeshData skinnedMesh, glm::vec3 position, glm::vec4 color,
+    bool castsShadow) {
+    MeshPrimResult result;
+    if (!shader || !_scene || path.empty() ||
+        !skinnedMesh.hasValidVertexSkinning())
+        return result;
+
+    auto* prim = _scene->definePrim(path, Scene::PrimType::Mesh);
+    prim->setMeshData(std::make_shared<Scene::MeshData>(skinnedMesh.mesh));
+    prim->addTranslateOp(position);
+    prim->setDisplayColorAlpha(color);
+
+    MeshHandle handle = addSkinnedShape(shader, prim, skinnedMesh);
+    if (handle != InvalidHandle) {
+        setShapeCastsShadow(handle, castsShadow);
+    }
+
+    result.prim = prim;
+    result.handle = handle;
+    return result;
 }
 
 glm::vec3 App::upPos(glm::vec3 pos, UpAxis from) const {
@@ -689,6 +721,32 @@ void App::updateMeshGeometry(MeshHandle handle, const float* positions,
     }
 
     _rasterizer->updateMeshGeometry(handle, positionVec, normalVec);
+}
+
+void App::updateSkinningMatrices(
+    MeshHandle handle, const std::vector<glm::mat4>& boneMatrices) {
+    if (_rasterizer)
+        _rasterizer->updateSkinningMatrices(handle, boneMatrices);
+}
+
+void App::updateSkinningMatrices(MeshHandle handle,
+                                 const float* rowMajorMatrices,
+                                 size_t count) {
+    if (!_rasterizer || !rowMajorMatrices)
+        return;
+
+    std::vector<glm::mat4> matrices;
+    matrices.reserve(count);
+    for (size_t i = 0; i < count; ++i) {
+        const float* p = rowMajorMatrices + i * 16;
+        glm::mat4 m(1.0f);
+        for (int row = 0; row < 4; ++row) {
+            for (int col = 0; col < 4; ++col)
+                m[col][row] = p[row * 4 + col];
+        }
+        matrices.push_back(m);
+    }
+    _rasterizer->updateSkinningMatrices(handle, matrices);
 }
 
 void App::setSkybox(const std::string& path) {

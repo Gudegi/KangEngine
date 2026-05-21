@@ -19,6 +19,7 @@
     "pybind11",
     "stb",
     "tinyobjloader",
-    "tinyxml2"
+    "tinyxml2",
+    "openfbx"
   ]
 }

@@ -143,6 +143,7 @@ find_package(fmt CONFIG REQUIRED)
 find_package(tinyobjloader CONFIG REQUIRED)
 find_package(Eigen3 CONFIG REQUIRED)
 find_package(tinyxml2 CONFIG REQUIRED)
+find_package(unofficial-openfbx CONFIG REQUIRED)
 if(IS_PYTHON_LIB)
     # Prefer system Python over vcpkg's Python
     set(Python_FIND_STRATEGY LOCATION)
@@ -171,6 +172,7 @@ target_link_libraries(engine_core PUBLIC
     tinyobjloader::tinyobjloader
     Eigen3::Eigen
     tinyxml2::tinyxml2
+    unoffical::openfbx::openfbx
 )
 target_link_libraries(engine_core PUBLIC pre_compiled_ext)
 ###### core libs END ######
@@ -186,10 +188,10 @@ target_link_libraries(engine_core PUBLIC pre_compiled_ext)
 # Active PhysX Examples
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_articulation.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_jointmonkey.cpp")
-#file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_ragdoll.cpp")
+file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_ragdoll.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_box_instancing.cpp")
-file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_instancing.cpp")
-
+#file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_instancing.cpp")
+#file(GLOB MAIN_FILE "${MAIN_DIR}/view_fbx_character.cpp")
 
 add_executable(${PROJECT_NAME} ${MAIN_FILE})
 target_link_libraries(${PROJECT_NAME} PRIVATE engine_core)

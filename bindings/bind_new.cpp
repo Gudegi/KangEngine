@@ -18,6 +18,7 @@
 #include <GLFW/glfw3.h>
 #include <imgui.h>
 #include <iomanip>
+#include <optional>
 
 namespace py = pybind11;
 using namespace KE;
@@ -633,6 +634,8 @@ py::class_<glm::vec3>(m, "vec3")
              py::arg("sceneBackendType") = Scene::BackendType::Native,
              py::arg("headless") = false)
         .def("setRenderHz", &App::setRenderHz, py::arg("renderHz"))
+        .def("get_delta_time", &App::getDeltaTime)
+        .def("get_render_hz", &App::getRenderHz)
         .def("start", &App::start)
         .def("render_frame_once", &App::renderFrameOnce)
         .def(
@@ -672,6 +675,18 @@ py::class_<glm::vec3>(m, "vec3")
              [](App* self, Backend::Shader* shader, Scene::Prim* prim,
                 RenderTrack track) { return self->addShape(shader, prim, track); },
              py::arg("shader"), py::arg("prim"),
+             py::arg("track") = RenderTrack::SceneGraph)
+        .def("addSkinnedShape",
+             [](App* self, Backend::Shader* shader, Scene::Prim* prim,
+                std::shared_ptr<Scene::SkinnedMeshData> skinnedMesh,
+                RenderTrack track) {
+                 if (!skinnedMesh)
+                     throw py::value_error("skinned_mesh_data is None");
+                 return self->addSkinnedShape(shader, prim, *skinnedMesh,
+                                              track);
+             },
+             py::arg("shader"), py::arg("prim"),
+             py::arg("skinned_mesh_data"),
              py::arg("track") = RenderTrack::SceneGraph)
         .def("addShape",
              [](App* self, PhongMaterial* material, Scene::Prim* prim,
@@ -730,6 +745,17 @@ py::class_<glm::vec3>(m, "vec3")
             },
             py::arg("handle"), py::arg("double_sided") = true)
         .def(
+            "setShapeCastsShadow",
+            [](App* self, uint32_t handle, bool castsShadow) {
+                self->setShapeCastsShadow(handle, castsShadow);
+            },
+            py::arg("handle"), py::arg("casts_shadow") = true)
+        .def(
+            "setShapeTexture",
+            [](App* self, uint32_t handle, Backend::Texture* texture,
+               int slot) { self->setShapeTexture(handle, texture, slot); },
+            py::arg("handle"), py::arg("texture"), py::arg("slot") = 0)
+        .def(
             "updateMeshGeometry",
             [](App* self, uint32_t handle, const FloatArray& positions,
                py::object normals) {
@@ -759,6 +785,20 @@ py::class_<glm::vec3>(m, "vec3")
                 self->updateMeshGeometry(handle, positions, normals);
             },
             py::arg("handle"), py::arg("positions"), py::arg("normals"))
+        .def(
+            "updateSkinningMatrices",
+            [](App* self, uint32_t handle, const FloatArray& matrices) {
+                auto m = mat4ArrayView(matrices, "bone_matrices");
+                self->updateSkinningMatrices(handle, m.data, m.count);
+            },
+            py::arg("handle"), py::arg("bone_matrices"))
+        .def(
+            "updateSkinningMatrices",
+            [](App* self, uint32_t handle,
+               const std::vector<glm::mat4>& matrices) {
+                self->updateSkinningMatrices(handle, matrices);
+            },
+            py::arg("handle"), py::arg("bone_matrices"))
         .def("checkError", &App::checkError)
         .def(
             "is_key_pressed",
@@ -772,4 +812,42 @@ py::class_<glm::vec3>(m, "vec3")
         .def("getWidth", &App::getWidth)
         .def("getHeight", &App::getHeight)
         .def("getScene", &App::getScene, py::return_value_policy::reference);
+
+    py::class_<Bridge::SkinnedCharacterBridge,
+               std::unique_ptr<Bridge::SkinnedCharacterBridge>>(
+        m, "SkinnedCharacterBridge")
+        .def_static(
+            "from_fbx",
+            [](App* app, Backend::Shader* shader, const std::string& fbxPath,
+               const std::optional<std::string>& bindFbxPath,
+               const std::string& primBasePath, int clipIndex, float fps,
+               float scale, bool useMaterials) {
+                const std::string& resolvedBindPath =
+                    bindFbxPath.has_value() ? bindFbxPath.value() : fbxPath;
+                return std::make_unique<Bridge::SkinnedCharacterBridge>(
+                    Bridge::SkinnedCharacterBridge::fromFBXWithBind(
+                        app, shader, fbxPath, resolvedBindPath, primBasePath,
+                        clipIndex, fps, scale, useMaterials));
+            },
+            py::arg("app"), py::arg("shader"), py::arg("fbx_path"),
+            py::arg("bind_fbx_path") = py::none(),
+            py::arg("prim_base_path") = "/fbx_character",
+            py::arg("clip_index") = 0, py::arg("fps") = 30.0f,
+            py::arg("scale") = 0.01f,
+            py::arg("use_materials") = true)
+        .def("apply_time", &Bridge::SkinnedCharacterBridge::applyTime,
+             py::arg("time"), py::arg("loop") = true)
+        .def("set_visible", &Bridge::SkinnedCharacterBridge::setVisible,
+             py::arg("visible"))
+        .def("set_color", &Bridge::SkinnedCharacterBridge::setColor,
+             py::arg("color"))
+        .def("set_casts_shadow",
+             &Bridge::SkinnedCharacterBridge::setCastsShadow,
+             py::arg("casts_shadow"))
+        .def("motion", &Bridge::SkinnedCharacterBridge::motion,
+             py::return_value_policy::reference_internal)
+        .def("num_meshes",
+             [](const Bridge::SkinnedCharacterBridge& self) {
+                 return self.meshes().size();
+             });
 }

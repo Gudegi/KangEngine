@@ -1,6 +1,8 @@
 #ifndef _SKELETON_MATH_HPP_
 #define _SKELETON_MATH_HPP_
 
+#include "skeleton_state.hpp"
+
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <glm/glm.hpp>
@@ -44,6 +46,11 @@ inline glm::mat4 transformToMat4(const Eigen::Quaternionf& rot,
     m = glm::translate(m, toGlm(trans));
     m *= glm::mat4_cast(toGlm(rot));
     return m;
+}
+
+inline glm::mat4 transformToMat4(const Transform& transform) {
+    return transformToMat4(transform.rotation.normalized(),
+                           transform.translation);
 }
 
 // Convert rotation + translation + scale to a 4x4 model matrix

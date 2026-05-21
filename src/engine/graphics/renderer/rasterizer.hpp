@@ -80,6 +80,7 @@ class Rasterizer : public Renderer {
     std::unique_ptr<Backend::Framebuffer> _shadowFbo; // depth-only
     int _shadowMapWH = 4096;
     std::unique_ptr<Backend::Shader> _shadowShader;
+    std::unique_ptr<Backend::Shader> _skinnedShadowShader;
     float _shadowRadius = 3.0f;
     int _shadowPcfSamples = 16;
     float _shadowDistance = 10.0f; // 0 = shadow disabled
@@ -119,6 +120,9 @@ class Rasterizer : public Renderer {
 
     MeshHandle addShape(Backend::Shader* shader, Scene::Prim* prim,
                         RenderTrack track = RenderTrack::SceneGraph);
+    MeshHandle addSkinnedShape(Backend::Shader* shader, Scene::Prim* prim,
+                               const Scene::SkinnedMeshData& skinnedMesh,
+                               RenderTrack track = RenderTrack::SceneGraph);
     MeshHandle addShape(PhongMaterial* material, Scene::Prim* prim,
                         RenderTrack track = RenderTrack::SceneGraph);
     void removePrim(MeshHandle handle, Scene::Prim* prim);
@@ -140,6 +144,8 @@ class Rasterizer : public Renderer {
     void updateMeshGeometry(MeshHandle handle,
                             const std::vector<glm::vec3>& positions,
                             const std::vector<glm::vec3>& normals);
+    void updateSkinningMatrices(MeshHandle handle,
+                                const std::vector<glm::mat4>& boneMatrices);
 
     void setSkybox(const std::string& path, UpAxis upAxis = UpAxis::Y) {
         _graphicsDevice->setSkybox(path, upAxis);

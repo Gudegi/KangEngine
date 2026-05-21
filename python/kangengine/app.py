@@ -31,6 +31,13 @@ class App(NativeApp):
     def __init__(self):
         super().__init__()
         self._previous_key_states = {}
+        self.width = 1920
+        self.height = 1080
+        self.hide_ui = False
+        self.up_axis = _ke.UpAxis.Y
+        self.graphics_backend_type = _ke.BackendType.OpenGL
+        self.scene_backend_type = scene.BackendType.Native
+        self.headless = False
 
     def setup(self):
         pass
@@ -63,21 +70,27 @@ class App(NativeApp):
         scene_backend_type=None,
         headless=False,
     ):
-        if up_axis is None:
-            up_axis = _ke.UpAxis.Y
+        self.initial_width = width
+        self.initial_height = height
+        self.hide_ui = hide_ui
+        self.headless = headless
+
+        self.up_axis = _ke.UpAxis.Y if up_axis is None else up_axis
         if graphics_backend_type is None:
             graphics_backend_type = _ke.BackendType.OpenGL
         if scene_backend_type is None:
             scene_backend_type = scene.BackendType.Native
+        self.graphics_backend_type = graphics_backend_type
+        self.scene_backend_type = scene_backend_type
 
         return super().initialize(
-            width,
-            height,
-            hide_ui,
-            up_axis,
-            graphics_backend_type,
-            scene_backend_type,
-            headless,
+            self.initial_width,
+            self.initial_height,
+            self.hide_ui,
+            self.up_axis,
+            self.graphics_backend_type,
+            self.scene_backend_type,
+            self.headless,
         )
 
     def is_key_down(self, key):

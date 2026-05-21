@@ -15,6 +15,23 @@
 
 namespace KE {
 
+namespace RendererAttribute {
+
+// Vertex attribute locations for MeshInstancer shaders.
+// Keep these in sync with GLSL layout(location = ...).
+constexpr int Position = 0;
+constexpr int Normal = 1;
+constexpr int TexCoord = 2;
+constexpr int InstanceTransform0 = 3;
+constexpr int InstanceTransform1 = 4;
+constexpr int InstanceTransform2 = 5;
+constexpr int InstanceTransform3 = 6;
+constexpr int InstanceColor = 7;
+constexpr int BoneIndices = 8;
+constexpr int BoneWeights = 9;
+
+} // namespace RendererAttribute
+
 // Instanced renderer for a single (shader, mesh) combination.
 // All Prims sharing the same MeshData pointer + Shader are batched
 // into one glDrawElementsInstanced call.
@@ -40,10 +57,14 @@ class MeshInstancer {
     bool _useExternalTransforms = false;
     bool _doubleSided = false;
     bool _castsShadow = true;
+    bool _hasSkinning = false;
     std::vector<std::pair<Backend::Texture*, int>> _textures;
+    std::vector<glm::mat4> _boneMatrices;
 
     std::vector<Scene::Prim*> _prims;
 
+    void _initMeshData(const Scene::MeshData& mesh);
+    void _setupSkinningAttribs(const Scene::SkinnedMeshData& skinnedMesh);
     void _setupInstanceAttribs();
     void _reallocate(int newMax);
 
@@ -57,6 +78,9 @@ class MeshInstancer {
     // Upload static geometry. Must be called before addPrim/update/render.
     void init(Backend::GraphicsDevice* device, Backend::Shader* shader,
               const Scene::MeshData& mesh, PhongMaterial* material = nullptr);
+    void init(Backend::GraphicsDevice* device, Backend::Shader* shader,
+              const Scene::SkinnedMeshData& skinnedMesh,
+              PhongMaterial* material = nullptr);
 
     void addPrim(Scene::Prim* prim);
     void removePrim(Scene::Prim* prim);
@@ -79,6 +103,8 @@ class MeshInstancer {
     // body). Vertex count must match the mesh passed to init().
     void updateGeometry(const std::vector<glm::vec3>& positions,
                         const std::vector<glm::vec3>& normals);
+    void updateSkinningMatrices(const std::vector<glm::mat4>& boneMatrices);
+    void uploadSkinningMatrices(Backend::Shader* shader = nullptr);
 
     void render();
 
@@ -87,6 +113,7 @@ class MeshInstancer {
     bool isDoubleSided() const { return _doubleSided; }
     void setCastsShadow(bool v) { _castsShadow = v; }
     bool castsShadow() const { return _castsShadow; }
+    bool hasSkinning() const { return _hasSkinning; }
 
     void setTexture(Backend::Texture* tex, int slot = 0) {
         for (auto& [t, s] : _textures) {

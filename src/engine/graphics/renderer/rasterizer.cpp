@@ -43,6 +43,9 @@ Rasterizer::Rasterizer(Backend::GraphicsDevice* graphicsDevice) {
     _shadowShader = _graphicsDevice->createShaderFromFile(
         KE::getAssetPath("shaders/shadow.vs"),
         KE::getAssetPath("shaders/shadow.fs"));
+    _skinnedShadowShader = _graphicsDevice->createShaderFromFile(
+        KE::getAssetPath("shaders/skinned_shadow.vs"),
+        KE::getAssetPath("shaders/shadow.fs"));
     updateShadowUBO(0.0f);
 }
 
@@ -59,6 +62,34 @@ MeshHandle Rasterizer::addShape(Backend::Shader* shader, Scene::Prim* prim,
     if (it == _instancers.end()) {
         auto [newIt, inserted] = _instancers.emplace(key, MeshInstancer{});
         newIt->second.init(_graphicsDevice, shader, *meshData);
+        it = newIt;
+    }
+    it->second.addPrim(prim);
+
+    auto hIt = _handleMap.find(key);
+    if (hIt == _handleMap.end()) {
+        MeshHandle h = static_cast<MeshHandle>(_handleTable.size());
+        _handleMap[key] = h;
+        _handleTable.push_back(&it->second);
+        return h;
+    }
+    return hIt->second;
+}
+
+MeshHandle
+Rasterizer::addSkinnedShape(Backend::Shader* shader, Scene::Prim* prim,
+                            const Scene::SkinnedMeshData& skinnedMesh,
+                            RenderTrack track) {
+    auto meshData = prim->resolveMeshData();
+    if (!meshData || meshData->vertices.empty() || meshData->indices.empty() ||
+        !skinnedMesh.hasValidVertexSkinning())
+        return InvalidHandle;
+
+    InstancerKey key{shader, meshData.get(), nullptr, track};
+    auto it = _instancers.find(key);
+    if (it == _instancers.end()) {
+        auto [newIt, inserted] = _instancers.emplace(key, MeshInstancer{});
+        newIt->second.init(_graphicsDevice, shader, skinnedMesh);
         it = newIt;
     }
     it->second.addPrim(prim);
@@ -148,6 +179,13 @@ void Rasterizer::updateMeshGeometry(MeshHandle handle,
     _handleTable[handle]->updateGeometry(positions, normals);
 }
 
+void Rasterizer::updateSkinningMatrices(
+    MeshHandle handle, const std::vector<glm::mat4>& boneMatrices) {
+    if (handle >= _handleTable.size())
+        return;
+    _handleTable[handle]->updateSkinningMatrices(boneMatrices);
+}
+
 // Render
 
 void Rasterizer::updateFrameData(const glm::mat4& view, const glm::mat4& proj) {
@@ -198,6 +236,7 @@ void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
             bindShadowSampler(inst.shader());
         }
         inst.bindTextures();
+        inst.uploadSkinningMatrices();
         // Re-bind shadow map after bindTextures() to prevent slot 1 conflict
         if (hasShadow)
             _shadowMap->bind(1);
@@ -223,6 +262,7 @@ void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
         else
             inst.shader()->use();
         inst.bindTextures();
+        inst.uploadSkinningMatrices();
         inst.render();
         if (inst.isDoubleSided())
             _graphicsDevice->setCullFace(true);
@@ -359,12 +399,17 @@ void Rasterizer::drawShadowCasters() {
     // Front-face culling avoids storing the same front surfaces that receive
     // the shadow, reducing acne on closed meshes.
     _graphicsDevice->setCullFaceMode(Backend::CullFaceMode::Front);
-    _shadowShader->use();
     for (auto& [key, inst] : _instancers) {
         if (inst.visibleCount() == 0)
             continue;
         if (!inst.castsShadow())
             continue;
+        if (inst.hasSkinning() && _skinnedShadowShader) {
+            _skinnedShadowShader->use();
+            inst.uploadSkinningMatrices(_skinnedShadowShader.get());
+        } else {
+            _shadowShader->use();
+        }
         if (inst.isDoubleSided())
             _graphicsDevice->setCullFace(false);
         inst.render();

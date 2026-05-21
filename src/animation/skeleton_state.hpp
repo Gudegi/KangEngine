@@ -28,6 +28,7 @@ class SkeletonState {
 
     // Forward kinematics: local rotations -> global transforms
     std::vector<Transform> computeGlobalTransforms() const;
+    void computeGlobalTransformsInto(std::vector<Transform>& global) const;
 
     // Global joint positions (convenience)
     std::vector<Eigen::Vector3f> computeGlobalPositions() const;

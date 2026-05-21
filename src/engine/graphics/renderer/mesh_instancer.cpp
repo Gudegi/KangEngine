@@ -5,9 +5,81 @@
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 namespace KE {
+
+void MeshInstancer::_initMeshData(const Scene::MeshData& mesh) {
+    _indexBuffer = _device->createBuffer(
+        Backend::BufferType::Index, sizeof(unsigned int) * mesh.indices.size(),
+        mesh.indices.data());
+    _vao->setIndexBuffer(_indexBuffer.get());
+    _numIndices = (int)mesh.indices.size();
+
+    auto addGeomAttr = [&](const auto& data, int location, int size) {
+        if (data.empty())
+            return;
+        auto buf =
+            _device->createBuffer(Backend::BufferType::Vertex,
+                                  sizeof(data[0]) * data.size(), data.data());
+        _vao->setVertexBuffer(buf.get());
+        Backend::VertexAttribute attr{
+            location,        size, Backend::VertexAttributeType::Float, false,
+            sizeof(data[0]), 0};
+        _vao->setVertexAttribute(attr);
+        _vbos.push_back(std::move(buf));
+    };
+
+    addGeomAttr(mesh.vertices, RendererAttribute::Position, 3);
+    addGeomAttr(mesh.normals, RendererAttribute::Normal, 3);
+    addGeomAttr(mesh.uvs, RendererAttribute::TexCoord, 2);
+}
+
+void MeshInstancer::_setupSkinningAttribs(
+    const Scene::SkinnedMeshData& skinnedMesh) {
+    if (!skinnedMesh.hasValidVertexSkinning())
+        return;
+    if (skinnedMesh.inverseBindMatrices.size() > Scene::MaxSkinningBones ||
+        skinnedMesh.boneNodeIndices.size() > Scene::MaxSkinningBones) {
+        throw std::runtime_error(
+            "Skinned mesh has " +
+            std::to_string(std::max(skinnedMesh.inverseBindMatrices.size(),
+                                    skinnedMesh.boneNodeIndices.size())) +
+            " bones, but GPU skinning supports at most " +
+            std::to_string(Scene::MaxSkinningBones));
+    }
+    _hasSkinning = true;
+
+    auto boneIndexBuffer = _device->createBuffer(
+        Backend::BufferType::Vertex,
+        sizeof(skinnedMesh.boneIndices[0]) * skinnedMesh.boneIndices.size(),
+        skinnedMesh.boneIndices.data());
+    _vao->setVertexBuffer(boneIndexBuffer.get());
+    Backend::VertexAttribute boneIndexAttr{RendererAttribute::BoneIndices,
+                                           4,
+                                           Backend::VertexAttributeType::Int,
+                                           false,
+                                           sizeof(skinnedMesh.boneIndices[0]),
+                                           0};
+    _vao->setVertexAttribute(boneIndexAttr);
+    _vbos.push_back(std::move(boneIndexBuffer));
+
+    auto boneWeightBuffer = _device->createBuffer(
+        Backend::BufferType::Vertex,
+        sizeof(skinnedMesh.boneWeights[0]) * skinnedMesh.boneWeights.size(),
+        skinnedMesh.boneWeights.data());
+    _vao->setVertexBuffer(boneWeightBuffer.get());
+    Backend::VertexAttribute boneWeightAttr{RendererAttribute::BoneWeights,
+                                            4,
+                                            Backend::VertexAttributeType::Float,
+                                            false,
+                                            sizeof(skinnedMesh.boneWeights[0]),
+                                            0};
+    _vao->setVertexAttribute(boneWeightAttr);
+    _vbos.push_back(std::move(boneWeightBuffer));
+}
 
 void MeshInstancer::init(Backend::GraphicsDevice* device,
                          Backend::Shader* shader, const Scene::MeshData& mesh,
@@ -19,29 +91,24 @@ void MeshInstancer::init(Backend::GraphicsDevice* device,
     _vao = device->createVertexArray();
     _vao->bind();
 
-    _indexBuffer = device->createBuffer(
-        Backend::BufferType::Index, sizeof(unsigned int) * mesh.indices.size(),
-        mesh.indices.data());
-    _vao->setIndexBuffer(_indexBuffer.get());
-    _numIndices = (int)mesh.indices.size();
+    _initMeshData(mesh);
 
-    auto addGeomAttr = [&](const auto& data, int location, int size) {
-        if (data.empty())
-            return;
-        auto buf =
-            device->createBuffer(Backend::BufferType::Vertex,
-                                 sizeof(data[0]) * data.size(), data.data());
-        _vao->setVertexBuffer(buf.get());
-        Backend::VertexAttribute attr{
-            location,        size, Backend::VertexAttributeType::Float, false,
-            sizeof(data[0]), 0};
-        _vao->setVertexAttribute(attr);
-        _vbos.push_back(std::move(buf));
-    };
+    _vao->unbind();
+}
 
-    addGeomAttr(mesh.vertices, 0, 3);
-    addGeomAttr(mesh.normals, 1, 3);
-    addGeomAttr(mesh.uvs, 2, 2);
+void MeshInstancer::init(Backend::GraphicsDevice* device,
+                         Backend::Shader* shader,
+                         const Scene::SkinnedMeshData& skinnedMesh,
+                         PhongMaterial* material) {
+    _device = device;
+    _shader = shader;
+    _material = material;
+
+    _vao = device->createVertexArray();
+    _vao->bind();
+
+    _initMeshData(skinnedMesh.mesh);
+    _setupSkinningAttribs(skinnedMesh);
 
     _vao->unbind();
 }
@@ -56,7 +123,7 @@ void MeshInstancer::_setupInstanceAttribs() {
     // Transform mat4: locations 3-6 (4 × vec4, stride = sizeof(mat4))
     _vao->setVertexBuffer(_transformVBO.get());
     for (int i = 0; i < 4; i++) {
-        Backend::VertexAttribute attr{3 + i,
+        Backend::VertexAttribute attr{RendererAttribute::InstanceTransform0 + i,
                                       4,
                                       Backend::VertexAttributeType::Float,
                                       false,
@@ -69,9 +136,24 @@ void MeshInstancer::_setupInstanceAttribs() {
     // Color vec4: location 7
     _vao->setVertexBuffer(_colorVBO.get());
     Backend::VertexAttribute colorAttr{
-        7, 4, Backend::VertexAttributeType::Float, false, sizeof(glm::vec4),
-        0, 1};
+        RendererAttribute::InstanceColor, 4, Backend::VertexAttributeType::Float,
+        false, sizeof(glm::vec4), 0, 1};
     _vao->setVertexAttribute(colorAttr);
+}
+
+void MeshInstancer::uploadSkinningMatrices(Backend::Shader* shader) {
+    Backend::Shader* targetShader = shader ? shader : _shader;
+    if (!targetShader || _boneMatrices.empty())
+        return;
+    if (_boneMatrices.size() > Scene::MaxSkinningBones) {
+        throw std::runtime_error(
+            "Skinned mesh upload has " + std::to_string(_boneMatrices.size()) +
+            " bone matrices, but GPU skinning supports at most " +
+            std::to_string(Scene::MaxSkinningBones));
+    }
+
+    targetShader->setMat4Array("uBoneMatrices[0]", _boneMatrices.data(),
+                               _boneMatrices.size());
 }
 
 void MeshInstancer::_reallocate(int newMax) {
@@ -159,6 +241,13 @@ void MeshInstancer::updateGeometry(const std::vector<glm::vec3>& positions,
                           sizeof(glm::vec3) * positions.size());
     if (_vbos.size() > 1 && !normals.empty())
         _vbos[1]->setData(normals.data(), sizeof(glm::vec3) * normals.size());
+}
+
+void MeshInstancer::updateSkinningMatrices(
+    const std::vector<glm::mat4>& boneMatrices) {
+    if (!_hasSkinning)
+        return;
+    _boneMatrices = boneMatrices;
 }
 
 void MeshInstancer::render() {

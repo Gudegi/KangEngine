@@ -175,6 +175,14 @@ void OpenGLShader::setMat4(const std::string& name, const glm::mat4& value) {
                        GL_FALSE, &value[0][0]);
 }
 
+void OpenGLShader::setMat4Array(const std::string& name,
+                                const glm::mat4* values, size_t count) {
+    if (!values || count == 0)
+        return;
+    glUniformMatrix4fv(glGetUniformLocation(_shaderProgram, name.c_str()),
+                       static_cast<GLsizei>(count), GL_FALSE, &values[0][0][0]);
+}
+
 // KE::Shader compatibility methods
 void OpenGLShader::use() {
     bind(); // Alias for bind()
@@ -605,10 +613,17 @@ void OpenGLVertexArray::setVertexAttribute(const VertexAttribute& attribute) {
         break;
     }
 
-    glVertexAttribPointer(attribute.location, attribute.size, glType,
-                          attribute.normalized ? GL_TRUE : GL_FALSE,
-                          attribute.stride,
-                          reinterpret_cast<void*>(attribute.offset));
+    if (attribute.type == VertexAttributeType::Int ||
+        attribute.type == VertexAttributeType::UnsignedInt) {
+        glVertexAttribIPointer(attribute.location, attribute.size, glType,
+                               attribute.stride,
+                               reinterpret_cast<void*>(attribute.offset));
+    } else {
+        glVertexAttribPointer(attribute.location, attribute.size, glType,
+                              attribute.normalized ? GL_TRUE : GL_FALSE,
+                              attribute.stride,
+                              reinterpret_cast<void*>(attribute.offset));
+    }
     glEnableVertexAttribArray(attribute.location);
     if (attribute.divisor > 0)
         glVertexAttribDivisor(attribute.location, attribute.divisor);

@@ -201,6 +201,16 @@ void bind_scene(py::module& m) {
         .def_readwrite("uvs", &KE::Scene::MeshData::uvs)
         .def_readwrite("indices", &KE::Scene::MeshData::indices);
 
+    py::class_<KE::Scene::SkinnedMeshData,
+               std::shared_ptr<KE::Scene::SkinnedMeshData>>(
+        scene, "SkinnedMeshData")
+        .def(py::init<>())
+        .def_readwrite("mesh", &KE::Scene::SkinnedMeshData::mesh)
+        .def_readwrite("bone_node_indices",
+                       &KE::Scene::SkinnedMeshData::boneNodeIndices)
+        .def("has_valid_vertex_skinning",
+             &KE::Scene::SkinnedMeshData::hasValidVertexSkinning);
+
     py::class_<KE::Scene::DebugDraw>(scene, "DebugDraw")
         .def_static(
             "log_lines",

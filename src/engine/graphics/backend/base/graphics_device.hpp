@@ -205,6 +205,8 @@ class Shader {
     virtual void setMat2(const std::string& name, const glm::mat2& value) = 0;
     virtual void setMat3(const std::string& name, const glm::mat3& value) = 0;
     virtual void setMat4(const std::string& name, const glm::mat4& value) = 0;
+    virtual void setMat4Array(const std::string& name, const glm::mat4* values,
+                              size_t count) = 0;
 
     // for OpenGL UBO binding
     virtual void setUniformBlockBinding(const std::string& blockName,

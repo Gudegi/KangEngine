@@ -29,6 +29,7 @@ ColorLibrary = _ke.ColorLibrary
 ColorType = _ke.ColorType
 Color = _ke.Color
 PhongMaterial = _ke.PhongMaterial
+SkinnedCharacterBridge = _ke.SkinnedCharacterBridge
 
 # GLM-style math types and helpers exposed by the C++ extension.
 vec3 = _ke.vec3
@@ -90,6 +91,7 @@ __all__ = [
     "ColorType",
     "Color",
     "PhongMaterial",
+    "SkinnedCharacterBridge",
 ]
 
 _OPTIONAL_EXPORTS = [

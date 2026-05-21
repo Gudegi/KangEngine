@@ -27,8 +27,15 @@ SkeletonState::zeroPose(std::shared_ptr<const SkeletonTree> tree) {
 }
 
 std::vector<Transform> SkeletonState::computeGlobalTransforms() const {
+    std::vector<Transform> global;
+    computeGlobalTransformsInto(global);
+    return global;
+}
+
+void SkeletonState::computeGlobalTransformsInto(
+    std::vector<Transform>& global) const {
     int n = _tree->numJoints();
-    std::vector<Transform> global(n);
+    global.resize(static_cast<size_t>(n));
 
     for (int i = 0; i < n; ++i) {
         const Eigen::Quaternionf& localRot = _rotations[i];
@@ -49,8 +56,6 @@ std::vector<Transform> SkeletonState::computeGlobalTransforms() const {
                                     global[parent].rotation * localTrans;
         }
     }
-
-    return global;
 }
 
 std::vector<Eigen::Vector3f> SkeletonState::computeGlobalPositions() const {
