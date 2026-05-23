@@ -33,6 +33,7 @@ SkinnedCharacterBridge = _ke.SkinnedCharacterBridge
 
 # GLM-style math types and helpers exposed by the C++ extension.
 vec3 = _ke.vec3
+vec2 = _ke.vec2
 vec4 = _ke.vec4
 quat = _ke.quat
 mat3 = _ke.mat3
@@ -72,6 +73,7 @@ __all__ = [
     "UpAxis",
     "RenderTrack",
     "vec3",
+    "vec2",
     "vec4",
     "quat",
     "mat3",

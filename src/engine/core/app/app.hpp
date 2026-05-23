@@ -64,6 +64,7 @@ class App {
     bool _screenshotRequested = false;
     uint64_t _frameIndex = 0;
     float _gamma = 2.2; // for Gamma Correction
+    float _cameraMoveSpeed = 15.0f;
     glm::mat4 _viewMatrix,
         _projectionMatrix; // variable to containing main camera's view and
                            // project matrix.
@@ -132,6 +133,8 @@ class App {
     float getDeltaTime() const;
     void setRenderHz(float renderHz);
     float getRenderHz() const { return _renderHz; }
+    void setCameraMoveSpeed(float speed);
+    float getCameraMoveSpeed() const { return _cameraMoveSpeed; }
 
   private:
     float _renderHz = 0;

@@ -315,10 +315,16 @@ bool App::writeScreenshotFrame() {
 
 float App::getDeltaTime() const { return _renderVariable->deltaTime; }
 
+void App::setCameraMoveSpeed(float speed) {
+    _cameraMoveSpeed = std::max(0.0f, speed);
+}
+
 void App::coreRender() {
     if (!_hideUI) {
         ImGui::Checkbox("Wireframe", &_renderWireframe);
         ImGui::SliderFloat("GammaCorrection", &_gamma, 0.f, 5.f);
+        ImGui::DragFloat("Camera Move Speed", &_cameraMoveSpeed, 0.2f, 0.0f,
+                         500.0f, "%.2f");
         if (_rasterizer) {
             DirectionalLight light = getLight();
             glm::vec3 direction = light.direction;
@@ -443,10 +449,11 @@ App::MeshPrimResult App::addMeshPrim(Backend::Shader* shader,
     return addMeshPrim(std::move(desc));
 }
 
-App::MeshPrimResult App::addSkinnedMeshPrim(
-    Backend::Shader* shader, const std::string& path,
-    Scene::SkinnedMeshData skinnedMesh, glm::vec3 position, glm::vec4 color,
-    bool castsShadow) {
+App::MeshPrimResult App::addSkinnedMeshPrim(Backend::Shader* shader,
+                                            const std::string& path,
+                                            Scene::SkinnedMeshData skinnedMesh,
+                                            glm::vec3 position, glm::vec4 color,
+                                            bool castsShadow) {
     MeshPrimResult result;
     if (!shader || !_scene || path.empty() ||
         !skinnedMesh.hasValidVertexSkinning())
@@ -723,15 +730,14 @@ void App::updateMeshGeometry(MeshHandle handle, const float* positions,
     _rasterizer->updateMeshGeometry(handle, positionVec, normalVec);
 }
 
-void App::updateSkinningMatrices(
-    MeshHandle handle, const std::vector<glm::mat4>& boneMatrices) {
+void App::updateSkinningMatrices(MeshHandle handle,
+                                 const std::vector<glm::mat4>& boneMatrices) {
     if (_rasterizer)
         _rasterizer->updateSkinningMatrices(handle, boneMatrices);
 }
 
 void App::updateSkinningMatrices(MeshHandle handle,
-                                 const float* rowMajorMatrices,
-                                 size_t count) {
+                                 const float* rowMajorMatrices, size_t count) {
     if (!_rasterizer || !rowMajorMatrices)
         return;
 
@@ -777,22 +783,27 @@ void App::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
 }
 
 void App::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
+    if (ImGui::GetIO().WantCaptureMouse)
+        return;
+
     /*
     float fov = _camera.getFoV();
     fov -= (float)yoffset;
     _camera.setFoV(fov);
     _camera.updateProjMatrix(_width, _height);
     */
-    // Dolly zoom: move camera along look direction
-    glm::vec3 cameraPos = _camera.getCameraPos();
-    glm::vec3 cameraFront = _camera.getCameraLookDir();
-    float distance = _camera.getCamToLookDistance();
-    float zoomSpeed = distance * 0.05f;
-    if (distance > 60 && yoffset < 0) {
-        zoomSpeed = 0;
-    }
-    cameraPos += static_cast<float>(yoffset) * zoomSpeed * cameraFront;
-    _camera.setCameraPos(cameraPos);
+    // Dolly zoom: preserve the current target and scale the camera-target
+    // distance, so large scenes can still zoom out without a fixed cap.
+    const glm::vec3 targetPos = _camera.getTargetPos();
+    const glm::vec3 cameraFront = _camera.getCameraLookDir();
+    const float distance = _camera.getCamToLookDistance();
+    const float zoomFactor = std::pow(0.90f, static_cast<float>(yoffset));
+    const float minDistance = std::max(_camera.getNearPlane() * 2.0f, 0.01f);
+    const float maxDistance =
+        std::max(_camera.getFarPlane() * 0.95f, minDistance + 0.01f);
+    const float nextDistance =
+        glm::clamp(distance * zoomFactor, minDistance, maxDistance);
+    _camera.setCameraPos(targetPos - cameraFront * nextDistance);
 }
 
 void App::cursorPositionCallback(GLFWwindow* window, double xpos, double ypos) {
@@ -849,7 +860,8 @@ void App::processInput() {
     if (ImGui::GetIO().WantCaptureMouse) {
         return;
     }
-    float cameraSpeed = static_cast<float>(15.0 * _renderVariable->deltaTime);
+    float cameraSpeed =
+        static_cast<float>(_cameraMoveSpeed * _renderVariable->deltaTime);
     float scaleDistance = _camera.getCamToLookDistance();
     glm::vec3 cameraPos = _camera.getCameraPos();
     glm::vec3 cameraFront = _camera.getCameraLookDir();

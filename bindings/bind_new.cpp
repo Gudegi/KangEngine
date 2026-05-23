@@ -314,6 +314,57 @@ py::class_<glm::vec3>(m, "vec3")
                ", " + std::to_string(v.z) + ")";
     });
     */
+    py::class_<glm::vec2>(m, "vec2", py::buffer_protocol())
+        .def(py::init<float, float>(), py::arg("x") = 0.0f, py::arg("y") = 0.0f)
+        .def(py::init([](py::handle obj) {
+            if (py::isinstance<glm::vec2>(obj))
+                return obj.cast<glm::vec2>();
+
+            try {
+                if (py::isinstance<py::buffer>(obj)) {
+                    auto buf = obj.cast<py::buffer>().request();
+                    if (buf.size == 2) {
+                        auto read = [&](int i) -> float {
+                            const char* p = static_cast<const char*>(buf.ptr) +
+                                            i * buf.strides[0];
+                            if (buf.format ==
+                                py::format_descriptor<double>::format())
+                                return static_cast<float>(
+                                    *reinterpret_cast<const double*>(p));
+                            return *reinterpret_cast<const float*>(p);
+                        };
+                        return glm::vec2(read(0), read(1));
+                    }
+                }
+            } catch (...) {
+            }
+
+            if (py::hasattr(obj, "x") && py::hasattr(obj, "y"))
+                return glm::vec2(obj.attr("x").cast<float>(),
+                                 obj.attr("y").cast<float>());
+
+            if (py::len_hint(obj) == 2)
+                return glm::vec2(obj[py::int_(0)].cast<float>(),
+                                 obj[py::int_(1)].cast<float>());
+
+            throw py::value_error("Cannot convert input to ke.vec2");
+        }))
+        .def_buffer([](glm::vec2& v) -> py::buffer_info {
+            return py::buffer_info(&v.x, sizeof(float),
+                                   py::format_descriptor<float>::format(), 1,
+                                   {2}, {sizeof(float)});
+        })
+        .def_readwrite("x", &glm::vec2::x)
+        .def_readwrite("y", &glm::vec2::y)
+        .def("__repr__", [](const glm::vec2& v) {
+            std::ostringstream oss;
+            oss << std::fixed << std::setprecision(2);
+            oss << "ke.vec2(" << v.x << ", " << v.y << ")";
+            return oss.str();
+        });
+
+    py::implicitly_convertible<py::object, glm::vec2>();
+
     py::class_<glm::vec3>(m, "vec3", py::buffer_protocol())
         .def(py::init<float, float, float>(), py::arg("x") = 0.0f,
              py::arg("y") = 0.0f, py::arg("z") = 0.0f)
@@ -621,8 +672,14 @@ py::class_<glm::vec3>(m, "vec3")
         .def("get_camera_look_dir", &Camera::getCameraLookDir)
         .def("get_camera_up_dir", &Camera::getCameraUpDir)
         .def("get_camera_right_dir", &Camera::getCameraRightDir)
+        .def("get_fov", &Camera::getFoV)
+        .def("get_near_plane", &Camera::getNearPlane)
+        .def("get_far_plane", &Camera::getFarPlane)
         .def("set_camera_pos", &Camera::setCameraPos, py::arg("camera_pos"))
-        .def("set_target_pos", &Camera::setTargetPos, py::arg("target_pos"));
+        .def("set_target_pos", &Camera::setTargetPos, py::arg("target_pos"))
+        .def("set_fov", &Camera::setFoV, py::arg("fov"))
+        .def("set_near_plane", &Camera::setNearPlane, py::arg("distance"))
+        .def("set_far_plane", &Camera::setFarPlane, py::arg("distance"));
 
     // App class with trampoline for Python overrides
     py::class_<App, PyApp>(m, "App")
@@ -636,6 +693,9 @@ py::class_<glm::vec3>(m, "vec3")
         .def("setRenderHz", &App::setRenderHz, py::arg("renderHz"))
         .def("get_delta_time", &App::getDeltaTime)
         .def("get_render_hz", &App::getRenderHz)
+        .def("set_camera_move_speed", &App::setCameraMoveSpeed,
+             py::arg("speed"))
+        .def("get_camera_move_speed", &App::getCameraMoveSpeed)
         .def("start", &App::start)
         .def("render_frame_once", &App::renderFrameOnce)
         .def(
@@ -671,30 +731,33 @@ py::class_<glm::vec3>(m, "vec3")
         .def("postRender", &App::postRender)
         .def("getGraphicsDevice", &App::getGraphicsDevice,
              py::return_value_policy::reference)
-        .def("addShape",
-             [](App* self, Backend::Shader* shader, Scene::Prim* prim,
-                RenderTrack track) { return self->addShape(shader, prim, track); },
-             py::arg("shader"), py::arg("prim"),
-             py::arg("track") = RenderTrack::SceneGraph)
-        .def("addSkinnedShape",
-             [](App* self, Backend::Shader* shader, Scene::Prim* prim,
-                std::shared_ptr<Scene::SkinnedMeshData> skinnedMesh,
-                RenderTrack track) {
-                 if (!skinnedMesh)
-                     throw py::value_error("skinned_mesh_data is None");
-                 return self->addSkinnedShape(shader, prim, *skinnedMesh,
-                                              track);
-             },
-             py::arg("shader"), py::arg("prim"),
-             py::arg("skinned_mesh_data"),
-             py::arg("track") = RenderTrack::SceneGraph)
-        .def("addShape",
-             [](App* self, PhongMaterial* material, Scene::Prim* prim,
-                RenderTrack track) {
-                 return self->addShape(material, prim, track);
-             },
-             py::arg("material"), py::arg("prim"),
-             py::arg("track") = RenderTrack::SceneGraph)
+        .def(
+            "addShape",
+            [](App* self, Backend::Shader* shader, Scene::Prim* prim,
+               RenderTrack track) {
+                return self->addShape(shader, prim, track);
+            },
+            py::arg("shader"), py::arg("prim"),
+            py::arg("track") = RenderTrack::SceneGraph)
+        .def(
+            "addSkinnedShape",
+            [](App* self, Backend::Shader* shader, Scene::Prim* prim,
+               std::shared_ptr<Scene::SkinnedMeshData> skinnedMesh,
+               RenderTrack track) {
+                if (!skinnedMesh)
+                    throw py::value_error("skinned_mesh_data is None");
+                return self->addSkinnedShape(shader, prim, *skinnedMesh, track);
+            },
+            py::arg("shader"), py::arg("prim"), py::arg("skinned_mesh_data"),
+            py::arg("track") = RenderTrack::SceneGraph)
+        .def(
+            "addShape",
+            [](App* self, PhongMaterial* material, Scene::Prim* prim,
+               RenderTrack track) {
+                return self->addShape(material, prim, track);
+            },
+            py::arg("material"), py::arg("prim"),
+            py::arg("track") = RenderTrack::SceneGraph)
         .def(
             "updateShapeTransforms",
             [](App* self, uint32_t handle, const FloatArray& transforms,
@@ -799,6 +862,10 @@ py::class_<glm::vec3>(m, "vec3")
                 self->updateSkinningMatrices(handle, matrices);
             },
             py::arg("handle"), py::arg("bone_matrices"))
+        .def("setLightDirection", &App::setLightDirection, py::arg("direction"))
+        .def("setLightColor", &App::setLightColor, py::arg("color"))
+        .def("setLightIntensity", &App::setLightIntensity, py::arg("intensity"))
+        .def("setLightAmbient", &App::setLightAmbient, py::arg("ambient"))
         .def("checkError", &App::checkError)
         .def(
             "is_key_pressed",
@@ -833,8 +900,7 @@ py::class_<glm::vec3>(m, "vec3")
             py::arg("bind_fbx_path") = py::none(),
             py::arg("prim_base_path") = "/fbx_character",
             py::arg("clip_index") = 0, py::arg("fps") = 30.0f,
-            py::arg("scale") = 0.01f,
-            py::arg("use_materials") = true)
+            py::arg("scale") = 0.01f, py::arg("use_materials") = true)
         .def("apply_time", &Bridge::SkinnedCharacterBridge::applyTime,
              py::arg("time"), py::arg("loop") = true)
         .def("set_visible", &Bridge::SkinnedCharacterBridge::setVisible,
@@ -846,8 +912,7 @@ py::class_<glm::vec3>(m, "vec3")
              py::arg("casts_shadow"))
         .def("motion", &Bridge::SkinnedCharacterBridge::motion,
              py::return_value_policy::reference_internal)
-        .def("num_meshes",
-             [](const Bridge::SkinnedCharacterBridge& self) {
-                 return self.meshes().size();
-             });
+        .def("num_meshes", [](const Bridge::SkinnedCharacterBridge& self) {
+            return self.meshes().size();
+        });
 }

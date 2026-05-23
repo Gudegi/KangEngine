@@ -66,7 +66,7 @@ void Camera::init(glm::vec3 cameraPos, glm::vec3 targetPos, UpAxis upAxis) {
     _camToLookDistance = glm::length(targetPos - cameraPos);
     _FoV = 45.0f;
     _nearPlane = 0.1f;
-    _farPlane = 100.0f;
+    _farPlane = 300.0f;
     _screenWidth = 1920;
     _screenHeight = 1080;
 
@@ -233,14 +233,12 @@ WorldFrustumPos Camera::getFrustumPos(float nearPlane, float farPlane) {
     nearPlane = std::max(0.001f, nearPlane);
     farPlane = std::max(nearPlane + 0.001f, farPlane);
 
-    float aspect = (_screenHeight == 0)
-                       ? 1.0f
-                       : static_cast<float>(_screenWidth) /
-                             static_cast<float>(_screenHeight);
+    float aspect = (_screenHeight == 0) ? 1.0f
+                                        : static_cast<float>(_screenWidth) /
+                                              static_cast<float>(_screenHeight);
     glm::mat4 clippedProj =
         glm::perspective(glm::radians(_FoV), aspect, nearPlane, farPlane);
-    glm::mat4 clippedInvViewProj =
-        glm::inverse(clippedProj * _viewMatrix);
+    glm::mat4 clippedInvViewProj = glm::inverse(clippedProj * _viewMatrix);
 
     auto toWorld = [&](const glm::vec3& ndc) {
         glm::vec4 world = clippedInvViewProj * glm::vec4(ndc, 1.0f);
