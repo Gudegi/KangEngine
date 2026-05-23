@@ -1,9 +1,9 @@
 #include "skeleton_bridge.hpp"
+#include "asset/mesh_loader.hpp"
 #include "asset/mjcf_loader.hpp"
 #include "animation/skeleton_math.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/scene_backend.hpp"
-#include "utils/load_utils.hpp"
 #include "utils/types.hpp"
 
 #include <Eigen/Geometry>
@@ -107,9 +107,9 @@ static std::string lowerExtension(std::string path) {
 static Scene::MeshData loadVisualMesh(const std::string& path) {
     std::string ext = lowerExtension(path);
     if (ext == ".stl")
-        return loadStl(path);
+        return Asset::loadStl(path);
     if (ext == ".obj")
-        return loadObj(path);
+        return Asset::loadObj(path);
     throw std::runtime_error("Unsupported visual mesh extension: " + path);
 }
 
@@ -205,7 +205,7 @@ SkeletonBridge SkeletonBridge::fromData(const Animation::CharacterData& data,
 SkeletonBridgeAsset SkeletonBridgeAsset::fromMJCF(const std::string& mjcfPath,
                                                   float scale,
                                                   const std::string& order) {
-    return fromData(Animation::MJCFLoader::load(mjcfPath, 1.0f, order), scale);
+    return fromData(Asset::MJCFLoader::load(mjcfPath, 1.0f, order), scale);
 }
 
 SkeletonBridgeAsset

@@ -13,7 +13,7 @@ from pathlib import Path
 import numpy as np
 
 import kangengine as ke
-from kangengine import animation, imgui, keys, scene
+from kangengine import animation, asset, imgui, keys, scene
 
 from view_motion import default_char_file, default_motion_file, load_motion
 
@@ -82,7 +82,7 @@ class KwMotionTrackingApp(ke.App):
         ground.set_mesh_data(scene.Prim.create_plane_data(100.0, ke.UpAxis.Z))
         self.addShape(self.ground_shader, ground)
 
-        mjcf_data = animation.MJCFLoader.load(self.char_file, order=self.order)
+        mjcf_data = asset.MJCFLoader.load(self.char_file, order=self.order)
         sim_record = self.sim_world.add_articulation(
             mjcf_data,
             env_id=0,

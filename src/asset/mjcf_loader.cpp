@@ -12,7 +12,9 @@
 #include <unordered_map>
 
 namespace KE {
-namespace Animation {
+namespace Asset {
+
+using namespace Animation;
 
 namespace {
 
@@ -27,9 +29,9 @@ std::vector<float> splitFloats(const char* str) {
     return out;
 }
 
-Eigen::Vector3f parseVec3(const char* str,
-                          const Eigen::Vector3f& fallback =
-                              Eigen::Vector3f::Zero()) {
+Eigen::Vector3f
+parseVec3(const char* str,
+          const Eigen::Vector3f& fallback = Eigen::Vector3f::Zero()) {
     auto values = splitFloats(str);
     if (values.size() < 3)
         return fallback;
@@ -163,9 +165,8 @@ void readGeomDefaults(tinyxml2::XMLElement* defElem, DefaultGeomAttrs& out) {
     g->QueryFloatAttribute("margin", &out.margin);
 }
 
-void collectDefaults(
-    tinyxml2::XMLElement* elem, const std::string& parentClass,
-    std::unordered_map<std::string, DefaultGeomAttrs>& map) {
+void collectDefaults(tinyxml2::XMLElement* elem, const std::string& parentClass,
+                     std::unordered_map<std::string, DefaultGeomAttrs>& map) {
     for (auto* def = elem->FirstChildElement("default"); def;
          def = def->NextSiblingElement("default")) {
         const char* cls = def->Attribute("class");
@@ -312,8 +313,7 @@ GeomMassData geomMassContribution(const CollisionGeom& g, float density) {
     case Type::Capsule:
     case Type::Cylinder: {
         float r = g.size[0];
-        float halfLen =
-            g.hasFromTo ? (g.to - g.from).norm() * 0.5f : g.size[1];
+        float halfLen = g.hasFromTo ? (g.to - g.from).norm() * 0.5f : g.size[1];
         float h = 2.f * halfLen;
         float Vcyl = static_cast<float>(M_PI) * r * r * h;
         float Vhemi = (g.type == Type::Capsule)
@@ -341,8 +341,8 @@ GeomMassData geomMassContribution(const CollisionGeom& g, float density) {
 
 } // namespace
 
-void MJCFLoader::parse(const std::string& mjcfPath, float scale,
-                       const std::string& order) {
+void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
+                               const std::string& order) {
     tinyxml2::XMLDocument doc;
     if (doc.LoadFile(mjcfPath.c_str()) != tinyxml2::XML_SUCCESS)
         throw std::runtime_error(
@@ -354,7 +354,8 @@ void MJCFLoader::parse(const std::string& mjcfPath, float scale,
     float degToRad = 1.f;
     bool inertiafromgeom = false;
     if (auto* compiler = root->FirstChildElement("compiler")) {
-        _data.meshDir = resolveMeshDir(mjcfPath, compiler->Attribute("meshdir"));
+        _data.meshDir =
+            resolveMeshDir(mjcfPath, compiler->Attribute("meshdir"));
         const char* angle = compiler->Attribute("angle");
         if (angle && std::string(angle) == "degree")
             degToRad = static_cast<float>(M_PI) / 180.f;
@@ -400,8 +401,7 @@ void MJCFLoader::parse(const std::string& mjcfPath, float scale,
                 auto geomType = geom->Attribute("type")
                                     ? std::string(geom->Attribute("type"))
                                     : std::string();
-                bool isCollisionMesh =
-                    cls && std::string(cls) == "collision";
+                bool isCollisionMesh = cls && std::string(cls) == "collision";
                 bool isVisualMesh = cls && std::string(cls) == "visual";
 
                 // Visual mesh
@@ -415,9 +415,8 @@ void MJCFLoader::parse(const std::string& mjcfPath, float scale,
                             parseQuatWxyz(geom->Attribute("quat"));
                         Eigen::Vector4f rgba =
                             parseVec4(geom->Attribute("rgba"));
-                        _data.meshInfos.push_back(
-                            {bodyName, it->second, idx, meshPos, meshQuat,
-                             rgba});
+                        _data.meshInfos.push_back({bodyName, it->second, idx,
+                                                   meshPos, meshQuat, rgba});
                     }
                     continue;
                 }
@@ -472,9 +471,8 @@ void MJCFLoader::parse(const std::string& mjcfPath, float scale,
                 auto forceRangeVals =
                     splitFloats(jElem->Attribute("actuatorfrcrange"));
                 if (forceRangeVals.size() >= 2) {
-                    jd.effortLimit =
-                        std::max(std::abs(forceRangeVals[0]),
-                                 std::abs(forceRangeVals[1]));
+                    jd.effortLimit = std::max(std::abs(forceRangeVals[0]),
+                                              std::abs(forceRangeVals[1]));
                 }
                 _data.joints[idx].push_back(jd);
             }
@@ -531,12 +529,21 @@ void MJCFLoader::parse(const std::string& mjcfPath, float scale,
         std::make_shared<const SkeletonTree>(std::move(skelTree));
 }
 
-CharacterData MJCFLoader::load(const std::string& mjcfPath, float scale,
-                               const std::string& order) {
+MJCFImportResult MJCFLoader::parse(const std::string& mjcfPath, float scale,
+                                   const std::string& order) {
     MJCFLoader loader;
-    loader.parse(mjcfPath, scale, order);
-    return std::move(loader._data);
+    loader.parseIntoData(mjcfPath, scale, order);
+
+    MJCFImportResult result;
+    result.character = std::move(loader._data);
+    result.diagnostics = std::move(loader._diagnostics);
+    return result;
 }
 
-} // namespace Animation
+CharacterData MJCFLoader::load(const std::string& mjcfPath, float scale,
+                               const std::string& order) {
+    return std::move(parse(mjcfPath, scale, order).character);
+}
+
+} // namespace Asset
 } // namespace KE

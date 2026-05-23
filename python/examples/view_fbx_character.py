@@ -10,7 +10,7 @@ import numpy as np
 import torch
 
 import kangengine as ke
-from kangengine import animation, imgui, keys, scene
+from kangengine import animation, asset, imgui, keys, scene
 
 
 def repo_root() -> Path:
@@ -100,16 +100,14 @@ class FbxCharacterViewer(ke.App):
         camera.set_camera_pos(ke.vec3(0.0, 1.45, 3.2))
         camera.set_target_pos(ke.vec3(0.0, 0.85, 0.0))
 
-        self.meshes = animation.FBXLoader.load_skinned_meshes(
-            self.fbx_file,
-            scale=self.scale,
-        )
-        self.motion = animation.FBXLoader.load_motion(
+        character = asset.FBXLoader.load_character(
             self.fbx_file,
             clip_index=self.clip_index,
             fps=self.fps,
             scale=self.scale,
         )
+        self.meshes = character.skinned_meshes
+        self.motion = character.motion
         self.parents = self.motion.parent_indices()
         self.names = self.motion.node_names()
 

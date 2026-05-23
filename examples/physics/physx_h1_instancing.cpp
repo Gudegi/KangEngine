@@ -20,6 +20,7 @@
 #include <vector>
 
 using namespace KE;
+using namespace KE::Asset;
 using namespace KE::Animation;
 using namespace KE::Bridge;
 using namespace physx;

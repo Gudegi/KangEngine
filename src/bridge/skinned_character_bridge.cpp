@@ -30,7 +30,7 @@ std::string primSafeName(std::string value, const std::string& fallback) {
     return value.empty() ? fallback : value;
 }
 
-glm::vec4 diffuseColorFromMaterial(const Animation::FBXMeshMetadata& mesh,
+glm::vec4 diffuseColorFromMaterial(const Asset::FBXMeshMetadata& mesh,
                                    glm::vec4 fallback) {
     const int idx = mesh.primaryMaterialIndex;
     if (idx < 0 || idx >= static_cast<int>(mesh.materials.size()))
@@ -40,7 +40,7 @@ glm::vec4 diffuseColorFromMaterial(const Animation::FBXMeshMetadata& mesh,
 }
 
 std::string
-diffuseTexturePathFromMaterial(const Animation::FBXMeshMetadata& mesh) {
+diffuseTexturePathFromMaterial(const Asset::FBXMeshMetadata& mesh) {
     const int idx = mesh.primaryMaterialIndex;
     if (idx < 0 || idx >= static_cast<int>(mesh.materials.size()))
         return {};
@@ -92,15 +92,15 @@ SkinnedCharacterBridge SkinnedCharacterBridge::fromFBXWithBind(
 
     SkinnedCharacterBridge bridge;
     bridge._app = app;
-    Animation::FBXCharacterAsset asset =
+    Asset::FBXCharacterData character =
         (motionFbxPath == bindFbxPath)
-            ? Animation::FBXLoader::loadCharacter(
+            ? Asset::FBXLoader::loadCharacter(
                   motionFbxPath, clipIndex, fps, scale)
-            : Animation::FBXLoader::loadCharacterWithBind(
+            : Asset::FBXLoader::loadCharacterWithBind(
                   motionFbxPath, bindFbxPath, clipIndex, fps, scale);
-    bridge._motion = std::move(asset.motion);
-    std::vector<Animation::FBXSkinnedMeshInfo>& meshes =
-        asset.skinnedMeshes;
+    bridge._motion = std::move(character.motion);
+    std::vector<Asset::FBXSkinnedMeshInfo>& meshes =
+        character.skinnedMeshes;
     bridge._meshes.reserve(meshes.size());
 
     static const glm::vec4 palette[] = {
@@ -124,19 +124,19 @@ SkinnedCharacterBridge SkinnedCharacterBridge::fromFBXWithBind(
     for (int i = 0; i < static_cast<int>(meshes.size()); ++i) {
         auto& imported = meshes[static_cast<size_t>(i)];
         const std::string safeName =
-            primSafeName(imported.mesh.name, "mesh_" + std::to_string(i));
+            primSafeName(imported.metadata.name, "mesh_" + std::to_string(i));
         const std::string path =
             primBasePath + "/" + std::to_string(i) + "_" + safeName;
         const glm::vec4 fallbackColor =
             palette[static_cast<size_t>(i) %
                     (sizeof(palette) / sizeof(palette[0]))];
         const glm::vec4 color =
-            useMaterials ? diffuseColorFromMaterial(imported.mesh,
+            useMaterials ? diffuseColorFromMaterial(imported.metadata,
                                                     fallbackColor)
                          : fallbackColor;
 
         MeshBinding binding;
-        binding.name = imported.mesh.name;
+        binding.name = imported.metadata.name;
         binding.boneNames = imported.boneNames;
         binding.boneNodeIndices = imported.skinnedMeshData.boneNodeIndices;
         binding.inverseBindMatrices =
@@ -154,7 +154,8 @@ SkinnedCharacterBridge SkinnedCharacterBridge::fromFBXWithBind(
         binding.handle = result.handle;
 
         const std::string texturePath =
-            useMaterials ? diffuseTexturePathFromMaterial(imported.mesh) : "";
+            useMaterials ? diffuseTexturePathFromMaterial(imported.metadata)
+                         : "";
         if (!texturePath.empty() && std::filesystem::exists(texturePath)) {
             bridge._textures.push_back(
                 app->getGraphicsDevice()->createTexture(texturePath, true));

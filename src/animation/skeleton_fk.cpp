@@ -5,7 +5,7 @@ namespace Animation {
 
 SkeletonFK SkeletonFK::fromMJCF(const std::string& mjcfPath, float scale,
                                 const std::string& order) {
-    return fromData(MJCFLoader::load(mjcfPath, 1.0f, order), scale);
+    return fromData(Asset::MJCFLoader::load(mjcfPath, 1.0f, order), scale);
 }
 
 SkeletonFK SkeletonFK::fromData(const CharacterData& data, float scale) {

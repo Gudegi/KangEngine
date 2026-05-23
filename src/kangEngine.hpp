@@ -19,7 +19,7 @@
 #include "utils/asset_path.hpp"
 #include "utils/print_debug.hpp"
 #include "utils/glm_utils.hpp"
-#include "utils/load_utils.hpp"
+#include "asset/mesh_loader.hpp"
 #include "engine/core/window/window.hpp"
 #include "engine/graphics/material/colors.hpp"
 

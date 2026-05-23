@@ -9,7 +9,7 @@ kp in code for active pose holding.
 import os
 
 import kangengine as ke
-from kangengine import animation, imgui, keys, scene
+from kangengine import animation, asset, imgui, keys, scene
 
 
 def asset_path(*parts):
@@ -51,7 +51,7 @@ class H1RagdollApp(ke.App):
         self.addShape(self.ground_shader, gnd)
 
         mjcf = asset_path("external", "retargetted", "kw", "kw5.xml")
-        mjcf_data = animation.MJCFLoader.load(mjcf)
+        mjcf_data = asset.MJCFLoader.load(mjcf)
 
         self.articulation = ke.Articulation.build(
             self.physics,

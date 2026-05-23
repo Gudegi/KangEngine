@@ -1,11 +1,12 @@
 #define TINYOBJLOADER_IMPLEMENTATION
-#include "load_utils.hpp"
+#include "mesh_loader.hpp"
 #include <cstdint>
 #include <cstring>
 #include <fstream>
 #include <sstream>
 
 namespace KE {
+namespace Asset {
 
 namespace {
 
@@ -36,7 +37,7 @@ bool isBinaryStl(const std::string& path) {
     return fileSize == expectedSize;
 }
 
-KE::Scene::MeshData loadBinaryStl(const std::string& path) {
+Scene::MeshData loadBinaryStl(const std::string& path) {
     std::ifstream file(path, std::ios::binary);
     if (!file.is_open()) {
         std::cerr << "Failed to open STL file: " << path << std::endl;
@@ -100,7 +101,7 @@ KE::Scene::MeshData loadBinaryStl(const std::string& path) {
     return meshData;
 }
 
-KE::Scene::MeshData loadAsciiStl(const std::string& path) {
+Scene::MeshData loadAsciiStl(const std::string& path) {
     std::ifstream file(path);
     if (!file.is_open()) {
         std::cerr << "Failed to open STL file: " << path << std::endl;
@@ -147,16 +148,15 @@ KE::Scene::MeshData loadAsciiStl(const std::string& path) {
 
 } // anonymous namespace
 
-KE::Scene::MeshData loadStl(const std::string& path) {
+Scene::MeshData loadStl(const std::string& path) {
     if (isBinaryStl(path)) {
         return loadBinaryStl(path);
     }
     return loadAsciiStl(path);
 }
 
-KE::Scene::MeshData
-loadObj(std::string path,
-        std::optional<tinyobj::ObjReaderConfig> render_config) {
+Scene::MeshData loadObj(
+    std::string path, std::optional<tinyobj::ObjReaderConfig> render_config) {
 
     tinyobj::ObjReader reader;
     tinyobj::ObjReaderConfig config;
@@ -258,4 +258,5 @@ loadObj(std::string path,
     return meshData;
 }
 
+} // namespace Asset
 } // namespace KE

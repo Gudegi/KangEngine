@@ -1,22 +1,27 @@
-#ifndef __LOAD_UTILS_HPP__
-#define __LOAD_UTILS_HPP__
+#ifndef _MESH_LOADER_HPP_
+#define _MESH_LOADER_HPP_
 
-#include <optional>
-#include <tiny_obj_loader.h>
-#include <string>
 #include "engine/scene/scene_backend.hpp"
 
-namespace KE {
+#include <optional>
+#include <string>
+#include <tiny_obj_loader.h>
 
-KE::Scene::MeshData
+// Support obj and stl.
+
+namespace KE {
+namespace Asset {
+
+Scene::MeshData
 loadObj(std::string inputFile,
         std::optional<tinyobj::ObjReaderConfig> render_config = std::nullopt);
 
 /// @brief Load a mesh from an STL file (supports both ASCII and Binary)
 /// @param path Path to the .stl file
 /// @return MeshData with vertices, normals, and indices (UVs are empty)
-KE::Scene::MeshData loadStl(const std::string& path);
+Scene::MeshData loadStl(const std::string& path);
 
+} // namespace Asset
 } // namespace KE
 
 #endif

@@ -42,6 +42,7 @@ scale = _ke.scale
 
 # Bound C++ submodules.
 scene = _ke.scene
+asset = _ke.asset
 animation = _ke.animation
 imgui = _ke.imgui
 keys = _ke.keys
@@ -78,6 +79,7 @@ __all__ = [
     "translate",
     "scale",
     "scene",
+    "asset",
     "animation",
     "imgui",
     "keys",

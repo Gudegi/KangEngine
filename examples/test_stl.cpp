@@ -2,7 +2,7 @@
 #include "engine/graphics/material/colors.hpp"
 #include <iostream>
 #include <memory>
-#include "utils/load_utils.hpp"
+#include "asset/mesh_loader.hpp"
 #include <tiny_obj_loader.h>
 
 using namespace KE;
@@ -167,7 +167,7 @@ class MyApp : public App {
             "/external/retargetted/unitree_h1/assets/pelvis.stl";
 
         try {
-            auto stlData = loadStl(stlPath);
+            auto stlData = Asset::loadStl(stlPath);
             auto stlMeshPtr =
                 std::make_shared<Scene::MeshData>(std::move(stlData));
 
@@ -193,7 +193,7 @@ class MyApp : public App {
             tinyobj::ObjReaderConfig reader_config;
             reader_config.mtl_search_path =
                 std::string(KANGENGINE_ASSETS_ROOT) + "/external/";
-            auto objData = loadObj(objPath, reader_config);
+            auto objData = Asset::loadObj(objPath, reader_config);
             auto objMeshPtr =
                 std::make_shared<Scene::MeshData>(std::move(objData));
 

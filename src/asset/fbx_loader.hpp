@@ -3,6 +3,7 @@
 
 #include "animation/skeleton_tree.hpp"
 #include "animation/skeleton_motion.hpp"
+#include "asset/import_diagnostics.hpp"
 #include "engine/scene/scene_backend.hpp"
 
 #include <Eigen/Core>
@@ -13,7 +14,7 @@
 #include <vector>
 
 namespace KE {
-namespace Animation {
+namespace Asset {
 
 struct FBXAnimationClipInfo {
     std::string name;
@@ -43,11 +44,79 @@ struct FBXMeshMetadata {
     std::vector<FBXMaterialInfo> materials;
 };
 
-struct FBXMeshInfo : FBXMeshMetadata {
+struct FBXStaticMeshInfo {
+    FBXMeshMetadata metadata;
     Scene::MeshData meshData;
 };
 
-struct FBXSkinClusterInfo {
+struct FBXSkinnedMeshInfo {
+    FBXMeshMetadata metadata;
+    Scene::SkinnedMeshData skinnedMeshData;
+    std::vector<std::string> boneNames;
+    std::vector<std::array<float, 16>> bindBoneMatrices;
+    std::vector<std::array<float, 16>> bindMeshMatrices;
+    int overweightVertexCount = 0;
+    int unweightedVertexCount = 0;
+    int mismatchedClusterCount = 0;
+};
+
+struct FBXCharacterData {
+    // Sampled animation clip converted to KangEngine skeleton motion.
+    Animation::SkeletonMotion motion;
+    // Skinned meshes with vertex data, weights, bind poses, and materials.
+    std::vector<FBXSkinnedMeshInfo> skinnedMeshes;
+};
+
+struct FBXImportResult {
+    // Runtime skinned character payload extracted from the source FBX.
+    FBXCharacterData character;
+    // Available animation clips/takes found in the source FBX.
+    std::vector<FBXAnimationClipInfo> clips;
+    // Non-fatal import warnings collected while parsing.
+    ImportDiagnostics diagnostics;
+};
+
+class FBXLoader {
+  public:
+    FBXLoader() = delete;
+
+    // Phase-1 import: load FBX transform nodes into KangEngine's SkeletonTree.
+    static Animation::SkeletonTree loadSkeleton(const std::string& fbxPath,
+                                                float scale = 0.01f);
+
+    static std::vector<FBXAnimationClipInfo>
+    loadAnimationClipInfos(const std::string& fbxPath);
+
+    static Animation::SkeletonMotion
+    loadMotion(const std::string& fbxPath, int clipIndex = 0,
+               float fps = 30.0f, float scale = 0.01f);
+
+    static std::vector<FBXStaticMeshInfo> loadMeshes(const std::string& fbxPath,
+                                                     float scale = 0.01f);
+
+    static std::vector<FBXSkinnedMeshInfo>
+    loadSkinnedMeshes(const std::string& fbxPath, float scale = 0.01f);
+
+    static FBXImportResult parse(const std::string& fbxPath, int clipIndex = 0,
+                                 float fps = 30.0f, float scale = 0.01f);
+
+    static FBXImportResult parseWithBind(const std::string& motionFbxPath,
+                                         const std::string& bindFbxPath,
+                                         int clipIndex = 0, float fps = 30.0f,
+                                         float scale = 0.01f);
+
+    static FBXCharacterData loadCharacter(const std::string& fbxPath,
+                                         int clipIndex = 0, float fps = 30.0f,
+                                         float scale = 0.01f);
+
+    static FBXCharacterData loadCharacterWithBind(
+        const std::string& motionFbxPath, const std::string& bindFbxPath,
+        int clipIndex = 0, float fps = 30.0f, float scale = 0.01f);
+};
+
+namespace FBXDebug {
+
+struct SkinClusterInfo {
     std::string meshName;
     std::string clusterName;
     std::string linkName;
@@ -62,57 +131,12 @@ struct FBXSkinClusterInfo {
     std::array<double, 3> transformLinkTranslation = {0.0, 0.0, 0.0};
 };
 
-struct FBXSkinnedMeshInfo {
-    FBXMeshMetadata mesh;
-    Scene::SkinnedMeshData skinnedMeshData;
-    std::vector<std::string> boneNames;
-    std::vector<std::array<float, 16>> bindBoneMatrices;
-    std::vector<std::array<float, 16>> bindMeshMatrices;
-    int overweightVertexCount = 0;
-    int unweightedVertexCount = 0;
-    int mismatchedClusterCount = 0;
-};
+std::vector<SkinClusterInfo> loadSkinClusterInfos(const std::string& fbxPath,
+                                                  float scale = 0.01f);
 
-struct FBXCharacterAsset {
-    SkeletonMotion motion;
-    std::vector<FBXSkinnedMeshInfo> skinnedMeshes;
-};
+} // namespace FBXDebug
 
-class FBXLoader {
-  public:
-    FBXLoader() = delete;
-
-    // Phase-1 import: load FBX transform nodes into KangEngine's SkeletonTree.
-    static SkeletonTree loadSkeleton(const std::string& fbxPath,
-                                     float scale = 0.01f);
-
-    static std::vector<FBXAnimationClipInfo>
-    loadAnimationClipInfos(const std::string& fbxPath);
-
-    static SkeletonMotion loadMotion(const std::string& fbxPath,
-                                     int clipIndex = 0, float fps = 30.0f,
-                                     float scale = 0.01f);
-
-    static std::vector<FBXMeshInfo> loadMeshes(const std::string& fbxPath,
-                                               float scale = 0.01f);
-
-    static std::vector<FBXSkinClusterInfo>
-    loadSkinClusterInfos(const std::string& fbxPath, float scale = 0.01f);
-
-    static std::vector<FBXSkinnedMeshInfo>
-    loadSkinnedMeshes(const std::string& fbxPath, float scale = 0.01f);
-
-    static FBXCharacterAsset loadCharacter(const std::string& fbxPath,
-                                           int clipIndex = 0,
-                                           float fps = 30.0f,
-                                           float scale = 0.01f);
-
-    static FBXCharacterAsset loadCharacterWithBind(
-        const std::string& motionFbxPath, const std::string& bindFbxPath,
-        int clipIndex = 0, float fps = 30.0f, float scale = 0.01f);
-};
-
-} // namespace Animation
+} // namespace Asset
 } // namespace KE
 
 #endif

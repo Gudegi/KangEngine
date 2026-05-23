@@ -251,7 +251,7 @@ class KangSimWorld:
         key = (str(Path(mjcf_path).expanduser().resolve()), float(scale), str(order))
         data = self._mjcf_cache.get(key)
         if data is None:
-            data = _ke.animation.MJCFLoader.load(key[0], scale=key[1], order=key[2])
+            data = _ke.asset.MJCFLoader.load(key[0], scale=key[1], order=key[2])
             self._mjcf_cache[key] = data
             self._mjcf_load_count += 1
         return data

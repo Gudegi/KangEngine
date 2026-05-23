@@ -1,6 +1,6 @@
 ///
 /// Animation System Python Bindings
-/// MJCFLoader, CharacterData, SkeletonTree, SkeletonState, SkeletonBridge
+/// Skeleton animation bindings plus asset importer bindings.
 ///
 
 #include <pybind11/pybind11.h>
@@ -23,6 +23,7 @@
 
 namespace py = pybind11;
 using namespace KE;
+using namespace KE::Asset;
 using namespace KE::Animation;
 using namespace KE::Bridge;
 
@@ -277,6 +278,7 @@ std::vector<Eigen::Matrix4f> eigenMat4ArrayFromPy(const FloatArray& array,
 
 void bind_animation(py::module& m) {
     py::module anim = m.def_submodule("animation", "Skeleton animation system");
+    py::module asset = m.def_submodule("asset", "Asset importers and loaders");
 
     anim.def(
         "cpu_skin",
@@ -408,7 +410,7 @@ void bind_animation(py::module& m) {
         .def_readonly("condim", &CollisionGeom::condim)
         .def_readonly("margin", &CollisionGeom::margin);
 
-    // CharacterData — aggregate returned by MJCFLoader::load()
+    // CharacterData — aggregate returned by asset importers.
     py::class_<CharacterData>(anim, "CharacterData")
         .def_readonly("skeleton_tree", &CharacterData::skeletonTree)
         .def_readonly("mesh_infos", &CharacterData::meshInfos)
@@ -428,18 +430,26 @@ void bind_animation(py::module& m) {
             return result;
         });
 
-    // MJCFLoader
-    py::class_<MJCFLoader>(anim, "MJCFLoader")
+    py::class_<ImportDiagnostics>(asset, "ImportDiagnostics")
+        .def_readonly("warnings", &ImportDiagnostics::warnings);
+
+    py::class_<MJCFImportResult>(asset, "MJCFImportResult")
+        .def_readonly("character", &MJCFImportResult::character)
+        .def_readonly("diagnostics", &MJCFImportResult::diagnostics);
+
+    py::class_<MJCFLoader>(asset, "MJCFLoader")
+        .def_static("parse", &MJCFLoader::parse, py::arg("mjcf_path"),
+                    py::arg("scale") = 1.0f, py::arg("order") = "DFS")
         .def_static("load", &MJCFLoader::load, py::arg("mjcf_path"),
                     py::arg("scale") = 1.0f, py::arg("order") = "DFS");
 
-    py::class_<FBXAnimationClipInfo>(anim, "FBXAnimationClipInfo")
+    py::class_<FBXAnimationClipInfo>(asset, "FBXAnimationClipInfo")
         .def_readonly("name", &FBXAnimationClipInfo::name)
         .def_readonly("start_time", &FBXAnimationClipInfo::startTime)
         .def_readonly("end_time", &FBXAnimationClipInfo::endTime)
         .def_readonly("frame_rate", &FBXAnimationClipInfo::frameRate);
 
-    py::class_<FBXMaterialInfo>(anim, "FBXMaterialInfo")
+    py::class_<FBXMaterialInfo>(asset, "FBXMaterialInfo")
         .def_readonly("name", &FBXMaterialInfo::name)
         .def_property_readonly("diffuse_color",
                                [](const FBXMaterialInfo& self) {
@@ -457,7 +467,7 @@ void bind_animation(py::module& m) {
                       &FBXMaterialInfo::hasEmbeddedDiffuseTexture);
 
     py::class_<FBXMeshMetadata, std::shared_ptr<FBXMeshMetadata>>(
-        anim, "FBXMeshMetadata")
+        asset, "FBXMeshMetadata")
         .def_readonly("name", &FBXMeshMetadata::name)
         .def_readonly("vertex_count", &FBXMeshMetadata::vertexCount)
         .def_readonly("index_count", &FBXMeshMetadata::indexCount)
@@ -471,73 +481,118 @@ void bind_animation(py::module& m) {
                       &FBXMeshMetadata::skinClusterNames)
         .def_readonly("materials", &FBXMeshMetadata::materials);
 
-    py::class_<FBXMeshInfo, std::shared_ptr<FBXMeshInfo>, FBXMeshMetadata>(
-        anim, "FBXMeshInfo")
+    py::class_<FBXStaticMeshInfo, std::shared_ptr<FBXStaticMeshInfo>>(
+        asset, "FBXMeshInfo")
+        .def_property_readonly("metadata",
+                               [](const FBXStaticMeshInfo& self) {
+                                   return self.metadata;
+                               })
+        .def_property_readonly("name",
+                               [](const FBXStaticMeshInfo& self) {
+                                   return self.metadata.name;
+                               })
+        .def_property_readonly("vertex_count",
+                               [](const FBXStaticMeshInfo& self) {
+                                   return self.metadata.vertexCount;
+                               })
+        .def_property_readonly("index_count",
+                               [](const FBXStaticMeshInfo& self) {
+                                   return self.metadata.indexCount;
+                               })
+        .def_property_readonly("material_count",
+                               [](const FBXStaticMeshInfo& self) {
+                                   return self.metadata.materialCount;
+                               })
+        .def_property_readonly("primary_material_index",
+                               [](const FBXStaticMeshInfo& self) {
+                                   return self.metadata.primaryMaterialIndex;
+                               })
+        .def_property_readonly("has_normals",
+                               [](const FBXStaticMeshInfo& self) {
+                                   return self.metadata.hasNormals;
+                               })
+        .def_property_readonly("has_uvs",
+                               [](const FBXStaticMeshInfo& self) {
+                                   return self.metadata.hasUVs;
+                               })
+        .def_property_readonly("has_skin",
+                               [](const FBXStaticMeshInfo& self) {
+                                   return self.metadata.hasSkin;
+                               })
+        .def_property_readonly("skin_cluster_names",
+                               [](const FBXStaticMeshInfo& self) {
+                                   return self.metadata.skinClusterNames;
+                               })
+        .def_property_readonly("materials",
+                               [](const FBXStaticMeshInfo& self) {
+                                   return self.metadata.materials;
+                               })
         .def_property_readonly("mesh_data",
-                               [](std::shared_ptr<FBXMeshInfo> self) {
+                               [](std::shared_ptr<FBXStaticMeshInfo> self) {
                                    return std::shared_ptr<KE::Scene::MeshData>(
                                        self, &self->meshData);
                                });
 
-    py::class_<FBXSkinClusterInfo>(anim, "FBXSkinClusterInfo")
-        .def_readonly("mesh_name", &FBXSkinClusterInfo::meshName)
-        .def_readonly("cluster_name", &FBXSkinClusterInfo::clusterName)
-        .def_readonly("link_name", &FBXSkinClusterInfo::linkName)
-        .def_readonly("weight_count", &FBXSkinClusterInfo::weightCount)
-        .def_readonly("index_count", &FBXSkinClusterInfo::indexCount)
-        .def_readonly("min_index", &FBXSkinClusterInfo::minIndex)
-        .def_readonly("max_index", &FBXSkinClusterInfo::maxIndex)
-        .def_readonly("min_weight", &FBXSkinClusterInfo::minWeight)
-        .def_readonly("max_weight", &FBXSkinClusterInfo::maxWeight)
-        .def_readonly("weight_sum", &FBXSkinClusterInfo::weightSum)
+    py::class_<FBXDebug::SkinClusterInfo>(asset, "FBXSkinClusterInfo")
+        .def_readonly("mesh_name", &FBXDebug::SkinClusterInfo::meshName)
+        .def_readonly("cluster_name", &FBXDebug::SkinClusterInfo::clusterName)
+        .def_readonly("link_name", &FBXDebug::SkinClusterInfo::linkName)
+        .def_readonly("weight_count", &FBXDebug::SkinClusterInfo::weightCount)
+        .def_readonly("index_count", &FBXDebug::SkinClusterInfo::indexCount)
+        .def_readonly("min_index", &FBXDebug::SkinClusterInfo::minIndex)
+        .def_readonly("max_index", &FBXDebug::SkinClusterInfo::maxIndex)
+        .def_readonly("min_weight", &FBXDebug::SkinClusterInfo::minWeight)
+        .def_readonly("max_weight", &FBXDebug::SkinClusterInfo::maxWeight)
+        .def_readonly("weight_sum", &FBXDebug::SkinClusterInfo::weightSum)
         .def_readonly("transform_translation",
-                      &FBXSkinClusterInfo::transformTranslation)
+                      &FBXDebug::SkinClusterInfo::transformTranslation)
         .def_readonly("transform_link_translation",
-                      &FBXSkinClusterInfo::transformLinkTranslation);
+                      &FBXDebug::SkinClusterInfo::transformLinkTranslation);
 
     py::class_<FBXSkinnedMeshInfo, std::shared_ptr<FBXSkinnedMeshInfo>>(
-        anim, "FBXSkinnedMeshInfo")
+        asset, "FBXSkinnedMeshInfo")
         .def_property_readonly("metadata",
                                [](const FBXSkinnedMeshInfo& self) {
-                                   return self.mesh;
+                                   return self.metadata;
                                })
         .def_property_readonly(
-            "name", [](const FBXSkinnedMeshInfo& self) { return self.mesh.name; })
+            "name",
+            [](const FBXSkinnedMeshInfo& self) { return self.metadata.name; })
         .def_property_readonly("vertex_count",
                                [](const FBXSkinnedMeshInfo& self) {
-                                   return self.mesh.vertexCount;
+                                   return self.metadata.vertexCount;
                                })
         .def_property_readonly("index_count",
                                [](const FBXSkinnedMeshInfo& self) {
-                                   return self.mesh.indexCount;
+                                   return self.metadata.indexCount;
                                })
         .def_property_readonly("material_count",
                                [](const FBXSkinnedMeshInfo& self) {
-                                   return self.mesh.materialCount;
+                                   return self.metadata.materialCount;
                                })
         .def_property_readonly("primary_material_index",
                                [](const FBXSkinnedMeshInfo& self) {
-                                   return self.mesh.primaryMaterialIndex;
+                                   return self.metadata.primaryMaterialIndex;
                                })
         .def_property_readonly("materials",
                                [](const FBXSkinnedMeshInfo& self) {
-                                   return self.mesh.materials;
+                                   return self.metadata.materials;
                                })
         .def_property_readonly("has_normals",
                                [](const FBXSkinnedMeshInfo& self) {
-                                   return self.mesh.hasNormals;
+                                   return self.metadata.hasNormals;
                                })
         .def_property_readonly("has_uvs",
                                [](const FBXSkinnedMeshInfo& self) {
-                                   return self.mesh.hasUVs;
+                                   return self.metadata.hasUVs;
                                })
         .def_property_readonly("has_skin",
                                [](const FBXSkinnedMeshInfo& self) {
-                                   return self.mesh.hasSkin;
+                                   return self.metadata.hasSkin;
                                })
         .def_property_readonly("skin_cluster_names",
                                [](const FBXSkinnedMeshInfo& self) {
-                                   return self.mesh.skinClusterNames;
+                                   return self.metadata.skinClusterNames;
                                })
         .def_property_readonly("mesh_data",
                                [](std::shared_ptr<FBXSkinnedMeshInfo> self) {
@@ -597,8 +652,37 @@ void bind_animation(py::module& m) {
         .def_readonly("mismatched_cluster_count",
                       &FBXSkinnedMeshInfo::mismatchedClusterCount);
 
-    // FBXLoader
-    py::class_<FBXLoader>(anim, "FBXLoader")
+    py::class_<FBXCharacterData>(asset, "FBXCharacterData")
+        .def_readonly("motion", &FBXCharacterData::motion)
+        .def_property_readonly(
+            "skinned_meshes",
+            [](const FBXCharacterData& self) {
+                py::list result;
+                for (const auto& mesh : self.skinnedMeshes) {
+                    result.append(std::make_shared<FBXSkinnedMeshInfo>(mesh));
+                }
+                return result;
+            });
+
+    py::class_<FBXImportResult>(asset, "FBXImportResult")
+        .def_readonly("character", &FBXImportResult::character)
+        .def_property_readonly("motion",
+                               [](const FBXImportResult& self) {
+                                   return self.character.motion;
+                               })
+        .def_property_readonly(
+            "skinned_meshes",
+            [](const FBXImportResult& self) {
+                py::list result;
+                for (const auto& mesh : self.character.skinnedMeshes) {
+                    result.append(std::make_shared<FBXSkinnedMeshInfo>(mesh));
+                }
+                return result;
+            })
+        .def_readonly("clips", &FBXImportResult::clips)
+        .def_readonly("diagnostics", &FBXImportResult::diagnostics);
+
+    py::class_<FBXLoader>(asset, "FBXLoader")
         .def_static("load_skeleton", &FBXLoader::loadSkeleton,
                     py::arg("fbx_path"), py::arg("scale") = 0.01f)
         .def_static("load_animation_clip_infos",
@@ -611,14 +695,26 @@ void bind_animation(py::module& m) {
             [](const std::string& fbxPath, float scale) {
                 py::list result;
                 for (auto& mesh : FBXLoader::loadMeshes(fbxPath, scale)) {
-                    result.append(std::make_shared<FBXMeshInfo>(
+                    result.append(std::make_shared<FBXStaticMeshInfo>(
                         std::move(mesh)));
                 }
                 return result;
             },
             py::arg("fbx_path"), py::arg("scale") = 0.01f)
-        .def_static("load_skin_cluster_infos",
-                    &FBXLoader::loadSkinClusterInfos, py::arg("fbx_path"),
+        .def_static("parse", &FBXLoader::parse, py::arg("fbx_path"),
+                    py::arg("clip_index") = 0, py::arg("fps") = 30.0f,
+                    py::arg("scale") = 0.01f)
+        .def_static("parse_with_bind", &FBXLoader::parseWithBind,
+                    py::arg("motion_fbx_path"), py::arg("bind_fbx_path"),
+                    py::arg("clip_index") = 0, py::arg("fps") = 30.0f,
+                    py::arg("scale") = 0.01f)
+        .def_static("load_character", &FBXLoader::loadCharacter,
+                    py::arg("fbx_path"), py::arg("clip_index") = 0,
+                    py::arg("fps") = 30.0f, py::arg("scale") = 0.01f)
+        .def_static("load_character_with_bind",
+                    &FBXLoader::loadCharacterWithBind,
+                    py::arg("motion_fbx_path"), py::arg("bind_fbx_path"),
+                    py::arg("clip_index") = 0, py::arg("fps") = 30.0f,
                     py::arg("scale") = 0.01f)
         .def_static(
             "load_skinned_meshes",
@@ -632,6 +728,12 @@ void bind_animation(py::module& m) {
                 return result;
             },
             py::arg("fbx_path"), py::arg("scale") = 0.01f);
+
+    py::module_ fbxDebug = asset.def_submodule(
+        "FBXDebug", "FBX debug and importer inspection helpers.");
+    fbxDebug.def("load_skin_cluster_infos",
+                 &FBXDebug::loadSkinClusterInfos, py::arg("fbx_path"),
+                 py::arg("scale") = 0.01f);
 
     // SkeletonTree (read-only after construction)
     py::class_<SkeletonTree, std::shared_ptr<SkeletonTree>>(anim,

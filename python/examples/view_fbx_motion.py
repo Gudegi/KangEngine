@@ -8,7 +8,7 @@ from pathlib import Path
 import torch
 
 import kangengine as ke
-from kangengine import animation, imgui, keys, scene
+from kangengine import asset, imgui, keys, scene
 
 
 def repo_root() -> Path:
@@ -45,7 +45,7 @@ class FbxMotionViewer(ke.App):
         self.time = 0.0
         self.line_handle = None
 
-        self.motion = animation.FBXLoader.load_motion(
+        self.motion = asset.FBXLoader.load_motion(
             self.fbx_file,
             clip_index=self.clip_index,
             fps=self.fps,

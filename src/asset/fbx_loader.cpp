@@ -25,7 +25,10 @@
 #include <vector>
 
 namespace KE {
-namespace Animation {
+namespace Asset {
+
+using Animation::SkeletonMotion;
+using Animation::SkeletonTree;
 
 namespace {
 
@@ -67,8 +70,8 @@ void warnUnexpectedGlobalSettings(const ofbx::IScene& scene,
     if (!settings)
         return;
 
-    const bool yUp = settings->UpAxis == ofbx::UpVector_AxisY &&
-                     settings->UpAxisSign == 1;
+    const bool yUp =
+        settings->UpAxis == ofbx::UpVector_AxisY && settings->UpAxisSign == 1;
     const bool rightHanded =
         settings->CoordAxis == ofbx::CoordSystem_RightHanded &&
         settings->CoordAxisSign == 1;
@@ -86,7 +89,8 @@ void warnUnexpectedGlobalSettings(const ofbx::IScene& scene,
 std::vector<ofbx::u8> readBinaryFile(const std::string& path) {
     std::ifstream file(path, std::ios::binary | std::ios::ate);
     if (!file)
-        throw std::runtime_error(fmt::format("Failed to open FBX file: {}", path));
+        throw std::runtime_error(
+            fmt::format("Failed to open FBX file: {}", path));
 
     const std::streamsize size = file.tellg();
     if (size <= 0)
@@ -95,7 +99,8 @@ std::vector<ofbx::u8> readBinaryFile(const std::string& path) {
     std::vector<ofbx::u8> bytes(static_cast<size_t>(size));
     file.seekg(0, std::ios::beg);
     if (!file.read(reinterpret_cast<char*>(bytes.data()), size)) {
-        throw std::runtime_error(fmt::format("Failed to read FBX file: {}", path));
+        throw std::runtime_error(
+            fmt::format("Failed to read FBX file: {}", path));
     }
     return bytes;
 }
@@ -216,9 +221,8 @@ std::vector<const ofbx::Object*> orderedImportNodes(const ofbx::IScene& scene) {
         if (!object)
             continue;
 
-        const bool useNode =
-            skeletonOnly ? isSkeletonNode(*object)
-                         : isFallbackTransformNode(*object);
+        const bool useNode = skeletonOnly ? isSkeletonNode(*object)
+                                          : isFallbackTransformNode(*object);
         if (useNode)
             selected.push_back(object);
     }
@@ -271,8 +275,8 @@ std::vector<const ofbx::Object*> orderedImportNodes(const ofbx::IScene& scene) {
     return ordered;
 }
 
-std::vector<int> parentIndicesForOrderedNodes(
-    const std::vector<const ofbx::Object*>& ordered) {
+std::vector<int>
+parentIndicesForOrderedNodes(const std::vector<const ofbx::Object*>& ordered) {
     std::unordered_map<const ofbx::Object*, int> objectToIndex;
     objectToIndex.reserve(ordered.size());
     for (int i = 0; i < static_cast<int>(ordered.size()); ++i)
@@ -295,7 +299,8 @@ std::vector<int> parentIndicesForOrderedNodes(
     return parentIndices;
 }
 
-std::vector<FBXAnimationClipInfo> clipInfosFromScene(const ofbx::IScene& scene) {
+std::vector<FBXAnimationClipInfo>
+clipInfosFromScene(const ofbx::IScene& scene) {
     std::vector<FBXAnimationClipInfo> clips;
     clips.reserve(static_cast<size_t>(scene.getAnimationStackCount()));
 
@@ -331,9 +336,9 @@ FBXSkeletonPoseSample sampleSkeletonPoseFromScene(
     }
 
     if (clipIndex < 0 || clipIndex >= scene.getAnimationStackCount()) {
-        throw std::runtime_error(fmt::format(
-            "FBX clip index {} is out of range [0, {})", clipIndex,
-            scene.getAnimationStackCount()));
+        throw std::runtime_error(
+            fmt::format("FBX clip index {} is out of range [0, {})", clipIndex,
+                        scene.getAnimationStackCount()));
     }
 
     const ofbx::AnimationStack* stack = scene.getAnimationStack(clipIndex);
@@ -405,13 +410,12 @@ std::string normalizeTexturePathString(std::string path) {
 
 std::string resolveTexturePath(const std::string& fbxPath,
                                const ofbx::Texture& texture) {
-    std::string relative =
-        normalizeTexturePathString(dataViewToString(texture.getRelativeFileName()));
+    std::string relative = normalizeTexturePathString(
+        dataViewToString(texture.getRelativeFileName()));
     std::string file =
         normalizeTexturePathString(dataViewToString(texture.getFileName()));
 
-    std::filesystem::path fbxDir =
-        std::filesystem::path(fbxPath).parent_path();
+    std::filesystem::path fbxDir = std::filesystem::path(fbxPath).parent_path();
     auto resolveCandidate = [&](const std::string& value) -> std::string {
         if (value.empty())
             return {};
@@ -480,8 +484,7 @@ Eigen::Matrix4f eigenMatrixFromFbx(const ofbx::DMatrix& transform,
     // default too, but assign explicitly so the convention is visible here.
     for (int col = 0; col < 4; ++col) {
         for (int row = 0; row < 4; ++row) {
-            out(row, col) =
-                static_cast<float>(transform.m[row + col * 4]);
+            out(row, col) = static_cast<float>(transform.m[row + col * 4]);
         }
     }
     out(0, 3) *= scale;
@@ -508,9 +511,8 @@ glm::mat4 glmMat4FromRowMajorArray(const std::array<float, 16>& a) {
     return out;
 }
 
-void addVertexInfluence(glm::ivec4& indices, glm::vec4& weights,
-                        int boneIndex, float weight,
-                        bool& droppedInfluence) {
+void addVertexInfluence(glm::ivec4& indices, glm::vec4& weights, int boneIndex,
+                        float weight, bool& droppedInfluence) {
     if (weight <= 0.0f)
         return;
 
@@ -625,10 +627,10 @@ void triangulateMeshGeometry(const std::string& meshName,
             if (polygon.vertex_count < 3)
                 continue;
             if (polygon.vertex_count > MaxPolygonVertices)
-                throw std::runtime_error(fmt::format(
-                    "FBX mesh '{}' has polygon with {} vertices; "
-                    "increase triangulation buffer above {}",
-                    meshName, polygon.vertex_count, TriBufferSize));
+                throw std::runtime_error(
+                    fmt::format("FBX mesh '{}' has polygon with {} vertices; "
+                                "increase triangulation buffer above {}",
+                                meshName, polygon.vertex_count, TriBufferSize));
 
             const ofbx::u32 triCount =
                 ofbx::triangulate(geom, polygon, triBuffer);
@@ -641,9 +643,8 @@ void triangulateMeshGeometry(const std::string& meshName,
                 const glm::vec3 normal =
                     hasNormals ? glmNormalFromFbx(normals.get(srcIndex))
                                : glm::vec3(0.0f);
-                const glm::vec2 uv =
-                    hasUVs ? glmVec2FromFbx(uvs.get(srcIndex))
-                           : glm::vec2(0.0f);
+                const glm::vec2 uv = hasUVs ? glmVec2FromFbx(uvs.get(srcIndex))
+                                            : glm::vec2(0.0f);
 
                 // If normals are missing, keep one vertex per face corner so
                 // fillMissingAttributes() can preserve flat-shaded normals.
@@ -682,9 +683,9 @@ SkeletonMotion loadMotionFromScene(const std::string& fbxPath,
 
     const std::vector<FBXAnimationClipInfo> clips = clipInfosFromScene(scene);
     if (clipIndex < 0 || clipIndex >= static_cast<int>(clips.size())) {
-        throw std::runtime_error(fmt::format(
-            "FBX clip index {} is out of range [0, {})", clipIndex,
-            static_cast<int>(clips.size())));
+        throw std::runtime_error(
+            fmt::format("FBX clip index {} is out of range [0, {})", clipIndex,
+                        static_cast<int>(clips.size())));
     }
 
     const FBXAnimationClipInfo& clip = clips[clipIndex];
@@ -722,8 +723,8 @@ SkeletonMotion loadMotionFromScene(const std::string& fbxPath,
             start + static_cast<double>(f) / static_cast<double>(fps);
         FBXSkeletonPoseSample sample =
             (f == 0) ? std::move(firstSample)
-                     : sampleSkeletonPoseFromScene(
-                           scene, ordered, time, clipIndex, scale, fbxPath);
+                     : sampleSkeletonPoseFromScene(scene, ordered, time,
+                                                   clipIndex, scale, fbxPath);
 
         rootTranslations.push_back(sample.rootTranslation.x());
         rootTranslations.push_back(sample.rootTranslation.y());
@@ -747,8 +748,8 @@ SkeletonMotion loadMotionFromScene(const std::string& fbxPath,
                           std::move(localRotationsWxyz));
 }
 
-void remapSkinnedMeshesToMotionByName(
-    std::vector<FBXSkinnedMeshInfo>& meshes, const SkeletonMotion& motion) {
+void remapSkinnedMeshesToMotionByName(std::vector<FBXSkinnedMeshInfo>& meshes,
+                                      const SkeletonMotion& motion) {
     std::unordered_map<std::string, int> sourceIndexByName;
     const std::vector<std::string>& sourceNames =
         motion.skeletonTree().nodeNames();
@@ -827,24 +828,24 @@ loadSkinnedMeshesFromScene(const std::string& fbxPath,
         const ofbx::Vec2Attributes uvs = geom.getUVs();
 
         FBXSkinnedMeshInfo info;
-        info.mesh.name = makeNodeName(*mesh, meshIdx);
-        info.mesh.materialCount = mesh->getMaterialCount();
-        info.mesh.materials = materialInfosForMesh(fbxPath, *mesh);
-        if (!info.mesh.materials.empty())
-            info.mesh.primaryMaterialIndex = 0;
-        info.mesh.hasNormals = normals.values != nullptr;
-        info.mesh.hasUVs = uvs.values != nullptr;
+        info.metadata.name = makeNodeName(*mesh, meshIdx);
+        info.metadata.materialCount = mesh->getMaterialCount();
+        info.metadata.materials = materialInfosForMesh(fbxPath, *mesh);
+        if (!info.metadata.materials.empty())
+            info.metadata.primaryMaterialIndex = 0;
+        info.metadata.hasNormals = normals.values != nullptr;
+        info.metadata.hasUVs = uvs.values != nullptr;
 
         std::vector<int> renderToControlPoint;
         renderToControlPoint.reserve(
             static_cast<size_t>(std::max(0, positions.count)));
 
-        triangulateMeshGeometry(info.mesh.name, geom, scale,
+        triangulateMeshGeometry(info.metadata.name, geom, scale,
                                 info.skinnedMeshData.mesh,
                                 &renderToControlPoint);
-        info.mesh.vertexCount =
+        info.metadata.vertexCount =
             static_cast<int>(info.skinnedMeshData.mesh.vertices.size());
-        info.mesh.indexCount =
+        info.metadata.indexCount =
             static_cast<int>(info.skinnedMeshData.mesh.indices.size());
 
         info.skinnedMeshData.boneIndices.assign(
@@ -853,9 +854,9 @@ loadSkinnedMeshesFromScene(const std::string& fbxPath,
             info.skinnedMeshData.mesh.vertices.size(), glm::vec4(0.0f));
 
         const ofbx::Skin* skin = skinForMesh(*mesh);
-        info.mesh.hasSkin = skin != nullptr;
+        info.metadata.hasSkin = skin != nullptr;
         if (skin) {
-            info.mesh.skinClusterNames.reserve(
+            info.metadata.skinClusterNames.reserve(
                 static_cast<size_t>(skin->getClusterCount()));
             std::unordered_map<int, std::vector<std::pair<int, float>>>
                 controlPointInfluences;
@@ -869,7 +870,7 @@ loadSkinnedMeshesFromScene(const std::string& fbxPath,
                 const std::string boneName =
                     link ? std::string(link->name)
                          : fmt::format("cluster_link_{}", clusterIdx);
-                info.mesh.skinClusterNames.push_back(boneName);
+                info.metadata.skinClusterNames.push_back(boneName);
 
                 const int boneSlot = static_cast<int>(info.boneNames.size());
                 info.boneNames.push_back(boneName);
@@ -877,9 +878,8 @@ loadSkinnedMeshesFromScene(const std::string& fbxPath,
                     findNodeIndexByName(nodeNames, boneName));
                 const Eigen::Matrix4f bindMesh =
                     eigenMatrixFromFbx(cluster->getTransformMatrix(), scale);
-                const Eigen::Matrix4f bindBone =
-                    eigenMatrixFromFbx(cluster->getTransformLinkMatrix(),
-                                       scale);
+                const Eigen::Matrix4f bindBone = eigenMatrixFromFbx(
+                    cluster->getTransformLinkMatrix(), scale);
                 info.bindMeshMatrices.push_back(
                     rowMajorArrayFromEigen(bindMesh));
                 info.bindBoneMatrices.push_back(
@@ -908,7 +908,7 @@ loadSkinnedMeshesFromScene(const std::string& fbxPath,
                 throw std::runtime_error(fmt::format(
                     "FBX mesh '{}' has {} skin bones, but GPU skinning "
                     "supports at most {}",
-                    info.mesh.name, info.boneNames.size(),
+                    info.metadata.name, info.boneNames.size(),
                     Scene::MaxSkinningBones));
             }
 
@@ -933,7 +933,7 @@ loadSkinnedMeshesFromScene(const std::string& fbxPath,
                 normalizeWeights(info.skinnedMeshData.boneWeights[vertexIdx]);
             }
         } else {
-            info.unweightedVertexCount = info.mesh.vertexCount;
+            info.unweightedVertexCount = info.metadata.vertexCount;
         }
 
         result.push_back(std::move(info));
@@ -956,9 +956,8 @@ SkeletonTree FBXLoader::loadSkeleton(const std::string& fbxPath, float scale) {
 
     const std::vector<const ofbx::Object*> ordered = orderedImportNodes(*scene);
     if (ordered.empty()) {
-        throw std::runtime_error(
-            fmt::format("FBX file '{}' has no importable transform nodes",
-                        fbxPath));
+        throw std::runtime_error(fmt::format(
+            "FBX file '{}' has no importable transform nodes", fbxPath));
     }
 
     std::vector<std::string> nodeNames;
@@ -977,7 +976,8 @@ SkeletonTree FBXLoader::loadSkeleton(const std::string& fbxPath, float scale) {
 
         const ofbx::DMatrix localTransform = object->getLocalTransform();
         nodeNames.push_back(makeNodeName(*object, i));
-        localTranslations.push_back(translationFromMatrix(localTransform, scale));
+        localTranslations.push_back(
+            translationFromMatrix(localTransform, scale));
         localRotations.push_back(rotationFromMatrix(localTransform));
         numJointsInBody.push_back(0);
     }
@@ -1015,8 +1015,8 @@ SkeletonMotion FBXLoader::loadMotion(const std::string& fbxPath, int clipIndex,
     return loadMotionFromScene(fbxPath, *scene, clipIndex, fps, scale);
 }
 
-std::vector<FBXMeshInfo> FBXLoader::loadMeshes(const std::string& fbxPath,
-                                               float scale) {
+std::vector<FBXStaticMeshInfo> FBXLoader::loadMeshes(const std::string& fbxPath,
+                                                     float scale) {
     const ofbx::u16 flags = static_cast<ofbx::u16>(
         ofbx::LoadFlags::IGNORE_ANIMATIONS | ofbx::LoadFlags::IGNORE_CAMERAS |
         ofbx::LoadFlags::IGNORE_LIGHTS);
@@ -1025,7 +1025,7 @@ std::vector<FBXMeshInfo> FBXLoader::loadMeshes(const std::string& fbxPath,
         loadSceneOrThrow(fbxPath, flags),
         [](ofbx::IScene* s) { s->destroy(); });
 
-    std::vector<FBXMeshInfo> result;
+    std::vector<FBXStaticMeshInfo> result;
     result.reserve(static_cast<size_t>(scene->getMeshCount()));
 
     for (int meshIdx = 0; meshIdx < scene->getMeshCount(); ++meshIdx) {
@@ -1037,33 +1037,36 @@ std::vector<FBXMeshInfo> FBXLoader::loadMeshes(const std::string& fbxPath,
         const ofbx::Vec3Attributes normals = geom.getNormals();
         const ofbx::Vec2Attributes uvs = geom.getUVs();
 
-        FBXMeshInfo info;
-        info.name = makeNodeName(*mesh, meshIdx);
-        info.materialCount = mesh->getMaterialCount();
-        info.materials = materialInfosForMesh(fbxPath, *mesh);
-        if (!info.materials.empty())
-            info.primaryMaterialIndex = 0;
-        info.hasNormals = normals.values != nullptr;
-        info.hasUVs = uvs.values != nullptr;
+        FBXStaticMeshInfo info;
+        info.metadata.name = makeNodeName(*mesh, meshIdx);
+        info.metadata.materialCount = mesh->getMaterialCount();
+        info.metadata.materials = materialInfosForMesh(fbxPath, *mesh);
+        if (!info.metadata.materials.empty())
+            info.metadata.primaryMaterialIndex = 0;
+        info.metadata.hasNormals = normals.values != nullptr;
+        info.metadata.hasUVs = uvs.values != nullptr;
 
         const ofbx::Skin* skin = skinForMesh(*mesh);
-        info.hasSkin = skin != nullptr;
+        info.metadata.hasSkin = skin != nullptr;
         if (skin) {
-            info.skinClusterNames.reserve(
+            info.metadata.skinClusterNames.reserve(
                 static_cast<size_t>(skin->getClusterCount()));
             for (int clusterIdx = 0; clusterIdx < skin->getClusterCount();
                  ++clusterIdx) {
                 const ofbx::Cluster* cluster = skin->getCluster(clusterIdx);
-                const ofbx::Object* link = cluster ? cluster->getLink() : nullptr;
-                info.skinClusterNames.push_back(
+                const ofbx::Object* link =
+                    cluster ? cluster->getLink() : nullptr;
+                info.metadata.skinClusterNames.push_back(
                     link ? std::string(link->name)
                          : fmt::format("cluster_{}", clusterIdx));
             }
         }
 
-        triangulateMeshGeometry(info.name, geom, scale, info.meshData);
-        info.vertexCount = static_cast<int>(info.meshData.vertices.size());
-        info.indexCount = static_cast<int>(info.meshData.indices.size());
+        triangulateMeshGeometry(info.metadata.name, geom, scale, info.meshData);
+        info.metadata.vertexCount =
+            static_cast<int>(info.meshData.vertices.size());
+        info.metadata.indexCount =
+            static_cast<int>(info.meshData.indices.size());
         result.push_back(std::move(info));
     }
 
@@ -1083,9 +1086,8 @@ FBXLoader::loadSkinnedMeshes(const std::string& fbxPath, float scale) {
     return loadSkinnedMeshesFromScene(fbxPath, *scene, scale);
 }
 
-FBXCharacterAsset FBXLoader::loadCharacter(const std::string& fbxPath,
-                                           int clipIndex, float fps,
-                                           float scale) {
+FBXImportResult FBXLoader::parse(const std::string& fbxPath, int clipIndex,
+                                 float fps, float scale) {
     const ofbx::u16 flags = static_cast<ofbx::u16>(
         ofbx::LoadFlags::IGNORE_CAMERAS | ofbx::LoadFlags::IGNORE_LIGHTS);
 
@@ -1093,25 +1095,68 @@ FBXCharacterAsset FBXLoader::loadCharacter(const std::string& fbxPath,
         loadSceneOrThrow(fbxPath, flags),
         [](ofbx::IScene* s) { s->destroy(); });
 
-    FBXCharacterAsset asset;
-    asset.motion = loadMotionFromScene(fbxPath, *scene, clipIndex, fps, scale);
-    asset.skinnedMeshes = loadSkinnedMeshesFromScene(fbxPath, *scene, scale);
-    return asset;
+    FBXImportResult result;
+    result.clips = clipInfosFromScene(*scene);
+    result.character.motion =
+        loadMotionFromScene(fbxPath, *scene, clipIndex, fps, scale);
+    result.character.skinnedMeshes =
+        loadSkinnedMeshesFromScene(fbxPath, *scene, scale);
+    return result;
 }
 
-FBXCharacterAsset FBXLoader::loadCharacterWithBind(
-    const std::string& motionFbxPath, const std::string& bindFbxPath,
-    int clipIndex, float fps, float scale) {
-    FBXCharacterAsset asset;
-    asset.motion = FBXLoader::loadMotion(motionFbxPath, clipIndex, fps, scale);
-    asset.skinnedMeshes = FBXLoader::loadSkinnedMeshes(bindFbxPath, scale);
-    bakeBindMeshTransforms(asset.skinnedMeshes);
-    remapSkinnedMeshesToMotionByName(asset.skinnedMeshes, asset.motion);
-    return asset;
+FBXImportResult FBXLoader::parseWithBind(const std::string& motionFbxPath,
+                                         const std::string& bindFbxPath,
+                                         int clipIndex, float fps,
+                                         float scale) {
+    if (motionFbxPath == bindFbxPath)
+        return parse(motionFbxPath, clipIndex, fps, scale);
+
+    const ofbx::u16 motionFlags = static_cast<ofbx::u16>(
+        ofbx::LoadFlags::IGNORE_GEOMETRY | ofbx::LoadFlags::IGNORE_MATERIALS |
+        ofbx::LoadFlags::IGNORE_TEXTURES | ofbx::LoadFlags::IGNORE_CAMERAS |
+        ofbx::LoadFlags::IGNORE_LIGHTS);
+    const ofbx::u16 bindFlags = static_cast<ofbx::u16>(
+        ofbx::LoadFlags::IGNORE_ANIMATIONS | ofbx::LoadFlags::IGNORE_CAMERAS |
+        ofbx::LoadFlags::IGNORE_LIGHTS);
+
+    std::unique_ptr<ofbx::IScene, void (*)(ofbx::IScene*)> motionScene(
+        loadSceneOrThrow(motionFbxPath, motionFlags),
+        [](ofbx::IScene* s) { s->destroy(); });
+    std::unique_ptr<ofbx::IScene, void (*)(ofbx::IScene*)> bindScene(
+        loadSceneOrThrow(bindFbxPath, bindFlags),
+        [](ofbx::IScene* s) { s->destroy(); });
+
+    FBXImportResult result;
+    result.clips = clipInfosFromScene(*motionScene);
+    result.character.motion =
+        loadMotionFromScene(motionFbxPath, *motionScene, clipIndex, fps, scale);
+    result.character.skinnedMeshes =
+        loadSkinnedMeshesFromScene(bindFbxPath, *bindScene, scale);
+    bakeBindMeshTransforms(result.character.skinnedMeshes);
+    remapSkinnedMeshesToMotionByName(result.character.skinnedMeshes,
+                                     result.character.motion);
+    return result;
 }
 
-std::vector<FBXSkinClusterInfo>
-FBXLoader::loadSkinClusterInfos(const std::string& fbxPath, float scale) {
+FBXCharacterData FBXLoader::loadCharacter(const std::string& fbxPath,
+                                         int clipIndex, float fps,
+                                         float scale) {
+    return std::move(parse(fbxPath, clipIndex, fps, scale).character);
+}
+
+FBXCharacterData
+FBXLoader::loadCharacterWithBind(const std::string& motionFbxPath,
+                                 const std::string& bindFbxPath, int clipIndex,
+                                 float fps, float scale) {
+    return std::move(parseWithBind(motionFbxPath, bindFbxPath, clipIndex, fps,
+                                   scale)
+                         .character);
+}
+
+namespace FBXDebug {
+
+std::vector<SkinClusterInfo> loadSkinClusterInfos(const std::string& fbxPath,
+                                                  float scale) {
     const ofbx::u16 flags = static_cast<ofbx::u16>(
         ofbx::LoadFlags::IGNORE_ANIMATIONS | ofbx::LoadFlags::IGNORE_CAMERAS |
         ofbx::LoadFlags::IGNORE_LIGHTS);
@@ -1120,7 +1165,7 @@ FBXLoader::loadSkinClusterInfos(const std::string& fbxPath, float scale) {
         loadSceneOrThrow(fbxPath, flags),
         [](ofbx::IScene* s) { s->destroy(); });
 
-    std::vector<FBXSkinClusterInfo> result;
+    std::vector<SkinClusterInfo> result;
     for (int meshIdx = 0; meshIdx < scene->getMeshCount(); ++meshIdx) {
         const ofbx::Mesh* mesh = scene->getMesh(meshIdx);
         if (!mesh)
@@ -1137,13 +1182,12 @@ FBXLoader::loadSkinClusterInfos(const std::string& fbxPath, float scale) {
             if (!cluster)
                 continue;
 
-            FBXSkinClusterInfo info;
+            SkinClusterInfo info;
             info.meshName = meshName;
             info.clusterName = makeNodeName(*cluster, clusterIdx);
             const ofbx::Object* link = cluster->getLink();
-            info.linkName =
-                link ? std::string(link->name)
-                     : fmt::format("cluster_link_{}", clusterIdx);
+            info.linkName = link ? std::string(link->name)
+                                 : fmt::format("cluster_link_{}", clusterIdx);
             info.indexCount = cluster->getIndicesCount();
             info.weightCount = cluster->getWeightsCount();
 
@@ -1185,5 +1229,7 @@ FBXLoader::loadSkinClusterInfos(const std::string& fbxPath, float scale) {
     return result;
 }
 
-} // namespace Animation
+} // namespace FBXDebug
+
+} // namespace Asset
 } // namespace KE
