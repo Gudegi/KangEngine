@@ -1,14 +1,63 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "mesh_loader.hpp"
+#include <array>
 #include <cstdint>
 #include <cstring>
 #include <fstream>
 #include <sstream>
+#include <unordered_map>
 
 namespace KE {
 namespace Asset {
 
 namespace {
+
+uint32_t floatBits(float value) {
+    uint32_t bits = 0;
+    std::memcpy(&bits, &value, sizeof(float));
+    return bits;
+}
+
+struct MeshVertexKey {
+    std::array<uint32_t, 3> position{};
+    std::array<uint32_t, 3> normal{};
+    std::array<uint32_t, 2> uv{};
+
+    bool operator==(const MeshVertexKey& other) const {
+        return position == other.position && normal == other.normal &&
+               uv == other.uv;
+    }
+};
+
+struct MeshVertexKeyHash {
+    size_t operator()(const MeshVertexKey& key) const {
+        // FNV-1a style hash combine over the raw float bits. This is used only
+        // to find identical expanded mesh corners quickly during deduplication.
+        size_t h = 1469598103934665603ull;
+        auto mix = [&](uint64_t v) {
+            h ^= static_cast<size_t>(v);
+            h *= 1099511628211ull;
+        };
+        for (uint32_t v : key.position)
+            mix(v);
+        for (uint32_t v : key.normal)
+            mix(v);
+        for (uint32_t v : key.uv)
+            mix(v);
+        return h;
+    }
+};
+
+MeshVertexKey makeMeshVertexKey(const glm::vec3& position,
+                                const glm::vec3& normal, const glm::vec2& uv) {
+    MeshVertexKey key;
+    key.position = {floatBits(position.x), floatBits(position.y),
+                    floatBits(position.z)};
+    key.normal = {floatBits(normal.x), floatBits(normal.y),
+                  floatBits(normal.z)};
+    key.uv = {floatBits(uv.x), floatBits(uv.y)};
+    return key;
+}
 
 bool isBinaryStl(const std::string& path) {
     std::ifstream file(path, std::ios::binary);
@@ -98,7 +147,8 @@ Scene::MeshData loadBinaryStl(const std::string& path) {
     meshData.normals = std::move(normals);
     meshData.uvs = std::move(uvs);
     meshData.indices = std::move(indices);
-    return meshData;
+    meshData.fillMissingAttributes();
+    return deduplicateMeshData(meshData);
 }
 
 Scene::MeshData loadAsciiStl(const std::string& path) {
@@ -143,10 +193,47 @@ Scene::MeshData loadAsciiStl(const std::string& path) {
     meshData.normals = std::move(normals);
     meshData.uvs = std::move(uvs);
     meshData.indices = std::move(indices);
-    return meshData;
+    meshData.fillMissingAttributes();
+    return deduplicateMeshData(meshData);
 }
 
 } // anonymous namespace
+
+Scene::MeshData deduplicateMeshData(const Scene::MeshData& src) {
+    if (src.vertices.empty() || src.indices.empty())
+        return src;
+    if (src.normals.size() != src.vertices.size() ||
+        src.uvs.size() != src.vertices.size())
+        return src;
+
+    Scene::MeshData dst;
+    dst.vertices.reserve(src.vertices.size());
+    dst.normals.reserve(src.normals.size());
+    dst.uvs.reserve(src.uvs.size());
+    dst.indices.reserve(src.indices.size());
+
+    std::unordered_map<MeshVertexKey, unsigned int, MeshVertexKeyHash> seen;
+    seen.reserve(src.vertices.size());
+
+    for (unsigned int srcIndex : src.indices) {
+        if (srcIndex >= src.vertices.size())
+            return src;
+
+        const MeshVertexKey key = makeMeshVertexKey(
+            src.vertices[srcIndex], src.normals[srcIndex], src.uvs[srcIndex]);
+
+        auto [it, inserted] =
+            seen.emplace(key, static_cast<unsigned int>(dst.vertices.size()));
+        if (inserted) {
+            dst.vertices.push_back(src.vertices[srcIndex]);
+            dst.normals.push_back(src.normals[srcIndex]);
+            dst.uvs.push_back(src.uvs[srcIndex]);
+        }
+        dst.indices.push_back(it->second);
+    }
+
+    return dst;
+}
 
 Scene::MeshData loadStl(const std::string& path) {
     if (isBinaryStl(path)) {
@@ -155,8 +242,8 @@ Scene::MeshData loadStl(const std::string& path) {
     return loadAsciiStl(path);
 }
 
-Scene::MeshData loadObj(
-    std::string path, std::optional<tinyobj::ObjReaderConfig> render_config) {
+Scene::MeshData loadObj(std::string path,
+                        std::optional<tinyobj::ObjReaderConfig> render_config) {
 
     tinyobj::ObjReader reader;
     tinyobj::ObjReaderConfig config;
@@ -255,7 +342,8 @@ Scene::MeshData loadObj(
     meshData.uvs = uvs;
     meshData.indices = indices;
 
-    return meshData;
+    meshData.fillMissingAttributes();
+    return deduplicateMeshData(meshData);
 }
 
 } // namespace Asset

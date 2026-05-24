@@ -10,11 +10,44 @@
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usdGeom/cube.h>
 #include <pxr/usd/usdGeom/mesh.h>
+#include <pxr/usd/usdGeom/primvarsAPI.h>
 #include <pxr/usd/usdGeom/sphere.h>
 #include <pxr/usd/usdGeom/xform.h>
+#include <pxr/usd/usdGeom/xformCache.h>
 
 namespace KE {
 namespace Scene {
+namespace {
+
+glm::vec3 transformPoint(const pxr::GfMatrix4d& matrix,
+                         const pxr::GfVec3f& point) {
+    const pxr::GfVec3d world =
+        matrix.Transform(pxr::GfVec3d(point[0], point[1], point[2]));
+    return glm::vec3(world[0], world[1], world[2]);
+}
+
+glm::vec3 transformNormal(const pxr::GfMatrix4d& matrix,
+                          const pxr::GfVec3f& normal) {
+    const pxr::GfVec3d world =
+        matrix.TransformDir(pxr::GfVec3d(normal[0], normal[1], normal[2]));
+    const glm::vec3 out(world[0], world[1], world[2]);
+    const float len = glm::length(out);
+    return len > 1e-8f ? out / len : glm::vec3(0.0f, 1.0f, 0.0f);
+}
+
+bool readIndexedValueIndex(const pxr::VtArray<int>& indices, size_t srcIndex,
+                           size_t valueCount, size_t& outIndex) {
+    if (!indices.empty()) {
+        if (srcIndex >= indices.size() || indices[srcIndex] < 0)
+            return false;
+        outIndex = static_cast<size_t>(indices[srcIndex]);
+    } else {
+        outIndex = srcIndex;
+    }
+    return outIndex < valueCount;
+}
+
+} // namespace
 
 USDScene::USDScene() {
     // Create in-memory stage by default
@@ -27,7 +60,6 @@ bool USDScene::loadScene(const std::string& path) {
         std::cerr << "Failed to open USD stage: " << path << std::endl;
         return false;
     }
-    std::cout << "Loaded USD stage: " << path << std::endl;
     return true;
 }
 
@@ -59,33 +91,134 @@ MeshData USDScene::loadMesh(const std::string& primPath) {
         return meshData;
     }
 
-    // Points (vertices)
+    pxr::VtArray<int> faceVertexCounts;
+    mesh.GetFaceVertexCountsAttr().Get(&faceVertexCounts);
+
+    pxr::UsdGeomXformCache xformCache(pxr::UsdTimeCode::Default());
+    const pxr::GfMatrix4d localToWorld =
+        xformCache.GetLocalToWorldTransform(prim);
+    const pxr::GfMatrix4d normalToWorld =
+        localToWorld.GetInverse().GetTranspose();
+
     pxr::VtArray<pxr::GfVec3f> points;
     mesh.GetPointsAttr().Get(&points);
-    meshData.vertices.reserve(points.size());
-    for (const auto& p : points) {
-        meshData.vertices.push_back(glm::vec3(p[0], p[1], p[2]));
-    }
 
-    // Normals
     pxr::VtArray<pxr::GfVec3f> normals;
     mesh.GetNormalsAttr().Get(&normals);
-    meshData.normals.reserve(normals.size());
-    for (const auto& n : normals) {
-        meshData.normals.push_back(glm::vec3(n[0], n[1], n[2]));
+    const pxr::TfToken normalInterpolation = mesh.GetNormalsInterpolation();
+
+    pxr::VtArray<pxr::GfVec2f> uvs;
+    pxr::VtArray<int> uvIndices;
+    pxr::TfToken uvInterpolation;
+    pxr::UsdGeomPrimvar st =
+        pxr::UsdGeomPrimvarsAPI(prim).GetPrimvar(pxr::TfToken("st"));
+    if (st) {
+        st.Get(&uvs);
+        st.GetIndices(&uvIndices);
+        uvInterpolation = st.GetInterpolation();
     }
 
-    // Indices
     pxr::VtArray<int> faceVertexIndices;
     mesh.GetFaceVertexIndicesAttr().Get(&faceVertexIndices);
-    meshData.indices.reserve(faceVertexIndices.size());
-    for (const auto& idx : faceVertexIndices) {
-        meshData.indices.push_back(static_cast<unsigned int>(idx));
+
+    size_t triangulatedIndexCount = 0;
+    for (const int count : faceVertexCounts) {
+        if (count < 3) {
+            std::cerr << "USDScene::loadMesh skipping degenerate face in "
+                      << primPath << " with " << count << " vertices"
+                      << std::endl;
+            continue;
+        }
+        triangulatedIndexCount += static_cast<size_t>(count - 2) * 3;
+    }
+    meshData.vertices.reserve(triangulatedIndexCount);
+    meshData.indices.reserve(triangulatedIndexCount);
+    if (!normals.empty())
+        meshData.normals.reserve(triangulatedIndexCount);
+    if (!uvs.empty())
+        meshData.uvs.reserve(triangulatedIndexCount);
+
+    const bool normalsFaceVarying =
+        normalInterpolation == pxr::TfToken("faceVarying") &&
+        normals.size() == faceVertexIndices.size();
+    const bool normalsVertex =
+        !normals.empty() && normals.size() == points.size();
+    const bool useNormals = normalsFaceVarying || normalsVertex;
+
+    const bool uvFaceVarying =
+        uvInterpolation == pxr::TfToken("faceVarying") ||
+        uvs.size() == faceVertexIndices.size() ||
+        (!uvIndices.empty() && uvIndices.size() == faceVertexIndices.size());
+    const bool uvVertex = !uvs.empty() && uvs.size() == points.size();
+    const bool useUvs = !uvs.empty();
+
+    auto emitCorner = [&](size_t cornerOffset) -> bool {
+        if (cornerOffset >= faceVertexIndices.size() ||
+            faceVertexIndices[cornerOffset] < 0)
+            return false;
+        const size_t pointIndex =
+            static_cast<size_t>(faceVertexIndices[cornerOffset]);
+        if (pointIndex >= points.size())
+            return false;
+
+        meshData.vertices.push_back(
+            transformPoint(localToWorld, points[pointIndex]));
+
+        if (useNormals) {
+            const size_t normalIndex =
+                normalsFaceVarying ? cornerOffset : pointIndex;
+            meshData.normals.push_back(
+                transformNormal(normalToWorld, normals[normalIndex]));
+        }
+
+        if (useUvs) {
+            glm::vec2 uv(0.0f);
+            size_t uvIndex = 0;
+            if (uvFaceVarying && readIndexedValueIndex(uvIndices, cornerOffset,
+                                                       uvs.size(), uvIndex)) {
+                uv = glm::vec2(uvs[uvIndex][0], uvs[uvIndex][1]);
+            } else if (uvVertex && pointIndex < uvs.size()) {
+                uv = glm::vec2(uvs[pointIndex][0], uvs[pointIndex][1]);
+            } else if (uvs.size() == 1) {
+                uv = glm::vec2(uvs[0][0], uvs[0][1]);
+            }
+            meshData.uvs.push_back(uv);
+        }
+        return true;
+    };
+
+    size_t offset = 0;
+    for (const int count : faceVertexCounts) {
+        if (count < 3) {
+            offset += static_cast<size_t>(std::max(0, count));
+            continue;
+        }
+        if (offset + static_cast<size_t>(count) > faceVertexIndices.size()) {
+            std::cerr << "USDScene::loadMesh face index data ended early for "
+                      << primPath << std::endl;
+            meshData.indices.clear();
+            return meshData;
+        }
+
+        for (int i = 1; i + 1 < count; ++i) {
+            const unsigned int base =
+                static_cast<unsigned int>(meshData.vertices.size());
+            if (!emitCorner(offset) ||
+                !emitCorner(offset + static_cast<size_t>(i)) ||
+                !emitCorner(offset + static_cast<size_t>(i + 1))) {
+                std::cerr << "USDScene::loadMesh found invalid face index for "
+                          << primPath << std::endl;
+                meshData = MeshData();
+                return meshData;
+            }
+            meshData.indices.push_back(base);
+            meshData.indices.push_back(base + 1);
+            meshData.indices.push_back(base + 2);
+        }
+        offset += static_cast<size_t>(count);
     }
 
-    std::cout << "Loaded mesh: " << primPath
-              << " (vertices: " << meshData.vertices.size()
-              << ", indices: " << meshData.indices.size() << ")" << std::endl;
+    meshData.fillMissingAttributes();
 
     return meshData;
 }
@@ -117,7 +250,6 @@ void USDScene::createNew() {
         pxr::UsdGeomXform root =
             pxr::UsdGeomXform::Define(_stage, pxr::SdfPath("/Root"));
         _stage->SetDefaultPrim(root.GetPrim());
-        std::cout << "Created new USD stage with /Root" << std::endl;
     }
 }
 

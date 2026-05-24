@@ -61,6 +61,7 @@ if(USE_USD)
     target_link_libraries(pre_compiled_ext INTERFACE
         usd
         usdGeom
+        usdShade
         sdf
         tf
     )

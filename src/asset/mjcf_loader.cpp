@@ -537,6 +537,7 @@ MJCFImportResult MJCFLoader::parse(const std::string& mjcfPath, float scale,
     MJCFImportResult result;
     result.character = std::move(loader._data);
     result.diagnostics = std::move(loader._diagnostics);
+    result.diagnostics.printWarnings("MJCFLoader " + mjcfPath);
     return result;
 }
 

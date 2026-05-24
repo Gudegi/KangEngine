@@ -12,6 +12,7 @@
 #include "animation/character_description.hpp"
 #include "asset/fbx_loader.hpp"
 #include "asset/mjcf_loader.hpp"
+#include "asset/usd_loader.hpp"
 #include "animation/skeleton_math.hpp"
 #include "animation/skeleton_motion.hpp"
 #include "animation/skeleton_state.hpp"
@@ -734,6 +735,52 @@ void bind_animation(py::module& m) {
     fbxDebug.def("load_skin_cluster_infos",
                  &FBXDebug::loadSkinClusterInfos, py::arg("fbx_path"),
                  py::arg("scale") = 0.01f);
+
+    py::class_<USDMeshInfo, std::shared_ptr<USDMeshInfo>>(asset, "USDMeshInfo")
+        .def_readonly("prim_path", &USDMeshInfo::primPath)
+        .def_readonly("name", &USDMeshInfo::name)
+        .def_readonly("material_path", &USDMeshInfo::materialPath)
+        .def_readonly("diffuse_texture_path",
+                      &USDMeshInfo::diffuseTexturePath)
+        .def_property_readonly("mesh_data",
+                               [](std::shared_ptr<USDMeshInfo> self) {
+                                   return std::shared_ptr<KE::Scene::MeshData>(
+                                       self, &self->meshData);
+                               })
+        .def_property_readonly("vertex_count",
+                               [](const USDMeshInfo& self) {
+                                   return self.meshData.vertices.size();
+                               })
+        .def_property_readonly("index_count", [](const USDMeshInfo& self) {
+            return self.meshData.indices.size();
+        });
+
+    py::class_<USDImportResult>(asset, "USDImportResult")
+        .def_property_readonly("meshes",
+                               [](const USDImportResult& self) {
+                                   py::list result;
+                                   for (const auto& mesh : self.meshes) {
+                                       result.append(
+                                           std::make_shared<USDMeshInfo>(mesh));
+                                   }
+                                   return result;
+                               })
+        .def_readonly("diagnostics", &USDImportResult::diagnostics);
+
+    py::class_<USDLoader>(asset, "USDLoader")
+        .def_static("parse", &USDLoader::parse, py::arg("usd_path"),
+                    py::arg("scale") = 1.0f)
+        .def_static(
+            "load_meshes",
+            [](const std::string& usdPath, float scale) {
+                py::list result;
+                for (auto& mesh : USDLoader::loadMeshes(usdPath, scale)) {
+                    result.append(
+                        std::make_shared<USDMeshInfo>(std::move(mesh)));
+                }
+                return result;
+            },
+            py::arg("usd_path"), py::arg("scale") = 1.0f);
 
     // SkeletonTree (read-only after construction)
     py::class_<SkeletonTree, std::shared_ptr<SkeletonTree>>(anim,

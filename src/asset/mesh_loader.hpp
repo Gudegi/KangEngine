@@ -21,6 +21,10 @@ loadObj(std::string inputFile,
 /// @return MeshData with vertices, normals, and indices (UVs are empty)
 Scene::MeshData loadStl(const std::string& path);
 
+/// Rebuild indices by sharing vertices with identical position/normal/uv.
+/// Useful after loaders expand face corners for face-varying attributes.
+Scene::MeshData deduplicateMeshData(const Scene::MeshData& meshData);
+
 } // namespace Asset
 } // namespace KE
 

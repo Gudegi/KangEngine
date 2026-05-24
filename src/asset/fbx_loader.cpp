@@ -1101,6 +1101,7 @@ FBXImportResult FBXLoader::parse(const std::string& fbxPath, int clipIndex,
         loadMotionFromScene(fbxPath, *scene, clipIndex, fps, scale);
     result.character.skinnedMeshes =
         loadSkinnedMeshesFromScene(fbxPath, *scene, scale);
+    result.diagnostics.printWarnings("FBXLoader " + fbxPath);
     return result;
 }
 
@@ -1135,6 +1136,7 @@ FBXImportResult FBXLoader::parseWithBind(const std::string& motionFbxPath,
     bakeBindMeshTransforms(result.character.skinnedMeshes);
     remapSkinnedMeshesToMotionByName(result.character.skinnedMeshes,
                                      result.character.motion);
+    result.diagnostics.printWarnings("FBXLoader " + motionFbxPath);
     return result;
 }
 
