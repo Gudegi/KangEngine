@@ -5,6 +5,7 @@
 #include "engine/graphics/material/material.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "engine/scene/native/prim.hpp"
+#include "geometry/bounds.hpp"
 #include <glm/glm.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
@@ -58,6 +59,14 @@ class MeshInstancer {
     bool _doubleSided = false;
     bool _castsShadow = true;
     bool _hasSkinning = false;
+    Geometry::AABB _localBounds;
+    Geometry::Sphere _localSphere;
+    Geometry::AABB _combinedWorldBounds;
+    std::vector<Geometry::AABB> _worldBounds;
+    std::vector<glm::mat4> _transforms;
+    std::vector<glm::vec4> _colors;
+    std::vector<glm::mat4> _culledTransforms;
+    std::vector<glm::vec4> _culledColors;
     std::vector<std::pair<Backend::Texture*, int>> _textures;
     std::vector<glm::mat4> _boneMatrices;
 
@@ -66,7 +75,14 @@ class MeshInstancer {
     void _initMeshData(const Scene::MeshData& mesh);
     void _setupSkinningAttribs(const Scene::SkinnedMeshData& skinnedMesh);
     void _setupInstanceAttribs();
+    // Recreate instance VBOs when transform/color capacity grows.
     void _reallocate(int newMax);
+    // Cache per-instance world AABBs used by frustum culling/debug stats.
+    void _updateWorldBounds(const std::vector<glm::mat4>& transforms);
+    // Upload the currently drawable instance transform/color buffer to GPU.
+    void _uploadInstanceData(const std::vector<glm::mat4>& transforms,
+                             const std::vector<glm::vec4>& colors);
+    void _updateTransparency();
 
   public:
     MeshInstancer() = default;
@@ -103,8 +119,11 @@ class MeshInstancer {
     // body). Vertex count must match the mesh passed to init().
     void updateGeometry(const std::vector<glm::vec3>& positions,
                         const std::vector<glm::vec3>& normals);
+    // Store bone matrices; render passes upload them to their active shader.
     void updateSkinningMatrices(const std::vector<glm::mat4>& boneMatrices);
     void uploadSkinningMatrices(Backend::Shader* shader = nullptr);
+    // Compact instance buffers to objects intersecting the current frustum.
+    void applyFrustumCulling(const Geometry::Frustum* frustum);
 
     void render();
 
@@ -114,6 +133,14 @@ class MeshInstancer {
     void setCastsShadow(bool v) { _castsShadow = v; }
     bool castsShadow() const { return _castsShadow; }
     bool hasSkinning() const { return _hasSkinning; }
+    const Geometry::AABB& localBounds() const { return _localBounds; }
+    const Geometry::Sphere& localSphere() const { return _localSphere; }
+    const Geometry::AABB& combinedWorldBounds() const {
+        return _combinedWorldBounds;
+    }
+    const std::vector<Geometry::AABB>& worldBounds() const {
+        return _worldBounds;
+    }
 
     void setTexture(Backend::Texture* tex, int slot = 0) {
         for (auto& [t, s] : _textures) {
@@ -129,6 +156,7 @@ class MeshInstancer {
     Backend::Shader* shader() const { return _shader; }
     PhongMaterial* material() const { return _material; }
     bool hasTransparent() const { return _hasTransparent; }
+    int instanceCount() const { return static_cast<int>(_transforms.size()); }
     int visibleCount() const { return _visibleCount; }
 };
 

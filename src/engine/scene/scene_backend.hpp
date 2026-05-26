@@ -15,6 +15,7 @@
 #include <glm/mat4x4.hpp>
 #include <glm/vec4.hpp>
 #include "engine/graphics/backend/graphics_factory.hpp"
+#include "geometry/bounds.hpp"
 
 namespace KE {
 namespace Scene {
@@ -57,6 +58,14 @@ struct MeshData {
         if (uvs.empty() && !vertices.empty()) {
             uvs.assign(vertices.size(), glm::vec2(0.0f));
         }
+    }
+
+    Geometry::AABB computeLocalAABB() const {
+        return Geometry::computeAABB(vertices);
+    }
+
+    Geometry::Sphere computeLocalSphere() const {
+        return Geometry::computeBoundingSphere(computeLocalAABB());
     }
 };
 

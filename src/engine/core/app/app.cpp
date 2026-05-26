@@ -203,7 +203,8 @@ bool App::shouldClose() {
 
 void App::renderSceneToFramebuffer(Camera& camera, Backend::Framebuffer* target,
                                    int width, int height, bool clear) {
-    if (!_rasterizer || !_graphicsDevice || !target || width <= 0 || height <= 0)
+    if (!_rasterizer || !_graphicsDevice || !target || width <= 0 ||
+        height <= 0)
         return;
 
     const glm::mat4 view = camera.getViewMatrix();
@@ -374,6 +375,21 @@ void App::coreRender() {
             int pcfSamples = _rasterizer->getShadowPcfSamples();
             if (ImGui::SliderInt("Shadow PCF Samples", &pcfSamples, 1, 16)) {
                 _rasterizer->setShadowPcfSamples(pcfSamples);
+            }
+
+            bool frustumCulling = _rasterizer->isFrustumCullingEnabled();
+            if (ImGui::Checkbox("Frustum Culling", &frustumCulling)) {
+                _rasterizer->setFrustumCullingEnabled(frustumCulling);
+            }
+            if (frustumCulling) {
+                // Batch = one instancer/draw group. Instance = one transform
+                // inside that batch, culled by its world AABB.
+                ImGui::Text("Culled Batches %d / %d",
+                            _rasterizer->getCullingCulledBatches(),
+                            _rasterizer->getCullingTotalBatches());
+                ImGui::Text("Culled Instances %d / %d",
+                            _rasterizer->getCullingCulledInstances(),
+                            _rasterizer->getCullingTotalInstances());
             }
 
             auto* shadowFbo =
@@ -782,6 +798,21 @@ void App::logDebugLines(const std::string& path,
                         bool hidden) {
     if (_rasterizer)
         _rasterizer->logDebugLines(path, starts, ends, colors, width, hidden);
+}
+
+void App::logDebugAxes(const std::string& path, const glm::mat4& transform,
+                       float length, float width, bool hidden) {
+    if (_rasterizer)
+        _rasterizer->logDebugAxes(path, transform, length, width, hidden);
+}
+
+void App::logDebugAxes(const std::string& path, const glm::vec3& origin,
+                       const glm::vec3& xAxis, const glm::vec3& yAxis,
+                       const glm::vec3& zAxis, float length, float width,
+                       bool hidden) {
+    if (_rasterizer)
+        _rasterizer->logDebugAxes(path, origin, xAxis, yAxis, zAxis, length,
+                                  width, hidden);
 }
 
 void App::clearDebugLines(const std::string& path) {

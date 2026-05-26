@@ -563,7 +563,7 @@ void OpenGLDevice::setPolygonMode(PolygonMode mode) {
 }
 
 void OpenGLDevice::setLineWidth(float width) {
-    glLineWidth(std::max(5.0f, width));
+    glLineWidth(std::max(1.0f, width));
 }
 
 void OpenGLDevice::setCullFace(bool enable) {

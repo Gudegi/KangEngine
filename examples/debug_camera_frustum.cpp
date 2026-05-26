@@ -1,8 +1,12 @@
 #include "kangEngine.hpp"
 #include "engine/graphics/renderer/post_processor.hpp"
+#include "geometry/bounds.hpp"
 
 #include <GLFW/glfw3.h>
+#include <glm/ext/quaternion_trigonometric.hpp>
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/trigonometric.hpp>
 #include <imgui.h>
 
 #include <cmath>
@@ -25,6 +29,12 @@ struct FrustumPoints {
     std::vector<glm::vec4> colors;
 };
 
+struct DebugBoundsObject {
+    Geometry::AABB localBounds;
+    glm::mat4 transform = glm::mat4(1.0f);
+    glm::vec4 color = glm::vec4(1.0f);
+};
+
 void addLine(FrustumLines& lines, const glm::vec3& a, const glm::vec3& b,
              const glm::vec4& color) {
     lines.starts.push_back(a);
@@ -32,19 +42,44 @@ void addLine(FrustumLines& lines, const glm::vec3& a, const glm::vec3& b,
     lines.colors.push_back(color);
 }
 
+glm::mat4 composeTransform(const glm::vec3& position,
+                           const glm::quat& orientation,
+                           const glm::vec3& scale = glm::vec3(1.0f)) {
+    return glm::translate(glm::mat4(1.0f), position) *
+           glm::mat4_cast(orientation) * glm::scale(glm::mat4(1.0f), scale);
+}
+
+void addAABBLines(FrustumLines& lines, const Geometry::AABB& box,
+                  const glm::vec4& color) {
+    if (!box.isValid())
+        return;
+
+    const glm::vec3 mn = box.min;
+    const glm::vec3 mx = box.max;
+    const glm::vec3 corners[] = {
+        {mn.x, mn.y, mn.z}, {mx.x, mn.y, mn.z}, {mx.x, mx.y, mn.z},
+        {mn.x, mx.y, mn.z}, {mn.x, mn.y, mx.z}, {mx.x, mn.y, mx.z},
+        {mx.x, mx.y, mx.z}, {mn.x, mx.y, mx.z},
+    };
+
+    const int edges[][2] = {
+        {0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6},
+        {6, 7}, {7, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7},
+    };
+    for (const auto& edge : edges)
+        addLine(lines, corners[edge[0]], corners[edge[1]], color);
+}
+
 FrustumLines buildFrustumLines(Camera& camera) {
     FrustumLines lines;
-    lines.starts.reserve(15);
-    lines.ends.reserve(15);
-    lines.colors.reserve(15);
+    lines.starts.reserve(12);
+    lines.ends.reserve(12);
+    lines.colors.reserve(12);
 
     const WorldFrustumPos f = camera.getFrustumPos();
     const glm::vec4 nearColor(0.2f, 0.95f, 1.0f, 1.0f);
     const glm::vec4 farColor(1.0f, 0.68f, 0.15f, 1.0f);
     const glm::vec4 sideColor(0.95f, 0.95f, 0.2f, 1.0f);
-    const glm::vec4 forwardColor(1.0f, 0.25f, 0.25f, 1.0f);
-    const glm::vec4 upColor(0.25f, 1.0f, 0.35f, 1.0f);
-    const glm::vec4 rightColor(0.35f, 0.45f, 1.0f, 1.0f);
 
     addLine(lines, f.nearLB, f.nearLT, nearColor);
     addLine(lines, f.nearLT, f.nearRT, nearColor);
@@ -61,13 +96,6 @@ FrustumLines buildFrustumLines(Camera& camera) {
     addLine(lines, f.nearRT, f.farRT, sideColor);
     addLine(lines, f.nearRB, f.farRB, sideColor);
 
-    const glm::vec3 pos = camera.getCameraPos();
-    const float axisLen = 0.6f;
-    addLine(lines, pos, pos + camera.getCameraLookDir() * axisLen * 1.35f,
-            forwardColor);
-    addLine(lines, pos, pos + camera.getCameraUpDir() * axisLen, upColor);
-    addLine(lines, pos, pos + camera.getCameraRightDir() * axisLen, rightColor);
-
     return lines;
 }
 
@@ -83,6 +111,47 @@ FrustumPoints buildFrustumPoints(Camera& camera) {
     };
 }
 
+FrustumLines buildAABBLines(const std::vector<DebugBoundsObject>& objects) {
+    FrustumLines lines;
+    lines.starts.reserve(objects.size() * 12);
+    lines.ends.reserve(objects.size() * 12);
+    lines.colors.reserve(objects.size() * 12);
+
+    for (const DebugBoundsObject& object : objects) {
+        const Geometry::AABB world =
+            Geometry::transformAABB(object.localBounds, object.transform);
+        addAABBLines(lines, world, object.color);
+    }
+    return lines;
+}
+
+FrustumLines
+buildClassifiedAABBLines(const std::vector<DebugBoundsObject>& objects,
+                         const Geometry::Frustum& frustum, int& visibleCount,
+                         int& culledCount) {
+    FrustumLines lines;
+    lines.starts.reserve(objects.size() * 12);
+    lines.ends.reserve(objects.size() * 12);
+    lines.colors.reserve(objects.size() * 12);
+
+    visibleCount = 0;
+    culledCount = 0;
+    const glm::vec4 visibleColor(0.25f, 1.0f, 0.35f, 1.0f);
+    const glm::vec4 culledColor(1.0f, 0.18f, 0.12f, 1.0f);
+
+    for (const DebugBoundsObject& object : objects) {
+        const Geometry::AABB world =
+            Geometry::transformAABB(object.localBounds, object.transform);
+        const bool visible = Geometry::intersects(frustum, world);
+        if (visible)
+            ++visibleCount;
+        else
+            ++culledCount;
+        addAABBLines(lines, world, visible ? visibleColor : culledColor);
+    }
+    return lines;
+}
+
 } // namespace
 
 class CameraFrustumDebugApp : public App {
@@ -94,9 +163,17 @@ class CameraFrustumDebugApp : public App {
 
     Camera subjectCamera;
     MeshHandle subjectBodyHandle = InvalidHandle;
+    std::vector<DebugBoundsObject> debugBoundsObjects;
 
     bool animateSubject = true;
     bool showSubjectBody = true;
+    bool showSceneAABB = true;
+    int aabbClassifyMode =
+        1; // 0: object original color, 1: subject, 2: observer
+    int subjectVisibleAABB = 0;
+    int subjectCulledAABB = 0;
+    int observerVisibleAABB = 0;
+    int observerCulledAABB = 0;
     float subjectTime = 0.0f;
     float subjectFov = 45.0f;
     float subjectNear = 0.1f;
@@ -172,6 +249,21 @@ class CameraFrustumDebugApp : public App {
         ImGui::Separator();
         ImGui::Checkbox("Animate subject camera", &animateSubject);
         ImGui::Checkbox("Show subject body", &showSubjectBody);
+        ImGui::Checkbox("Show scene AABB", &showSceneAABB);
+        ImGui::Text("AABB color mode");
+        ImGui::RadioButton("Original", &aabbClassifyMode, 0);
+        ImGui::SameLine();
+        ImGui::RadioButton("Subject", &aabbClassifyMode, 1);
+        ImGui::SameLine();
+        ImGui::RadioButton("Observer", &aabbClassifyMode, 2);
+        if (showSceneAABB && aabbClassifyMode == 1) {
+            ImGui::Text("Subject visible AABB %d / %d", subjectVisibleAABB,
+                        subjectVisibleAABB + subjectCulledAABB);
+        }
+        if (showSceneAABB && aabbClassifyMode == 2) {
+            ImGui::Text("Observer visible AABB %d / %d", observerVisibleAABB,
+                        observerVisibleAABB + observerCulledAABB);
+        }
         ImGui::SliderFloat("Subject FOV", &subjectFov, 15.0f, 90.0f);
         ImGui::SliderFloat("Subject near", &subjectNear, 0.01f, 2.0f);
         ImGui::SliderFloat("Subject far", &subjectFar, 0.5f, 400.0f);
@@ -195,17 +287,66 @@ class CameraFrustumDebugApp : public App {
     }
 
   private:
+    void addBoundsObject(const Scene::MeshData& meshData,
+                         const glm::vec3& position,
+                         const glm::quat& orientation, const glm::vec4& color) {
+        debugBoundsObjects.push_back({meshData.computeLocalAABB(),
+                                      composeTransform(position, orientation),
+                                      color});
+    }
+
     void addSceneObjects() {
-        addCube("/debug/box_left", 0.65f, glm::vec3(-2.2f, 0.33f, -1.2f),
-                glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-                glm::vec4(0.95f, 0.34f, 0.25f, 1.0f), shader.get());
-        addCube("/debug/box_right", 0.55f, glm::vec3(2.0f, 0.28f, 1.25f),
-                glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-                glm::vec4(0.25f, 0.55f, 0.95f, 1.0f), shader.get());
-        addSphere("/debug/sphere_center", 0.45f, glm::vec3(0.0f, 0.45f, 0.0f),
-                  glm::vec4(0.95f, 0.82f, 0.25f, 1.0f), shader.get());
-        addSphere("/debug/sphere_far", 0.35f, glm::vec3(0.9f, 0.35f, -3.5f),
-                  glm::vec4(0.45f, 0.95f, 0.55f, 1.0f), shader.get());
+        auto addCubeWithBounds =
+            [&](const std::string& path, float size, const glm::vec3& position,
+                const glm::quat& orientation, const glm::vec4& color) {
+                Scene::MeshData mesh = Scene::Prim::createCubeData(size);
+                MeshPrimDesc desc;
+                desc.shader = shader.get();
+                desc.path = path;
+                desc.meshData = mesh;
+                desc.position = position;
+                desc.orientation = orientation;
+                desc.color = color;
+                addMeshPrim(std::move(desc));
+                addBoundsObject(mesh, position, orientation,
+                                glm::vec4(color.r, color.g, color.b, 1.0f));
+            };
+
+        auto addSphereWithBounds = [&](const std::string& path, float radius,
+                                       const glm::vec3& position,
+                                       const glm::quat& orientation,
+                                       const glm::vec4& color) {
+            Scene::MeshData mesh =
+                Scene::Prim::createSphereData(radius, 32, 16);
+            MeshPrimDesc desc;
+            desc.shader = shader.get();
+            desc.path = path;
+            desc.meshData = mesh;
+            desc.position = position;
+            desc.orientation = orientation;
+            desc.color = color;
+            addMeshPrim(std::move(desc));
+            addBoundsObject(mesh, position, orientation,
+                            glm::vec4(color.r, color.g, color.b, 1.0f));
+        };
+
+        addCubeWithBounds(
+            "/debug/box_left", 0.65f, glm::vec3(-2.2f, 0.33f, -1.2f),
+            glm::angleAxis(glm::radians(30.0f), glm::vec3(1.f, 0.f, 0.f)),
+            glm::vec4(0.95f, 0.34f, 0.25f, 1.0f));
+        addCubeWithBounds(
+            "/debug/box_right", 0.55f, glm::vec3(2.0f, 0.28f, 1.25f),
+            glm::angleAxis(glm::radians(45.0f),
+                           glm::normalize(glm::vec3(1.f, 1.f, 0.f))),
+            glm::vec4(0.25f, 0.55f, 0.95f, 1.0f));
+        addSphereWithBounds(
+            "/debug/sphere_center", 0.45f, glm::vec3(0.0f, 0.45f, 0.0f),
+            glm::angleAxis(glm::radians(15.0f), glm::vec3(1.f, 0.f, 0.f)),
+            glm::vec4(0.95f, 0.82f, 0.25f, 1.0f));
+        addSphereWithBounds("/debug/sphere_far", 0.35f,
+                            glm::vec3(0.9f, 0.35f, -3.5f),
+                            glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+                            glm::vec4(0.45f, 0.95f, 0.55f, 1.0f));
     }
 
     void initializeSubjectCamera() {
@@ -251,9 +392,41 @@ class CameraFrustumDebugApp : public App {
         const FrustumLines lines = buildFrustumLines(subjectCamera);
         logDebugLines("/debug/subject_camera_frustum", lines.starts, lines.ends,
                       lines.colors, 2.0f);
+        glm::mat4 cameraAxes(1.0f);
+        cameraAxes[0] = glm::vec4(subjectCamera.getCameraRightDir(), 0.0f);
+        cameraAxes[1] = glm::vec4(subjectCamera.getCameraUpDir(), 0.0f);
+        cameraAxes[2] = glm::vec4(subjectCamera.getCameraLookDir(), 0.0f);
+        cameraAxes[3] = glm::vec4(subjectCamera.getCameraPos(), 1.0f);
+        logDebugAxes("/debug/subject_camera_axes", cameraAxes, 0.6f, 2.0f);
         const FrustumPoints points = buildFrustumPoints(subjectCamera);
-        logDebugPoints("/debug/subject_camera_frustum_corners", points.positions,
-                       points.colors, 9.0f);
+        logDebugPoints("/debug/subject_camera_frustum_corners",
+                       points.positions, points.colors, 9.0f);
+
+        int visibleAABB = 0;
+        int culledAABB = 0;
+        const Geometry::Frustum subjectFrustum =
+            Geometry::Frustum::fromViewProjection(
+                subjectCamera.getProjMatrix() * subjectCamera.getViewMatrix());
+        const Geometry::Frustum observerFrustum =
+            Geometry::Frustum::fromViewProjection(getProjectionMatrix() *
+                                                  getViewMatrix());
+
+        FrustumLines aabbLines;
+        if (aabbClassifyMode == 1) {
+            aabbLines = buildClassifiedAABBLines(
+                debugBoundsObjects, subjectFrustum, visibleAABB, culledAABB);
+            subjectVisibleAABB = visibleAABB;
+            subjectCulledAABB = culledAABB;
+        } else if (aabbClassifyMode == 2) {
+            aabbLines = buildClassifiedAABBLines(
+                debugBoundsObjects, observerFrustum, visibleAABB, culledAABB);
+            observerVisibleAABB = visibleAABB;
+            observerCulledAABB = culledAABB;
+        } else {
+            aabbLines = buildAABBLines(debugBoundsObjects);
+        }
+        logDebugLines("/debug/scene_aabb", aabbLines.starts, aabbLines.ends,
+                      aabbLines.colors, 1.5f, !showSceneAABB);
 
         if (subjectBodyHandle != InvalidHandle) {
             std::vector<glm::mat4> transforms(

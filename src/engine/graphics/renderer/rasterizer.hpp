@@ -9,6 +9,7 @@
 #include "engine/scene/scene_backend.hpp"
 #include "engine/graphics/material/material.hpp"
 #include "engine/graphics/camera/camera.hpp"
+#include "geometry/bounds.hpp"
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -89,6 +90,12 @@ class Rasterizer : public Renderer {
     float _activeShadowOrthoHalfSize = 0.0f;
     glm::mat4 _lightSpaceMatrix{1.f};
     Backend::Texture* _shadowMap = nullptr;
+    Geometry::Frustum _viewFrustum;
+    bool _frustumCullingEnabled = true;
+    int _cullingTotalBatches = 0;
+    int _cullingCulledBatches = 0;
+    int _cullingTotalInstances = 0;
+    int _cullingCulledInstances = 0;
 
     // shadow
     void updateShadowUBO(float activeOrthoHalfSize);
@@ -119,6 +126,15 @@ class Rasterizer : public Renderer {
                          int viewportHeight);
     glm::mat4 computeLightSpaceMatrix(Camera& camera, const UpAxis upAxis);
     Backend::Framebuffer* getShadowFbo() { return _shadowFbo.get(); }
+
+    void setFrustumCullingEnabled(bool enabled) {
+        _frustumCullingEnabled = enabled;
+    }
+    bool isFrustumCullingEnabled() const { return _frustumCullingEnabled; }
+    int getCullingTotalBatches() const { return _cullingTotalBatches; }
+    int getCullingCulledBatches() const { return _cullingCulledBatches; }
+    int getCullingTotalInstances() const { return _cullingTotalInstances; }
+    int getCullingCulledInstances() const { return _cullingCulledInstances; }
 
     MeshHandle addShape(Backend::Shader* shader, Scene::Prim* prim,
                         RenderTrack track = RenderTrack::SceneGraph);
@@ -154,6 +170,13 @@ class Rasterizer : public Renderer {
                        const std::vector<glm::vec3>& ends,
                        const std::vector<glm::vec4>& colors = {},
                        float width = 1.0f, bool hidden = false);
+    void logDebugAxes(const std::string& path, const glm::mat4& transform,
+                      float length = 1.0f, float width = 1.0f,
+                      bool hidden = false);
+    void logDebugAxes(const std::string& path, const glm::vec3& origin,
+                      const glm::vec3& xAxis, const glm::vec3& yAxis,
+                      const glm::vec3& zAxis, float length = 1.0f,
+                      float width = 1.0f, bool hidden = false);
     void clearDebugLines(const std::string& path);
     void logDebugPoints(const std::string& path,
                         const std::vector<glm::vec3>& points,

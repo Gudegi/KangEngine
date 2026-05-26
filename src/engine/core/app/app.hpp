@@ -225,6 +225,13 @@ class App {
                        const std::vector<glm::vec3>& ends,
                        const std::vector<glm::vec4>& colors = {},
                        float width = 1.0f, bool hidden = false);
+    void logDebugAxes(const std::string& path, const glm::mat4& transform,
+                      float length = 1.0f, float width = 1.0f,
+                      bool hidden = false);
+    void logDebugAxes(const std::string& path, const glm::vec3& origin,
+                      const glm::vec3& xAxis, const glm::vec3& yAxis,
+                      const glm::vec3& zAxis, float length = 1.0f,
+                      float width = 1.0f, bool hidden = false);
     void clearDebugLines(const std::string& path);
     void logDebugPoints(const std::string& path,
                         const std::vector<glm::vec3>& points,

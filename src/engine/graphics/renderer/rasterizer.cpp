@@ -195,6 +195,20 @@ void Rasterizer::logDebugLines(const std::string& path,
     _debugRenderer.logLines(path, starts, ends, colors, width, hidden);
 }
 
+void Rasterizer::logDebugAxes(const std::string& path,
+                              const glm::mat4& transform, float length,
+                              float width, bool hidden) {
+    _debugRenderer.logAxes(path, transform, length, width, hidden);
+}
+
+void Rasterizer::logDebugAxes(const std::string& path,
+                              const glm::vec3& origin, const glm::vec3& xAxis,
+                              const glm::vec3& yAxis, const glm::vec3& zAxis,
+                              float length, float width, bool hidden) {
+    _debugRenderer.logAxes(path, origin, xAxis, yAxis, zAxis, length, width,
+                           hidden);
+}
+
 void Rasterizer::clearDebugLines(const std::string& path) {
     _debugRenderer.clearLines(path);
 }
@@ -213,6 +227,8 @@ void Rasterizer::clearDebugPoints(const std::string& path) {
 // Render
 
 void Rasterizer::updateFrameData(const glm::mat4& view, const glm::mat4& proj) {
+    _viewFrustum = Geometry::Frustum::fromViewProjection(proj * view);
+
     // Upload camera UBO once per frame
     _cameraUBO->setData(&view, sizeof(view));
     _cameraUBO->setData(&proj, sizeof(proj), sizeof(glm::mat4));
@@ -236,13 +252,21 @@ void Rasterizer::updateFrameData(const glm::mat4& view, const glm::mat4& proj) {
 }
 
 void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
+    _cullingTotalBatches = 0;
+    _cullingCulledBatches = 0;
+    _cullingTotalInstances = 0;
+    _cullingCulledInstances = 0;
+
     // Bind shadow map and upload shadow uniforms onto each instancer's shader
     const bool hasShadow = (_shadowMap != nullptr && _shadowDistance > 0.0f);
-    if (hasShadow)
-        _shadowMap->bind(1);
+    Backend::Texture* shadowTexture = hasShadow ? _shadowMap : nullptr;
+    if (!shadowTexture && _shadowFbo)
+        shadowTexture = _shadowFbo->getDepthTexture();
+    if (shadowTexture)
+        shadowTexture->bind(1);
 
     auto bindShadowSampler = [&](Backend::Shader* sh) {
-        if (hasShadow)
+        if (shadowTexture)
             sh->setInt("shadowMap", 1);
     };
 
@@ -250,6 +274,18 @@ void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
     for (auto& [key, inst] : _instancers) {
         if (inst.hasTransparent() || inst.visibleCount() == 0)
             continue;
+        if (_frustumCullingEnabled) {
+            ++_cullingTotalBatches;
+            const int totalInstances = inst.instanceCount();
+            _cullingTotalInstances += totalInstances;
+            inst.applyFrustumCulling(&_viewFrustum);
+            const int culledInstances = totalInstances - inst.visibleCount();
+            _cullingCulledInstances += culledInstances;
+            if (inst.visibleCount() == 0) {
+                ++_cullingCulledBatches;
+                continue;
+            }
+        }
         if (inst.isDoubleSided())
             _graphicsDevice->setCullFace(false);
         if (inst.material()) {
@@ -262,8 +298,8 @@ void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
         inst.bindTextures();
         inst.uploadSkinningMatrices();
         // Re-bind shadow map after bindTextures() to prevent slot 1 conflict
-        if (hasShadow)
-            _shadowMap->bind(1);
+        if (shadowTexture)
+            shadowTexture->bind(1);
         inst.render();
         if (inst.isDoubleSided())
             _graphicsDevice->setCullFace(true);
@@ -279,13 +315,30 @@ void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
     for (auto& [key, inst] : _instancers) {
         if (!inst.hasTransparent() || inst.visibleCount() == 0)
             continue;
+        if (_frustumCullingEnabled) {
+            ++_cullingTotalBatches;
+            const int totalInstances = inst.instanceCount();
+            _cullingTotalInstances += totalInstances;
+            inst.applyFrustumCulling(&_viewFrustum);
+            const int culledInstances = totalInstances - inst.visibleCount();
+            _cullingCulledInstances += culledInstances;
+            if (inst.visibleCount() == 0) {
+                ++_cullingCulledBatches;
+                continue;
+            }
+        }
         if (inst.isDoubleSided())
             _graphicsDevice->setCullFace(false);
-        if (inst.material())
+        if (inst.material()) {
             inst.material()->bind();
-        else
+            bindShadowSampler(inst.shader());
+        } else {
             inst.shader()->use();
+            bindShadowSampler(inst.shader());
+        }
         inst.bindTextures();
+        if (shadowTexture)
+            shadowTexture->bind(1);
         inst.uploadSkinningMatrices();
         inst.render();
         if (inst.isDoubleSided())

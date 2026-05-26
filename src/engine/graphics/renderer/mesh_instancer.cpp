@@ -12,6 +12,11 @@
 namespace KE {
 
 void MeshInstancer::_initMeshData(const Scene::MeshData& mesh) {
+    _localBounds = mesh.computeLocalAABB();
+    // Reserved for future sphere culling / LOD paths; current culling uses
+    // AABB.
+    _localSphere = Geometry::computeBoundingSphere(_localBounds);
+
     _indexBuffer = _device->createBuffer(
         Backend::BufferType::Index, sizeof(unsigned int) * mesh.indices.size(),
         mesh.indices.data());
@@ -57,12 +62,10 @@ void MeshInstancer::_setupSkinningAttribs(
         sizeof(skinnedMesh.boneIndices[0]) * skinnedMesh.boneIndices.size(),
         skinnedMesh.boneIndices.data());
     _vao->setVertexBuffer(boneIndexBuffer.get());
-    Backend::VertexAttribute boneIndexAttr{RendererAttribute::BoneIndices,
-                                           4,
-                                           Backend::VertexAttributeType::Int,
-                                           false,
-                                           sizeof(skinnedMesh.boneIndices[0]),
-                                           0};
+    Backend::VertexAttribute boneIndexAttr{
+        RendererAttribute::BoneIndices,     4,
+        Backend::VertexAttributeType::Int,  false,
+        sizeof(skinnedMesh.boneIndices[0]), 0};
     _vao->setVertexAttribute(boneIndexAttr);
     _vbos.push_back(std::move(boneIndexBuffer));
 
@@ -71,12 +74,10 @@ void MeshInstancer::_setupSkinningAttribs(
         sizeof(skinnedMesh.boneWeights[0]) * skinnedMesh.boneWeights.size(),
         skinnedMesh.boneWeights.data());
     _vao->setVertexBuffer(boneWeightBuffer.get());
-    Backend::VertexAttribute boneWeightAttr{RendererAttribute::BoneWeights,
-                                            4,
-                                            Backend::VertexAttributeType::Float,
-                                            false,
-                                            sizeof(skinnedMesh.boneWeights[0]),
-                                            0};
+    Backend::VertexAttribute boneWeightAttr{
+        RendererAttribute::BoneWeights,      4,
+        Backend::VertexAttributeType::Float, false,
+        sizeof(skinnedMesh.boneWeights[0]),  0};
     _vao->setVertexAttribute(boneWeightAttr);
     _vbos.push_back(std::move(boneWeightBuffer));
 }
@@ -135,9 +136,13 @@ void MeshInstancer::_setupInstanceAttribs() {
 
     // Color vec4: location 7
     _vao->setVertexBuffer(_colorVBO.get());
-    Backend::VertexAttribute colorAttr{
-        RendererAttribute::InstanceColor, 4, Backend::VertexAttributeType::Float,
-        false, sizeof(glm::vec4), 0, 1};
+    Backend::VertexAttribute colorAttr{RendererAttribute::InstanceColor,
+                                       4,
+                                       Backend::VertexAttributeType::Float,
+                                       false,
+                                       sizeof(glm::vec4),
+                                       0,
+                                       1};
     _vao->setVertexAttribute(colorAttr);
 }
 
@@ -165,82 +170,108 @@ void MeshInstancer::_reallocate(int newMax) {
     _setupInstanceAttribs();
 }
 
-void MeshInstancer::setColors(const std::vector<glm::vec4>& colors) {
-    int n = (int)colors.size();
-    if (n > _allocatedInstances)
-        _reallocate(n * 2);
+void MeshInstancer::_updateWorldBounds(
+    const std::vector<glm::mat4>& transforms) {
+    _worldBounds.clear();
+    _combinedWorldBounds = Geometry::AABB::empty();
+
+    if (!_localBounds.isValid())
+        return;
+
+    if (_worldBounds.capacity() < transforms.size())
+        _worldBounds.reserve(transforms.size());
+    for (const glm::mat4& transform : transforms) {
+        Geometry::AABB world = Geometry::transformAABB(_localBounds, transform);
+        _worldBounds.push_back(world);
+        _combinedWorldBounds.expand(world);
+    }
+}
+
+void MeshInstancer::_uploadInstanceData(
+    const std::vector<glm::mat4>& transforms,
+    const std::vector<glm::vec4>& colors) {
+    _visibleCount = static_cast<int>(transforms.size());
+    if (_visibleCount == 0)
+        return;
+
+    if (_visibleCount > _allocatedInstances)
+        _reallocate(_visibleCount * 2);
+
+    _transformVBO->setData(transforms.data(),
+                           sizeof(glm::mat4) * _visibleCount);
+    if (!colors.empty())
+        _colorVBO->setData(colors.data(), sizeof(glm::vec4) * _visibleCount);
+}
+
+void MeshInstancer::_updateTransparency() {
     _hasTransparent = false;
-    for (const auto& color : colors) {
+    for (const auto& color : _colors) {
         if (color.a < 1.0f) {
             _hasTransparent = true;
             break;
         }
     }
-    _colorVBO->setData(colors.data(), sizeof(glm::vec4) * n);
+}
+
+void MeshInstancer::setColors(const std::vector<glm::vec4>& colors) {
+    _colors = colors;
+    _updateTransparency();
+    _uploadInstanceData(_transforms, _colors);
 }
 
 void MeshInstancer::updateFromTransforms(
     const std::vector<glm::mat4>& transforms,
     const std::vector<glm::vec4>* colors) {
-    _visibleCount = (int)transforms.size();
-    if (_visibleCount == 0)
-        return;
-    if (_visibleCount > _allocatedInstances)
-        _reallocate(_visibleCount * 2);
-    _transformVBO->setData(transforms.data(),
-                           sizeof(glm::mat4) * _visibleCount);
-    if (colors) {
-        _hasTransparent = false;
-        for (const auto& color : *colors) {
-            if (color.a < 1.0f) {
-                _hasTransparent = true;
-                break;
-            }
-        }
-        _colorVBO->setData(colors->data(), sizeof(glm::vec4) * _visibleCount);
-    }
+    _transforms = transforms;
+    if (colors)
+        _colors = *colors;
+    if (_colors.size() != _transforms.size())
+        _colors.assign(_transforms.size(), glm::vec4(1.0f));
+
+    _updateTransparency();
+    _updateWorldBounds(_transforms);
+    _uploadInstanceData(_transforms, _colors);
     _useExternalTransforms = true;
 }
 
 void MeshInstancer::update() {
-    if (_useExternalTransforms)
+    if (_useExternalTransforms) {
+        _uploadInstanceData(_transforms, _colors);
         return;
+    }
 
-    std::vector<glm::mat4> transforms;
-    std::vector<glm::vec4> colors;
-    _hasTransparent = false;
+    _transforms.clear();
+    _colors.clear();
+    if (_transforms.capacity() < _prims.size())
+        _transforms.reserve(_prims.size());
+    if (_colors.capacity() < _prims.size())
+        _colors.reserve(_prims.size());
 
     for (auto* prim : _prims) {
         if (!prim || !prim->isVisible())
             continue;
         auto col = prim->getDisplayColorAlpha();
         glm::vec4 c = col ? *col : glm::vec4(1.f);
-        if (c.a < 1.0f)
-            _hasTransparent = true;
-        transforms.push_back(prim->computeModelMatrix());
-        colors.push_back(c);
+        _transforms.push_back(prim->computeModelMatrix());
+        _colors.push_back(c);
     }
 
-    _visibleCount = (int)transforms.size();
-    if (_visibleCount == 0)
-        return;
-
-    if (_visibleCount > _allocatedInstances)
-        _reallocate(_visibleCount * 2);
-
-    _transformVBO->setData(transforms.data(),
-                           sizeof(glm::mat4) * _visibleCount);
-    _colorVBO->setData(colors.data(), sizeof(glm::vec4) * _visibleCount);
+    _updateTransparency();
+    _updateWorldBounds(_transforms);
+    _uploadInstanceData(_transforms, _colors);
 }
 
 void MeshInstancer::updateGeometry(const std::vector<glm::vec3>& positions,
                                    const std::vector<glm::vec3>& normals) {
+    // TODO: Soft-body/deformable meshes need world bounds refresh after this.
     // _vbos[0] = positions (location 0), _vbos[1] = normals (location 1)
     if (!_vbos.empty())
         _vbos[0]->setData(positions.data(),
                           sizeof(glm::vec3) * positions.size());
     if (_vbos.size() > 1 && !normals.empty())
         _vbos[1]->setData(normals.data(), sizeof(glm::vec3) * normals.size());
+    _localBounds = Geometry::computeAABB(positions);
+    _localSphere = Geometry::computeBoundingSphere(_localBounds);
 }
 
 void MeshInstancer::updateSkinningMatrices(
@@ -248,6 +279,30 @@ void MeshInstancer::updateSkinningMatrices(
     if (!_hasSkinning)
         return;
     _boneMatrices = boneMatrices;
+}
+
+void MeshInstancer::applyFrustumCulling(const Geometry::Frustum* frustum) {
+    if (!frustum || _hasSkinning || _worldBounds.size() != _transforms.size()) {
+        _uploadInstanceData(_transforms, _colors);
+        return;
+    }
+
+    _culledTransforms.clear();
+    _culledColors.clear();
+    if (_culledTransforms.capacity() < _transforms.size())
+        _culledTransforms.reserve(_transforms.size());
+    if (_culledColors.capacity() < _colors.size())
+        _culledColors.reserve(_colors.size());
+
+    for (size_t i = 0; i < _transforms.size(); ++i) {
+        if (!Geometry::intersects(*frustum, _worldBounds[i]))
+            continue;
+        _culledTransforms.push_back(_transforms[i]);
+        _culledColors.push_back(i < _colors.size() ? _colors[i]
+                                                   : glm::vec4(1.0f));
+    }
+
+    _uploadInstanceData(_culledTransforms, _culledColors);
 }
 
 void MeshInstancer::render() {
