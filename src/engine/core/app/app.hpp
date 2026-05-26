@@ -118,6 +118,9 @@ class App {
     Backend::GraphicsDevice* getGraphicsDevice() {
         return _graphicsDevice.get();
     }
+    void renderSceneToFramebuffer(Camera& camera, Backend::Framebuffer* target,
+                                  int width, int height,
+                                  bool clear = true);
 
     //////
     void start();
@@ -217,6 +220,17 @@ class App {
                                 const std::vector<glm::mat4>& boneMatrices);
     void updateSkinningMatrices(MeshHandle handle, const float* rowMajorMatrices,
                                 size_t count);
+    void logDebugLines(const std::string& path,
+                       const std::vector<glm::vec3>& starts,
+                       const std::vector<glm::vec3>& ends,
+                       const std::vector<glm::vec4>& colors = {},
+                       float width = 1.0f, bool hidden = false);
+    void clearDebugLines(const std::string& path);
+    void logDebugPoints(const std::string& path,
+                        const std::vector<glm::vec3>& points,
+                        const std::vector<glm::vec4>& colors = {},
+                        float size = 6.0f, bool hidden = false);
+    void clearDebugPoints(const std::string& path);
 
     void setSkybox(const std::string& path);
     void setSkybox(const std::vector<std::string>& paths);

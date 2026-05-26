@@ -100,6 +100,8 @@ class GraphicsDevice {
     virtual void clear(float r, float g, float b, float a) = 0;
     virtual void setViewport(int x, int y, int width, int height) = 0;
     virtual void drawIndexed(size_t indexCount) = 0;
+    virtual void drawLines(size_t vertexCount) = 0;
+    virtual void drawPoints(size_t vertexCount) = 0;
     // instanced rendering
     virtual void drawIndexedInstanced(size_t indexCount,
                                       size_t instanceCount) = 0;
@@ -112,6 +114,7 @@ class GraphicsDevice {
     virtual void setBlendFunc(BlendFactor src, BlendFactor dst) = 0;
     virtual void setStencilTest(bool enable) = 0;
     virtual void setPolygonMode(PolygonMode mode) = 0;
+    virtual void setLineWidth(float width) = 0;
     virtual void setCullFace(bool enable) = 0;
     virtual void setCullFaceMode(CullFaceMode mode) = 0;
     virtual void setClearColor(float r, float g, float b, float a) = 0;

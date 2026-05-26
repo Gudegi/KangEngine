@@ -369,6 +369,7 @@ void OpenGLDevice::initialize() {
 
     // OpenGL context should already be created by Window
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_PROGRAM_POINT_SIZE);
     // TODO: need material-wise different culling
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
@@ -406,6 +407,14 @@ void OpenGLDevice::setViewport(int x, int y, int width, int height) {
 void OpenGLDevice::drawIndexed(size_t indexCount) {
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indexCount),
                    GL_UNSIGNED_INT, 0);
+}
+
+void OpenGLDevice::drawLines(size_t vertexCount) {
+    glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(vertexCount));
+}
+
+void OpenGLDevice::drawPoints(size_t vertexCount) {
+    glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(vertexCount));
 }
 
 void OpenGLDevice::drawIndexedInstanced(size_t indexCount,
@@ -551,6 +560,10 @@ void OpenGLDevice::setPolygonMode(PolygonMode mode) {
         break;
     }
     glPolygonMode(GL_FRONT_AND_BACK, glMode);
+}
+
+void OpenGLDevice::setLineWidth(float width) {
+    glLineWidth(std::max(5.0f, width));
 }
 
 void OpenGLDevice::setCullFace(bool enable) {

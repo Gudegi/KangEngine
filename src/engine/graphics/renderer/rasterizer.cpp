@@ -46,6 +46,7 @@ Rasterizer::Rasterizer(Backend::GraphicsDevice* graphicsDevice) {
     _skinnedShadowShader = _graphicsDevice->createShaderFromFile(
         KE::getAssetPath("shaders/skinned_shadow.vs"),
         KE::getAssetPath("shaders/shadow.fs"));
+    _debugRenderer.init(_graphicsDevice);
     updateShadowUBO(0.0f);
 }
 
@@ -186,6 +187,29 @@ void Rasterizer::updateSkinningMatrices(
     _handleTable[handle]->updateSkinningMatrices(boneMatrices);
 }
 
+void Rasterizer::logDebugLines(const std::string& path,
+                               const std::vector<glm::vec3>& starts,
+                               const std::vector<glm::vec3>& ends,
+                               const std::vector<glm::vec4>& colors,
+                               float width, bool hidden) {
+    _debugRenderer.logLines(path, starts, ends, colors, width, hidden);
+}
+
+void Rasterizer::clearDebugLines(const std::string& path) {
+    _debugRenderer.clearLines(path);
+}
+
+void Rasterizer::logDebugPoints(const std::string& path,
+                                const std::vector<glm::vec3>& points,
+                                const std::vector<glm::vec4>& colors,
+                                float size, bool hidden) {
+    _debugRenderer.logPoints(path, points, colors, size, hidden);
+}
+
+void Rasterizer::clearDebugPoints(const std::string& path) {
+    _debugRenderer.clearPoints(path);
+}
+
 // Render
 
 void Rasterizer::updateFrameData(const glm::mat4& view, const glm::mat4& proj) {
@@ -269,6 +293,8 @@ void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
     }
     _graphicsDevice->setDepthWrite(true);
     _graphicsDevice->setBlend(false);
+
+    _debugRenderer.render();
 }
 
 /////////////// Shadow Pass //////////////

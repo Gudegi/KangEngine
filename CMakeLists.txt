@@ -189,10 +189,11 @@ target_link_libraries(engine_core PUBLIC pre_compiled_ext)
 # Active PhysX Examples
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_articulation.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_jointmonkey.cpp")
-file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_ragdoll.cpp")
+#file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_ragdoll.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_box_instancing.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_instancing.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/view_fbx_character.cpp")
+file(GLOB MAIN_FILE "${MAIN_DIR}/debug_camera_frustum.cpp")
 
 add_executable(${PROJECT_NAME} ${MAIN_FILE})
 target_link_libraries(${PROJECT_NAME} PRIVATE engine_core)

@@ -64,6 +64,7 @@ void PostProcessor::init(Backend::GraphicsDevice* device, int width,
 
 void PostProcessor::process(Backend::Texture* src, float gamma) {
     _outputFBO->bind();
+    _device->setViewport(0, 0, _width, _height);
     _device->clear(0.f, 0.f, 0.f, 1.f);
     _device->setDepthTest(false);
 

@@ -201,6 +201,26 @@ bool App::shouldClose() {
     return window == nullptr || glfwWindowShouldClose(window);
 }
 
+void App::renderSceneToFramebuffer(Camera& camera, Backend::Framebuffer* target,
+                                   int width, int height, bool clear) {
+    if (!_rasterizer || !_graphicsDevice || !target || width <= 0 || height <= 0)
+        return;
+
+    const glm::mat4 view = camera.getViewMatrix();
+    const glm::mat4 proj = camera.getProjMatrix();
+
+    _rasterizer->updateFrameData(view, proj);
+    target->bind();
+    _graphicsDevice->setViewport(0, 0, width, height);
+    if (clear)
+        _graphicsDevice->clear(0.2f, 0.3f, 0.3f, 1.0f);
+    _rasterizer->render(view, proj);
+    _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
+    target->resolve();
+    target->unbind();
+    _graphicsDevice->setViewport(0, 0, _width, _height);
+}
+
 void App::renderFrameOnce() {
     GLFWwindow* window = _window.getGlfwWindow();
     if (window == nullptr || glfwWindowShouldClose(window))
@@ -753,6 +773,33 @@ void App::updateSkinningMatrices(MeshHandle handle,
         matrices.push_back(m);
     }
     _rasterizer->updateSkinningMatrices(handle, matrices);
+}
+
+void App::logDebugLines(const std::string& path,
+                        const std::vector<glm::vec3>& starts,
+                        const std::vector<glm::vec3>& ends,
+                        const std::vector<glm::vec4>& colors, float width,
+                        bool hidden) {
+    if (_rasterizer)
+        _rasterizer->logDebugLines(path, starts, ends, colors, width, hidden);
+}
+
+void App::clearDebugLines(const std::string& path) {
+    if (_rasterizer)
+        _rasterizer->clearDebugLines(path);
+}
+
+void App::logDebugPoints(const std::string& path,
+                         const std::vector<glm::vec3>& points,
+                         const std::vector<glm::vec4>& colors, float size,
+                         bool hidden) {
+    if (_rasterizer)
+        _rasterizer->logDebugPoints(path, points, colors, size, hidden);
+}
+
+void App::clearDebugPoints(const std::string& path) {
+    if (_rasterizer)
+        _rasterizer->clearDebugPoints(path);
 }
 
 void App::setSkybox(const std::string& path) {

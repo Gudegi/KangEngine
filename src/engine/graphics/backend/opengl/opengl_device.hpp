@@ -192,6 +192,8 @@ class OpenGLDevice : public GraphicsDevice {
     void clear(float r, float g, float b, float a) override;
     void setViewport(int x, int y, int width, int height) override;
     void drawIndexed(size_t indexCount) override;
+    void drawLines(size_t vertexCount) override;
+    void drawPoints(size_t vertexCount) override;
     void drawIndexedInstanced(size_t indexCount, size_t instanceCount) override;
     void checkError() override;
 
@@ -202,6 +204,7 @@ class OpenGLDevice : public GraphicsDevice {
     void setBlendFunc(BlendFactor src, BlendFactor dst) override;
     void setStencilTest(bool enable) override;
     void setPolygonMode(PolygonMode mode) override;
+    void setLineWidth(float width) override;
     void setCullFace(bool enable) override;
     void setCullFaceMode(CullFaceMode mode) override;
     void setClearColor(float r, float g, float b, float a) override;
