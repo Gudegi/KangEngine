@@ -369,12 +369,37 @@ void App::coreRender() {
 
             float distance = _rasterizer->getShadowDistance();
             if (ImGui::SliderFloat("Shadow Distance (Set 0 to disable shadow)",
-                                   &distance, 0.0f, 100.0f)) {
+                                   &distance, 0.0f, 300.0f)) {
                 _rasterizer->setShadowDistance(distance);
             }
             int pcfSamples = _rasterizer->getShadowPcfSamples();
             if (ImGui::SliderInt("Shadow PCF Samples", &pcfSamples, 1, 16)) {
                 _rasterizer->setShadowPcfSamples(pcfSamples);
+            }
+            bool useCsm = _rasterizer->getUseCsm();
+            if (ImGui::Checkbox("Use CSM", &useCsm)) {
+                _rasterizer->setUseCsm(useCsm);
+            }
+            if (useCsm) {
+                int cascadeCount = _rasterizer->getCascadeCount();
+                if (ImGui::SliderInt("CSM Cascade Count", &cascadeCount, 1,
+                                     Rasterizer::MaxShadowCascades)) {
+                    _rasterizer->setCascadeCount(cascadeCount);
+                }
+                float cascadeLambda = _rasterizer->getCascadeLambda();
+                if (ImGui::SliderFloat("CSM Cascade Lambda", &cascadeLambda,
+                                       0.0f, 1.0f)) {
+                    _rasterizer->setCascadeLambda(cascadeLambda);
+                }
+                bool useTightShadowFit = _rasterizer->getUseTightShadowFit();
+                if (ImGui::Checkbox("Tight Shadow Fit", &useTightShadowFit)) {
+                    _rasterizer->setUseTightShadowFit(useTightShadowFit);
+                }
+                bool debugCascadeTint = _rasterizer->getDebugCsmCascadeTint();
+                if (ImGui::Checkbox("Debug CSM Cascade Tint",
+                                    &debugCascadeTint)) {
+                    _rasterizer->setDebugCsmCascadeTint(debugCascadeTint);
+                }
             }
 
             bool frustumCulling = _rasterizer->isFrustumCullingEnabled();
@@ -392,18 +417,38 @@ void App::coreRender() {
                             _rasterizer->getCullingTotalInstances());
             }
 
-            auto* shadowFbo =
-                _rasterizer ? _rasterizer->getShadowFbo() : nullptr;
-            if (shadowFbo) {
-                auto* depthTex = shadowFbo->getDepthTexture();
-                if (depthTex) {
-                    ImGui::Text("Shadow Map %dx%d", depthTex->getWidth(),
-                                depthTex->getHeight());
-                    ImGui::Image(
-                        (ImTextureID)(uintptr_t)depthTex->getNativeHandle(),
-                        ImVec2(128, 128), ImVec2(0, 1),
-                        ImVec2(1,
-                               0)); // flip Y: GL bottom-left -> ImGui top-left
+            if (useCsm) {
+                const int cascadeCount = _rasterizer->getCascadeCount();
+                ImGui::Text("CSM Shadow Maps");
+                if (ImGui::BeginTable("CSMShadowMapPreview", 2)) {
+                    for (int i = 0; i < cascadeCount; ++i) {
+                        auto* cascadeFbo = _rasterizer->getCascadeShadowFbo(i);
+                        if (!cascadeFbo)
+                            continue;
+                        auto* depthTex = cascadeFbo->getDepthTexture();
+                        if (!depthTex)
+                            continue;
+                        ImGui::TableNextColumn();
+                        ImGui::Text("Cascade %d %dx%d", i, depthTex->getWidth(),
+                                    depthTex->getHeight());
+                        ImGui::Image(
+                            (ImTextureID)(uintptr_t)depthTex->getNativeHandle(),
+                            ImVec2(128, 128), ImVec2(0, 1), ImVec2(1, 0));
+                    }
+                    ImGui::EndTable();
+                }
+            } else {
+                auto* shadowFbo =
+                    _rasterizer ? _rasterizer->getShadowFbo() : nullptr;
+                if (shadowFbo) {
+                    auto* depthTex = shadowFbo->getDepthTexture();
+                    if (depthTex) {
+                        ImGui::Text("Shadow Map %dx%d", depthTex->getWidth(),
+                                    depthTex->getHeight());
+                        ImGui::Image(
+                            (ImTextureID)(uintptr_t)depthTex->getNativeHandle(),
+                            ImVec2(128, 128), ImVec2(0, 1), ImVec2(1, 0));
+                    }
                 }
             }
         }

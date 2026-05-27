@@ -15,6 +15,7 @@
 #include <glm/vec4.hpp>
 #include "utils/types.hpp"
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <map>
@@ -51,6 +52,9 @@ enum class RenderTrack {
 // ---------------------------------------------------------------------------
 
 class Rasterizer : public Renderer {
+  public:
+    static constexpr int MaxShadowCascades = 4;
+
   private:
     // Prim-based instanced rendering
     struct InstancerKey {
@@ -82,14 +86,28 @@ class Rasterizer : public Renderer {
 
     std::unique_ptr<Backend::Framebuffer> _shadowFbo; // depth-only
     int _shadowMapWH = 4096;
+    std::array<int, MaxShadowCascades> _cascadeMapSizes{4096, 2048, 1024, 1024};
+    std::array<std::unique_ptr<Backend::Framebuffer>, MaxShadowCascades>
+        _cascadeFbos;
+    std::array<Backend::Texture*, MaxShadowCascades> _cascadeMaps{};
     std::unique_ptr<Backend::Shader> _shadowShader;
     std::unique_ptr<Backend::Shader> _skinnedShadowShader;
     float _shadowRadius = 3.0f;
     int _shadowPcfSamples = 16;
-    float _shadowDistance = 10.0f; // 0 = shadow disabled
+    float _shadowDistance = 20.0f; // 0 = shadow disabled
     float _activeShadowOrthoHalfSize = 0.0f;
     glm::mat4 _lightSpaceMatrix{1.f};
     Backend::Texture* _shadowMap = nullptr;
+    // CSM
+    bool _useCsm = false;
+    bool _debugCsmCascadeTint = false;
+    bool _useTightShadowFit = true;
+    int _cascadeCount = 3;
+    // Blends uniform and logarithmic cascade splits: 0=uniform, 1=log.
+    float _cascadeLambda = 0.55f;
+    std::array<float, MaxShadowCascades> _cascadeSplits{};
+    std::array<float, MaxShadowCascades> _cascadeOrthoHalfSizes{};
+    std::array<glm::mat4, MaxShadowCascades> _cascadeLightMatrices{};
     Geometry::Frustum _viewFrustum;
     bool _frustumCullingEnabled = true;
     int _cullingTotalBatches = 0;
@@ -99,6 +117,8 @@ class Rasterizer : public Renderer {
 
     // shadow
     void updateShadowUBO(float activeOrthoHalfSize);
+    void updateShadowPassUBO(const glm::mat4& lightSpaceMatrix,
+                             float activeOrthoHalfSize);
     void setShadowMap(Backend::Texture* tex, const glm::mat4& lightSpaceMat,
                       float radius, float distance);
     void drawShadowCasters();
@@ -122,9 +142,36 @@ class Rasterizer : public Renderer {
         updateShadowUBO(_shadowMap ? _activeShadowOrthoHalfSize : 0.0f);
     }
     int getShadowPcfSamples() const { return _shadowPcfSamples; }
+    void setUseCsm(bool enabled) { _useCsm = enabled; }
+    bool getUseCsm() const { return _useCsm; }
+    void setDebugCsmCascadeTint(bool enabled) {
+        _debugCsmCascadeTint = enabled;
+    }
+    bool getDebugCsmCascadeTint() const { return _debugCsmCascadeTint; }
+    void setUseTightShadowFit(bool enabled) { _useTightShadowFit = enabled; }
+    bool getUseTightShadowFit() const { return _useTightShadowFit; }
+    void setCascadeCount(int count) {
+        _cascadeCount = std::clamp(count, 1, MaxShadowCascades);
+    }
+    int getCascadeCount() const { return _cascadeCount; }
+    void setCascadeLambda(float lambda) {
+        _cascadeLambda = std::clamp(lambda, 0.0f, 1.0f);
+    }
+    float getCascadeLambda() const { return _cascadeLambda; }
+    const std::array<float, MaxShadowCascades>& getCascadeSplits() const {
+        return _cascadeSplits;
+    }
+    Backend::Framebuffer* getCascadeShadowFbo(int index) {
+        if (index < 0 || index >= _cascadeCount)
+            return nullptr;
+        return _cascadeFbos[static_cast<size_t>(index)].get();
+    }
     void renderShadowMap(Camera& camera, UpAxis upAxis, int viewportWidth,
                          int viewportHeight);
     glm::mat4 computeLightSpaceMatrix(Camera& camera, const UpAxis upAxis);
+    std::array<float, MaxShadowCascades> computeCascadeSplits(Camera& camera);
+    glm::mat4 computeLightSpaceMatrix(Camera& camera, const UpAxis upAxis,
+                                      float shadowNear, float shadowFar);
     Backend::Framebuffer* getShadowFbo() { return _shadowFbo.get(); }
 
     void setFrustumCullingEnabled(bool enabled) {

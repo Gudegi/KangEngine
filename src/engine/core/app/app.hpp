@@ -119,8 +119,7 @@ class App {
         return _graphicsDevice.get();
     }
     void renderSceneToFramebuffer(Camera& camera, Backend::Framebuffer* target,
-                                  int width, int height,
-                                  bool clear = true);
+                                  int width, int height, bool clear = true);
 
     //////
     void start();
@@ -189,11 +188,12 @@ class App {
                                glm::vec3 position = glm::vec3(0.0f),
                                glm::vec4 color = glm::vec4(1.0f),
                                bool castsShadow = true);
-    MeshPrimResult addSkinnedMeshPrim(
-        Backend::Shader* shader, const std::string& path,
-        Scene::SkinnedMeshData skinnedMesh,
-        glm::vec3 position = glm::vec3(0.0f),
-        glm::vec4 color = glm::vec4(1.0f), bool castsShadow = true);
+    MeshPrimResult addSkinnedMeshPrim(Backend::Shader* shader,
+                                      const std::string& path,
+                                      Scene::SkinnedMeshData skinnedMesh,
+                                      glm::vec3 position = glm::vec3(0.0f),
+                                      glm::vec4 color = glm::vec4(1.0f),
+                                      bool castsShadow = true);
 
     void updateShapeTransforms(MeshHandle handle,
                                const std::vector<glm::mat4>& transforms,
@@ -218,8 +218,8 @@ class App {
                             size_t normalCount);
     void updateSkinningMatrices(MeshHandle handle,
                                 const std::vector<glm::mat4>& boneMatrices);
-    void updateSkinningMatrices(MeshHandle handle, const float* rowMajorMatrices,
-                                size_t count);
+    void updateSkinningMatrices(MeshHandle handle,
+                                const float* rowMajorMatrices, size_t count);
     void logDebugLines(const std::string& path,
                        const std::vector<glm::vec3>& starts,
                        const std::vector<glm::vec3>& ends,

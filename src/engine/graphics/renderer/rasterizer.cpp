@@ -6,6 +6,7 @@
 #include "utils/asset_path.hpp"
 #include "utils/types.hpp"
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -19,6 +20,8 @@
 constexpr int CAMERA_UBO_BIND_SLOT = 0;
 constexpr int LIGHT_UBO_BIND_SLOT = 1;
 constexpr int SHADOW_UBO_BIND_SLOT = 2;
+constexpr int SHADOW_TEXTURE_SLOT_BASE =
+    1; // most diffuse textures use 0, TODO: more efficient manage
 
 namespace KE {
 
@@ -30,16 +33,22 @@ Rasterizer::Rasterizer(Backend::GraphicsDevice* graphicsDevice) {
     _lightUBO = _graphicsDevice->createBuffer(Backend::BufferType::Uniform,
                                               3 * sizeof(glm::vec4));
     _graphicsDevice->bindUniformBuffer(_lightUBO.get(), LIGHT_UBO_BIND_SLOT);
-    // mat4 lightSpaceMatrix, vec4 shadowParams (xyz: sun_direction,
-    // w:shadow_radius), vec4 shadowInfo (x: active shadow ortho half-size, y:
-    // shadowMapWH, z: PCF samples, w: unused)
-    _shadowUBO = _graphicsDevice->createBuffer(Backend::BufferType::Uniform,
-                                               sizeof(glm::mat4) +
-                                                   2 * sizeof(glm::vec4));
+    // std140 shadow data: mat4[4] cascade matrices, vec4 cascade splits,
+    // vec4 cascade ortho half-sizes, vec4 cascade map sizes, vec4 params,
+    // vec4 info.
+    _shadowUBO = _graphicsDevice->createBuffer(
+        Backend::BufferType::Uniform,
+        MaxShadowCascades * sizeof(glm::mat4) + 5 * sizeof(glm::vec4));
     _graphicsDevice->bindUniformBuffer(_shadowUBO.get(), SHADOW_UBO_BIND_SLOT);
 
     _shadowFbo = _graphicsDevice->createFramebuffer(
         {_shadowMapWH, _shadowMapWH, true, false, 0}); // depth-only, no MSAA
+    for (size_t i = 0; i < _cascadeFbos.size(); ++i) {
+        const int mapSize = _cascadeMapSizes[i];
+        auto& fbo = _cascadeFbos[i];
+        fbo = _graphicsDevice->createFramebuffer(
+            {mapSize, mapSize, true, false, 0});
+    }
     _shadowShader = _graphicsDevice->createShaderFromFile(
         KE::getAssetPath("shaders/shadow.vs"),
         KE::getAssetPath("shaders/shadow.fs"));
@@ -201,10 +210,10 @@ void Rasterizer::logDebugAxes(const std::string& path,
     _debugRenderer.logAxes(path, transform, length, width, hidden);
 }
 
-void Rasterizer::logDebugAxes(const std::string& path,
-                              const glm::vec3& origin, const glm::vec3& xAxis,
-                              const glm::vec3& yAxis, const glm::vec3& zAxis,
-                              float length, float width, bool hidden) {
+void Rasterizer::logDebugAxes(const std::string& path, const glm::vec3& origin,
+                              const glm::vec3& xAxis, const glm::vec3& yAxis,
+                              const glm::vec3& zAxis, float length, float width,
+                              bool hidden) {
     _debugRenderer.logAxes(path, origin, xAxis, yAxis, zAxis, length, width,
                            hidden);
 }
@@ -259,15 +268,33 @@ void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
 
     // Bind shadow map and upload shadow uniforms onto each instancer's shader
     const bool hasShadow = (_shadowMap != nullptr && _shadowDistance > 0.0f);
-    Backend::Texture* shadowTexture = hasShadow ? _shadowMap : nullptr;
-    if (!shadowTexture && _shadowFbo)
-        shadowTexture = _shadowFbo->getDepthTexture();
-    if (shadowTexture)
-        shadowTexture->bind(1);
+    Backend::Texture* fallbackShadowTexture =
+        _shadowFbo ? _shadowFbo->getDepthTexture() : nullptr;
+    Backend::Texture* shadowTexture =
+        hasShadow ? _shadowMap : fallbackShadowTexture;
+
+    auto bindShadowTextures = [&]() {
+        if (!shadowTexture)
+            return;
+        for (int i = 0; i < MaxShadowCascades; ++i) {
+            Backend::Texture* cascadeTexture =
+                (_useCsm && hasShadow && _cascadeMaps[static_cast<size_t>(i)])
+                    ? _cascadeMaps[static_cast<size_t>(i)]
+                    : shadowTexture;
+            cascadeTexture->bind(SHADOW_TEXTURE_SLOT_BASE + i);
+        }
+    };
+    bindShadowTextures();
 
     auto bindShadowSampler = [&](Backend::Shader* sh) {
-        if (shadowTexture)
-            sh->setInt("shadowMap", 1);
+        if (!shadowTexture)
+            return;
+        sh->setInt("shadowMap0", SHADOW_TEXTURE_SLOT_BASE);
+        sh->setInt("shadowMap1", SHADOW_TEXTURE_SLOT_BASE + 1);
+        sh->setInt("shadowMap2", SHADOW_TEXTURE_SLOT_BASE + 2);
+        sh->setInt("shadowMap3", SHADOW_TEXTURE_SLOT_BASE + 3);
+        sh->setInt("debugCsmCascadeTint",
+                   (_debugCsmCascadeTint && _useCsm) ? 1 : 0);
     };
 
     // Pass 1: opaque instanced
@@ -298,8 +325,7 @@ void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
         inst.bindTextures();
         inst.uploadSkinningMatrices();
         // Re-bind shadow map after bindTextures() to prevent slot 1 conflict
-        if (shadowTexture)
-            shadowTexture->bind(1);
+        bindShadowTextures();
         inst.render();
         if (inst.isDoubleSided())
             _graphicsDevice->setCullFace(true);
@@ -337,8 +363,7 @@ void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
             bindShadowSampler(inst.shader());
         }
         inst.bindTextures();
-        if (shadowTexture)
-            shadowTexture->bind(1);
+        bindShadowTextures();
         inst.uploadSkinningMatrices();
         inst.render();
         if (inst.isDoubleSided())
@@ -353,13 +378,78 @@ void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
 /////////////// Shadow Pass //////////////
 
 void Rasterizer::updateShadowUBO(float activeOrthoHalfSize) {
+    std::array<glm::mat4, MaxShadowCascades> matrices{};
+    std::array<float, MaxShadowCascades> orthoHalfSizes{};
+    matrices.fill(glm::mat4(1.0f));
+
+    const bool csmActive = _useCsm && _shadowMap && _shadowDistance > 0.0f;
+    if (csmActive) {
+        matrices = _cascadeLightMatrices;
+        orthoHalfSizes = _cascadeOrthoHalfSizes;
+    } else {
+        matrices[0] = _lightSpaceMatrix;
+        orthoHalfSizes[0] = activeOrthoHalfSize;
+    }
+
+    const glm::vec4 cascadeSplits{_cascadeSplits[0], _cascadeSplits[1],
+                                  _cascadeSplits[2], _cascadeSplits[3]};
+    const glm::vec4 cascadeOrthoHalfSizes{orthoHalfSizes[0], orthoHalfSizes[1],
+                                          orthoHalfSizes[2], orthoHalfSizes[3]};
+    const glm::vec4 cascadeMapSizes{
+        static_cast<float>(csmActive ? _cascadeMapSizes[0] : _shadowMapWH),
+        static_cast<float>(csmActive ? _cascadeMapSizes[1] : _shadowMapWH),
+        static_cast<float>(csmActive ? _cascadeMapSizes[2] : _shadowMapWH),
+        static_cast<float>(csmActive ? _cascadeMapSizes[3] : _shadowMapWH)};
     glm::vec4 shadowParams{_light.direction, _shadowRadius};
-    glm::vec4 shadowInfo{activeOrthoHalfSize, (float)(_shadowMapWH),
-                         static_cast<float>(_shadowPcfSamples), 0.f};
-    _shadowUBO->setData(&_lightSpaceMatrix, sizeof(_lightSpaceMatrix));
-    _shadowUBO->setData(&shadowParams, sizeof(shadowParams), sizeof(glm::mat4));
-    _shadowUBO->setData(&shadowInfo, sizeof(shadowInfo),
-                        sizeof(glm::mat4) + sizeof(glm::vec4));
+    glm::vec4 shadowInfo{static_cast<float>(_shadowPcfSamples),
+                         csmActive ? static_cast<float>(_cascadeCount) : 0.0f,
+                         csmActive ? 1.0f : 0.0f, 0.0f};
+
+    size_t offset = 0;
+    _shadowUBO->setData(matrices.data(), sizeof(glm::mat4) * matrices.size(),
+                        offset);
+    offset += sizeof(glm::mat4) * matrices.size();
+    _shadowUBO->setData(&cascadeSplits, sizeof(cascadeSplits), offset);
+    offset += sizeof(glm::vec4);
+    _shadowUBO->setData(&cascadeOrthoHalfSizes, sizeof(cascadeOrthoHalfSizes),
+                        offset);
+    offset += sizeof(glm::vec4);
+    _shadowUBO->setData(&cascadeMapSizes, sizeof(cascadeMapSizes), offset);
+    offset += sizeof(glm::vec4);
+    _shadowUBO->setData(&shadowParams, sizeof(shadowParams), offset);
+    offset += sizeof(glm::vec4);
+    _shadowUBO->setData(&shadowInfo, sizeof(shadowInfo), offset);
+}
+
+void Rasterizer::updateShadowPassUBO(const glm::mat4& lightSpaceMatrix,
+                                     float activeOrthoHalfSize) {
+    std::array<glm::mat4, MaxShadowCascades> matrices{};
+    matrices.fill(glm::mat4(1.0f));
+    matrices[0] = lightSpaceMatrix;
+
+    const glm::vec4 cascadeSplits{0.0f};
+    const glm::vec4 cascadeOrthoHalfSizes{activeOrthoHalfSize, 0.0f, 0.0f,
+                                          0.0f};
+    const glm::vec4 cascadeMapSizes{static_cast<float>(_shadowMapWH), 0.0f,
+                                    0.0f, 0.0f};
+    glm::vec4 shadowParams{_light.direction, _shadowRadius};
+    glm::vec4 shadowInfo{static_cast<float>(_shadowPcfSamples), 0.0f, 0.0f,
+                         0.0f};
+
+    size_t offset = 0;
+    _shadowUBO->setData(matrices.data(), sizeof(glm::mat4) * matrices.size(),
+                        offset);
+    offset += sizeof(glm::mat4) * matrices.size();
+    _shadowUBO->setData(&cascadeSplits, sizeof(cascadeSplits), offset);
+    offset += sizeof(glm::vec4);
+    _shadowUBO->setData(&cascadeOrthoHalfSizes, sizeof(cascadeOrthoHalfSizes),
+                        offset);
+    offset += sizeof(glm::vec4);
+    _shadowUBO->setData(&cascadeMapSizes, sizeof(cascadeMapSizes), offset);
+    offset += sizeof(glm::vec4);
+    _shadowUBO->setData(&shadowParams, sizeof(shadowParams), offset);
+    offset += sizeof(glm::vec4);
+    _shadowUBO->setData(&shadowInfo, sizeof(shadowInfo), offset);
 }
 
 void Rasterizer::setShadowMap(Backend::Texture* tex,
@@ -375,6 +465,34 @@ void Rasterizer::setShadowMap(Backend::Texture* tex,
 
 glm::mat4 Rasterizer::computeLightSpaceMatrix(Camera& camera,
                                               const UpAxis upAxis) {
+    const float shadowNear = camera.getNearPlane();
+    const float shadowFar = std::min(camera.getFarPlane(), _shadowDistance);
+    return computeLightSpaceMatrix(camera, upAxis, shadowNear, shadowFar);
+}
+
+std::array<float, Rasterizer::MaxShadowCascades>
+Rasterizer::computeCascadeSplits(Camera& camera) {
+    std::array<float, MaxShadowCascades> splits{};
+    const float shadowNear = std::max(0.001f, camera.getNearPlane());
+    const float shadowFar = std::max(
+        shadowNear + 0.001f, std::min(camera.getFarPlane(), _shadowDistance));
+    const float range = shadowFar - shadowNear;
+    const float ratio = shadowFar / shadowNear;
+
+    for (int i = 1; i <= _cascadeCount; ++i) {
+        const float p =
+            static_cast<float>(i) / static_cast<float>(_cascadeCount);
+        const float logSplit = shadowNear * std::pow(ratio, p);
+        const float uniformSplit = shadowNear + range * p;
+        splits[i - 1] = glm::mix(uniformSplit, logSplit, _cascadeLambda);
+    }
+    return splits;
+}
+
+glm::mat4 Rasterizer::computeLightSpaceMatrix(Camera& camera,
+                                              const UpAxis upAxis,
+                                              float shadowNear,
+                                              float shadowFar) {
     const glm::vec3& sunDir = glm::normalize(_light.direction);
     glm::vec3 up =
         (std::abs(sunDir.y) < 0.99f) ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0);
@@ -382,19 +500,8 @@ glm::mat4 Rasterizer::computeLightSpaceMatrix(Camera& camera,
         up = (std::abs(sunDir.z) < 0.99f) ? glm::vec3(0, 0, 1)
                                           : glm::vec3(1, 0, 0);
 
-    /*
-    // Fixed-box shadow fitting:
-    // glm::vec3 sceneCenter = camera.getTargetPos();
-    // glm::vec3 lightPos = sceneCenter + sunDir * _shadowDistance;
-    // glm::mat4 lightView = glm::lookAt(lightPos, sceneCenter, up);
-    // glm::mat4 lightProj =
-    //     glm::ortho(-_shadowDistance, _shadowDistance, -_shadowDistance,
-    //                _shadowDistance, 0.0f, 2.0f * _shadowDistance);
-    // return lightProj * lightView;
-    */
-
-    float shadowNear = camera.getNearPlane();
-    float shadowFar = std::min(camera.getFarPlane(), _shadowDistance);
+    shadowNear = std::max(0.001f, shadowNear);
+    shadowFar = std::max(shadowNear + 0.001f, shadowFar);
     WorldFrustumPos frustumPos = camera.getFrustumPos(shadowNear, shadowFar);
     glm::vec3 corners[] = {
         frustumPos.nearLB, frustumPos.nearLT, frustumPos.nearRB,
@@ -407,31 +514,55 @@ glm::mat4 Rasterizer::computeLightSpaceMatrix(Camera& camera,
         frustumCenter += corner;
     frustumCenter /= 8.0f;
 
-    float frustumRadius = 0.0f;
-    for (const auto& corner : corners)
-        frustumRadius =
-            std::max(frustumRadius, glm::length(corner - frustumCenter));
-    const float casterMargin = std::max(2.0f, _shadowDistance * 0.25f);
-    frustumRadius += casterMargin;
-    _activeShadowOrthoHalfSize = frustumRadius;
-
-    glm::vec3 lightPos = frustumCenter + sunDir * frustumRadius;
+    const float cascadeRange = shadowFar - shadowNear;
+    glm::vec3 lightPos = frustumCenter + sunDir * std::max(10.0f, cascadeRange);
     glm::mat4 lightView = glm::lookAt(lightPos, frustumCenter, up);
-
     float minZ = std::numeric_limits<float>::max();
     float maxZ = std::numeric_limits<float>::lowest();
+    std::vector<glm::vec3> lightSpaceCorners;
+    lightSpaceCorners.reserve(8);
     for (const auto& corner : corners) {
         glm::vec3 lightSpaceCorner =
             glm::vec3(lightView * glm::vec4(corner, 1.0f));
+        lightSpaceCorners.push_back(lightSpaceCorner);
         minZ = std::min(minZ, lightSpaceCorner.z);
         maxZ = std::max(maxZ, lightSpaceCorner.z);
     }
 
-    const float zPadding = std::max(5.0f, _shadowDistance * 0.25f);
-    // Use a square XY fit to reduce scaling shimmer.
-    glm::mat4 lightProj =
-        glm::ortho(-frustumRadius, frustumRadius, -frustumRadius, frustumRadius,
-                   -maxZ - zPadding, -minZ + zPadding);
+    const float zPadding = std::max(5.0f, cascadeRange * 0.25f);
+    glm::mat4 lightProj(1.0f);
+    if (_useTightShadowFit) {
+        const float casterMargin = std::max(1.0f, cascadeRange * 0.05f);
+        float minX = std::numeric_limits<float>::max();
+        float maxX = std::numeric_limits<float>::lowest();
+        float minY = std::numeric_limits<float>::max();
+        float maxY = std::numeric_limits<float>::lowest();
+        for (const auto& corner : lightSpaceCorners) {
+            minX = std::min(minX, corner.x);
+            maxX = std::max(maxX, corner.x);
+            minY = std::min(minY, corner.y);
+            maxY = std::max(maxY, corner.y);
+        }
+
+        minX -= casterMargin;
+        maxX += casterMargin;
+        minY -= casterMargin;
+        maxY += casterMargin;
+        _activeShadowOrthoHalfSize =
+            std::max((maxX - minX) * 0.5f, (maxY - minY) * 0.5f);
+        lightProj = glm::ortho(minX, maxX, minY, maxY, -maxZ - zPadding,
+                               -minZ + zPadding);
+    } else {
+        float frustumRadius = 0.0f;
+        for (const auto& corner : corners)
+            frustumRadius =
+                std::max(frustumRadius, glm::length(corner - frustumCenter));
+        frustumRadius += std::max(2.0f, cascadeRange * 0.25f);
+        _activeShadowOrthoHalfSize = frustumRadius;
+        lightProj =
+            glm::ortho(-frustumRadius, frustumRadius, -frustumRadius,
+                       frustumRadius, -maxZ - zPadding, -minZ + zPadding);
+    }
 
     // Snap the projection to the shadow texel grid.
     glm::mat4 lightSpaceMatrix = lightProj * lightView;
@@ -462,15 +593,52 @@ void Rasterizer::renderShadowMap(Camera& camera, UpAxis upAxis,
         return;
     }
 
-    _lightSpaceMatrix = computeLightSpaceMatrix(camera, upAxis);
-    _shadowMap = _shadowFbo->getDepthTexture();
+    _cascadeSplits = computeCascadeSplits(camera);
+    float cascadeNear = camera.getNearPlane();
+    for (int i = 0; i < _cascadeCount; ++i) {
+        const float cascadeFar = _cascadeSplits[i];
+        _cascadeLightMatrices[i] =
+            computeLightSpaceMatrix(camera, upAxis, cascadeNear, cascadeFar);
+        _cascadeOrthoHalfSizes[i] = _activeShadowOrthoHalfSize;
+        cascadeNear = cascadeFar;
+    }
+
+    _lightSpaceMatrix = _useCsm ? _cascadeLightMatrices[0]
+                                : computeLightSpaceMatrix(camera, upAxis);
+    if (!_useCsm)
+        _cascadeOrthoHalfSizes[0] = _activeShadowOrthoHalfSize;
+    _shadowMap = _useCsm && _cascadeFbos[0] ? _cascadeFbos[0]->getDepthTexture()
+                                            : _shadowFbo->getDepthTexture();
     updateShadowUBO(_shadowMap ? _activeShadowOrthoHalfSize : 0.0f);
 
-    _shadowFbo->bind();
-    _graphicsDevice->setViewport(0, 0, _shadowMapWH, _shadowMapWH);
-    _graphicsDevice->clear(0, 0, 0, 1);
-    drawShadowCasters();
-    _shadowFbo->unbind();
+    if (_useCsm) {
+        for (int i = 0; i < _cascadeCount; ++i) {
+            if (!_cascadeFbos[static_cast<size_t>(i)])
+                continue;
+            _lightSpaceMatrix = _cascadeLightMatrices[static_cast<size_t>(i)];
+            _cascadeMaps[static_cast<size_t>(i)] =
+                _cascadeFbos[static_cast<size_t>(i)]->getDepthTexture();
+            updateShadowPassUBO(_cascadeLightMatrices[static_cast<size_t>(i)],
+                                _cascadeOrthoHalfSizes[static_cast<size_t>(i)]);
+
+            _cascadeFbos[static_cast<size_t>(i)]->bind();
+            const int mapSize = _cascadeMapSizes[static_cast<size_t>(i)];
+            _graphicsDevice->setViewport(0, 0, mapSize, mapSize);
+            _graphicsDevice->clear(0, 0, 0, 1);
+            drawShadowCasters();
+            _cascadeFbos[static_cast<size_t>(i)]->unbind();
+        }
+        _lightSpaceMatrix = _cascadeLightMatrices[0];
+        _shadowMap = _cascadeMaps[0];
+        updateShadowUBO(_shadowMap ? _activeShadowOrthoHalfSize : 0.0f);
+    } else {
+        updateShadowPassUBO(_lightSpaceMatrix, _activeShadowOrthoHalfSize);
+        _shadowFbo->bind();
+        _graphicsDevice->setViewport(0, 0, _shadowMapWH, _shadowMapWH);
+        _graphicsDevice->clear(0, 0, 0, 1);
+        drawShadowCasters();
+        _shadowFbo->unbind();
+    }
     _graphicsDevice->setViewport(0, 0, viewportWidth, viewportHeight);
 }
 
@@ -483,6 +651,8 @@ void Rasterizer::drawShadowCasters() {
             continue;
         if (!inst.castsShadow())
             continue;
+        // Shadow pass runs after updateFrameData() uploads all instances and
+        // before scene-pass frustum culling compacts the visible buffer.
         if (inst.hasSkinning() && _skinnedShadowShader) {
             _skinnedShadowShader->use();
             inst.uploadSkinningMatrices(_skinnedShadowShader.get());

@@ -10,14 +10,16 @@ layout(location = 9) in vec4 aBoneWeights;
 #import "skinning_common.glsl"
 
 layout(std140) uniform shadowUBO {
-    mat4 lightSpaceMatrix;
+    mat4 lightSpaceMatrices[4];
+    vec4 cascadeSplits;
+    vec4 cascadeOrthoHalfSizes;
+    vec4 cascadeMapSizes;
     vec4 shadowParams;
-    vec4 shadowInfo; // x: ortho half-size, y: map width, z: PCF samples
+    vec4 shadowInfo; // x: PCF samples, y: cascade count, z: use CSM
 };
 
 void main() {
-    mat4 model = mat4(aInstanceTransform0, aInstanceTransform1,
-                      aInstanceTransform2, aInstanceTransform3);
-    gl_Position = lightSpaceMatrix * model *
-                  skinMatrix(aBoneIndices, aBoneWeights) * vec4(aPos, 1.0);
+    mat4 model = mat4(aInstanceTransform0, aInstanceTransform1, aInstanceTransform2, aInstanceTransform3);
+    gl_Position = lightSpaceMatrices[0] * model *
+        skinMatrix(aBoneIndices, aBoneWeights) * vec4(aPos, 1.0);
 }

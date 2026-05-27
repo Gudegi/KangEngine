@@ -4,11 +4,13 @@
 
 #include <GLFW/glfw3.h>
 #include <glm/ext/quaternion_trigonometric.hpp>
+#include <glm/fwd.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/trigonometric.hpp>
 #include <imgui.h>
 
+#include <algorithm>
 #include <cmath>
 #include <memory>
 #include <string>
@@ -42,6 +44,11 @@ void addLine(FrustumLines& lines, const glm::vec3& a, const glm::vec3& b,
     lines.colors.push_back(color);
 }
 
+glm::vec4 presetColor(ColorType type) {
+    const Color& c = ColorLibrary::get(type);
+    return glm::vec4(c.r, c.g, c.b, c.a);
+}
+
 glm::mat4 composeTransform(const glm::vec3& position,
                            const glm::quat& orientation,
                            const glm::vec3& scale = glm::vec3(1.0f)) {
@@ -70,16 +77,16 @@ void addAABBLines(FrustumLines& lines, const Geometry::AABB& box,
         addLine(lines, corners[edge[0]], corners[edge[1]], color);
 }
 
-FrustumLines buildFrustumLines(Camera& camera) {
+FrustumLines buildFrustumLines(Camera& camera, float nearPlane, float farPlane,
+                               const glm::vec4& nearColor,
+                               const glm::vec4& farColor,
+                               const glm::vec4& sideColor) {
     FrustumLines lines;
     lines.starts.reserve(12);
     lines.ends.reserve(12);
     lines.colors.reserve(12);
 
-    const WorldFrustumPos f = camera.getFrustumPos();
-    const glm::vec4 nearColor(0.2f, 0.95f, 1.0f, 1.0f);
-    const glm::vec4 farColor(1.0f, 0.68f, 0.15f, 1.0f);
-    const glm::vec4 sideColor(0.95f, 0.95f, 0.2f, 1.0f);
+    const WorldFrustumPos f = camera.getFrustumPos(nearPlane, farPlane);
 
     addLine(lines, f.nearLB, f.nearLT, nearColor);
     addLine(lines, f.nearLT, f.nearRT, nearColor);
@@ -97,6 +104,65 @@ FrustumLines buildFrustumLines(Camera& camera) {
     addLine(lines, f.nearRB, f.farRB, sideColor);
 
     return lines;
+}
+
+FrustumLines buildFrustumLines(Camera& camera) {
+    return buildFrustumLines(camera, camera.getNearPlane(),
+                             camera.getFarPlane(),
+                             presetColor(ColorType::PASTEL_CYAN),
+                             presetColor(ColorType::PASTEL_ORANGE),
+                             presetColor(ColorType::PASTEL_YELLOW));
+}
+
+std::vector<float> computeCascadeSplits(Camera& camera, int cascadeCount,
+                                        float lambda) {
+    std::vector<float> splits(static_cast<size_t>(cascadeCount), 0.0f);
+    const float nearPlane = std::max(0.001f, camera.getNearPlane());
+    const float farPlane = std::max(nearPlane + 0.001f, camera.getFarPlane());
+    const float range = farPlane - nearPlane;
+    const float ratio = farPlane / nearPlane;
+
+    for (int i = 1; i <= cascadeCount; ++i) {
+        const float p =
+            static_cast<float>(i) / static_cast<float>(cascadeCount);
+        const float logSplit = nearPlane * std::pow(ratio, p);
+        const float uniformSplit = nearPlane + range * p;
+        splits[static_cast<size_t>(i - 1)] =
+            glm::mix(uniformSplit, logSplit, lambda);
+    }
+    return splits;
+}
+
+FrustumLines buildCascadeFrustumLines(Camera& camera, int cascadeCount,
+                                      float lambda) {
+    FrustumLines out;
+    const std::vector<float> splits =
+        computeCascadeSplits(camera, cascadeCount, lambda);
+    out.starts.reserve(splits.size() * 12);
+    out.ends.reserve(splits.size() * 12);
+    out.colors.reserve(splits.size() * 12);
+
+    const glm::vec4 colors[] = {
+        presetColor(ColorType::PASTEL_BLUE),
+        presetColor(ColorType::PASTEL_GREEN),
+        presetColor(ColorType::PASTEL_PEACH),
+        presetColor(ColorType::PASTEL_PURPLE),
+    };
+
+    float cascadeNear = camera.getNearPlane();
+    for (size_t i = 0; i < splits.size(); ++i) {
+        const glm::vec4 color = colors[std::min(i, size_t(3))];
+        FrustumLines lines =
+            buildFrustumLines(camera, cascadeNear, splits[i], color, color,
+                              glm::vec4(color.r, color.g, color.b, 0.95f));
+        out.starts.insert(out.starts.end(), lines.starts.begin(),
+                          lines.starts.end());
+        out.ends.insert(out.ends.end(), lines.ends.begin(), lines.ends.end());
+        out.colors.insert(out.colors.end(), lines.colors.begin(),
+                          lines.colors.end());
+        cascadeNear = splits[i];
+    }
+    return out;
 }
 
 FrustumPoints buildFrustumPoints(Camera& camera) {
@@ -168,8 +234,11 @@ class CameraFrustumDebugApp : public App {
     bool animateSubject = true;
     bool showSubjectBody = true;
     bool showSceneAABB = true;
+    bool showCascadeFrustums = true;
     int aabbClassifyMode =
         1; // 0: object original color, 1: subject, 2: observer
+    int cascadeCount = 3;
+    float cascadeLambda = 0.55f;
     int subjectVisibleAABB = 0;
     int subjectCulledAABB = 0;
     int observerVisibleAABB = 0;
@@ -184,10 +253,10 @@ class CameraFrustumDebugApp : public App {
     bool previewPostProcess = true;
 
     void setup() override {
-        setCameraMoveSpeed(8.0f);
-        getCamera().setCameraPos(glm::vec3(7.0f, 4.5f, 8.0f));
-        getCamera().setTargetPos(glm::vec3(0.0f, 1.0f, 0.0f));
-        getCamera().setFarPlane(200.0f);
+        setCameraMoveSpeed(35.0f);
+        getCamera().setCameraPos(glm::vec3(32.0f, 18.0f, 42.0f));
+        getCamera().setTargetPos(glm::vec3(0.0f, 1.2f, -70.0f));
+        getCamera().setFarPlane(500.0f);
 
         setLight(
             DirectionalLight{glm::normalize(glm::vec3(0.35f, 0.85f, 0.45f)),
@@ -218,10 +287,14 @@ class CameraFrustumDebugApp : public App {
         MeshPrimDesc ground;
         ground.shader = groundShader.get();
         ground.path = "/debug/ground";
-        ground.meshData = Scene::Prim::createPlaneData(24.0f, _upAxis);
+        ground.meshData = Scene::Prim::createPlaneData(360.0f, _upAxis);
         ground.doubleSided = false;
         ground.castsShadow = false;
         addMeshPrim(std::move(ground));
+
+        Scene::DebugDraw::logCoordinateAxes(
+            this, shader.get(), "/debug/axis", glm::vec3(0, 0, 0),
+            glm::quat(1.0, 0.f, 0.f, 0.f), 1.8f, 0.11f);
 
         addSceneObjects();
         subjectPreviewFbo = getGraphicsDevice()->createFramebuffer(
@@ -250,6 +323,9 @@ class CameraFrustumDebugApp : public App {
         ImGui::Checkbox("Animate subject camera", &animateSubject);
         ImGui::Checkbox("Show subject body", &showSubjectBody);
         ImGui::Checkbox("Show scene AABB", &showSceneAABB);
+        ImGui::Checkbox("Show CSM cascades", &showCascadeFrustums);
+        ImGui::SliderInt("Cascade count", &cascadeCount, 1, 4);
+        ImGui::SliderFloat("Cascade lambda", &cascadeLambda, 0.0f, 1.0f);
         ImGui::Text("AABB color mode");
         ImGui::RadioButton("Original", &aabbClassifyMode, 0);
         ImGui::SameLine();
@@ -330,31 +406,71 @@ class CameraFrustumDebugApp : public App {
                             glm::vec4(color.r, color.g, color.b, 1.0f));
         };
 
-        addCubeWithBounds(
-            "/debug/box_left", 0.65f, glm::vec3(-2.2f, 0.33f, -1.2f),
-            glm::angleAxis(glm::radians(30.0f), glm::vec3(1.f, 0.f, 0.f)),
-            glm::vec4(0.95f, 0.34f, 0.25f, 1.0f));
-        addCubeWithBounds(
-            "/debug/box_right", 0.55f, glm::vec3(2.0f, 0.28f, 1.25f),
-            glm::angleAxis(glm::radians(45.0f),
-                           glm::normalize(glm::vec3(1.f, 1.f, 0.f))),
-            glm::vec4(0.25f, 0.55f, 0.95f, 1.0f));
-        addSphereWithBounds(
-            "/debug/sphere_center", 0.45f, glm::vec3(0.0f, 0.45f, 0.0f),
-            glm::angleAxis(glm::radians(15.0f), glm::vec3(1.f, 0.f, 0.f)),
-            glm::vec4(0.95f, 0.82f, 0.25f, 1.0f));
-        addSphereWithBounds("/debug/sphere_far", 0.35f,
-                            glm::vec3(0.9f, 0.35f, -3.5f),
-                            glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-                            glm::vec4(0.45f, 0.95f, 0.55f, 1.0f));
+        const glm::vec4 warm = presetColor(ColorType::PASTEL_PEACH);
+        const glm::vec4 cool = presetColor(ColorType::PASTEL_BLUE);
+        const glm::vec4 green = presetColor(ColorType::PASTEL_GREEN);
+        const glm::vec4 yellow = presetColor(ColorType::PASTEL_YELLOW);
+        const glm::vec4 purple = presetColor(ColorType::PASTEL_PURPLE);
+
+        const std::vector<float> rows = {-8.0f,   -16.0f,  -28.0f,
+                                         -44.0f,  -66.0f,  -92.0f,
+                                         -124.0f, -162.0f, -205.0f};
+        const std::vector<float> lanes = {-14.0f, -7.0f, 0.0f, 7.0f, 14.0f};
+
+        int objectId = 0;
+        for (size_t row = 0; row < rows.size(); ++row) {
+            for (size_t lane = 0; lane < lanes.size(); ++lane) {
+                const float size =
+                    0.75f + 0.22f * static_cast<float>((row + lane) % 4);
+                const glm::vec3 position(
+                    lanes[lane] +
+                        std::sin(static_cast<float>(row) * 0.8f) * 0.8f,
+                    size * 0.5f, rows[row]);
+                const glm::quat orientation = glm::angleAxis(
+                    glm::radians(17.0f * static_cast<float>(row + lane)),
+                    glm::normalize(glm::vec3(0.25f, 1.0f, 0.15f)));
+                const glm::vec4 color = ((row + lane) % 3 == 0)   ? warm
+                                        : ((row + lane) % 3 == 1) ? cool
+                                                                  : green;
+                addCubeWithBounds("/debug/csm_box_" +
+                                      std::to_string(objectId++),
+                                  size, position, orientation, color);
+            }
+        }
+
+        for (size_t i = 0; i < rows.size(); ++i) {
+            const float z = rows[i] - 5.0f;
+            const float radius = 0.45f + 0.08f * static_cast<float>(i % 3);
+            addSphereWithBounds("/debug/csm_sphere_left_" + std::to_string(i),
+                                radius, glm::vec3(-20.0f, radius, z),
+                                glm::quat(1.0f, 0.0f, 0.0f, 0.0f), yellow);
+            addSphereWithBounds("/debug/csm_sphere_right_" + std::to_string(i),
+                                radius, glm::vec3(20.0f, radius, z - 6.0f),
+                                glm::quat(1.0f, 0.0f, 0.0f, 0.0f), purple);
+        }
+
+        for (int i = 0; i < 8; ++i) {
+            const float z = -18.0f - static_cast<float>(i) * 24.0f;
+            const float size = 2.2f + 0.25f * static_cast<float>(i % 2);
+            addCubeWithBounds("/debug/csm_tower_left_" + std::to_string(i),
+                              size, glm::vec3(-28.0f, size * 0.5f, z),
+                              glm::angleAxis(glm::radians(12.0f * i),
+                                             glm::vec3(0.f, 1.f, 0.f)),
+                              cool);
+            addCubeWithBounds("/debug/csm_tower_right_" + std::to_string(i),
+                              size, glm::vec3(28.0f, size * 0.5f, z - 10.0f),
+                              glm::angleAxis(glm::radians(-9.0f * i),
+                                             glm::vec3(0.f, 1.f, 0.f)),
+                              warm);
+        }
     }
 
     void initializeSubjectCamera() {
-        subjectCamera.init(glm::vec3(-3.0f, 1.35f, 3.2f),
-                           glm::vec3(0.3f, 0.95f, -0.3f), _upAxis);
+        subjectCamera.init(glm::vec3(0.0f, 2.25f, 6.0f),
+                           glm::vec3(0.0f, 1.1f, -55.0f), _upAxis);
         subjectFov = subjectCamera.getFoV();
         subjectNear = subjectCamera.getNearPlane();
-        subjectFar = subjectCamera.getFarPlane();
+        subjectFar = 140.0f;
         updateSubjectCamera();
     }
 
@@ -364,10 +480,11 @@ class CameraFrustumDebugApp : public App {
         subjectAspect = std::max(0.05f, subjectAspect);
 
         if (animateSubject) {
-            const float angle = subjectTime * 0.35f;
-            const glm::vec3 target(0.2f * std::sin(angle * 1.7f), 0.95f, -0.2f);
-            const glm::vec3 pos(-2.8f + 0.45f * std::sin(angle), 1.35f,
-                                3.0f + 0.35f * std::cos(angle));
+            const float angle = subjectTime * 0.18f;
+            const glm::vec3 target(5.0f * std::sin(angle * 1.2f), 1.1f,
+                                   -55.0f + 8.0f * std::cos(angle * 0.7f));
+            const glm::vec3 pos(3.0f * std::sin(angle), 2.25f,
+                                6.0f + 2.0f * std::cos(angle));
             subjectCamera.setTargetPos(target);
             subjectCamera.setCameraPos(pos);
         }
@@ -398,6 +515,13 @@ class CameraFrustumDebugApp : public App {
         cameraAxes[2] = glm::vec4(subjectCamera.getCameraLookDir(), 0.0f);
         cameraAxes[3] = glm::vec4(subjectCamera.getCameraPos(), 1.0f);
         logDebugAxes("/debug/subject_camera_axes", cameraAxes, 0.6f, 2.0f);
+        cascadeCount = std::clamp(cascadeCount, 1, 4);
+        cascadeLambda = std::clamp(cascadeLambda, 0.0f, 1.0f);
+        const FrustumLines cascadeLines = buildCascadeFrustumLines(
+            subjectCamera, cascadeCount, cascadeLambda);
+        logDebugLines("/debug/subject_camera_cascades", cascadeLines.starts,
+                      cascadeLines.ends, cascadeLines.colors, 2.5f,
+                      !showCascadeFrustums);
         const FrustumPoints points = buildFrustumPoints(subjectCamera);
         logDebugPoints("/debug/subject_camera_frustum_corners",
                        points.positions, points.colors, 9.0f);

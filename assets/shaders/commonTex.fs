@@ -13,13 +13,20 @@ layout(std140) uniform lightUBO {
     vec4 ambient;
 };
 layout(std140) uniform shadowUBO {
-    mat4 lightSpaceMatrix;
+    mat4 lightSpaceMatrices[4];
+    vec4 cascadeSplits;
+    vec4 cascadeOrthoHalfSizes;
+    vec4 cascadeMapSizes;
     vec4 shadowParams;
-    vec4 shadowInfo; // x: ortho half-size, y: map width, z: PCF samples
+    vec4 shadowInfo; // x: PCF samples, y: cascade count, z: use CSM
 };
 
 uniform sampler2D uTexture;
-uniform sampler2D shadowMap;
+uniform sampler2D shadowMap0;
+uniform sampler2D shadowMap1;
+uniform sampler2D shadowMap2;
+uniform sampler2D shadowMap3;
+uniform int debugCsmCascadeTint;
 
 #import "shadow_common.glsl"
 
@@ -37,5 +44,6 @@ void main() {
     vec3 specular = spec * lightColor.rgb;
 
     float shadow = ShadowCalculation();
-    FragColor = vec4(ambient.rgb * texColor.rgb + (1.0 - shadow) * (diffuse + specular), texColor.a);
+    vec3 lit = ambient.rgb * texColor.rgb + (1.0 - shadow) * (diffuse + specular);
+    FragColor = vec4(lit * ShadowCascadeTint(), texColor.a);
 }
