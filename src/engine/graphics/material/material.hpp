@@ -47,8 +47,14 @@ public:
 
         if (diffuseMap) {
             diffuseMap->bind(0);
+            _shader->setInt("uTexture", 0);
             _shader->setInt("material.diffuseMap", 0);
         }
+        if (normalMap) {
+            normalMap->bind(5);
+            _shader->setInt("normalMap", 5);
+        }
+        _shader->setInt("useNormalMap", normalMap ? 1 : 0);
     }
 
     void unbind() override {

@@ -1,6 +1,7 @@
 #include "usd_loader.hpp"
 
 #include "asset/mesh_loader.hpp"
+#include "geometry/mesh_utils.hpp"
 
 #include <filesystem>
 #include <stdexcept>
@@ -86,8 +87,9 @@ std::string findTextureInShaderNetwork(const pxr::UsdPrim& prim,
     return {};
 }
 
-std::string diffuseTexturePath(const pxr::UsdShadeMaterial& material,
-                               const std::string& usdPath) {
+std::string connectedTexturePath(const pxr::UsdShadeMaterial& material,
+                                 const std::string& usdPath,
+                                 const pxr::TfToken& inputName) {
     if (!material)
         return {};
 
@@ -95,18 +97,28 @@ std::string diffuseTexturePath(const pxr::UsdShadeMaterial& material,
     if (!shader)
         return {};
 
-    pxr::UsdShadeInput diffuseInput =
-        shader.GetInput(pxr::TfToken("diffuseColor"));
-    if (!diffuseInput)
+    pxr::UsdShadeInput input = shader.GetInput(inputName);
+    if (!input)
         return {};
 
     const pxr::UsdShadeInput::SourceInfoVector sources =
-        diffuseInput.GetConnectedSources();
+        input.GetConnectedSources();
     if (sources.empty())
         return {};
 
     return findTextureInShaderNetwork(sources.front().source.GetPrim(),
                                       usdPath);
+}
+
+std::string diffuseTexturePath(const pxr::UsdShadeMaterial& material,
+                               const std::string& usdPath) {
+    return connectedTexturePath(material, usdPath,
+                                pxr::TfToken("diffuseColor"));
+}
+
+std::string normalTexturePath(const pxr::UsdShadeMaterial& material,
+                              const std::string& usdPath) {
+    return connectedTexturePath(material, usdPath, pxr::TfToken("normal"));
 }
 
 pxr::UsdShadeMaterial boundMaterial(const pxr::UsdPrim& prim) {
@@ -142,9 +154,8 @@ bool readIndexedValueIndex(const pxr::VtArray<int>& indices, size_t srcIndex,
     return outIndex < valueCount;
 }
 
-Scene::MeshData
-loadMeshData(const pxr::UsdPrim& prim,
-             const std::unordered_set<size_t>* selectedFaces) {
+Scene::MeshData loadMeshData(const pxr::UsdPrim& prim,
+                             const std::unordered_set<size_t>* selectedFaces) {
     Scene::MeshData meshData;
     pxr::UsdGeomMesh mesh(prim);
     if (!mesh)
@@ -156,8 +167,7 @@ loadMeshData(const pxr::UsdPrim& prim,
     mesh.GetFaceVertexCountsAttr().Get(&faceVertexCounts);
     mesh.GetFaceVertexIndicesAttr().Get(&faceVertexIndices);
     mesh.GetPointsAttr().Get(&points);
-    if (faceVertexCounts.empty() || faceVertexIndices.empty() ||
-        points.empty())
+    if (faceVertexCounts.empty() || faceVertexIndices.empty() || points.empty())
         return meshData;
 
     pxr::UsdGeomXformCache xformCache(pxr::UsdTimeCode::Default());
@@ -276,7 +286,9 @@ loadMeshData(const pxr::UsdPrim& prim,
     }
 
     meshData.fillMissingAttributes();
-    return deduplicateMeshData(meshData);
+    Scene::MeshData deduped = deduplicateMeshData(meshData);
+    Geometry::computeTangents(deduped);
+    return deduped;
 }
 
 std::unordered_set<size_t> faceSetFromSubset(const pxr::UsdPrim& subsetPrim) {
@@ -298,17 +310,17 @@ size_t faceCount(const pxr::UsdPrim& prim) {
 }
 
 void assignMaterial(USDMeshInfo& info, const pxr::UsdShadeMaterial& material,
-                    const std::string& usdPath,
-                    ImportDiagnostics& diagnostics,
+                    const std::string& usdPath, ImportDiagnostics& diagnostics,
                     std::unordered_set<std::string>& missingTextureWarnings) {
     if (!material)
         return;
     info.materialPath = material.GetPath().GetString();
     info.diffuseTexturePath = diffuseTexturePath(material, usdPath);
+    info.normalTexturePath = normalTexturePath(material, usdPath);
     if (info.diffuseTexturePath.empty() &&
         missingTextureWarnings.insert(info.materialPath).second) {
-        diagnostics.warnings.push_back("USD diffuse texture was not found for " +
-                                      info.materialPath);
+        diagnostics.warnings.push_back(
+            "USD diffuse texture was not found for " + info.materialPath);
     }
 }
 #endif

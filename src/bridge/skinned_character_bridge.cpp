@@ -48,6 +48,14 @@ diffuseTexturePathFromMaterial(const Asset::FBXMeshMetadata& mesh) {
     return material.hasDiffuseTexture ? material.diffuseTexturePath : "";
 }
 
+std::string normalTexturePathFromMaterial(const Asset::FBXMeshMetadata& mesh) {
+    const int idx = mesh.primaryMaterialIndex;
+    if (idx < 0 || idx >= static_cast<int>(mesh.materials.size()))
+        return {};
+    const auto& material = mesh.materials[static_cast<size_t>(idx)];
+    return material.hasNormalTexture ? material.normalTexturePath : "";
+}
+
 void validateBoneSlots(const SkinnedCharacterBridge::MeshBinding& mesh,
                        size_t motionNodeCount) {
     if (mesh.boneNames.size() != mesh.boneNodeIndices.size() ||
@@ -161,8 +169,19 @@ SkinnedCharacterBridge SkinnedCharacterBridge::fromFBXWithBind(
                 app->getGraphicsDevice()->createTexture(texturePath, true));
             binding.diffuseTexture = bridge._textures.back().get();
         }
+        const std::string normalTexturePath =
+            useMaterials ? normalTexturePathFromMaterial(imported.metadata)
+                         : "";
+        if (!normalTexturePath.empty() &&
+            std::filesystem::exists(normalTexturePath)) {
+            bridge._textures.push_back(app->getGraphicsDevice()->createTexture(
+                normalTexturePath, true));
+            binding.normalTexture = bridge._textures.back().get();
+        }
         if (binding.handle != InvalidHandle && binding.diffuseTexture)
             app->setShapeTexture(binding.handle, binding.diffuseTexture, 0);
+        if (binding.handle != InvalidHandle && binding.normalTexture)
+            app->setShapeTexture(binding.handle, binding.normalTexture, 5);
 
         bridge._meshes.push_back(std::move(binding));
     }

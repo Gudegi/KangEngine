@@ -12,13 +12,29 @@ A lightweight C++ engine for computer graphics and robotics research, with a Pyt
 
 ## Features
 
-- **Rendering** — OpenGL/GLFW renderer with ImGui panels, camera controls, materials, shadows, post-processing, and mesh instancing. (TODO : WebGPU support)
-- **Scene** — A lightweight native scene graph with USD-style prim paths, transforms, mesh data, visibility, and display color attributes.
-- **Physics** — Optional NVIDIA PhysX integration for rigid bodies, articulations, and robot simulation examples.
-- **Animation** — Skeleton data structures, forward kinematics, MJCF loading, and bridges from skeleton/physics state to scene visuals.
-- **Simulation** — Experimental XPBD cloth simulation utilities.
-- **OpenUSD** — Optional OpenUSD backend when configured with `-DUSE_USD=ON`.
-- **Python** — Optional pybind11 module for using the engine, scene, animation, and physics APIs from Python.
+### Rendering
+- OpenGL renderer with instanced mesh drawing and a lightweight graphics abstraction layer (WebGPU planned)
+- Scene-graph and handle-driven rendering paths for static scenes, physics objects, and large crowds
+- Shadow mapping, skybox rendering, gamma post-processing, and ImGui tooling
+- GPU skinning for animated FBX characters
+- Debug rendering utilities for lines, arrows, coordinate axes, and camera frustums
+
+### Asset Import
+- FBX: skeletons, animation clips, static meshes, and skinned meshes
+- MJCF: articulated characters, collision geometry, joints, and inertials
+- USD: mesh traversal, material subsets, and diffuse texture loading
+- OBJ/STL static mesh import
+
+### Simulation & Animation
+- PhysX rigid bodies and articulated robot simulation
+- Skeleton trees, sampled motion clips, FK, and pose states
+- Bridges for syncing physics, skeletons, and skinned characters to rendering
+- Experimental XPBD cloth simulation(non-PhysX)
+
+### Python
+- pybind11 bindings for app, scene, animation, physics, and asset APIs
+- Headless simulation and live visualization helpers
+- MimicKit-compatible backend adapter
 
 ## How to build
 Install CMake first, then follow the platform steps below.

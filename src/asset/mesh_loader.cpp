@@ -1,5 +1,6 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "mesh_loader.hpp"
+#include "geometry/mesh_utils.hpp"
 #include <array>
 #include <cstdint>
 #include <cstring>
@@ -22,10 +23,13 @@ struct MeshVertexKey {
     std::array<uint32_t, 3> position{};
     std::array<uint32_t, 3> normal{};
     std::array<uint32_t, 2> uv{};
+    std::array<uint32_t, 4> tangent{};
+    bool hasTangent = false;
 
     bool operator==(const MeshVertexKey& other) const {
         return position == other.position && normal == other.normal &&
-               uv == other.uv;
+               uv == other.uv && hasTangent == other.hasTangent &&
+               (!hasTangent || tangent == other.tangent);
     }
 };
 
@@ -44,18 +48,29 @@ struct MeshVertexKeyHash {
             mix(v);
         for (uint32_t v : key.uv)
             mix(v);
+        mix(key.hasTangent ? 1u : 0u);
+        if (key.hasTangent) {
+            for (uint32_t v : key.tangent)
+                mix(v);
+        }
         return h;
     }
 };
 
 MeshVertexKey makeMeshVertexKey(const glm::vec3& position,
-                                const glm::vec3& normal, const glm::vec2& uv) {
+                                const glm::vec3& normal, const glm::vec2& uv,
+                                const glm::vec4* tangent) {
     MeshVertexKey key;
     key.position = {floatBits(position.x), floatBits(position.y),
                     floatBits(position.z)};
     key.normal = {floatBits(normal.x), floatBits(normal.y),
                   floatBits(normal.z)};
     key.uv = {floatBits(uv.x), floatBits(uv.y)};
+    if (tangent) {
+        key.hasTangent = true;
+        key.tangent = {floatBits(tangent->x), floatBits(tangent->y),
+                       floatBits(tangent->z), floatBits(tangent->w)};
+    }
     return key;
 }
 
@@ -148,7 +163,9 @@ Scene::MeshData loadBinaryStl(const std::string& path) {
     meshData.uvs = std::move(uvs);
     meshData.indices = std::move(indices);
     meshData.fillMissingAttributes();
-    return deduplicateMeshData(meshData);
+    Scene::MeshData deduped = deduplicateMeshData(meshData);
+    Geometry::computeTangents(deduped);
+    return deduped;
 }
 
 Scene::MeshData loadAsciiStl(const std::string& path) {
@@ -194,7 +211,9 @@ Scene::MeshData loadAsciiStl(const std::string& path) {
     meshData.uvs = std::move(uvs);
     meshData.indices = std::move(indices);
     meshData.fillMissingAttributes();
-    return deduplicateMeshData(meshData);
+    Scene::MeshData deduped = deduplicateMeshData(meshData);
+    Geometry::computeTangents(deduped);
+    return deduped;
 }
 
 } // anonymous namespace
@@ -205,11 +224,14 @@ Scene::MeshData deduplicateMeshData(const Scene::MeshData& src) {
     if (src.normals.size() != src.vertices.size() ||
         src.uvs.size() != src.vertices.size())
         return src;
+    const bool hasTangents = src.tangents.size() == src.vertices.size();
 
     Scene::MeshData dst;
     dst.vertices.reserve(src.vertices.size());
     dst.normals.reserve(src.normals.size());
     dst.uvs.reserve(src.uvs.size());
+    if (hasTangents)
+        dst.tangents.reserve(src.tangents.size());
     dst.indices.reserve(src.indices.size());
 
     std::unordered_map<MeshVertexKey, unsigned int, MeshVertexKeyHash> seen;
@@ -219,8 +241,11 @@ Scene::MeshData deduplicateMeshData(const Scene::MeshData& src) {
         if (srcIndex >= src.vertices.size())
             return src;
 
-        const MeshVertexKey key = makeMeshVertexKey(
-            src.vertices[srcIndex], src.normals[srcIndex], src.uvs[srcIndex]);
+        const glm::vec4* tangent =
+            hasTangents ? &src.tangents[srcIndex] : nullptr;
+        const MeshVertexKey key =
+            makeMeshVertexKey(src.vertices[srcIndex], src.normals[srcIndex],
+                              src.uvs[srcIndex], tangent);
 
         auto [it, inserted] =
             seen.emplace(key, static_cast<unsigned int>(dst.vertices.size()));
@@ -228,6 +253,8 @@ Scene::MeshData deduplicateMeshData(const Scene::MeshData& src) {
             dst.vertices.push_back(src.vertices[srcIndex]);
             dst.normals.push_back(src.normals[srcIndex]);
             dst.uvs.push_back(src.uvs[srcIndex]);
+            if (hasTangents)
+                dst.tangents.push_back(src.tangents[srcIndex]);
         }
         dst.indices.push_back(it->second);
     }
@@ -343,7 +370,9 @@ Scene::MeshData loadObj(std::string path,
     meshData.indices = indices;
 
     meshData.fillMissingAttributes();
-    return deduplicateMeshData(meshData);
+    Scene::MeshData deduped = deduplicateMeshData(meshData);
+    Geometry::computeTangents(deduped);
+    return deduped;
 }
 
 } // namespace Asset

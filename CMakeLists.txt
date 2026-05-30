@@ -145,6 +145,7 @@ find_package(tinyobjloader CONFIG REQUIRED)
 find_package(Eigen3 CONFIG REQUIRED)
 find_package(tinyxml2 CONFIG REQUIRED)
 find_package(unofficial-openfbx CONFIG REQUIRED)
+find_package(mikktspace CONFIG REQUIRED)
 if(IS_PYTHON_LIB)
     # Prefer system Python over vcpkg's Python
     set(Python_FIND_STRATEGY LOCATION)
@@ -174,6 +175,7 @@ target_link_libraries(engine_core PUBLIC
     Eigen3::Eigen
     tinyxml2::tinyxml2
     unoffical::openfbx::openfbx
+    mikktspace::mikktspace
 )
 target_link_libraries(engine_core PUBLIC pre_compiled_ext)
 ###### core libs END ######

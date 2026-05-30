@@ -5,6 +5,7 @@
 #ifdef KANGENGINE_USE_USD
 
 #include "usd_scene.hpp"
+#include "geometry/mesh_utils.hpp"
 #include <iostream>
 #include <pxr/base/vt/array.h>
 #include <pxr/usd/usd/primRange.h>
@@ -219,6 +220,7 @@ MeshData USDScene::loadMesh(const std::string& primPath) {
     }
 
     meshData.fillMissingAttributes();
+    Geometry::computeTangents(meshData);
 
     return meshData;
 }

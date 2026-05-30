@@ -1,5 +1,6 @@
 #include "mesh_instancer.hpp"
 #include "engine/graphics/material/material.hpp"
+#include "geometry/mesh_utils.hpp"
 #include <algorithm>
 #include <glm/glm.hpp>
 #include <glm/mat4x4.hpp>
@@ -17,11 +18,23 @@ void MeshInstancer::_initMeshData(const Scene::MeshData& mesh) {
     // AABB.
     _localSphere = Geometry::computeBoundingSphere(_localBounds);
 
+    Scene::MeshData tangentMesh;
+    const Scene::MeshData* uploadMesh = &mesh;
+    if (mesh.tangents.empty() && !mesh.vertices.empty() &&
+        mesh.normals.size() == mesh.vertices.size() &&
+        mesh.uvs.size() == mesh.vertices.size()) {
+        tangentMesh = mesh;
+        Geometry::computeTangents(tangentMesh);
+        uploadMesh = &tangentMesh;
+    }
+
     _indexBuffer = _device->createBuffer(
-        Backend::BufferType::Index, sizeof(unsigned int) * mesh.indices.size(),
-        mesh.indices.data());
+        Backend::BufferType::Index,
+        sizeof(unsigned int) * uploadMesh->indices.size(),
+        uploadMesh->indices.data());
     _vao->setIndexBuffer(_indexBuffer.get());
-    _numIndices = (int)mesh.indices.size();
+    _numIndices = (int)uploadMesh->indices.size();
+    _hasTangents = uploadMesh->tangents.size() == uploadMesh->vertices.size();
 
     auto addGeomAttr = [&](const auto& data, int location, int size) {
         if (data.empty())
@@ -37,9 +50,11 @@ void MeshInstancer::_initMeshData(const Scene::MeshData& mesh) {
         _vbos.push_back(std::move(buf));
     };
 
-    addGeomAttr(mesh.vertices, RendererAttribute::Position, 3);
-    addGeomAttr(mesh.normals, RendererAttribute::Normal, 3);
-    addGeomAttr(mesh.uvs, RendererAttribute::TexCoord, 2);
+    addGeomAttr(uploadMesh->vertices, RendererAttribute::Position, 3);
+    addGeomAttr(uploadMesh->normals, RendererAttribute::Normal, 3);
+    addGeomAttr(uploadMesh->uvs, RendererAttribute::TexCoord, 2);
+    if (_hasTangents)
+        addGeomAttr(uploadMesh->tangents, RendererAttribute::Tangent, 4);
 }
 
 void MeshInstancer::_setupSkinningAttribs(

@@ -16,10 +16,11 @@
       ]
     },
     "imguizmo",
+    "openfbx",
     "pybind11",
     "stb",
     "tinyobjloader",
     "tinyxml2",
-    "openfbx"
+    "mikktspace"
   ]
 }

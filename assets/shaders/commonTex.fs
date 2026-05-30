@@ -4,6 +4,8 @@ in vec3 Normal;
 in vec3 FragPos;
 in vec3 WorldPos;
 in vec3 WorldNormal;
+in vec3 Tangent;
+in float TangentHandedness;
 in vec2 TexCoord;
 in vec4 vColor;
 
@@ -22,6 +24,9 @@ layout(std140) uniform shadowUBO {
 };
 
 uniform sampler2D uTexture;
+uniform sampler2D normalMap;
+uniform int useNormalMap;
+uniform int normalDebugMode;
 uniform sampler2D shadowMap0;
 uniform sampler2D shadowMap1;
 uniform sampler2D shadowMap2;
@@ -32,9 +37,34 @@ uniform int debugCsmCascadeTint;
 
 void main() {
     vec4 texColor = texture(uTexture, TexCoord) * vColor;
-    vec3 N = normalize(Normal);
+    vec3 vertexNormal = normalize(Normal);
+    vec3 N = vertexNormal;
+    vec3 T = normalize(Tangent - dot(Tangent, N) * N);
+    vec3 B = normalize(cross(N, T) * TangentHandedness);
+    vec3 sampledNormal = texture(normalMap, TexCoord).xyz * 2.0 - 1.0;
+    if(useNormalMap != 0) {
+        N = normalize(mat3(T, B, N) * sampledNormal);
+    }
     if(!gl_FrontFacing)
         N = -N;
+
+    if(normalDebugMode == 1) {
+        FragColor = vec4(normalize(vertexNormal) * 0.5 + 0.5, texColor.a);
+        return;
+    }
+    if(normalDebugMode == 2) {
+        FragColor = vec4(normalize(T) * 0.5 + 0.5, texColor.a);
+        return;
+    }
+    if(normalDebugMode == 3) {
+        FragColor = vec4(sampledNormal * 0.5 + 0.5, texColor.a);
+        return;
+    }
+    if(normalDebugMode == 4) {
+        FragColor = vec4(normalize(N) * 0.5 + 0.5, texColor.a);
+        return;
+    }
+
     vec3 L = normalize(lightDir.xyz);
     float diff = max(dot(N, L), 0.0);
     vec3 diffuse = diff * lightColor.rgb * texColor.rgb;

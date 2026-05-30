@@ -30,8 +30,17 @@ constexpr int InstanceTransform3 = 6;
 constexpr int InstanceColor = 7;
 constexpr int BoneIndices = 8;
 constexpr int BoneWeights = 9;
+constexpr int Tangent = 10;
 
 } // namespace RendererAttribute
+
+namespace RendererTextureSlot {
+
+constexpr int Diffuse = 0;
+constexpr int Normal = 5;
+constexpr int Specular = 6;
+
+} // namespace RendererTextureSlot
 
 // Instanced renderer for a single (shader, mesh) combination.
 // All Prims sharing the same MeshData pointer + Shader are batched
@@ -59,6 +68,7 @@ class MeshInstancer {
     bool _doubleSided = false;
     bool _castsShadow = true;
     bool _hasSkinning = false;
+    bool _hasTangents = false;
     Geometry::AABB _localBounds;
     Geometry::Sphere _localSphere;
     Geometry::AABB _combinedWorldBounds;
@@ -149,8 +159,19 @@ class MeshInstancer {
         _textures.emplace_back(tex, slot);
     }
     void bindTextures() const {
+        bool hasNormalMap = _hasTangents && _material && _material->normalMap;
         for (auto& [tex, slot] : _textures)
-            if (tex) tex->bind(slot);
+            if (tex) {
+                tex->bind(slot);
+                hasNormalMap = hasNormalMap ||
+                               (_hasTangents &&
+                                slot == RendererTextureSlot::Normal);
+            }
+        if (_shader) {
+            _shader->setInt("uTexture", RendererTextureSlot::Diffuse);
+            _shader->setInt("normalMap", RendererTextureSlot::Normal);
+            _shader->setInt("useNormalMap", hasNormalMap ? 1 : 0);
+        }
     }
 
     Backend::Shader* shader() const { return _shader; }

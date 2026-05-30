@@ -1,4 +1,5 @@
 #include "asset/fbx_loader.hpp"
+#include "geometry/mesh_utils.hpp"
 
 #include <fmt/core.h>
 #include <ofbx.h>
@@ -415,23 +416,48 @@ std::string resolveTexturePath(const std::string& fbxPath,
     std::string file =
         normalizeTexturePathString(dataViewToString(texture.getFileName()));
 
-    std::filesystem::path fbxDir = std::filesystem::path(fbxPath).parent_path();
-    auto resolveCandidate = [&](const std::string& value) -> std::string {
+    const std::filesystem::path fbxFile(fbxPath);
+    const std::filesystem::path fbxDir = fbxFile.parent_path();
+    const std::filesystem::path fbxCompanionDir =
+        fbxDir / (fbxFile.stem().string() + ".fbm");
+    std::string fallback;
+    auto tryResolveCandidate = [&](const std::string& value) -> std::string {
         if (value.empty())
             return {};
         std::filesystem::path path(value);
-        if (path.is_absolute())
+        if (path.is_absolute() && std::filesystem::exists(path))
             return path.string();
-        std::filesystem::path joined = fbxDir / path;
-        if (std::filesystem::exists(joined))
-            return joined.string();
-        return joined.lexically_normal().string();
+
+        const std::filesystem::path filename = path.filename();
+        const std::filesystem::path searchPath =
+            path.is_absolute() ? filename : path;
+        const std::filesystem::path parentDir = fbxDir.parent_path();
+        const std::filesystem::path candidates[] = {
+            fbxDir / searchPath,
+            parentDir / searchPath,
+            fbxCompanionDir / filename,
+            parentDir / "textures" / filename,
+            parentDir / "Textures" / filename,
+            fbxDir / "textures" / filename,
+            fbxDir / "Textures" / filename,
+        };
+        for (const std::filesystem::path& candidate : candidates) {
+            if (std::filesystem::exists(candidate))
+                return candidate.string();
+        }
+
+        if (fallback.empty())
+            fallback = (fbxDir / path).lexically_normal().string();
+        return {};
     };
 
-    std::string resolved = resolveCandidate(relative);
+    std::string resolved = tryResolveCandidate(relative);
     if (!resolved.empty())
         return resolved;
-    return resolveCandidate(file);
+    resolved = tryResolveCandidate(file);
+    if (!resolved.empty())
+        return resolved;
+    return fallback;
 }
 
 FBXMaterialInfo materialInfoFromMaterial(const std::string& fbxPath,
@@ -452,6 +478,14 @@ FBXMaterialInfo materialInfoFromMaterial(const std::string& fbxPath,
             texture->getEmbeddedData().begin != texture->getEmbeddedData().end;
     }
 
+    if (const ofbx::Texture* texture =
+            material.getTexture(ofbx::Texture::NORMAL)) {
+        info.normalTexturePath = resolveTexturePath(fbxPath, *texture);
+        info.hasNormalTexture = !info.normalTexturePath.empty();
+        info.hasEmbeddedNormalTexture =
+            texture->getEmbeddedData().begin != texture->getEmbeddedData().end;
+    }
+
     return info;
 }
 
@@ -467,6 +501,29 @@ std::vector<FBXMaterialInfo> materialInfosForMesh(const std::string& fbxPath,
         materials.push_back(materialInfoFromMaterial(fbxPath, *material));
     }
     return materials;
+}
+
+std::string safeNameFragment(std::string value, const std::string& fallback) {
+    for (char& ch : value) {
+        if (!(std::isalnum(static_cast<unsigned char>(ch)) || ch == '_'))
+            ch = '_';
+    }
+    while (!value.empty() && value.front() == '_')
+        value.erase(value.begin());
+    while (!value.empty() && value.back() == '_')
+        value.pop_back();
+    return value.empty() ? fallback : value;
+}
+
+std::string materialNameForMeshPartition(const ofbx::Mesh& mesh,
+                                         int partitionIdx) {
+    if (partitionIdx < 0 || partitionIdx >= mesh.getMaterialCount())
+        return {};
+    const ofbx::Material* material = mesh.getMaterial(partitionIdx);
+    return material ? safeNameFragment(std::string(material->name),
+                                       "material_" +
+                                           std::to_string(partitionIdx))
+                    : "material_" + std::to_string(partitionIdx);
 }
 
 int findNodeIndexByName(const std::vector<std::string>& names,
@@ -555,13 +612,15 @@ uint32_t floatBits(float value) {
 struct MeshVertexKey {
     std::array<uint32_t, 3> position{};
     std::array<uint32_t, 3> normal{};
+    std::array<uint32_t, 3> tangent{};
     std::array<uint32_t, 2> uv{};
     int controlPoint = -1;
     unsigned int uniqueCorner = 0;
 
     bool operator==(const MeshVertexKey& other) const {
         return position == other.position && normal == other.normal &&
-               uv == other.uv && controlPoint == other.controlPoint &&
+               tangent == other.tangent && uv == other.uv &&
+               controlPoint == other.controlPoint &&
                uniqueCorner == other.uniqueCorner;
     }
 };
@@ -577,6 +636,8 @@ struct MeshVertexKeyHash {
             mix(v);
         for (uint32_t v : key.normal)
             mix(v);
+        for (uint32_t v : key.tangent)
+            mix(v);
         for (uint32_t v : key.uv)
             mix(v);
         mix(static_cast<uint32_t>(key.controlPoint));
@@ -586,13 +647,16 @@ struct MeshVertexKeyHash {
 };
 
 MeshVertexKey makeMeshVertexKey(const glm::vec3& position,
-                                const glm::vec3& normal, const glm::vec2& uv,
+                                const glm::vec3& normal,
+                                const glm::vec3& tangent, const glm::vec2& uv,
                                 int controlPoint, unsigned int uniqueCorner) {
     MeshVertexKey key;
     key.position = {floatBits(position.x), floatBits(position.y),
                     floatBits(position.z)};
     key.normal = {floatBits(normal.x), floatBits(normal.y),
                   floatBits(normal.z)};
+    key.tangent = {floatBits(tangent.x), floatBits(tangent.y),
+                   floatBits(tangent.z)};
     key.uv = {floatBits(uv.x), floatBits(uv.y)};
     key.controlPoint = controlPoint;
     key.uniqueCorner = uniqueCorner;
@@ -602,11 +666,14 @@ MeshVertexKey makeMeshVertexKey(const glm::vec3& position,
 void triangulateMeshGeometry(const std::string& meshName,
                              const ofbx::GeometryData& geom, float scale,
                              Scene::MeshData& meshData,
-                             std::vector<int>* renderToControlPoint = nullptr) {
+                             std::vector<int>* renderToControlPoint = nullptr,
+                             int onlyPartitionIdx = -1) {
     const ofbx::Vec3Attributes positions = geom.getPositions();
     const ofbx::Vec3Attributes normals = geom.getNormals();
+    const ofbx::Vec3Attributes tangents = geom.getTangents();
     const ofbx::Vec2Attributes uvs = geom.getUVs();
     const bool hasNormals = normals.values != nullptr;
+    const bool hasTangents = tangents.values != nullptr;
     const bool hasUVs = uvs.values != nullptr;
 
     std::unordered_map<MeshVertexKey, unsigned int, MeshVertexKeyHash>
@@ -616,7 +683,10 @@ void triangulateMeshGeometry(const std::string& meshName,
     constexpr int TriBufferSize = 256;
     constexpr int MaxPolygonVertices = TriBufferSize / 3;
     int triBuffer[TriBufferSize] = {};
-    for (int partitionIdx = 0; partitionIdx < geom.getPartitionCount();
+    const int partitionBegin = onlyPartitionIdx >= 0 ? onlyPartitionIdx : 0;
+    const int partitionEnd =
+        onlyPartitionIdx >= 0 ? onlyPartitionIdx + 1 : geom.getPartitionCount();
+    for (int partitionIdx = partitionBegin; partitionIdx < partitionEnd;
          ++partitionIdx) {
         const ofbx::GeometryPartition partition =
             geom.getPartition(partitionIdx);
@@ -643,6 +713,9 @@ void triangulateMeshGeometry(const std::string& meshName,
                 const glm::vec3 normal =
                     hasNormals ? glmNormalFromFbx(normals.get(srcIndex))
                                : glm::vec3(0.0f);
+                const glm::vec3 tangent =
+                    hasTangents ? glmNormalFromFbx(tangents.get(srcIndex))
+                                : glm::vec3(0.0f);
                 const glm::vec2 uv = hasUVs ? glmVec2FromFbx(uvs.get(srcIndex))
                                             : glm::vec2(0.0f);
 
@@ -653,7 +726,7 @@ void triangulateMeshGeometry(const std::string& meshName,
                         ? 0u
                         : static_cast<unsigned int>(meshData.indices.size());
                 const MeshVertexKey key = makeMeshVertexKey(
-                    position, normal, uv, controlPoint, uniqueCorner);
+                    position, normal, tangent, uv, controlPoint, uniqueCorner);
 
                 auto [it, inserted] = dedupedVertices.emplace(
                     key, static_cast<unsigned int>(meshData.vertices.size()));
@@ -662,6 +735,8 @@ void triangulateMeshGeometry(const std::string& meshName,
                     meshData.vertices.push_back(position);
                     if (hasNormals)
                         meshData.normals.push_back(normal);
+                    if (hasTangents)
+                        meshData.tangents.push_back(glm::vec4(tangent, 1.0f));
                     if (hasUVs)
                         meshData.uvs.push_back(uv);
                     if (renderToControlPoint)
@@ -672,7 +747,13 @@ void triangulateMeshGeometry(const std::string& meshName,
         }
     }
 
+    if (meshData.vertices.empty())
+        return;
     meshData.fillMissingAttributes();
+    if (hasTangents)
+        Geometry::orthonormalizeTangents(meshData);
+    else
+        Geometry::computeTangents(meshData);
 }
 
 SkeletonMotion loadMotionFromScene(const std::string& fbxPath,
@@ -785,6 +866,22 @@ void transformMeshData(Scene::MeshData& meshData, const glm::mat4& transform) {
         const glm::vec3 n = normalTransform * normal;
         const float len = glm::length(n);
         normal = (len > 1e-8f) ? (n / len) : glm::vec3(0.0f, 1.0f, 0.0f);
+    }
+
+    if (meshData.tangents.size() == meshData.vertices.size()) {
+        const glm::mat3 tangentTransform = glm::mat3(transform);
+        for (size_t i = 0; i < meshData.tangents.size(); ++i) {
+            glm::vec4& tangent = meshData.tangents[i];
+            const glm::vec3 t = tangentTransform * glm::vec3(tangent);
+            const glm::vec3 n =
+                i < meshData.normals.size() ? meshData.normals[i]
+                                            : glm::vec3(0.0f, 1.0f, 0.0f);
+            const glm::vec3 ortho = t - glm::dot(t, n) * n;
+            const float len = glm::length(ortho);
+            tangent = glm::vec4(
+                len > 1e-8f ? ortho / len : glm::vec3(1.0f, 0.0f, 0.0f),
+                tangent.w);
+        }
     }
 }
 
@@ -1037,37 +1134,64 @@ std::vector<FBXStaticMeshInfo> FBXLoader::loadMeshes(const std::string& fbxPath,
         const ofbx::Vec3Attributes normals = geom.getNormals();
         const ofbx::Vec2Attributes uvs = geom.getUVs();
 
-        FBXStaticMeshInfo info;
-        info.metadata.name = makeNodeName(*mesh, meshIdx);
-        info.metadata.materialCount = mesh->getMaterialCount();
-        info.metadata.materials = materialInfosForMesh(fbxPath, *mesh);
-        if (!info.metadata.materials.empty())
-            info.metadata.primaryMaterialIndex = 0;
-        info.metadata.hasNormals = normals.values != nullptr;
-        info.metadata.hasUVs = uvs.values != nullptr;
+        const std::string baseName = makeNodeName(*mesh, meshIdx);
+        const std::vector<FBXMaterialInfo> materials =
+            materialInfosForMesh(fbxPath, *mesh);
+        const int materialCount = mesh->getMaterialCount();
+        const int partitionCount = geom.getPartitionCount();
+        const bool splitByMaterial = materialCount > 1 && partitionCount > 1;
+        const int submeshCount = splitByMaterial ? partitionCount : 1;
 
-        const ofbx::Skin* skin = skinForMesh(*mesh);
-        info.metadata.hasSkin = skin != nullptr;
-        if (skin) {
-            info.metadata.skinClusterNames.reserve(
-                static_cast<size_t>(skin->getClusterCount()));
-            for (int clusterIdx = 0; clusterIdx < skin->getClusterCount();
-                 ++clusterIdx) {
-                const ofbx::Cluster* cluster = skin->getCluster(clusterIdx);
-                const ofbx::Object* link =
-                    cluster ? cluster->getLink() : nullptr;
-                info.metadata.skinClusterNames.push_back(
-                    link ? std::string(link->name)
-                         : fmt::format("cluster_{}", clusterIdx));
+        for (int submeshIdx = 0; submeshIdx < submeshCount; ++submeshIdx) {
+            const int partitionIdx = splitByMaterial ? submeshIdx : -1;
+
+            FBXStaticMeshInfo info;
+            info.metadata.name = baseName;
+            if (splitByMaterial) {
+                info.metadata.name += "_" +
+                                      materialNameForMeshPartition(*mesh,
+                                                                   submeshIdx);
             }
-        }
+            info.metadata.materialCount = materialCount;
+            info.metadata.materials = materials;
+            if (!info.metadata.materials.empty()) {
+                info.metadata.primaryMaterialIndex =
+                    splitByMaterial
+                        ? std::min(submeshIdx,
+                                   static_cast<int>(
+                                       info.metadata.materials.size()) -
+                                       1)
+                        : 0;
+            }
+            info.metadata.hasNormals = normals.values != nullptr;
+            info.metadata.hasUVs = uvs.values != nullptr;
 
-        triangulateMeshGeometry(info.metadata.name, geom, scale, info.meshData);
-        info.metadata.vertexCount =
-            static_cast<int>(info.meshData.vertices.size());
-        info.metadata.indexCount =
-            static_cast<int>(info.meshData.indices.size());
-        result.push_back(std::move(info));
+            const ofbx::Skin* skin = skinForMesh(*mesh);
+            info.metadata.hasSkin = skin != nullptr;
+            if (skin) {
+                info.metadata.skinClusterNames.reserve(
+                    static_cast<size_t>(skin->getClusterCount()));
+                for (int clusterIdx = 0; clusterIdx < skin->getClusterCount();
+                     ++clusterIdx) {
+                    const ofbx::Cluster* cluster = skin->getCluster(clusterIdx);
+                    const ofbx::Object* link =
+                        cluster ? cluster->getLink() : nullptr;
+                    info.metadata.skinClusterNames.push_back(
+                        link ? std::string(link->name)
+                             : fmt::format("cluster_{}", clusterIdx));
+                }
+            }
+
+            triangulateMeshGeometry(info.metadata.name, geom, scale,
+                                    info.meshData, nullptr, partitionIdx);
+            if (info.meshData.vertices.empty())
+                continue;
+            info.metadata.vertexCount =
+                static_cast<int>(info.meshData.vertices.size());
+            info.metadata.indexCount =
+                static_cast<int>(info.meshData.indices.size());
+            result.push_back(std::move(info));
+        }
     }
 
     return result;

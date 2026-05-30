@@ -15,6 +15,7 @@ struct USDMeshInfo {
     std::string name;
     std::string materialPath;
     std::string diffuseTexturePath;
+    std::string normalTexturePath;
     Scene::MeshData meshData;
 };
 

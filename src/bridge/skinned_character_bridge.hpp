@@ -39,6 +39,7 @@ class SkinnedCharacterBridge {
         std::vector<glm::mat4> boneMatrices;
         glm::vec4 baseColor = glm::vec4(1.0f);
         Backend::Texture* diffuseTexture = nullptr;
+        Backend::Texture* normalTexture = nullptr;
     };
 
     static SkinnedCharacterBridge fromFBX(

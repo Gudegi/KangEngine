@@ -27,8 +27,11 @@ struct FBXMaterialInfo {
     std::string name;
     std::array<float, 4> diffuseColor = {1.0f, 1.0f, 1.0f, 1.0f};
     std::string diffuseTexturePath;
+    std::string normalTexturePath;
     bool hasDiffuseTexture = false;
     bool hasEmbeddedDiffuseTexture = false;
+    bool hasNormalTexture = false;
+    bool hasEmbeddedNormalTexture = false;
 };
 
 struct FBXMeshMetadata {

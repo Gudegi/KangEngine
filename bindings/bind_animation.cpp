@@ -462,10 +462,16 @@ void bind_animation(py::module& m) {
                                })
         .def_readonly("diffuse_texture_path",
                       &FBXMaterialInfo::diffuseTexturePath)
+        .def_readonly("normal_texture_path",
+                      &FBXMaterialInfo::normalTexturePath)
         .def_readonly("has_diffuse_texture",
                       &FBXMaterialInfo::hasDiffuseTexture)
         .def_readonly("has_embedded_diffuse_texture",
-                      &FBXMaterialInfo::hasEmbeddedDiffuseTexture);
+                      &FBXMaterialInfo::hasEmbeddedDiffuseTexture)
+        .def_readonly("has_normal_texture",
+                      &FBXMaterialInfo::hasNormalTexture)
+        .def_readonly("has_embedded_normal_texture",
+                      &FBXMaterialInfo::hasEmbeddedNormalTexture);
 
     py::class_<FBXMeshMetadata, std::shared_ptr<FBXMeshMetadata>>(
         asset, "FBXMeshMetadata")
@@ -742,6 +748,7 @@ void bind_animation(py::module& m) {
         .def_readonly("material_path", &USDMeshInfo::materialPath)
         .def_readonly("diffuse_texture_path",
                       &USDMeshInfo::diffuseTexturePath)
+        .def_readonly("normal_texture_path", &USDMeshInfo::normalTexturePath)
         .def_property_readonly("mesh_data",
                                [](std::shared_ptr<USDMeshInfo> self) {
                                    return std::shared_ptr<KE::Scene::MeshData>(
