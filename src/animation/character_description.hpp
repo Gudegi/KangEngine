@@ -42,6 +42,21 @@ struct Joint {
     float effortLimit = FLT_MAX;
 };
 
+// Named body-local reference frame parsed from MJCF <site> elements.
+struct Site {
+    enum class Type { Sphere, Capsule, Box };
+    Type type = Type::Sphere;
+    std::string name;
+    int bodyIndex = -1;
+    Eigen::Vector3f pos = Eigen::Vector3f::Zero();
+    Eigen::Quaternionf quat = Eigen::Quaternionf::Identity();
+    Eigen::Vector3f size = Eigen::Vector3f::Zero();
+    Eigen::Vector4f rgba = Eigen::Vector4f(0.15f, 0.15f, 0.15f, 1.0f);
+    // True when the site orientation was derived from MJCF zaxis.
+    bool hasZAxis = false;
+    Eigen::Vector3f zaxis = Eigen::Vector3f::UnitZ();
+};
+
 struct Inertial {
     float mass = 1.f;
     Eigen::Vector3f com = Eigen::Vector3f::Zero();
@@ -86,6 +101,7 @@ struct CollisionGeom {
 // ---------------------------------------------------------------------------
 
 using JointMap = std::unordered_map<int, std::vector<Joint>>;
+using SiteMap = std::unordered_map<std::string, Site>;
 using InertialMap = std::unordered_map<int, Inertial>;
 using CollisionGeomMap = std::unordered_map<int, std::vector<CollisionGeom>>;
 
@@ -98,6 +114,7 @@ struct CharacterData {
     std::vector<MeshInfo> meshInfos;
     std::string meshDir;
     JointMap joints;
+    SiteMap sites;
     CollisionGeomMap collisionGeoms;
     InertialMap inertials;
 };

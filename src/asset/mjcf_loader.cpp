@@ -57,6 +57,13 @@ Eigen::Quaternionf parseQuatWxyz(
         .normalized();
 }
 
+Eigen::Quaternionf quatFromZAxis(const Eigen::Vector3f& zaxis) {
+    if (zaxis.squaredNorm() < 1e-12f)
+        return Eigen::Quaternionf::Identity();
+    return Eigen::Quaternionf::FromTwoVectors(Eigen::Vector3f::UnitZ(),
+                                             zaxis.normalized());
+}
+
 std::string resolveMeshDir(const std::string& mjcfPath, const char* meshdir) {
     std::string dir;
     auto lastSlash = mjcfPath.find_last_of("/\\");
@@ -140,6 +147,16 @@ struct DefaultGeomAttrs {
     std::string parentClass;
 };
 
+struct DefaultSiteAttrs {
+    std::string type;
+    std::vector<float> size;
+    std::vector<float> pos;
+    std::vector<float> quat;
+    std::vector<float> zaxis;
+    std::vector<float> rgba;
+    std::string parentClass;
+};
+
 void readGeomDefaults(tinyxml2::XMLElement* defElem, DefaultGeomAttrs& out) {
     auto* g = defElem->FirstChildElement("geom");
     if (!g)
@@ -165,18 +182,48 @@ void readGeomDefaults(tinyxml2::XMLElement* defElem, DefaultGeomAttrs& out) {
     g->QueryFloatAttribute("margin", &out.margin);
 }
 
+void readSiteDefaults(tinyxml2::XMLElement* defElem, DefaultSiteAttrs& out) {
+    auto* s = defElem->FirstChildElement("site");
+    if (!s)
+        return;
+    if (auto* t = s->Attribute("type"))
+        out.type = t;
+    auto sz = splitFloats(s->Attribute("size"));
+    if (!sz.empty())
+        out.size = sz;
+    auto ps = splitFloats(s->Attribute("pos"));
+    if (!ps.empty())
+        out.pos = ps;
+    auto qt = splitFloats(s->Attribute("quat"));
+    if (!qt.empty())
+        out.quat = qt;
+    auto za = splitFloats(s->Attribute("zaxis"));
+    if (!za.empty())
+        out.zaxis = za;
+    auto rgba = splitFloats(s->Attribute("rgba"));
+    if (!rgba.empty())
+        out.rgba = rgba;
+}
+
 void collectDefaults(tinyxml2::XMLElement* elem, const std::string& parentClass,
-                     std::unordered_map<std::string, DefaultGeomAttrs>& map) {
+                     std::unordered_map<std::string, DefaultGeomAttrs>& geomMap,
+                     std::unordered_map<std::string, DefaultSiteAttrs>& siteMap) {
     for (auto* def = elem->FirstChildElement("default"); def;
          def = def->NextSiblingElement("default")) {
         const char* cls = def->Attribute("class");
         if (!cls)
             continue;
-        DefaultGeomAttrs attrs;
-        attrs.parentClass = parentClass;
-        readGeomDefaults(def, attrs);
-        map[cls] = attrs;
-        collectDefaults(def, cls, map);
+        DefaultGeomAttrs geomAttrs;
+        geomAttrs.parentClass = parentClass;
+        readGeomDefaults(def, geomAttrs);
+        geomMap[cls] = geomAttrs;
+
+        DefaultSiteAttrs siteAttrs;
+        siteAttrs.parentClass = parentClass;
+        readSiteDefaults(def, siteAttrs);
+        siteMap[cls] = siteAttrs;
+
+        collectDefaults(def, cls, geomMap, siteMap);
     }
 }
 
@@ -210,6 +257,94 @@ resolveClass(const std::string& cls,
         cur = a.parentClass;
     }
     return out;
+}
+
+DefaultSiteAttrs
+resolveSiteClass(const std::string& cls,
+                 const std::unordered_map<std::string, DefaultSiteAttrs>& map) {
+    DefaultSiteAttrs out;
+    std::string cur = cls;
+    while (!cur.empty()) {
+        auto it = map.find(cur);
+        if (it == map.end())
+            break;
+        const auto& a = it->second;
+        if (out.type.empty() && !a.type.empty())
+            out.type = a.type;
+        if (out.size.empty() && !a.size.empty())
+            out.size = a.size;
+        if (out.pos.empty() && !a.pos.empty())
+            out.pos = a.pos;
+        if (out.quat.empty() && !a.quat.empty())
+            out.quat = a.quat;
+        if (out.zaxis.empty() && !a.zaxis.empty())
+            out.zaxis = a.zaxis;
+        if (out.rgba.empty() && !a.rgba.empty())
+            out.rgba = a.rgba;
+        cur = a.parentClass;
+    }
+    return out;
+}
+
+bool parseSite(tinyxml2::XMLElement* siteElem,
+               const std::unordered_map<std::string, DefaultSiteAttrs>&
+                   defaultMap,
+               Site& out, const std::string& inheritedClass = "") {
+    const char* siteName = siteElem->Attribute("name");
+    if (!siteName || siteName[0] == '\0')
+        return false;
+
+    const char* clsAttr = siteElem->Attribute("class");
+    std::string effectiveCls = clsAttr ? clsAttr : inheritedClass;
+    DefaultSiteAttrs defs;
+    if (!effectiveCls.empty())
+        defs = resolveSiteClass(effectiveCls, defaultMap);
+
+    auto typeStr = siteElem->Attribute("type")
+                       ? std::string(siteElem->Attribute("type"))
+                       : defs.type;
+    if (typeStr == "capsule")
+        out.type = Site::Type::Capsule;
+    else if (typeStr == "box")
+        out.type = Site::Type::Box;
+    else
+        out.type = Site::Type::Sphere;
+
+    auto size = splitFloats(siteElem->Attribute("size"));
+    auto pos = splitFloats(siteElem->Attribute("pos"));
+    auto quat = splitFloats(siteElem->Attribute("quat"));
+    auto zaxis = splitFloats(siteElem->Attribute("zaxis"));
+    auto rgba = splitFloats(siteElem->Attribute("rgba"));
+    if (size.empty())
+        size = defs.size;
+    if (pos.empty())
+        pos = defs.pos;
+    if (quat.empty())
+        quat = defs.quat;
+    if (zaxis.empty())
+        zaxis = defs.zaxis;
+    if (rgba.empty())
+        rgba = defs.rgba;
+
+    out.name = siteName;
+    if (pos.size() >= 3)
+        out.pos = Eigen::Vector3f(pos[0], pos[1], pos[2]);
+    for (int i = 0; i < static_cast<int>(size.size()) && i < 3; ++i)
+        out.size[i] = size[i];
+    if (rgba.size() >= 4)
+        out.rgba = Eigen::Vector4f(rgba[0], rgba[1], rgba[2], rgba[3]);
+    if (quat.size() >= 4) {
+        out.quat =
+            Eigen::Quaternionf(quat[0], quat[1], quat[2], quat[3]).normalized();
+    } else if (zaxis.size() >= 3) {
+        Eigen::Vector3f axis(zaxis[0], zaxis[1], zaxis[2]);
+        if (axis.squaredNorm() > 1e-12f) {
+            out.hasZAxis = true;
+            out.zaxis = axis.normalized();
+            out.quat = quatFromZAxis(out.zaxis);
+        }
+    }
+    return true;
 }
 
 // Returns false if the geom should be skipped (visual, mesh, unknown type).
@@ -382,10 +517,11 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
     // 3. Skeleton
     SkeletonTree skelTree = SkeletonTree::skelFromMJCFElement(root, order);
 
-    // 4. Default class map for collision
+    // 4. Default class maps for collision geoms and named sites
     std::unordered_map<std::string, DefaultGeomAttrs> defaultMap;
+    std::unordered_map<std::string, DefaultSiteAttrs> siteDefaultMap;
     if (auto* def = root->FirstChildElement("default"))
-        collectDefaults(def, "", defaultMap);
+        collectDefaults(def, "", defaultMap, siteDefaultMap);
 
     // 5. Single traversal — mesh info, joints, collision, inertial
     traverseBodies(
@@ -447,6 +583,18 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
                 }
 
                 _data.collisionGeoms[idx].push_back(g);
+            }
+
+            // Named body-local frames
+            for (auto* sElem = elem->FirstChildElement("site"); sElem;
+                 sElem = sElem->NextSiblingElement("site")) {
+                Site site;
+                if (!parseSite(sElem, siteDefaultMap, site, inheritedClass))
+                    continue;
+                site.bodyIndex = idx;
+                site.pos *= scale;
+                site.size *= scale;
+                _data.sites[site.name] = std::move(site);
             }
 
             // Joints for this body

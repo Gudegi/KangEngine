@@ -91,8 +91,7 @@ floatArrayFromVec4Vector(const std::vector<std::array<float, 4>>& values) {
     auto view = array.mutable_unchecked<2>();
     for (py::ssize_t i = 0; i < static_cast<py::ssize_t>(values.size()); ++i) {
         for (py::ssize_t j = 0; j < 4; ++j) {
-            view(i, j) =
-                values[static_cast<size_t>(i)][static_cast<size_t>(j)];
+            view(i, j) = values[static_cast<size_t>(i)][static_cast<size_t>(j)];
         }
     }
     return array;
@@ -143,33 +142,31 @@ floatArrayFromVec3Vector(const std::vector<Eigen::Vector3f>& values) {
 
 py::array_t<float>
 floatArrayFromMat4Vector(const std::vector<std::array<float, 16>>& values) {
-    py::array_t<float> array(
-        {static_cast<py::ssize_t>(values.size()), py::ssize_t(4),
-         py::ssize_t(4)});
+    py::array_t<float> array({static_cast<py::ssize_t>(values.size()),
+                              py::ssize_t(4), py::ssize_t(4)});
     auto view = array.mutable_unchecked<3>();
     for (py::ssize_t i = 0; i < static_cast<py::ssize_t>(values.size()); ++i) {
         for (py::ssize_t row = 0; row < 4; ++row) {
             for (py::ssize_t col = 0; col < 4; ++col) {
-                view(i, row, col) =
-                    values[static_cast<size_t>(i)]
-                          [static_cast<size_t>(row * 4 + col)];
+                view(i, row, col) = values[static_cast<size_t>(i)]
+                                          [static_cast<size_t>(row * 4 + col)];
             }
         }
     }
     return array;
 }
 
-py::array_t<float> floatArrayFromMat4Vector(const std::vector<glm::mat4>& values) {
-    py::array_t<float> array(
-        {static_cast<py::ssize_t>(values.size()), py::ssize_t(4),
-         py::ssize_t(4)});
+py::array_t<float>
+floatArrayFromMat4Vector(const std::vector<glm::mat4>& values) {
+    py::array_t<float> array({static_cast<py::ssize_t>(values.size()),
+                              py::ssize_t(4), py::ssize_t(4)});
     auto view = array.mutable_unchecked<3>();
     for (py::ssize_t i = 0; i < static_cast<py::ssize_t>(values.size()); ++i) {
         const glm::mat4& m = values[static_cast<size_t>(i)];
         for (py::ssize_t row = 0; row < 4; ++row) {
             for (py::ssize_t col = 0; col < 4; ++col)
-                view(i, row, col) = m[static_cast<size_t>(col)]
-                                     [static_cast<size_t>(row)];
+                view(i, row, col) =
+                    m[static_cast<size_t>(col)][static_cast<size_t>(row)];
         }
     }
     return array;
@@ -177,16 +174,15 @@ py::array_t<float> floatArrayFromMat4Vector(const std::vector<glm::mat4>& values
 
 py::array_t<float>
 floatArrayFromMat4Vector(const std::vector<Eigen::Matrix4f>& values) {
-    py::array_t<float> array(
-        {static_cast<py::ssize_t>(values.size()), py::ssize_t(4),
-         py::ssize_t(4)});
+    py::array_t<float> array({static_cast<py::ssize_t>(values.size()),
+                              py::ssize_t(4), py::ssize_t(4)});
     auto view = array.mutable_unchecked<3>();
     for (py::ssize_t i = 0; i < static_cast<py::ssize_t>(values.size()); ++i) {
         const Eigen::Matrix4f& m = values[static_cast<size_t>(i)];
         for (py::ssize_t row = 0; row < 4; ++row) {
             for (py::ssize_t col = 0; col < 4; ++col)
-                view(i, row, col) = m(static_cast<int>(row),
-                                      static_cast<int>(col));
+                view(i, row, col) =
+                    m(static_cast<int>(row), static_cast<int>(col));
         }
     }
     return array;
@@ -226,8 +222,8 @@ std::vector<std::array<int, 4>> intVec4ArrayFromPy(py::array_t<int> array,
     return result;
 }
 
-std::vector<std::array<float, 4>>
-floatVec4ArrayFromPy(const FloatArray& array, const char* name) {
+std::vector<std::array<float, 4>> floatVec4ArrayFromPy(const FloatArray& array,
+                                                       const char* name) {
     auto view = vec4ArrayView(array, name);
     std::vector<std::array<float, 4>> result;
     result.reserve(view.count);
@@ -299,9 +295,8 @@ void bind_animation(py::module& m) {
                 intVectorFromPy(boneNodeIndices, "bone_node_indices");
             std::vector<Eigen::Matrix4f> inv =
                 eigenMat4ArrayFromPy(inverseBinds, "inverse_bind_matrices");
-            std::vector<Eigen::Matrix4f> globals =
-                eigenMat4ArrayFromPy(currentGlobalMatrices,
-                                     "current_global_matrices");
+            std::vector<Eigen::Matrix4f> globals = eigenMat4ArrayFromPy(
+                currentGlobalMatrices, "current_global_matrices");
 
             CPUSkinningInput input;
             input.bindPositions = &positions;
@@ -331,11 +326,10 @@ void bind_animation(py::module& m) {
                 intVectorFromPy(boneNodeIndices, "bone_node_indices");
             std::vector<Eigen::Matrix4f> inv =
                 eigenMat4ArrayFromPy(inverseBinds, "inverse_bind_matrices");
-            std::vector<Eigen::Matrix4f> globals =
-                eigenMat4ArrayFromPy(currentGlobalMatrices,
-                                     "current_global_matrices");
-            return floatArrayFromMat4Vector(Skinning::computeSkinningMatrices(
-                nodeIndices, inv, globals));
+            std::vector<Eigen::Matrix4f> globals = eigenMat4ArrayFromPy(
+                currentGlobalMatrices, "current_global_matrices");
+            return floatArrayFromMat4Vector(
+                Skinning::computeSkinningMatrices(nodeIndices, inv, globals));
         },
         py::arg("bone_node_indices"), py::arg("inverse_bind_matrices"),
         py::arg("current_global_matrices"));
@@ -348,9 +342,8 @@ void bind_animation(py::module& m) {
                 intVectorFromPy(boneNodeIndices, "bone_node_indices");
             std::vector<Eigen::Matrix4f> inv =
                 eigenMat4ArrayFromPy(inverseBinds, "inverse_bind_matrices");
-            std::vector<Eigen::Matrix4f> globals =
-                eigenMat4ArrayFromPy(currentGlobalMatrices,
-                                     "current_global_matrices");
+            std::vector<Eigen::Matrix4f> globals = eigenMat4ArrayFromPy(
+                currentGlobalMatrices, "current_global_matrices");
             std::vector<Eigen::Matrix4f> matrices;
             Skinning::computeSkinningMatricesInto(nodeIndices, inv, globals,
                                                   matrices);
@@ -367,6 +360,30 @@ void bind_animation(py::module& m) {
         .def_readonly("hi_limit", &Joint::hiLimit)
         .def_property_readonly("axis",
                                [](const Joint& j) { return toGlm(j.axis); });
+
+    py::enum_<Site::Type>(anim, "SiteType")
+        .value("Sphere", Site::Type::Sphere)
+        .value("Capsule", Site::Type::Capsule)
+        .value("Box", Site::Type::Box)
+        .export_values();
+
+    // Site
+    py::class_<Site>(anim, "Site")
+        .def_readonly("type", &Site::type)
+        .def_readonly("name", &Site::name)
+        .def_readonly("body_index", &Site::bodyIndex)
+        .def_property_readonly("pos",
+                               [](const Site& s) { return toGlm(s.pos); })
+        .def_property_readonly("quat",
+                               [](const Site& s) { return toGlm(s.quat); })
+        .def_property_readonly("size",
+                               [](const Site& s) { return toGlm(s.size); })
+        .def_property_readonly("rgba", [](const Site& s) {
+            return glm::vec4(s.rgba.x(), s.rgba.y(), s.rgba.z(), s.rgba.w());
+        })
+        .def_readonly("has_zaxis", &Site::hasZAxis)
+        .def_property_readonly("zaxis",
+                               [](const Site& s) { return toGlm(s.zaxis); });
 
     // MeshInfo
     py::class_<MeshInfo>(anim, "MeshInfo")
@@ -416,6 +433,7 @@ void bind_animation(py::module& m) {
         .def_readonly("skeleton_tree", &CharacterData::skeletonTree)
         .def_readonly("mesh_infos", &CharacterData::meshInfos)
         .def_readonly("mesh_dir", &CharacterData::meshDir)
+        .def_readonly("sites", &CharacterData::sites)
         // joints: return dict[int, list[Joint]]
         .def_property_readonly("joints",
                                [](const CharacterData& d) {
@@ -454,11 +472,10 @@ void bind_animation(py::module& m) {
         .def_readonly("name", &FBXMaterialInfo::name)
         .def_property_readonly("diffuse_color",
                                [](const FBXMaterialInfo& self) {
-                                   return py::make_tuple(
-                                       self.diffuseColor[0],
-                                       self.diffuseColor[1],
-                                       self.diffuseColor[2],
-                                       self.diffuseColor[3]);
+                                   return py::make_tuple(self.diffuseColor[0],
+                                                         self.diffuseColor[1],
+                                                         self.diffuseColor[2],
+                                                         self.diffuseColor[3]);
                                })
         .def_readonly("diffuse_texture_path",
                       &FBXMaterialInfo::diffuseTexturePath)
@@ -468,8 +485,7 @@ void bind_animation(py::module& m) {
                       &FBXMaterialInfo::hasDiffuseTexture)
         .def_readonly("has_embedded_diffuse_texture",
                       &FBXMaterialInfo::hasEmbeddedDiffuseTexture)
-        .def_readonly("has_normal_texture",
-                      &FBXMaterialInfo::hasNormalTexture)
+        .def_readonly("has_normal_texture", &FBXMaterialInfo::hasNormalTexture)
         .def_readonly("has_embedded_normal_texture",
                       &FBXMaterialInfo::hasEmbeddedNormalTexture);
 
@@ -484,20 +500,17 @@ void bind_animation(py::module& m) {
         .def_readonly("has_normals", &FBXMeshMetadata::hasNormals)
         .def_readonly("has_uvs", &FBXMeshMetadata::hasUVs)
         .def_readonly("has_skin", &FBXMeshMetadata::hasSkin)
-        .def_readonly("skin_cluster_names",
-                      &FBXMeshMetadata::skinClusterNames)
+        .def_readonly("skin_cluster_names", &FBXMeshMetadata::skinClusterNames)
         .def_readonly("materials", &FBXMeshMetadata::materials);
 
     py::class_<FBXStaticMeshInfo, std::shared_ptr<FBXStaticMeshInfo>>(
         asset, "FBXMeshInfo")
-        .def_property_readonly("metadata",
-                               [](const FBXStaticMeshInfo& self) {
-                                   return self.metadata;
-                               })
-        .def_property_readonly("name",
-                               [](const FBXStaticMeshInfo& self) {
-                                   return self.metadata.name;
-                               })
+        .def_property_readonly(
+            "metadata",
+            [](const FBXStaticMeshInfo& self) { return self.metadata; })
+        .def_property_readonly(
+            "name",
+            [](const FBXStaticMeshInfo& self) { return self.metadata.name; })
         .def_property_readonly("vertex_count",
                                [](const FBXStaticMeshInfo& self) {
                                    return self.metadata.vertexCount;
@@ -518,14 +531,12 @@ void bind_animation(py::module& m) {
                                [](const FBXStaticMeshInfo& self) {
                                    return self.metadata.hasNormals;
                                })
-        .def_property_readonly("has_uvs",
-                               [](const FBXStaticMeshInfo& self) {
-                                   return self.metadata.hasUVs;
-                               })
-        .def_property_readonly("has_skin",
-                               [](const FBXStaticMeshInfo& self) {
-                                   return self.metadata.hasSkin;
-                               })
+        .def_property_readonly(
+            "has_uvs",
+            [](const FBXStaticMeshInfo& self) { return self.metadata.hasUVs; })
+        .def_property_readonly(
+            "has_skin",
+            [](const FBXStaticMeshInfo& self) { return self.metadata.hasSkin; })
         .def_property_readonly("skin_cluster_names",
                                [](const FBXStaticMeshInfo& self) {
                                    return self.metadata.skinClusterNames;
@@ -558,10 +569,9 @@ void bind_animation(py::module& m) {
 
     py::class_<FBXSkinnedMeshInfo, std::shared_ptr<FBXSkinnedMeshInfo>>(
         asset, "FBXSkinnedMeshInfo")
-        .def_property_readonly("metadata",
-                               [](const FBXSkinnedMeshInfo& self) {
-                                   return self.metadata;
-                               })
+        .def_property_readonly(
+            "metadata",
+            [](const FBXSkinnedMeshInfo& self) { return self.metadata; })
         .def_property_readonly(
             "name",
             [](const FBXSkinnedMeshInfo& self) { return self.metadata.name; })
@@ -589,10 +599,9 @@ void bind_animation(py::module& m) {
                                [](const FBXSkinnedMeshInfo& self) {
                                    return self.metadata.hasNormals;
                                })
-        .def_property_readonly("has_uvs",
-                               [](const FBXSkinnedMeshInfo& self) {
-                                   return self.metadata.hasUVs;
-                               })
+        .def_property_readonly(
+            "has_uvs",
+            [](const FBXSkinnedMeshInfo& self) { return self.metadata.hasUVs; })
         .def_property_readonly("has_skin",
                                [](const FBXSkinnedMeshInfo& self) {
                                    return self.metadata.hasSkin;
@@ -642,11 +651,12 @@ void bind_animation(py::module& m) {
                                    return floatArrayFromMat4Vector(
                                        self.bindBoneMatrices);
                                })
-        .def_property_readonly("inverse_bind_matrices",
-                               [](const FBXSkinnedMeshInfo& self) {
-                                   return floatArrayFromMat4Vector(
-                                       self.skinnedMeshData.inverseBindMatrices);
-                               })
+        .def_property_readonly(
+            "inverse_bind_matrices",
+            [](const FBXSkinnedMeshInfo& self) {
+                return floatArrayFromMat4Vector(
+                    self.skinnedMeshData.inverseBindMatrices);
+            })
         .def_property_readonly("bind_mesh_matrices",
                                [](const FBXSkinnedMeshInfo& self) {
                                    return floatArrayFromMat4Vector(
@@ -662,8 +672,7 @@ void bind_animation(py::module& m) {
     py::class_<FBXCharacterData>(asset, "FBXCharacterData")
         .def_readonly("motion", &FBXCharacterData::motion)
         .def_property_readonly(
-            "skinned_meshes",
-            [](const FBXCharacterData& self) {
+            "skinned_meshes", [](const FBXCharacterData& self) {
                 py::list result;
                 for (const auto& mesh : self.skinnedMeshes) {
                     result.append(std::make_shared<FBXSkinnedMeshInfo>(mesh));
@@ -673,10 +682,9 @@ void bind_animation(py::module& m) {
 
     py::class_<FBXImportResult>(asset, "FBXImportResult")
         .def_readonly("character", &FBXImportResult::character)
-        .def_property_readonly("motion",
-                               [](const FBXImportResult& self) {
-                                   return self.character.motion;
-                               })
+        .def_property_readonly(
+            "motion",
+            [](const FBXImportResult& self) { return self.character.motion; })
         .def_property_readonly(
             "skinned_meshes",
             [](const FBXImportResult& self) {
@@ -694,16 +702,16 @@ void bind_animation(py::module& m) {
                     py::arg("fbx_path"), py::arg("scale") = 0.01f)
         .def_static("load_animation_clip_infos",
                     &FBXLoader::loadAnimationClipInfos, py::arg("fbx_path"))
-        .def_static("load_motion", &FBXLoader::loadMotion,
-                    py::arg("fbx_path"), py::arg("clip_index") = 0,
-                    py::arg("fps") = 30.0f, py::arg("scale") = 0.01f)
+        .def_static("load_motion", &FBXLoader::loadMotion, py::arg("fbx_path"),
+                    py::arg("clip_index") = 0, py::arg("fps") = 30.0f,
+                    py::arg("scale") = 0.01f)
         .def_static(
             "load_meshes",
             [](const std::string& fbxPath, float scale) {
                 py::list result;
                 for (auto& mesh : FBXLoader::loadMeshes(fbxPath, scale)) {
-                    result.append(std::make_shared<FBXStaticMeshInfo>(
-                        std::move(mesh)));
+                    result.append(
+                        std::make_shared<FBXStaticMeshInfo>(std::move(mesh)));
                 }
                 return result;
             },
@@ -729,8 +737,8 @@ void bind_animation(py::module& m) {
                 py::list result;
                 for (auto& mesh :
                      FBXLoader::loadSkinnedMeshes(fbxPath, scale)) {
-                    result.append(std::make_shared<FBXSkinnedMeshInfo>(
-                        std::move(mesh)));
+                    result.append(
+                        std::make_shared<FBXSkinnedMeshInfo>(std::move(mesh)));
                 }
                 return result;
             },
@@ -738,16 +746,14 @@ void bind_animation(py::module& m) {
 
     py::module_ fbxDebug = asset.def_submodule(
         "FBXDebug", "FBX debug and importer inspection helpers.");
-    fbxDebug.def("load_skin_cluster_infos",
-                 &FBXDebug::loadSkinClusterInfos, py::arg("fbx_path"),
-                 py::arg("scale") = 0.01f);
+    fbxDebug.def("load_skin_cluster_infos", &FBXDebug::loadSkinClusterInfos,
+                 py::arg("fbx_path"), py::arg("scale") = 0.01f);
 
     py::class_<USDMeshInfo, std::shared_ptr<USDMeshInfo>>(asset, "USDMeshInfo")
         .def_readonly("prim_path", &USDMeshInfo::primPath)
         .def_readonly("name", &USDMeshInfo::name)
         .def_readonly("material_path", &USDMeshInfo::materialPath)
-        .def_readonly("diffuse_texture_path",
-                      &USDMeshInfo::diffuseTexturePath)
+        .def_readonly("diffuse_texture_path", &USDMeshInfo::diffuseTexturePath)
         .def_readonly("normal_texture_path", &USDMeshInfo::normalTexturePath)
         .def_property_readonly("mesh_data",
                                [](std::shared_ptr<USDMeshInfo> self) {
@@ -832,8 +838,7 @@ void bind_animation(py::module& m) {
              [](const SkeletonMotion& self, int frame, int joint) {
                  return toGlm(self.localRotation(frame, joint));
              })
-        .def("root_translations_flat",
-             &SkeletonMotion::rootTranslationsFlat)
+        .def("root_translations_flat", &SkeletonMotion::rootTranslationsFlat)
         .def("local_rotations_wxyz_flat",
              &SkeletonMotion::localRotationsWxyzFlat);
 
@@ -885,9 +890,8 @@ void bind_animation(py::module& m) {
                      }
                      for (py::ssize_t row = 0; row < 3; ++row) {
                          for (py::ssize_t col = 0; col < 3; ++col) {
-                             view(i, row, col) =
-                                 r(static_cast<int>(row),
-                                   static_cast<int>(col));
+                             view(i, row, col) = r(static_cast<int>(row),
+                                                   static_cast<int>(col));
                          }
                      }
                      view(i, 0, 3) = t.translation.x();
