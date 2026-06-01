@@ -10,16 +10,21 @@ namespace KE {
 
 class App;
 
-class BasePanel : public Panel {
-
-    /*
-        Define basic panel to inherit
-    */
-
+class PerformancePanel : public Panel {
   private:
   public:
-    BasePanel();
-    ~BasePanel();
+    PerformancePanel();
+    ~PerformancePanel();
+    virtual void buildPanel();
+};
+
+class RendererDebugPanel : public Panel {
+  private:
+    App* _app;
+
+  public:
+    RendererDebugPanel(App* app);
+    ~RendererDebugPanel();
     virtual void buildPanel();
 };
 

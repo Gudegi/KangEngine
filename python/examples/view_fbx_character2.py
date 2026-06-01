@@ -20,16 +20,20 @@ def package_asset_path(*parts: str) -> str:
 
 
 def default_fbx_file() -> Path:
-    return repo_root() / "assets" / "external" / "fbx/aiming1_subject4.fbx" #"Capoeira.fbx"
+    return repo_root() / "assets" / "external" / "Geno/lafan_fbx/aiming1_subject4.fbx" #"Capoeira.fbx"
 
 
 def default_bind_file() -> Path:
-    return repo_root() / "assets" / "external" / "Geno.fbx"
+    return repo_root() / "assets" / "external" / "Geno/Geno_bind.fbx"
 
 
 def resolve_bind_file(fbx_file: Path) -> Path | None:
     candidate = default_bind_file()
-    if fbx_file.parent.name == "fbx" and candidate.exists():
+    for parent in (fbx_file.parent, *fbx_file.parents):
+        local_candidate = parent / "Geno_bind.fbx"
+        if local_candidate.exists():
+            return local_candidate.resolve()
+    if "geno" in [part.lower() for part in fbx_file.parts] and candidate.exists():
         return candidate.resolve()
     return None
 
@@ -59,12 +63,8 @@ class FbxCharacterBridgeViewer(ke.App):
     def setup(self):
         self.show_mesh = True
         self.show_skeleton = True
-        self.cast_shadows = True
-        self.animate = True
-        self.playback_speed = 1.0
         pg = ke.ColorLibrary.get(ke.ColorType.PASTEL_GREEN)
         self.mesh_color = [pg.r, pg.g, pg.b, pg.a]
-        self.time = 0.0
         self.line_handle = None
         self.skeleton_starts = None
         self.skeleton_ends = None
@@ -125,13 +125,13 @@ class FbxCharacterBridgeViewer(ke.App):
             use_materials=self.use_materials,
         )
         self.motion = self.character.motion()
+        self.editor = ke.MotionEditor(self.motion, Path(self.fbx_file).name)
         self.parents = self.motion.parent_indices()
         self.names = self.motion.node_names()
         self._update_skeleton_lines(self.motion.sample(0.0, loop=True))
         if not self.use_materials or self.material_mode == "debug_checker":
             self.character.set_color(ke.vec4(*self.mesh_color))
         self._apply_visibility()
-        self.character.set_casts_shadow(self.cast_shadows)
 
         print(
             f"FBX character2 loaded: {Path(self.fbx_file).name} "
@@ -209,7 +209,12 @@ class FbxCharacterBridgeViewer(ke.App):
             colors,
         )
 
+    def _apply_character_time(self):
+        state = self.character.apply_time(self.editor.player.time)
+        self._update_skeleton_lines(state)
+
     def preRender(self):
+        self.character.set_casts_shadow(False)
         changed = False
         if self.was_key_pressed(keys.M):
             self.show_mesh = not self.show_mesh
@@ -218,37 +223,32 @@ class FbxCharacterBridgeViewer(ke.App):
             self.show_skeleton = not self.show_skeleton
             changed = True
         if self.was_key_pressed(keys.H):
-            self.cast_shadows = not self.cast_shadows
-            self.character.set_casts_shadow(self.cast_shadows)
+            pass
         if self.was_key_pressed(keys.SPACE):
-            self.animate = not self.animate
+            self.editor.player.playing = not self.editor.player.playing
         if changed:
             self._apply_visibility()
-        if self.animate:
-            self.time += self.get_delta_time() * max(0.0, self.playback_speed)
-            state = self.character.apply_time(self.time)
-            self._update_skeleton_lines(state)
+        if self.editor.update(self.get_delta_time()):
+            self._apply_character_time()
         self.checkError()
 
     def render(self):
+        self._render_character_panel()
+        if self._render_motion_panel():
+            self._apply_character_time()
+
+    def _render_character_panel(self):
         imgui.begin("FBX Character 2")
         imgui.text(f"{Path(self.fbx_file).name}")
         imgui.text(
             f"Meshes: {self.character.num_meshes()}  "
             f"Joints: {self.motion.num_joints()}"
         )
-        state = "running" if self.animate else "paused"
-        duration = max(self.motion.duration(), 1e-6)
-        imgui.text(f"Time: {self.time % duration:.3f}s / {duration:.3f}s  |  {state}")
         imgui.text("Space: pause/resume    M: mesh    L: skeleton    H: shadow")
         mesh_changed, self.show_mesh = imgui.checkbox("show mesh", self.show_mesh)
         skeleton_changed, self.show_skeleton = imgui.checkbox(
             "show skeleton",
             self.show_skeleton,
-        )
-        shadow_changed, self.cast_shadows = imgui.checkbox(
-            "cast shadows",
-            self.cast_shadows,
         )
         color_changed = False
         for idx, label in enumerate(("mesh R", "mesh G", "mesh B", "mesh A")):
@@ -261,26 +261,28 @@ class FbxCharacterBridgeViewer(ke.App):
             if changed:
                 self.mesh_color[idx] = value
                 color_changed = True
-        _, self.animate = imgui.checkbox("animate", self.animate)
-        _, self.playback_speed = imgui.slider_float(
-            "playback speed",
-            self.playback_speed,
-            0.0,
-            4.0,
-        )
         if mesh_changed or skeleton_changed:
             self._apply_visibility()
-        if shadow_changed:
-            self.character.set_casts_shadow(self.cast_shadows)
         if color_changed:
             self.character.set_color(ke.vec4(*self.mesh_color))
             self._apply_visibility()
         imgui.end()
 
+    def _render_motion_panel(self):
+        work_x, work_y, work_w, work_h = imgui.main_viewport_work_rect()
+        panel_h = min(280.0, max(180.0, work_h * 0.28))
+        imgui.set_next_window_pos(work_x, work_y + work_h - panel_h)
+        imgui.set_next_window_size(work_w, panel_h)
+        imgui.begin("Motion Sequencer")
+        changed = self.editor.render_ui()
+        imgui.end()
+        return changed
+
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--fbx-file", default=str(default_fbx_file()))
+    parser.add_argument("--bind-file", default=None)
     parser.add_argument("--clip-index", type=int, default=0)
     parser.add_argument("--fps", type=float, default=30.0)
     parser.add_argument("--scale", type=float, default=0.01)
@@ -302,7 +304,13 @@ def main():
     fbx_file = Path(args.fbx_file).expanduser().resolve()
     if not fbx_file.exists():
         raise FileNotFoundError(fbx_file)
-    bind_file = resolve_bind_file(fbx_file)
+    bind_file = (
+        Path(args.bind_file).expanduser().resolve()
+        if args.bind_file is not None
+        else resolve_bind_file(fbx_file)
+    )
+    if bind_file is not None and not bind_file.exists():
+        raise FileNotFoundError(bind_file)
 
     app = FbxCharacterBridgeViewer(
         fbx_file,

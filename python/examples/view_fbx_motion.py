@@ -40,9 +40,6 @@ class FbxMotionViewer(ke.App):
         self.line_radius = line_radius
 
     def setup(self):
-        self.paused = False
-        self.playback_speed = 1.0
-        self.time = 0.0
         self.line_handle = None
 
         self.motion = asset.FBXLoader.load_motion(
@@ -51,6 +48,7 @@ class FbxMotionViewer(ke.App):
             fps=self.fps,
             scale=self.scale,
         )
+        self.editor = ke.MotionEditor(self.motion)
         self.parents = self.motion.parent_indices()
         self.names = self.motion.node_names()
 
@@ -143,32 +141,25 @@ class FbxMotionViewer(ke.App):
 
     def preRender(self):
         if self.was_key_pressed(keys.SPACE):
-            self.paused = not self.paused
+            self.editor.player.playing = not self.editor.player.playing
         if self.was_key_pressed(keys.R):
-            self.time = 0.0
-            self._apply_time(self.time)
+            self.editor.reset()
+            self._apply_time(self.editor.player.time)
 
-        if self.paused:
-            return
-
-        self.time += (1.0 / 60.0) * max(0.0, self.playback_speed)
-        self._apply_time(self.time)
+        if self.editor.update(self.get_delta_time()):
+            self._apply_time(self.editor.player.time)
         self.checkError()
 
     def render(self):
-        state = "PAUSED" if self.paused else "running"
-        duration = max(self.motion.duration(), 1e-6)
+        work_x, work_y, work_w, work_h = imgui.main_viewport_work_rect()
+        panel_h = min(280.0, max(180.0, work_h * 0.28))
+        imgui.set_next_window_pos(work_x, work_y + work_h - panel_h)
+        imgui.set_next_window_size(work_w, panel_h)
         imgui.begin("FBX Motion")
-        imgui.text(f"{Path(self.fbx_file).name}")
-        imgui.text(f"Time: {self.time % duration:.3f}s / {duration:.3f}s  |  {state}")
         imgui.text(f"Joints: {self.motion.num_joints()}  FPS: {self.motion.fps():.3f}")
         imgui.text("Space: pause/resume    R: reset")
-        _, self.playback_speed = imgui.slider_float(
-            "playback speed",
-            self.playback_speed,
-            0.0,
-            4.0,
-        )
+        if self.editor.render_ui(Path(self.fbx_file).name):
+            self._apply_time(self.editor.player.time)
         imgui.end()
 
     def postRender(self):

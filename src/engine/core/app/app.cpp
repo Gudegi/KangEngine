@@ -153,7 +153,8 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     _panelManager.loadFont(KE::getAssetPath("fonts/godoFont/GodoM.ttf"), true);
     _panelManager.addPanel(std::make_unique<MenuBarPanel>(this));
     _panelManager.addPanel(std::make_unique<ScenePanel>(this));
-    _panelManager.addPanel(std::make_unique<BasePanel>());
+    _panelManager.addPanel(std::make_unique<PerformancePanel>());
+    _panelManager.addPanel(std::make_unique<RendererDebugPanel>(this));
 
     _graphicsDevice->setDepthTest(true);
     _graphicsDevice->setStencilTest(true);
@@ -199,6 +200,12 @@ void App::start() {
 bool App::shouldClose() {
     GLFWwindow* window = _window.getGlfwWindow();
     return window == nullptr || glfwWindowShouldClose(window);
+}
+
+void App::requestClose() {
+    GLFWwindow* window = _window.getGlfwWindow();
+    if (window)
+        glfwSetWindowShouldClose(window, true);
 }
 
 void App::renderSceneToFramebuffer(Camera& camera, Backend::Framebuffer* target,
@@ -341,119 +348,6 @@ void App::setCameraMoveSpeed(float speed) {
 }
 
 void App::coreRender() {
-    if (!_hideUI) {
-        ImGui::Checkbox("Wireframe", &_renderWireframe);
-        ImGui::SliderFloat("GammaCorrection", &_gamma, 0.f, 5.f);
-        ImGui::DragFloat("Camera Move Speed", &_cameraMoveSpeed, 0.2f, 0.0f,
-                         500.0f, "%.2f");
-        if (_rasterizer) {
-            DirectionalLight light = getLight();
-            glm::vec3 direction = light.direction;
-            float color[3] = {light.color.r, light.color.g, light.color.b};
-            glm::vec3 ambient = light.ambient;
-
-            if (ImGui::DragFloat3("Sun Direction (toward light)", &direction.x,
-                                  0.02f)) {
-                setLightDirection(direction);
-            }
-            if (ImGui::ColorEdit3("Light Color", color)) {
-                setLightColor(glm::vec3(color[0], color[1], color[2]));
-            }
-            if (ImGui::SliderFloat("Light Intensity", &light.intensity, 0.0f,
-                                   2.0f)) {
-                setLightIntensity(light.intensity);
-            }
-            if (ImGui::ColorEdit3("Ambient", &ambient.x)) {
-                setLightAmbient(ambient);
-            }
-
-            float distance = _rasterizer->getShadowDistance();
-            if (ImGui::SliderFloat("Shadow Distance (Set 0 to disable shadow)",
-                                   &distance, 0.0f, 300.0f)) {
-                _rasterizer->setShadowDistance(distance);
-            }
-            int pcfSamples = _rasterizer->getShadowPcfSamples();
-            if (ImGui::SliderInt("Shadow PCF Samples", &pcfSamples, 1, 16)) {
-                _rasterizer->setShadowPcfSamples(pcfSamples);
-            }
-            bool useCsm = _rasterizer->getUseCsm();
-            if (ImGui::Checkbox("Use CSM", &useCsm)) {
-                _rasterizer->setUseCsm(useCsm);
-            }
-            if (useCsm) {
-                int cascadeCount = _rasterizer->getCascadeCount();
-                if (ImGui::SliderInt("CSM Cascade Count", &cascadeCount, 1,
-                                     Rasterizer::MaxShadowCascades)) {
-                    _rasterizer->setCascadeCount(cascadeCount);
-                }
-                float cascadeLambda = _rasterizer->getCascadeLambda();
-                if (ImGui::SliderFloat("CSM Cascade Lambda", &cascadeLambda,
-                                       0.0f, 1.0f)) {
-                    _rasterizer->setCascadeLambda(cascadeLambda);
-                }
-                bool useTightShadowFit = _rasterizer->getUseTightShadowFit();
-                if (ImGui::Checkbox("Tight Shadow Fit", &useTightShadowFit)) {
-                    _rasterizer->setUseTightShadowFit(useTightShadowFit);
-                }
-                bool debugCascadeTint = _rasterizer->getDebugCsmCascadeTint();
-                if (ImGui::Checkbox("Debug CSM Cascade Tint",
-                                    &debugCascadeTint)) {
-                    _rasterizer->setDebugCsmCascadeTint(debugCascadeTint);
-                }
-            }
-
-            bool frustumCulling = _rasterizer->isFrustumCullingEnabled();
-            if (ImGui::Checkbox("Frustum Culling", &frustumCulling)) {
-                _rasterizer->setFrustumCullingEnabled(frustumCulling);
-            }
-            if (frustumCulling) {
-                // Batch = one instancer/draw group. Instance = one transform
-                // inside that batch, culled by its world AABB.
-                ImGui::Text("Culled Batches %d / %d",
-                            _rasterizer->getCullingCulledBatches(),
-                            _rasterizer->getCullingTotalBatches());
-                ImGui::Text("Culled Instances %d / %d",
-                            _rasterizer->getCullingCulledInstances(),
-                            _rasterizer->getCullingTotalInstances());
-            }
-
-            if (useCsm) {
-                const int cascadeCount = _rasterizer->getCascadeCount();
-                ImGui::Text("CSM Shadow Maps");
-                if (ImGui::BeginTable("CSMShadowMapPreview", 2)) {
-                    for (int i = 0; i < cascadeCount; ++i) {
-                        auto* cascadeFbo = _rasterizer->getCascadeShadowFbo(i);
-                        if (!cascadeFbo)
-                            continue;
-                        auto* depthTex = cascadeFbo->getDepthTexture();
-                        if (!depthTex)
-                            continue;
-                        ImGui::TableNextColumn();
-                        ImGui::Text("Cascade %d %dx%d", i, depthTex->getWidth(),
-                                    depthTex->getHeight());
-                        ImGui::Image(
-                            (ImTextureID)(uintptr_t)depthTex->getNativeHandle(),
-                            ImVec2(128, 128), ImVec2(0, 1), ImVec2(1, 0));
-                    }
-                    ImGui::EndTable();
-                }
-            } else {
-                auto* shadowFbo =
-                    _rasterizer ? _rasterizer->getShadowFbo() : nullptr;
-                if (shadowFbo) {
-                    auto* depthTex = shadowFbo->getDepthTexture();
-                    if (depthTex) {
-                        ImGui::Text("Shadow Map %dx%d", depthTex->getWidth(),
-                                    depthTex->getHeight());
-                        ImGui::Image(
-                            (ImTextureID)(uintptr_t)depthTex->getNativeHandle(),
-                            ImVec2(128, 128), ImVec2(0, 1), ImVec2(1, 0));
-                    }
-                }
-            }
-        }
-    }
-
     if (_renderWireframe == true) {
         _graphicsDevice->setPolygonMode(Backend::PolygonMode::Line);
     } else {

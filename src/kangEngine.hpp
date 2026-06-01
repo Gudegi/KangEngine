@@ -15,6 +15,8 @@
 #include "engine/scene/debug_draw.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/core/ui/base_panel.hpp"
+#include "engine/core/ui/motion_sequencer_panel.hpp"
+#include "engine/core/ui/sequencer_widget.hpp"
 #include "engine/core/ui/panel_manager.hpp"
 #include "utils/asset_path.hpp"
 #include "utils/print_debug.hpp"

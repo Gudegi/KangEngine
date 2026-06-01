@@ -1,25 +1,151 @@
 #include "base_panel.hpp"
 #include "imgui.h"
 #include "engine/core/app/app.hpp"
-#include <GLFW/glfw3.h>
+#include "engine/graphics/renderer/rasterizer.hpp"
+#include <cstdio>
+#include <cstdint>
 
 namespace KE {
 
-BasePanel::BasePanel() {}
+PerformancePanel::PerformancePanel() : Panel("Performance") {}
 
-BasePanel::~BasePanel() {}
+PerformancePanel::~PerformancePanel() {}
 
-void BasePanel::buildPanel() {
-    // ImGui::Begin("Performance");
+void PerformancePanel::buildPanel() {
+    ImGui::Begin(name().c_str());
     ImGui::Text("Performance");
     ImGui::Separator();
     ImGui::Text("FPS: %.1f (%.3f ms/frame)", ImGui::GetIO().Framerate,
                 1000.0f / ImGui::GetIO().Framerate);
-    // ImGui::Spacing();
-    // ImGui::End();
+    ImGui::End();
 }
 
-MenuBarPanel::MenuBarPanel(App* app) : _app(app) {}
+RendererDebugPanel::RendererDebugPanel(App* app)
+    : Panel("Renderer Debug"), _app(app) {}
+
+RendererDebugPanel::~RendererDebugPanel() {}
+
+void RendererDebugPanel::buildPanel() {
+    if (!_app)
+        return;
+
+    ImGui::Begin(name().c_str());
+    ImGui::Checkbox("Wireframe", &_app->_renderWireframe);
+    ImGui::SliderFloat("GammaCorrection", &_app->_gamma, 0.f, 5.f);
+    ImGui::DragFloat("Camera Move Speed", &_app->_cameraMoveSpeed, 0.2f, 0.0f,
+                     500.0f, "%.2f");
+
+    Rasterizer* rasterizer = _app->getRasterizer();
+    if (!rasterizer) {
+        ImGui::End();
+        return;
+    }
+
+    DirectionalLight light = _app->getLight();
+    glm::vec3 direction = light.direction;
+    float color[3] = {light.color.r, light.color.g, light.color.b};
+    glm::vec3 ambient = light.ambient;
+
+    if (ImGui::DragFloat3("Sun Direction (toward light)", &direction.x,
+                          0.02f)) {
+        _app->setLightDirection(direction);
+    }
+    if (ImGui::ColorEdit3("Light Color", color)) {
+        _app->setLightColor(glm::vec3(color[0], color[1], color[2]));
+    }
+    if (ImGui::SliderFloat("Light Intensity", &light.intensity, 0.0f, 2.0f)) {
+        _app->setLightIntensity(light.intensity);
+    }
+    if (ImGui::ColorEdit3("Ambient", &ambient.x)) {
+        _app->setLightAmbient(ambient);
+    }
+
+    float distance = rasterizer->getShadowDistance();
+    if (ImGui::SliderFloat("Shadow Distance (Set 0 to disable shadow)",
+                           &distance, 0.0f, 300.0f)) {
+        rasterizer->setShadowDistance(distance);
+    }
+    int pcfSamples = rasterizer->getShadowPcfSamples();
+    if (ImGui::SliderInt("Shadow PCF Samples", &pcfSamples, 1, 16)) {
+        rasterizer->setShadowPcfSamples(pcfSamples);
+    }
+    bool useCsm = rasterizer->getUseCsm();
+    if (ImGui::Checkbox("Use CSM", &useCsm)) {
+        rasterizer->setUseCsm(useCsm);
+    }
+    if (useCsm) {
+        int cascadeCount = rasterizer->getCascadeCount();
+        if (ImGui::SliderInt("CSM Cascade Count", &cascadeCount, 1,
+                             Rasterizer::MaxShadowCascades)) {
+            rasterizer->setCascadeCount(cascadeCount);
+        }
+        float cascadeLambda = rasterizer->getCascadeLambda();
+        if (ImGui::SliderFloat("CSM Cascade Lambda", &cascadeLambda, 0.0f,
+                               1.0f)) {
+            rasterizer->setCascadeLambda(cascadeLambda);
+        }
+        bool useTightShadowFit = rasterizer->getUseTightShadowFit();
+        if (ImGui::Checkbox("Tight Shadow Fit", &useTightShadowFit)) {
+            rasterizer->setUseTightShadowFit(useTightShadowFit);
+        }
+        bool debugCascadeTint = rasterizer->getDebugCsmCascadeTint();
+        if (ImGui::Checkbox("Debug CSM Cascade Tint", &debugCascadeTint)) {
+            rasterizer->setDebugCsmCascadeTint(debugCascadeTint);
+        }
+    }
+
+    bool frustumCulling = rasterizer->isFrustumCullingEnabled();
+    if (ImGui::Checkbox("Frustum Culling", &frustumCulling)) {
+        rasterizer->setFrustumCullingEnabled(frustumCulling);
+    }
+    if (frustumCulling) {
+        // Batch = one instancer/draw group. Instance = one transform inside
+        // that batch, culled by its world AABB.
+        ImGui::Text("Culled Batches %d / %d",
+                    rasterizer->getCullingCulledBatches(),
+                    rasterizer->getCullingTotalBatches());
+        ImGui::Text("Culled Instances %d / %d",
+                    rasterizer->getCullingCulledInstances(),
+                    rasterizer->getCullingTotalInstances());
+    }
+
+    if (useCsm) {
+        const int cascadeCount = rasterizer->getCascadeCount();
+        ImGui::Text("CSM Shadow Maps");
+        if (ImGui::BeginTable("CSMShadowMapPreview", 2)) {
+            for (int i = 0; i < cascadeCount; ++i) {
+                auto* cascadeFbo = rasterizer->getCascadeShadowFbo(i);
+                if (!cascadeFbo)
+                    continue;
+                auto* depthTex = cascadeFbo->getDepthTexture();
+                if (!depthTex)
+                    continue;
+                ImGui::TableNextColumn();
+                ImGui::Text("Cascade %d %dx%d", i, depthTex->getWidth(),
+                            depthTex->getHeight());
+                ImGui::Image(
+                    (ImTextureID)(uintptr_t)depthTex->getNativeHandle(),
+                    ImVec2(128, 128), ImVec2(0, 1), ImVec2(1, 0));
+            }
+            ImGui::EndTable();
+        }
+    } else {
+        auto* shadowFbo = rasterizer->getShadowFbo();
+        if (shadowFbo) {
+            auto* depthTex = shadowFbo->getDepthTexture();
+            if (depthTex) {
+                ImGui::Text("Shadow Map %dx%d", depthTex->getWidth(),
+                            depthTex->getHeight());
+                ImGui::Image(
+                    (ImTextureID)(uintptr_t)depthTex->getNativeHandle(),
+                    ImVec2(128, 128), ImVec2(0, 1), ImVec2(1, 0));
+            }
+        }
+    }
+    ImGui::End();
+}
+
+MenuBarPanel::MenuBarPanel(App* app) : Panel("Menu Bar"), _app(app) {}
 
 MenuBarPanel::~MenuBarPanel() {}
 
@@ -36,7 +162,7 @@ void MenuBarPanel::buildPanel() {
             }
             if (ImGui::MenuItem("Exit")) {
                 if (_app)
-                    glfwSetWindowShouldClose(_app->getWindow(), true);
+                    _app->requestClose();
             }
             ImGui::EndMenu();
         }
@@ -66,12 +192,12 @@ void MenuBarPanel::buildPanel() {
     }
 }
 
-ScenePanel::ScenePanel(App* app) : _app(app) {}
+ScenePanel::ScenePanel(App* app) : Panel("Scene"), _app(app) {}
 
 ScenePanel::~ScenePanel() {}
 
 void ScenePanel::buildPanel() {
-    ImGui::Begin("Scene");
+    ImGui::Begin(name().c_str());
     if (auto* root = _app->getScene()->getRootPrim()) {
         auto drawPrimTree = [&](auto& self, Scene::Prim* prim) -> void {
             const auto& children = prim->getChildren();

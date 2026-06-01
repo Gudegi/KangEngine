@@ -9,6 +9,7 @@ if _assets_dir.exists():
 
 from ._core import _ke
 from .app import App, NativeApp
+from .motion_editor import MotionEditor, MotionPlayer
 from .sim import ControlMode, KangSimWorld
 from .visual import KangWorldVisualBridge
 from .mimickit_engine import (
@@ -59,6 +60,8 @@ WebGPU = _ke.WebGPU
 __all__ = [
     "App",
     "NativeApp",
+    "MotionEditor",
+    "MotionPlayer",
     "ControlMode",
     "KangSimWorld",
     "KangWorldVisualBridge",

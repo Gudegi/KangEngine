@@ -23,6 +23,7 @@ def package_asset_path(*parts: str) -> str:
 
 def default_fbx_file() -> Path:
     return repo_root() / "assets" / "external" / "Capoeira.fbx"
+    #return repo_root() / "assets" / "external" / "Dying.fbx"
 
 
 def prim_safe_name(name: str, fallback: str) -> str:
@@ -147,6 +148,7 @@ class FbxCharacterViewer(ke.App):
             color = self._mesh_material_color(mesh, palette[idx % len(palette)])
             prim.set_display_color_alpha(color)
             texture = self._load_mesh_texture(mesh)
+            normal_texture = self._load_mesh_normal_texture(mesh)
             shader = self.textured_mesh_shader if texture is not None else self.mesh_shader
             handle = self.addSkinnedShape(
                 shader,
@@ -155,6 +157,8 @@ class FbxCharacterViewer(ke.App):
             )
             if texture is not None:
                 self.setShapeTexture(handle, texture, 0)
+                if normal_texture is not None:
+                    self.setShapeTexture(handle, normal_texture, 5)
             # self.setShapeDoubleSided(handle, True)
             self.mesh_prims.append(prim)
             self.mesh_colors.append(color)
@@ -200,6 +204,17 @@ class FbxCharacterViewer(ke.App):
         if material is None or not material.has_diffuse_texture:
             return None
         texture_path = Path(material.diffuse_texture_path)
+        if not texture_path.exists():
+            return None
+        texture = self.getGraphicsDevice().createTexture(str(texture_path), True)
+        self.textures.append(texture)
+        return texture
+
+    def _load_mesh_normal_texture(self, mesh):
+        material = self._primary_material(mesh)
+        if material is None or not material.has_normal_texture:
+            return None
+        texture_path = Path(material.normal_texture_path)
         if not texture_path.exists():
             return None
         texture = self.getGraphicsDevice().createTexture(str(texture_path), True)

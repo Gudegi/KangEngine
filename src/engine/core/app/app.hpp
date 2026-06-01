@@ -118,6 +118,8 @@ class App {
     Backend::GraphicsDevice* getGraphicsDevice() {
         return _graphicsDevice.get();
     }
+    Rasterizer* getRasterizer() { return _rasterizer.get(); }
+    const Rasterizer* getRasterizer() const { return _rasterizer.get(); }
     void renderSceneToFramebuffer(Camera& camera, Backend::Framebuffer* target,
                                   int width, int height, bool clear = true);
 
@@ -125,6 +127,7 @@ class App {
     void start();
     void renderFrameOnce();
     bool shouldClose();
+    void requestClose();
     virtual void setup() {}      // 처음에 사용
     virtual void preRender() {}  // 루프 안에서 사용됨. 렌더 전에 사용
     virtual void render() {}     // overrideable 실제 렌더링

@@ -17,6 +17,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <GLFW/glfw3.h>
 #include <imgui.h>
+#include <algorithm>
 #include <iomanip>
 #include <optional>
 
@@ -39,6 +40,38 @@ class PyApp : public App {
     void postRender() override {
         PYBIND11_OVERRIDE_PURE(void, App, postRender);
     }
+};
+
+class SingleMotionSequence : public UI::SequenceInterface {
+  public:
+    SingleMotionSequence(int frameMin, int frameMax, const std::string& label)
+        : _frameMin(frameMin), _frameMax(frameMax), _label(label),
+          _start(frameMin), _end(frameMax) {}
+
+    int GetFrameMin() const override { return _frameMin; }
+    int GetFrameMax() const override { return _frameMax; }
+    int GetItemCount() const override { return 1; }
+    const char* GetItemLabel(int) const override { return _label.c_str(); }
+    const char* GetCollapseFmt() const override { return "%d Frames"; }
+
+    void Get(int, int** start, int** end, int* type,
+             unsigned int* color) override {
+        if (start)
+            *start = &_start;
+        if (end)
+            *end = &_end;
+        if (type)
+            *type = 0;
+        if (color)
+            *color = IM_COL32(96, 180, 255, 255);
+    }
+
+  private:
+    int _frameMin = 0;
+    int _frameMax = 0;
+    std::string _label;
+    int _start = 0;
+    int _end = 0;
 };
 
 void bind_imgui(py::module& m) {
@@ -65,6 +98,23 @@ void bind_imgui(py::module& m) {
     });
     imgui.def("separator", []() { ImGui::Separator(); });
     imgui.def("same_line", []() { ImGui::SameLine(); });
+    imgui.def("main_viewport_work_rect", []() {
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
+        return py::make_tuple(viewport->WorkPos.x, viewport->WorkPos.y,
+                              viewport->WorkSize.x, viewport->WorkSize.y);
+    });
+    imgui.def(
+        "set_next_window_pos",
+        [](float x, float y) {
+            ImGui::SetNextWindowPos(ImVec2(x, y), ImGuiCond_Always);
+        },
+        py::arg("x"), py::arg("y"));
+    imgui.def(
+        "set_next_window_size",
+        [](float width, float height) {
+            ImGui::SetNextWindowSize(ImVec2(width, height), ImGuiCond_Always);
+        },
+        py::arg("width"), py::arg("height"));
     imgui.def("button", [](const std::string& label) {
         return ImGui::Button(label.c_str());
     });
@@ -93,6 +143,39 @@ void bind_imgui(py::module& m) {
         },
         py::arg("fraction"), py::arg("width") = -1.0f, py::arg("height") = 0.0f,
         py::arg("overlay") = "");
+    imgui.def(
+        "motion_sequencer",
+        [](const std::string& label, int currentFrame, int frameMin,
+           int frameMax, int firstFrame, bool expanded, int selectedEntry,
+           const std::string& itemLabel, bool fitToContent) {
+            if (frameMax < frameMin)
+                frameMax = frameMin;
+            currentFrame = std::clamp(currentFrame, frameMin, frameMax);
+            firstFrame = std::clamp(firstFrame, frameMin, frameMax);
+
+            SingleMotionSequence sequence(frameMin, frameMax, itemLabel);
+            int current = currentFrame;
+            int first = firstFrame;
+            int selected = selectedEntry;
+            bool isExpanded = expanded;
+
+            ImGui::PushID(label.c_str());
+            UI::SequencerConfig config;
+            config.fitToContent = fitToContent;
+            bool changed =
+                UI::sequencer(&sequence, &current, &isExpanded, &selected,
+                              &first, UI::SequencerChangeFrame, config);
+            ImGui::PopID();
+
+            current = std::clamp(current, frameMin, frameMax);
+            first = std::clamp(first, frameMin, frameMax);
+            return py::make_tuple(changed || current != currentFrame, current,
+                                  first, isExpanded, selected);
+        },
+        py::arg("label"), py::arg("current_frame"), py::arg("frame_min"),
+        py::arg("frame_max"), py::arg("first_frame") = 0,
+        py::arg("expanded") = true, py::arg("selected_entry") = -1,
+        py::arg("item_label") = "Motion", py::arg("fit_to_content") = false);
 }
 
 void bind_keys(py::module& m) {

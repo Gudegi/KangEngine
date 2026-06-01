@@ -58,6 +58,7 @@ class FbxCharacterCppApp : public App {
     std::unique_ptr<Backend::Shader> lineShader;
     std::unique_ptr<Backend::Shader> groundShader;
     SkinnedCharacterBridge character;
+    MotionSequencerPanel motionPanel;
 
     MeshHandle skeletonHandle = InvalidHandle;
     std::vector<glm::vec3> lineStarts;
@@ -72,7 +73,6 @@ class FbxCharacterCppApp : public App {
     bool mWasDown = false;
     bool lWasDown = false;
     bool hWasDown = false;
-    float playbackSpeed = 1.0f;
     float time = 0.0f;
 
     void setup() override {
@@ -122,6 +122,17 @@ class FbxCharacterCppApp : public App {
             fps, importScale);
         character.setCastsShadow(castShadows);
         updateSkeletonLines(character.motion().sample(0.0f, true));
+        const std::string motionName =
+            character.motion().motionName().empty()
+                ? std::filesystem::path(fbxPath).filename().string()
+                : character.motion().motionName();
+        motionPanel.setMotion(motionName, character.motion().numFrames(),
+                              character.motion().fps());
+        motionPanel.setFrameChangedCallback(
+            [this](int frame) { applyFrame(frame); });
+        motionPanel.setPlayingChangedCallback(
+            [this](bool playing) { animate = playing; });
+        motionPanel.setPlaying(animate);
 
         std::cout << "FBX C++ character loaded: " << fbxPath << "\n";
         std::cout << "meshes=" << character.meshes().size()
@@ -162,14 +173,28 @@ class FbxCharacterCppApp : public App {
 
     void applyVisibility() {
         character.setVisible(showMesh);
-        updateSkeletonLines(character.motion().sample(time, true));
+        updateSkeletonLines(
+            character.motion().sample(time, motionPanel.loop()));
+    }
+
+    void applyFrame(int frame) {
+        const auto& motion = character.motion();
+        frame = std::clamp(frame, 0, motion.numFrames() - 1);
+        time = static_cast<float>(frame) / motion.fps();
+        const Animation::SkeletonState state =
+            character.applyTime(time, motionPanel.loop());
+        updateSkeletonLines(state);
+        motionPanel.setCurrentTime(time);
+        time = motionPanel.currentTime();
     }
 
     void preRender() override {
         const bool spaceDown =
             glfwGetKey(getWindow(), GLFW_KEY_SPACE) == GLFW_PRESS;
-        if (spaceDown && !spaceWasDown)
+        if (spaceDown && !spaceWasDown) {
             animate = !animate;
+            motionPanel.setPlaying(animate);
+        }
         spaceWasDown = spaceDown;
 
         const bool mDown = glfwGetKey(getWindow(), GLFW_KEY_M) == GLFW_PRESS;
@@ -194,8 +219,11 @@ class FbxCharacterCppApp : public App {
         hWasDown = hDown;
 
         if (animate) {
-            time += getDeltaTime() * playbackSpeed;
-            const Animation::SkeletonState state = character.applyTime(time);
+            time += getDeltaTime() * motionPanel.timeScale();
+            motionPanel.setCurrentTime(time);
+            time = motionPanel.currentTime();
+            const Animation::SkeletonState state =
+                character.applyTime(time, motionPanel.loop());
             updateSkeletonLines(state);
         }
         checkError();
@@ -216,11 +244,13 @@ class FbxCharacterCppApp : public App {
             applyVisibility();
         if (ImGui::Checkbox("cast shadows", &castShadows))
             character.setCastsShadow(castShadows);
-        ImGui::Checkbox("animate", &animate);
-        ImGui::SliderFloat("playback speed", &playbackSpeed, 0.0f, 4.0f);
+        if (ImGui::Checkbox("animate", &animate))
+            motionPanel.setPlaying(animate);
         const float duration = std::max(character.motion().duration(), 1e-6f);
         ImGui::Text("time %.3f / %.3f", std::fmod(time, duration), duration);
         ImGui::End();
+
+        motionPanel.buildPanel();
     }
 };
 
