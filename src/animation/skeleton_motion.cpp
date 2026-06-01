@@ -85,11 +85,12 @@ SkeletonState SkeletonMotion::sample(float time, bool loop) const {
         return frame(0);
 
     const float maxTime = duration();
+    const float loopPeriod = static_cast<float>(frames) / _fps;
     float t = time;
-    if (loop && maxTime > 0.0f) {
-        t = std::fmod(t, maxTime);
+    if (loop && loopPeriod > 0.0f) {
+        t = std::fmod(t, loopPeriod);
         if (t < 0.0f)
-            t += maxTime;
+            t += loopPeriod;
     } else {
         t = std::clamp(t, 0.0f, maxTime);
     }
@@ -98,7 +99,7 @@ SkeletonState SkeletonMotion::sample(float time, bool loop) const {
     const int i0 =
         std::clamp(static_cast<int>(std::floor(frameFloat)), 0, frames - 1);
     const int i1 = std::min(i0 + 1, frames - 1);
-    const float alpha = frameFloat - static_cast<float>(i0);
+    const float alpha = i0 == i1 ? 0.0f : frameFloat - static_cast<float>(i0);
 
     const Eigen::Vector3f root =
         rootTranslation(i0) * (1.0f - alpha) + rootTranslation(i1) * alpha;

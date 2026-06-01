@@ -24,9 +24,38 @@ enum SequencerOptions {
 };
 
 struct SequencerConfig {
+    // Fit the full frame range into the available timeline width.
     bool fitToContent = false;
+    // Refit once immediately, for example when a UI toggle is enabled.
+    bool requestFitToContent = false;
+    // Restore the timeline view saved before fit-to-content was enabled.
+    bool requestRestoreView = false;
+    // Show the bottom bar for panning and zooming the visible frame range.
+    bool showScrollBar = false;
+    // Smallest allowed pixels-per-frame scale.
     float minFramePixelWidth = 0.1f;
+    // Largest allowed pixels-per-frame scale.
     float maxFramePixelWidth = 50.0f;
+    // Smoothing factor for animated zoom changes.
+    float framePixelLerp = 0.33f;
+    // Width reserved for track labels on the left.
+    int legendWidth = 200;
+    // Height of one track row and the frame header.
+    int itemHeight = 20;
+    // Height of the optional bottom panning/zoom bar.
+    float scrollBarHeight = 14.0f;
+    // Padding below the track content area.
+    float childBottomPadding = 8.0f;
+    // Minimum pixel spacing between major frame ticks.
+    float minTickSpacing = 150.0f;
+    // Width of the current-frame cursor line.
+    float cursorWidth = 8.0f;
+    // Minimum width of draggable clip handles.
+    float minHandleWidth = 10.0f;
+    // Minimum width of the scrollbar thumb.
+    float minScrollBarWidth = 44.0f;
+    // Corner radius for major timeline rectangles.
+    float rectRounding = 7.0f;
 };
 
 struct SequenceInterface {

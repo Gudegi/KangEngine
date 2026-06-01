@@ -126,6 +126,14 @@ class FbxCharacterBridgeViewer(ke.App):
         )
         self.motion = self.character.motion()
         self.editor = ke.MotionEditor(self.motion, Path(self.fbx_file).name)
+        self.editor.add_module(
+            ke.RootTrajectoryModule(
+                self,
+                "/debug/fbx_character2_root_trajectory",
+                line_width=2.0,
+                point_size=8.0,
+            )
+        )
         self.parents = self.motion.parent_indices()
         self.names = self.motion.node_names()
         self._update_skeleton_lines(self.motion.sample(0.0, loop=True))
@@ -214,7 +222,7 @@ class FbxCharacterBridgeViewer(ke.App):
         self._update_skeleton_lines(state)
 
     def preRender(self):
-        self.character.set_casts_shadow(False)
+        # self.character.set_casts_shadow(False)
         changed = False
         if self.was_key_pressed(keys.M):
             self.show_mesh = not self.show_mesh
@@ -244,7 +252,7 @@ class FbxCharacterBridgeViewer(ke.App):
             f"Meshes: {self.character.num_meshes()}  "
             f"Joints: {self.motion.num_joints()}"
         )
-        imgui.text("Space: pause/resume    M: mesh    L: skeleton    H: shadow")
+        imgui.text("Space: pause/resume    M: mesh    L: skeleton")
         mesh_changed, self.show_mesh = imgui.checkbox("show mesh", self.show_mesh)
         skeleton_changed, self.show_skeleton = imgui.checkbox(
             "show skeleton",
@@ -266,17 +274,12 @@ class FbxCharacterBridgeViewer(ke.App):
         if color_changed:
             self.character.set_color(ke.vec4(*self.mesh_color))
             self._apply_visibility()
+        if self.editor.render_modules_ui():
+            self.editor.update_modules()
         imgui.end()
 
     def _render_motion_panel(self):
-        work_x, work_y, work_w, work_h = imgui.main_viewport_work_rect()
-        panel_h = min(280.0, max(180.0, work_h * 0.28))
-        imgui.set_next_window_pos(work_x, work_y + work_h - panel_h)
-        imgui.set_next_window_size(work_w, panel_h)
-        imgui.begin("Motion Sequencer")
-        changed = self.editor.render_ui()
-        imgui.end()
-        return changed
+        return self.editor.render_panel()
 
 
 def main():

@@ -1,5 +1,5 @@
 #include "motion_sequencer_panel.hpp"
-
+#include "engine/graphics/material/colors.hpp"
 #include "imgui.h"
 
 #include <algorithm>
@@ -30,8 +30,11 @@ class MotionSequencerPanel::SingleMotionSequence
             *end = &_end;
         if (type)
             *type = 0;
-        if (color)
-            *color = IM_COL32(96, 180, 255, 255);
+        if (color) {
+            const Color& pg = ColorLibrary::get(ColorType::PASTEL_GREEN);
+            *color =
+                ImGui::ColorConvertFloat4ToU32(ImVec4(pg.r, pg.g, pg.b, pg.a));
+        }
     }
 
   private:
@@ -72,6 +75,10 @@ void MotionSequencerPanel::setTimeScale(float timeScale) {
     _timeScale = std::max(0.0f, timeScale);
 }
 
+void MotionSequencerPanel::setOverlayWidthRatio(float ratio) {
+    _overlayWidthRatio = std::clamp(ratio, 0.1f, 1.0f);
+}
+
 void MotionSequencerPanel::setFrameChangedCallback(
     FrameChangedCallback callback) {
     _onFrameChanged = std::move(callback);
@@ -84,47 +91,131 @@ void MotionSequencerPanel::setPlayingChangedCallback(
 
 void MotionSequencerPanel::buildPanel() {
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
-    const float panelHeight =
-        std::min(280.0f, std::max(180.0f, viewport->WorkSize.y * 0.28f));
+    const float expandedHeight =
+        std::clamp(viewport->WorkSize.y * 0.20f, 132.0f, 190.0f);
+    const float foldedHeight = 42.0f;
+    const float panelHeight = _folded ? foldedHeight : expandedHeight;
+    const float panelWidth =
+        viewport->WorkSize.x * (_overlay ? _overlayWidthRatio : 1.0f);
+    const float panelX =
+        viewport->WorkPos.x + (viewport->WorkSize.x - panelWidth) * 0.5f;
+    const ImGuiCond placementCond =
+        _overlay ? ImGuiCond_Always : ImGuiCond_FirstUseEver;
     ImGui::SetNextWindowPos(
-        ImVec2(viewport->WorkPos.x,
+        ImVec2(panelX,
                viewport->WorkPos.y + viewport->WorkSize.y - panelHeight),
-        ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x, panelHeight),
-                             ImGuiCond_FirstUseEver);
+        placementCond);
+    ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight), placementCond);
 
-    ImGui::Begin(name().c_str());
-    ImGui::Text("%s", _motionName.c_str());
+    ImGuiWindowFlags windowFlags =
+        ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
+    if (_overlay)
+        windowFlags |= ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize |
+                       ImGuiWindowFlags_NoSavedSettings;
+    if (_transparent)
+        windowFlags |= ImGuiWindowFlags_NoBackground;
+
+    if (!_transparent)
+        ImGui::SetNextWindowBgAlpha(_overlay ? 0.74f : 1.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, _overlay ? 0.0f : 1.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(14.0f, 10.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 6.0f));
+    ImGui::Begin(name().c_str(), nullptr, windowFlags);
+
     const float d = duration();
-    const float displayTime = d > 1e-6f ? std::fmod(_time, d) : 0.0f;
-    ImGui::Text("Frame %d/%d  %.3fs / %.3fs  |  %s", currentFrame() + 1,
-                _numFrames, displayTime, d, _playing ? "running" : "paused");
-    if (ImGui::Button(_playing ? "Pause" : "Play"))
+    const float playbackD = playbackDuration();
+    const float playbackTime = _loop && playbackD > 1e-6f
+                                   ? std::fmod(_time, playbackD)
+                                   : std::clamp(_time, 0.0f, d);
+    const float displayTime = std::min(playbackTime, d);
+    const char* foldLabel = _folded ? "Show" : "Hide";
+    if (ImGui::Button(foldLabel, ImVec2(52.0f, 0.0f)))
+        _folded = !_folded;
+    ImGui::SameLine();
+    ImGui::Text("%d HZ", static_cast<int>(_fps));
+    ImGui::SameLine();
+    const float statusWidth =
+        ImGui::CalcTextSize("Frame 000000/000000  0000.000s / 0000.000s").x;
+    const float statusStartX = ImGui::GetCursorPosX();
+    const ImGuiStyle& style = ImGui::GetStyle();
+    const auto buttonWidth = [&style](const char* label) {
+        return ImGui::CalcTextSize(label).x + style.FramePadding.x * 2.0f;
+    };
+    const auto checkboxWidth = [&style](const char* label) {
+        return ImGui::GetFrameHeight() + style.ItemInnerSpacing.x +
+               ImGui::CalcTextSize(label).x;
+    };
+    constexpr float playButtonWidth = 58.0f;
+    constexpr float speedSliderWidth = 75.0f;
+    constexpr int inlineControlCount = 8;
+    const float inlineControlsWidth =
+        playButtonWidth + buttonWidth("Reset") + checkboxWidth("Loop") +
+        checkboxWidth("fit whole motion") + buttonWidth("0.3") +
+        buttonWidth("0.5") + buttonWidth("1.0") + speedSliderWidth +
+        style.ItemInnerSpacing.x + ImGui::CalcTextSize("Speed").x +
+        style.ItemSpacing.x * static_cast<float>(inlineControlCount - 1);
+    const bool inlineControls =
+        ImGui::GetContentRegionAvail().x >=
+        statusWidth + style.ItemSpacing.x + inlineControlsWidth;
+    ImGui::Text("Frame %d/%d  %.3fs / %.3fs", currentFrame(),
+                std::max(_numFrames - 1, 0), displayTime, d);
+
+    if (_folded) {
+        ImGui::End();
+        ImGui::PopStyleVar(4);
+        return;
+    }
+
+    if (inlineControls) {
+        ImGui::SameLine();
+        ImGui::SetCursorPosX(statusStartX + statusWidth + style.ItemSpacing.x);
+    }
+    if (ImGui::Button(_playing ? "Pause" : "Play", ImVec2(58.0f, 0.0f)))
         setPlaying(!_playing);
     ImGui::SameLine();
     if (ImGui::Button("Reset"))
         setFrame(0);
     ImGui::SameLine();
-    ImGui::Checkbox("loop", &_loop);
+    ImGui::Checkbox("Loop", &_loop);
     ImGui::SameLine();
-    ImGui::Checkbox("fit whole motion", &_fitToContent);
-    ImGui::SliderFloat("playback speed", &_timeScale, 0.0f, 4.0f);
+    const bool fitToContentChanged =
+        ImGui::Checkbox("fit whole motion", &_fitToContent);
+    ImGui::SameLine();
+    if (ImGui::Button("0.3"))
+        _timeScale = 0.3f;
+    ImGui::SameLine();
+    if (ImGui::Button("0.5"))
+        _timeScale = 0.5f;
+    ImGui::SameLine();
+    if (ImGui::Button("1.0"))
+        _timeScale = 1.0f;
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(speedSliderWidth);
+    ImGui::SliderFloat("Speed", &_timeScale, 0.0f, 4.0f);
 
     int frame = currentFrame();
     SingleMotionSequence sequence(0, std::max(_numFrames - 1, 0), _motionName);
     UI::SequencerConfig config;
     config.fitToContent = _fitToContent;
+    config.requestFitToContent = fitToContentChanged && _fitToContent;
+    config.requestRestoreView = fitToContentChanged && !_fitToContent;
+    if (config.requestFitToContent)
+        _firstFrame = 0;
     const bool changed =
         UI::sequencer(&sequence, &frame, &_expanded, &_selectedTrack,
                       &_firstFrame, UI::SequencerChangeFrame, config);
     if (changed)
         setFrame(frame);
 
-    const float progress = d > 1e-6f ? displayTime / d : 0.0f;
-    char overlay[32];
-    std::snprintf(overlay, sizeof(overlay), "%.1f%%", progress * 100.0f);
-    ImGui::ProgressBar(progress, ImVec2(-1.0f, 0.0f), overlay);
+    if (_showProgressBar) {
+        const float progress = d > 1e-6f ? displayTime / d : 0.0f;
+        char overlay[32];
+        std::snprintf(overlay, sizeof(overlay), "%.1f%%", progress * 100.0f);
+        ImGui::ProgressBar(progress, ImVec2(-1.0f, 0.0f), overlay);
+    }
     ImGui::End();
+    ImGui::PopStyleVar(4);
 }
 
 float MotionSequencerPanel::duration() const {
@@ -133,23 +224,32 @@ float MotionSequencerPanel::duration() const {
     return static_cast<float>(_numFrames - 1) / _fps;
 }
 
+float MotionSequencerPanel::playbackDuration() const {
+    if (_numFrames <= 0)
+        return 0.0f;
+    return static_cast<float>(_numFrames) / _fps;
+}
+
 int MotionSequencerPanel::currentFrame() const {
     if (_numFrames <= 1)
         return 0;
     const float d = duration();
-    const float t = d > 1e-6f ? std::fmod(_time, d) : 0.0f;
-    return std::clamp(static_cast<int>(std::round(t * _fps)), 0,
+    const float playbackD = playbackDuration();
+    const float t = _loop && playbackD > 1e-6f ? std::fmod(_time, playbackD)
+                                               : std::clamp(_time, 0.0f, d);
+    return std::clamp(static_cast<int>(std::floor(t * _fps)), 0,
                       _numFrames - 1);
 }
 
 void MotionSequencerPanel::wrapOrClampTime() {
     const float d = duration();
-    if (d <= 1e-6f) {
+    const float playbackD = playbackDuration();
+    if (playbackD <= 1e-6f) {
         _time = 0.0f;
         return;
     }
     if (_loop)
-        _time = std::fmod(_time, d);
+        _time = std::fmod(_time, playbackD);
     else
         _time = std::clamp(_time, 0.0f, d);
 }

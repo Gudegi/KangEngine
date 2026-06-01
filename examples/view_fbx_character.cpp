@@ -212,11 +212,11 @@ class FbxCharacterCppApp : public App {
         lWasDown = lDown;
 
         const bool hDown = glfwGetKey(getWindow(), GLFW_KEY_H) == GLFW_PRESS;
-        if (hDown && !hWasDown) {
-            castShadows = !castShadows;
-            character.setCastsShadow(castShadows);
-        }
-        hWasDown = hDown;
+        // if (hDown && !hWasDown) {
+        //     castShadows = !castShadows;
+        //     character.setCastsShadow(castShadows);
+        // }
+        // hWasDown = hDown;
 
         if (animate) {
             time += getDeltaTime() * motionPanel.timeScale();
@@ -236,18 +236,22 @@ class FbxCharacterCppApp : public App {
                     static_cast<int>(character.meshes().size()),
                     character.motion().numJoints(),
                     character.motion().numFrames());
-        ImGui::Text(
-            "Space: pause/resume    M: mesh    L: skeleton    H: shadow");
+        ImGui::Text("Space: pause/resume    M: mesh    L: skeleton");
         if (ImGui::Checkbox("show mesh", &showMesh))
             applyVisibility();
         if (ImGui::Checkbox("show skeleton", &showSkeleton))
             applyVisibility();
-        if (ImGui::Checkbox("cast shadows", &castShadows))
-            character.setCastsShadow(castShadows);
+        // if (ImGui::Checkbox("cast shadows", &castShadows))
+        //     character.setCastsShadow(castShadows);
         if (ImGui::Checkbox("animate", &animate))
             motionPanel.setPlaying(animate);
-        const float duration = std::max(character.motion().duration(), 1e-6f);
-        ImGui::Text("time %.3f / %.3f", std::fmod(time, duration), duration);
+        const auto& motion = character.motion();
+        const float duration = std::max(motion.duration(), 1e-6f);
+        const float playbackDuration = std::max(
+            static_cast<float>(motion.numFrames()) / motion.fps(), 1e-6f);
+        const float displayTime =
+            std::min(std::fmod(time, playbackDuration), duration);
+        ImGui::Text("time %.3f / %.3f", displayTime, duration);
         ImGui::End();
 
         motionPanel.buildPanel();

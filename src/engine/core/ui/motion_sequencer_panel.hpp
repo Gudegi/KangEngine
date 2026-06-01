@@ -27,6 +27,16 @@ class MotionSequencerPanel : public Panel {
     bool loop() const { return _loop; }
     void setTimeScale(float timeScale);
     float timeScale() const { return _timeScale; }
+    void setTransparent(bool transparent) { _transparent = transparent; }
+    bool transparent() const { return _transparent; }
+    void setOverlay(bool overlay) { _overlay = overlay; }
+    bool overlay() const { return _overlay; }
+    void setOverlayWidthRatio(float ratio);
+    float overlayWidthRatio() const { return _overlayWidthRatio; }
+    void setFolded(bool folded) { _folded = folded; }
+    bool folded() const { return _folded; }
+    void setShowProgressBar(bool show) { _showProgressBar = show; }
+    bool showProgressBar() const { return _showProgressBar; }
     void setFrameChangedCallback(FrameChangedCallback callback);
     void setPlayingChangedCallback(PlayingChangedCallback callback);
     void buildPanel() override;
@@ -35,6 +45,7 @@ class MotionSequencerPanel : public Panel {
     class SingleMotionSequence;
 
     int currentFrame() const;
+    float playbackDuration() const;
     void wrapOrClampTime();
     void setFrame(int frame);
     void emitPlayingChanged();
@@ -47,6 +58,11 @@ class MotionSequencerPanel : public Panel {
     bool _loop = true;
     bool _fitToContent = true;
     bool _expanded = true;
+    bool _transparent = false;
+    bool _overlay = true;
+    bool _folded = false;
+    bool _showProgressBar = false;
+    float _overlayWidthRatio = 0.70f;
     float _timeScale = 1.0f;
     int _firstFrame = 0;
     int _selectedTrack = -1;

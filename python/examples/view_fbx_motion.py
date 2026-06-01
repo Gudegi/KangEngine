@@ -70,6 +70,15 @@ class FbxMotionViewer(ke.App):
         self.ground_shader.setVec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
         self.ground_shader.setVec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
 
+        self.editor.add_module(
+            ke.RootTrajectoryModule(
+                self,
+                "/debug/fbx_motion_root_trajectory",
+                line_width=2.0,
+                point_size=8.0,
+            )
+        )
+
         ground = self.getScene().define_prim("/ground", scene.PrimType.Mesh)
         ground.set_mesh_data(scene.Prim.create_plane_data(20.0, self.up_axis))
         self.addShape(self.ground_shader, ground)
@@ -151,16 +160,12 @@ class FbxMotionViewer(ke.App):
         self.checkError()
 
     def render(self):
-        work_x, work_y, work_w, work_h = imgui.main_viewport_work_rect()
-        panel_h = min(280.0, max(180.0, work_h * 0.28))
-        imgui.set_next_window_pos(work_x, work_y + work_h - panel_h)
-        imgui.set_next_window_size(work_w, panel_h)
         imgui.begin("FBX Motion")
         imgui.text(f"Joints: {self.motion.num_joints()}  FPS: {self.motion.fps():.3f}")
         imgui.text("Space: pause/resume    R: reset")
-        if self.editor.render_ui(Path(self.fbx_file).name):
-            self._apply_time(self.editor.player.time)
         imgui.end()
+        if self.editor.render_panel(Path(self.fbx_file).name):
+            self._apply_time(self.editor.player.time)
 
     def postRender(self):
         pass

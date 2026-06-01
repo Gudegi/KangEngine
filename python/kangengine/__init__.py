@@ -9,7 +9,7 @@ if _assets_dir.exists():
 
 from ._core import _ke
 from .app import App, NativeApp
-from .motion_editor import MotionEditor, MotionPlayer
+from .motion_editor import MotionEditor, MotionModule, MotionPlayer, RootTrajectoryModule
 from .sim import ControlMode, KangSimWorld
 from .visual import KangWorldVisualBridge
 from .mimickit_engine import (
@@ -31,6 +31,7 @@ ColorType = _ke.ColorType
 Color = _ke.Color
 PhongMaterial = _ke.PhongMaterial
 SkinnedCharacterBridge = _ke.SkinnedCharacterBridge
+MotionSequencerPanel = _ke.MotionSequencerPanel
 
 # GLM-style math types and helpers exposed by the C++ extension.
 vec3 = _ke.vec3
@@ -61,7 +62,9 @@ __all__ = [
     "App",
     "NativeApp",
     "MotionEditor",
+    "MotionModule",
     "MotionPlayer",
+    "RootTrajectoryModule",
     "ControlMode",
     "KangSimWorld",
     "KangWorldVisualBridge",
@@ -99,6 +102,7 @@ __all__ = [
     "Color",
     "PhongMaterial",
     "SkinnedCharacterBridge",
+    "MotionSequencerPanel",
 ]
 
 _OPTIONAL_EXPORTS = [

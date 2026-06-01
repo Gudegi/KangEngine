@@ -78,9 +78,25 @@ void bind_imgui(py::module& m) {
     py::module imgui =
         m.def_submodule("imgui", "Small Dear ImGui wrapper for Python apps");
 
-    imgui.def("begin", [](const std::string& name) {
-        return ImGui::Begin(name.c_str());
-    });
+    imgui.attr("WindowFlags_None") =
+        py::int_(static_cast<int>(ImGuiWindowFlags_None));
+    imgui.attr("WindowFlags_NoTitleBar") =
+        py::int_(static_cast<int>(ImGuiWindowFlags_NoTitleBar));
+    imgui.attr("WindowFlags_NoBackground") =
+        py::int_(static_cast<int>(ImGuiWindowFlags_NoBackground));
+    imgui.attr("WindowFlags_NoResize") =
+        py::int_(static_cast<int>(ImGuiWindowFlags_NoResize));
+    imgui.attr("WindowFlags_NoMove") =
+        py::int_(static_cast<int>(ImGuiWindowFlags_NoMove));
+    imgui.attr("WindowFlags_NoScrollbar") =
+        py::int_(static_cast<int>(ImGuiWindowFlags_NoScrollbar));
+    imgui.def(
+        "begin",
+        [](const std::string& name, int flags) {
+            return ImGui::Begin(name.c_str(), nullptr,
+                                static_cast<ImGuiWindowFlags>(flags));
+        },
+        py::arg("name"), py::arg("flags") = 0);
     imgui.def("end", []() { ImGui::End(); });
     imgui.def(
         "begin_child",
@@ -290,6 +306,27 @@ PYBIND11_MODULE(_kangengine, m) {
     bind_keys(m);
     // bind_physics is called after GLM types are registered (uses glm defaults)
 
+    py::class_<MotionSequencerPanel>(m, "MotionSequencerPanel")
+        .def(py::init<>())
+        .def("set_motion", &MotionSequencerPanel::setMotion,
+             py::arg("motion_name"), py::arg("num_frames"), py::arg("fps"))
+        .def("set_current_time", &MotionSequencerPanel::setCurrentTime)
+        .def("current_time", &MotionSequencerPanel::currentTime)
+        .def("duration", &MotionSequencerPanel::duration)
+        .def("set_playing", &MotionSequencerPanel::setPlaying)
+        .def("is_playing", &MotionSequencerPanel::isPlaying)
+        .def("set_loop", &MotionSequencerPanel::setLoop)
+        .def("loop", &MotionSequencerPanel::loop)
+        .def("set_time_scale", &MotionSequencerPanel::setTimeScale)
+        .def("time_scale", &MotionSequencerPanel::timeScale)
+        .def("set_transparent", &MotionSequencerPanel::setTransparent)
+        .def("set_overlay", &MotionSequencerPanel::setOverlay)
+        .def("set_overlay_width_ratio",
+             &MotionSequencerPanel::setOverlayWidthRatio)
+        .def("set_folded", &MotionSequencerPanel::setFolded)
+        .def("set_show_progress_bar", &MotionSequencerPanel::setShowProgressBar)
+        .def("build_panel", &MotionSequencerPanel::buildPanel);
+
     // Materials & Colors
     py::class_<Color>(m, "Color")
         .def(py::init<>())
@@ -300,6 +337,10 @@ PYBIND11_MODULE(_kangengine, m) {
 
     py::enum_<ColorType>(m, "ColorType")
         .value("WHITE", ColorType::WHITE)
+        .value("BLACK", ColorType::BLACK)
+        .value("ORANGE", ColorType::ORANGE)
+        .value("LIME_GREEN", ColorType::LIME_GREEN)
+        .value("ROYAL_BLUE", ColorType::ROYAL_BLUE)
         .value("PASTEL_GREEN", ColorType::PASTEL_GREEN);
     // TODO: If you want to use other colors in colors.hpp,
     // add like this .value("BLACK", ColorType::BLACK) .value("RED",
@@ -945,6 +986,51 @@ py::class_<glm::vec3>(m, "vec3")
                 self->updateSkinningMatrices(handle, matrices);
             },
             py::arg("handle"), py::arg("bone_matrices"))
+        .def(
+            "log_debug_lines",
+            [](App* self, const std::string& path, const FloatArray& starts,
+               const FloatArray& ends, py::object colors, float width,
+               bool hidden) {
+                auto s = vec3Array(starts, "starts");
+                auto e = vec3Array(ends, "ends");
+                if (s.size() != e.size()) {
+                    throw py::value_error(
+                        "starts and ends must have the same length");
+                }
+                std::vector<glm::vec4> c;
+                if (!colors.is_none()) {
+                    auto colorArray = colors.cast<FloatArray>();
+                    c = vec4Array(colorArray, "colors");
+                    if (!c.empty() && c.size() != 1 && c.size() != s.size()) {
+                        throw py::value_error(
+                            "colors must be empty, length 1, or match lines");
+                    }
+                }
+                self->logDebugLines(path, s, e, c, width, hidden);
+            },
+            py::arg("path"), py::arg("starts"), py::arg("ends"),
+            py::arg("colors") = py::none(), py::arg("width") = 1.0f,
+            py::arg("hidden") = false)
+        .def("clear_debug_lines", &App::clearDebugLines, py::arg("path"))
+        .def(
+            "log_debug_points",
+            [](App* self, const std::string& path, const FloatArray& points,
+               py::object colors, float size, bool hidden) {
+                auto p = vec3Array(points, "points");
+                std::vector<glm::vec4> c;
+                if (!colors.is_none()) {
+                    auto colorArray = colors.cast<FloatArray>();
+                    c = vec4Array(colorArray, "colors");
+                    if (!c.empty() && c.size() != 1 && c.size() != p.size()) {
+                        throw py::value_error(
+                            "colors must be empty, length 1, or match points");
+                    }
+                }
+                self->logDebugPoints(path, p, c, size, hidden);
+            },
+            py::arg("path"), py::arg("points"), py::arg("colors") = py::none(),
+            py::arg("size") = 6.0f, py::arg("hidden") = false)
+        .def("clear_debug_points", &App::clearDebugPoints, py::arg("path"))
         .def("setLightDirection", &App::setLightDirection, py::arg("direction"))
         .def("setLightColor", &App::setLightColor, py::arg("color"))
         .def("setLightIntensity", &App::setLightIntensity, py::arg("intensity"))
