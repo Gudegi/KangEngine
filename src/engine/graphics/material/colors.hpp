@@ -4,6 +4,8 @@
 #define _COLORS_HPP_
 
 #include <array>
+#include <cstddef>
+#include <cstdint>
 
 namespace KE {
 
