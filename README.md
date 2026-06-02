@@ -191,6 +191,8 @@ KangEngine can be used as a backend engine of [MimicKit](https://github.com/xbpe
 package. Use the `backend_kangengine` branch of MimicKit and keep MimicKit in a
 separate Python environment.
 
+**Limitation**: KangEngine supports both MimicKit policy inference and RL training, but its current PhysX simulation backend runs on the CPU, limiting training throughput compared with GPU-native simulators.
+
 <table align="center">
   <tr>
     <td width="50%" align="center"><img src="images/Mimickit_kangengine_1.png" alt="MimicKit running with KangEngine" style="width:100%; height:260px; object-fit:cover;"></td>
@@ -246,8 +248,6 @@ separate Python environment.
       --visualize true \
       --model_file data/models/amp_humanoid_spinkick_model.pt
     ```
-    Currently, KangEngine has only been tested with pretrained MimicKit policy
-    inference, not full RL training.
 
 For reference, the MimicKit KangEngine backend uses an engine config like this:
 

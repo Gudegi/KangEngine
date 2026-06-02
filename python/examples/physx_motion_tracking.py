@@ -14,26 +14,13 @@ import numpy as np
 
 import kangengine as ke
 from kangengine import animation, asset, imgui, keys, scene
+from kangengine.utils.math import quat_wxyz_to_xyzw, quat_wxyz_twist_angle
 
 from view_motion import default_char_file, default_motion_file, load_motion
 
 
 def package_asset_path(*parts: str) -> str:
     return str(Path(ke.__file__).resolve().parent / "assets" / Path(*parts))
-
-
-def twist_angle(q_wxyz: np.ndarray, axis: np.ndarray) -> float:
-    """Return the signed twist angle around a local joint axis."""
-    w = float(q_wxyz[0])
-    xyz = np.array([float(q_wxyz[1]), float(q_wxyz[2]), float(q_wxyz[3])])
-    if w < 0.0:
-        w, xyz = -w, -xyz
-    proj = float(np.dot(xyz, axis))
-    return float(2.0 * np.arctan2(proj, w))
-
-
-def wxyz_to_xyzw(q_wxyz: np.ndarray) -> list[float]:
-    return [float(q_wxyz[1]), float(q_wxyz[2]), float(q_wxyz[3]), float(q_wxyz[0])]
 
 
 class KwMotionTrackingApp(ke.App):
@@ -150,7 +137,7 @@ class KwMotionTrackingApp(ke.App):
                 continue
             q = local_rot_frame[body_idx]
             for axis in axes:
-                targets.append(twist_angle(q, axis))
+                targets.append(quat_wxyz_twist_angle(q, axis))
         return targets
 
     def _apply_ghost(self, idx: int):
@@ -174,7 +161,7 @@ class KwMotionTrackingApp(ke.App):
             None,
             0,
             self.root_pos[0],
-            wxyz_to_xyzw(self.local_rot[0][0]),
+            quat_wxyz_to_xyzw(self.local_rot[0][0]),
         )
         targets = self._motion_dof_targets(self.local_rot[0])
         if len(targets) == self.num_dofs:
@@ -200,7 +187,7 @@ class KwMotionTrackingApp(ke.App):
                 None,
                 0,
                 self.root_pos[idx],
-                wxyz_to_xyzw(self.local_rot[idx][0]),
+                quat_wxyz_to_xyzw(self.local_rot[idx][0]),
             )
 
         targets = self._motion_dof_targets(self.local_rot[idx])

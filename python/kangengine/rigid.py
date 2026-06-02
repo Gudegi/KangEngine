@@ -6,6 +6,13 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from .utils.math import (
+    quat_xyzw_from_two_vectors,
+    quat_xyzw_multiply,
+    quat_xyzw_normalize,
+    quat_xyzw_rotate,
+)
+
 
 __all__ = [
     "RigidShapeSpec",
@@ -63,57 +70,20 @@ def rigid_body_names(data) -> list[str]:
 
 def expand_rigid_body_state(root_pos, root_rot, local_pos, local_rot):
     root_pos = np.asarray(root_pos, dtype=np.float32).reshape(3)
-    root_rot = _quat_normalize(np.asarray(root_rot, dtype=np.float32).reshape(4))
+    root_rot = quat_xyzw_normalize(np.asarray(root_rot, dtype=np.float32).reshape(4))
     local_pos = np.asarray(local_pos, dtype=np.float32).reshape(-1, 3)
     local_rot = np.asarray(local_rot, dtype=np.float32).reshape(-1, 4)
     body_pos = np.stack(
-        [root_pos + _quat_rotate(root_rot, pos) for pos in local_pos], axis=0
+        [root_pos + quat_xyzw_rotate(root_rot, pos) for pos in local_pos], axis=0
     ).astype(np.float32)
     body_rot = np.stack(
-        [_quat_normalize(_quat_mul(root_rot, rot)) for rot in local_rot], axis=0
+        [
+            quat_xyzw_normalize(quat_xyzw_multiply(root_rot, rot))
+            for rot in local_rot
+        ],
+        axis=0,
     ).astype(np.float32)
     return body_pos, body_rot
-
-
-def _quat_mul(a, b):
-    ax, ay, az, aw = a
-    bx, by, bz, bw = b
-    return np.array(
-        [
-            aw * bx + ax * bw + ay * bz - az * by,
-            aw * by - ax * bz + ay * bw + az * bx,
-            aw * bz + ax * by - ay * bx + az * bw,
-            aw * bw - ax * bx - ay * by - az * bz,
-        ],
-        dtype=np.float32,
-    )
-
-
-def _quat_rotate(q, v):
-    q = _quat_normalize(q)
-    vq = np.array([v[0], v[1], v[2], 0.0], dtype=np.float32)
-    return _quat_mul(_quat_mul(q, vq), _quat_conj(q))[:3]
-
-
-def _quat_conj(q):
-    return np.array([-q[0], -q[1], -q[2], q[3]], dtype=np.float32)
-
-
-def _quat_from_two_vectors(src, dst):
-    src = _normalize_vec(np.asarray(src, dtype=np.float32).reshape(3))
-    dst = _normalize_vec(np.asarray(dst, dtype=np.float32).reshape(3))
-    dot = float(np.dot(src, dst))
-    if dot > 0.999999:
-        return np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32)
-    if dot < -0.999999:
-        axis = np.cross(src, np.array([1.0, 0.0, 0.0], dtype=np.float32))
-        if np.linalg.norm(axis) < 1e-6:
-            axis = np.cross(src, np.array([0.0, 1.0, 0.0], dtype=np.float32))
-        axis = _normalize_vec(axis)
-        return np.array([axis[0], axis[1], axis[2], 0.0], dtype=np.float32)
-    axis = np.cross(src, dst)
-    q = np.array([axis[0], axis[1], axis[2], 1.0 + dot], dtype=np.float32)
-    return _quat_normalize(q)
 
 
 def _shape_spec(name: str, geom) -> RigidShapeSpec:
@@ -125,16 +95,16 @@ def _shape_spec(name: str, geom) -> RigidShapeSpec:
             end = _vec3(geom.to_pos)
             local_pos = (start + end) * 0.5
             axis = end - start
-            local_rot = _quat_from_two_vectors([1.0, 0.0, 0.0], axis)
+            local_rot = quat_xyzw_from_two_vectors([1.0, 0.0, 0.0], axis)
             size = size.copy()
             size[1] = np.linalg.norm(axis) * 0.5
         else:
             local_pos = _vec3(geom.pos)
             mjcf_rot = _quat(geom.quat)
-            axis = _quat_rotate(
+            axis = quat_xyzw_rotate(
                 mjcf_rot, np.array([0.0, 0.0, 1.0], dtype=np.float32)
             )
-            local_rot = _quat_from_two_vectors([1.0, 0.0, 0.0], axis)
+            local_rot = quat_xyzw_from_two_vectors([1.0, 0.0, 0.0], axis)
     else:
         local_pos = _vec3(geom.pos)
         local_rot = _quat(geom.quat) if geom_type == "Box" else np.array(
@@ -145,7 +115,7 @@ def _shape_spec(name: str, geom) -> RigidShapeSpec:
         name,
         geom_type,
         local_pos.astype(np.float32),
-        _quat_normalize(local_rot),
+        quat_xyzw_normalize(local_rot),
         size.astype(np.float32),
     )
 
@@ -174,18 +144,4 @@ def _quat(value):
         arr = np.asarray([value[0], value[1], value[2], value[3]], dtype=np.float32)
     except TypeError:
         arr = np.asarray([value.x, value.y, value.z, value.w], dtype=np.float32)
-    return _quat_normalize(arr)
-
-
-def _normalize_vec(v):
-    n = float(np.linalg.norm(v))
-    if n < 1e-8:
-        return np.array([1.0, 0.0, 0.0], dtype=np.float32)
-    return (v / n).astype(np.float32)
-
-
-def _quat_normalize(q):
-    n = float(np.linalg.norm(q))
-    if n < 1e-8:
-        return np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32)
-    return (q / n).astype(np.float32)
+    return quat_xyzw_normalize(arr)

@@ -7,12 +7,9 @@ from typing import Optional
 import numpy as np
 
 from ._core import _ke
+from .utils import preset_rgba
+from .utils.math import normalize_vector
 imgui = _ke.imgui
-
-
-def _preset_rgba(color_type, alpha: float = 1.0):
-    color = _ke.ColorLibrary.get(color_type)
-    return [color.r, color.g, color.b, alpha]
 
 
 @dataclass
@@ -301,8 +298,7 @@ class RootTrajectoryModule(MotionModule):
                 (next_pos[2] - prev_pos[2]) * fps * 0.5,
             ]
             direction = [velocity[0], 0.0, velocity[2]]
-            length = max((direction[0] ** 2 + direction[2] ** 2) ** 0.5, 1e-6)
-            direction = [direction[0] / length, 0.0, direction[2] / length]
+            direction = normalize_vector(direction).tolist()
             self._velocities.append(velocity)
             self._directions.append(direction)
         self._last_key = None
@@ -342,10 +338,10 @@ class RootTrajectoryModule(MotionModule):
             indices.append(hi)
 
         alpha = 1.0
-        black = _preset_rgba(_ke.ColorType.BLACK)
-        orange = _preset_rgba(_ke.ColorType.ORANGE)
-        lime_green = _preset_rgba(_ke.ColorType.LIME_GREEN)
-        royal_blue = _preset_rgba(_ke.ColorType.ROYAL_BLUE)
+        black = preset_rgba(_ke.ColorType.BLACK)
+        orange = preset_rgba(_ke.ColorType.ORANGE)
+        lime_green = preset_rgba(_ke.ColorType.LIME_GREEN)
+        royal_blue = preset_rgba(_ke.ColorType.ROYAL_BLUE)
         path_starts = []
         path_ends = []
         path_colors = []

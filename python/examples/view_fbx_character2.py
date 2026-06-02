@@ -63,8 +63,7 @@ class FbxCharacterBridgeViewer(ke.App):
     def setup(self):
         self.show_mesh = True
         self.show_skeleton = True
-        pg = ke.ColorLibrary.get(ke.ColorType.PASTEL_GREEN)
-        self.mesh_color = [pg.r, pg.g, pg.b, pg.a]
+        self.mesh_color = ke.preset_rgba(ke.ColorType.PASTEL_GREEN)
         self.line_handle = None
         self.skeleton_starts = None
         self.skeleton_ends = None

@@ -17,17 +17,15 @@ from typing import Any, Literal, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+import torch
 
 from ._core import _ke
 from .app import App
 from .rigid import rigid_body_names
 from .sim import ControlMode, KangSimWorld
+from .utils import preset_rgba
+from .utils.tensor import as_native_numpy, as_tensor, resolve_device
 from .visual import KangWorldVisualBridge
-
-try:
-    import torch as _torch
-except ImportError:
-    _torch = None
 
 try:
     import engines.engine as _mk_engine
@@ -259,8 +257,10 @@ class _KangEngineViewer(App):
 
         self.ground_shader.use()
         self.ground_shader.setVec4("checkerColor1", _ke.vec4(1.0, 1.0, 1.0, 1.0))
-        pg = _ke.ColorLibrary.get(_ke.ColorType.PASTEL_GREEN)
-        self.ground_shader.setVec4("checkerColor2", _ke.vec4(pg.r, pg.g, pg.b, pg.a))
+        self.ground_shader.setVec4(
+            "checkerColor2",
+            _ke.vec4(*preset_rgba(_ke.ColorType.PASTEL_GREEN)),
+        )
 
         ground = self.getScene().define_prim("/ground", _ke.scene.PrimType.Mesh)
         ground.set_mesh_data(_ke.scene.Prim.create_plane_data(100.0, _ke.UpAxis.Z))
@@ -358,7 +358,7 @@ class KangEngineEngine(_BaseEngine):
         super().__init__(visualize)
         self._config = dict(config)
         self._num_envs = int(num_envs)
-        self._device = device
+        self._device = resolve_device(device)
         self._visualize = bool(visualize)
         self._record_video = bool(record_video)
 
@@ -381,6 +381,7 @@ class KangEngineEngine(_BaseEngine):
             num_envs=self._num_envs,
             sim_dt=self._sim_timestep,
             add_ground=bool(self._config.get("add_ground", True)),
+            device=self._device,
         )
         self._created_envs: list[int] = []
         self._objects: list[list[KangEngineObject]] = [[] for _ in range(self._num_envs)]
@@ -676,7 +677,7 @@ class KangEngineEngine(_BaseEngine):
         return self._num_envs
 
     def get_gravity(self):
-        return self._gravity.copy()
+        return self._out(self._gravity)
 
     def get_objs_per_env(self):
         return len(self._objects[0]) if self._objects else 0
@@ -922,7 +923,7 @@ class KangEngineEngine(_BaseEngine):
     def get_obj_torque_limits(self, env_id, obj_id):
         if self._is_visual_obj(obj_id):
             return np.full(self.get_obj_num_dofs(obj_id), np.inf, dtype=np.float32)
-        return self._world.state.get_obj_effort_limits(obj_id)
+        return self._as_numpy(self._world.state.get_obj_effort_limits(obj_id))
 
     def get_obj_dof_limits(self, env_id, obj_id):
         if self._is_visual_obj(obj_id):
@@ -931,13 +932,15 @@ class KangEngineEngine(_BaseEngine):
                 n, np.inf, dtype=np.float32
             )
         limits = self._world.state.get_obj_dof_limits(obj_id)
+        limits = self._as_numpy(limits)
         return limits[:, 0], limits[:, 1]
 
     def get_obj_pd_gains(self, env_id, obj_id):
         if self._is_visual_obj(obj_id):
             n = self.get_obj_num_dofs(obj_id)
             return np.zeros(n, dtype=np.float32), np.zeros(n, dtype=np.float32)
-        return self._world.state.get_obj_pd_gains(obj_id)
+        kp, kd = self._world.state.get_obj_pd_gains(obj_id)
+        return self._as_numpy(kp), self._as_numpy(kd)
 
     def calc_obj_mass(self, env_id, obj_id):
         return self._world.state.calc_obj_mass(int(env_id), int(obj_id))
@@ -995,7 +998,7 @@ class KangEngineEngine(_BaseEngine):
         if base is None:
             base = np.full(len(dof_names), fallback_scalar, dtype=np.float32)
         else:
-            base = np.asarray(base, dtype=np.float32).reshape(-1)
+            base = self._as_numpy(base).reshape(-1)
         if value is None:
             if np.any(np.abs(base) > 0):
                 return base.copy()
@@ -1003,7 +1006,7 @@ class KangEngineEngine(_BaseEngine):
         return self._drive_param_array(value, dof_names, base)
 
     def _drive_param_array(self, value, dof_names, base):
-        out = np.asarray(base, dtype=np.float32).copy()
+        out = self._as_numpy(base).copy()
         if isinstance(value, str):
             value = _parse_drive_string(value)
         if isinstance(value, dict):
@@ -1014,7 +1017,7 @@ class KangEngineEngine(_BaseEngine):
                     raise KeyError(f"unknown DOF name in drive config: {name}") from exc
                 out[idx] = float(v)
             return out
-        arr = np.asarray(value, dtype=np.float32).reshape(-1)
+        arr = self._as_numpy(value).reshape(-1)
         if arr.size == 1:
             out.fill(float(arr[0]))
             return out
@@ -1260,7 +1263,7 @@ class KangEngineEngine(_BaseEngine):
         if base is None:
             out = np.zeros((self._num_envs, num_bodies, 3), dtype=np.float32)
         else:
-            out = np.asarray(base, dtype=np.float32).copy()
+            out = self._as_numpy(base).copy()
         out[mask] = values[mask, obj_id, :num_bodies]
         return out
 
@@ -1332,7 +1335,7 @@ class KangEngineEngine(_BaseEngine):
         self, env_id: int, obj_id: int, component: RootComponent, value: ArrayLike
     ) -> None:
         values, mask = self._root_pending_storage(component)
-        values[int(env_id), int(obj_id)] = np.asarray(value, dtype=np.float32)
+        values[int(env_id), int(obj_id)] = self._as_numpy(value)
         mask[int(env_id), int(obj_id)] = True
 
     def _set_dof_pending_value(
@@ -1346,7 +1349,7 @@ class KangEngineEngine(_BaseEngine):
         values, mask = self._dof_pending_storage(component)
         eid = int(env_id)
         oid = int(obj_id)
-        values[eid, oid, :width] = np.asarray(value, dtype=np.float32).reshape(width)
+        values[eid, oid, :width] = self._as_numpy(value).reshape(width)
         mask[eid, oid] = True
 
     def _clear_state_pending_overrides(self) -> None:
@@ -1630,22 +1633,22 @@ class KangEngineEngine(_BaseEngine):
         return self._env_offsets[int(env_id)]
 
     def _world_pos(self, env_id: int, value: ArrayLike) -> np.ndarray:
-        arr = np.asarray(value, dtype=np.float32)
+        arr = self._as_numpy(value)
         return arr + self._env_offset(env_id)
 
     def _world_pos_batch(self, values: ArrayLike) -> np.ndarray:
-        arr = np.asarray(values, dtype=np.float32).copy()
+        arr = self._as_numpy(values).copy()
         if arr.ndim >= 2 and arr.shape[0] == self._num_envs:
             view_shape = (self._num_envs,) + (1,) * (arr.ndim - 2) + (3,)
             arr += self._env_offsets.reshape(view_shape)
         return arr
 
     def _local_pos(self, env_id: int, value: ArrayLike) -> np.ndarray:
-        arr = np.asarray(value, dtype=np.float32)
+        arr = self._as_numpy(value)
         return arr - self._env_offset(env_id)
 
     def _local_pos_batch(self, values: ArrayLike) -> np.ndarray:
-        arr = np.asarray(values, dtype=np.float32).copy()
+        arr = self._as_numpy(values).copy()
         if arr.ndim >= 2 and arr.shape[0] == self._num_envs:
             view_shape = (self._num_envs,) + (1,) * (arr.ndim - 2) + (3,)
             arr -= self._env_offsets.reshape(view_shape)
@@ -1663,20 +1666,13 @@ class KangEngineEngine(_BaseEngine):
         return isinstance(env_id, (int, np.integer))
 
     def _as_numpy(self, value: ArrayLike) -> np.ndarray:
-        if _torch is not None and _torch.is_tensor(value):
-            value = value.detach().cpu().numpy()
-        return np.asarray(value, dtype=np.float32)
+        return as_native_numpy(value)
 
     def _out(self, value: ArrayLike) -> ArrayLike:
-        arr = np.asarray(value, dtype=np.float32)
-        if _torch is not None and self._device is not None:
-            return _torch.as_tensor(arr, dtype=_torch.float32, device=self._device)
-        return arr
+        return as_tensor(value, device=self._device)
 
     def _zeros_like(self, value):
-        if _torch is not None and _torch.is_tensor(value):
-            return _torch.zeros_like(value)
-        return np.zeros_like(value, dtype=np.float32)
+        return torch.zeros_like(self._out(value))
 
 ######## install the engine to MimicKit ############
 def build_engine(config, num_envs, device=None, visualize=False, record_video=False):

@@ -11,17 +11,11 @@ import numpy as np
 from ._core import _ke
 from .rigid import rigid_shape_specs
 from .state import KangStateCache
-
-try:
-    import torch as _torch
-except Exception:
-    _torch = None
+from .utils.tensor import as_native_numpy, resolve_device
 
 
 def _as_float_array(value):
-    if _torch is not None and _torch.is_tensor(value):
-        value = value.detach().cpu().numpy()
-    return np.asarray(value, dtype=np.float32)
+    return as_native_numpy(value)
 
 
 def _optional_drive_array(value, size: int):
@@ -125,6 +119,7 @@ class KangSimWorld:
         physics_config=None,
         sim_dt: float | None = None,
         add_ground: bool = False,
+        device=None,
     ):
         _require_physx()
         if physics_config is None:
@@ -133,13 +128,12 @@ class KangSimWorld:
             physics_config.dt = float(sim_dt)
 
         self.num_envs = int(num_envs)
+        self.device = resolve_device(device)
         self.physics = _ke.PhysicsWorld(physics_config)
-        if sim_dt is not None:
-            self.physics.set_dt(float(sim_dt))
         if add_ground:
             self.physics.add_default_ground()
 
-        self.state = KangStateCache(num_envs=self.num_envs)
+        self.state = KangStateCache(num_envs=self.num_envs, device=self.device)
         self.articulations: dict[tuple[int, int], SimArticulation] = {}
         self.rigids: dict[tuple[int, int], SimRigid] = {}
         self.commands: dict[tuple[int, int], CommandBuffer] = {}
@@ -277,8 +271,7 @@ class KangSimWorld:
         for eid in env_ids:
             key = (eid, int(obj_id))
             if key in self.rigids:
-                self.commands[key] = CommandBuffer(ControlMode.NONE)
-                continue
+                raise TypeError(f"rigid body at env={eid}, obj={obj_id} does not accept commands")
             record = self.articulations[key]
             expected = record.articulation.num_dofs()
             if env_id is None and source.ndim >= 2 and source.shape[0] == self.num_envs:
@@ -307,8 +300,6 @@ class KangSimWorld:
         for key, buffer in self.commands.items():
             if buffer.mode == ControlMode.NONE or buffer.cmd is None:
                 continue
-            if key in self.rigids:
-                continue
             articulation = self.articulations[key].articulation
             if buffer.mode == ControlMode.POS:
                 metadata_dirty = False
@@ -333,12 +324,16 @@ class KangSimWorld:
                 torque = _clip_forces(buffer.cmd, articulation.get_effort_limits())
                 articulation.set_joint_forces(torque)
             elif buffer.mode == ControlMode.PD_EXPLICIT:
+                kp = buffer.kp
+                kd = buffer.kd
                 if buffer.kp is not None:
                     articulation.set_kps(buffer.kp)
+                else:
+                    kp = _as_float_array(articulation.get_kps()).reshape(-1)
                 if buffer.kd is not None:
                     articulation.set_kds(buffer.kd)
-                kp = _as_float_array(articulation.get_kps()).reshape(-1)
-                kd = _as_float_array(articulation.get_kds()).reshape(-1)
+                else:
+                    kd = _as_float_array(articulation.get_kds()).reshape(-1)
                 dof_pos = _as_float_array(articulation.get_dof_positions()).reshape(-1)
                 dof_vel = _as_float_array(articulation.get_dof_velocities()).reshape(-1)
                 torque = kp * (buffer.cmd - dof_pos) - kd * dof_vel
@@ -463,21 +458,28 @@ class KangSimWorld:
             return
 
         env_ids = range(self.num_envs) if env_id is None else [int(env_id)]
-        root = RootStateReset(
-            _as_float_array(pos).reshape(3),
-            _as_float_array(rot_xyzw).reshape(4),
+        pos_arr = _as_float_array(pos).reshape(3)
+        rot_arr = _as_float_array(rot_xyzw).reshape(4)
+        linear_velocity_arr = (
             None
             if linear_velocity is None
-            else _as_float_array(linear_velocity).reshape(3),
+            else _as_float_array(linear_velocity).reshape(3)
+        )
+        angular_velocity_arr = (
             None
             if angular_velocity is None
-            else _as_float_array(angular_velocity).reshape(3),
+            else _as_float_array(angular_velocity).reshape(3)
         )
         for eid in env_ids:
             key = (eid, int(obj_id))
             if key not in self.articulations and key not in self.rigids:
                 raise KeyError(f"no object registered at env={eid}, obj={obj_id}")
-            self.resets[key].root = root
+            self.resets[key].root = RootStateReset(
+                pos_arr.copy(),
+                rot_arr.copy(),
+                None if linear_velocity_arr is None else linear_velocity_arr.copy(),
+                None if angular_velocity_arr is None else angular_velocity_arr.copy(),
+            )
             self._pending_reset_keys.add(key)
 
     def set_dof_state(
@@ -501,7 +503,7 @@ class KangSimWorld:
         for eid in env_ids:
             key = (eid, int(obj_id))
             if key in self.rigids:
-                continue
+                raise TypeError(f"rigid body at env={eid}, obj={obj_id} does not have DOF state")
             expected = self.articulations[key].articulation.num_dofs()
             pos = _as_float_array(positions).reshape(-1)
             if pos.size != expected:
@@ -527,6 +529,8 @@ class KangSimWorld:
             return
         for record in self.articulations.values():
             record.articulation.release()
+        for record in self.rigids.values():
+            record.rigid.release()
         self.articulations.clear()
         self.rigids.clear()
         self.commands.clear()

@@ -62,6 +62,7 @@ void bind_physics(py::module& m) {
             return floatArrayFromVector({v.x, v.y, v.z});
         })
         .def("get_mass", &PxRigidDynamic::getMass)
+        .def("release", &PxRigidDynamic::release)
         .def(
             "set_root_state",
             [](PxRigidDynamic& self, const FloatArray& pos,

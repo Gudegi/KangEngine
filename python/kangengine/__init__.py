@@ -11,6 +11,7 @@ from ._core import _ke
 from .app import App, NativeApp
 from .motion_editor import MotionEditor, MotionModule, MotionPlayer, RootTrajectoryModule
 from .sim import ControlMode, KangSimWorld
+from .utils import preset_rgba
 from .visual import KangWorldVisualBridge
 from .mimickit_engine import (
     KangEngineEngine,
@@ -103,6 +104,7 @@ __all__ = [
     "PhongMaterial",
     "SkinnedCharacterBridge",
     "MotionSequencerPanel",
+    "preset_rgba",
 ]
 
 _OPTIONAL_EXPORTS = [
