@@ -151,7 +151,9 @@ class KangWorldVisualBridge:
         if add_shapes and shader is not None:
             for prim in body_prims:
                 body_handles.append(
-                    self.app.addShape(shader, prim, _ke.RenderTrack.Instanced)
+                    self.app.addShape(
+                        shader, prim, _ke.TransformSource.ExternalBuffer
+                    )
                 )
             self.physics_bridge.add_instanced(articulation, body_handles)
             self._append_instanced_color(body_handles, color)

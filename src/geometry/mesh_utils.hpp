@@ -1,5 +1,5 @@
-#ifndef _GEOMETRY_MESH_UTILS_HPP_
-#define _GEOMETRY_MESH_UTILS_HPP_
+#ifndef _MESH_UTILS_HPP_
+#define _MESH_UTILS_HPP_
 
 #include "engine/scene/scene_backend.hpp"
 

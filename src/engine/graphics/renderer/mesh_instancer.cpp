@@ -6,6 +6,7 @@
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -28,10 +29,10 @@ void MeshInstancer::_initMeshData(const Scene::MeshData& mesh) {
         uploadMesh = &tangentMesh;
     }
 
-    _indexBuffer = _device->createBuffer(
-        Backend::BufferType::Index,
-        sizeof(unsigned int) * uploadMesh->indices.size(),
-        uploadMesh->indices.data());
+    _indexBuffer =
+        _device->createBuffer(Backend::BufferType::Index,
+                              sizeof(unsigned int) * uploadMesh->indices.size(),
+                              uploadMesh->indices.data());
     _vao->setIndexBuffer(_indexBuffer.get());
     _numIndices = (int)uploadMesh->indices.size();
     _hasTangents = uploadMesh->tangents.size() == uploadMesh->vertices.size();
@@ -99,10 +100,12 @@ void MeshInstancer::_setupSkinningAttribs(
 
 void MeshInstancer::init(Backend::GraphicsDevice* device,
                          Backend::Shader* shader, const Scene::MeshData& mesh,
+                         TransformSource transformSource,
                          PhongMaterial* material) {
     _device = device;
     _shader = shader;
     _material = material;
+    _transformSource = transformSource;
 
     _vao = device->createVertexArray();
     _vao->bind();
@@ -115,10 +118,12 @@ void MeshInstancer::init(Backend::GraphicsDevice* device,
 void MeshInstancer::init(Backend::GraphicsDevice* device,
                          Backend::Shader* shader,
                          const Scene::SkinnedMeshData& skinnedMesh,
+                         TransformSource transformSource,
                          PhongMaterial* material) {
     _device = device;
     _shader = shader;
     _material = material;
+    _transformSource = transformSource;
 
     _vao = device->createVertexArray();
     _vao->bind();
@@ -238,6 +243,7 @@ void MeshInstancer::updateFromTransforms(
     const std::vector<glm::mat4>& transforms,
     const std::vector<glm::vec4>* colors) {
     _transforms = transforms;
+    _instancePrims.clear();
     if (colors)
         _colors = *colors;
     if (_colors.size() != _transforms.size())
@@ -257,10 +263,13 @@ void MeshInstancer::update() {
 
     _transforms.clear();
     _colors.clear();
+    _instancePrims.clear();
     if (_transforms.capacity() < _prims.size())
         _transforms.reserve(_prims.size());
     if (_colors.capacity() < _prims.size())
         _colors.reserve(_prims.size());
+    if (_instancePrims.capacity() < _prims.size())
+        _instancePrims.reserve(_prims.size());
 
     for (auto* prim : _prims) {
         if (!prim || !prim->isVisible())
@@ -269,6 +278,7 @@ void MeshInstancer::update() {
         glm::vec4 c = col ? *col : glm::vec4(1.f);
         _transforms.push_back(prim->computeModelMatrix());
         _colors.push_back(c);
+        _instancePrims.push_back(prim);
     }
 
     _updateTransparency();
@@ -318,6 +328,64 @@ void MeshInstancer::applyFrustumCulling(const Geometry::Frustum* frustum) {
     }
 
     _uploadInstanceData(_culledTransforms, _culledColors);
+}
+
+bool MeshInstancer::findRayIntersection(const Geometry::Ray& ray,
+                                        int& outInstanceIndex,
+                                        float& outDistance,
+                                        Geometry::AABB* outBounds,
+                                        Scene::Prim** outPrim) const {
+    outInstanceIndex = -1;
+    outDistance = std::numeric_limits<float>::infinity();
+    if (_worldBounds.empty())
+        return false;
+
+    bool hit = false;
+    for (size_t i = 0; i < _worldBounds.size(); ++i) {
+        float distance = 0.0f;
+        // Check hit
+        if (!Geometry::intersects(ray, _worldBounds[i], distance))
+            continue;
+        // Check it is the closest
+        if (distance >= outDistance)
+            continue;
+
+        hit = true;
+        outDistance = distance;
+        outInstanceIndex = static_cast<int>(i);
+        if (outBounds)
+            *outBounds = _worldBounds[i];
+        if (outPrim) {
+            *outPrim = i < _instancePrims.size() ? _instancePrims[i] : nullptr;
+        }
+    }
+    return hit;
+}
+
+bool MeshInstancer::getInstanceTransform(int instanceIndex,
+                                         glm::mat4& outTransform) const {
+    if (instanceIndex < 0 ||
+        instanceIndex >= static_cast<int>(_transforms.size()))
+        return false;
+    outTransform = _transforms[static_cast<size_t>(instanceIndex)];
+    return true;
+}
+
+bool MeshInstancer::setInstanceTransform(int instanceIndex,
+                                         const glm::mat4& transform) {
+    if (instanceIndex < 0 ||
+        instanceIndex >= static_cast<int>(_transforms.size()))
+        return false;
+
+    _transforms[static_cast<size_t>(instanceIndex)] = transform;
+    if (_colors.size() != _transforms.size())
+        _colors.assign(_transforms.size(), glm::vec4(1.0f));
+
+    _updateWorldBounds(_transforms);
+    _uploadInstanceData(_transforms, _colors);
+    _useExternalTransforms = true;
+    _instancePrims.clear();
+    return true;
 }
 
 void MeshInstancer::render() {

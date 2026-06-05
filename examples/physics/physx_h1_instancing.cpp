@@ -108,7 +108,8 @@ class H1InstancingApp : public App {
         // One handle per body type — each instancer will hold N transforms
         for (auto* prim : refRobot.bodyPrims())
             _bodyHandles.push_back(
-                addShape(commonShader.get(), prim, RenderTrack::Instanced));
+                addShape(commonShader.get(), prim,
+                         TransformSource::ExternalBuffer));
 
         // Per-robot colors — same color for all bodies of one robot
         std::vector<glm::vec4> colors(N);

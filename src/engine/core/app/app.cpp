@@ -10,6 +10,7 @@
 #include "utils/print_debug.hpp"
 #include "utils/asset_path.hpp"
 #include "utils/types.hpp"
+#include <ImGuizmo.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 #include <chrono>
@@ -21,6 +22,7 @@
 #include <glm/fwd.hpp>
 #include <glm/geometric.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <iomanip>
 #include <memory>
 #include <optional>
@@ -84,7 +86,9 @@ struct App::IO {
     double deltaMouseX = 0.0;
     double deltaMouseY = 0.0;
     bool isHKeyPressed = false;
-    bool isScreenshotKeyPressed = false;
+    bool isScreenshotKeyPressed = false; // t
+    bool isSHIFTKeyPressed = false;
+    bool isPickMode = false; // left click + shift
 };
 
 struct App::RenderVariable {
@@ -250,6 +254,17 @@ void App::renderFrameOnce() {
     this->preRender();
     if (_rasterizer) {
         _rasterizer->updateFrameData(_viewMatrix, _projectionMatrix);
+        if (_mousePickRequested) {
+            _lastRayPickResult = pickMouse();
+            _mousePickRequested = false;
+            if (_lastRayPickResult.hit)
+                _selectedRayPickResult = _lastRayPickResult;
+            onRayPicked(_lastRayPickResult);
+        }
+        if (_io->isPickMode) {
+            _lastRayPickResult = pickMouse();
+            onRayPickHover(_lastRayPickResult);
+        }
         _rasterizer->renderShadowMap(_camera, _upAxis, _width, _height);
     }
 
@@ -277,6 +292,7 @@ void App::renderFrameOnce() {
     // default framebuffer
     if (!_hideUI) {
         _panelManager.render();
+        renderSelectionGizmo();
         _panelManager.postRender();
     }
     this->postRender();
@@ -361,22 +377,23 @@ void App::coreRender() {
 void App::checkError() { _graphicsDevice->checkError(); }
 
 MeshHandle App::addShape(Backend::Shader* shader, Scene::Prim* prim,
-                         RenderTrack track) {
-    return _rasterizer ? _rasterizer->addShape(shader, prim, track)
+                         TransformSource transformSource) {
+    return _rasterizer ? _rasterizer->addShape(shader, prim, transformSource)
                        : InvalidHandle;
 }
 
 MeshHandle App::addSkinnedShape(Backend::Shader* shader, Scene::Prim* prim,
                                 const Scene::SkinnedMeshData& skinnedMesh,
-                                RenderTrack track) {
+                                TransformSource transformSource) {
     return _rasterizer
-               ? _rasterizer->addSkinnedShape(shader, prim, skinnedMesh, track)
+               ? _rasterizer->addSkinnedShape(shader, prim, skinnedMesh,
+                                              transformSource)
                : InvalidHandle;
 }
 
 MeshHandle App::addShape(PhongMaterial* material, Scene::Prim* prim,
-                         RenderTrack track) {
-    return _rasterizer ? _rasterizer->addShape(material, prim, track)
+                         TransformSource transformSource) {
+    return _rasterizer ? _rasterizer->addShape(material, prim, transformSource)
                        : InvalidHandle;
 }
 
@@ -599,6 +616,18 @@ void App::updateShapeTransforms(MeshHandle handle,
                                 const std::vector<glm::vec4>* colors) {
     if (_rasterizer)
         _rasterizer->updateShapeTransforms(handle, transforms, colors);
+}
+
+bool App::getShapeInstanceTransform(MeshHandle handle, int instanceIndex,
+                                    glm::mat4& outTransform) const {
+    return _rasterizer && _rasterizer->getShapeInstanceTransform(
+                              handle, instanceIndex, outTransform);
+}
+
+bool App::setShapeInstanceTransform(MeshHandle handle, int instanceIndex,
+                                    const glm::mat4& transform) {
+    return _rasterizer && _rasterizer->setShapeInstanceTransform(
+                              handle, instanceIndex, transform);
 }
 
 void App::updateShapeTransforms(MeshHandle handle, const float* transforms,
@@ -839,10 +868,21 @@ void App::mouseButtonCallback(GLFWwindow* window, int button, int action,
                               int mods) {
     _io->deltaMouseX = 0;
     _io->deltaMouseY = 0;
-    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
         _io->isMouseLeftClicked = true;
-    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
+        const bool shiftPressed =
+            (mods & GLFW_MOD_SHIFT) != 0 ||
+            glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+            glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+        if (!ImGui::GetIO().WantCaptureMouse && shiftPressed) {
+            _mousePickRequested = true;
+            _io->isPickMode = true;
+        }
+    }
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
         _io->isMouseLeftClicked = false;
+        _io->isPickMode = false;
+    }
     if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_PRESS)
         _io->isMouseMiddleClicked = true;
     if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_RELEASE)
@@ -872,6 +912,13 @@ void App::processInput() {
     if (screenshotPressed && !_io->isScreenshotKeyPressed)
         _screenshotRequested = true;
     _io->isScreenshotKeyPressed = screenshotPressed;
+
+    bool shiftPressed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+                        glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+    _io->isSHIFTKeyPressed = shiftPressed;
+    if (!shiftPressed) {
+        _io->isPickMode = false;
+    }
 
     // Prevent manipulations while ImGui using the mouse.
     if (ImGui::GetIO().WantCaptureMouse) {
@@ -953,7 +1000,7 @@ void App::processInput() {
         _camera.setCameraPos(cameraPos);
     }
 
-    if (_io->isMouseLeftClicked) {
+    if (_io->isMouseLeftClicked && !_io->isSHIFTKeyPressed) {
         // Orbit cam
         float dx = deltaMouseX * 0.1f;
         float dy = deltaMouseY * 0.1f;
@@ -1026,7 +1073,7 @@ glm::vec2 App::getScreenToNDC(float scrX, float scrY) {
     return glm::vec2(x, y);
 }
 
-Ray App::getMouseRay() {
+Geometry::Ray App::getMouseRay() {
     glm::vec2 ndc = getScreenToNDC(_io->mouseX, _io->mouseY);
     glm::mat4 invProj = glm::inverse(_camera.getProjMatrix());
     glm::mat4 invView = glm::inverse(_camera.getViewMatrix());
@@ -1040,8 +1087,63 @@ Ray App::getMouseRay() {
     // cam to world
     glm::vec3 worldNear = glm::vec3(invView * camNear);
     glm::vec3 worldFar = glm::vec3(invView * camFar);
-    return Ray(_camera.getCameraPos(), glm::normalize(worldFar - worldNear));
+    return Geometry::Ray(_camera.getCameraPos(),
+                         glm::normalize(worldFar - worldNear));
 }
+
+RayPickResult App::rayPick(const Geometry::Ray& ray) const {
+    return _rasterizer ? _rasterizer->rayPick(ray) : RayPickResult{};
+}
+
+RayPickResult App::pickMouse() { return rayPick(getMouseRay()); }
+
+bool App::getPickTransform(const RayPickResult& result,
+                           glm::mat4& outTransform) const {
+    if (!result.hit)
+        return false;
+    if (result.transformSource == TransformSource::SceneGraph && result.prim) {
+        outTransform = result.prim->computeModelMatrix();
+        return true;
+    }
+    return getShapeInstanceTransform(result.handle, result.instanceIndex,
+                                     outTransform);
+}
+
+bool App::setPickTransform(const RayPickResult& result,
+                           const glm::mat4& transform) {
+    if (!result.hit)
+        return false;
+    if (result.transformSource == TransformSource::SceneGraph && result.prim) {
+        result.prim->addTranslateOp(glm::vec3(transform[3]));
+        return true;
+    }
+    return setShapeInstanceTransform(result.handle, result.instanceIndex,
+                                     transform);
+}
+
+void App::renderSelectionGizmo() {
+    if (!_selectedRayPickResult.hit || _hideUI)
+        return;
+
+    glm::mat4 transform(1.0f);
+    if (!getPickTransform(_selectedRayPickResult, transform))
+        return;
+
+    ImGuizmo::SetOrthographic(false);
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImGuizmo::SetDrawlist(ImGui::GetForegroundDrawList(viewport));
+    ImGuizmo::SetRect(viewport->Pos.x, viewport->Pos.y, viewport->Size.x,
+                      viewport->Size.y);
+
+    const glm::mat4 view = _camera.getViewMatrix();
+    const glm::mat4 proj = _camera.getProjMatrix();
+    if (ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(proj),
+                             ImGuizmo::TRANSLATE, ImGuizmo::WORLD,
+                             glm::value_ptr(transform))) {
+        setPickTransform(_selectedRayPickResult, transform);
+    }
+}
+
 } // namespace KE
 
 //////////////// Call backs

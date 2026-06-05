@@ -62,16 +62,16 @@ Rasterizer::Rasterizer(Backend::GraphicsDevice* graphicsDevice) {
 // Prim-based (instanced)
 
 MeshHandle Rasterizer::addShape(Backend::Shader* shader, Scene::Prim* prim,
-                                RenderTrack track) {
+                                TransformSource transformSource) {
     auto meshData = prim->resolveMeshData();
     if (!meshData || meshData->vertices.empty() || meshData->indices.empty())
         return InvalidHandle;
 
-    InstancerKey key{shader, meshData.get(), nullptr, track};
+    InstancerKey key{shader, meshData.get(), nullptr, transformSource};
     auto it = _instancers.find(key);
     if (it == _instancers.end()) {
         auto [newIt, inserted] = _instancers.emplace(key, MeshInstancer{});
-        newIt->second.init(_graphicsDevice, shader, *meshData);
+        newIt->second.init(_graphicsDevice, shader, *meshData, transformSource);
         it = newIt;
     }
     it->second.addPrim(prim);
@@ -89,17 +89,18 @@ MeshHandle Rasterizer::addShape(Backend::Shader* shader, Scene::Prim* prim,
 MeshHandle
 Rasterizer::addSkinnedShape(Backend::Shader* shader, Scene::Prim* prim,
                             const Scene::SkinnedMeshData& skinnedMesh,
-                            RenderTrack track) {
+                            TransformSource transformSource) {
     auto meshData = prim->resolveMeshData();
     if (!meshData || meshData->vertices.empty() || meshData->indices.empty() ||
         !skinnedMesh.hasValidVertexSkinning())
         return InvalidHandle;
 
-    InstancerKey key{shader, meshData.get(), nullptr, track};
+    InstancerKey key{shader, meshData.get(), nullptr, transformSource};
     auto it = _instancers.find(key);
     if (it == _instancers.end()) {
         auto [newIt, inserted] = _instancers.emplace(key, MeshInstancer{});
-        newIt->second.init(_graphicsDevice, shader, skinnedMesh);
+        newIt->second.init(_graphicsDevice, shader, skinnedMesh,
+                           transformSource);
         it = newIt;
     }
     it->second.addPrim(prim);
@@ -115,18 +116,19 @@ Rasterizer::addSkinnedShape(Backend::Shader* shader, Scene::Prim* prim,
 }
 
 MeshHandle Rasterizer::addShape(PhongMaterial* material, Scene::Prim* prim,
-                                RenderTrack track) {
+                                TransformSource transformSource) {
     auto meshData = prim->resolveMeshData();
     if (!material || !meshData || meshData->vertices.empty() ||
         meshData->indices.empty())
         return InvalidHandle;
 
     auto* shader = material->getShader();
-    InstancerKey key{shader, meshData.get(), material, track};
+    InstancerKey key{shader, meshData.get(), material, transformSource};
     auto it = _instancers.find(key);
     if (it == _instancers.end()) {
         auto [newIt, inserted] = _instancers.emplace(key, MeshInstancer{});
-        newIt->second.init(_graphicsDevice, shader, *meshData, material);
+        newIt->second.init(_graphicsDevice, shader, *meshData, transformSource,
+                           material);
         it = newIt;
     }
     it->second.addPrim(prim);
@@ -179,6 +181,58 @@ void Rasterizer::setShapeTexture(MeshHandle handle, Backend::Texture* tex,
     if (handle >= _handleTable.size())
         return;
     _handleTable[handle]->setTexture(tex, slot);
+}
+
+RayPickResult Rasterizer::rayPick(const Geometry::Ray& ray) const {
+    RayPickResult best;
+    best.distance = std::numeric_limits<float>::infinity();
+    for (size_t handle = 0; handle < _handleTable.size(); ++handle) {
+        const MeshInstancer* inst = _handleTable[handle];
+        if (!inst)
+            continue;
+
+        int instanceIndex = -1;
+        float distance = 0.0f;
+        Geometry::AABB bounds;
+        Scene::Prim* prim = nullptr;
+        if (!inst->findRayIntersection(ray, instanceIndex, distance, &bounds,
+                                       &prim))
+            continue;
+        if (distance >= best.distance)
+            continue;
+
+        best.hit = true;
+        best.handle = static_cast<MeshHandle>(handle);
+        best.instanceIndex = instanceIndex;
+        best.transformSource = inst->transformSource();
+        best.prim = best.transformSource == TransformSource::SceneGraph
+                        ? prim
+                        : nullptr;
+        best.distance = distance;
+        best.position = ray.getPoint(distance);
+        best.bounds = bounds;
+    }
+    return best;
+}
+
+bool Rasterizer::getShapeInstanceTransform(MeshHandle handle, int instanceIndex,
+                                           glm::mat4& outTransform) const {
+    if (handle >= _handleTable.size() || !_handleTable[handle])
+        return false;
+    return _handleTable[handle]->getInstanceTransform(instanceIndex,
+                                                      outTransform);
+}
+
+bool Rasterizer::setShapeInstanceTransform(MeshHandle handle, int instanceIndex,
+                                           const glm::mat4& transform) {
+    if (handle >= _handleTable.size() || !_handleTable[handle])
+        return false;
+
+    MeshInstancer* instancer = _handleTable[handle];
+    if (instancer->transformSource() != TransformSource::ExternalBuffer)
+        return false;
+
+    return instancer->setInstanceTransform(instanceIndex, transform);
 }
 
 void Rasterizer::updateMeshGeometry(MeshHandle handle,

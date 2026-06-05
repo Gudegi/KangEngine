@@ -26,7 +26,7 @@ Shader = _ke.Shader
 Texture = _ke.Texture
 Camera = _ke.Camera
 UpAxis = _ke.UpAxis
-RenderTrack = _ke.RenderTrack
+TransformSource = _ke.TransformSource
 ColorLibrary = _ke.ColorLibrary
 ColorType = _ke.ColorType
 Color = _ke.Color
@@ -78,7 +78,7 @@ __all__ = [
     "Texture",
     "Camera",
     "UpAxis",
-    "RenderTrack",
+    "TransformSource",
     "vec3",
     "vec2",
     "vec4",

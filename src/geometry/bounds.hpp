@@ -1,5 +1,7 @@
-#ifndef _GEOMETRY_BOUNDS_HPP_
-#define _GEOMETRY_BOUNDS_HPP_
+#ifndef _BOUNDS_HPP_
+#define _BOUNDS_HPP_
+
+#include "geometry/ray.hpp"
 
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
@@ -61,6 +63,10 @@ Sphere transformSphere(const Sphere& sphere, const glm::mat4& transform);
 
 bool intersects(const AABB& a, const AABB& b);
 bool intersects(const Sphere& a, const Sphere& b);
+bool intersects(const Ray& ray, const AABB& bounds, float& outDistance);
+bool intersects(const Ray& ray, const AABB& bounds);
+bool intersects(const Ray& ray, const Sphere& sphere, float& outDistance);
+bool intersects(const Ray& ray, const Sphere& sphere);
 bool intersects(const Frustum& frustum, const AABB& bounds);
 bool intersects(const Frustum& frustum, const Sphere& sphere);
 

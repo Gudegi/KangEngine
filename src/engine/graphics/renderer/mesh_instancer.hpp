@@ -16,6 +16,8 @@
 
 namespace KE {
 
+enum class TransformSource;
+
 namespace RendererAttribute {
 
 // Vertex attribute locations for MeshInstancer shaders.
@@ -69,6 +71,7 @@ class MeshInstancer {
     bool _castsShadow = true;
     bool _hasSkinning = false;
     bool _hasTangents = false;
+    TransformSource _transformSource{};
     Geometry::AABB _localBounds;
     Geometry::Sphere _localSphere;
     Geometry::AABB _combinedWorldBounds;
@@ -79,6 +82,7 @@ class MeshInstancer {
     std::vector<glm::vec4> _culledColors;
     std::vector<std::pair<Backend::Texture*, int>> _textures;
     std::vector<glm::mat4> _boneMatrices;
+    std::vector<Scene::Prim*> _instancePrims;
 
     std::vector<Scene::Prim*> _prims;
 
@@ -103,9 +107,11 @@ class MeshInstancer {
 
     // Upload static geometry. Must be called before addPrim/update/render.
     void init(Backend::GraphicsDevice* device, Backend::Shader* shader,
-              const Scene::MeshData& mesh, PhongMaterial* material = nullptr);
+              const Scene::MeshData& mesh, TransformSource transformSource,
+              PhongMaterial* material = nullptr);
     void init(Backend::GraphicsDevice* device, Backend::Shader* shader,
               const Scene::SkinnedMeshData& skinnedMesh,
+              TransformSource transformSource,
               PhongMaterial* material = nullptr);
 
     void addPrim(Scene::Prim* prim);
@@ -134,6 +140,13 @@ class MeshInstancer {
     void uploadSkinningMatrices(Backend::Shader* shader = nullptr);
     // Compact instance buffers to objects intersecting the current frustum.
     void applyFrustumCulling(const Geometry::Frustum* frustum);
+    bool findRayIntersection(const Geometry::Ray& ray, int& outInstanceIndex,
+                             float& outDistance,
+                             Geometry::AABB* outBounds = nullptr,
+                             Scene::Prim** outPrim = nullptr) const;
+    bool getInstanceTransform(int instanceIndex, glm::mat4& outTransform) const;
+    bool setInstanceTransform(int instanceIndex, const glm::mat4& transform);
+    TransformSource transformSource() const { return _transformSource; }
 
     void render();
 

@@ -28,27 +28,39 @@ namespace KE {
 using MeshHandle = uint32_t;
 static constexpr MeshHandle InvalidHandle = ~0u;
 
-enum class RenderTrack {
-    SceneGraph, // Prim/scene graph owns transforms.
-    Instanced,  // Caller uploads transform/color arrays through the handle.
+enum class TransformSource {
+    SceneGraph,     // Prim/scene graph owns transforms.
+    ExternalBuffer, // Caller owns per-instance transform arrays.
+};
+
+struct RayPickResult {
+    bool hit = false;
+    MeshHandle handle = InvalidHandle;
+    int instanceIndex = -1;
+    TransformSource transformSource = TransformSource::SceneGraph;
+    Scene::Prim* prim = nullptr;
+    float distance = 0.0f;
+    glm::vec3 position = glm::vec3(0.0f);
+    Geometry::AABB bounds;
 };
 
 // ---------------------------------------------------------------------------
-// Two-track rendering
+// Two-source transform ownership
 //
-// Track A — Prim-based (scene graph drives transforms)
+// Source A — SceneGraph-driven
 //   addShape(shader, prim) → instancer polls Prim attributes every frame
 //   Use for: static geometry, any object the scene graph owns
 //
-// Track B — Handle-based (caller drives transforms)
+// Source B — ExternalBuffer-driven
 //   handle = addShape(shader, prim)       // register once at setup
 //   setShapeColors(handle, colors)        // upload colors once
 //   updateShapeTransforms(handle, mats)   // upload transforms per frame
 //   Use for: PhysX rigid bodies, large instanced crowds, anything with
 //            per-frame external transform arrays
 //
-// Tracks are split at the Rasterizer key level, so a scene-graph draw group and
-// an instanced draw group can share shader/mesh/material without interfering.
+// Sources are split at the Rasterizer key level, so scene-graph objects and
+// external simulation buffers can share shader/mesh/material without
+// interfering.
 // ---------------------------------------------------------------------------
 
 class Rasterizer : public Renderer {
@@ -61,7 +73,7 @@ class Rasterizer : public Renderer {
         Backend::Shader* shader;
         const Scene::MeshData* mesh;
         PhongMaterial* material; // nullptr for shader-only path
-        RenderTrack track;
+        TransformSource transformSource;
         bool operator<(const InstancerKey& o) const {
             if (shader != o.shader)
                 return shader < o.shader;
@@ -69,7 +81,7 @@ class Rasterizer : public Renderer {
                 return mesh < o.mesh;
             if (material != o.material)
                 return material < o.material;
-            return track < o.track;
+            return transformSource < o.transformSource;
         }
     };
     std::map<InstancerKey, MeshInstancer> _instancers;
@@ -183,13 +195,16 @@ class Rasterizer : public Renderer {
     int getCullingTotalInstances() const { return _cullingTotalInstances; }
     int getCullingCulledInstances() const { return _cullingCulledInstances; }
 
-    MeshHandle addShape(Backend::Shader* shader, Scene::Prim* prim,
-                        RenderTrack track = RenderTrack::SceneGraph);
-    MeshHandle addSkinnedShape(Backend::Shader* shader, Scene::Prim* prim,
-                               const Scene::SkinnedMeshData& skinnedMesh,
-                               RenderTrack track = RenderTrack::SceneGraph);
-    MeshHandle addShape(PhongMaterial* material, Scene::Prim* prim,
-                        RenderTrack track = RenderTrack::SceneGraph);
+    MeshHandle
+    addShape(Backend::Shader* shader, Scene::Prim* prim,
+             TransformSource transformSource = TransformSource::SceneGraph);
+    MeshHandle addSkinnedShape(
+        Backend::Shader* shader, Scene::Prim* prim,
+        const Scene::SkinnedMeshData& skinnedMesh,
+        TransformSource transformSource = TransformSource::SceneGraph);
+    MeshHandle
+    addShape(PhongMaterial* material, Scene::Prim* prim,
+             TransformSource transformSource = TransformSource::SceneGraph);
     void removePrim(MeshHandle handle, Scene::Prim* prim);
 
     void updateShapeTransforms(MeshHandle handle,
@@ -204,6 +219,11 @@ class Rasterizer : public Renderer {
     void setShapeCastsShadow(MeshHandle handle, bool castsShadow = true);
     void setShapeTexture(MeshHandle handle, Backend::Texture* tex,
                          int slot = 0);
+    RayPickResult rayPick(const Geometry::Ray& ray) const;
+    bool getShapeInstanceTransform(MeshHandle handle, int instanceIndex,
+                                   glm::mat4& outTransform) const;
+    bool setShapeInstanceTransform(MeshHandle handle, int instanceIndex,
+                                   const glm::mat4& transform);
 
     // Deformable mesh: update vertex positions + normals each frame.
     void updateMeshGeometry(MeshHandle handle,

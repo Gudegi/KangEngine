@@ -128,7 +128,8 @@ class BoxInstancingApp : public App {
             prim->setDisplayColorAlpha(color);
             _colors.push_back(color);
             MeshHandle h =
-                addShape(commonShader.get(), prim, RenderTrack::Instanced);
+                addShape(commonShader.get(), prim,
+                         TransformSource::ExternalBuffer);
             if (_boxHandle == InvalidHandle)
                 _boxHandle = h;
             _prims.push_back(prim);

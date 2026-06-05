@@ -20,7 +20,7 @@
 #include "engine/graphics/camera/camera.hpp"
 #include "engine/core/ui/panel_manager.hpp"
 #include "utils/asset_path.hpp"
-#include "utils/ray.hpp"
+#include "geometry/ray.hpp"
 #include "engine/core/window/window.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/graphics/backend/graphics_factory.hpp"
@@ -62,6 +62,7 @@ class App {
     bool _hideUI, _renderWireframe;
     bool _initialized = false;
     bool _screenshotRequested = false;
+    bool _mousePickRequested = false;
     uint64_t _frameIndex = 0;
     float _gamma = 2.2; // for Gamma Correction
     float _cameraMoveSpeed = 15.0f;
@@ -80,9 +81,16 @@ class App {
     std::unique_ptr<Scene::SceneBackend> _scene = nullptr;
     std::unique_ptr<Rasterizer> _rasterizer;
     std::unique_ptr<PostProcessor> _postProcessor;
+    RayPickResult _lastRayPickResult;
+    RayPickResult _selectedRayPickResult;
 
     void registerCallbacks();
     bool writeScreenshotFrame();
+    void renderSelectionGizmo();
+    bool getPickTransform(const RayPickResult& result,
+                          glm::mat4& outTransform) const;
+    bool setPickTransform(const RayPickResult& result,
+                          const glm::mat4& transform);
 
   public:
     void initialize(
@@ -132,6 +140,8 @@ class App {
     virtual void preRender() {}  // 루프 안에서 사용됨. 렌더 전에 사용
     virtual void render() {}     // overrideable 실제 렌더링
     virtual void postRender() {} // 렌더링 이후 마무리
+    virtual void onRayPicked(const RayPickResult& result) {}
+    virtual void onRayPickHover(const RayPickResult& result) {}
     //////
 
     // Frame rate control
@@ -160,12 +170,15 @@ class App {
     }
 
     MeshHandle addShape(Backend::Shader* shader, Scene::Prim* prim,
-                        RenderTrack track = RenderTrack::SceneGraph);
+                        TransformSource transformSource =
+                            TransformSource::SceneGraph);
     MeshHandle addSkinnedShape(Backend::Shader* shader, Scene::Prim* prim,
                                const Scene::SkinnedMeshData& skinnedMesh,
-                               RenderTrack track = RenderTrack::SceneGraph);
+                               TransformSource transformSource =
+                                   TransformSource::SceneGraph);
     MeshHandle addShape(PhongMaterial* material, Scene::Prim* prim,
-                        RenderTrack track = RenderTrack::SceneGraph);
+                        TransformSource transformSource =
+                            TransformSource::SceneGraph);
     void removePrim(MeshHandle handle, Scene::Prim* prim);
 
     struct MeshPrimDesc {
@@ -201,6 +214,10 @@ class App {
     void updateShapeTransforms(MeshHandle handle,
                                const std::vector<glm::mat4>& transforms,
                                const std::vector<glm::vec4>* colors = nullptr);
+    bool getShapeInstanceTransform(MeshHandle handle, int instanceIndex,
+                                   glm::mat4& outTransform) const;
+    bool setShapeInstanceTransform(MeshHandle handle, int instanceIndex,
+                                   const glm::mat4& transform);
     // std::vector -> * functions for pybind
     void updateShapeTransforms(MeshHandle handle, const float* transforms,
                                const float* colors, size_t count,
@@ -248,7 +265,12 @@ class App {
     glm::vec2 getScreenToNDC(float x, float y);
 
     // 마우스 위치로부터 3D 월드 공간의 Ray 객체 생성
-    Ray getMouseRay();
+    Geometry::Ray getMouseRay();
+    RayPickResult rayPick(const Geometry::Ray& ray) const;
+    RayPickResult pickMouse();
+    const RayPickResult& getLastRayPickResult() const {
+        return _lastRayPickResult;
+    }
 
     // Coordinate Conversion Utilities
     glm::vec3 upPos(glm::vec3 pos, UpAxis from = UpAxis::Z) const;

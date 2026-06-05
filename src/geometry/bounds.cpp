@@ -131,6 +131,65 @@ bool intersects(const Sphere& a, const Sphere& b) {
            radius * radius;
 }
 
+bool intersects(const Ray& ray, const AABB& bounds, float& outDistance) {
+    if (!bounds.isValid())
+        return false;
+
+    float tMin = 0.0f;
+    float tMax = std::numeric_limits<float>::infinity();
+    for (int axis = 0; axis < 3; ++axis) {
+        const float origin = ray.origin[axis];
+        const float direction = ray.direction[axis];
+        const float minValue = bounds.min[axis];
+        const float maxValue = bounds.max[axis];
+        if (std::abs(direction) <= std::numeric_limits<float>::epsilon()) {
+            if (origin < minValue || origin > maxValue)
+                return false;
+            continue;
+        }
+
+        float nearT = (minValue - origin) / direction;
+        float farT = (maxValue - origin) / direction;
+        if (nearT > farT)
+            std::swap(nearT, farT);
+        tMin = std::max(tMin, nearT);
+        tMax = std::min(tMax, farT);
+        if (tMin > tMax)
+            return false;
+    }
+
+    outDistance = tMin;
+    return true;
+}
+
+bool intersects(const Ray& ray, const AABB& bounds) {
+    float distance = 0.0f;
+    return intersects(ray, bounds, distance);
+}
+
+bool intersects(const Ray& ray, const Sphere& sphere, float& outDistance) {
+    const glm::vec3 offset = ray.origin - sphere.center;
+    const float b = glm::dot(offset, ray.direction);
+    const float c = glm::dot(offset, offset) - sphere.radius * sphere.radius;
+    const float discriminant = b * b - c;
+    if (discriminant < 0.0f)
+        return false;
+
+    const float sqrtDiscriminant = std::sqrt(discriminant);
+    const float nearT = -b - sqrtDiscriminant;
+    const float farT = -b + sqrtDiscriminant;
+    if (farT < 0.0f)
+        return false;
+
+    outDistance = nearT >= 0.0f ? nearT : 0.0f;
+    return true;
+}
+
+bool intersects(const Ray& ray, const Sphere& sphere) {
+    float distance = 0.0f;
+    return intersects(ray, sphere, distance);
+}
+
 bool intersects(const Frustum& frustum, const AABB& bounds) {
     if (!bounds.isValid())
         return false;

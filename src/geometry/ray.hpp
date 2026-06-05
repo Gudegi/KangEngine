@@ -6,6 +6,7 @@
 #include <glm/gtx/intersect.hpp>
 
 namespace KE {
+namespace Geometry {
 
 struct Ray {
     glm::vec3 origin;
@@ -40,6 +41,7 @@ struct Ray {
     }
 };
 
+} // namespace Geometry
 } // namespace KE
 
-#endif // _KE_RAY_HPP_
+#endif // _RAY_HPP_

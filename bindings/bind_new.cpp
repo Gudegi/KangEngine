@@ -296,9 +296,9 @@ PYBIND11_MODULE(_kangengine, m) {
         .value("WebGPU", Backend::BackendType::WebGPU)
         .export_values();
 
-    py::enum_<RenderTrack>(m, "RenderTrack")
-        .value("SceneGraph", RenderTrack::SceneGraph)
-        .value("Instanced", RenderTrack::Instanced);
+    py::enum_<TransformSource>(m, "TransformSource")
+        .value("SceneGraph", TransformSource::SceneGraph)
+        .value("ExternalBuffer", TransformSource::ExternalBuffer);
 
     bind_scene(m);
     bind_animation(m);
@@ -858,30 +858,31 @@ py::class_<glm::vec3>(m, "vec3")
         .def(
             "addShape",
             [](App* self, Backend::Shader* shader, Scene::Prim* prim,
-               RenderTrack track) {
-                return self->addShape(shader, prim, track);
+               TransformSource transformSource) {
+                return self->addShape(shader, prim, transformSource);
             },
             py::arg("shader"), py::arg("prim"),
-            py::arg("track") = RenderTrack::SceneGraph)
+            py::arg("transform_source") = TransformSource::SceneGraph)
         .def(
             "addSkinnedShape",
             [](App* self, Backend::Shader* shader, Scene::Prim* prim,
                std::shared_ptr<Scene::SkinnedMeshData> skinnedMesh,
-               RenderTrack track) {
+               TransformSource transformSource) {
                 if (!skinnedMesh)
                     throw py::value_error("skinned_mesh_data is None");
-                return self->addSkinnedShape(shader, prim, *skinnedMesh, track);
+                return self->addSkinnedShape(shader, prim, *skinnedMesh,
+                                             transformSource);
             },
             py::arg("shader"), py::arg("prim"), py::arg("skinned_mesh_data"),
-            py::arg("track") = RenderTrack::SceneGraph)
+            py::arg("transform_source") = TransformSource::SceneGraph)
         .def(
             "addShape",
             [](App* self, PhongMaterial* material, Scene::Prim* prim,
-               RenderTrack track) {
-                return self->addShape(material, prim, track);
+               TransformSource transformSource) {
+                return self->addShape(material, prim, transformSource);
             },
             py::arg("material"), py::arg("prim"),
-            py::arg("track") = RenderTrack::SceneGraph)
+            py::arg("transform_source") = TransformSource::SceneGraph)
         .def(
             "updateShapeTransforms",
             [](App* self, uint32_t handle, const FloatArray& transforms,
