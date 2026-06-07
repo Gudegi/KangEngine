@@ -236,7 +236,7 @@ class MyApp : public App {
             prim->setMeshData(boxMeshPtr);
             prim->setAttribute("primvars:displaycolorAlpha",
                                boxSpawns[i].color);
-            prim->setAttribute("xformOp:translate", boxSpawns[i].pos);
+            prim->setWorldTranslation(boxSpawns[i].pos);
 
             addShape(cubeShader.get(), prim);
             physics.addBox(boxSpawns[i].pos.x, boxSpawns[i].pos.y,
@@ -276,10 +276,9 @@ class MyApp : public App {
         for (PxU32 i = 0; i < nbActors && i < NUM_BOXES; ++i) {
             auto* actor = static_cast<PxRigidActor*>(actors[i]);
             PxTransform pose = actor->getGlobalPose();
-            boxPrims[i]->setAttribute("xformOp:translate",
-                                      glm::vec3(pose.p.x, pose.p.y, pose.p.z));
-            boxPrims[i]->setAttribute(
-                "xformOp:rotateQuaternion",
+            boxPrims[i]->setWorldTranslation(
+                glm::vec3(pose.p.x, pose.p.y, pose.p.z));
+            boxPrims[i]->setWorldRotation(
                 glm::quat(pose.q.w, pose.q.x, pose.q.y, pose.q.z));
         }
 

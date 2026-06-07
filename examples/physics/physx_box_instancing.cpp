@@ -180,9 +180,8 @@ class BoxInstancingApp : public App {
     void syncVisuals() {
         for (int i = 0; i < NUM_BOXES; i++) {
             PxTransform pose = _actors[i]->getGlobalPose();
-            _prims[i]->setAttribute("xformOp:translate", pxToGlm(pose.p));
-            _prims[i]->setAttribute("xformOp:rotateQuaternion",
-                                    pxToGlm(pose.q));
+            _prims[i]->setWorldTranslation(pxToGlm(pose.p));
+            _prims[i]->setWorldRotation(pxToGlm(pose.q));
         }
     }
 

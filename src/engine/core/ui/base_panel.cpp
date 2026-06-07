@@ -98,6 +98,10 @@ void RendererDebugPanel::buildPanel() {
     if (ImGui::Checkbox("Frustum Culling", &frustumCulling)) {
         rasterizer->setFrustumCullingEnabled(frustumCulling);
     }
+    bool debugRenderAABB = rasterizer->getDebugRenderAABB();
+    if (ImGui::Checkbox("Show Render AABB", &debugRenderAABB)) {
+        rasterizer->setDebugRenderAABB(debugRenderAABB);
+    }
     if (frustumCulling) {
         // Batch = one instancer/draw group. Instance = one transform inside
         // that batch, culled by its world AABB.
@@ -200,15 +204,44 @@ void ScenePanel::buildPanel() {
     ImGui::Begin(name().c_str());
     if (auto* root = _app->getScene()->getRootPrim()) {
         auto drawPrimTree = [&](auto& self, Scene::Prim* prim) -> void {
+            ImGui::PushID(prim);
+            // bool active = prim->isActive();
+            // if (ImGui::Checkbox("##active", &active))
+            //     prim->setActive(active);
+            // ImGui::SameLine();
+            bool visible = prim->isVisible();
+            if (ImGui::Checkbox("##Visible", &visible))
+                prim->setVisible(visible);
+            ImGui::SameLine();
+
+            const bool activeInHierarchy = prim->isActiveInHierarchy();
+            const bool visibleInHierarchy = prim->isVisibleInHierarchy();
+            if (!activeInHierarchy || !visibleInHierarchy)
+                ImGui::PushStyleColor(
+                    ImGuiCol_Text,
+                    ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+
             const auto& children = prim->getChildren();
             if (children.empty()) {
                 ImGui::Text("%s", prim->getName().c_str());
             } else if (ImGui::TreeNode(prim->getName().c_str())) {
+                if (!activeInHierarchy || !visibleInHierarchy)
+                    ImGui::PopStyleColor();
                 for (auto* child : children)
                     self(self, child);
                 ImGui::TreePop();
+                ImGui::PopID();
+                return;
             }
+
+            if (!activeInHierarchy || !visibleInHierarchy)
+                ImGui::PopStyleColor();
+            ImGui::PopID();
         };
+        // ImGui::TextDisabled("A");
+        // ImGui::SameLine();
+        ImGui::TextDisabled("Visible");
+        ImGui::Separator();
         for (auto* child : root->getChildren())
             drawPrimTree(drawPrimTree, child);
     }

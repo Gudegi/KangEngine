@@ -23,6 +23,35 @@ constexpr int SHADOW_UBO_BIND_SLOT = 2;
 constexpr int SHADOW_TEXTURE_SLOT_BASE =
     1; // most diffuse textures use 0, TODO: more efficient manage
 
+namespace {
+
+void appendAABBLines(const KE::Geometry::AABB& box,
+                     std::vector<glm::vec3>& starts,
+                     std::vector<glm::vec3>& ends,
+                     std::vector<glm::vec4>& colors, const glm::vec4& color) {
+    if (!box.isValid())
+        return;
+
+    const glm::vec3 mn = box.min;
+    const glm::vec3 mx = box.max;
+    const glm::vec3 corners[] = {
+        {mn.x, mn.y, mn.z}, {mx.x, mn.y, mn.z}, {mx.x, mx.y, mn.z},
+        {mn.x, mx.y, mn.z}, {mn.x, mn.y, mx.z}, {mx.x, mn.y, mx.z},
+        {mx.x, mx.y, mx.z}, {mn.x, mx.y, mx.z},
+    };
+    constexpr int edges[][2] = {
+        {0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6},
+        {6, 7}, {7, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7},
+    };
+    for (const auto& edge : edges) {
+        starts.push_back(corners[edge[0]]);
+        ends.push_back(corners[edge[1]]);
+        colors.push_back(color);
+    }
+}
+
+} // namespace
+
 namespace KE {
 
 Rasterizer::Rasterizer(Backend::GraphicsDevice* graphicsDevice) {
@@ -287,6 +316,37 @@ void Rasterizer::clearDebugPoints(const std::string& path) {
     _debugRenderer.clearPoints(path);
 }
 
+void Rasterizer::updateDebugRenderAABB() {
+    constexpr const char* path = "/renderer/aabb";
+    if (!_debugRenderAABB) {
+        _debugRenderer.clearLines(path);
+        return;
+    }
+
+    std::vector<glm::vec3> starts;
+    std::vector<glm::vec3> ends;
+    std::vector<glm::vec4> colors;
+    const glm::vec4 color(0.45f, 1.0f, 0.55f, 1.0f);
+
+    for (const auto& [key, inst] : _instancers) {
+        if (inst.visibleCount() == 0)
+            continue;
+
+        const auto& boundsList = inst.worldBounds();
+        starts.reserve(starts.size() + boundsList.size() * 12);
+        ends.reserve(ends.size() + boundsList.size() * 12);
+        colors.reserve(colors.size() + boundsList.size() * 12);
+        for (const auto& bounds : boundsList) {
+            if (_frustumCullingEnabled &&
+                !Geometry::intersects(_viewFrustum, bounds))
+                continue;
+            appendAABBLines(bounds, starts, ends, colors, color);
+        }
+    }
+
+    _debugRenderer.logLines(path, starts, ends, colors, 1.0f, starts.empty());
+}
+
 // Render
 
 void Rasterizer::updateFrameData(const glm::mat4& view, const glm::mat4& proj) {
@@ -426,6 +486,7 @@ void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
     _graphicsDevice->setDepthWrite(true);
     _graphicsDevice->setBlend(false);
 
+    updateDebugRenderAABB();
     _debugRenderer.render();
 }
 

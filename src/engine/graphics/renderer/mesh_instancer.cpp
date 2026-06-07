@@ -207,6 +207,20 @@ void MeshInstancer::_updateWorldBounds(
     }
 }
 
+bool MeshInstancer::_hasVisibleOwnerPrim() const {
+    if (_prims.empty())
+        return true;
+
+    // ExternalBuffer batches use owner Prim visibility as a batch-level toggle.
+    // Individual external instances are not mapped to individual Prim
+    // visibility.
+    for (const auto* prim : _prims) {
+        if (prim && prim->isActiveInHierarchy() && prim->isVisibleInHierarchy())
+            return true;
+    }
+    return false;
+}
+
 void MeshInstancer::_uploadInstanceData(
     const std::vector<glm::mat4>& transforms,
     const std::vector<glm::vec4>& colors) {
@@ -257,6 +271,14 @@ void MeshInstancer::updateFromTransforms(
 
 void MeshInstancer::update() {
     if (_useExternalTransforms) {
+        if (!_hasVisibleOwnerPrim()) {
+            static const std::vector<glm::mat4> emptyTransforms;
+            static const std::vector<glm::vec4> emptyColors;
+            _updateWorldBounds(emptyTransforms);
+            _uploadInstanceData(emptyTransforms, emptyColors);
+            return;
+        }
+        _updateWorldBounds(_transforms);
         _uploadInstanceData(_transforms, _colors);
         return;
     }
@@ -272,7 +294,8 @@ void MeshInstancer::update() {
         _instancePrims.reserve(_prims.size());
 
     for (auto* prim : _prims) {
-        if (!prim || !prim->isVisible())
+        if (!prim || !prim->isActiveInHierarchy() ||
+            !prim->isVisibleInHierarchy())
             continue;
         auto col = prim->getDisplayColorAlpha();
         glm::vec4 c = col ? *col : glm::vec4(1.f);

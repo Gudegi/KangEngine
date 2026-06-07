@@ -7,6 +7,7 @@ const Token XformTokens::translate("xformOp:translate");
 const Token XformTokens::rotateXYZ("xformOp:rotateXYZ");
 const Token XformTokens::rotateQuat("xformOp:rotateQuaternion");
 const Token XformTokens::scale("xformOp:scale");
+const Token XformTokens::transform("xformOp:transform");
 const Token XformTokens::opOrder("xformOpOrder");
 const std::vector<Token> XformTokens::defaultOpOrder = {
     XformTokens::scale, XformTokens::rotateQuat, XformTokens::translate};
@@ -20,7 +21,14 @@ XformOpType XformTokens::getXformOpType(const Token& token) {
         return XformOpType::RotateXYZ;
     if (token == XformTokens::scale)
         return XformOpType::Scale;
+    if (token == XformTokens::transform)
+        return XformOpType::Matrix;
     return XformOpType::None;
+}
+
+bool XformTokens::isXformAttribute(const Token& token) {
+    return token == XformTokens::opOrder ||
+           getXformOpType(token) != XformOpType::None;
 }
 
 } // namespace Scene

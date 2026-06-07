@@ -32,8 +32,8 @@ struct FrustumPoints {
 };
 
 struct DebugBoundsObject {
+    Scene::Prim* prim = nullptr;
     Geometry::AABB localBounds;
-    glm::mat4 transform = glm::mat4(1.0f);
     glm::vec4 color = glm::vec4(1.0f);
 };
 
@@ -47,13 +47,6 @@ void addLine(FrustumLines& lines, const glm::vec3& a, const glm::vec3& b,
 glm::vec4 presetColor(ColorType type) {
     const Color& c = ColorLibrary::get(type);
     return glm::vec4(c.r, c.g, c.b, c.a);
-}
-
-glm::mat4 composeTransform(const glm::vec3& position,
-                           const glm::quat& orientation,
-                           const glm::vec3& scale = glm::vec3(1.0f)) {
-    return glm::translate(glm::mat4(1.0f), position) *
-           glm::mat4_cast(orientation) * glm::scale(glm::mat4(1.0f), scale);
 }
 
 void addAABBLines(FrustumLines& lines, const Geometry::AABB& box,
@@ -184,8 +177,10 @@ FrustumLines buildAABBLines(const std::vector<DebugBoundsObject>& objects) {
     lines.colors.reserve(objects.size() * 12);
 
     for (const DebugBoundsObject& object : objects) {
-        const Geometry::AABB world =
-            Geometry::transformAABB(object.localBounds, object.transform);
+        if (!object.prim)
+            continue;
+        const Geometry::AABB world = Geometry::transformAABB(
+            object.localBounds, object.prim->computeWorldMatrix());
         addAABBLines(lines, world, object.color);
     }
     return lines;
@@ -206,8 +201,10 @@ buildClassifiedAABBLines(const std::vector<DebugBoundsObject>& objects,
     const glm::vec4 culledColor(1.0f, 0.18f, 0.12f, 1.0f);
 
     for (const DebugBoundsObject& object : objects) {
-        const Geometry::AABB world =
-            Geometry::transformAABB(object.localBounds, object.transform);
+        if (!object.prim)
+            continue;
+        const Geometry::AABB world = Geometry::transformAABB(
+            object.localBounds, object.prim->computeWorldMatrix());
         const bool visible = Geometry::intersects(frustum, world);
         if (visible)
             ++visibleCount;
@@ -363,12 +360,10 @@ class CameraFrustumDebugApp : public App {
     }
 
   private:
-    void addBoundsObject(const Scene::MeshData& meshData,
-                         const glm::vec3& position,
-                         const glm::quat& orientation, const glm::vec4& color) {
-        debugBoundsObjects.push_back({meshData.computeLocalAABB(),
-                                      composeTransform(position, orientation),
-                                      color});
+    void addBoundsObject(Scene::Prim* prim, const Scene::MeshData& meshData,
+                         const glm::vec4& color) {
+        debugBoundsObjects.push_back(
+            {prim, meshData.computeLocalAABB(), color});
     }
 
     void addSceneObjects() {
@@ -383,8 +378,8 @@ class CameraFrustumDebugApp : public App {
                 desc.position = position;
                 desc.orientation = orientation;
                 desc.color = color;
-                addMeshPrim(std::move(desc));
-                addBoundsObject(mesh, position, orientation,
+                MeshPrimResult result = addMeshPrim(std::move(desc));
+                addBoundsObject(result.prim, mesh,
                                 glm::vec4(color.r, color.g, color.b, 1.0f));
             };
 
@@ -401,8 +396,8 @@ class CameraFrustumDebugApp : public App {
             desc.position = position;
             desc.orientation = orientation;
             desc.color = color;
-            addMeshPrim(std::move(desc));
-            addBoundsObject(mesh, position, orientation,
+            MeshPrimResult result = addMeshPrim(std::move(desc));
+            addBoundsObject(result.prim, mesh,
                             glm::vec4(color.r, color.g, color.b, 1.0f));
         };
 

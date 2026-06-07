@@ -125,6 +125,13 @@ void bind_scene(py::module& m) {
             py::arg("radius"), py::arg("height"),
             py::arg("up_axis") = KE::UpAxis::Y, py::arg("segments") = 32)
         // Transform ops
+        .def("set_local_translation", &KE::Scene::Prim::setLocalTranslation)
+        .def("set_local_scale", &KE::Scene::Prim::setLocalScale)
+        .def("set_local_rotation", &KE::Scene::Prim::setLocalRotation)
+        .def("set_local_matrix", &KE::Scene::Prim::setLocalMatrix)
+        .def("set_world_translation", &KE::Scene::Prim::setWorldTranslation)
+        .def("set_world_rotation", &KE::Scene::Prim::setWorldRotation)
+        .def("set_world_matrix", &KE::Scene::Prim::setWorldMatrix)
         .def("add_translate_op", &KE::Scene::Prim::addTranslateOp)
         .def("add_scale_op", &KE::Scene::Prim::addScaleOp)
         .def("add_rotate_quaternion_op",
@@ -136,6 +143,15 @@ void bind_scene(py::module& m) {
         .def("get_display_color_alpha", &KE::Scene::Prim::getDisplayColorAlpha)
         // Model matrix
         .def("compute_model_matrix", &KE::Scene::Prim::computeModelMatrix)
+        .def("compute_local_matrix", &KE::Scene::Prim::computeLocalMatrix)
+        .def("compute_world_matrix", &KE::Scene::Prim::computeWorldMatrix)
+        .def("is_visible", &KE::Scene::Prim::isVisible)
+        .def("set_visible", &KE::Scene::Prim::setVisible)
+        .def("is_visible_in_hierarchy",
+             &KE::Scene::Prim::isVisibleInHierarchy)
+        .def("is_active", &KE::Scene::Prim::isActive)
+        .def("set_active", &KE::Scene::Prim::setActive)
+        .def("is_active_in_hierarchy", &KE::Scene::Prim::isActiveInHierarchy)
         // setAttribute with specific types
         .def("set_attribute_vec3",
              [](KE::Scene::Prim& self, const std::string& name,

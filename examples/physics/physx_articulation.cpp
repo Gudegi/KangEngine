@@ -526,15 +526,15 @@ class ScissorLiftApp : public App {
         // Sync articulation link transforms → Prims
         for (auto& [link, prim] : linkVisuals) {
             auto p = link->getGlobalPose();
-            prim->setAttribute("xformOp:translate", pxToGlm(p.p));
-            prim->setAttribute("xformOp:rotateQuaternion", pxToGlm(p.q));
+            prim->setWorldTranslation(pxToGlm(p.p));
+            prim->setWorldRotation(pxToGlm(p.q));
         }
 
         // Sync dynamic box transforms → Prims
         for (auto& [box, prim] : boxVisuals) {
             auto p = box->getGlobalPose();
-            prim->setAttribute("xformOp:translate", pxToGlm(p.p));
-            prim->setAttribute("xformOp:rotateQuaternion", pxToGlm(p.q));
+            prim->setWorldTranslation(pxToGlm(p.p));
+            prim->setWorldRotation(pxToGlm(p.q));
         }
 
         checkError();

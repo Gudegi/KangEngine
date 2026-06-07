@@ -93,6 +93,7 @@ class MeshInstancer {
     void _reallocate(int newMax);
     // Cache per-instance world AABBs used by frustum culling/debug stats.
     void _updateWorldBounds(const std::vector<glm::mat4>& transforms);
+    bool _hasVisibleOwnerPrim() const;
     // Upload the currently drawable instance transform/color buffer to GPU.
     void _uploadInstanceData(const std::vector<glm::mat4>& transforms,
                              const std::vector<glm::vec4>& colors);
@@ -123,6 +124,8 @@ class MeshInstancer {
 
     // Track B mode: directly upload transforms (and optionally colors), then
     // keep using that external instance buffer instead of polling Prims.
+    // Owner Prim visibility is a batch-level toggle; per-instance visibility is
+    // intentionally not supported here.
     // colors == nullptr: skip color upload (use previously set colors).
     void updateFromTransforms(const std::vector<glm::mat4>& transforms,
                               const std::vector<glm::vec4>* colors = nullptr);

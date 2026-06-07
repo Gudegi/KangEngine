@@ -53,11 +53,17 @@ class Prim {
 
     bool _renderable = true; // whether can render or not  TODO: true only when
                              // you use proper PrimType
-    bool _visible = true;    // runtime show/hide toggle
+    bool _visible = true;    // runtime show/hide toggle(just render visibility)
+    bool _active = true;     // Scene traversal / update participation
 
-    // cached TODO: refactoring
-    bool _isDirty = true; // true -> compute
-    glm::mat4 _cachedModelMat = glm::mat4(1.0f);
+    bool _localDirty = true;
+    bool _worldDirty = true;
+    glm::mat4 _cachedLocalMat = glm::mat4(1.0f);
+    glm::mat4 _cachedWorldMat = glm::mat4(1.0f);
+
+    void onAttributeChanged(const Token& name);
+    void markLocalTransformDirty();
+    void markWorldTransformDirtyRecursive();
 
   public:
     Prim(const std::string& name, PrimType type, Prim* parent = nullptr);
@@ -114,13 +120,11 @@ class Prim {
 
     // Scene geometry axes: creates three colored arrow mesh prims that behave
     // like normal scene objects.
-    static std::vector<Prim*>
-    defineCoordinateAxes(SceneBackend* scene, const std::string& basePath,
-                         float length = 1.0f, float radius = 0.025f,
-                         int segments = 16,
-                         glm::vec3 origin = glm::vec3(0.0f),
-                         glm::quat orientation = glm::quat(1.0f, 0.0f, 0.0f,
-                                                           0.0f));
+    static std::vector<Prim*> defineCoordinateAxes(
+        SceneBackend* scene, const std::string& basePath, float length = 1.0f,
+        float radius = 0.025f, int segments = 16,
+        glm::vec3 origin = glm::vec3(0.0f),
+        glm::quat orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
 
     // Instanced points: 1 sphere MeshData shared -> 1 Prim per point
     static std::vector<Prim*>
@@ -142,7 +146,7 @@ class Prim {
 
     template <typename T> void setAttribute(const Token& name, const T& value) {
         _Attributes[name] = value;
-        this->onDirtyAttributeChanged();
+        onAttributeChanged(name);
     }
 
     template <typename T>
@@ -182,6 +186,10 @@ class Prim {
     bool isRenderable() const { return _renderable; }
     bool isVisible() const { return _visible; }
     void setVisible(bool v) { _visible = v; }
+    bool isActive() const { return _active; }
+    bool isActiveInHierarchy() const;
+    bool isVisibleInHierarchy() const;
+    void setActive(bool a);
 
     void setXformOpOrder(const std::vector<std::string>& order) {
         this->setAttribute("xformOpOrder", order);
@@ -210,25 +218,21 @@ class Prim {
         return std::nullopt;
     }
 
-    void addTranslateOp(glm::vec3 trans) {
-        this->setAttribute("xformOp:translate", trans);
-    }
+    void setLocalTranslation(glm::vec3 trans);
+    void setLocalScale(glm::vec3 scale);
+    void setLocalRotation(glm::quat quat);
+    void setLocalMatrix(const glm::mat4& matrix);
+    void setWorldTranslation(glm::vec3 trans);
+    void setWorldRotation(glm::quat quat);
+    void setWorldMatrix(const glm::mat4& matrix);
 
-    void addScaleOp(glm::vec3 scale) {
-        this->setAttribute("xformOp:scale", scale);
-    }
+    void addTranslateOp(glm::vec3 trans) { setLocalTranslation(trans); }
+    void addScaleOp(glm::vec3 scale) { setLocalScale(scale); }
+    void addRotateQuaternionOp(glm::quat quat) { setLocalRotation(quat); }
 
-    void addRotateQuaternionOp(glm::quat quat) {
-        this->setAttribute("xformOp:rotateQuaternion", quat);
-    }
-
+    glm::mat4 computeLocalMatrix();
+    glm::mat4 computeWorldMatrix();
     glm::mat4 computeModelMatrix();
-
-    void onDirtyAttributeChanged() {
-        _isDirty = true;
-        // Note: Children are not dirty because _cachedModelMat represents
-        // the Local transform, which is independent of the parent.
-    }
 };
 
 } // namespace Scene

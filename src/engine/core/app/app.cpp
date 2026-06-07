@@ -1102,6 +1102,8 @@ bool App::getPickTransform(const RayPickResult& result,
     if (!result.hit)
         return false;
     if (result.transformSource == TransformSource::SceneGraph && result.prim) {
+        if (!result.prim->isActiveInHierarchy())
+            return false;
         outTransform = result.prim->computeModelMatrix();
         return true;
     }
@@ -1114,7 +1116,9 @@ bool App::setPickTransform(const RayPickResult& result,
     if (!result.hit)
         return false;
     if (result.transformSource == TransformSource::SceneGraph && result.prim) {
-        result.prim->addTranslateOp(glm::vec3(transform[3]));
+        if (!result.prim->isActiveInHierarchy())
+            return false;
+        result.prim->setWorldMatrix(transform);
         return true;
     }
     return setShapeInstanceTransform(result.handle, result.instanceIndex,

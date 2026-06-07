@@ -71,13 +71,11 @@ class RigidVisualBridge:
             root_pos, root_rot, self.local_pos, self.local_rot
         )
         for prim, pos, rot in zip(self.body_prims, body_pos, body_rot):
-            prim.set_attribute_vec3(
-                "xformOp:translate",
-                _ke.vec3(float(pos[0]), float(pos[1]), float(pos[2])),
+            prim.set_world_translation(
+                _ke.vec3(float(pos[0]), float(pos[1]), float(pos[2]))
             )
-            prim.set_attribute_quat(
-                "xformOp:rotateQuaternion",
-                _ke.quat(float(rot[3]), float(rot[0]), float(rot[1]), float(rot[2])),
+            prim.set_world_rotation(
+                _ke.quat(float(rot[3]), float(rot[0]), float(rot[1]), float(rot[2]))
             )
 
     def _define_shape_prim(self, base_path, idx, spec):
@@ -305,17 +303,15 @@ class KangWorldVisualBridge:
 
         if body_pos is not None:
             for prim, pos in zip(record.body_prims, body_pos):
-                prim.set_attribute_vec3(
-                    "xformOp:translate",
-                    _ke.vec3(float(pos[0]), float(pos[1]), float(pos[2])),
+                prim.set_world_translation(
+                    _ke.vec3(float(pos[0]), float(pos[1]), float(pos[2]))
                 )
 
         if body_rot is not None:
             for prim, rot in zip(record.body_prims, body_rot):
                 # MimicKit stores quaternions as xyzw; KangEngine's Python quat
                 # constructor takes wxyz.
-                prim.set_attribute_quat(
-                    "xformOp:rotateQuaternion",
+                prim.set_world_rotation(
                     _ke.quat(float(rot[3]), float(rot[0]), float(rot[1]), float(rot[2])),
                 )
 

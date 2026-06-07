@@ -9,6 +9,7 @@
 #include <Eigen/Geometry>
 #include <cassert>
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
 namespace KE {
@@ -48,8 +49,7 @@ void PhysicsBridge::sync() {
     // Prim-based: PhysX pose -> Prim xform attributes
     for (auto& v : _primVisuals) {
         physx::PxTransform pose = v.link->getGlobalPose();
-        v.prim->setAttribute("xformOp:translate", pxToGlm(pose.p));
-        v.prim->setAttribute("xformOp:rotateQuaternion", pxToGlm(pose.q));
+        v.prim->setWorldMatrix(pxToMat4(pose));
     }
 
     // Handle-based instanced: collect N transforms per body, upload to VBO
@@ -72,10 +72,10 @@ void PhysicsBridge::sync() {
         physx::PxTransform pose = cv.link->getGlobalPose();
         glm::vec3 linkPos = pxToGlm(pose.p);
         glm::quat linkRot = pxToGlm(pose.q);
-        cv.prim->setAttribute("xformOp:translate",
-                              linkPos + linkRot * cv.localPos);
-        cv.prim->setAttribute("xformOp:rotateQuaternion",
-                              linkRot * cv.localQuat);
+        const glm::vec3 worldPos = linkPos + linkRot * cv.localPos;
+        const glm::quat worldRot = linkRot * cv.localQuat;
+        cv.prim->setWorldMatrix(glm::translate(glm::mat4(1.0f), worldPos) *
+                                glm::mat4_cast(worldRot));
     }
 }
 

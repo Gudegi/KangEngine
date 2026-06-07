@@ -12,6 +12,7 @@
 #include <filesystem>
 #include <fmt/core.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <memory>
 #include <stdexcept>
@@ -266,8 +267,8 @@ SkeletonBridgeAsset::instantiate(Scene::SceneBackend* scene,
         glm::vec3 pos =
             Animation::toGlm(globalTransforms[i].translation) * _scale;
         glm::quat rot = Animation::toGlm(globalTransforms[i].rotation);
-        prim->setAttribute("xformOp:translate", pos);
-        prim->setAttribute("xformOp:rotateQuaternion", rot);
+        prim->setWorldMatrix(glm::translate(glm::mat4(1.0f), pos) *
+                             glm::mat4_cast(rot));
         bridge._bodyPrims[i] = prim;
 
         if (!useMeshInstances && i < static_cast<int>(_bodyMeshes.size()) &&
@@ -288,8 +289,8 @@ void SkeletonBridge::applyPose() {
             continue;
         glm::vec3 pos = Animation::toGlm(globals[i].translation) * scale;
         glm::quat rot = Animation::toGlm(globals[i].rotation);
-        _bodyPrims[i]->setAttribute("xformOp:translate", pos);
-        _bodyPrims[i]->setAttribute("xformOp:rotateQuaternion", rot);
+        _bodyPrims[i]->setWorldMatrix(glm::translate(glm::mat4(1.0f), pos) *
+                                      glm::mat4_cast(rot));
     }
 }
 

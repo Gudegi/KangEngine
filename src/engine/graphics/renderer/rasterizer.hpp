@@ -122,6 +122,7 @@ class Rasterizer : public Renderer {
     std::array<glm::mat4, MaxShadowCascades> _cascadeLightMatrices{};
     Geometry::Frustum _viewFrustum;
     bool _frustumCullingEnabled = true;
+    bool _debugRenderAABB = false;
     int _cullingTotalBatches = 0;
     int _cullingCulledBatches = 0;
     int _cullingTotalInstances = 0;
@@ -134,6 +135,7 @@ class Rasterizer : public Renderer {
     void setShadowMap(Backend::Texture* tex, const glm::mat4& lightSpaceMat,
                       float radius, float distance);
     void drawShadowCasters();
+    void updateDebugRenderAABB();
 
   public:
     Rasterizer(Backend::GraphicsDevice* graphicsDevice);
@@ -190,6 +192,8 @@ class Rasterizer : public Renderer {
         _frustumCullingEnabled = enabled;
     }
     bool isFrustumCullingEnabled() const { return _frustumCullingEnabled; }
+    void setDebugRenderAABB(bool enabled) { _debugRenderAABB = enabled; }
+    bool getDebugRenderAABB() const { return _debugRenderAABB; }
     int getCullingTotalBatches() const { return _cullingTotalBatches; }
     int getCullingCulledBatches() const { return _cullingCulledBatches; }
     int getCullingTotalInstances() const { return _cullingTotalInstances; }
