@@ -151,18 +151,7 @@ void MeshInstancer::removePrim(Scene::Prim* prim) {
 void MeshInstancer::_setupInstanceAttribs(Backend::VertexArray* vao,
                                           Backend::Buffer* transformBuffer,
                                           Backend::Buffer* colorBuffer) {
-    // Transform mat4: locations 3-6 (4 × vec4, stride = sizeof(mat4))
-    vao->setVertexBuffer(transformBuffer);
-    for (int i = 0; i < 4; i++) {
-        Backend::VertexAttribute attr{RendererAttribute::InstanceTransform0 + i,
-                                      4,
-                                      Backend::VertexAttributeType::Float,
-                                      false,
-                                      sizeof(glm::mat4),
-                                      (size_t)(i * sizeof(glm::vec4)),
-                                      1};
-        vao->setVertexAttribute(attr);
-    }
+    _setupInstanceTransformAttribs(vao, transformBuffer);
 
     // Color vec4: location 7
     vao->setVertexBuffer(colorBuffer);
@@ -176,14 +165,30 @@ void MeshInstancer::_setupInstanceAttribs(Backend::VertexArray* vao,
     vao->setVertexAttribute(colorAttr);
 }
 
+void MeshInstancer::_setupInstanceTransformAttribs(
+    Backend::VertexArray* vao, Backend::Buffer* transformBuffer) {
+    // Transform mat4: locations 3-6 (4 × vec4, stride = sizeof(mat4))
+    vao->setVertexBuffer(transformBuffer);
+    for (int i = 0; i < 4; i++) {
+        Backend::VertexAttribute attr{RendererAttribute::InstanceTransform0 + i,
+                                      4,
+                                      Backend::VertexAttributeType::Float,
+                                      false,
+                                      sizeof(glm::mat4),
+                                      (size_t)(i * sizeof(glm::vec4)),
+                                      1};
+        vao->setVertexAttribute(attr);
+    }
+}
+
 void MeshInstancer::_setupInstanceAttribs() {
     _setupInstanceAttribs(_vao.get(), _transformVBO.get(), _colorVBO.get());
 }
 
 void MeshInstancer::_initOverrideInstanceData() {
-    // Selection/outline draws need a one-instance path without rebinding the
-    // main instance VBOs. Reuse the static mesh attributes, but attach separate
-    // transform/color buffers to this override VAO.
+    // Selection mask draws need a one-instance path without rebinding the main
+    // instance VBOs. Reuse the static mesh attributes, but attach a separate
+    // transform buffer to this override VAO.
     _overrideVAO = _device->createVertexArray();
     _overrideVAO->bind();
     _overrideVAO->setIndexBuffer(_indexBuffer.get());
@@ -194,10 +199,8 @@ void MeshInstancer::_initOverrideInstanceData() {
 
     _overrideTransformVBO = _device->createBuffer(
         Backend::BufferType::DynamicVertex, sizeof(glm::mat4));
-    _overrideColorVBO = _device->createBuffer(
-        Backend::BufferType::DynamicVertex, sizeof(glm::vec4));
-    _setupInstanceAttribs(_overrideVAO.get(), _overrideTransformVBO.get(),
-                          _overrideColorVBO.get());
+    _setupInstanceTransformAttribs(_overrideVAO.get(),
+                                   _overrideTransformVBO.get());
     _overrideVAO->unbind();
 }
 
@@ -272,10 +275,8 @@ void MeshInstancer::_uploadInstanceData(
         _colorVBO->setData(colors.data(), sizeof(glm::vec4) * _visibleCount);
 }
 
-void MeshInstancer::_uploadSingleInstanceData(const glm::mat4& transform,
-                                              const glm::vec4& color) {
+void MeshInstancer::_uploadOverrideTransform(const glm::mat4& transform) {
     _overrideTransformVBO->setData(&transform, sizeof(glm::mat4));
-    _overrideColorVBO->setData(&color, sizeof(glm::vec4));
 }
 
 void MeshInstancer::_updateTransparency() {
@@ -460,24 +461,12 @@ void MeshInstancer::render() {
     _vao->unbind();
 }
 
-void MeshInstancer::renderInstanceOverride(int instanceIndex,
-                                           const glm::vec4& color) {
+void MeshInstancer::renderInstanceMask(int instanceIndex) {
     if (instanceIndex < 0 ||
         instanceIndex >= static_cast<int>(_transforms.size()))
         return;
 
-    renderInstanceOverride(
-        instanceIndex, _transforms[static_cast<size_t>(instanceIndex)], color);
-}
-
-void MeshInstancer::renderInstanceOverride(int instanceIndex,
-                                           const glm::mat4& transform,
-                                           const glm::vec4& color) {
-    if (instanceIndex < 0 ||
-        instanceIndex >= static_cast<int>(_transforms.size()))
-        return;
-
-    _uploadSingleInstanceData(transform, color);
+    _uploadOverrideTransform(_transforms[static_cast<size_t>(instanceIndex)]);
     _overrideVAO->bind();
     _device->drawIndexedInstanced(_numIndices, 1);
     _overrideVAO->unbind();

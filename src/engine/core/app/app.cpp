@@ -141,9 +141,10 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     // Initialize graphics device after OpenGL context is created
     _graphicsDevice->initialize();
 
-    _framebuffer = _graphicsDevice->createFramebuffer(
-        {_width, _height, false, true,
-         4}); // stencil=true for outline rendering
+    _framebuffer =
+        _graphicsDevice->createFramebuffer({_width, _height, false, true, 4});
+    _selectionMaskFramebuffer =
+        _graphicsDevice->createFramebuffer({_width, _height, false, false, 0});
 
     glm::vec3 cameraPos, cameraTarget;
     if (_upAxis == UpAxis::Z) {
@@ -163,11 +164,13 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     _panelManager.addPanel(std::make_unique<RendererDebugPanel>(this));
 
     _graphicsDevice->setDepthTest(true);
-    _graphicsDevice->setStencilTest(true);
+    _graphicsDevice->setStencilTest(false);
 
     _rasterizer = std::make_unique<Rasterizer>(_graphicsDevice.get());
     _postProcessor = std::make_unique<PostProcessor>();
     _postProcessor->init(_graphicsDevice.get(), _width, _height);
+    _selectionOutlineProcessor = std::make_unique<SelectionOutlineProcessor>();
+    _selectionOutlineProcessor->init(_graphicsDevice.get(), _width, _height);
 
     _rasterizer->setLight(DirectionalLight{
         (_upAxis == UpAxis::Z) ? glm::normalize(glm::vec3(0.2f, 0.5f, 1.0f))
@@ -292,11 +295,28 @@ void App::renderFrameOnce() {
     _framebuffer->resolve();
     _framebuffer->unbind();
 
+    Backend::Texture* finalSource = _framebuffer->getColorTexture();
+
+    if (_postProcessor && _selectionOutlineProcessor &&
+        _selectionOutlineProcessor->config().enabled &&
+        _selectionMaskFramebuffer && _rasterizer &&
+        _selectedRayPickResult.hit) {
+        _rasterizer->renderSelectionMask(_selectedRayPickResult,
+                                         _selectionMaskFramebuffer.get(),
+                                         _width, _height);
+        _selectionOutlineProcessor->process(
+            _framebuffer->getColorTexture(),
+            _selectionMaskFramebuffer->getColorTexture());
+        finalSource = _selectionOutlineProcessor->getResult();
+    }
+
     if (_postProcessor) {
-        _postProcessor->process(_framebuffer->getColorTexture(), _gamma);
+        _postProcessor->process(finalSource, _gamma);
         _postProcessor->blitToScreen(_width, _height);
+        _lastPresentedFramebuffer = _postProcessor->getOutputFramebuffer();
     } else {
         _framebuffer->blitToScreen(_width, _height);
+        _lastPresentedFramebuffer = _framebuffer.get();
     }
 
     if (_screenshotRequested) {
@@ -321,12 +341,8 @@ void App::setRenderHz(float renderHz) {
 }
 
 std::vector<uint8_t> App::readRgbPixels(bool flipY) {
-    if (_postProcessor) {
-        Backend::Framebuffer* outputFbo =
-            _postProcessor->getOutputFramebuffer();
-        if (outputFbo)
-            return outputFbo->readColorPixels(flipY);
-    }
+    if (_lastPresentedFramebuffer)
+        return _lastPresentedFramebuffer->readColorPixels(flipY);
     if (!_framebuffer)
         return {};
     return _framebuffer->readColorPixels(flipY);
@@ -385,10 +401,8 @@ void App::coreRender() {
         _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
     }
 
-    if (_rasterizer) {
-        _rasterizer->render(_viewMatrix, _projectionMatrix,
-                            &_selectedRayPickResult);
-    }
+    if (_rasterizer)
+        _rasterizer->render(_viewMatrix, _projectionMatrix);
 }
 
 void App::checkError() { _graphicsDevice->checkError(); }
@@ -840,8 +854,12 @@ void App::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
     _camera.updateProjMatrix(_width, _height);
     if (_framebuffer)
         _framebuffer->resize(_width, _height);
+    if (_selectionMaskFramebuffer)
+        _selectionMaskFramebuffer->resize(_width, _height);
     if (_postProcessor)
         _postProcessor->resize(_width, _height);
+    if (_selectionOutlineProcessor)
+        _selectionOutlineProcessor->resize(_width, _height);
 }
 
 void App::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {

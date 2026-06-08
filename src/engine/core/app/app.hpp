@@ -28,6 +28,7 @@
 #include "engine/graphics/material/material.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
 #include "engine/graphics/renderer/post_processor.hpp"
+#include "engine/graphics/renderer/selection_outline_processor.hpp"
 #include "engine/graphics/renderer/light.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "engine/scene/native/prim.hpp"
@@ -85,9 +86,12 @@ class App {
   private:
     std::unique_ptr<Backend::GraphicsDevice> _graphicsDevice;
     std::unique_ptr<Backend::Framebuffer> _framebuffer;
+    std::unique_ptr<Backend::Framebuffer> _selectionMaskFramebuffer;
+    Backend::Framebuffer* _lastPresentedFramebuffer = nullptr;
     std::unique_ptr<Scene::SceneBackend> _scene = nullptr;
     std::unique_ptr<Rasterizer> _rasterizer;
     std::unique_ptr<PostProcessor> _postProcessor;
+    std::unique_ptr<SelectionOutlineProcessor> _selectionOutlineProcessor;
     RayPickResult _lastRayPickResult;
     RayPickResult _selectedRayPickResult;
     InteractionMode _interactionMode = InteractionMode::Inspect;
@@ -141,6 +145,9 @@ class App {
     }
     Rasterizer* getRasterizer() { return _rasterizer.get(); }
     const Rasterizer* getRasterizer() const { return _rasterizer.get(); }
+    SelectionOutlineProcessor* getSelectionOutlineProcessor() {
+        return _selectionOutlineProcessor.get();
+    }
     InteractionMode getInteractionMode() const { return _interactionMode; }
     void setInteractionMode(InteractionMode mode) { _interactionMode = mode; }
     bool hasSelection() const { return _selectedRayPickResult.hit; }

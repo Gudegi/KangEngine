@@ -38,6 +38,19 @@ void RendererDebugPanel::buildPanel() {
         _app->setInteractionMode(static_cast<InteractionMode>(interactionMode));
     }
     ImGui::SliderFloat("GammaCorrection", &_app->_gamma, 0.f, 5.f);
+    if (SelectionOutlineProcessor* outline =
+            _app->getSelectionOutlineProcessor()) {
+        SelectionOutlineConfig& config = outline->config();
+        ImGui::Checkbox("Selection Outline", &config.enabled);
+        float outlineColor[4] = {config.color.r, config.color.g, config.color.b,
+                                 config.color.a};
+        if (ImGui::ColorEdit4("Selection Outline Color", outlineColor)) {
+            config.color = glm::vec4(outlineColor[0], outlineColor[1],
+                                     outlineColor[2], outlineColor[3]);
+        }
+        ImGui::SliderFloat("Selection Outline Radius", &config.radius, 1.0f,
+                           8.0f, "%.1f px");
+    }
     ImGui::DragFloat("Camera Move Speed", &_app->_cameraMoveSpeed, 0.2f, 0.0f,
                      500.0f, "%.2f");
 

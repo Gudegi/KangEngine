@@ -104,8 +104,8 @@ class Rasterizer : public Renderer {
     std::array<Backend::Texture*, MaxShadowCascades> _cascadeMaps{};
     std::unique_ptr<Backend::Shader> _shadowShader;
     std::unique_ptr<Backend::Shader> _skinnedShadowShader;
-    std::unique_ptr<Backend::Shader> _outlineShader;
-    std::unique_ptr<Backend::Shader> _skinnedOutlineShader;
+    std::unique_ptr<Backend::Shader> _selectionMaskShader;
+    std::unique_ptr<Backend::Shader> _skinnedSelectionMaskShader;
     float _shadowRadius = 3.0f;
     int _shadowPcfSamples = 16;
     float _shadowDistance = 20.0f; // 0 = shadow disabled
@@ -125,8 +125,6 @@ class Rasterizer : public Renderer {
     Geometry::Frustum _viewFrustum;
     bool _frustumCullingEnabled = true;
     bool _debugRenderAABB = false;
-    bool _selectionStencilMarked = false;
-    float _selectionOutlineWidth = 0.1f;
     int _cullingTotalBatches = 0;
     int _cullingCulledBatches = 0;
     int _cullingTotalInstances = 0;
@@ -140,10 +138,6 @@ class Rasterizer : public Renderer {
                       float radius, float distance);
     void drawShadowCasters();
     void updateDebugRenderAABB();
-    bool markSelectionStencil(MeshInstancer& inst,
-                              const RayPickResult& selection);
-    void drawSelectionOutline(const RayPickResult& result);
-    void restoreSelectionOutlineState();
 
   public:
     Rasterizer(Backend::GraphicsDevice* graphicsDevice);
@@ -273,8 +267,9 @@ class Rasterizer : public Renderer {
 
     void updateFrameData(const glm::mat4& view, const glm::mat4& proj);
     void render(const glm::mat4& view, const glm::mat4& proj) override;
-    void render(const glm::mat4& view, const glm::mat4& proj,
-                const RayPickResult* selection);
+    void renderSelectionMask(const RayPickResult& selection,
+                             Backend::Framebuffer* target, int width,
+                             int height);
 };
 
 } // namespace KE

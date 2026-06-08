@@ -65,7 +65,6 @@ class MeshInstancer {
     std::vector<std::unique_ptr<Backend::Buffer>> _vbos;
     std::unique_ptr<Backend::Buffer> _indexBuffer;
     std::unique_ptr<Backend::Buffer> _overrideTransformVBO;
-    std::unique_ptr<Backend::Buffer> _overrideColorVBO;
     int _numIndices = 0;
 
     // Instance data (dynamic, uploaded each frame)
@@ -100,6 +99,8 @@ class MeshInstancer {
     void _setupInstanceAttribs(Backend::VertexArray* vao,
                                Backend::Buffer* transformBuffer,
                                Backend::Buffer* colorBuffer);
+    void _setupInstanceTransformAttribs(Backend::VertexArray* vao,
+                                        Backend::Buffer* transformBuffer);
     void _setupInstanceAttribs();
     void _initOverrideInstanceData();
     // Recreate instance VBOs when transform/color capacity grows.
@@ -110,8 +111,7 @@ class MeshInstancer {
     // Upload the currently drawable instance transform/color buffer to GPU.
     void _uploadInstanceData(const std::vector<glm::mat4>& transforms,
                              const std::vector<glm::vec4>& colors);
-    void _uploadSingleInstanceData(const glm::mat4& transform,
-                                   const glm::vec4& color);
+    void _uploadOverrideTransform(const glm::mat4& transform);
     void _updateTransparency();
 
   public:
@@ -167,9 +167,8 @@ class MeshInstancer {
     TransformSource transformSource() const { return _transformSource; }
 
     void render();
-    void renderInstanceOverride(int instanceIndex, const glm::vec4& color);
-    void renderInstanceOverride(int instanceIndex, const glm::mat4& transform,
-                                const glm::vec4& color);
+    // Draw one instance into a selection mask pass using only its transform.
+    void renderInstanceMask(int instanceIndex);
 
     // DoubleSided means the mesh can be seen both back and forward side.
     void setDoubleSided(bool v) { _doubleSided = v; }
@@ -188,7 +187,10 @@ class MeshInstancer {
 
     void setTexture(Backend::Texture* tex, int slot = 0) {
         for (auto& [t, s] : _textures) {
-            if (s == slot) { t = tex; return; }
+            if (s == slot) {
+                t = tex;
+                return;
+            }
         }
         _textures.emplace_back(tex, slot);
     }
@@ -197,9 +199,9 @@ class MeshInstancer {
         for (auto& [tex, slot] : _textures)
             if (tex) {
                 tex->bind(slot);
-                hasNormalMap = hasNormalMap ||
-                               (_hasTangents &&
-                                slot == RendererTextureSlot::Normal);
+                hasNormalMap =
+                    hasNormalMap ||
+                    (_hasTangents && slot == RendererTextureSlot::Normal);
             }
         if (_shader) {
             _shader->setInt("uTexture", RendererTextureSlot::Diffuse);
