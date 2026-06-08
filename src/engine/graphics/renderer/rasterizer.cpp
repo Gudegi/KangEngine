@@ -1,5 +1,6 @@
 #include "rasterizer.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
+#include "engine/graphics/material/colors.hpp"
 #include "engine/graphics/material/material.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/scene_backend.hpp"
@@ -84,6 +85,12 @@ Rasterizer::Rasterizer(Backend::GraphicsDevice* graphicsDevice) {
     _skinnedShadowShader = _graphicsDevice->createShaderFromFile(
         KE::getAssetPath("shaders/skinned_shadow.vs"),
         KE::getAssetPath("shaders/shadow.fs"));
+    _outlineShader = _graphicsDevice->createShaderFromFile(
+        KE::getAssetPath("shaders/outline.vs"),
+        KE::getAssetPath("shaders/outline.fs"));
+    _skinnedOutlineShader = _graphicsDevice->createShaderFromFile(
+        KE::getAssetPath("shaders/skinned_outline.vs"),
+        KE::getAssetPath("shaders/outline.fs"));
     _debugRenderer.init(_graphicsDevice);
     updateShadowUBO(0.0f);
 }
@@ -375,11 +382,16 @@ void Rasterizer::updateFrameData(const glm::mat4& view, const glm::mat4& proj) {
 }
 
 void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
+    render(view, proj, nullptr);
+}
+
+void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj,
+                        const RayPickResult* selection) {
     _cullingTotalBatches = 0;
     _cullingCulledBatches = 0;
     _cullingTotalInstances = 0;
     _cullingCulledInstances = 0;
-
+    _selectionStencilMarked = false;
     // Bind shadow map and upload shadow uniforms onto each instancer's shader
     const bool hasShadow = (_shadowMap != nullptr && _shadowDistance > 0.0f);
     Backend::Texture* fallbackShadowTexture =
@@ -411,6 +423,10 @@ void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
                    (_debugCsmCascadeTint && _useCsm) ? 1 : 0);
     };
 
+    MeshInstancer* selectedOutlineInstancer = nullptr;
+    if (selection && selection->hit && selection->handle < _handleTable.size())
+        selectedOutlineInstancer = _handleTable[selection->handle];
+
     // Pass 1: opaque instanced
     for (auto& [key, inst] : _instancers) {
         if (inst.hasTransparent() || inst.visibleCount() == 0)
@@ -440,7 +456,12 @@ void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
         inst.uploadSkinningMatrices();
         // Re-bind shadow map after bindTextures() to prevent slot 1 conflict
         bindShadowTextures();
+        if (&inst == selectedOutlineInstancer)
+            markSelectionStencil(inst, *selection);
         inst.render();
+        if (&inst == selectedOutlineInstancer)
+            // TODO: 일관되지 않은 결과. 나중에 postprocess로 처리?
+            drawSelectionOutline(*selection);
         if (inst.isDoubleSided())
             _graphicsDevice->setCullFace(true);
     }
@@ -781,6 +802,100 @@ void Rasterizer::drawShadowCasters() {
             _graphicsDevice->setCullFace(true);
     }
     _graphicsDevice->setCullFaceMode(Backend::CullFaceMode::Back);
+}
+
+// Selection outline
+bool Rasterizer::markSelectionStencil(MeshInstancer& inst,
+                                      const RayPickResult& selection) {
+    if (!selection.hit || selection.handle >= _handleTable.size())
+        return false;
+    if (_handleTable[selection.handle] != &inst)
+        return false;
+    if (selection.instanceIndex < 0)
+        return false;
+
+    _graphicsDevice->setStencilTest(true);
+    _graphicsDevice->setStencilFunc(Backend::StencilFunc::Always, 1, 0xFF);
+    _graphicsDevice->setStencilWriteMask(0xFF);
+    _graphicsDevice->setStencilOp(Backend::StencilOp::Keep,
+                                  Backend::StencilOp::Keep,
+                                  Backend::StencilOp::Replace);
+    _graphicsDevice->setColorWrite(false);
+    _graphicsDevice->setDepthWrite(false);
+    inst.renderInstanceOverride(selection.instanceIndex, glm::vec4(1.0f));
+
+    restoreSelectionOutlineState();
+    _selectionStencilMarked = true;
+    return true;
+}
+
+void Rasterizer::drawSelectionOutline(const RayPickResult& result) {
+    if (!_selectionStencilMarked || !result.hit ||
+        result.handle >= _handleTable.size()) {
+        _selectionStencilMarked = false;
+        return;
+    }
+
+    MeshInstancer* inst = _handleTable[result.handle];
+    if (!inst || result.instanceIndex < 0) {
+        _selectionStencilMarked = false;
+        return;
+    }
+
+    glm::mat4 transform(1.0f);
+    if (!inst->getInstanceTransform(result.instanceIndex, transform)) {
+        _selectionStencilMarked = false;
+        return;
+    }
+
+    Backend::Shader* outlineShader = inst->hasSkinning()
+                                         ? _skinnedOutlineShader.get()
+                                         : _outlineShader.get();
+    if (!outlineShader) {
+        _selectionStencilMarked = false;
+        return;
+    }
+
+    const Color& yellow = ColorLibrary::get(ColorType::ORANGE);
+    const glm::vec4 outlineColor(yellow.r, yellow.g, yellow.b, 1.0f);
+    outlineShader->use();
+    outlineShader->setVec4("outlineColor", outlineColor);
+    outlineShader->setFloat("outlineWidth", _selectionOutlineWidth);
+    const Geometry::AABB& localBounds = inst->localBounds();
+    const glm::vec3 outlineCenter =
+        localBounds.isValid() ? (localBounds.min + localBounds.max) * 0.5f
+                              : glm::vec3(0.0f);
+    outlineShader->setVec3("outlineCenter", outlineCenter);
+    inst->uploadSkinningMatrices(outlineShader);
+
+    // The main render pass marks the selected instance with stencil value 1.
+    // Only draw the expanded shell outside that original silhouette.
+    _graphicsDevice->setStencilTest(true);
+    _graphicsDevice->setStencilWriteMask(0x00);
+    _graphicsDevice->setStencilFunc(Backend::StencilFunc::NotEqual, 1, 0xFF);
+    _graphicsDevice->setCullFace(true);
+    _graphicsDevice->setCullFaceMode(Backend::CullFaceMode::Front);
+    _graphicsDevice->setDepthTest(false);
+    _graphicsDevice->setDepthWrite(false);
+    inst->renderInstanceOverride(result.instanceIndex, transform, outlineColor);
+
+    restoreSelectionOutlineState();
+    _selectionStencilMarked = false;
+}
+
+void Rasterizer::restoreSelectionOutlineState() {
+    // Selection outline is drawn only in the opaque pass. Restore the states
+    // this path mutates instead of resetting the whole renderer state.
+    _graphicsDevice->setCullFaceMode(Backend::CullFaceMode::Back);
+    _graphicsDevice->setDepthTest(true);
+    _graphicsDevice->setDepthWrite(true);
+    _graphicsDevice->setStencilWriteMask(0xFF);
+    _graphicsDevice->setStencilFunc(Backend::StencilFunc::Always, 0, 0xFF);
+    _graphicsDevice->setStencilOp(Backend::StencilOp::Keep,
+                                  Backend::StencilOp::Keep,
+                                  Backend::StencilOp::Keep);
+    _graphicsDevice->setColorWrite(true);
+    _graphicsDevice->setStencilTest(false);
 }
 
 } // namespace KE

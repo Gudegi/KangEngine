@@ -127,6 +127,7 @@ class FbxCharacterCppApp : public App {
         character = SkinnedCharacterBridge::fromFBX(
             this, skinnedShader.get(), fbxPath, "/fbx_character", clipIndex,
             fps, importScale);
+        Scene::Prim::defineManipulationGroup(getScene(), "/fbx_character");
         for (const auto& mesh : character.meshes()) {
             if (mesh.handle != InvalidHandle)
                 pickNames[mesh.handle] =

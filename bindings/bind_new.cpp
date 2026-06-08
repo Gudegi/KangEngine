@@ -40,6 +40,23 @@ class PyApp : public App {
     void postRender() override {
         PYBIND11_OVERRIDE_PURE(void, App, postRender);
     }
+    void onRayPicked(const RayPickResult& result) override {
+        PYBIND11_OVERRIDE(void, App, onRayPicked, result);
+    }
+    void onRayPickHover(const RayPickResult& result) override {
+        PYBIND11_OVERRIDE(void, App, onRayPickHover, result);
+    }
+    void onForceDragBegin(const RayPickResult& result,
+                          const glm::vec3& target) override {
+        PYBIND11_OVERRIDE(void, App, onForceDragBegin, result, target);
+    }
+    void onForceDragUpdate(const RayPickResult& result,
+                           const glm::vec3& target) override {
+        PYBIND11_OVERRIDE(void, App, onForceDragUpdate, result, target);
+    }
+    void onForceDragEnd() override {
+        PYBIND11_OVERRIDE(void, App, onForceDragEnd);
+    }
 };
 
 class SingleMotionSequence : public UI::SequenceInterface {
@@ -300,6 +317,20 @@ PYBIND11_MODULE(_kangengine, m) {
         .value("SceneGraph", TransformSource::SceneGraph)
         .value("ExternalBuffer", TransformSource::ExternalBuffer);
 
+    py::enum_<InteractionMode>(m, "InteractionMode")
+        .value("Inspect", InteractionMode::Inspect)
+        .value("Edit", InteractionMode::Edit)
+        .value("Force", InteractionMode::Force)
+        .export_values();
+
+    py::class_<RayPickResult>(m, "RayPickResult")
+        .def_readonly("hit", &RayPickResult::hit)
+        .def_readonly("handle", &RayPickResult::handle)
+        .def_readonly("instance_index", &RayPickResult::instanceIndex)
+        .def_readonly("transform_source", &RayPickResult::transformSource)
+        .def_readonly("distance", &RayPickResult::distance)
+        .def_readonly("position", &RayPickResult::position);
+
     bind_scene(m);
     bind_animation(m);
     bind_imgui(m);
@@ -337,6 +368,8 @@ PYBIND11_MODULE(_kangengine, m) {
 
     py::enum_<ColorType>(m, "ColorType")
         .value("WHITE", ColorType::WHITE)
+        .value("RED", ColorType::RED)
+        .value("MAGENTA", ColorType::MAGENTA)
         .value("BLACK", ColorType::BLACK)
         .value("ORANGE", ColorType::ORANGE)
         .value("LIME_GREEN", ColorType::LIME_GREEN)
@@ -853,6 +886,15 @@ py::class_<glm::vec3>(m, "vec3")
         .def("preRender", &App::preRender)
         .def("render", &App::render)
         .def("postRender", &App::postRender)
+        .def("onRayPicked", &App::onRayPicked)
+        .def("onRayPickHover", &App::onRayPickHover)
+        .def("onForceDragBegin", &App::onForceDragBegin)
+        .def("onForceDragUpdate", &App::onForceDragUpdate)
+        .def("onForceDragEnd", &App::onForceDragEnd)
+        .def("get_interaction_mode", &App::getInteractionMode)
+        .def("set_interaction_mode", &App::setInteractionMode)
+        .def("has_selection", &App::hasSelection)
+        .def("clear_selection", &App::clearSelection)
         .def("getGraphicsDevice", &App::getGraphicsDevice,
              py::return_value_policy::reference)
         .def(

@@ -517,6 +517,10 @@ void OpenGLDevice::setDepthTest(bool enable) {
 
 void OpenGLDevice::setDepthWrite(bool enable) { glDepthMask(enable); }
 
+void OpenGLDevice::setColorWrite(bool enable) {
+    glColorMask(enable, enable, enable, enable);
+}
+
 void OpenGLDevice::setBlend(bool enable) {
     enable ? glEnable(GL_BLEND) : glDisable(GL_BLEND);
 }
@@ -545,6 +549,59 @@ void OpenGLDevice::setBlendFunc(BlendFactor src, BlendFactor dst) {
 void OpenGLDevice::setStencilTest(bool enable) {
     enable ? glEnable(GL_STENCIL_TEST) : glDisable(GL_STENCIL_TEST);
 }
+
+void OpenGLDevice::setStencilFunc(StencilFunc func, int ref, uint32_t mask) {
+    auto toGL = [](StencilFunc f) -> GLenum {
+        switch (f) {
+        case StencilFunc::Never:
+            return GL_NEVER;
+        case StencilFunc::Less:
+            return GL_LESS;
+        case StencilFunc::LessEqual:
+            return GL_LEQUAL;
+        case StencilFunc::Greater:
+            return GL_GREATER;
+        case StencilFunc::GreaterEqual:
+            return GL_GEQUAL;
+        case StencilFunc::Equal:
+            return GL_EQUAL;
+        case StencilFunc::NotEqual:
+            return GL_NOTEQUAL;
+        case StencilFunc::Always:
+            return GL_ALWAYS;
+        }
+        return GL_ALWAYS;
+    };
+    glStencilFunc(toGL(func), ref, mask);
+}
+
+void OpenGLDevice::setStencilOp(StencilOp stencilFail, StencilOp depthFail,
+                                StencilOp depthPass) {
+    auto toGL = [](StencilOp op) -> GLenum {
+        switch (op) {
+        case StencilOp::Keep:
+            return GL_KEEP;
+        case StencilOp::Zero:
+            return GL_ZERO;
+        case StencilOp::Replace:
+            return GL_REPLACE;
+        case StencilOp::IncrementClamp:
+            return GL_INCR;
+        case StencilOp::DecrementClamp:
+            return GL_DECR;
+        case StencilOp::Invert:
+            return GL_INVERT;
+        case StencilOp::IncrementWrap:
+            return GL_INCR_WRAP;
+        case StencilOp::DecrementWrap:
+            return GL_DECR_WRAP;
+        }
+        return GL_KEEP;
+    };
+    glStencilOp(toGL(stencilFail), toGL(depthFail), toGL(depthPass));
+}
+
+void OpenGLDevice::setStencilWriteMask(uint32_t mask) { glStencilMask(mask); }
 
 void OpenGLDevice::setPolygonMode(PolygonMode mode) {
     GLenum glMode;

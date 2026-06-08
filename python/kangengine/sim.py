@@ -139,6 +139,7 @@ class KangSimWorld:
         self.commands: dict[tuple[int, int], CommandBuffer] = {}
         self.resets: dict[tuple[int, int], ResetBuffer] = {}
         self.body_forces: dict[tuple[int, int], np.ndarray] = {}
+        self.body_force_positions: dict[tuple[int, int], np.ndarray] = {}
         self._pending_reset_keys: set[tuple[int, int]] = set()
         self._active_body_force_keys: set[tuple[int, int]] = set()
         self._mjcf_cache: dict[tuple[str, float, str], object] = {}
@@ -173,6 +174,9 @@ class KangSimWorld:
         self.resets[key] = ResetBuffer()
         self.body_forces[key] = np.zeros(
             (articulation.num_links(), 3), dtype=np.float32
+        )
+        self.body_force_positions[key] = np.full(
+            (articulation.num_links(), 3), np.nan, dtype=np.float32
         )
         return record
 
@@ -226,6 +230,9 @@ class KangSimWorld:
         self.commands[key] = CommandBuffer(ControlMode.NONE)
         self.resets[key] = ResetBuffer()
         self.body_forces[key] = np.zeros((len(body_names), 3), dtype=np.float32)
+        self.body_force_positions[key] = np.full(
+            (len(body_names), 3), np.nan, dtype=np.float32
+        )
         return record
 
     def add_mjcf_articulation(
@@ -392,26 +399,70 @@ class KangSimWorld:
                 self._active_body_force_keys.add(key)
             elif not np.any(forces):
                 self._active_body_force_keys.discard(key)
+            self.body_force_positions[key][body_idx].fill(np.nan)
+
+    def set_body_force_at_position(
+        self,
+        env_id: int | None,
+        obj_id: int,
+        body_id: int,
+        force,
+        position,
+    ):
+        env_ids = range(self.num_envs) if env_id is None else [int(env_id)]
+        for eid in env_ids:
+            key = (eid, int(obj_id))
+            forces = self.body_forces[key]
+            positions = self.body_force_positions[key]
+            body_idx = int(body_id)
+            if body_idx < 0 or body_idx >= forces.shape[0]:
+                raise IndexError(
+                    f"body_id {body_idx} out of range for env={eid}, obj={obj_id}"
+                )
+            forces[body_idx] = _as_float_array(force).reshape(3)
+            positions[body_idx] = _as_float_array(position).reshape(3)
+            if np.any(forces[body_idx]):
+                self._active_body_force_keys.add(key)
+            elif not np.any(forces):
+                self._active_body_force_keys.discard(key)
+                positions.fill(np.nan)
 
     def apply_body_forces(self):
         if not self._active_body_force_keys:
             return
         for key in self._active_body_force_keys:
             forces = self.body_forces[key]
-            for body_id, force in enumerate(forces):
-                if np.any(force):
-                    if key in self.articulations:
-                        self.articulations[key].articulation.add_link_force(
-                            int(body_id), force
+            active_body_ids = np.flatnonzero(np.any(forces != 0.0, axis=1))
+            if active_body_ids.size == 0:
+                continue
+            positions = self.body_force_positions[key]
+            articulation = self.articulations.get(key)
+            rigid = self.rigids.get(key)
+            if articulation is None and rigid is None:
+                continue
+            for body_id in active_body_ids:
+                force = forces[body_id]
+                position = positions[body_id]
+                has_position = np.all(np.isfinite(position))
+                if articulation is not None:
+                    if has_position:
+                        articulation.articulation.add_link_force_at_position(
+                            int(body_id), force, position
                         )
-                    elif key in self.rigids:
-                        self.rigids[key].rigid.add_force(force)
+                    else:
+                        articulation.articulation.add_link_force(int(body_id), force)
+                elif rigid is not None:
+                    if has_position:
+                        rigid.rigid.add_force_at_position(force, position)
+                    else:
+                        rigid.rigid.add_force(force)
 
     def clear_body_forces(self):
         if not self._active_body_force_keys:
             return
         for key in self._active_body_force_keys:
             self.body_forces[key].fill(0.0)
+            self.body_force_positions[key].fill(np.nan)
         self._active_body_force_keys.clear()
 
     def step(self, substeps: int = 1, refresh: bool = True, apply_commands: bool = True):
@@ -535,6 +586,8 @@ class KangSimWorld:
         self.rigids.clear()
         self.commands.clear()
         self.resets.clear()
+        self.body_forces.clear()
+        self.body_force_positions.clear()
         self.physics = None
         self._pending_reset_keys.clear()
         self._active_body_force_keys.clear()

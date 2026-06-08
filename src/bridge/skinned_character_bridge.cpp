@@ -39,8 +39,7 @@ glm::vec4 diffuseColorFromMaterial(const Asset::FBXMeshMetadata& mesh,
     return glm::vec4(color[0], color[1], color[2], color[3]);
 }
 
-std::string
-diffuseTexturePathFromMaterial(const Asset::FBXMeshMetadata& mesh) {
+std::string diffuseTexturePathFromMaterial(const Asset::FBXMeshMetadata& mesh) {
     const int idx = mesh.primaryMaterialIndex;
     if (idx < 0 || idx >= static_cast<int>(mesh.materials.size()))
         return {};
@@ -68,8 +67,8 @@ void validateBoneSlots(const SkinnedCharacterBridge::MeshBinding& mesh,
     for (size_t slot = 0; slot < mesh.boneNodeIndices.size(); ++slot) {
         const int node = mesh.boneNodeIndices[slot];
         if (node < 0 || node >= static_cast<int>(motionNodeCount)) {
-            const std::string boneName =
-                slot < mesh.boneNames.size() ? mesh.boneNames[slot]
+            const std::string boneName = slot < mesh.boneNames.size()
+                                             ? mesh.boneNames[slot]
                                              : std::to_string(slot);
             throw std::runtime_error(
                 "SkinnedCharacterBridge bone '" + boneName +
@@ -80,10 +79,11 @@ void validateBoneSlots(const SkinnedCharacterBridge::MeshBinding& mesh,
 
 } // namespace
 
-SkinnedCharacterBridge SkinnedCharacterBridge::fromFBX(
-    App* app, Backend::Shader* shader, const std::string& fbxPath,
-    const std::string& primBasePath, int clipIndex, float fps, float scale,
-    bool useMaterials) {
+SkinnedCharacterBridge
+SkinnedCharacterBridge::fromFBX(App* app, Backend::Shader* shader,
+                                const std::string& fbxPath,
+                                const std::string& primBasePath, int clipIndex,
+                                float fps, float scale, bool useMaterials) {
     return fromFBXWithBind(app, shader, fbxPath, fbxPath, primBasePath,
                            clipIndex, fps, scale, useMaterials);
 }
@@ -93,7 +93,8 @@ SkinnedCharacterBridge SkinnedCharacterBridge::fromFBXWithBind(
     const std::string& bindFbxPath, const std::string& primBasePath,
     int clipIndex, float fps, float scale, bool useMaterials) {
     if (!app)
-        throw std::runtime_error("SkinnedCharacterBridge::fromFBX requires App");
+        throw std::runtime_error(
+            "SkinnedCharacterBridge::fromFBX requires App");
     if (!shader)
         throw std::runtime_error(
             "SkinnedCharacterBridge::fromFBX requires Shader");
@@ -102,13 +103,12 @@ SkinnedCharacterBridge SkinnedCharacterBridge::fromFBXWithBind(
     bridge._app = app;
     Asset::FBXCharacterData character =
         (motionFbxPath == bindFbxPath)
-            ? Asset::FBXLoader::loadCharacter(
-                  motionFbxPath, clipIndex, fps, scale)
+            ? Asset::FBXLoader::loadCharacter(motionFbxPath, clipIndex, fps,
+                                              scale)
             : Asset::FBXLoader::loadCharacterWithBind(
                   motionFbxPath, bindFbxPath, clipIndex, fps, scale);
     bridge._motion = std::move(character.motion);
-    std::vector<Asset::FBXSkinnedMeshInfo>& meshes =
-        character.skinnedMeshes;
+    std::vector<Asset::FBXSkinnedMeshInfo>& meshes = character.skinnedMeshes;
     bridge._meshes.reserve(meshes.size());
 
     static const glm::vec4 palette[] = {
@@ -125,7 +125,8 @@ SkinnedCharacterBridge SkinnedCharacterBridge::fromFBXWithBind(
     whiteDesc.channels = 4;
     whiteDesc.data = whitePixel.data();
     whiteDesc.name = "fbx_white_fallback";
-    bridge._whiteTexture = app->getGraphicsDevice()->createTexture(whiteDesc);
+    bridge._fallbackWhiteTexture =
+        app->getGraphicsDevice()->createTexture(whiteDesc);
     shader->use();
     shader->setInt("uTexture", 0);
 
@@ -139,9 +140,9 @@ SkinnedCharacterBridge SkinnedCharacterBridge::fromFBXWithBind(
             palette[static_cast<size_t>(i) %
                     (sizeof(palette) / sizeof(palette[0]))];
         const glm::vec4 color =
-            useMaterials ? diffuseColorFromMaterial(imported.metadata,
-                                                    fallbackColor)
-                         : fallbackColor;
+            useMaterials
+                ? diffuseColorFromMaterial(imported.metadata, fallbackColor)
+                : fallbackColor;
 
         MeshBinding binding;
         binding.name = imported.metadata.name;
@@ -153,35 +154,36 @@ SkinnedCharacterBridge SkinnedCharacterBridge::fromFBXWithBind(
         binding.boneMatrices.assign(binding.inverseBindMatrices.size(),
                                     glm::mat4(1.0f));
         binding.baseColor = color;
-        binding.diffuseTexture = bridge._whiteTexture.get();
 
         App::MeshPrimResult result = app->addSkinnedMeshPrim(
-            shader, path, std::move(imported.skinnedMeshData),
-            glm::vec3(0.0f), color, true);
+            shader, path, std::move(imported.skinnedMeshData), glm::vec3(0.0f),
+            color, true);
         binding.prim = result.prim;
         binding.handle = result.handle;
 
         const std::string texturePath =
             useMaterials ? diffuseTexturePathFromMaterial(imported.metadata)
                          : "";
+        Backend::Texture* diffuseTexture = bridge._fallbackWhiteTexture.get();
         if (!texturePath.empty() && std::filesystem::exists(texturePath)) {
             bridge._textures.push_back(
                 app->getGraphicsDevice()->createTexture(texturePath, true));
-            binding.diffuseTexture = bridge._textures.back().get();
+            diffuseTexture = bridge._textures.back().get();
         }
         const std::string normalTexturePath =
             useMaterials ? normalTexturePathFromMaterial(imported.metadata)
                          : "";
+        Backend::Texture* normalTexture = nullptr;
         if (!normalTexturePath.empty() &&
             std::filesystem::exists(normalTexturePath)) {
             bridge._textures.push_back(app->getGraphicsDevice()->createTexture(
                 normalTexturePath, true));
-            binding.normalTexture = bridge._textures.back().get();
+            normalTexture = bridge._textures.back().get();
         }
-        if (binding.handle != InvalidHandle && binding.diffuseTexture)
-            app->setShapeTexture(binding.handle, binding.diffuseTexture, 0);
-        if (binding.handle != InvalidHandle && binding.normalTexture)
-            app->setShapeTexture(binding.handle, binding.normalTexture, 5);
+        if (binding.handle != InvalidHandle && diffuseTexture)
+            app->setShapeTexture(binding.handle, diffuseTexture, 0);
+        if (binding.handle != InvalidHandle && normalTexture)
+            app->setShapeTexture(binding.handle, normalTexture, 5);
 
         bridge._meshes.push_back(std::move(binding));
     }

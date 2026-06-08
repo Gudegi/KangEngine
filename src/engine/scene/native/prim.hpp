@@ -36,6 +36,15 @@ enum class PrimType {
     Light         // Light
 };
 
+// ray pick같은 걸로 조작할 때 정책
+enum class ManipulationPolicy {
+    Inherit, // Use the nearest ancestor policy, or Self if none exists.
+    Self,    // Manipulate this prim.
+    Parent,  // Manipulate this prim's parent.
+    Root,    // Manipulate the prim that declares this policy for its subtree.
+    Disabled // Do not allow interactive manipulation.
+};
+
 // Scene Graph Node (USD Prim처럼)
 class Prim {
   private:
@@ -55,6 +64,7 @@ class Prim {
                              // you use proper PrimType
     bool _visible = true;    // runtime show/hide toggle(just render visibility)
     bool _active = true;     // Scene traversal / update participation
+    ManipulationPolicy _manipulationPolicy = ManipulationPolicy::Inherit;
 
     bool _localDirty = true;
     bool _worldDirty = true;
@@ -117,6 +127,11 @@ class Prim {
     static MeshData createConeData(float radius, float height,
                                    UpAxis upAxis = UpAxis::Y,
                                    int segments = 32);
+
+    // Creates an Xform prim that manipulates as one group when any child is
+    // picked.
+    static Prim* defineManipulationGroup(SceneBackend* scene,
+                                         const std::string& path);
 
     // Scene geometry axes: creates three colored arrow mesh prims that behave
     // like normal scene objects.
@@ -190,6 +205,14 @@ class Prim {
     bool isActiveInHierarchy() const;
     bool isVisibleInHierarchy() const;
     void setActive(bool a);
+    ManipulationPolicy getManipulationPolicy() const {
+        return _manipulationPolicy;
+    }
+    void setManipulationPolicy(ManipulationPolicy policy) {
+        _manipulationPolicy = policy;
+    }
+    Prim* resolveManipulationTarget();
+    const Prim* resolveManipulationTarget() const;
 
     void setXformOpOrder(const std::vector<std::string>& order) {
         this->setAttribute("xformOpOrder", order);

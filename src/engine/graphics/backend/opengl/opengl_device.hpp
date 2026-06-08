@@ -200,9 +200,14 @@ class OpenGLDevice : public GraphicsDevice {
     // Render State
     void setDepthTest(bool enable) override;
     void setDepthWrite(bool enable) override;
+    void setColorWrite(bool enable) override;
     void setBlend(bool enable) override;
     void setBlendFunc(BlendFactor src, BlendFactor dst) override;
     void setStencilTest(bool enable) override;
+    void setStencilFunc(StencilFunc func, int ref, uint32_t mask) override;
+    void setStencilOp(StencilOp stencilFail, StencilOp depthFail,
+                      StencilOp depthPass) override;
+    void setStencilWriteMask(uint32_t mask) override;
     void setPolygonMode(PolygonMode mode) override;
     void setLineWidth(float width) override;
     void setCullFace(bool enable) override;

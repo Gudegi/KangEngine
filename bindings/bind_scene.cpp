@@ -50,6 +50,14 @@ void bind_scene(py::module& m) {
         .value("Light", KE::Scene::PrimType::Light)
         .export_values();
 
+    py::enum_<KE::Scene::ManipulationPolicy>(scene, "ManipulationPolicy")
+        .value("Inherit", KE::Scene::ManipulationPolicy::Inherit)
+        .value("Self", KE::Scene::ManipulationPolicy::Self)
+        .value("Parent", KE::Scene::ManipulationPolicy::Parent)
+        .value("Root", KE::Scene::ManipulationPolicy::Root)
+        .value("Disabled", KE::Scene::ManipulationPolicy::Disabled)
+        .export_values();
+
     // Prim class
     py::class_<KE::Scene::Prim>(scene, "Prim")
         .def(py::init<const std::string&, KE::Scene::PrimType,
@@ -124,6 +132,9 @@ void bind_scene(py::module& m) {
             },
             py::arg("radius"), py::arg("height"),
             py::arg("up_axis") = KE::UpAxis::Y, py::arg("segments") = 32)
+        .def_static("define_manipulation_group",
+                    &KE::Scene::Prim::defineManipulationGroup,
+                    py::return_value_policy::reference)
         // Transform ops
         .def("set_local_translation", &KE::Scene::Prim::setLocalTranslation)
         .def("set_local_scale", &KE::Scene::Prim::setLocalScale)
@@ -152,6 +163,13 @@ void bind_scene(py::module& m) {
         .def("is_active", &KE::Scene::Prim::isActive)
         .def("set_active", &KE::Scene::Prim::setActive)
         .def("is_active_in_hierarchy", &KE::Scene::Prim::isActiveInHierarchy)
+        .def("get_manipulation_policy",
+             &KE::Scene::Prim::getManipulationPolicy)
+        .def("set_manipulation_policy",
+             &KE::Scene::Prim::setManipulationPolicy)
+        .def("resolve_manipulation_target",
+             py::overload_cast<>(&KE::Scene::Prim::resolveManipulationTarget),
+             py::return_value_policy::reference)
         // setAttribute with specific types
         .def("set_attribute_vec3",
              [](KE::Scene::Prim& self, const std::string& name,

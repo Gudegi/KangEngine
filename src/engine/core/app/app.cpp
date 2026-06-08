@@ -14,6 +14,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 #include <chrono>
+#include <cmath>
 #include <cstring>
 #include <ctime>
 #include <exception>
@@ -87,6 +88,7 @@ struct App::IO {
     double deltaMouseY = 0.0;
     bool isHKeyPressed = false;
     bool isScreenshotKeyPressed = false; // t
+    bool isEscKeyPressed = false;
     bool isSHIFTKeyPressed = false;
     bool isPickMode = false; // left click + shift
 };
@@ -259,7 +261,20 @@ void App::renderFrameOnce() {
             _mousePickRequested = false;
             if (_lastRayPickResult.hit)
                 _selectedRayPickResult = _lastRayPickResult;
+            if (_interactionMode == InteractionMode::Force &&
+                _lastRayPickResult.hit) {
+                _forceDragActive = true;
+                _forceDragPick = _lastRayPickResult;
+                _forceDragPlanePoint = _lastRayPickResult.position;
+                _forceDragPlaneNormal = _camera.getCameraLookDir();
+                onForceDragBegin(_forceDragPick, _forceDragPlanePoint);
+            }
             onRayPicked(_lastRayPickResult);
+        }
+        if (_forceDragActive) {
+            glm::vec3 target;
+            if (forceDragTarget(getMouseRay(), target))
+                onForceDragUpdate(_forceDragPick, target);
         }
         if (_io->isPickMode) {
             _lastRayPickResult = pickMouse();
@@ -370,8 +385,10 @@ void App::coreRender() {
         _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
     }
 
-    if (_rasterizer)
-        _rasterizer->render(_viewMatrix, _projectionMatrix);
+    if (_rasterizer) {
+        _rasterizer->render(_viewMatrix, _projectionMatrix,
+                            &_selectedRayPickResult);
+    }
 }
 
 void App::checkError() { _graphicsDevice->checkError(); }
@@ -385,10 +402,9 @@ MeshHandle App::addShape(Backend::Shader* shader, Scene::Prim* prim,
 MeshHandle App::addSkinnedShape(Backend::Shader* shader, Scene::Prim* prim,
                                 const Scene::SkinnedMeshData& skinnedMesh,
                                 TransformSource transformSource) {
-    return _rasterizer
-               ? _rasterizer->addSkinnedShape(shader, prim, skinnedMesh,
-                                              transformSource)
-               : InvalidHandle;
+    return _rasterizer ? _rasterizer->addSkinnedShape(shader, prim, skinnedMesh,
+                                                      transformSource)
+                       : InvalidHandle;
 }
 
 MeshHandle App::addShape(PhongMaterial* material, Scene::Prim* prim,
@@ -882,6 +898,11 @@ void App::mouseButtonCallback(GLFWwindow* window, int button, int action,
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
         _io->isMouseLeftClicked = false;
         _io->isPickMode = false;
+        if (_forceDragActive) {
+            _forceDragActive = false;
+            _forceDragPick = RayPickResult{};
+            onForceDragEnd();
+        }
     }
     if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_PRESS)
         _io->isMouseMiddleClicked = true;
@@ -933,8 +954,14 @@ void App::processInput() {
     glm::vec3 cameraRight = _camera.getCameraRightDir();
     glm::vec3 globalUp = _camera.getUpVector();
 
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
+    bool escPressed = glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS;
+    if (escPressed && !_io->isEscKeyPressed) {
+        if (hasSelection())
+            clearSelection();
+        else
+            glfwSetWindowShouldClose(window, true);
+    }
+    _io->isEscKeyPressed = escPressed;
 
     // look at specifc target or // look at forward direction
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
@@ -1097,18 +1124,35 @@ RayPickResult App::rayPick(const Geometry::Ray& ray) const {
 
 RayPickResult App::pickMouse() { return rayPick(getMouseRay()); }
 
+bool App::forceDragTarget(const Geometry::Ray& ray,
+                          glm::vec3& outTarget) const {
+    const float denom = glm::dot(_forceDragPlaneNormal, ray.direction);
+    if (std::abs(denom) < 1e-6f)
+        return false;
+    const float t =
+        glm::dot(_forceDragPlanePoint - ray.origin, _forceDragPlaneNormal) /
+        denom;
+    if (t < 0.0f)
+        return false;
+    outTarget = ray.getPoint(t);
+    return true;
+}
+
 bool App::getPickTransform(const RayPickResult& result,
                            glm::mat4& outTransform) const {
     if (!result.hit)
         return false;
     if (result.transformSource == TransformSource::SceneGraph && result.prim) {
-        if (!result.prim->isActiveInHierarchy())
+        Scene::Prim* target = result.prim->resolveManipulationTarget();
+        if (!target || !target->isActiveInHierarchy())
             return false;
-        outTransform = result.prim->computeModelMatrix();
+        outTransform = target->computeModelMatrix();
         return true;
     }
-    return getShapeInstanceTransform(result.handle, result.instanceIndex,
-                                     outTransform);
+    // ExternalBuffer transforms are owned by simulation/data streams. They are
+    // pickable, but interactive manipulation should use a domain action such as
+    // drag force instead of writing render instance matrices.
+    return false;
 }
 
 bool App::setPickTransform(const RayPickResult& result,
@@ -1116,17 +1160,21 @@ bool App::setPickTransform(const RayPickResult& result,
     if (!result.hit)
         return false;
     if (result.transformSource == TransformSource::SceneGraph && result.prim) {
-        if (!result.prim->isActiveInHierarchy())
+        Scene::Prim* target = result.prim->resolveManipulationTarget();
+        if (!target || !target->isActiveInHierarchy())
             return false;
-        result.prim->setWorldMatrix(transform);
+        target->setWorldMatrix(transform);
         return true;
     }
-    return setShapeInstanceTransform(result.handle, result.instanceIndex,
-                                     transform);
+    // ExternalBuffer transforms are simulation-owned; do not overwrite them
+    // from the render gizmo.
+    return false;
 }
 
 void App::renderSelectionGizmo() {
     if (!_selectedRayPickResult.hit || _hideUI)
+        return;
+    if (_interactionMode != InteractionMode::Edit)
         return;
 
     glm::mat4 transform(1.0f);
@@ -1141,8 +1189,9 @@ void App::renderSelectionGizmo() {
 
     const glm::mat4 view = _camera.getViewMatrix();
     const glm::mat4 proj = _camera.getProjMatrix();
+    ImGuizmo::OPERATION operation = ImGuizmo::TRANSLATE | ImGuizmo::ROTATE;
     if (ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(proj),
-                             ImGuizmo::TRANSLATE, ImGuizmo::WORLD,
+                             operation, ImGuizmo::WORLD,
                              glm::value_ptr(transform))) {
         setPickTransform(_selectedRayPickResult, transform);
     }

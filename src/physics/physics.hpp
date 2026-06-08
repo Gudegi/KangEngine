@@ -150,6 +150,14 @@ inline glm::mat4 pxToMat4(const PxTransform& t) {
     return m;
 }
 
+inline glm::vec3 pxToVec3(const physx::PxVec3& v) {
+    return glm::vec3(v.x, v.y, v.z);
+}
+
+inline physx::PxVec3 toPxVec3(const glm::vec3& v) {
+    return physx::PxVec3(v.x, v.y, v.z);
+}
+
 } // namespace KE
 
 #endif

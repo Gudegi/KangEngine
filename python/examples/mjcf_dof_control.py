@@ -18,6 +18,7 @@ def package_asset_path(*parts: str) -> str:
 
 def default_mjcf_path() -> Path:
     return Path(package_asset_path("characters", "kw", "kw.xml"))
+    # return Path(package_asset_path("external", "unitree_mujoco", "unitree_robots", "h2", "h2_mujoco.xml"))
 
 
 class MjcfDofControlApp(ke.App):
@@ -63,6 +64,30 @@ class MjcfDofControlApp(ke.App):
         self.contact_force_color = np.array([[1.0, 0.25, 0.05, 1.0]], dtype=np.float32)
         self.empty_vec3 = np.empty((0, 3), dtype=np.float32)
         self.empty_vec4 = np.empty((0, 4), dtype=np.float32)
+        red = ke.ColorLibrary.get(ke.ColorType.RED)
+        magenta = ke.ColorLibrary.get(ke.ColorType.MAGENTA)
+        self.drag_force_line_color = np.array(
+            [[red.r, red.g, red.b, red.a]], dtype=np.float32
+        )
+        self.drag_force_target_color = np.array(
+            [[magenta.r, magenta.g, magenta.b, magenta.a]], dtype=np.float32
+        )
+        self.drag_force_line_starts = np.empty((3, 3), dtype=np.float32)
+        self.drag_force_line_ends = np.empty((3, 3), dtype=np.float32)
+        self.drag_force_up_z = np.array([0.0, 0.0, 1.0], dtype=np.float32)
+        self.drag_force_up_y = np.array([0.0, 1.0, 0.0], dtype=np.float32)
+        self.drag_force_enabled = True
+        self.drag_force_stiffness = 750.0
+        self.drag_force_damping = 75.0
+        self.drag_force_max = 300.0
+        self.drag_force_arrow_scale = 0.003
+        self.show_drag_force_arrow = True
+        self._drag_force_body_id = None
+        self._drag_force_local_anchor = None
+        self._drag_force_target = None
+        self._drag_force_anchor_world = None
+        self._drag_force_vector = None
+        self._clear_drag_force_arrow()
 
         self.configure_camera()
         self.create_shaders()
@@ -134,6 +159,10 @@ class MjcfDofControlApp(ke.App):
         )
         self.visual_body_prims = self.articulation_visual_record.body_prims
         self.visual_body_handles = self.articulation_visual_record.body_handles
+        self._body_id_by_handle = {
+            int(handle): body_id
+            for body_id, handle in enumerate(self.visual_body_handles)
+        }
         # self.collision_body_prims = self.articulation_visual_record.collision_prims
 
         self.num_dofs = self.robot.num_dofs()
@@ -180,6 +209,7 @@ class MjcfDofControlApp(ke.App):
         self.world.step(substeps=0, apply_commands=False)
         self.visual.sync()
         self._update_contact_force_arrows()
+        self._clear_drag_force()
 
     def _animated_targets(self):
         out = np.zeros_like(self.targets)
@@ -202,7 +232,7 @@ class MjcfDofControlApp(ke.App):
             self.paused = not self.paused
         if self.was_key_pressed(keys.R):
             self._reset()
-        if self.was_key_pressed(keys.A):
+        if self.was_key_pressed(keys.Q):
             self.animate = not self.animate
 
         if self.paused:
@@ -223,7 +253,157 @@ class MjcfDofControlApp(ke.App):
         self.world.step(substeps=int(self.step_substeps))
         self.visual.sync()
         self._update_contact_force_arrows()
+        self._update_drag_force_arrow()
         self.checkError()
+
+    def onForceDragBegin(self, result, target):
+        if (
+            not self.drag_force_enabled
+            or not result.hit
+            or result.transform_source != ke.TransformSource.ExternalBuffer
+        ):
+            self._clear_drag_force()
+            return
+
+        body_id = self._body_id_by_handle.get(int(result.handle))
+        if body_id is None:
+            self._clear_drag_force()
+            return
+
+        self._drag_force_body_id = int(body_id)
+        body_state = self._drag_body_state(self._drag_force_body_id)
+        if body_state is None:
+            return
+        body_pos, body_rot, _, _ = body_state
+        hit_pos = self._vec3_to_np(result.position)
+        self._drag_force_local_anchor = self._quat_inverse_rotate_xyzw(
+            body_rot, hit_pos - body_pos
+        )
+        self._drag_force_target = self._vec3_to_np(target)
+        self._apply_drag_force()
+        self._update_drag_force_arrow()
+
+    def onForceDragUpdate(self, result, target):
+        if not self.drag_force_enabled or self._drag_force_body_id is None:
+            self._clear_drag_force()
+            return
+        self._drag_force_target = self._vec3_to_np(target)
+        self._apply_drag_force()
+        self._update_drag_force_arrow()
+
+    def onForceDragEnd(self):
+        self._clear_drag_force()
+
+    def _apply_drag_force(self):
+        if (
+            self._drag_force_body_id is None
+            or self._drag_force_local_anchor is None
+            or self._drag_force_target is None
+        ):
+            return
+        body_state = self._drag_body_state(self._drag_force_body_id)
+        if body_state is None:
+            return
+        body_pos, body_rot, body_vel, body_ang_vel = body_state
+        radius = self._quat_rotate_xyzw(body_rot, self._drag_force_local_anchor)
+        anchor_world = body_pos + radius
+        point_vel = body_vel + np.cross(body_ang_vel, radius)
+        force = (
+            (self._drag_force_target - anchor_world) * float(self.drag_force_stiffness)
+            - point_vel * float(self.drag_force_damping)
+        )
+        norm = float(np.linalg.norm(force))
+        if norm > float(self.drag_force_max) > 0.0:
+            force *= float(self.drag_force_max) / norm
+        self._drag_force_anchor_world = anchor_world.astype(np.float32)
+        self._drag_force_vector = force.astype(np.float32)
+        self.world.set_body_force_at_position(
+            0,
+            self.obj_id,
+            self._drag_force_body_id,
+            force.astype(np.float32),
+            anchor_world.astype(np.float32),
+        )
+
+    def _clear_drag_force_arrow(self):
+        self.clear_debug_lines("/debug/mjcf_drag_force")
+        self.clear_debug_points("/debug/mjcf_drag_force_target")
+
+    def _update_drag_force_arrow(self):
+        if (
+            not self.show_drag_force_arrow
+            or self._drag_force_anchor_world is None
+            or self._drag_force_vector is None
+            or self._drag_force_target is None
+        ):
+            self._clear_drag_force_arrow()
+            return
+
+        start = self._drag_force_anchor_world
+        force = self._drag_force_vector
+        force_len = float(np.linalg.norm(force))
+        if force_len < 1e-5:
+            self._clear_drag_force_arrow()
+            return
+
+        direction = force / force_len
+        end = start + force * float(self.drag_force_arrow_scale)
+        shaft_len = float(np.linalg.norm(end - start))
+        head_len = min(max(shaft_len * 0.25, 0.04), 0.18)
+
+        side = np.cross(direction, self.drag_force_up_z)
+        if np.linalg.norm(side) < 1e-5:
+            side = np.cross(direction, self.drag_force_up_y)
+        side = side / max(float(np.linalg.norm(side)), 1e-8)
+
+        back = end - direction * head_len
+        left = back + side * head_len * 0.45
+        right = back - side * head_len * 0.45
+        self.drag_force_line_starts[0] = start
+        self.drag_force_line_starts[1] = end
+        self.drag_force_line_starts[2] = end
+        self.drag_force_line_ends[0] = end
+        self.drag_force_line_ends[1] = left
+        self.drag_force_line_ends[2] = right
+        self.log_debug_lines(
+            "/debug/mjcf_drag_force",
+            self.drag_force_line_starts,
+            self.drag_force_line_ends,
+            self.drag_force_line_color,
+            3.0,
+        )
+        self.log_debug_points(
+            "/debug/mjcf_drag_force_target",
+            self._drag_force_target.reshape(1, 3),
+            self.drag_force_target_color,
+            10.0,
+        )
+
+    def _drag_body_state(self, body_id: int):
+        body_pos = self._state_array(self.world.state.get_body_pos(self.obj_id)[0])
+        if body_id >= body_pos.shape[0]:
+            self._clear_drag_force()
+            return None
+        body_rot = self._state_array(self.world.state.get_body_rot(self.obj_id)[0])
+        body_vel = self._state_array(self.world.state.get_body_vel(self.obj_id)[0])
+        body_ang_vel = self._state_array(
+            self.world.state.get_body_ang_vel(self.obj_id)[0]
+        )
+        return (
+            body_pos[body_id],
+            body_rot[body_id],
+            body_vel[body_id],
+            body_ang_vel[body_id],
+        )
+
+    def _clear_drag_force(self):
+        if getattr(self, "_drag_force_body_id", None) is not None:
+            self.world.set_body_force(
+                0, self.obj_id, int(self._drag_force_body_id), np.zeros(3, dtype=np.float32)
+            )
+        self._drag_force_body_id = None
+        self._drag_force_local_anchor = None
+        self._drag_force_target = None
 
     def _clear_contact_force_arrows(self):
         if self.contact_force_handle is None:
@@ -297,6 +477,26 @@ class MjcfDofControlApp(ke.App):
     def _vec3_to_np(value) -> np.ndarray:
         return np.array([float(value.x), float(value.y), float(value.z)], dtype=np.float32)
 
+    @staticmethod
+    def _state_array(value) -> np.ndarray:
+        if hasattr(value, "detach"):
+            value = value.detach().cpu().numpy()
+        return np.asarray(value, dtype=np.float32)
+
+    @staticmethod
+    def _quat_rotate_xyzw(quat, vector) -> np.ndarray:
+        q = np.asarray(quat, dtype=np.float32)
+        v = np.asarray(vector, dtype=np.float32)
+        qv = q[:3]
+        t = 2.0 * np.cross(qv, v)
+        return (v + q[3] * t + np.cross(qv, t)).astype(np.float32)
+
+    @classmethod
+    def _quat_inverse_rotate_xyzw(cls, quat, vector) -> np.ndarray:
+        q = np.asarray(quat, dtype=np.float32).copy()
+        q[:3] *= -1.0
+        return cls._quat_rotate_xyzw(q, vector)
+
     def _set_visual_alpha(self, alpha: float):
         color = np.array(self.visual_color, dtype=np.float32).reshape(-1)
         if color.size == 3:
@@ -321,7 +521,7 @@ class MjcfDofControlApp(ke.App):
     def render(self):
         imgui.begin(self.window_title)
         imgui.text(f"State: {'paused' if self.paused else 'running'}")
-        imgui.text("Space: pause/resume    R: reset    A: auto motion")
+        imgui.text("Space: pause/resume    R: reset    Q: auto motion")
         imgui.text(f"Links: {self.robot.num_links()}  DOFs: {self.num_dofs}")
         imgui.text(Path(self.mjcf_path).name)
         imgui.separator()
@@ -348,6 +548,45 @@ class MjcfDofControlApp(ke.App):
             0.0,
             0.02,
         )
+        imgui.separator()
+        changed, self.drag_force_enabled = imgui.checkbox(
+            "Enable drag force",
+            self.drag_force_enabled,
+        )
+        if changed and not self.drag_force_enabled:
+            self._clear_drag_force()
+        changed, self.show_drag_force_arrow = imgui.checkbox(
+            "Show drag force arrow",
+            self.show_drag_force_arrow,
+        )
+        if changed and not self.show_drag_force_arrow:
+            self._clear_drag_force_arrow()
+        _, self.drag_force_stiffness = imgui.slider_float(
+            "drag force stiffness",
+            self.drag_force_stiffness,
+            0.0,
+            1000.0,
+        )
+        _, self.drag_force_damping = imgui.slider_float(
+            "drag force damping",
+            self.drag_force_damping,
+            0.0,
+            80.0,
+        )
+        _, self.drag_force_max = imgui.slider_float(
+            "drag force max",
+            self.drag_force_max,
+            0.0,
+            2000.0,
+        )
+        _, self.drag_force_arrow_scale = imgui.slider_float(
+            "drag force arrow scale",
+            self.drag_force_arrow_scale,
+            0.0005,
+            0.02,
+        )
+        if self._drag_force_body_id is not None:
+            imgui.text(f"Dragging body: {self._drag_force_body_id}")
         imgui.separator()
 
         for i, name in enumerate(self.dof_names):

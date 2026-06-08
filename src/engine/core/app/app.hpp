@@ -33,6 +33,13 @@
 #include "engine/scene/native/prim.hpp"
 namespace KE {
 
+enum class InteractionMode {
+    Inspect, // Pick/hover/debug only.
+    Edit,    // SceneGraph transform gizmo.
+    Force,   // Physics/external-buffer drag force.
+    // IK       // IK target / effector controls.
+};
+
 class App {
   private:
     class GLFWCallbackWrapper { // https://stackoverflow.com/a/41089765
@@ -83,10 +90,16 @@ class App {
     std::unique_ptr<PostProcessor> _postProcessor;
     RayPickResult _lastRayPickResult;
     RayPickResult _selectedRayPickResult;
+    InteractionMode _interactionMode = InteractionMode::Inspect;
+    bool _forceDragActive = false;
+    RayPickResult _forceDragPick;
+    glm::vec3 _forceDragPlanePoint = glm::vec3(0.0f);
+    glm::vec3 _forceDragPlaneNormal = glm::vec3(0.0f, 0.0f, 1.0f);
 
     void registerCallbacks();
     bool writeScreenshotFrame();
     void renderSelectionGizmo();
+    bool forceDragTarget(const Geometry::Ray& ray, glm::vec3& outTarget) const;
     bool getPickTransform(const RayPickResult& result,
                           glm::mat4& outTransform) const;
     bool setPickTransform(const RayPickResult& result,
@@ -128,6 +141,10 @@ class App {
     }
     Rasterizer* getRasterizer() { return _rasterizer.get(); }
     const Rasterizer* getRasterizer() const { return _rasterizer.get(); }
+    InteractionMode getInteractionMode() const { return _interactionMode; }
+    void setInteractionMode(InteractionMode mode) { _interactionMode = mode; }
+    bool hasSelection() const { return _selectedRayPickResult.hit; }
+    void clearSelection() { _selectedRayPickResult = RayPickResult{}; }
     void renderSceneToFramebuffer(Camera& camera, Backend::Framebuffer* target,
                                   int width, int height, bool clear = true);
 
@@ -142,6 +159,11 @@ class App {
     virtual void postRender() {} // 렌더링 이후 마무리
     virtual void onRayPicked(const RayPickResult& result) {}
     virtual void onRayPickHover(const RayPickResult& result) {}
+    virtual void onForceDragBegin(const RayPickResult& result,
+                                  const glm::vec3& target) {}
+    virtual void onForceDragUpdate(const RayPickResult& result,
+                                   const glm::vec3& target) {}
+    virtual void onForceDragEnd() {}
     //////
 
     // Frame rate control
@@ -169,16 +191,16 @@ class App {
         return _rasterizer ? _rasterizer->getShadowFbo() : nullptr;
     }
 
-    MeshHandle addShape(Backend::Shader* shader, Scene::Prim* prim,
-                        TransformSource transformSource =
-                            TransformSource::SceneGraph);
-    MeshHandle addSkinnedShape(Backend::Shader* shader, Scene::Prim* prim,
-                               const Scene::SkinnedMeshData& skinnedMesh,
-                               TransformSource transformSource =
-                                   TransformSource::SceneGraph);
-    MeshHandle addShape(PhongMaterial* material, Scene::Prim* prim,
-                        TransformSource transformSource =
-                            TransformSource::SceneGraph);
+    MeshHandle
+    addShape(Backend::Shader* shader, Scene::Prim* prim,
+             TransformSource transformSource = TransformSource::SceneGraph);
+    MeshHandle addSkinnedShape(
+        Backend::Shader* shader, Scene::Prim* prim,
+        const Scene::SkinnedMeshData& skinnedMesh,
+        TransformSource transformSource = TransformSource::SceneGraph);
+    MeshHandle
+    addShape(PhongMaterial* material, Scene::Prim* prim,
+             TransformSource transformSource = TransformSource::SceneGraph);
     void removePrim(MeshHandle handle, Scene::Prim* prim);
 
     struct MeshPrimDesc {

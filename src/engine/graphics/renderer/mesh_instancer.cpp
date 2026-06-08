@@ -43,12 +43,14 @@ void MeshInstancer::_initMeshData(const Scene::MeshData& mesh) {
         auto buf =
             _device->createBuffer(Backend::BufferType::Vertex,
                                   sizeof(data[0]) * data.size(), data.data());
-        _vao->setVertexBuffer(buf.get());
         Backend::VertexAttribute attr{
             location,        size, Backend::VertexAttributeType::Float, false,
             sizeof(data[0]), 0};
+        Backend::Buffer* rawBuffer = buf.get();
+        _vao->setVertexBuffer(rawBuffer);
         _vao->setVertexAttribute(attr);
         _vbos.push_back(std::move(buf));
+        _vertexBufferBindings.push_back({rawBuffer, attr});
     };
 
     addGeomAttr(uploadMesh->vertices, RendererAttribute::Position, 3);
@@ -77,25 +79,29 @@ void MeshInstancer::_setupSkinningAttribs(
         Backend::BufferType::Vertex,
         sizeof(skinnedMesh.boneIndices[0]) * skinnedMesh.boneIndices.size(),
         skinnedMesh.boneIndices.data());
-    _vao->setVertexBuffer(boneIndexBuffer.get());
     Backend::VertexAttribute boneIndexAttr{
         RendererAttribute::BoneIndices,     4,
         Backend::VertexAttributeType::Int,  false,
         sizeof(skinnedMesh.boneIndices[0]), 0};
+    Backend::Buffer* boneIndexRawBuffer = boneIndexBuffer.get();
+    _vao->setVertexBuffer(boneIndexRawBuffer);
     _vao->setVertexAttribute(boneIndexAttr);
     _vbos.push_back(std::move(boneIndexBuffer));
+    _vertexBufferBindings.push_back({boneIndexRawBuffer, boneIndexAttr});
 
     auto boneWeightBuffer = _device->createBuffer(
         Backend::BufferType::Vertex,
         sizeof(skinnedMesh.boneWeights[0]) * skinnedMesh.boneWeights.size(),
         skinnedMesh.boneWeights.data());
-    _vao->setVertexBuffer(boneWeightBuffer.get());
     Backend::VertexAttribute boneWeightAttr{
         RendererAttribute::BoneWeights,      4,
         Backend::VertexAttributeType::Float, false,
         sizeof(skinnedMesh.boneWeights[0]),  0};
+    Backend::Buffer* boneWeightRawBuffer = boneWeightBuffer.get();
+    _vao->setVertexBuffer(boneWeightRawBuffer);
     _vao->setVertexAttribute(boneWeightAttr);
     _vbos.push_back(std::move(boneWeightBuffer));
+    _vertexBufferBindings.push_back({boneWeightRawBuffer, boneWeightAttr});
 }
 
 void MeshInstancer::init(Backend::GraphicsDevice* device,
@@ -113,6 +119,7 @@ void MeshInstancer::init(Backend::GraphicsDevice* device,
     _initMeshData(mesh);
 
     _vao->unbind();
+    _initOverrideInstanceData();
 }
 
 void MeshInstancer::init(Backend::GraphicsDevice* device,
@@ -132,6 +139,7 @@ void MeshInstancer::init(Backend::GraphicsDevice* device,
     _setupSkinningAttribs(skinnedMesh);
 
     _vao->unbind();
+    _initOverrideInstanceData();
 }
 
 void MeshInstancer::addPrim(Scene::Prim* prim) { _prims.push_back(prim); }
@@ -140,9 +148,11 @@ void MeshInstancer::removePrim(Scene::Prim* prim) {
     _prims.erase(std::remove(_prims.begin(), _prims.end(), prim), _prims.end());
 }
 
-void MeshInstancer::_setupInstanceAttribs() {
+void MeshInstancer::_setupInstanceAttribs(Backend::VertexArray* vao,
+                                          Backend::Buffer* transformBuffer,
+                                          Backend::Buffer* colorBuffer) {
     // Transform mat4: locations 3-6 (4 × vec4, stride = sizeof(mat4))
-    _vao->setVertexBuffer(_transformVBO.get());
+    vao->setVertexBuffer(transformBuffer);
     for (int i = 0; i < 4; i++) {
         Backend::VertexAttribute attr{RendererAttribute::InstanceTransform0 + i,
                                       4,
@@ -151,11 +161,11 @@ void MeshInstancer::_setupInstanceAttribs() {
                                       sizeof(glm::mat4),
                                       (size_t)(i * sizeof(glm::vec4)),
                                       1};
-        _vao->setVertexAttribute(attr);
+        vao->setVertexAttribute(attr);
     }
 
     // Color vec4: location 7
-    _vao->setVertexBuffer(_colorVBO.get());
+    vao->setVertexBuffer(colorBuffer);
     Backend::VertexAttribute colorAttr{RendererAttribute::InstanceColor,
                                        4,
                                        Backend::VertexAttributeType::Float,
@@ -163,7 +173,32 @@ void MeshInstancer::_setupInstanceAttribs() {
                                        sizeof(glm::vec4),
                                        0,
                                        1};
-    _vao->setVertexAttribute(colorAttr);
+    vao->setVertexAttribute(colorAttr);
+}
+
+void MeshInstancer::_setupInstanceAttribs() {
+    _setupInstanceAttribs(_vao.get(), _transformVBO.get(), _colorVBO.get());
+}
+
+void MeshInstancer::_initOverrideInstanceData() {
+    // Selection/outline draws need a one-instance path without rebinding the
+    // main instance VBOs. Reuse the static mesh attributes, but attach separate
+    // transform/color buffers to this override VAO.
+    _overrideVAO = _device->createVertexArray();
+    _overrideVAO->bind();
+    _overrideVAO->setIndexBuffer(_indexBuffer.get());
+    for (const auto& binding : _vertexBufferBindings) {
+        _overrideVAO->setVertexBuffer(binding.buffer);
+        _overrideVAO->setVertexAttribute(binding.attribute);
+    }
+
+    _overrideTransformVBO = _device->createBuffer(
+        Backend::BufferType::DynamicVertex, sizeof(glm::mat4));
+    _overrideColorVBO = _device->createBuffer(
+        Backend::BufferType::DynamicVertex, sizeof(glm::vec4));
+    _setupInstanceAttribs(_overrideVAO.get(), _overrideTransformVBO.get(),
+                          _overrideColorVBO.get());
+    _overrideVAO->unbind();
 }
 
 void MeshInstancer::uploadSkinningMatrices(Backend::Shader* shader) {
@@ -235,6 +270,12 @@ void MeshInstancer::_uploadInstanceData(
                            sizeof(glm::mat4) * _visibleCount);
     if (!colors.empty())
         _colorVBO->setData(colors.data(), sizeof(glm::vec4) * _visibleCount);
+}
+
+void MeshInstancer::_uploadSingleInstanceData(const glm::mat4& transform,
+                                              const glm::vec4& color) {
+    _overrideTransformVBO->setData(&transform, sizeof(glm::mat4));
+    _overrideColorVBO->setData(&color, sizeof(glm::vec4));
 }
 
 void MeshInstancer::_updateTransparency() {
@@ -417,6 +458,29 @@ void MeshInstancer::render() {
     _vao->bind();
     _device->drawIndexedInstanced(_numIndices, _visibleCount);
     _vao->unbind();
+}
+
+void MeshInstancer::renderInstanceOverride(int instanceIndex,
+                                           const glm::vec4& color) {
+    if (instanceIndex < 0 ||
+        instanceIndex >= static_cast<int>(_transforms.size()))
+        return;
+
+    renderInstanceOverride(
+        instanceIndex, _transforms[static_cast<size_t>(instanceIndex)], color);
+}
+
+void MeshInstancer::renderInstanceOverride(int instanceIndex,
+                                           const glm::mat4& transform,
+                                           const glm::vec4& color) {
+    if (instanceIndex < 0 ||
+        instanceIndex >= static_cast<int>(_transforms.size()))
+        return;
+
+    _uploadSingleInstanceData(transform, color);
+    _overrideVAO->bind();
+    _device->drawIndexedInstanced(_numIndices, 1);
+    _overrideVAO->unbind();
 }
 
 } // namespace KE

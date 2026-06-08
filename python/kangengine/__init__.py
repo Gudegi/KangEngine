@@ -27,6 +27,7 @@ Texture = _ke.Texture
 Camera = _ke.Camera
 UpAxis = _ke.UpAxis
 TransformSource = _ke.TransformSource
+InteractionMode = _ke.InteractionMode
 ColorLibrary = _ke.ColorLibrary
 ColorType = _ke.ColorType
 Color = _ke.Color
@@ -79,6 +80,7 @@ __all__ = [
     "Camera",
     "UpAxis",
     "TransformSource",
+    "InteractionMode",
     "vec3",
     "vec2",
     "vec4",

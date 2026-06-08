@@ -2,6 +2,7 @@
 #include "animation/skeleton_state.hpp"
 
 #include <Eigen/Geometry>
+#include <extensions/PxRigidBodyExt.h>
 #include <algorithm>
 #include <stdexcept>
 #include <utility>
@@ -708,6 +709,18 @@ void Articulation::addLinkForce(int linkIndex, const PxVec3& force) {
         return;
 
     _links[linkIndex]->addForce(force, PxForceMode::eFORCE, true);
+    if (_artic->isSleeping())
+        _artic->wakeUp();
+}
+
+void Articulation::addLinkForceAtPosition(int linkIndex, const PxVec3& force,
+                                          const PxVec3& position) {
+    if (!_artic || linkIndex < 0 ||
+        linkIndex >= static_cast<int>(_links.size()) || !_links[linkIndex])
+        return;
+
+    PxRigidBodyExt::addForceAtPos(*_links[linkIndex], force, position,
+                                  PxForceMode::eFORCE, true);
     if (_artic->isSleeping())
         _artic->wakeUp();
 }

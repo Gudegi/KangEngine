@@ -50,14 +50,22 @@ constexpr int Specular = 6;
 class MeshInstancer {
 
   private:
+    struct VertexBufferBinding {
+        Backend::Buffer* buffer = nullptr;
+        Backend::VertexAttribute attribute{};
+    };
+
     Backend::GraphicsDevice* _device = nullptr;
     Backend::Shader* _shader = nullptr;
     PhongMaterial* _material = nullptr;
 
     // Geometry (static) — shared by all instances
     std::unique_ptr<Backend::VertexArray> _vao;
+    std::unique_ptr<Backend::VertexArray> _overrideVAO;
     std::vector<std::unique_ptr<Backend::Buffer>> _vbos;
     std::unique_ptr<Backend::Buffer> _indexBuffer;
+    std::unique_ptr<Backend::Buffer> _overrideTransformVBO;
+    std::unique_ptr<Backend::Buffer> _overrideColorVBO;
     int _numIndices = 0;
 
     // Instance data (dynamic, uploaded each frame)
@@ -83,12 +91,17 @@ class MeshInstancer {
     std::vector<std::pair<Backend::Texture*, int>> _textures;
     std::vector<glm::mat4> _boneMatrices;
     std::vector<Scene::Prim*> _instancePrims;
+    std::vector<VertexBufferBinding> _vertexBufferBindings;
 
     std::vector<Scene::Prim*> _prims;
 
     void _initMeshData(const Scene::MeshData& mesh);
     void _setupSkinningAttribs(const Scene::SkinnedMeshData& skinnedMesh);
+    void _setupInstanceAttribs(Backend::VertexArray* vao,
+                               Backend::Buffer* transformBuffer,
+                               Backend::Buffer* colorBuffer);
     void _setupInstanceAttribs();
+    void _initOverrideInstanceData();
     // Recreate instance VBOs when transform/color capacity grows.
     void _reallocate(int newMax);
     // Cache per-instance world AABBs used by frustum culling/debug stats.
@@ -97,6 +110,8 @@ class MeshInstancer {
     // Upload the currently drawable instance transform/color buffer to GPU.
     void _uploadInstanceData(const std::vector<glm::mat4>& transforms,
                              const std::vector<glm::vec4>& colors);
+    void _uploadSingleInstanceData(const glm::mat4& transform,
+                                   const glm::vec4& color);
     void _updateTransparency();
 
   public:
@@ -152,6 +167,9 @@ class MeshInstancer {
     TransformSource transformSource() const { return _transformSource; }
 
     void render();
+    void renderInstanceOverride(int instanceIndex, const glm::vec4& color);
+    void renderInstanceOverride(int instanceIndex, const glm::mat4& transform,
+                                const glm::vec4& color);
 
     // DoubleSided means the mesh can be seen both back and forward side.
     void setDoubleSided(bool v) { _doubleSided = v; }

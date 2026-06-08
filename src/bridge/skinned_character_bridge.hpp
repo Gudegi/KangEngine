@@ -38,8 +38,6 @@ class SkinnedCharacterBridge {
         std::vector<glm::mat4> inverseBindMatrices;
         std::vector<glm::mat4> boneMatrices;
         glm::vec4 baseColor = glm::vec4(1.0f);
-        Backend::Texture* diffuseTexture = nullptr;
-        Backend::Texture* normalTexture = nullptr;
     };
 
     static SkinnedCharacterBridge fromFBX(
@@ -71,7 +69,7 @@ class SkinnedCharacterBridge {
     std::vector<Animation::Transform> _globalTransforms;
     std::vector<glm::mat4> _globalMatrices;
     std::vector<std::unique_ptr<Backend::Texture>> _textures;
-    std::unique_ptr<Backend::Texture> _whiteTexture;
+    std::unique_ptr<Backend::Texture> _fallbackWhiteTexture;
 };
 
 } // namespace Bridge

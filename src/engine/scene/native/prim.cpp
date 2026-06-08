@@ -150,6 +150,38 @@ bool Prim::isVisibleInHierarchy() const {
 
 void Prim::setActive(bool a) { _active = a; }
 
+Prim* Prim::resolveManipulationTarget() {
+    for (Prim* prim = this; prim; prim = prim->_parent) {
+        switch (prim->_manipulationPolicy) {
+        case ManipulationPolicy::Inherit:
+            break;
+        case ManipulationPolicy::Self:
+            return prim;
+        case ManipulationPolicy::Parent:
+            return prim->_parent ? prim->_parent : prim;
+        case ManipulationPolicy::Root:
+            return prim;
+        case ManipulationPolicy::Disabled:
+            return nullptr;
+        }
+    }
+    return this;
+}
+
+const Prim* Prim::resolveManipulationTarget() const {
+    return const_cast<Prim*>(this)->resolveManipulationTarget();
+}
+
+Prim* Prim::defineManipulationGroup(SceneBackend* scene,
+                                    const std::string& path) {
+    if (!scene)
+        return nullptr;
+    Prim* prim = scene->definePrim(path, PrimType::Xform);
+    if (prim)
+        prim->setManipulationPolicy(ManipulationPolicy::Root);
+    return prim;
+}
+
 MeshData Prim::createSquareData(float scale) { return createCubeData(scale); }
 
 MeshData Prim::createCubeData(float scale) {
@@ -583,6 +615,7 @@ std::vector<Prim*> Prim::defineCoordinateAxes(SceneBackend* scene,
 
     std::vector<Prim*> result;
     result.reserve(3);
+    defineManipulationGroup(scene, basePath);
     for (const auto& axis : axes) {
         auto meshData = std::make_shared<MeshData>(
             createArrowData(safeRadius, shaftHeight, axis.axis, capRadius,

@@ -31,6 +31,12 @@ void RendererDebugPanel::buildPanel() {
 
     ImGui::Begin(name().c_str());
     ImGui::Checkbox("Wireframe", &_app->_renderWireframe);
+    const char* interactionLabels[] = {"Inspect", "Edit", "Force"};
+    int interactionMode = static_cast<int>(_app->getInteractionMode());
+    if (ImGui::Combo("Interaction Mode", &interactionMode, interactionLabels,
+                     3)) {
+        _app->setInteractionMode(static_cast<InteractionMode>(interactionMode));
+    }
     ImGui::SliderFloat("GammaCorrection", &_app->_gamma, 0.f, 5.f);
     ImGui::DragFloat("Camera Move Speed", &_app->_cameraMoveSpeed, 0.2f, 0.0f,
                      500.0f, "%.2f");

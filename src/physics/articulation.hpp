@@ -103,6 +103,8 @@ class Articulation {
                      const std::vector<float>& velocities);
     void setJointForces(const std::vector<float>& forces);
     void addLinkForce(int linkIndex, const PxVec3& force);
+    void addLinkForceAtPosition(int linkIndex, const PxVec3& force,
+                                const PxVec3& position);
     void setKPs(const std::vector<float>& kps);
     const std::vector<float>& getKPs() const { return _KPs; }
     void setKDs(const std::vector<float>& kds);

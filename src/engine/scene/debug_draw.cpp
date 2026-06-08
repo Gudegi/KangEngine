@@ -57,8 +57,8 @@ void validateLineInputs(const char* functionName,
 }
 
 void validateRawLineInputs(const char* functionName, const float* starts,
-                           const float* ends, const float* colors,
-                           size_t count, size_t colorCount) {
+                           const float* ends, const float* colors, size_t count,
+                           size_t colorCount) {
     if (count > 0 && (!starts || !ends)) {
         throw std::invalid_argument(std::string(functionName) +
                                     " requires non-null starts and ends when "

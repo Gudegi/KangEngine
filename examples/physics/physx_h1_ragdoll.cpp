@@ -17,7 +17,9 @@
 
 #include "kangEngine.hpp"
 #include "foundation/Px.h"
+#include "physics/force_drag_controller.hpp"
 #include <glm/glm.hpp>
+#include <glm/geometric.hpp>
 #include <imgui.h>
 #include <algorithm>
 #include <memory>
@@ -43,13 +45,17 @@ class H1RagdollApp : public App {
     PhysicsWorld physics{PhysicsConfig::zUp()};
     Articulation artic;
     Bridge::PhysicsBridge physicsBridge;
+    ForceDragController forceDrag;
+    ForceDragConfig forceDragConfig;
 
     std::vector<float> targets;
+    std::vector<MeshHandle> bodyHandles;
     MeshHandle contactArrowHandle = InvalidHandle;
 
     float spawnHeightOffset = 1.5f;
     float contactImpulseScale = 0.08f;
     float contactMaxArrowLength = 0.6f;
+    float dragForceArrowScale = 0.003f;
 
     float kp = 0.f;
     float kd = 5.f;
@@ -58,6 +64,7 @@ class H1RagdollApp : public App {
     bool rWasDown = false;
     bool showCollision = false;
     bool showContacts = true;
+    bool showDragForceArrow = true;
     // -----------------------------------------------------------------------
     void setup() override {
         auto commonVSPath = KE::getAssetPath("shaders/common.vs");
@@ -111,8 +118,11 @@ class H1RagdollApp : public App {
 
         robot = SkeletonBridge::fromData(mjcfData, getScene());
         physicsBridge.add(artic, robot);
+        bodyHandles.clear();
+        bodyHandles.reserve(robot.bodyPrims().size());
         for (auto* prim : robot.bodyPrims())
-            addShape(commonShader.get(), prim);
+            bodyHandles.push_back(addShape(commonShader.get(), prim));
+        forceDrag.registerArticulation(artic, bodyHandles);
 
         auto colPrims = physicsBridge.addCollisionVisuals(artic, getScene());
         for (auto* p : colPrims)
@@ -127,6 +137,62 @@ class H1RagdollApp : public App {
 
         reset();
         checkError();
+    }
+
+    void onForceDragBegin(const RayPickResult& result,
+                          const glm::vec3& target) override {
+        forceDrag.begin(result, target);
+        updateDragForceArrow();
+    }
+
+    void onForceDragUpdate(const RayPickResult&,
+                           const glm::vec3& target) override {
+        forceDrag.update(target);
+        updateDragForceArrow();
+    }
+
+    void onForceDragEnd() override {
+        forceDrag.end();
+        clearDebugLines("/debug/drag_force");
+        clearDebugPoints("/debug/drag_force_target");
+    }
+
+    void updateDragForceArrow() {
+        if (!showDragForceArrow || !forceDrag.active()) {
+            clearDebugLines("/debug/drag_force");
+            clearDebugPoints("/debug/drag_force_target");
+            return;
+        }
+
+        const glm::vec3 start = forceDrag.lastAnchorPosition();
+        const glm::vec3 force = forceDrag.lastForce();
+        const float forceLen = glm::length(force);
+        if (forceLen < 1e-5f) {
+            clearDebugLines("/debug/drag_force");
+            return;
+        }
+
+        const glm::vec3 dir = force / forceLen;
+        const glm::vec3 end = start + force * dragForceArrowScale;
+        const float shaftLen = glm::length(end - start);
+        const float headLen = std::clamp(shaftLen * 0.25f, 0.04f, 0.18f);
+
+        glm::vec3 side = glm::cross(dir, glm::vec3(0.0f, 0.0f, 1.0f));
+        if (glm::length(side) < 1e-5f)
+            side = glm::cross(dir, glm::vec3(0.0f, 1.0f, 0.0f));
+        side = glm::normalize(side);
+
+        const glm::vec3 back = end - dir * headLen;
+        const glm::vec3 left = back + side * headLen * 0.45f;
+        const glm::vec3 right = back - side * headLen * 0.45f;
+        const auto red = ColorLibrary::get(ColorType::RED);
+        const glm::vec4 arrowColor(red.r, red.g, red.b, 1.0f);
+        logDebugLines("/debug/drag_force", {start, end, end},
+                      {end, left, right}, {arrowColor}, 3.0f);
+
+        const auto mag = ColorLibrary::get(ColorType::MAGENTA);
+        logDebugPoints("/debug/drag_force_target", {forceDrag.lastTarget()},
+                       {glm::vec4(mag.r, mag.g, mag.b, 1.0f)}, 10.0f);
     }
 
     void reset() {
@@ -152,6 +218,7 @@ class H1RagdollApp : public App {
             physicsBridge.sync();
         }
         updateContactArrows();
+        updateDragForceArrow();
 
         checkError();
     }
@@ -234,6 +301,20 @@ class H1RagdollApp : public App {
         ImGui::SliderFloat("Contact max arrow length", &contactMaxArrowLength,
                            0.05f, 2.0f);
         ImGui::Text("Contacts: %u", physics.numContacts());
+        ImGui::Separator();
+        ImGui::Text("Force drag: select Force mode, then Shift + left drag");
+        ImGui::Checkbox("Show drag force arrow", &showDragForceArrow);
+        if (ImGui::SliderFloat("Drag stiffness", &forceDragConfig.stiffness,
+                               0.0f, 1000.0f) ||
+            ImGui::SliderFloat("Drag damping", &forceDragConfig.damping, 0.0f,
+                               80.0f) ||
+            ImGui::SliderFloat("Drag max force", &forceDragConfig.maxForce,
+                               0.0f, 1500.0f)) {
+            forceDrag.setConfig(forceDragConfig);
+        }
+        ImGui::SliderFloat("Drag arrow scale", &dragForceArrowScale, 0.0005f,
+                           0.02f);
+        ImGui::Text("Dragging: %s", forceDrag.active() ? "yes" : "no");
 
         if (kp >= 1.f) {
             ImGui::Text("Joint targets (rad):");

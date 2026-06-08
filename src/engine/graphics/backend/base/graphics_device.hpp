@@ -35,6 +35,28 @@ enum class PolygonMode { Fill, Line, Point };
 
 enum class CullFaceMode { Front, Back };
 
+enum class StencilFunc {
+    Never,
+    Less,
+    LessEqual,
+    Greater,
+    GreaterEqual,
+    Equal,
+    NotEqual,
+    Always,
+};
+
+enum class StencilOp {
+    Keep,
+    Zero,
+    Replace,
+    IncrementClamp,
+    DecrementClamp,
+    Invert,
+    IncrementWrap,
+    DecrementWrap,
+};
+
 enum class BlendFactor {
     Zero,
     One,
@@ -110,9 +132,14 @@ class GraphicsDevice {
     // Render State
     virtual void setDepthTest(bool enable) = 0;
     virtual void setDepthWrite(bool enable) = 0;
+    virtual void setColorWrite(bool enable) = 0;
     virtual void setBlend(bool enable) = 0;
     virtual void setBlendFunc(BlendFactor src, BlendFactor dst) = 0;
     virtual void setStencilTest(bool enable) = 0;
+    virtual void setStencilFunc(StencilFunc func, int ref, uint32_t mask) = 0;
+    virtual void setStencilOp(StencilOp stencilFail, StencilOp depthFail,
+                              StencilOp depthPass) = 0;
+    virtual void setStencilWriteMask(uint32_t mask) = 0;
     virtual void setPolygonMode(PolygonMode mode) = 0;
     virtual void setLineWidth(float width) = 0;
     virtual void setCullFace(bool enable) = 0;

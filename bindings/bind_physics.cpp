@@ -17,6 +17,7 @@
 #include "engine/scene/scene_backend.hpp"
 #include "physics/articulation.hpp"
 #include "physics/physics.hpp"
+#include <extensions/PxRigidBodyExt.h>
 #endif
 
 namespace py = pybind11;
@@ -129,6 +130,32 @@ void bind_physics(py::module& m) {
                  if (force.size() != 3)
                      throw std::runtime_error("add_force expects force[3]");
                  self.addForce(PxVec3(force[0], force[1], force[2]));
+             })
+        .def("add_force_at_position",
+             [](PxRigidDynamic& self, const FloatArray& force,
+                const FloatArray& position) {
+                 auto f = vec3ArrayView(force, "force");
+                 auto p = vec3ArrayView(position, "position");
+                 if (f.count != 1 || p.count != 1) {
+                     throw py::value_error(
+                         "add_force_at_position expects force[3] and "
+                         "position[3]");
+                 }
+                 PxRigidBodyExt::addForceAtPos(
+                     self, PxVec3(f.data[0], f.data[1], f.data[2]),
+                     PxVec3(p.data[0], p.data[1], p.data[2]));
+             })
+        .def("add_force_at_position",
+             [](PxRigidDynamic& self, const std::vector<float>& force,
+                const std::vector<float>& position) {
+                 if (force.size() != 3 || position.size() != 3) {
+                     throw std::runtime_error(
+                         "add_force_at_position expects force[3] and "
+                         "position[3]");
+                 }
+                 PxRigidBodyExt::addForceAtPos(
+                     self, PxVec3(force[0], force[1], force[2]),
+                     PxVec3(position[0], position[1], position[2]));
              });
 
     // PhysicsWorld (non-copyable, non-movable — Python must keep it alive)
@@ -396,6 +423,37 @@ void bind_physics(py::module& m) {
                     PxVec3(force[0], force[1], force[2]));
             },
             py::arg("link_index"), py::arg("force"))
+        .def(
+            "add_link_force_at_position",
+            [](Articulation& self, int linkIndex, const FloatArray& force,
+               const FloatArray& position) {
+                auto f = vec3ArrayView(force, "force");
+                auto p = vec3ArrayView(position, "position");
+                if (f.count != 1 || p.count != 1) {
+                    throw py::value_error(
+                        "add_link_force_at_position expects force[3] and "
+                        "position[3]");
+                }
+                self.addLinkForceAtPosition(
+                    linkIndex, PxVec3(f.data[0], f.data[1], f.data[2]),
+                    PxVec3(p.data[0], p.data[1], p.data[2]));
+            },
+            py::arg("link_index"), py::arg("force"), py::arg("position"))
+        .def(
+            "add_link_force_at_position",
+            [](Articulation& self, int linkIndex,
+               const std::vector<float>& force,
+               const std::vector<float>& position) {
+                if (force.size() != 3 || position.size() != 3) {
+                    throw std::runtime_error(
+                        "add_link_force_at_position expects force[3] and "
+                        "position[3]");
+                }
+                self.addLinkForceAtPosition(
+                    linkIndex, PxVec3(force[0], force[1], force[2]),
+                    PxVec3(position[0], position[1], position[2]));
+            },
+            py::arg("link_index"), py::arg("force"), py::arg("position"))
         .def("get_kps", &Articulation::getKPs)
         .def("get_kds", &Articulation::getKDs)
         .def("get_effort_limits",
