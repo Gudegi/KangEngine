@@ -54,8 +54,8 @@ std::vector<glm::vec4> skeletonColors(const std::vector<std::string>& names,
 class FbxCharacterCppApp : public App {
   public:
     std::string fbxPath = defaultFbxPath();
-    int clipIndex = 0;
-    float fps = 30.0f;
+    int clipIndex = -1;
+    float fps = -1.0f;
     float importScale = 0.01f;
 
     std::unique_ptr<Backend::Shader> skinnedShader;

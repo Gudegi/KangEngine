@@ -368,16 +368,60 @@ PYBIND11_MODULE(_kangengine, m) {
 
     py::enum_<ColorType>(m, "ColorType")
         .value("WHITE", ColorType::WHITE)
-        .value("RED", ColorType::RED)
-        .value("MAGENTA", ColorType::MAGENTA)
         .value("BLACK", ColorType::BLACK)
+        .value("RED", ColorType::RED)
+        .value("GREEN", ColorType::GREEN)
+        .value("BLUE", ColorType::BLUE)
+        .value("YELLOW", ColorType::YELLOW)
+        .value("CYAN", ColorType::CYAN)
+        .value("MAGENTA", ColorType::MAGENTA)
         .value("ORANGE", ColorType::ORANGE)
+        .value("PURPLE", ColorType::PURPLE)
+        .value("PINK", ColorType::PINK)
+        .value("BROWN", ColorType::BROWN)
+        .value("GRAY", ColorType::GRAY)
+        .value("LIGHT_GRAY", ColorType::LIGHT_GRAY)
+        .value("DARK_GRAY", ColorType::DARK_GRAY)
+        .value("CORAL", ColorType::CORAL)
+        .value("SALMON", ColorType::SALMON)
+        .value("TOMATO", ColorType::TOMATO)
+        .value("CRIMSON", ColorType::CRIMSON)
+        .value("FOREST_GREEN", ColorType::FOREST_GREEN)
         .value("LIME_GREEN", ColorType::LIME_GREEN)
+        .value("SEA_GREEN", ColorType::SEA_GREEN)
+        .value("TEAL", ColorType::TEAL)
+        .value("NAVY", ColorType::NAVY)
+        .value("SKY_BLUE", ColorType::SKY_BLUE)
+        .value("STEEL_BLUE", ColorType::STEEL_BLUE)
         .value("ROYAL_BLUE", ColorType::ROYAL_BLUE)
-        .value("PASTEL_GREEN", ColorType::PASTEL_GREEN);
-    // TODO: If you want to use other colors in colors.hpp,
-    // add like this .value("BLACK", ColorType::BLACK) .value("RED",
-    // ColorType::RED)
+        .value("INDIGO", ColorType::INDIGO)
+        .value("VIOLET", ColorType::VIOLET)
+        .value("ORCHID", ColorType::ORCHID)
+        .value("GOLD", ColorType::GOLD)
+        .value("KHAKI", ColorType::KHAKI)
+        .value("OLIVE", ColorType::OLIVE)
+        .value("MAROON", ColorType::MAROON)
+        .value("BEIGE", ColorType::BEIGE)
+        .value("IVORY", ColorType::IVORY)
+        .value("MINT", ColorType::MINT)
+        .value("LAVENDER", ColorType::LAVENDER)
+        .value("SLATE_GRAY", ColorType::SLATE_GRAY)
+        .value("PASTEL_RED", ColorType::PASTEL_RED)
+        .value("PASTEL_ORANGE", ColorType::PASTEL_ORANGE)
+        .value("PASTEL_YELLOW", ColorType::PASTEL_YELLOW)
+        .value("PASTEL_GREEN", ColorType::PASTEL_GREEN)
+        .value("PASTEL_MINT", ColorType::PASTEL_MINT)
+        .value("PASTEL_CYAN", ColorType::PASTEL_CYAN)
+        .value("PASTEL_BLUE", ColorType::PASTEL_BLUE)
+        .value("PASTEL_PURPLE", ColorType::PASTEL_PURPLE)
+        .value("PASTEL_PINK", ColorType::PASTEL_PINK)
+        .value("PASTEL_ROSE", ColorType::PASTEL_ROSE)
+        .value("PASTEL_PEACH", ColorType::PASTEL_PEACH)
+        .value("PASTEL_LAVENDER", ColorType::PASTEL_LAVENDER)
+        .value("PASTEL_LILAC", ColorType::PASTEL_LILAC)
+        .value("PASTEL_CORAL", ColorType::PASTEL_CORAL)
+        .value("PASTEL_CREAM", ColorType::PASTEL_CREAM)
+        .value("PASTEL_SKY", ColorType::PASTEL_SKY);
 
     py::class_<ColorLibrary>(m, "ColorLibrary")
         .def_static("get", &ColorLibrary::get, py::arg("type"));
@@ -1111,10 +1155,45 @@ py::class_<glm::vec3>(m, "vec3")
             py::arg("app"), py::arg("shader"), py::arg("fbx_path"),
             py::arg("bind_fbx_path") = py::none(),
             py::arg("prim_base_path") = "/fbx_character",
-            py::arg("clip_index") = 0, py::arg("fps") = 30.0f,
+            py::arg("clip_index") = -1, py::arg("fps") = -1.0f,
             py::arg("scale") = 0.01f, py::arg("use_materials") = true)
         .def("apply_time", &Bridge::SkinnedCharacterBridge::applyTime,
              py::arg("time"), py::arg("loop") = true)
+        .def(
+            "apply_pose",
+            [](Bridge::SkinnedCharacterBridge& self,
+               py::array_t<float, py::array::c_style | py::array::forcecast>
+                   rootTranslation,
+               py::array_t<float, py::array::c_style | py::array::forcecast>
+                   localRotationsWxyz) {
+                py::buffer_info rootInfo = rootTranslation.request();
+                if (rootInfo.size != 3) {
+                    throw py::value_error(
+                        "root_translation expected shape [3]");
+                }
+                const float* root = static_cast<const float*>(rootInfo.ptr);
+
+                py::buffer_info rotInfo = localRotationsWxyz.request();
+                const int joints = self.motion().numJoints();
+                if (!((rotInfo.ndim == 2 && rotInfo.shape[0] == joints &&
+                       rotInfo.shape[1] == 4) ||
+                      (rotInfo.ndim == 1 && rotInfo.shape[0] == joints * 4))) {
+                    throw py::value_error(
+                        "local_rotations_wxyz expected shape [num_joints, 4] "
+                        "or flat [num_joints * 4]");
+                }
+                const float* q = static_cast<const float*>(rotInfo.ptr);
+                std::vector<Eigen::Quaternionf> rotations;
+                rotations.reserve(static_cast<size_t>(joints));
+                for (int i = 0; i < joints; ++i) {
+                    const float* p = q + i * 4;
+                    rotations.emplace_back(p[0], p[1], p[2], p[3]);
+                }
+
+                return self.applyPose(
+                    Eigen::Vector3f(root[0], root[1], root[2]), rotations);
+            },
+            py::arg("root_translation"), py::arg("local_rotations_wxyz"))
         .def("set_visible", &Bridge::SkinnedCharacterBridge::setVisible,
              py::arg("visible"))
         .def("set_color", &Bridge::SkinnedCharacterBridge::setColor,

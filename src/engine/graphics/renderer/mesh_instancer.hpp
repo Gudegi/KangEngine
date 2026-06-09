@@ -39,6 +39,7 @@ constexpr int Tangent = 10;
 namespace RendererTextureSlot {
 
 constexpr int Diffuse = 0;
+// 1 ~ 4 slots are used as shadowMap(CSM)
 constexpr int Normal = 5;
 constexpr int Specular = 6;
 

@@ -328,6 +328,34 @@ clipInfosFromScene(const ofbx::IScene& scene) {
     return clips;
 }
 
+int resolveClipIndex(const std::vector<FBXAnimationClipInfo>& clips,
+                     int requestedClipIndex) {
+    // Set the longest clip as default
+    if (clips.empty()) {
+        throw std::runtime_error("FBX file has no animation clips");
+    }
+
+    if (requestedClipIndex >= 0) {
+        if (requestedClipIndex >= static_cast<int>(clips.size())) {
+            throw std::runtime_error(fmt::format(
+                "FBX clip index {} is out of range [0, {})", requestedClipIndex,
+                static_cast<int>(clips.size())));
+        }
+        return requestedClipIndex;
+    }
+
+    int longestIndex = 0;
+    double longestDuration = clips[0].endTime - clips[0].startTime;
+    for (int i = 1; i < static_cast<int>(clips.size()); ++i) {
+        const double duration = clips[i].endTime - clips[i].startTime;
+        if (duration > longestDuration) {
+            longestDuration = duration;
+            longestIndex = i;
+        }
+    }
+    return longestIndex;
+}
+
 FBXSkeletonPoseSample sampleSkeletonPoseFromScene(
     const ofbx::IScene& scene, const std::vector<const ofbx::Object*>& ordered,
     double time, int clipIndex, float scale, const std::string& sourceName) {
@@ -520,10 +548,10 @@ std::string materialNameForMeshPartition(const ofbx::Mesh& mesh,
     if (partitionIdx < 0 || partitionIdx >= mesh.getMaterialCount())
         return {};
     const ofbx::Material* material = mesh.getMaterial(partitionIdx);
-    return material ? safeNameFragment(std::string(material->name),
-                                       "material_" +
-                                           std::to_string(partitionIdx))
-                    : "material_" + std::to_string(partitionIdx);
+    return material
+               ? safeNameFragment(std::string(material->name),
+                                  "material_" + std::to_string(partitionIdx))
+               : "material_" + std::to_string(partitionIdx);
 }
 
 int findNodeIndexByName(const std::vector<std::string>& names,
@@ -759,17 +787,16 @@ void triangulateMeshGeometry(const std::string& meshName,
 SkeletonMotion loadMotionFromScene(const std::string& fbxPath,
                                    const ofbx::IScene& scene, int clipIndex,
                                    float fps, float scale) {
-    if (fps <= 0.0f)
-        throw std::runtime_error("FBX motion fps must be positive");
-
     const std::vector<FBXAnimationClipInfo> clips = clipInfosFromScene(scene);
-    if (clipIndex < 0 || clipIndex >= static_cast<int>(clips.size())) {
-        throw std::runtime_error(
-            fmt::format("FBX clip index {} is out of range [0, {})", clipIndex,
-                        static_cast<int>(clips.size())));
-    }
+    clipIndex = resolveClipIndex(clips, clipIndex);
 
     const FBXAnimationClipInfo& clip = clips[clipIndex];
+    if (fps <= 0.0f)
+        fps = static_cast<float>(clip.frameRate);
+    if (fps <= 0.0f)
+        throw std::runtime_error("FBX motion fps must be positive or available "
+                                 "from the source clip");
+
     const double start = clip.startTime;
     const double end = clip.endTime;
     if (end < start)
@@ -873,14 +900,14 @@ void transformMeshData(Scene::MeshData& meshData, const glm::mat4& transform) {
         for (size_t i = 0; i < meshData.tangents.size(); ++i) {
             glm::vec4& tangent = meshData.tangents[i];
             const glm::vec3 t = tangentTransform * glm::vec3(tangent);
-            const glm::vec3 n =
-                i < meshData.normals.size() ? meshData.normals[i]
-                                            : glm::vec3(0.0f, 1.0f, 0.0f);
+            const glm::vec3 n = i < meshData.normals.size()
+                                    ? meshData.normals[i]
+                                    : glm::vec3(0.0f, 1.0f, 0.0f);
             const glm::vec3 ortho = t - glm::dot(t, n) * n;
             const float len = glm::length(ortho);
-            tangent = glm::vec4(
-                len > 1e-8f ? ortho / len : glm::vec3(1.0f, 0.0f, 0.0f),
-                tangent.w);
+            tangent = glm::vec4(len > 1e-8f ? ortho / len
+                                            : glm::vec3(1.0f, 0.0f, 0.0f),
+                                tangent.w);
         }
     }
 }
@@ -1148,19 +1175,18 @@ std::vector<FBXStaticMeshInfo> FBXLoader::loadMeshes(const std::string& fbxPath,
             FBXStaticMeshInfo info;
             info.metadata.name = baseName;
             if (splitByMaterial) {
-                info.metadata.name += "_" +
-                                      materialNameForMeshPartition(*mesh,
-                                                                   submeshIdx);
+                info.metadata.name +=
+                    "_" + materialNameForMeshPartition(*mesh, submeshIdx);
             }
             info.metadata.materialCount = materialCount;
             info.metadata.materials = materials;
             if (!info.metadata.materials.empty()) {
                 info.metadata.primaryMaterialIndex =
                     splitByMaterial
-                        ? std::min(submeshIdx,
-                                   static_cast<int>(
-                                       info.metadata.materials.size()) -
-                                       1)
+                        ? std::min(
+                              submeshIdx,
+                              static_cast<int>(info.metadata.materials.size()) -
+                                  1)
                         : 0;
             }
             info.metadata.hasNormals = normals.values != nullptr;
@@ -1265,8 +1291,8 @@ FBXImportResult FBXLoader::parseWithBind(const std::string& motionFbxPath,
 }
 
 FBXCharacterData FBXLoader::loadCharacter(const std::string& fbxPath,
-                                         int clipIndex, float fps,
-                                         float scale) {
+                                          int clipIndex, float fps,
+                                          float scale) {
     return std::move(parse(fbxPath, clipIndex, fps, scale).character);
 }
 
@@ -1274,9 +1300,9 @@ FBXCharacterData
 FBXLoader::loadCharacterWithBind(const std::string& motionFbxPath,
                                  const std::string& bindFbxPath, int clipIndex,
                                  float fps, float scale) {
-    return std::move(parseWithBind(motionFbxPath, bindFbxPath, clipIndex, fps,
-                                   scale)
-                         .character);
+    return std::move(
+        parseWithBind(motionFbxPath, bindFbxPath, clipIndex, fps, scale)
+            .character);
 }
 
 namespace FBXDebug {

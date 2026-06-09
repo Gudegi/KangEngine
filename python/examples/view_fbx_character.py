@@ -101,12 +101,18 @@ class FbxCharacterViewer(ke.App):
         camera.set_camera_pos(ke.vec3(0.0, 1.45, 3.2))
         camera.set_target_pos(ke.vec3(0.0, 0.85, 0.0))
 
-        character = asset.FBXLoader.load_character(
-            self.fbx_file,
-            clip_index=self.clip_index,
-            fps=self.fps,
-            scale=self.scale,
-        )
+        self.clips = asset.FBXLoader.load_animation_clip_infos(self.fbx_file)
+        if self.clip_index == -1 and self.fps <= 0.0 and self.scale == 0.01:
+            self.load_call = "FBXLoader.load_character(path)"
+            character = asset.FBXLoader.load_character(self.fbx_file)
+        else:
+            self.load_call = "FBXLoader.load_character(path, clip_index, fps, scale)"
+            character = asset.FBXLoader.load_character(
+                self.fbx_file,
+                clip_index=self.clip_index,
+                fps=self.fps,
+                scale=self.scale,
+            )
         self.meshes = character.skinned_meshes
         self.motion = character.motion
         self.parents = self.motion.parent_indices()
@@ -117,19 +123,54 @@ class FbxCharacterViewer(ke.App):
         self._apply_visibility()
         self._apply_shadow_casting()
 
+        self._print_fbx_import_info()
+        self.checkError()
+
+    def _print_fbx_import_info(self):
         print(f"FBX character loaded: {Path(self.fbx_file).name}")
+        print(f"load: {self.load_call}")
+        fps_text = "source" if self.fps <= 0.0 else f"{self.fps:g}"
+        print(
+            f"request: clip_index={self.clip_index} "
+            f"fps={fps_text} "
+            f"scale={self.scale:g}"
+        )
+        print("clips:")
+        for idx, clip in enumerate(self.clips):
+            duration = clip.end_time - clip.start_time
+            selected = " <- selected" if clip.name == self.motion.motion_name() else ""
+            print(
+                f"  [{idx}] {clip.name} "
+                f"start={clip.start_time:.3f}s end={clip.end_time:.3f}s "
+                f"duration={duration:.3f}s frame_rate={clip.frame_rate:g}{selected}"
+            )
+        print(
+            f"motion: {self.motion.motion_name()} "
+            f"joints={self.motion.num_joints()} frames={self.motion.num_frames()} "
+            f"fps={self.motion.fps():g} duration={self.motion.duration():.3f}s"
+        )
         print(f"meshes: {len(self.meshes)}")
         for idx, mesh in enumerate(self.meshes):
+            materials = list(mesh.materials)
+            primary = self._primary_material(mesh)
+            texture = ""
+            if primary is not None:
+                texture_bits = []
+                if primary.has_diffuse_texture:
+                    texture_bits.append("diffuse")
+                if primary.has_normal_texture:
+                    texture_bits.append("normal")
+                texture = f" primary_material={primary.name}"
+                if texture_bits:
+                    texture += f" textures={','.join(texture_bits)}"
             print(
                 f"  [{idx}] {mesh.name} "
                 f"vertices={mesh.vertex_count} indices={mesh.index_count} "
-                f"skin={mesh.has_skin} clusters={len(mesh.skin_cluster_names)}"
+                f"materials={len(materials)} skin={mesh.has_skin} "
+                f"clusters={len(mesh.skin_cluster_names)} "
+                f"unweighted={mesh.unweighted_vertex_count} "
+                f"overweight={mesh.overweight_vertex_count}{texture}"
             )
-        print(
-            f"skeleton: {self.motion.num_joints()} joints, "
-            f"{self.motion.num_frames()} frames"
-        )
-        self.checkError()
 
     def _create_mesh_prims(self):
         palette = [
@@ -435,7 +476,7 @@ class FbxCharacterViewer(ke.App):
         if changed:
             self._apply_visibility()
         if self.animate:
-            self.time += (1.0 / 60.0) * max(0.0, self.playback_speed)
+            self.time += self.get_delta_time() * max(0.0, self.playback_speed)
             self._apply_time(self.time)
         self.checkError()
 
@@ -476,8 +517,8 @@ class FbxCharacterViewer(ke.App):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--fbx-file", default=str(default_fbx_file()))
-    parser.add_argument("--clip-index", type=int, default=0)
-    parser.add_argument("--fps", type=float, default=30.0)
+    parser.add_argument("--clip-index", type=int, default=-1)
+    parser.add_argument("--fps", type=float, default=-1.0)
     parser.add_argument("--scale", type=float, default=0.01)
     parser.add_argument("--line-radius", type=float, default=0.008)
     parser.add_argument("--width", type=int, default=1920)

@@ -195,6 +195,33 @@ SkinnedCharacterBridge SkinnedCharacterBridge::fromFBXWithBind(
 Animation::SkeletonState SkinnedCharacterBridge::applyTime(float time,
                                                            bool loop) {
     const Animation::SkeletonState state = _motion.sample(time, loop);
+    return applyState(state);
+}
+
+Animation::SkeletonState SkinnedCharacterBridge::applyPose(
+    const Eigen::Vector3f& rootTranslation,
+    const std::vector<Eigen::Quaternionf>& localRotations) {
+    if (static_cast<int>(localRotations.size()) != _motion.numJoints()) {
+        throw std::runtime_error(
+            "SkinnedCharacterBridge::applyPose local rotation count does not "
+            "match motion skeleton joint count");
+    }
+
+    Animation::SkeletonState state = _motion.frame(0);
+    state.setRootTranslation(rootTranslation);
+    for (int i = 0; i < static_cast<int>(localRotations.size()); ++i) {
+        Eigen::Quaternionf q = localRotations[static_cast<size_t>(i)];
+        if (q.norm() <= 1e-6f)
+            q = Eigen::Quaternionf::Identity();
+        else
+            q.normalize();
+        state.setRotation(i, q);
+    }
+    return applyState(state);
+}
+
+Animation::SkeletonState
+SkinnedCharacterBridge::applyState(const Animation::SkeletonState& state) {
     if (!_app)
         return state;
 

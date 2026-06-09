@@ -43,17 +43,20 @@ class SkinnedCharacterBridge {
     static SkinnedCharacterBridge fromFBX(
         App* app, Backend::Shader* shader, const std::string& fbxPath,
         const std::string& primBasePath = "/fbx_character",
-        int clipIndex = 0, float fps = 30.0f, float scale = 0.01f,
+        int clipIndex = -1, float fps = -1.0f, float scale = 0.01f,
         bool useMaterials = true);
 
     static SkinnedCharacterBridge fromFBXWithBind(
         App* app, Backend::Shader* shader, const std::string& motionFbxPath,
         const std::string& bindFbxPath,
         const std::string& primBasePath = "/fbx_character",
-        int clipIndex = 0, float fps = 30.0f, float scale = 0.01f,
+        int clipIndex = -1, float fps = -1.0f, float scale = 0.01f,
         bool useMaterials = true);
 
     Animation::SkeletonState applyTime(float time, bool loop = true);
+    Animation::SkeletonState
+    applyPose(const Eigen::Vector3f& rootTranslation,
+              const std::vector<Eigen::Quaternionf>& localRotations);
     void setVisible(bool visible);
     void setColor(const glm::vec4& color);
     void setCastsShadow(bool castsShadow);
@@ -63,6 +66,8 @@ class SkinnedCharacterBridge {
     std::vector<MeshBinding>& meshes() { return _meshes; }
 
   private:
+    Animation::SkeletonState applyState(const Animation::SkeletonState& state);
+
     App* _app = nullptr;
     Animation::SkeletonMotion _motion;
     std::vector<MeshBinding> _meshes;

@@ -5,6 +5,10 @@ frame lifecycle, and scene rendering.  This wrapper adds default lifecycle
 hooks and small input helpers so examples can inherit from `kangengine.App`
 without talking directly to the pybind class.
 """
+from __future__ import annotations
+
+from pathlib import Path
+from types import SimpleNamespace
 
 from ._core import _ke
 
@@ -38,6 +42,115 @@ class App(NativeApp):
         self.graphics_backend_type = _ke.BackendType.OpenGL
         self.scene_backend_type = scene.BackendType.Native
         self.headless = False
+
+    def package_asset_path(self, *parts: str) -> str:
+        return str(Path(_ke.__file__).resolve().parent / "assets" / Path(*parts))
+
+    ############# Shaders ###########################################
+    def _bind_common_ubos(self, *shaders):
+        for shader in shaders:
+            shader.use()
+            shader.setUniformBlockBinding("cameraUBO", 0)
+            shader.setUniformBlockBinding("lightUBO", 1)
+            shader.setUniformBlockBinding("shadowUBO", 2)
+        return shaders[0] if len(shaders) == 1 else shaders
+
+    def create_asset_shader(self, vertex_shader: str, fragment_shader: str):
+        shader = self.getGraphicsDevice().createShaderFromFile(
+            self.package_asset_path("shaders", vertex_shader),
+            self.package_asset_path("shaders", fragment_shader),
+        )
+        self._bind_common_ubos(shader)
+        return shader
+
+    def set_texture_uniform(self, shader, unit: int = 0, name: str = "uTexture"):
+        shader.use()
+        shader.setInt(name, int(unit))
+        return shader
+
+    def configure_checker_shader(
+        self,
+        shader,
+        color1=None,
+        color2=None,
+    ):
+        if color1 is None:
+            color1 = _ke.vec4(1.0, 1.0, 1.0, 1.0)
+        if color2 is None:
+            preset = _ke.ColorLibrary.get(_ke.ColorType.PASTEL_GREEN)
+            color2 = _ke.vec4(preset.r, preset.g, preset.b, preset.a)
+        shader.use()
+        shader.setVec4("checkerColor1", color1)
+        shader.setVec4("checkerColor2", color2)
+        return shader
+
+    def create_standard_shaders(self):
+        shaders = SimpleNamespace(
+            common=self.create_asset_shader("common.vs", "common.fs"),
+            common_texture=self.create_asset_shader("common.vs", "commonTex.fs"),
+            common_debug=self.create_asset_shader("common.vs", "debug_checker.fs"),
+            skinned=self.create_asset_shader("skinned_mesh.vs", "common.fs"),
+            skinned_texture=self.create_asset_shader(
+                "skinned_mesh.vs",
+                "commonTex.fs",
+            ),
+            skinned_debug=self.create_asset_shader(
+                "skinned_mesh.vs",
+                "debug_checker.fs",
+            ),
+            ground=self.create_asset_shader("common.vs", "checkerboard.fs"),
+        )
+        self.set_texture_uniform(shaders.common_texture)
+        self.set_texture_uniform(shaders.skinned_texture)
+        self.configure_checker_shader(shaders.ground)
+        return shaders
+
+    #################################################################
+
+    ############# Helpers ###########################################
+    def add_ground(self, path: str = "/ground", scale: float = 20.0, shader=None):
+        if shader is None:
+            shader = self.create_asset_shader("common.vs", "checkerboard.fs")
+            self.configure_checker_shader(shader)
+        ground = self.getScene().define_prim(path, scene.PrimType.Mesh)
+        ground.set_mesh_data(scene.Prim.create_plane_data(float(scale), self.up_axis))
+        handle = self.addShape(shader, ground)
+        return ground, handle
+
+    def add_mesh(self, path: str, mesh_data, shader, color=None):
+        prim = self.getScene().define_prim(path, scene.PrimType.Mesh)
+        prim.set_mesh_data(mesh_data)
+        if color is not None:
+            prim.set_display_color_alpha(color)
+        handle = self.addShape(shader, prim)
+        return prim, handle
+
+    def set_shape_textures(self, handle, diffuse=None, normal=None):
+        if diffuse is not None:
+            self.setShapeTexture(handle, diffuse, 0)  # TODO : refactor the hardcoded texture slots
+        if normal is not None:
+            self.setShapeTexture(handle, normal, 5)
+        return handle
+
+    def as_vec3(self, value):
+        if isinstance(value, _ke.vec3):
+            return value
+        if hasattr(value, "tolist"):
+            value = value.tolist()
+        if len(value) != 3:
+            raise ValueError("vec3 value expected 3 elements")
+        return _ke.vec3(float(value[0]), float(value[1]), float(value[2]))
+
+    def set_camera_view(self, position, target):
+        camera = self.getCamera()
+        camera.set_camera_pos(self.as_vec3(position))
+        camera.set_target_pos(self.as_vec3(target))
+        return camera
+
+    def set_render_hz(self, hz: float):
+        self.setRenderHz(float(hz))
+    
+    #################################################################
 
     def setup(self):
         pass

@@ -174,8 +174,8 @@ class FbxMotionViewer(ke.App):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--fbx-file", default=str(default_fbx_file()))
-    parser.add_argument("--clip-index", type=int, default=0)
-    parser.add_argument("--fps", type=float, default=30.0)
+    parser.add_argument("--clip-index", type=int, default=-1)
+    parser.add_argument("--fps", type=float, default=-1.0)
     parser.add_argument("--scale", type=float, default=0.01)
     parser.add_argument("--line-radius", type=float, default=0.01)
     parser.add_argument("--width", type=int, default=1920)

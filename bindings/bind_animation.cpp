@@ -703,7 +703,7 @@ void bind_animation(py::module& m) {
         .def_static("load_animation_clip_infos",
                     &FBXLoader::loadAnimationClipInfos, py::arg("fbx_path"))
         .def_static("load_motion", &FBXLoader::loadMotion, py::arg("fbx_path"),
-                    py::arg("clip_index") = 0, py::arg("fps") = 30.0f,
+                    py::arg("clip_index") = -1, py::arg("fps") = -1.0f,
                     py::arg("scale") = 0.01f)
         .def_static(
             "load_meshes",
@@ -717,19 +717,19 @@ void bind_animation(py::module& m) {
             },
             py::arg("fbx_path"), py::arg("scale") = 0.01f)
         .def_static("parse", &FBXLoader::parse, py::arg("fbx_path"),
-                    py::arg("clip_index") = 0, py::arg("fps") = 30.0f,
+                    py::arg("clip_index") = -1, py::arg("fps") = -1.0f,
                     py::arg("scale") = 0.01f)
         .def_static("parse_with_bind", &FBXLoader::parseWithBind,
                     py::arg("motion_fbx_path"), py::arg("bind_fbx_path"),
-                    py::arg("clip_index") = 0, py::arg("fps") = 30.0f,
+                    py::arg("clip_index") = -1, py::arg("fps") = -1.0f,
                     py::arg("scale") = 0.01f)
         .def_static("load_character", &FBXLoader::loadCharacter,
-                    py::arg("fbx_path"), py::arg("clip_index") = 0,
-                    py::arg("fps") = 30.0f, py::arg("scale") = 0.01f)
+                    py::arg("fbx_path"), py::arg("clip_index") = -1,
+                    py::arg("fps") = -1.0f, py::arg("scale") = 0.01f)
         .def_static("load_character_with_bind",
                     &FBXLoader::loadCharacterWithBind,
                     py::arg("motion_fbx_path"), py::arg("bind_fbx_path"),
-                    py::arg("clip_index") = 0, py::arg("fps") = 30.0f,
+                    py::arg("clip_index") = -1, py::arg("fps") = -1.0f,
                     py::arg("scale") = 0.01f)
         .def_static(
             "load_skinned_meshes",
