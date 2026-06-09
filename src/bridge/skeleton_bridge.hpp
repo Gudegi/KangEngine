@@ -22,7 +22,7 @@ namespace Bridge {
 
 class SkeletonBridgeAsset;
 
-class SkeletonBridge {
+class SkeletonBridge { // TODO: refactor name
   public:
     SkeletonBridge() {}
 

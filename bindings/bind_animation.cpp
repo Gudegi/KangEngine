@@ -10,6 +10,7 @@
 #include "py_array_view.hpp"
 
 #include "animation/character_description.hpp"
+#include "asset/bvh_loader.hpp"
 #include "asset/fbx_loader.hpp"
 #include "asset/mjcf_loader.hpp"
 #include "asset/usd_loader.hpp"
@@ -19,6 +20,8 @@
 #include "animation/skeleton_tree.hpp"
 #include "animation/skinning.hpp"
 #include "bridge/skeleton_bridge.hpp"
+#include "bridge/skeleton_visual_bridge.hpp"
+#include "engine/core/app/app.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/scene_backend.hpp"
 
@@ -378,9 +381,11 @@ void bind_animation(py::module& m) {
                                [](const Site& s) { return toGlm(s.quat); })
         .def_property_readonly("size",
                                [](const Site& s) { return toGlm(s.size); })
-        .def_property_readonly("rgba", [](const Site& s) {
-            return glm::vec4(s.rgba.x(), s.rgba.y(), s.rgba.z(), s.rgba.w());
-        })
+        .def_property_readonly("rgba",
+                               [](const Site& s) {
+                                   return glm::vec4(s.rgba.x(), s.rgba.y(),
+                                                    s.rgba.z(), s.rgba.w());
+                               })
         .def_readonly("has_zaxis", &Site::hasZAxis)
         .def_property_readonly("zaxis",
                                [](const Site& s) { return toGlm(s.zaxis); });
@@ -461,6 +466,21 @@ void bind_animation(py::module& m) {
                     py::arg("scale") = 1.0f, py::arg("order") = "DFS")
         .def_static("load", &MJCFLoader::load, py::arg("mjcf_path"),
                     py::arg("scale") = 1.0f, py::arg("order") = "DFS");
+
+    py::class_<BVHImportResult>(asset, "BVHImportResult")
+        .def_readonly("motion", &BVHImportResult::motion)
+        .def_readonly("diagnostics", &BVHImportResult::diagnostics)
+        .def_readonly("frame_count", &BVHImportResult::frameCount)
+        .def_readonly("frame_time", &BVHImportResult::frameTime)
+        .def_readonly("frame_rate", &BVHImportResult::frameRate);
+
+    py::class_<BVHLoader>(asset, "BVHLoader")
+        .def_static("load_skeleton", &BVHLoader::loadSkeleton,
+                    py::arg("bvh_path"), py::arg("scale") = 1.0f)
+        .def_static("load_motion", &BVHLoader::loadMotion, py::arg("bvh_path"),
+                    py::arg("scale") = 1.0f)
+        .def_static("parse", &BVHLoader::parse, py::arg("bvh_path"),
+                    py::arg("scale") = 1.0f);
 
     py::class_<FBXAnimationClipInfo>(asset, "FBXAnimationClipInfo")
         .def_readonly("name", &FBXAnimationClipInfo::name)
@@ -997,4 +1017,46 @@ void bind_animation(py::module& m) {
              py::arg("prim_base_path") = "/robot",
              py::arg("mesh_asset_base_path") = "")
         .def("num_bodies", &SkeletonBridgeAsset::numBodies);
+
+    py::class_<SkeletonVisualConfig>(anim, "SkeletonVisualConfig")
+        .def(py::init<>())
+        .def_readwrite("bone_color", &SkeletonVisualConfig::boneColor)
+        .def_readwrite("joint_color", &SkeletonVisualConfig::jointColor)
+        .def_readwrite("bone_radius", &SkeletonVisualConfig::boneRadius)
+        .def_readwrite("joint_radius", &SkeletonVisualConfig::jointRadius)
+        .def_readwrite("segments", &SkeletonVisualConfig::segments)
+        .def_readwrite("visible", &SkeletonVisualConfig::visible)
+        .def_readwrite("show_joints", &SkeletonVisualConfig::showJoints);
+
+    py::class_<SkeletonVisualBridge>(anim, "SkeletonVisualBridge")
+        .def(py::init<>())
+        .def_static(
+            "define",
+            [](App* app, Backend::Shader* shader, const std::string& basePath,
+               const SkeletonState& state, const SkeletonVisualConfig& config) {
+                return SkeletonVisualBridge::define(app, shader, basePath,
+                                                    state, config);
+            },
+            py::arg("app"), py::arg("shader"), py::arg("base_path"),
+            py::arg("state"), py::arg("config") = SkeletonVisualConfig{})
+        .def_static(
+            "define",
+            [](App* app, Backend::Shader* shader, const std::string& basePath,
+               const SkeletonMotion& motion, float time, bool loop,
+               const SkeletonVisualConfig& config) {
+                return SkeletonVisualBridge::define(app, shader, basePath,
+                                                    motion, time, loop, config);
+            },
+            py::arg("app"), py::arg("shader"), py::arg("base_path"),
+            py::arg("motion"), py::arg("time") = 0.0f, py::arg("loop") = true,
+            py::arg("config") = SkeletonVisualConfig{})
+        .def("apply_state", &SkeletonVisualBridge::applyState, py::arg("state"))
+        .def("apply_motion", &SkeletonVisualBridge::applyMotion,
+             py::arg("motion"), py::arg("time"), py::arg("loop") = true)
+        .def("set_visible", &SkeletonVisualBridge::setVisible,
+             py::arg("visible"))
+        .def("set_show_joints", &SkeletonVisualBridge::setShowJoints,
+             py::arg("show_joints"))
+        .def("bone_handle", &SkeletonVisualBridge::boneHandle)
+        .def("joint_handle", &SkeletonVisualBridge::jointHandle);
 }

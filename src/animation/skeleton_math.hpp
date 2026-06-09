@@ -8,9 +8,15 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <vector>
 
 namespace KE {
 namespace Animation {
+
+struct SkeletonBoneLines {
+    std::vector<glm::vec3> starts;
+    std::vector<glm::vec3> ends;
+};
 
 // --- Eigen <-> glm conversions ---
 
@@ -62,6 +68,31 @@ inline glm::mat4 transformToMat4(const Eigen::Quaternionf& rot,
     m *= glm::mat4_cast(toGlm(rot));
     m = glm::scale(m, toGlm(scale));
     return m;
+}
+
+inline std::vector<glm::vec3> jointPositions(const SkeletonState& state) {
+    std::vector<glm::vec3> out;
+    auto global = state.computeGlobalTransforms();
+    out.reserve(global.size());
+    for (const auto& transform : global)
+        out.push_back(toGlm(transform.translation));
+    return out;
+}
+
+inline SkeletonBoneLines boneLines(const SkeletonState& state) {
+    SkeletonBoneLines out;
+    const std::vector<glm::vec3> joints = jointPositions(state);
+    const SkeletonTree& tree = state.skeletonTree();
+    out.starts.reserve(joints.size());
+    out.ends.reserve(joints.size());
+    for (int i = 0; i < tree.numJoints(); ++i) {
+        const int parent = tree.parentIndex(i);
+        if (parent < 0)
+            continue;
+        out.starts.push_back(joints[static_cast<size_t>(parent)]);
+        out.ends.push_back(joints[static_cast<size_t>(i)]);
+    }
+    return out;
 }
 
 } // namespace Animation

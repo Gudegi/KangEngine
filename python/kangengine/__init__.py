@@ -33,6 +33,8 @@ ColorType = _ke.ColorType
 Color = _ke.Color
 PhongMaterial = _ke.PhongMaterial
 SkinnedCharacterBridge = _ke.SkinnedCharacterBridge
+SkeletonVisualBridge = _ke.animation.SkeletonVisualBridge
+SkeletonVisualConfig = _ke.animation.SkeletonVisualConfig
 MotionSequencerPanel = _ke.MotionSequencerPanel
 
 # GLM-style math types and helpers exposed by the C++ extension.
@@ -105,6 +107,8 @@ __all__ = [
     "Color",
     "PhongMaterial",
     "SkinnedCharacterBridge",
+    "SkeletonVisualBridge",
+    "SkeletonVisualConfig",
     "MotionSequencerPanel",
     "preset_rgba",
 ]

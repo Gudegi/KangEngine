@@ -22,12 +22,14 @@
 #include "utils/print_debug.hpp"
 #include "utils/glm_utils.hpp"
 #include "asset/mesh_loader.hpp"
+#include "asset/bvh_loader.hpp"
 #include "engine/core/window/window.hpp"
 #include "engine/graphics/material/colors.hpp"
 
 #include "asset/mjcf_loader.hpp"
 #include "bridge/physics_bridge.hpp"
 #include "bridge/skeleton_bridge.hpp"
+#include "bridge/skeleton_visual_bridge.hpp"
 #include "bridge/skinned_character_bridge.hpp"
 
 #ifdef KANGENGINE_USE_PHYSX
