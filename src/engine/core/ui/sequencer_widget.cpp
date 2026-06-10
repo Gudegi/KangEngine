@@ -5,6 +5,7 @@
 #include "imgui.h"
 #include "imgui_internal.h"
 #include <cstdlib>
+#include <string>
 
 namespace KE::UI {
 #ifndef IMGUI_DEFINE_MATH_OPERATORS
@@ -12,6 +13,32 @@ static ImVec2 operator+(const ImVec2& a, const ImVec2& b) {
     return ImVec2(a.x + b.x, a.y + b.y);
 }
 #endif
+
+static std::string ellipsizeText(const char* text, float maxWidth) {
+    if (!text || maxWidth <= 0.0f)
+        return "";
+    if (ImGui::CalcTextSize(text).x <= maxWidth)
+        return text;
+
+    constexpr const char* ellipsis = "...";
+    const float ellipsisWidth = ImGui::CalcTextSize(ellipsis).x;
+    if (ellipsisWidth > maxWidth)
+        return "";
+
+    const std::string source(text);
+    size_t lo = 0;
+    size_t hi = source.size();
+    while (lo < hi) {
+        const size_t mid = (lo + hi + 1) / 2;
+        const std::string candidate = source.substr(0, mid) + ellipsis;
+        if (ImGui::CalcTextSize(candidate.c_str()).x <= maxWidth)
+            lo = mid;
+        else
+            hi = mid - 1;
+    }
+    return source.substr(0, lo) + ellipsis;
+}
+
 static bool SequencerAddDelButton(ImDrawList* draw_list, ImVec2 pos,
                                   bool add = true) {
     ImGuiIO& io = ImGui::GetIO();
@@ -382,9 +409,23 @@ bool sequencer(SequenceInterface* sequence, int* currentFrame, bool* expanded,
         for (int i = 0; i < sequenceCount; i++) {
             int type;
             sequence->Get(i, NULL, NULL, &type, NULL);
-            ImVec2 tpos(contentMin.x + 3,
-                        contentMin.y + i * itemHeight + 2 + customHeight);
-            draw_list->AddText(tpos, 0xFFFFFFFF, sequence->GetItemLabel(i));
+            const float labelPaddingX = 3.0f;
+            const float textHeight = ImGui::GetTextLineHeight();
+            const float rowTop = contentMin.y + i * itemHeight + customHeight;
+            const float labelRight =
+                contentMin.x + legendWidth -
+                ((sequenceOptions & SequencerDel) ? itemHeight * 2.0f : 0.0f) -
+                labelPaddingX;
+            ImVec2 tpos(contentMin.x + labelPaddingX,
+                        rowTop + ImMax((itemHeight - textHeight) * 0.5f, 0.0f));
+            const float labelWidth = labelRight - tpos.x;
+            const std::string label =
+                ellipsizeText(sequence->GetItemLabel(i), labelWidth);
+            draw_list->PushClipRect(
+                ImVec2(contentMin.x, rowTop),
+                ImVec2(contentMin.x + legendWidth, rowTop + itemHeight), true);
+            draw_list->AddText(tpos, 0xFFFFFFFF, label.c_str());
+            draw_list->PopClipRect();
 
             if (sequenceOptions & SequencerDel) {
                 if (SequencerAddDelButton(
