@@ -1144,6 +1144,27 @@ py::class_<glm::vec3>(m, "vec3")
             py::arg("path"), py::arg("starts"), py::arg("ends"),
             py::arg("colors") = py::none(), py::arg("width") = 1.0f,
             py::arg("hidden") = false)
+        .def(
+            "log_debug_axes",
+            [](App* self, const std::string& path, const FloatArray& transform,
+               float length, float width, bool hidden) {
+                auto t = mat4ArrayView(transform, "transform");
+                if (t.count != 1) {
+                    throw py::value_error(
+                        "transform must be a single matrix with shape [16] "
+                        "or [4, 4]");
+                }
+
+                const float* p = t.data;
+                glm::mat4 m(1.0f);
+                for (int row = 0; row < 4; ++row) {
+                    for (int col = 0; col < 4; ++col)
+                        m[col][row] = p[row * 4 + col];
+                }
+                self->logDebugAxes(path, m, length, width, hidden);
+            },
+            py::arg("path"), py::arg("transform"), py::arg("length") = 1.0f,
+            py::arg("width") = 1.0f, py::arg("hidden") = false)
         .def("clear_debug_lines", &App::clearDebugLines, py::arg("path"))
         .def(
             "log_debug_points",

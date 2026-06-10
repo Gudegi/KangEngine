@@ -233,6 +233,9 @@ void DebugRenderer::render() {
         return;
 
     _device->setCullFace(false);
+    _device->setBlend(true);
+    _device->setBlendFunc(Backend::BlendFactor::SrcAlpha,
+                          Backend::BlendFactor::OneMinusSrcAlpha);
 
     if (_shader) {
         _shader->use();
@@ -257,6 +260,7 @@ void DebugRenderer::render() {
         }
     }
 
+    _device->setBlend(false);
     _device->setCullFace(true);
 }
 

@@ -8,7 +8,7 @@ from pathlib import Path
 import torch
 
 import kangengine as ke
-from kangengine import imgui, keys, scene
+from kangengine import imgui, keys, scene, JointMapper, JointSemantic
 
 
 def repo_root() -> Path:
@@ -63,6 +63,7 @@ class FbxCharacterBridgeViewer(ke.App):
     def setup(self):
         self.show_mesh = True
         self.show_skeleton = True
+        self.follow_camera = True
         self.mesh_color = ke.preset_rgba(ke.ColorType.PASTEL_GREEN)
         self.line_handle = None
         self.skeleton_starts = None
@@ -125,12 +126,56 @@ class FbxCharacterBridgeViewer(ke.App):
         )
         self.motion = self.character.motion()
         self.editor = ke.MotionEditor(self.motion, Path(self.fbx_file).name)
+        self.camera_follower = ke.MotionCameraFollower(
+            self.motion,
+            samples=self.editor.motion_samples(),
+            target_semantic=JointSemantic.ROOT,
+            target_offset=(0.0, 0.05, 0.0),
+            camera_offset=(0.0, 0.65, 4.2),
+            smoothing=0.12,
+        )
+        self.camera_follower.update(camera, 0, force=True)
         self.editor.add_module(
             ke.RootTrajectoryModule(
                 self,
                 "/debug/fbx_character2_root_trajectory",
                 line_width=2.0,
                 point_size=8.0,
+            )
+        )
+        mapper = JointMapper.from_motion(self.motion, profiles=["Geno", "common"])
+        tracking = mapper.find_many([
+            JointSemantic.HEAD,
+            JointSemantic.LEFT_HAND,
+            JointSemantic.RIGHT_HAND,
+            JointSemantic.LEFT_ANKLE,
+            JointSemantic.RIGHT_ANKLE,
+        ])
+        self.editor.add_module(
+            ke.TrackingModule(
+                self,
+                "/debug/fbx_character2_tracking",
+                joint_indices=tracking,
+                line_width=2.0,
+                point_size=8.0,
+            )
+        )
+        self.editor.add_module(
+            ke.ContactModule(
+                self,
+                "/debug/fbx_character2_contacts",
+                point_size=15.0,
+            )
+        )
+        self.editor.add_module(
+            ke.TargetModule(
+                self,
+                "/debug/fbx_character2_target",
+                source_semantic=JointSemantic.RIGHT_HAND,
+                target_offset=(0.25, 0.15, 0.0),
+                offset_frame="root",
+                point_size=18.0,
+                line_width=2.0,
             )
         )
         self.parents = self.motion.parent_indices()
@@ -237,6 +282,11 @@ class FbxCharacterBridgeViewer(ke.App):
             self._apply_visibility()
         if self.editor.update(self.get_delta_time()):
             self._apply_character_time()
+        if self.follow_camera:
+            self.camera_follower.update(
+                self.getCamera(),
+                self.editor.player.frame_index,
+            )
         self.checkError()
 
     def render(self):
@@ -257,6 +307,7 @@ class FbxCharacterBridgeViewer(ke.App):
             "show skeleton",
             self.show_skeleton,
         )
+        _, self.follow_camera = imgui.checkbox("follow camera", self.follow_camera)
         color_changed = False
         for idx, label in enumerate(("mesh R", "mesh G", "mesh B", "mesh A")):
             changed, value = imgui.slider_float(
@@ -278,7 +329,14 @@ class FbxCharacterBridgeViewer(ke.App):
         imgui.end()
 
     def _render_motion_panel(self):
-        return self.editor.render_panel()
+        changed = self.editor.render_panel()
+        if changed and self.follow_camera:
+            self.camera_follower.update(
+                self.getCamera(),
+                self.editor.player.frame_index,
+                force=True,
+            )
+        return changed
 
 
 def main():

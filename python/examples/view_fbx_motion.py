@@ -78,6 +78,21 @@ class FbxMotionViewer(ke.App):
                 point_size=8.0,
             )
         )
+        self.editor.add_module(
+            ke.TrackingModule(
+                self,
+                "/debug/fbx_motion_tracking",
+                line_width=2.0,
+                point_size=8.0,
+            )
+        )
+        self.editor.add_module(
+            ke.ContactModule(
+                self,
+                "/debug/fbx_motion_contacts",
+                point_size=11.0,
+            )
+        )
 
         ground = self.getScene().define_prim("/ground", scene.PrimType.Mesh)
         ground.set_mesh_data(scene.Prim.create_plane_data(20.0, self.up_axis))
