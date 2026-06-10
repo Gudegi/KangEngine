@@ -19,6 +19,7 @@
 
 #include "engine/graphics/camera/camera.hpp"
 #include "engine/core/ui/panel_manager.hpp"
+#include "engine/core/ui/ui_scale.hpp"
 #include "utils/asset_path.hpp"
 #include "geometry/ray.hpp"
 #include "engine/core/window/window.hpp"
@@ -82,6 +83,7 @@ class App {
     Window _window;
     Camera _camera;
     PanelManager _panelManager;
+    UIScale _uiScale;
 
   private:
     std::unique_ptr<Backend::GraphicsDevice> _graphicsDevice;
@@ -126,6 +128,8 @@ class App {
     int getHeight() { return _height; }
     int getLogicalWidth() { return _logicalWidth; }
     int getLogicalHeight() { return _logicalHeight; }
+    const UIScale& getUiScale() const { return _uiScale; }
+    UIScale& getUiScale() { return _uiScale; }
 
     struct IO;
     struct RenderVariable;

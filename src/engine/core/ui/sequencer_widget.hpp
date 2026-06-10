@@ -40,6 +40,14 @@ struct SequencerConfig {
     float framePixelLerp = 0.33f;
     // Width reserved for track labels on the left.
     int legendWidth = 200;
+    // Optional live legend width value updated by dragging the splitter.
+    float* legendWidthValue = nullptr;
+    // Smallest draggable legend width.
+    float minLegendWidth = 80.0f;
+    // Largest draggable legend width.
+    float maxLegendWidth = 420.0f;
+    // Hit area around the legend/timeline splitter.
+    float legendResizeHandleWidth = 10.0f;
     // Height of one track row and the frame header.
     int itemHeight = 20;
     // Height of the optional bottom panning/zoom bar.

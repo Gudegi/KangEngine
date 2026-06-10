@@ -137,6 +137,7 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     registerCallbacks();
     glfwGetFramebufferSize(_window.getGlfwWindow(), &_width, &_height);
     glfwGetWindowSize(_window.getGlfwWindow(), &_logicalWidth, &_logicalHeight);
+    _uiScale.update(_window.getGlfwWindow());
 
     // Initialize graphics device after OpenGL context is created
     _graphicsDevice->initialize();
@@ -850,6 +851,7 @@ void App::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
     _width = width;
     _height = height;
     glfwGetWindowSize(window, &_logicalWidth, &_logicalHeight);
+    _uiScale.update(window);
     _graphicsDevice->setViewport(0, 0, _width, _height);
     _camera.updateProjMatrix(_width, _height);
     if (_framebuffer)

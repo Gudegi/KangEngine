@@ -46,7 +46,7 @@ bool sequencer(SequenceInterface* sequence, int* currentFrame, bool* expanded,
     static float framePixelWidthBeforeFit = 10.f;
     static float framePixelWidthTargetBeforeFit = 10.f;
     static int firstFrameBeforeFit = 0;
-    const int legendWidth = ImMax(config.legendWidth, 0);
+    int legendWidth = ImMax(config.legendWidth, 0);
     const float rectRounding = ImMax(config.rectRounding, 0.0f);
 
     static int movingEntry = -1;
@@ -68,6 +68,40 @@ bool sequencer(SequenceInterface* sequence, int* currentFrame, bool* expanded,
     ImVec2 canvas_size =
         ImGui::GetContentRegionAvail(); // Resize canvas to what's available
     int firstFrameUsed = firstFrame ? *firstFrame : 0;
+    bool legendResizeHovered = false;
+    bool legendResizeHeld = false;
+    if (config.legendWidthValue && canvas_size.x > 1.0f) {
+        const float minLegendWidth = ImMax(config.minLegendWidth, 0.0f);
+        const float maxLegendWidth =
+            ImMax(minLegendWidth, config.maxLegendWidth);
+        const float timelineMinWidth = ImMax(80.0f, itemHeight * 2.0f);
+        const float clampedMaxLegendWidth =
+            ImMin(maxLegendWidth,
+                  ImMax(minLegendWidth, canvas_size.x - timelineMinWidth));
+        *config.legendWidthValue = ImClamp(
+            *config.legendWidthValue, minLegendWidth, clampedMaxLegendWidth);
+        legendWidth = static_cast<int>(*config.legendWidthValue);
+
+        const float handleWidth = ImMax(config.legendResizeHandleWidth, 1.0f);
+        const float handleX = canvas_pos.x + *config.legendWidthValue;
+        const ImRect resizeRect(
+            ImVec2(handleX - handleWidth * 0.5f, canvas_pos.y),
+            ImVec2(handleX + handleWidth * 0.5f, canvas_pos.y + canvas_size.y));
+        const ImVec2 cursorBeforeResize = ImGui::GetCursorScreenPos();
+        ImGui::SetCursorScreenPos(resizeRect.Min);
+        ImGui::InvisibleButton("legendResize", resizeRect.GetSize());
+        legendResizeHovered = ImGui::IsItemHovered();
+        legendResizeHeld = ImGui::IsItemActive();
+        ImGui::SetCursorScreenPos(cursorBeforeResize);
+        if (legendResizeHovered || legendResizeHeld)
+            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+        if (legendResizeHeld && io.MouseDelta.x != 0.0f) {
+            *config.legendWidthValue =
+                ImClamp(*config.legendWidthValue + io.MouseDelta.x,
+                        minLegendWidth, clampedMaxLegendWidth);
+            legendWidth = static_cast<int>(*config.legendWidthValue);
+        }
+    }
 
     int controlHeight = sequenceCount * itemHeight;
     for (int i = 0; i < sequenceCount; i++)
@@ -197,6 +231,17 @@ bool sequencer(SequenceInterface* sequence, int* currentFrame, bool* expanded,
         // full background
         draw_list->AddRectFilled(canvas_pos, canvas_pos + canvas_size,
                                  0xFF242424, 0);
+        if (config.legendWidthValue) {
+            const unsigned int splitterColor = legendResizeHeld ? 0xFF9F8CFF
+                                               : legendResizeHovered
+                                                   ? 0xAA9F8CFF
+                                                   : 0x55404040;
+            draw_list->AddLine(
+                ImVec2(canvas_pos.x + legendWidth, canvas_pos.y + itemHeight),
+                ImVec2(canvas_pos.x + legendWidth,
+                       canvas_pos.y + canvas_size.y),
+                splitterColor, 1.0f);
+        }
 
         // current frame top
         ImRect topRect(
@@ -204,6 +249,7 @@ bool sequencer(SequenceInterface* sequence, int* currentFrame, bool* expanded,
             ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + itemHeight));
 
         if (!MovingCurrentFrame && !MovingScrollBar && movingEntry == -1 &&
+            !legendResizeHovered && !legendResizeHeld &&
             sequenceOptions & SequencerChangeFrame && currentFrame &&
             *currentFrame >= 0 && topRect.Contains(io.MousePos) &&
             io.MouseDown[0]) {

@@ -209,6 +209,46 @@ void bind_imgui(py::module& m) {
         py::arg("frame_max"), py::arg("first_frame") = 0,
         py::arg("expanded") = true, py::arg("selected_entry") = -1,
         py::arg("item_label") = "Motion", py::arg("fit_to_content") = false);
+    imgui.def(
+        "motion_sequencer_resizable",
+        [](const std::string& label, int currentFrame, int frameMin,
+           int frameMax, int firstFrame, bool expanded, int selectedEntry,
+           const std::string& itemLabel, bool fitToContent, float legendWidth) {
+            if (frameMax < frameMin)
+                frameMax = frameMin;
+            currentFrame = std::clamp(currentFrame, frameMin, frameMax);
+            firstFrame = std::clamp(firstFrame, frameMin, frameMax);
+
+            SingleMotionSequence sequence(frameMin, frameMax, itemLabel);
+            int current = currentFrame;
+            int first = firstFrame;
+            int selected = selectedEntry;
+            bool isExpanded = expanded;
+            float liveLegendWidth = legendWidth;
+
+            ImGui::PushID(label.c_str());
+            UI::SequencerConfig config;
+            config.fitToContent = fitToContent;
+            config.legendWidth = static_cast<int>(liveLegendWidth);
+            config.legendWidthValue = &liveLegendWidth;
+            config.minLegendWidth = 96.0f;
+            config.maxLegendWidth = 420.0f;
+            config.legendResizeHandleWidth = 10.0f;
+            bool changed =
+                UI::sequencer(&sequence, &current, &isExpanded, &selected,
+                              &first, UI::SequencerChangeFrame, config);
+            ImGui::PopID();
+
+            current = std::clamp(current, frameMin, frameMax);
+            first = std::clamp(first, frameMin, frameMax);
+            return py::make_tuple(changed || current != currentFrame, current,
+                                  first, isExpanded, selected, liveLegendWidth);
+        },
+        py::arg("label"), py::arg("current_frame"), py::arg("frame_min"),
+        py::arg("frame_max"), py::arg("first_frame") = 0,
+        py::arg("expanded") = true, py::arg("selected_entry") = -1,
+        py::arg("item_label") = "Motion", py::arg("fit_to_content") = false,
+        py::arg("legend_width") = 200.0f);
 }
 
 void bind_keys(py::module& m) {
@@ -354,6 +394,10 @@ PYBIND11_MODULE(_kangengine, m) {
         .def("set_overlay", &MotionSequencerPanel::setOverlay)
         .def("set_overlay_width_ratio",
              &MotionSequencerPanel::setOverlayWidthRatio)
+        .def("set_legend_width", &MotionSequencerPanel::setLegendWidth)
+        .def("legend_width", &MotionSequencerPanel::legendWidth)
+        .def("set_ui_scale", &MotionSequencerPanel::setUiScale)
+        .def("ui_scale", &MotionSequencerPanel::uiScale)
         .def("set_folded", &MotionSequencerPanel::setFolded)
         .def("set_show_progress_bar", &MotionSequencerPanel::setShowProgressBar)
         .def("build_panel", &MotionSequencerPanel::buildPanel);
@@ -894,6 +938,8 @@ py::class_<glm::vec3>(m, "vec3")
         .def("setRenderHz", &App::setRenderHz, py::arg("renderHz"))
         .def("get_delta_time", &App::getDeltaTime)
         .def("get_render_hz", &App::getRenderHz)
+        .def("get_ui_scale",
+             [](const App& self) { return self.getUiScale().value(); })
         .def("set_camera_move_speed", &App::setCameraMoveSpeed,
              py::arg("speed"))
         .def("get_camera_move_speed", &App::getCameraMoveSpeed)

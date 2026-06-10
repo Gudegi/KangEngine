@@ -86,6 +86,7 @@ class MotionEditor:
         self.motion_name = motion_name
         self.fit_to_content = fit_to_content
         self.first_frame = 0
+        self.legend_width = 200.0
         self.is_expanded = True  # Show progress bar
         self.selected_track_idx = -1
         self.modules = []
@@ -164,8 +165,15 @@ class MotionEditor:
             4.0,
         )
 
-        seq_is_changed, current_frame, self.first_frame, self.is_expanded, self.selected_track_idx = (
-            imgui.motion_sequencer(
+        (
+            seq_is_changed,
+            current_frame,
+            self.first_frame,
+            self.is_expanded,
+            self.selected_track_idx,
+            self.legend_width,
+        ) = (
+            imgui.motion_sequencer_resizable(
                 self.panel_name,
                 current_frame,
                 0,
@@ -175,6 +183,7 @@ class MotionEditor:
                 self.selected_track_idx,
                 self.motion_name,
                 self.fit_to_content,
+                self.legend_width,
             )
         )
         if seq_is_changed:
@@ -209,12 +218,14 @@ class MotionEditor:
         self.panel.set_playing(player.playing)
         self.panel.set_loop(player.loop)
         self.panel.set_time_scale(player.time_scale)
+        self.panel.set_legend_width(self.legend_width)
         self.panel.build_panel()
 
         player.time = self.panel.current_time()
         player.playing = self.panel.is_playing()
         player.loop = self.panel.loop()
         player.time_scale = self.panel.time_scale()
+        self.legend_width = self.panel.legend_width()
         is_changed = abs(player.time - previous_time) > 1e-9
         if is_changed:
             self.update_modules()

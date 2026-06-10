@@ -3,6 +3,7 @@
 
 #include "panel.hpp"
 #include "sequencer_widget.hpp"
+#include "ui_scale.hpp"
 
 #include <functional>
 #include <string>
@@ -33,6 +34,10 @@ class MotionSequencerPanel : public Panel {
     bool overlay() const { return _overlay; }
     void setOverlayWidthRatio(float ratio);
     float overlayWidthRatio() const { return _overlayWidthRatio; }
+    void setLegendWidth(float width);
+    float legendWidth() const { return _legendWidth; }
+    void setUiScale(float scale) { _uiScale.setUserScale(scale); }
+    float uiScale() const { return _uiScale.value(); }
     void setFolded(bool folded) { _folded = folded; }
     bool folded() const { return _folded; }
     void setShowProgressBar(bool show) { _showProgressBar = show; }
@@ -63,9 +68,11 @@ class MotionSequencerPanel : public Panel {
     bool _folded = false;
     bool _showProgressBar = false;
     float _overlayWidthRatio = 0.70f;
+    float _legendWidth = 200.0f;
     float _timeScale = 1.0f;
     int _firstFrame = 0;
     int _selectedTrack = -1;
+    UIScale _uiScale;
     FrameChangedCallback _onFrameChanged;
     PlayingChangedCallback _onPlayingChanged;
 };

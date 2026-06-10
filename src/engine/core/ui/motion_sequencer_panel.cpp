@@ -79,6 +79,10 @@ void MotionSequencerPanel::setOverlayWidthRatio(float ratio) {
     _overlayWidthRatio = std::clamp(ratio, 0.1f, 1.0f);
 }
 
+void MotionSequencerPanel::setLegendWidth(float width) {
+    _legendWidth = std::clamp(width, 96.0f, 420.0f);
+}
+
 void MotionSequencerPanel::setFrameChangedCallback(
     FrameChangedCallback callback) {
     _onFrameChanged = std::move(callback);
@@ -91,9 +95,16 @@ void MotionSequencerPanel::setPlayingChangedCallback(
 
 void MotionSequencerPanel::buildPanel() {
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
-    const float expandedHeight =
-        std::clamp(viewport->WorkSize.y * 0.20f, 132.0f, 190.0f);
-    const float foldedHeight = 42.0f;
+    _uiScale.update(static_cast<int>(viewport->WorkSize.x * viewport->DpiScale),
+                    static_cast<int>(viewport->WorkSize.y * viewport->DpiScale),
+                    static_cast<int>(viewport->WorkSize.x),
+                    static_cast<int>(viewport->WorkSize.y), viewport->DpiScale);
+    const auto logicalPx = [this](float value) {
+        return _uiScale.logicalPx(value);
+    };
+    const float expandedHeight = std::clamp(
+        viewport->WorkSize.y * 0.20f, logicalPx(132.0f), logicalPx(190.0f));
+    const float foldedHeight = logicalPx(42.0f);
     const float panelHeight = _folded ? foldedHeight : expandedHeight;
     const float panelWidth =
         viewport->WorkSize.x * (_overlay ? _overlayWidthRatio : 1.0f);
@@ -117,10 +128,12 @@ void MotionSequencerPanel::buildPanel() {
 
     if (!_transparent)
         ImGui::SetNextWindowBgAlpha(_overlay ? 0.74f : 1.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, logicalPx(8.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, _overlay ? 0.0f : 1.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(14.0f, 10.0f));
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 6.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,
+                        ImVec2(logicalPx(14.0f), logicalPx(10.0f)));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,
+                        ImVec2(logicalPx(8.0f), logicalPx(6.0f)));
     ImGui::Begin(name().c_str(), nullptr, windowFlags);
 
     const float d = duration();
@@ -130,7 +143,7 @@ void MotionSequencerPanel::buildPanel() {
                                    : std::clamp(_time, 0.0f, d);
     const float displayTime = std::min(playbackTime, d);
     const char* foldLabel = _folded ? "Show" : "Hide";
-    if (ImGui::Button(foldLabel, ImVec2(52.0f, 0.0f)))
+    if (ImGui::Button(foldLabel, ImVec2(logicalPx(52.0f), 0.0f)))
         _folded = !_folded;
     ImGui::SameLine();
     ImGui::Text("%d HZ", static_cast<int>(_fps));
@@ -146,8 +159,8 @@ void MotionSequencerPanel::buildPanel() {
         return ImGui::GetFrameHeight() + style.ItemInnerSpacing.x +
                ImGui::CalcTextSize(label).x;
     };
-    constexpr float playButtonWidth = 58.0f;
-    constexpr float speedSliderWidth = 75.0f;
+    const float playButtonWidth = logicalPx(58.0f);
+    const float speedSliderWidth = logicalPx(75.0f);
     constexpr int inlineControlCount = 8;
     const float inlineControlsWidth =
         playButtonWidth + buttonWidth("Reset") + checkboxWidth("Loop") +
@@ -171,7 +184,8 @@ void MotionSequencerPanel::buildPanel() {
         ImGui::SameLine();
         ImGui::SetCursorPosX(statusStartX + statusWidth + style.ItemSpacing.x);
     }
-    if (ImGui::Button(_playing ? "Pause" : "Play", ImVec2(58.0f, 0.0f)))
+    if (ImGui::Button(_playing ? "Pause" : "Play",
+                      ImVec2(playButtonWidth, 0.0f)))
         setPlaying(!_playing);
     ImGui::SameLine();
     if (ImGui::Button("Reset"))
@@ -200,11 +214,29 @@ void MotionSequencerPanel::buildPanel() {
     config.fitToContent = _fitToContent;
     config.requestFitToContent = fitToContentChanged && _fitToContent;
     config.requestRestoreView = fitToContentChanged && !_fitToContent;
+    config.minFramePixelWidth = logicalPx(config.minFramePixelWidth);
+    config.maxFramePixelWidth = logicalPx(config.maxFramePixelWidth);
+    float legendWidth = logicalPx(_legendWidth);
+    config.legendWidth = static_cast<int>(legendWidth);
+    config.legendWidthValue = &legendWidth;
+    config.minLegendWidth = logicalPx(96.0f);
+    config.maxLegendWidth = logicalPx(420.0f);
+    config.legendResizeHandleWidth = logicalPx(10.0f);
+    config.itemHeight =
+        static_cast<int>(logicalPx(static_cast<float>(config.itemHeight)));
+    config.scrollBarHeight = logicalPx(config.scrollBarHeight);
+    config.childBottomPadding = logicalPx(config.childBottomPadding);
+    config.minTickSpacing = logicalPx(config.minTickSpacing);
+    config.cursorWidth = logicalPx(config.cursorWidth);
+    config.minHandleWidth = logicalPx(config.minHandleWidth);
+    config.minScrollBarWidth = logicalPx(config.minScrollBarWidth);
+    config.rectRounding = logicalPx(config.rectRounding);
     if (config.requestFitToContent)
         _firstFrame = 0;
     const bool changed =
         UI::sequencer(&sequence, &frame, &_expanded, &_selectedTrack,
                       &_firstFrame, UI::SequencerChangeFrame, config);
+    _legendWidth = legendWidth / std::max(_uiScale.value(), 1e-6f);
     if (changed)
         setFrame(frame);
 
