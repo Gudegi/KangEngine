@@ -21,7 +21,8 @@ using Animation::SkeletonTree;
 
 namespace {
 
-constexpr float DEG_TO_RAD = 0.017453292519943295769f;
+constexpr float PI = 3.14159265358979323846f;
+constexpr float DEG_TO_RAD = PI / 180.0f;
 
 enum class BVHChannel {
     Xposition,
@@ -207,10 +208,11 @@ void parseJointBlock(TokenStream& tokens, BVHParsedData& out,
         if (token == "}") {
             break;
         } else if (token == "OFFSET") {
+            const float x = tokens.nextFloat("OFFSET x") * scale;
+            const float y = tokens.nextFloat("OFFSET y") * scale;
+            const float z = tokens.nextFloat("OFFSET z") * scale;
             out.joints[static_cast<size_t>(jointIndex)].offset =
-                Eigen::Vector3f(tokens.nextFloat("OFFSET x") * scale,
-                                tokens.nextFloat("OFFSET y") * scale,
-                                tokens.nextFloat("OFFSET z") * scale);
+                Eigen::Vector3f(x, y, z);
             sawOffset = true;
         } else if (token == "CHANNELS") {
             const int count = tokens.nextInt("CHANNELS count");
