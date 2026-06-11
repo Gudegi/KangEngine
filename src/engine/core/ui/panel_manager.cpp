@@ -37,7 +37,7 @@ void PanelManager::init(GLFWwindow* window) {
     // TODO: improve me.
     _fontSize = 13.0f;
 #else
-    _fontSize = 11.0f * dpiScale;
+    _fontSize = 13.0f; //  * dpiScale;
 #endif
     // loadFont("./assets/fonts/godoFont/GodoM.ttf", fontSize, true);
 }
