@@ -122,8 +122,12 @@ if(USE_PHYSX)
             PhysXCommon_static_64
             PhysXFoundation_static_64
             -Wl,--end-group
+            PhysXGpu_64
             pthread
             dl
+        )
+        target_link_options(pre_compiled_ext INTERFACE
+            "-Wl,-rpath,${physx_DIR}/bin/linux.clang/${PHYSX_BUILD_TYPE}"
         )
     endif()
 endif()
@@ -195,6 +199,7 @@ target_link_libraries(engine_core PUBLIC pre_compiled_ext)
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_box_instancing.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_instancing.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/view_fbx_character.cpp")
+#file(GLOB MAIN_FILE "${MAIN_DIR}/view_bvh_character.cpp")
 file(GLOB MAIN_FILE "${MAIN_DIR}/debug_camera_frustum.cpp")
 
 add_executable(${PROJECT_NAME} ${MAIN_FILE})

@@ -1,7 +1,12 @@
 #include "physics.hpp"
+#include "PxBroadPhase.h"
+#include "PxSceneDesc.h"
 #include "animation/character_description.hpp"
 #include "articulation.hpp"
 #include "foundation/Px.h"
+#ifndef __APPLE__
+#include "gpu/PxGpu.h"
+#endif
 #include <Eigen/Geometry>
 #include <algorithm>
 #include <cmath>
@@ -156,7 +161,7 @@ PhysicsWorld::PhysicsWorld(PhysicsConfig config) {
 
     PxSceneDesc sceneDesc(_physics->getTolerancesScale());
     sceneDesc.gravity = _gravity;
-    _dispatcher = PxDefaultCpuDispatcherCreate(2);
+    _dispatcher = PxDefaultCpuDispatcherCreate(4);
     sceneDesc.cpuDispatcher = _dispatcher;
     sceneDesc.filterShader = config.filterShader;
     if (config.enableContactReports) {
@@ -166,6 +171,31 @@ PhysicsWorld::PhysicsWorld(PhysicsConfig config) {
             sceneDesc.filterShader = contactReportFilterShader;
     }
     sceneDesc.solverType = config.solverType;
+    if (config.enableGPU) {
+#ifdef __APPLE__
+        fmt::print(
+            "PhysX GPU is not available on Apple builds; using CPU PhysX.\n");
+#else
+        PxCudaContextManagerDesc cudaContextManagerDesc;
+        _cudaContextManager = PxCreateCudaContextManager(
+            *_foundation, cudaContextManagerDesc, PxGetProfilerCallback());
+        if (_cudaContextManager && !_cudaContextManager->contextIsValid()) {
+            _cudaContextManager->release();
+            _cudaContextManager = nullptr;
+        }
+        if (_cudaContextManager) {
+            sceneDesc.cudaContextManager = _cudaContextManager;
+            sceneDesc.flags |= PxSceneFlag::eENABLE_GPU_DYNAMICS;
+            sceneDesc.broadPhaseType = PxBroadPhaseType::eGPU;
+            // sceneDesc.gpuDynamicsConfig;
+            fmt::print("PhysX GPU is enabled.\n");
+        } else {
+            fmt::print(
+                "Failed to initialize PhysX CUDA context; using CPU PhysX.\n");
+        }
+#endif
+    }
+
     _scene = _physics->createScene(sceneDesc);
 
     _material = _physics->createMaterial(
@@ -180,6 +210,10 @@ PhysicsWorld::~PhysicsWorld() {
         _scene->release();
     if (_dispatcher)
         _dispatcher->release();
+#ifndef __APPLE__
+    if (_cudaContextManager)
+        _cudaContextManager->release();
+#endif
     if (_material)
         _material->release();
     _contactCallback.reset();

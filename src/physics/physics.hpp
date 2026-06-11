@@ -32,6 +32,11 @@ struct PhysicsConfig {
     bool enableContactReports = true;
     // PxSolverType::Enum solverType = PxSolverType::ePGS;
     PxSolverType::Enum solverType = PxSolverType::eTGS;
+#ifdef __APPLE__
+    bool enableGPU = false;
+#else
+    bool enableGPU = true;
+#endif
 
     static PhysicsConfig yUp() { return {}; }
 
@@ -65,6 +70,7 @@ class PhysicsWorld {
     PxScene* _scene = nullptr;
     PxMaterial* _material = nullptr;
     PxDefaultCpuDispatcher* _dispatcher = nullptr;
+    PxCudaContextManager* _cudaContextManager = nullptr;
 
     float _dt;
     UpAxis _upAxis;
