@@ -25,7 +25,6 @@ from .motion_modules import (
     TargetModule,
     TrackingModule,
 )
-from .sim import ControlMode, KangSimWorld
 from .utils import (
     COMMON,
     DEFAULT_PROFILE_ORDER,
@@ -39,11 +38,31 @@ from .utils import (
     preset_rgba,
 )
 from .visual import KangWorldVisualBridge
-from .mimickit_engine import (
-    KangEngineEngine,
-    build_engine as build_mimickit_engine,
-    install_mimickit_engine_builder,
-)
+# TODO: Keep Torch-heavy modules lazy until CUDA context interop is explicit.
+# This avoids accidental Torch CUDA initialization before PhysX GPU setup.
+_LAZY_IMPORTS = {
+    "ControlMode": (".sim", "ControlMode"),
+    "KangSimWorld": (".sim", "KangSimWorld"),
+    "KangEngineEngine": (".mimickit_engine", "KangEngineEngine"),
+    "build_mimickit_engine": (".mimickit_engine", "build_engine"),
+    "install_mimickit_engine_builder": (
+        ".mimickit_engine",
+        "install_mimickit_engine_builder",
+    ),
+}
+
+
+def __getattr__(name):
+    try:
+        module_name, attr_name = _LAZY_IMPORTS[name]
+    except KeyError as exc:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from exc
+
+    from importlib import import_module
+
+    value = getattr(import_module(module_name, __name__), attr_name)
+    globals()[name] = value
+    return value
 
 # Core engine API
 BackendType = _ke.BackendType

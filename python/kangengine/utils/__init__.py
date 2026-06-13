@@ -1,12 +1,3 @@
-
-from .batched_rotations import (
-    quat_wxyz_conjugate,
-    quat_wxyz_from_angle_axis,
-    quat_wxyz_multiply,
-    quat_wxyz_normalize,
-    quat_wxyz_rotate,
-    quat_wxyz_rotate_inverse,
-)
 from .color import preset_rgba
 from .debug_draw import log_debug_axes
 from .joint_mapping import (
@@ -34,7 +25,37 @@ from .math import (
     quat_xyzw_normalize,
     quat_xyzw_rotate,
 )
-from .tensor import as_native_numpy, as_tensor, resolve_device
+
+_LAZY_IMPORTS = {
+    "as_native_numpy": (".tensor", "as_native_numpy"),
+    "as_tensor": (".tensor", "as_tensor"),
+    "resolve_device": (".tensor", "resolve_device"),
+    "quat_wxyz_conjugate": (".batched_rotations", "quat_wxyz_conjugate"),
+    "quat_wxyz_from_angle_axis": (
+        ".batched_rotations",
+        "quat_wxyz_from_angle_axis",
+    ),
+    "quat_wxyz_multiply": (".batched_rotations", "quat_wxyz_multiply"),
+    "quat_wxyz_normalize": (".batched_rotations", "quat_wxyz_normalize"),
+    "quat_wxyz_rotate": (".batched_rotations", "quat_wxyz_rotate"),
+    "quat_wxyz_rotate_inverse": (
+        ".batched_rotations",
+        "quat_wxyz_rotate_inverse",
+    ),
+}
+
+
+def __getattr__(name):
+    try:
+        module_name, attr_name = _LAZY_IMPORTS[name]
+    except KeyError as exc:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from exc
+
+    from importlib import import_module
+
+    value = getattr(import_module(module_name, __name__), attr_name)
+    globals()[name] = value
+    return value
 
 __all__ = [
     "preset_rgba",

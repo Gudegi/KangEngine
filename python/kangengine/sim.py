@@ -10,11 +10,11 @@ import numpy as np
 
 from ._core import _ke
 from .rigid import rigid_shape_specs
-from .state import KangStateCache
-from .utils.tensor import as_native_numpy, resolve_device
 
 
 def _as_float_array(value):
+    from .utils.tensor import as_native_numpy
+
     return as_native_numpy(value)
 
 
@@ -52,6 +52,21 @@ def _require_physx():
             "KangSimWorld requires KangEngine PhysX bindings. "
             f"Missing: {', '.join(missing)}"
         )
+
+
+def _sim_device_uses_gpu(sim_device) -> bool:
+    if sim_device is None:
+        return False
+    if isinstance(sim_device, str):
+        device = sim_device.strip().lower()
+        if device == "cpu":
+            return False
+        if device == "cuda" or device.startswith("cuda:"):
+            return True
+    raise ValueError(
+        "sim_device must be 'cpu', 'cuda', or 'cuda:<ordinal>' "
+        f"(got {sim_device!r})"
+    )
 
 
 @dataclass(slots=True)
@@ -119,6 +134,7 @@ class KangSimWorld:
         physics_config=None,
         sim_dt: float | None = None,
         add_ground: bool = False,
+        sim_device="cpu",
         device=None,
     ):
         _require_physx()
@@ -126,13 +142,18 @@ class KangSimWorld:
             physics_config = _ke.PhysicsConfig.z_up()
         if sim_dt is not None:
             physics_config.dt = float(sim_dt)
+        if hasattr(physics_config, "enable_gpu"):
+            physics_config.enable_gpu = _sim_device_uses_gpu(sim_device)
 
         self.num_envs = int(num_envs)
-        self.device = resolve_device(device)
         self.physics = _ke.PhysicsWorld(physics_config)
         if add_ground:
             self.physics.add_default_ground()
 
+        from .state import KangStateCache
+        from .utils.tensor import resolve_device
+
+        self.device = resolve_device(device)
         self.state = KangStateCache(num_envs=self.num_envs, device=self.device)
         self.articulations: dict[tuple[int, int], SimArticulation] = {}
         self.rigids: dict[tuple[int, int], SimRigid] = {}
