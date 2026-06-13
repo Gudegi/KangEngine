@@ -1,5 +1,8 @@
 ///
-/// SkeletonBridge — connects SkeletonFK pose computation to scene Prim visuals.
+/// SkeletonBridge — adapter from SkeletonFK/SkeletonState to scene Prim xforms.
+///
+/// FK/IK calculation belongs in animation/. This class is the scene mutation
+/// bridge that applies computed skeleton poses to non-owning Prim visuals.
 ///
 
 #ifndef _SKELETON_BRIDGE_HPP_
@@ -22,7 +25,10 @@ namespace Bridge {
 
 class SkeletonBridgeAsset;
 
-class SkeletonBridge { // TODO: refactor name
+// Scene mutation adapter for SkeletonFK/SkeletonState.
+// FK/IK calculation belongs in animation/; this class applies computed poses
+// to non-owning scene Prims.
+class SkeletonBridge {
   public:
     SkeletonBridge() {}
 

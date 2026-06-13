@@ -1,4 +1,4 @@
-"""Python state helpers for KangEngine simulation objects."""
+"""Canonical Python-side batched state cache for KangEngine simulation objects."""
 
 from __future__ import annotations
 
@@ -296,7 +296,7 @@ class ArticulationRecord:
 
 
 class KangStateCache:
-    """Batched state cache keyed by ``(env_id, obj_id)``.
+    """Canonical runtime state cache keyed by ``(env_id, obj_id)``.
 
     This is the Python-side bridge toward MimicKit/Newton/Isaac-style APIs:
     object getters return preallocated tensors batched over envs, e.g.

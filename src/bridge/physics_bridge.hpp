@@ -1,5 +1,8 @@
 ///
-/// PhysicsBridge — syncs PhysX simulation results (pose) to scene Prim visuals.
+/// PhysicsBridge — adapter from PhysX state to scene/render visuals.
+///
+/// This class does not own simulation state. It only copies PhysX poses into
+/// SceneGraph prims or ExternalBuffer renderer handles.
 ///
 /// Usage:
 ///   PhysicsBridge bridge{this};               // App* once at construction
@@ -43,9 +46,12 @@ class PhysicsBridge {
     explicit PhysicsBridge(App* app = nullptr) : _app(app) {}
 
     // Single articulation paired with skeleton visuals — Prim-based sync
+    // Legacy/small-scene path. Simulation visuals should prefer addInstanced()
+    // so renderer transforms come from ExternalBuffer uploads.
     void add(const Articulation& artic, const SkeletonBridge& skelBridge);
 
     // N identical articulations, one handle per body type — instanced sync
+    // Preferred simulation visual path.
     void addInstanced(std::vector<Articulation*> artics,
                       std::vector<MeshHandle> handles);
     void addInstanced(const Articulation& artic,
@@ -53,6 +59,7 @@ class PhysicsBridge {
 
     // Create one Prim per collision geom. Returns Prims for addShape().
     // visibleByDefault=false: debug overlay (invisible until toggled)
+    // Debug visual authoring helper, not the primary simulation sync path.
     std::vector<Scene::Prim*>
     addCollisionVisuals(const Articulation& artic, Scene::SceneBackend* scene,
                         const std::string& basePath = "/collision",

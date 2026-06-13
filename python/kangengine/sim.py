@@ -55,6 +55,8 @@ def _require_physx():
 
 
 class SimDevice(str, Enum):
+    """Simulation backend/device selector for KangSimWorld."""
+
     CPU = "cpu"
     CUDA = "cuda"
 
@@ -133,7 +135,19 @@ class ResetBuffer:
 
 
 class KangSimWorld:
-    """Owns a PhysX world, registered articulations, and batched state cache."""
+    """Owns a PhysX world, registered articulations, and batched state cache.
+
+    ``state`` is the canonical Python runtime state. ``step(refresh=True)`` and
+    ``refresh()`` update this cache from PhysX and return it. Viewer helpers may
+    sync render objects separately, but policy/training code should read state
+    from this cache.
+
+    Args:
+        sim_device: Simulation backend/device. ``"cpu"`` is the default PhysX
+            CPU path. ``"cuda"`` enables the experimental PhysX GPU path.
+        device: Torch state/cache device for returned batched tensors. This is
+            intentionally separate from ``sim_device``.
+    """
 
     def __init__(
         self,
@@ -494,6 +508,7 @@ class KangSimWorld:
         self._active_body_force_keys.clear()
 
     def step(self, substeps: int = 1, refresh: bool = True, apply_commands: bool = True):
+        """Advance simulation and return the canonical batched state cache."""
         self.apply_resets()
         if apply_commands:
             self.apply_commands()
@@ -507,6 +522,7 @@ class KangSimWorld:
         return self.state
 
     def refresh(self):
+        """Refresh and return the canonical batched state cache."""
         return self.state.refresh()
 
     def articulation(self, env_id: int = 0, obj_id: int = 0):

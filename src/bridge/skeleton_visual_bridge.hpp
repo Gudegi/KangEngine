@@ -1,5 +1,9 @@
 ///
-/// SkeletonVisualBridge — renderer-backed line/sphere skeleton visualization.
+/// SkeletonVisualBridge — SkeletonState to renderer-backed line/point
+/// visualizer.
+///
+/// Unlike SkeletonBridge, this does not author a body hierarchy for simulation.
+/// It owns lightweight render handles for visualizing BVH/FBX skeleton motion.
 ///
 
 #ifndef _SKELETON_VISUAL_BRIDGE_HPP_

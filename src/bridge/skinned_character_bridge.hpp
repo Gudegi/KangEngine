@@ -19,14 +19,17 @@ class App;
 namespace Backend {
 class Shader;
 class Texture;
-}
+} // namespace Backend
 
 namespace Bridge {
 
-// Connects imported skinned character assets to App rendering.
+// Adapter for imported skinned character assets and skeleton motion playback.
 //
 // Asset/FBXLoader owns import and conversion. This bridge owns the scene prims,
 // mesh handles, and per-frame bone matrix upload for animation playback.
+// Long term, this should split into SkeletonState calculation and
+// SkinningRenderer-style upload plumbing. Keep it as a convenience adapter
+// while the runtime/render state boundary is still settling.
 class SkinnedCharacterBridge {
   public:
     struct MeshBinding {
@@ -40,18 +43,17 @@ class SkinnedCharacterBridge {
         glm::vec4 baseColor = glm::vec4(1.0f);
     };
 
-    static SkinnedCharacterBridge fromFBX(
-        App* app, Backend::Shader* shader, const std::string& fbxPath,
-        const std::string& primBasePath = "/fbx_character",
-        int clipIndex = -1, float fps = -1.0f, float scale = 0.01f,
-        bool useMaterials = true);
+    static SkinnedCharacterBridge
+    fromFBX(App* app, Backend::Shader* shader, const std::string& fbxPath,
+            const std::string& primBasePath = "/fbx_character",
+            int clipIndex = -1, float fps = -1.0f, float scale = 0.01f,
+            bool useMaterials = true);
 
     static SkinnedCharacterBridge fromFBXWithBind(
         App* app, Backend::Shader* shader, const std::string& motionFbxPath,
         const std::string& bindFbxPath,
-        const std::string& primBasePath = "/fbx_character",
-        int clipIndex = -1, float fps = -1.0f, float scale = 0.01f,
-        bool useMaterials = true);
+        const std::string& primBasePath = "/fbx_character", int clipIndex = -1,
+        float fps = -1.0f, float scale = 0.01f, bool useMaterials = true);
 
     Animation::SkeletonState applyTime(float time, bool loop = true);
     Animation::SkeletonState

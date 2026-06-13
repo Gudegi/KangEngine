@@ -381,6 +381,7 @@ class KangEngineEngine(_BaseEngine):
             num_envs=self._num_envs,
             sim_dt=self._sim_timestep,
             add_ground=bool(self._config.get("add_ground", True)),
+            sim_device=self._config.get("sim_device", "cpu"),
             device=self._device,
         )
         self._created_envs: list[int] = []

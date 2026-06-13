@@ -65,7 +65,8 @@ def __getattr__(name):
     globals()[name] = value
     return value
 
-# Core engine API
+# Core engine API. Keep top-level exports focused on common viewer/app usage;
+# heavier simulation and MimicKit APIs stay lazy via _LAZY_IMPORTS.
 BackendType = _ke.BackendType
 GraphicsDevice = _ke.GraphicsDevice
 Shader = _ke.Shader

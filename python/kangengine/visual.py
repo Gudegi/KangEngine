@@ -1,7 +1,8 @@
-"""Viewer-side helpers for KangSimWorld.
+"""Viewer-side wiring helpers for KangSimWorld.
 
-KangSimWorld intentionally stays headless. These helpers are owned by App or
-examples that need scene Prim visuals synced from PhysX.
+KangSimWorld intentionally stays headless and owns canonical runtime state.
+These helpers are owned by App or examples that need scene Prim/render visuals
+synced from PhysX. They should not become a second simulation state source.
 """
 
 from __future__ import annotations
@@ -102,7 +103,12 @@ class RigidVisualBridge:
 
 
 class KangWorldVisualBridge:
-    """Owns PhysicsBridge/SkeletonBridge wiring for one KangSimWorld viewer."""
+    """Viewer-side wiring for one KangSimWorld.
+
+    This class syncs render/scene visuals from simulation objects. It is not the
+    canonical state owner; use ``world.state`` / ``world.refresh()`` for runtime
+    state consumed by policy or training code.
+    """
 
     def __init__(self, app, world):
         if not hasattr(_ke, "PhysicsBridge"):
