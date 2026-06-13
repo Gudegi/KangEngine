@@ -42,6 +42,7 @@ from .visual import KangWorldVisualBridge
 # This avoids accidental Torch CUDA initialization before PhysX GPU setup.
 _LAZY_IMPORTS = {
     "ControlMode": (".sim", "ControlMode"),
+    "SimDevice": (".sim", "SimDevice"),
     "KangSimWorld": (".sim", "KangSimWorld"),
     "KangEngineEngine": (".mimickit_engine", "KangEngineEngine"),
     "build_mimickit_engine": (".mimickit_engine", "build_engine"),
@@ -73,6 +74,7 @@ Camera = _ke.Camera
 UpAxis = _ke.UpAxis
 TransformSource = _ke.TransformSource
 InteractionMode = _ke.InteractionMode
+RayPickResult = _ke.RayPickResult
 ColorLibrary = _ke.ColorLibrary
 ColorType = _ke.ColorType
 Color = _ke.Color
@@ -132,6 +134,7 @@ __all__ = [
     "KW5",
     "MIXAMO",
     "ControlMode",
+    "SimDevice",
     "KangSimWorld",
     "KangWorldVisualBridge",
     "KangEngineEngine",
@@ -145,6 +148,7 @@ __all__ = [
     "UpAxis",
     "TransformSource",
     "InteractionMode",
+    "RayPickResult",
     "vec3",
     "vec2",
     "vec4",

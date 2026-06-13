@@ -22,6 +22,7 @@
 #include "engine/core/ui/ui_scale.hpp"
 #include "utils/asset_path.hpp"
 #include "geometry/ray.hpp"
+#include "engine/core/app/interaction_controller.hpp"
 #include "engine/core/window/window.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/graphics/backend/graphics_factory.hpp"
@@ -34,13 +35,6 @@
 #include "engine/scene/scene_backend.hpp"
 #include "engine/scene/native/prim.hpp"
 namespace KE {
-
-enum class InteractionMode {
-    Inspect, // Pick/hover/debug only.
-    Edit,    // SceneGraph transform gizmo.
-    Force,   // Physics/external-buffer drag force.
-    // IK       // IK target / effector controls.
-};
 
 class App {
   private:
@@ -94,18 +88,12 @@ class App {
     std::unique_ptr<Rasterizer> _rasterizer;
     std::unique_ptr<PostProcessor> _postProcessor;
     std::unique_ptr<SelectionOutlineProcessor> _selectionOutlineProcessor;
-    RayPickResult _lastRayPickResult;
-    RayPickResult _selectedRayPickResult;
-    InteractionMode _interactionMode = InteractionMode::Inspect;
-    bool _forceDragActive = false;
-    RayPickResult _forceDragPick;
-    glm::vec3 _forceDragPlanePoint = glm::vec3(0.0f);
-    glm::vec3 _forceDragPlaneNormal = glm::vec3(0.0f, 0.0f, 1.0f);
+    InteractionController _interaction;
+    GizmoController _gizmo;
 
     void registerCallbacks();
     bool writeScreenshotFrame();
     void renderSelectionGizmo();
-    bool forceDragTarget(const Geometry::Ray& ray, glm::vec3& outTarget) const;
     bool getPickTransform(const RayPickResult& result,
                           glm::mat4& outTransform) const;
     bool setPickTransform(const RayPickResult& result,
@@ -152,10 +140,12 @@ class App {
     SelectionOutlineProcessor* getSelectionOutlineProcessor() {
         return _selectionOutlineProcessor.get();
     }
-    InteractionMode getInteractionMode() const { return _interactionMode; }
-    void setInteractionMode(InteractionMode mode) { _interactionMode = mode; }
-    bool hasSelection() const { return _selectedRayPickResult.hit; }
-    void clearSelection() { _selectedRayPickResult = RayPickResult{}; }
+    InteractionMode getInteractionMode() const { return _interaction.mode(); }
+    void setInteractionMode(InteractionMode mode) {
+        _interaction.setMode(mode);
+    }
+    bool hasSelection() const { return _interaction.hasSelection(); }
+    void clearSelection() { _interaction.clearSelection(); }
     void renderSceneToFramebuffer(Camera& camera, Backend::Framebuffer* target,
                                   int width, int height, bool clear = true);
 
@@ -302,7 +292,7 @@ class App {
     RayPickResult rayPick(const Geometry::Ray& ray) const;
     RayPickResult pickMouse();
     const RayPickResult& getLastRayPickResult() const {
-        return _lastRayPickResult;
+        return _interaction.lastPick();
     }
 
     // Coordinate Conversion Utilities

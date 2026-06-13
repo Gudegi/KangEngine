@@ -14,7 +14,7 @@
 #ifndef _PHYSICS_BRIDGE_HPP_
 #define _PHYSICS_BRIDGE_HPP_
 
-#include "engine/graphics/renderer/rasterizer.hpp"
+#include "engine/graphics/renderer/renderer_types.hpp"
 #include "PxPhysicsAPI.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>

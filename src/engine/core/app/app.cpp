@@ -10,7 +10,6 @@
 #include "utils/print_debug.hpp"
 #include "utils/asset_path.hpp"
 #include "utils/types.hpp"
-#include <ImGuizmo.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 #include <chrono>
@@ -23,7 +22,6 @@
 #include <glm/fwd.hpp>
 #include <glm/geometric.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 #include <iomanip>
 #include <memory>
 #include <optional>
@@ -261,28 +259,22 @@ void App::renderFrameOnce() {
     if (_rasterizer) {
         _rasterizer->updateFrameData(_viewMatrix, _projectionMatrix);
         if (_mousePickRequested) {
-            _lastRayPickResult = pickMouse();
+            const RayPickResult pick = pickMouse();
             _mousePickRequested = false;
-            if (_lastRayPickResult.hit)
-                _selectedRayPickResult = _lastRayPickResult;
-            if (_interactionMode == InteractionMode::Force &&
-                _lastRayPickResult.hit) {
-                _forceDragActive = true;
-                _forceDragPick = _lastRayPickResult;
-                _forceDragPlanePoint = _lastRayPickResult.position;
-                _forceDragPlaneNormal = _camera.getCameraLookDir();
-                onForceDragBegin(_forceDragPick, _forceDragPlanePoint);
+            if (_interaction.handlePick(pick, _camera.getCameraLookDir())) {
+                onForceDragBegin(_interaction.forceDragPick(),
+                                 _interaction.forceDragPlanePoint());
             }
-            onRayPicked(_lastRayPickResult);
+            onRayPicked(_interaction.lastPick());
         }
-        if (_forceDragActive) {
+        if (_interaction.isForceDragActive()) {
             glm::vec3 target;
-            if (forceDragTarget(getMouseRay(), target))
-                onForceDragUpdate(_forceDragPick, target);
+            if (_interaction.forceDragTarget(getMouseRay(), target))
+                onForceDragUpdate(_interaction.forceDragPick(), target);
         }
         if (_io->isPickMode) {
-            _lastRayPickResult = pickMouse();
-            onRayPickHover(_lastRayPickResult);
+            _interaction.handleHoverPick(pickMouse());
+            onRayPickHover(_interaction.lastPick());
         }
         _rasterizer->renderShadowMap(_camera, _upAxis, _width, _height);
     }
@@ -301,8 +293,8 @@ void App::renderFrameOnce() {
     if (_postProcessor && _selectionOutlineProcessor &&
         _selectionOutlineProcessor->config().enabled &&
         _selectionMaskFramebuffer && _rasterizer &&
-        _selectedRayPickResult.hit) {
-        _rasterizer->renderSelectionMask(_selectedRayPickResult,
+        _interaction.hasSelection()) {
+        _rasterizer->renderSelectionMask(_interaction.selection(),
                                          _selectionMaskFramebuffer.get(),
                                          _width, _height);
         _selectionOutlineProcessor->process(
@@ -918,9 +910,8 @@ void App::mouseButtonCallback(GLFWwindow* window, int button, int action,
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
         _io->isMouseLeftClicked = false;
         _io->isPickMode = false;
-        if (_forceDragActive) {
-            _forceDragActive = false;
-            _forceDragPick = RayPickResult{};
+        if (_interaction.isForceDragActive()) {
+            _interaction.endForceDrag();
             onForceDragEnd();
         }
     }
@@ -976,10 +967,13 @@ void App::processInput() {
 
     bool escPressed = glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS;
     if (escPressed && !_io->isEscKeyPressed) {
-        if (hasSelection())
-            clearSelection();
-        else
-            glfwSetWindowShouldClose(window, true);
+        bool endedForceDrag = false;
+        if (_interaction.cancelActiveInteraction(endedForceDrag)) {
+            if (endedForceDrag)
+                onForceDragEnd();
+        } else {
+            requestClose();
+        }
     }
     _io->isEscKeyPressed = escPressed;
 
@@ -1144,20 +1138,6 @@ RayPickResult App::rayPick(const Geometry::Ray& ray) const {
 
 RayPickResult App::pickMouse() { return rayPick(getMouseRay()); }
 
-bool App::forceDragTarget(const Geometry::Ray& ray,
-                          glm::vec3& outTarget) const {
-    const float denom = glm::dot(_forceDragPlaneNormal, ray.direction);
-    if (std::abs(denom) < 1e-6f)
-        return false;
-    const float t =
-        glm::dot(_forceDragPlanePoint - ray.origin, _forceDragPlaneNormal) /
-        denom;
-    if (t < 0.0f)
-        return false;
-    outTarget = ray.getPoint(t);
-    return true;
-}
-
 bool App::getPickTransform(const RayPickResult& result,
                            glm::mat4& outTransform) const {
     if (!result.hit)
@@ -1192,28 +1172,15 @@ bool App::setPickTransform(const RayPickResult& result,
 }
 
 void App::renderSelectionGizmo() {
-    if (!_selectedRayPickResult.hit || _hideUI)
-        return;
-    if (_interactionMode != InteractionMode::Edit)
+    if (_hideUI || !_interaction.hasEditableSelection())
         return;
 
     glm::mat4 transform(1.0f);
-    if (!getPickTransform(_selectedRayPickResult, transform))
+    if (!getPickTransform(_interaction.selection(), transform))
         return;
 
-    ImGuizmo::SetOrthographic(false);
-    ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImGuizmo::SetDrawlist(ImGui::GetForegroundDrawList(viewport));
-    ImGuizmo::SetRect(viewport->Pos.x, viewport->Pos.y, viewport->Size.x,
-                      viewport->Size.y);
-
-    const glm::mat4 view = _camera.getViewMatrix();
-    const glm::mat4 proj = _camera.getProjMatrix();
-    ImGuizmo::OPERATION operation = ImGuizmo::TRANSLATE | ImGuizmo::ROTATE;
-    if (ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(proj),
-                             operation, ImGuizmo::WORLD,
-                             glm::value_ptr(transform))) {
-        setPickTransform(_selectedRayPickResult, transform);
+    if (_gizmo.manipulateTransform(_camera, transform)) {
+        setPickTransform(_interaction.selection(), transform);
     }
 }
 

@@ -4,6 +4,7 @@
 #include "engine/graphics/renderer/renderer.hpp"
 #include "engine/graphics/renderer/debug_renderer.hpp"
 #include "engine/graphics/renderer/mesh_instancer.hpp"
+#include "engine/graphics/renderer/renderer_types.hpp"
 #include "engine/graphics/renderer/light.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/scene/scene_backend.hpp"
@@ -24,25 +25,6 @@
 #include <vector>
 
 namespace KE {
-
-using MeshHandle = uint32_t;
-static constexpr MeshHandle InvalidHandle = ~0u;
-
-enum class TransformSource {
-    SceneGraph,     // Prim/scene graph owns transforms.
-    ExternalBuffer, // Caller owns per-instance transform arrays.
-};
-
-struct RayPickResult {
-    bool hit = false;
-    MeshHandle handle = InvalidHandle;
-    int instanceIndex = -1;
-    TransformSource transformSource = TransformSource::SceneGraph;
-    Scene::Prim* prim = nullptr;
-    float distance = 0.0f;
-    glm::vec3 position = glm::vec3(0.0f);
-    Geometry::AABB bounds;
-};
 
 // ---------------------------------------------------------------------------
 // Two-source transform ownership

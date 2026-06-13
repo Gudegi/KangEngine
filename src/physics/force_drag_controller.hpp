@@ -3,7 +3,7 @@
 
 #include "PxPhysicsAPI.h"
 #include "physics.hpp"
-#include "engine/graphics/renderer/rasterizer.hpp"
+#include "engine/graphics/renderer/renderer_types.hpp"
 #include <glm/vec3.hpp>
 #include <unordered_map>
 #include <vector>
@@ -15,7 +15,7 @@ class Articulation;
 struct ForceDragConfig {
     float stiffness = 250.0f;
     float damping = 8.0f;
-    float maxForce = 300.0f;
+    float maxForce = 800.0f;
 };
 
 class ForceDragController {

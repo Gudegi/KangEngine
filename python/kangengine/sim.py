@@ -54,9 +54,16 @@ def _require_physx():
         )
 
 
+class SimDevice(str, Enum):
+    CPU = "cpu"
+    CUDA = "cuda"
+
+
 def _sim_device_uses_gpu(sim_device) -> bool:
     if sim_device is None:
         return False
+    if isinstance(sim_device, SimDevice):
+        sim_device = sim_device.value
     if isinstance(sim_device, str):
         device = sim_device.strip().lower()
         if device == "cpu":

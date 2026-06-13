@@ -3,6 +3,7 @@
 
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/graphics/material/material.hpp"
+#include "engine/graphics/renderer/renderer_types.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "geometry/bounds.hpp"
@@ -15,8 +16,6 @@
 #include <vector>
 
 namespace KE {
-
-enum class TransformSource;
 
 namespace RendererAttribute {
 
