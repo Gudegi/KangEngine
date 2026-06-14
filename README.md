@@ -66,7 +66,7 @@ python examples/view_bvh_character.py
 Run a Python PhysX example:
 
 ```bash
-python examples/physx_ragdoll.py
+python examples/sim_world_minimal.py
 ```
 
 See [Build Guide](docs/BUILD.md) for platform setup, PhysX, USD, and Python binding details.
@@ -79,6 +79,7 @@ See [Build Guide](docs/BUILD.md) for platform setup, PhysX, USD, and Python bind
 | Motion | `python/examples/view_fbx_character2.py` | FBX character viewing with motion editor modules |
 | Assets | `python/examples/view_fbx_mesh.py` | FBX static mesh import and scene manipulation |
 | Assets | `python/examples/view_usd_scene.py` | USD scene traversal and material loading |
+| Physics | `python/examples/sim_world_minimal.py` | Minimal `KangSimWorld` simulation and viewer sync |
 | Physics | `python/examples/physx_ragdoll.py` | Free-base articulated ragdoll simulation |
 | Physics | `python/examples/mjcf_dof_control.py` | MJCF loading and DOF control |
 | Tracking | `python/examples/physx_h1_motion_tracking.py` | H1 PhysX articulation tracking a reference motion |
