@@ -10,18 +10,19 @@ import numpy as np
 
 from ._core import _ke
 from .rigid import rigid_shape_specs
-
-
-def _as_float_array(value):
-    from .utils.tensor import as_native_numpy
-
-    return as_native_numpy(value)
+from .utils.env_utils import (
+    EnvIdLike,
+    env_id_list,
+    select_env_value,
+    select_optional_env_value,
+)
+from .utils.tensor import as_cpu_numpy
 
 
 def _optional_drive_array(value, size: int):
     if value is None:
         return None
-    arr = _as_float_array(value).reshape(-1)
+    arr = as_cpu_numpy(value).reshape(-1)
     if arr.size == 1:
         arr = np.full(size, float(arr[0]), dtype=np.float32)
     if arr.size != size:
@@ -30,7 +31,7 @@ def _optional_drive_array(value, size: int):
 
 
 def _clip_forces(forces, limits):
-    limits = _as_float_array(limits).reshape(-1)
+    limits = as_cpu_numpy(limits).reshape(-1)
     if limits.size == 1:
         limits = np.full_like(forces, float(limits[0]), dtype=np.float32)
     return np.clip(forces, -limits, limits).astype(np.float32, copy=False)
@@ -246,8 +247,8 @@ class KangSimWorld:
             collision_group = key[0] + 1
         rigid = self.physics.create_dynamic_rigid(
             data,
-            _as_float_array(pos).reshape(3),
-            _as_float_array(rot_xyzw).reshape(4),
+            as_cpu_numpy(pos).reshape(3),
+            as_cpu_numpy(rot_xyzw).reshape(4),
             float(density),
             int(collision_group),
             float(contact_offset),
@@ -307,7 +308,7 @@ class KangSimWorld:
 
     def set_cmd(
         self,
-        env_id: int | None,
+        env_id: EnvIdLike,
         obj_id: int,
         cmd,
         mode: ControlMode | str = ControlMode.POS,
@@ -315,18 +316,14 @@ class KangSimWorld:
         kd: float | None = 10.0,
     ):
         mode = ControlMode(mode)
-        env_ids = range(self.num_envs) if env_id is None else [int(env_id)]
-        source = _as_float_array(cmd)
-        for eid in env_ids:
+        env_ids = env_id_list(env_id, self.num_envs)
+        for env_index, eid in enumerate(env_ids):
             key = (eid, int(obj_id))
             if key in self.rigids:
                 raise TypeError(f"rigid body at env={eid}, obj={obj_id} does not accept commands")
             record = self.articulations[key]
             expected = record.articulation.num_dofs()
-            if env_id is None and source.ndim >= 2 and source.shape[0] == self.num_envs:
-                arr = source[eid].reshape(-1)
-            else:
-                arr = source.reshape(-1)
+            arr = select_env_value(cmd, env_index, len(env_ids), (expected,))
             if mode in (ControlMode.POS, ControlMode.VEL) and arr.size != expected:
                 raise ValueError(
                     f"{mode.value} command for env={eid}, obj={obj_id} expected "
@@ -336,10 +333,11 @@ class KangSimWorld:
             kd_arr = _optional_drive_array(kd, expected)
             self.commands[key] = CommandBuffer(mode, arr.copy(), kp_arr, kd_arr)
 
-    def clear_cmd(self, env_id: int | None = None, obj_id: int | None = None):
+    def clear_cmd(self, env_id: EnvIdLike = None, obj_id: int | None = None):
         keys = list(self.commands.keys())
+        env_ids = None if env_id is None else set(env_id_list(env_id, self.num_envs))
         for key in keys:
-            if env_id is not None and key[0] != int(env_id):
+            if env_ids is not None and key[0] not in env_ids:
                 continue
             if obj_id is not None and key[1] != int(obj_id):
                 continue
@@ -378,13 +376,13 @@ class KangSimWorld:
                 if buffer.kp is not None:
                     articulation.set_kps(buffer.kp)
                 else:
-                    kp = _as_float_array(articulation.get_kps()).reshape(-1)
+                    kp = as_cpu_numpy(articulation.get_kps()).reshape(-1)
                 if buffer.kd is not None:
                     articulation.set_kds(buffer.kd)
                 else:
-                    kd = _as_float_array(articulation.get_kds()).reshape(-1)
-                dof_pos = _as_float_array(articulation.get_dof_positions()).reshape(-1)
-                dof_vel = _as_float_array(articulation.get_dof_velocities()).reshape(-1)
+                    kd = as_cpu_numpy(articulation.get_kds()).reshape(-1)
+                dof_pos = as_cpu_numpy(articulation.get_dof_positions()).reshape(-1)
+                dof_vel = as_cpu_numpy(articulation.get_dof_velocities()).reshape(-1)
                 torque = kp * (buffer.cmd - dof_pos) - kd * dof_vel
                 torque = _clip_forces(torque, articulation.get_effort_limits())
                 articulation.set_joint_forces(torque)
@@ -422,13 +420,13 @@ class KangSimWorld:
 
     def set_body_force(
         self,
-        env_id: int | None,
+        env_id: EnvIdLike,
         obj_id: int,
         body_id: int,
         force,
     ):
-        env_ids = range(self.num_envs) if env_id is None else [int(env_id)]
-        for eid in env_ids:
+        env_ids = env_id_list(env_id, self.num_envs)
+        for env_index, eid in enumerate(env_ids):
             key = (eid, int(obj_id))
             forces = self.body_forces[key]
             body_idx = int(body_id)
@@ -436,7 +434,7 @@ class KangSimWorld:
                 raise IndexError(
                     f"body_id {body_idx} out of range for env={eid}, obj={obj_id}"
                 )
-            forces[body_idx] = _as_float_array(force).reshape(3)
+            forces[body_idx] = select_env_value(force, env_index, len(env_ids), (3,))
             if np.any(forces[body_idx]):
                 self._active_body_force_keys.add(key)
             elif not np.any(forces):
@@ -445,14 +443,14 @@ class KangSimWorld:
 
     def set_body_force_at_position(
         self,
-        env_id: int | None,
+        env_id: EnvIdLike,
         obj_id: int,
         body_id: int,
         force,
         position,
     ):
-        env_ids = range(self.num_envs) if env_id is None else [int(env_id)]
-        for eid in env_ids:
+        env_ids = env_id_list(env_id, self.num_envs)
+        for env_index, eid in enumerate(env_ids):
             key = (eid, int(obj_id))
             forces = self.body_forces[key]
             positions = self.body_force_positions[key]
@@ -461,8 +459,10 @@ class KangSimWorld:
                 raise IndexError(
                     f"body_id {body_idx} out of range for env={eid}, obj={obj_id}"
                 )
-            forces[body_idx] = _as_float_array(force).reshape(3)
-            positions[body_idx] = _as_float_array(position).reshape(3)
+            forces[body_idx] = select_env_value(force, env_index, len(env_ids), (3,))
+            positions[body_idx] = select_env_value(
+                position, env_index, len(env_ids), (3,)
+            )
             if np.any(forces[body_idx]):
                 self._active_body_force_keys.add(key)
             elif not np.any(forces):
@@ -533,7 +533,7 @@ class KangSimWorld:
 
     def set_root_state(
         self,
-        env_id: int | None,
+        env_id: EnvIdLike,
         obj_id: int,
         pos,
         rot_xyzw,
@@ -545,30 +545,26 @@ class KangSimWorld:
             self.state.set_root_state(
                 env_id, obj_id, pos, rot_xyzw, linear_velocity, angular_velocity
             )
-            env_ids = range(self.num_envs) if env_id is None else [int(env_id)]
+            env_ids = env_id_list(env_id, self.num_envs)
             for eid in env_ids:
                 self.resets[(eid, int(obj_id))].root = None
                 if not self.resets[(eid, int(obj_id))].pending:
                     self._pending_reset_keys.discard((eid, int(obj_id)))
             return
 
-        env_ids = range(self.num_envs) if env_id is None else [int(env_id)]
-        pos_arr = _as_float_array(pos).reshape(3)
-        rot_arr = _as_float_array(rot_xyzw).reshape(4)
-        linear_velocity_arr = (
-            None
-            if linear_velocity is None
-            else _as_float_array(linear_velocity).reshape(3)
-        )
-        angular_velocity_arr = (
-            None
-            if angular_velocity is None
-            else _as_float_array(angular_velocity).reshape(3)
-        )
-        for eid in env_ids:
+        env_ids = env_id_list(env_id, self.num_envs)
+        for env_index, eid in enumerate(env_ids):
             key = (eid, int(obj_id))
             if key not in self.articulations and key not in self.rigids:
                 raise KeyError(f"no object registered at env={eid}, obj={obj_id}")
+            pos_arr = select_env_value(pos, env_index, len(env_ids), (3,))
+            rot_arr = select_env_value(rot_xyzw, env_index, len(env_ids), (4,))
+            linear_velocity_arr = select_optional_env_value(
+                linear_velocity, env_index, len(env_ids), (3,)
+            )
+            angular_velocity_arr = select_optional_env_value(
+                angular_velocity, env_index, len(env_ids), (3,)
+            )
             self.resets[key].root = RootStateReset(
                 pos_arr.copy(),
                 rot_arr.copy(),
@@ -579,7 +575,7 @@ class KangSimWorld:
 
     def set_dof_state(
         self,
-        env_id: int | None,
+        env_id: EnvIdLike,
         obj_id: int,
         positions,
         velocities=None,
@@ -587,20 +583,20 @@ class KangSimWorld:
     ):
         if immediate:
             self.state.set_dof_state(env_id, obj_id, positions, velocities)
-            env_ids = range(self.num_envs) if env_id is None else [int(env_id)]
+            env_ids = env_id_list(env_id, self.num_envs)
             for eid in env_ids:
                 self.resets[(eid, int(obj_id))].dof = None
                 if not self.resets[(eid, int(obj_id))].pending:
                     self._pending_reset_keys.discard((eid, int(obj_id)))
             return
 
-        env_ids = range(self.num_envs) if env_id is None else [int(env_id)]
-        for eid in env_ids:
+        env_ids = env_id_list(env_id, self.num_envs)
+        for env_index, eid in enumerate(env_ids):
             key = (eid, int(obj_id))
             if key in self.rigids:
                 raise TypeError(f"rigid body at env={eid}, obj={obj_id} does not have DOF state")
             expected = self.articulations[key].articulation.num_dofs()
-            pos = _as_float_array(positions).reshape(-1)
+            pos = select_env_value(positions, env_index, len(env_ids), (expected,))
             if pos.size != expected:
                 raise ValueError(
                     f"dof reset for env={eid}, obj={obj_id} expected "
@@ -608,7 +604,7 @@ class KangSimWorld:
                 )
             vel = None
             if velocities is not None:
-                vel = _as_float_array(velocities).reshape(-1)
+                vel = select_env_value(velocities, env_index, len(env_ids), (expected,))
                 if vel.size != expected:
                     raise ValueError(
                         f"dof reset for env={eid}, obj={obj_id} expected "

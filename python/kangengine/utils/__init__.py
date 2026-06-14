@@ -27,7 +27,8 @@ from .math import (
 )
 
 _LAZY_IMPORTS = {
-    "as_native_numpy": (".tensor", "as_native_numpy"),
+    "as_cpu_numpy": (".tensor", "as_cpu_numpy"),
+    "as_sim_buffer": (".tensor", "as_sim_buffer"),
     "as_tensor": (".tensor", "as_tensor"),
     "resolve_device": (".tensor", "resolve_device"),
     "quat_wxyz_conjugate": (".batched_rotations", "quat_wxyz_conjugate"),
@@ -74,7 +75,8 @@ __all__ = [
     "MIXAMO",
     "normalize_joint_name",
     "normalize_vector",
-    "as_native_numpy",
+    "as_cpu_numpy",
+    "as_sim_buffer",
     "as_tensor",
     "quat_wxyz_conjugate",
     "quat_wxyz_from_angle_axis",

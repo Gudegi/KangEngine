@@ -16,7 +16,6 @@ import sys
 from typing import Any, Literal, TypeAlias
 
 import numpy as np
-from numpy.typing import NDArray
 import torch
 
 from ._core import _ke
@@ -24,7 +23,8 @@ from .app import App
 from .rigid import rigid_body_names
 from .sim import ControlMode, KangSimWorld
 from .utils import preset_rgba
-from .utils.tensor import as_native_numpy, as_tensor, resolve_device
+from .utils.env_utils import EnvIdLike, env_id_list
+from .utils.tensor import as_cpu_numpy, as_tensor, resolve_device
 from .visual import KangWorldVisualBridge
 
 try:
@@ -68,9 +68,6 @@ _CONTROL_MODE_MAP = {
 }
 
 ArrayLike: TypeAlias = Any
-EnvIdLike: TypeAlias = (
-    int | np.integer[Any] | NDArray[np.integer[Any]] | list[int] | tuple[int, ...] | None
-)
 RootComponent: TypeAlias = Literal["pos", "rot", "vel", "ang_vel"]
 DofComponent: TypeAlias = Literal["pos", "vel"]
 BodyVelocityKind: TypeAlias = Literal["vel", "ang_vel"]
@@ -1656,18 +1653,13 @@ class KangEngineEngine(_BaseEngine):
         return arr
 
     def _env_ids(self, env_id: EnvIdLike) -> list[int]:
-        if env_id is None:
-            return list(range(self._num_envs))
-        if self._is_single_env_id(env_id):
-            return [int(env_id)]
-        ids = self._as_numpy(env_id).reshape(-1)
-        return [int(x) for x in ids]
+        return env_id_list(env_id, self._num_envs)
 
     def _is_single_env_id(self, env_id: EnvIdLike) -> bool:
         return isinstance(env_id, (int, np.integer))
 
     def _as_numpy(self, value: ArrayLike) -> np.ndarray:
-        return as_native_numpy(value)
+        return as_cpu_numpy(value)
 
     def _out(self, value: ArrayLike) -> ArrayLike:
         return as_tensor(value, device=self._device)

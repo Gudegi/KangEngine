@@ -8,7 +8,13 @@ import numpy as np
 import torch
 
 from .rigid import expand_rigid_body_state
-from .utils.tensor import as_native_numpy, as_tensor, resolve_device
+from .utils.env_utils import (
+    EnvIdLike,
+    env_id_list,
+    select_env_value,
+    select_optional_env_value,
+)
+from .utils.tensor import as_cpu_numpy, as_tensor, resolve_device
 
 
 def _empty_state(batch_shape, num_links: int, num_dofs: int, device):
@@ -171,18 +177,18 @@ class ArticulationStateCache:
             [0.0, 0.0, 0.0] if angular_velocity is None else angular_velocity
         )
         self.articulation.set_root_state(
-            as_native_numpy(pos, shape=(3,)),
-            as_native_numpy(rot_xyzw, shape=(4,)),
-            as_native_numpy(linear_velocity, shape=(3,)),
-            as_native_numpy(angular_velocity, shape=(3,)),
+            as_cpu_numpy(pos, shape=(3,)),
+            as_cpu_numpy(rot_xyzw, shape=(4,)),
+            as_cpu_numpy(linear_velocity, shape=(3,)),
+            as_cpu_numpy(angular_velocity, shape=(3,)),
         )
 
     def set_dofs(self, positions, velocities=None):
         if velocities is None:
             velocities = torch.zeros(self.num_dofs, dtype=torch.float32, device=self.device)
         self.articulation.set_dof_state(
-            as_native_numpy(positions, shape=(self.num_dofs,)),
-            as_native_numpy(velocities, shape=(self.num_dofs,)),
+            as_cpu_numpy(positions, shape=(self.num_dofs,)),
+            as_cpu_numpy(velocities, shape=(self.num_dofs,)),
         )
 
 
@@ -238,10 +244,10 @@ class RigidStateCache:
             self.link_masses[0] = float(self.rigid.get_mass())
 
     def refresh_into(self, state: ArticulationState) -> ArticulationState:
-        pos = as_native_numpy(self.rigid.get_root_position(), shape=(3,))
-        rot = as_native_numpy(self.rigid.get_root_rotation(), shape=(4,))
-        vel = as_native_numpy(self.rigid.get_root_linear_velocity(), shape=(3,))
-        ang_vel = as_native_numpy(self.rigid.get_root_angular_velocity(), shape=(3,))
+        pos = as_cpu_numpy(self.rigid.get_root_position(), shape=(3,))
+        rot = as_cpu_numpy(self.rigid.get_root_rotation(), shape=(4,))
+        vel = as_cpu_numpy(self.rigid.get_root_linear_velocity(), shape=(3,))
+        ang_vel = as_cpu_numpy(self.rigid.get_root_angular_velocity(), shape=(3,))
         body_pos, body_rot = expand_rigid_body_state(
             pos, rot, self.local_pos, self.local_rot
         )
@@ -276,10 +282,10 @@ class RigidStateCache:
             [0.0, 0.0, 0.0] if angular_velocity is None else angular_velocity
         )
         self.rigid.set_root_state(
-            as_native_numpy(pos, shape=(3,)),
-            as_native_numpy(rot_xyzw, shape=(4,)),
-            as_native_numpy(linear_velocity, shape=(3,)),
-            as_native_numpy(angular_velocity, shape=(3,)),
+            as_cpu_numpy(pos, shape=(3,)),
+            as_cpu_numpy(rot_xyzw, shape=(4,)),
+            as_cpu_numpy(linear_velocity, shape=(3,)),
+            as_cpu_numpy(angular_velocity, shape=(3,)),
         )
 
     def set_dofs(self, positions, velocities=None):
@@ -484,20 +490,39 @@ class KangStateCache:
 
     def set_root_state(
         self,
-        env_id: int | None,
+        env_id: EnvIdLike,
         obj_id: int,
         pos,
         rot_xyzw,
         linear_velocity=None,
         angular_velocity=None,
     ):
-        env_ids = range(self.num_envs) if env_id is None else [int(env_id)]
-        for eid in env_ids:
+        env_ids = env_id_list(env_id, self.num_envs)
+        for env_index, eid in enumerate(env_ids):
             self.record(eid, obj_id).cache.set_root(
-                pos, rot_xyzw, linear_velocity, angular_velocity
+                select_env_value(pos, env_index, len(env_ids), (3,)),
+                select_env_value(rot_xyzw, env_index, len(env_ids), (4,)),
+                select_optional_env_value(
+                    linear_velocity, env_index, len(env_ids), (3,)
+                ),
+                select_optional_env_value(
+                    angular_velocity, env_index, len(env_ids), (3,)
+                ),
             )
 
-    def set_dof_state(self, env_id: int | None, obj_id: int, positions, velocities=None):
-        env_ids = range(self.num_envs) if env_id is None else [int(env_id)]
-        for eid in env_ids:
-            self.record(eid, obj_id).cache.set_dofs(positions, velocities)
+    def set_dof_state(
+        self,
+        env_id: EnvIdLike,
+        obj_id: int,
+        positions,
+        velocities=None,
+    ):
+        env_ids = env_id_list(env_id, self.num_envs)
+        for env_index, eid in enumerate(env_ids):
+            expected = self.record(eid, obj_id).cache.num_dofs
+            self.record(eid, obj_id).cache.set_dofs(
+                select_env_value(positions, env_index, len(env_ids), (expected,)),
+                select_optional_env_value(
+                    velocities, env_index, len(env_ids), (expected,)
+                ),
+            )
