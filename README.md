@@ -1,6 +1,14 @@
 # KangEngine
 
-A lightweight C++ engine for computer graphics and robotics research, with a Python interface for simulation and control experiments.
+A lightweight C++/Python engine for visualizing motion, robotics assets, and PhysX-based simulation experiments.
+
+> **Note:** This is a personal, long-term codebase dedicated to ongoing research and self-study. It is crafted as a lifetime sandbox for exploring computer graphics (especially character animation) and robotics control.
+
+![macOS](https://img.shields.io/badge/macOS-Apple%20Silicon-lightgrey)
+![Linux](https://img.shields.io/badge/Linux-Ubuntu%2024.04-orange)
+![C++17](https://img.shields.io/badge/C%2B%2B-17-blue)
+![Python](https://img.shields.io/badge/Python-3.12-blue)
+![PhysX](https://img.shields.io/badge/Physics-PhysX-green)
 
 <table align="center">
   <tr>
@@ -10,188 +18,128 @@ A lightweight C++ engine for computer graphics and robotics research, with a Pyt
   </tr>
 </table>
 
-## Features
+KangEngine is built for quick iteration around character motion, robot assets, and simulation visualization. The C++ side owns the renderer, scene graph, asset loaders, and PhysX integration; the Python package exposes the same runtime for scripts, motion tools, control experiments, and MimicKit integration.
+
+## Requirements
+
+- **OS:** macOS on Apple Silicon (Tahoe tested) or Linux (Ubuntu 24.04 tested)
+- **Build:** C++17, CMake, vcpkg, PhysX 5.1
+- **Python:** 3.12 for bindings and examples
+- **Graphics & GPU:** OpenGL 4.1+ compatible GPU (NVIDIA GPU required only for experimental PhysX GPU/CUDA workflows)
+
+## What It Does
+
+- **Multi-Format Asset Viewer:** Loads FBX, BVH, MJCF, OpenUSD, OBJ, and STL assets.
+- **Motion Inspection:** Visualizes skeletal motion, FK poses, root trajectories, contacts, and tracking targets.
+- **Interactive Visualization:** Provides skinned character rendering, skeleton overlays, debug drawing, and scene interaction tools.
+- **PhysX Simulation:** Runs rigid bodies, articulated robots, and motion-tracking control experiments.
+- **Python Workflows:** Provides Python APIs for motion editing, IK/control experiments, simulation scripts, and MimicKit integration.
+
+## Quick Start
+
+Build the C++ executable:
+
+```bash
+cmake --preset=vcpkg
+cmake --build build/release
+make run2
+```
+
+Build and install the Python package:
+
+```bash
+cd python
+uv venv .venv --python 3.12
+source .venv/bin/activate
+cd ..
+make build_python
+cd python
+uv pip install -e .
+```
+
+Run a Python motion viewer:
+
+```bash
+python examples/view_bvh_character.py
+```
+
+Run a Python PhysX example:
+
+```bash
+python examples/physx_ragdoll.py
+```
+
+See [Build Guide](docs/BUILD.md) for platform setup, PhysX, USD, and Python binding details.
+
+## Example Catalog
+
+| Area | Example | What it shows |
+|---|---|---|
+| Motion | `python/examples/view_bvh_character.py` | BVH loading, skeleton visualization, motion sequencer |
+| Motion | `python/examples/view_fbx_character2.py` | FBX character viewing with motion editor modules |
+| Assets | `python/examples/view_fbx_mesh.py` | FBX static mesh import and scene manipulation |
+| Assets | `python/examples/view_usd_scene.py` | USD scene traversal and material loading |
+| Physics | `python/examples/physx_ragdoll.py` | Free-base articulated ragdoll simulation |
+| Physics | `python/examples/mjcf_dof_control.py` | MJCF loading and DOF control |
+| Tracking | `python/examples/physx_h1_motion_tracking.py` | H1 PhysX articulation tracking a reference motion |
+| Physics | `examples/physics/physx_h1_instancing.cpp` | High-throughput ExternalBuffer visual sync |
+| Physics | `examples/physics/xpbd_cloth.cpp` | XPBD cloth simulation test |
+| Debug | `examples/debug_camera_frustum.cpp` | Camera frustum and renderer AABB debug tools |
+
+See [Examples](docs/EXAMPLES.md) for a longer list.
+
+## Feature Overview
 
 ### Rendering
-- OpenGL renderer with instanced mesh drawing and a lightweight graphics abstraction layer (WebGPU planned)
-- Scene-graph and handle-driven rendering paths for static scenes, physics objects, and large crowds
-- Shadow mapping, skybox rendering, gamma post-processing, and ImGui tooling
-- GPU skinning for animated FBX characters
-- Debug rendering utilities for lines, arrows, coordinate axes, and camera frustums
+
+- OpenGL renderer with instanced mesh drawing and a lightweight graphics abstraction layer.
+- SceneGraph and ExternalBuffer transform paths for authored scenes and high-throughput simulation visuals. See `examples/physics/physx_h1_instancing.cpp`.
+- Shadow mapping, skybox rendering, gamma post-processing, ImGui tooling, and post-process selection outlines.
+- GPU skinning for animated FBX characters.
+- Debug rendering utilities for lines, arrows, coordinate axes, points, and camera frustums.
 
 ### Asset Import
-- FBX: skeletons, animation clips, static meshes, and skinned meshes
-- MJCF: articulated characters, collision geometry, joints, and inertials
-- USD: mesh traversal, material subsets, and diffuse texture loading
-- OBJ/STL static mesh import
+
+- FBX: skeletons, animation clips, static meshes, and skinned meshes.
+- BVH: skeleton hierarchy, frame time, root motion, and local joint rotations.
+- MJCF: articulated characters, collision geometry, joints, and inertials.
+- USD: mesh traversal, material subsets, and diffuse texture loading.
+- OBJ/STL static mesh import.
 
 ### Simulation & Animation
-- PhysX rigid bodies and articulated robot simulation
-- Skeleton trees, sampled motion clips, FK, and pose states
-- Bridges for syncing physics, skeletons, and skinned characters to rendering
-- Experimental XPBD cloth simulation(non-PhysX)
+
+- PhysX rigid bodies and articulated robot simulation.
+- Skeleton trees, sampled motion clips, FK, pose states, and skeleton visual bridges.
+- Bridges for syncing physics, skeletons, and skinned characters to scene/render state.
+- Experimental XPBD cloth simulation. See `examples/physics/xpbd_cloth.cpp`.
+
+### Advanced Runtime Paths
+
+- **ExternalBuffer visual sync:** skips per-object scene graph mutation during simulation and uploads batched transforms directly to renderer-owned instance buffers. This is the preferred path for large simulation visuals such as many robot bodies or rigid objects.
+- **XPBD cloth:** a non-PhysX cloth simulation experiment used to explore constraint-based deformable simulation.
 
 ### Python
-- pybind11 bindings for app, scene, animation, physics, and asset APIs
-- Headless simulation and live visualization helpers
-- MimicKit-compatible backend adapter
 
-## How to build
-Install CMake first, then follow the platform steps below.
+- pybind11 bindings for app, scene, animation, physics, asset, and renderer-facing APIs.
+- Headless simulation and live visualization helpers.
+- Motion editor modules for trajectories, contacts, targets, and tracking overlays.
+- MimicKit-compatible backend adapter.
 
-<details>
-<summary> vcpkg </summary>
-KangEngine uses vcpkg manifest mode for most third-party C++ dependencies.
+## Development Notes
 
-1. Clone and bootstrap vcpkg.
-    ```bash
-    git clone https://github.com/microsoft/vcpkg.git
-    cd vcpkg && ./bootstrap-vcpkg.sh
-    ```
-2. Export `VCPKG_ROOT` and add vcpkg to `PATH`.
-    ```bash
-    export VCPKG_ROOT=/path/to/vcpkg
-    export PATH=$VCPKG_ROOT:$PATH
-    ```
-</details>
+This project is evolving quickly. While the main workflows are stable, some internal and high-level APIs are under active development and subject to change.
 
-<details>
-<summary> Linux (tested with Ubuntu 24.04)</summary>
+TODO:
 
-1. Install system packages.
-    ```bash
-    sudo apt install clang ninja-build unzip libxinerama-dev libxcursor-dev xorg-dev libglu1-mesa-dev pkg-config autoconf autoconf-archive automake libtool
-    ```
-2. Download NVIDIA Omniverse PhysX under `$HOME/Physics/PhysX`.
-    ```bash
-    mkdir -p ~/Physics
-    cd ~/Physics
-    wget https://github.com/NVIDIA-Omniverse/PhysX/archive/refs/tags/104.1-physx-5.1.2.zip
-    unzip 104.1-physx-5.1.2.zip
-    mv PhysX-104.1-physx-5.1.2 PhysX
-    ```
-3. Build PhysX with clang.
-    ```bash
-    cd ~/Physics/PhysX/physx
-    ./buildtools/packman/packman update -y
-    ./generate_projects.sh
+- WebGPU backend.
+- GPU accelerated simulation.
+- PBR rendering.
 
-    cd compiler/linux-release
-    cmake . \
-      -DCMAKE_C_COMPILER=clang \
-      -DCMAKE_CXX_COMPILER=clang++ \
-      -DCMAKE_CXX_FLAGS="-Wno-error=unsafe-buffer-usage -Wno-unsafe-buffer-usage -Wno-error=switch-default -Wno-switch-default -Wno-error=invalid-offsetof -Wno-invalid-offsetof -Wno-error=unused-but-set-variable -Wno-unused-but-set-variable"
-    cmake --build . --config release # (debug|checked|profile|release)
-    ```
-    Do not run the PhysX configure/build commands with `sudo`. If files were created as root, fix ownership first.
-    ```bash
-    sudo chown -R "$USER:$USER" ~/Physics/PhysX/physx
-    ```
-    The PhysX snippet executables may fail to link against the bundled OpenGL package, but KangEngine only needs the PhysX static libraries in `~/Physics/PhysX/physx/bin/linux.clang/release`.
-4. Configure KangEngine with clang.
-    ```bash
-    CC=clang CXX=clang++ cmake --preset=vcpkg
-    ```
-5. Build KangEngine.
-    ```bash
-    cmake --build build/release
-    ```
-6. Run KangEngine.
-    ```bash
-    make run2
-    ```
+## RL With MimicKit
 
-</details>
+KangEngine can be used as a backend engine of [MimicKit](https://github.com/xbpeng/MimicKit) through KangEngine's Python package. Use the `backend_kangengine` branch of MimicKit and keep MimicKit in a separate Python environment.
 
-<details>
-<summary> macOS (tested with M4 mac)</summary>
-
-1. Clone o3de PhysX under `$HOME/Physics/PhysX`.
-    ```bash
-    mkdir -p ~/Physics
-    cd ~/Physics
-    git clone -b 104.1 https://github.com/o3de/PhysX.git
-    ```
-2. Install build tools.
-    ```bash
-    brew install coreutils ninja autoconf automake autoconf-archive
-    ```
-3. Build PhysX.
-    ```bash
-    cd ~/Physics/PhysX/physx
-    ./buildtools/packman/packman update -y
-    ./generate_projects.sh
-
-    # Note: The O3DE PhysX build system uses the 'mac.x86_64' directory name for all macOS builds, including M-chips.
-    cd compiler/mac.x86_64
-    cmake --build . --config release # (debug|checked|profile|release)
-    ```
-4. Configure KangEngine.
-    ```bash
-    cmake --preset=vcpkg
-    ```
-5. Build KangEngine.
-    ```bash
-    cmake --build build/release
-    ```
-
-</details>
-
-<details>
-<summary>OpenUSD (Optional)</summary>
-
-OpenUSD is only needed when configuring KangEngine with `-DUSE_USD=ON`.
-
-1. Clone OpenUSD.
-    ```bash
-    cd ~
-    git clone https://github.com/PixarAnimationStudios/OpenUSD.git
-    ```
-2. Build OpenUSD into `~/usd_build`.
-    ```bash
-    mkdir -p ~/usd_build
-    python3 ~/OpenUSD/build_scripts/build_usd.py ~/usd_build
-    ```
-3. If you build OpenUSD somewhere else, pass `-Dpxr_DIR=/path/to/usd_build` to your CMake configure command instead of modifying `CMakeLists.txt`.
-
-</details>
-
-<details>
-
-<summary> Python Bindings (Optional) </summary>
-KangEngine exposes a Python module (`kangengine`) via pybind11. The extension is built by CMake and must be compiled against the same Python that will run it.
-
-1. Create a virtual environment with Python 3.12 using [uv](https://github.com/astral-sh/uv).
-    ```bash
-    cd python
-    uv venv .venv --python 3.12
-    source .venv/bin/activate
-    ```
-2. Build the extension with CMake from the repo root.
-    ```bash
-    cd ..
-    make build_python
-    # or with USD support:
-    # make build_usd_python
-    ```
-3. Install the Python package in editable mode.
-    ```bash
-    cd python
-    uv pip install -e .
-    ```
-4. Run an example.
-    ```bash
-    python examples/control_demo.py
-    ```
-</details>
-
-## RL with MimicKit
-
-KangEngine can be used as a backend engine of [MimicKit](https://github.com/xbpeng/MimicKit) through KangEngine's Python
-package. Use the `backend_kangengine` branch of MimicKit and keep MimicKit in a
-separate Python environment.
-
-**Limitation**: KangEngine supports both MimicKit policy inference and RL training, but its current PhysX simulation backend runs on the CPU, limiting training throughput compared with GPU-native simulators.
+**Limitation**: KangEngine supports both MimicKit policy inference and RL training, but the current PhysX backend is still CPU-oriented for most stable workflows. PhysX GPU support is being explored, but CUDA context compatibility with Torch is still an active design item.
 
 <table align="center">
   <tr>
@@ -200,33 +148,46 @@ separate Python environment.
   </tr>
 </table>
 
+<details>
+<summary>MimicKit setup and run commands</summary>
+
 1. Clone the KangEngine-enabled MimicKit fork branch.
+
     ```bash
     git clone -b backend_kangengine https://github.com/Gudegi/MimicKit.git
     ```
+
 2. Create and activate a MimicKit Python environment with uv.
+
     ```bash
     cd MimicKit
     uv venv .venv --python 3.12
     source .venv/bin/activate
     ```
+
 3. Build KangEngine's Python extension from the KangEngine repo.
+
     ```bash
     cd /path/to/KangEngine
     make build_python
     ```
+
 4. Install KangEngine's Python package into the MimicKit environment.
+
     ```bash
     cd python
     uv pip install -e .
     ```
+
 5. Install MimicKit dependencies.
+
     ```bash
     cd /path/to/MimicKit
-    source .venv/bin/activate
     uv pip install -r requirements.txt
     ```
-6. Run a small motion visualize test.
+
+6. Run a small motion visualization test.
+
     ```bash
     python mimickit/run.py \
       --mode test \
@@ -237,7 +198,9 @@ separate Python environment.
       --devices cpu \
       --test_episodes 10
     ```
+
 7. Run pretrained policy inference with KangEngine.
+
     ```bash
     python mimickit/run.py \
       --mode test \
@@ -261,6 +224,23 @@ env_spacing: 5
 enable_self_collisions: false
 ```
 
-The `backend_kangengine` branch already includes
-`data/engines/kangengine_engine.yaml`, so you usually do not need to create it
-manually.
+The `backend_kangengine` branch already includes `data/engines/kangengine_engine.yaml`, so you usually do not need to create it manually.
+
+</details>
+
+## References
+
+KangEngine is inspired by and built upon ideas from these excellent projects:
+
+**Frameworks & Learning Workflows**
+- [MimicKit](https://github.com/xbpeng/MimicKit): Motion imitation and RL experiment structure.
+- [Isaac Lab](https://github.com/isaac-sim/IsaacLab): Robot learning workflows and simulation tooling.
+- [Newton](https://github.com/newton-physics/newton): Robotics API shape and GPU simulation design.
+
+**Animation & Motion Editing**
+- [GenoViewPython](https://github.com/orangeduck/GenoViewPython): Skeletal animation and motion-debug visualization.
+- [AI4AnimationPy](https://github.com/facebookresearch/ai4animationpy): Motion modules and animation-engine structure.
+
+**Core Backends**
+- [NVIDIA PhysX](https://github.com/NVIDIA-Omniverse/PhysX): Rigid body and articulation simulation.
+- [OpenUSD](https://github.com/PixarAnimationStudios/OpenUSD): Scene description and asset loading.
