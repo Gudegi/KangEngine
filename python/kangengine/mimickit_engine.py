@@ -244,22 +244,22 @@ class _KangEngineViewer(App):
         vs = _asset_path("shaders", "common.vs")
         fs = _asset_path("shaders", "common.fs")
         checker_fs = _asset_path("shaders", "checkerboard.fs")
-        self.robot_shader = device.createShaderFromFile(vs, fs)
-        self.ground_shader = device.createShaderFromFile(vs, checker_fs)
+        self.robot_shader = device.create_shader_from_file(vs, fs)
+        self.ground_shader = device.create_shader_from_file(vs, checker_fs)
         for shader in (self.robot_shader, self.ground_shader):
             shader.use()
-            shader.setUniformBlockBinding("cameraUBO", 0)
-            shader.setUniformBlockBinding("lightUBO", 1)
-            shader.setUniformBlockBinding("shadowUBO", 2)
+            shader.set_uniform_block_binding("cameraUBO", 0)
+            shader.set_uniform_block_binding("lightUBO", 1)
+            shader.set_uniform_block_binding("shadowUBO", 2)
 
         self.ground_shader.use()
-        self.ground_shader.setVec4("checkerColor1", _ke.vec4(1.0, 1.0, 1.0, 1.0))
-        self.ground_shader.setVec4(
+        self.ground_shader.set_vec4("checkerColor1", _ke.vec4(1.0, 1.0, 1.0, 1.0))
+        self.ground_shader.set_vec4(
             "checkerColor2",
             _ke.vec4(*preset_rgba(_ke.ColorType.PASTEL_GREEN)),
         )
 
-        ground = self.getScene().define_prim("/ground", _ke.scene.PrimType.Mesh)
+        ground = self.get_scene().define_prim("/ground", _ke.scene.PrimType.Mesh)
         ground.set_mesh_data(_ke.scene.Prim.create_plane_data(100.0, _ke.UpAxis.Z))
         self.add_renderable(self.ground_shader, ground)
         self.visual_bridge = KangWorldVisualBridge(self, self.world)
@@ -608,7 +608,7 @@ class KangEngineEngine(_BaseEngine):
     def set_camera_pose(self, pos, look_at):
         if self._viewer is None:
             return
-        camera = self._viewer.getCamera()
+        camera = self._viewer.get_camera()
         p = self._as_numpy(pos).reshape(3)
         t = self._as_numpy(look_at).reshape(3)
         camera.set_camera_pos(_ke.vec3(float(p[0]), float(p[1]), float(p[2])))
@@ -617,13 +617,13 @@ class KangEngineEngine(_BaseEngine):
     def get_camera_pos(self):
         if self._viewer is None:
             return np.zeros(3, dtype=np.float32)
-        p = self._viewer.getCamera().get_camera_pos()
+        p = self._viewer.get_camera().get_camera_pos()
         return np.array([p.x, p.y, p.z], dtype=np.float32)
 
     def get_camera_dir(self):
         if self._viewer is None:
             return np.array([0.0, 0.0, -1.0], dtype=np.float32)
-        d = self._viewer.getCamera().get_camera_look_dir()
+        d = self._viewer.get_camera().get_camera_look_dir()
         return np.array([d.x, d.y, d.z], dtype=np.float32)
 
     def get_rgb_pixels(self):

@@ -51,35 +51,35 @@ class RobotViewer(ke.App):
         fs = asset_path("shaders", "common.fs")
         checker_fs = asset_path("shaders", "checkerboard.fs")
 
-        self.robot_shader = device.createShaderFromFile(vs, fs)
-        self.ground_shader = device.createShaderFromFile(vs, checker_fs)
+        self.robot_shader = device.create_shader_from_file(vs, fs)
+        self.ground_shader = device.create_shader_from_file(vs, checker_fs)
 
         # Bind UBO slots (cameraUBO=0, lightUBO=1 — managed by App)
         for shader in (self.robot_shader, self.ground_shader):
             shader.use()
-            shader.setUniformBlockBinding("cameraUBO", 0)
-            shader.setUniformBlockBinding("lightUBO", 1)
+            shader.set_uniform_block_binding("cameraUBO", 0)
+            shader.set_uniform_block_binding("lightUBO", 1)
 
         # Checker color for ground (regular uniforms, not UBO)
         self.ground_shader.use()
-        self.ground_shader.setVec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
-        self.ground_shader.setVec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
+        self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
+        self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
 
         # Ground plane (Z-up)
-        gnd = self.getScene().define_prim("/ground", scene.PrimType.Mesh)
+        gnd = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
         gnd.set_mesh_data(scene.Prim.create_plane_data(100.0, ke.UpAxis.Z))
         self.add_renderable(self.ground_shader, gnd)
 
         # Robot
         mjcf = asset_path("external", "retargetted", "unitree_h1", "unitree_h1.xml")
         self.robot = animation.SkeletonBridge.from_mjcf(
-            mjcf, self.getScene(), "/robot", 1.0, "BFS"
+            mjcf, self.get_scene(), "/robot", 1.0, "BFS"
         )
         for prim in self.robot.body_prims():
             self.add_renderable(self.robot_shader, prim)
 
         print(f"Robot loaded: {self.robot.num_bodies()} bodies")
-        self.checkError()
+        self.check_error()
 
     def preRender(self):
         if _motion_data is None:
@@ -101,7 +101,7 @@ class RobotViewer(ke.App):
         self.robot.apply_pose()
 
         self.frame_idx = (self.frame_idx + 1) % root_trans.shape[0]
-        self.checkError()
+        self.check_error()
 
     def render(self):
         pass

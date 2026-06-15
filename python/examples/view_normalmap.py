@@ -39,25 +39,25 @@ class BrickwallNormalMapViewer(ke.App):
         tex_fs = package_asset_path("shaders", "commonTex.fs")
         checker_fs = package_asset_path("shaders", "checkerboard.fs")
 
-        self.wall_shader = device.createShaderFromFile(vs, tex_fs)
-        self.ground_shader = device.createShaderFromFile(vs, checker_fs)
+        self.wall_shader = device.create_shader_from_file(vs, tex_fs)
+        self.ground_shader = device.create_shader_from_file(vs, checker_fs)
 
         for shader in (self.wall_shader, self.ground_shader):
             shader.use()
-            shader.setUniformBlockBinding("cameraUBO", 0)
-            shader.setUniformBlockBinding("lightUBO", 1)
-            shader.setUniformBlockBinding("shadowUBO", 2)
-            shader.setInt("normalDebugMode", 0)
+            shader.set_uniform_block_binding("cameraUBO", 0)
+            shader.set_uniform_block_binding("lightUBO", 1)
+            shader.set_uniform_block_binding("shadowUBO", 2)
+            shader.set_int("normalDebugMode", 0)
 
         self.ground_shader.use()
-        self.ground_shader.setVec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
-        self.ground_shader.setVec4("checkerColor2", ke.vec4(0.62, 0.82, 0.68, 1.0))
+        self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
+        self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.62, 0.82, 0.68, 1.0))
 
         root = brickwall_dir()
-        self.diffuse_texture = device.createTexture(str(root / "brickwall.jpg"), True)
-        self.normal_texture = device.createTexture(str(root / "brickwall_normal.jpg"), True)
+        self.diffuse_texture = device.create_texture(str(root / "brickwall.jpg"), True)
+        self.normal_texture = device.create_texture(str(root / "brickwall_normal.jpg"), True)
 
-        wall = self.getScene().define_prim("/brickwall", scene.PrimType.Mesh)
+        wall = self.get_scene().define_prim("/brickwall", scene.PrimType.Mesh)
         wall.set_mesh_data(scene.Prim.create_plane_data(4.0, ke.UpAxis.Z))
         wall.set_display_color_alpha(ke.vec4(1.0, 1.0, 1.0, 1.0))
         self.wall_handle = self.add_renderable(self.wall_shader, wall)
@@ -65,17 +65,17 @@ class BrickwallNormalMapViewer(ke.App):
         self.set_renderable_texture(self.wall_handle, self.normal_texture, 5)
         self.set_renderable_double_sided(self.wall_handle, True)
 
-        ground = self.getScene().define_prim("/ground", scene.PrimType.Mesh)
+        ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
         ground.set_mesh_data(scene.Prim.create_plane_data(6.0, ke.UpAxis.Y))
         ground.add_translate_op(ke.vec3(0.0, -2.0, 0.0))
         self.add_renderable(self.ground_shader, ground)
 
-        self.setLightDirection(ke.vec3(-0.45, 0.35, 0.82))
-        self.setLightColor(ke.vec3(1.0, 0.96, 0.88))
-        self.setLightIntensity(1.4)
-        self.setLightAmbient(ke.vec3(0.22, 0.22, 0.22))
+        self.set_light_direction(ke.vec3(-0.45, 0.35, 0.82))
+        self.set_light_color(ke.vec3(1.0, 0.96, 0.88))
+        self.set_light_intensity(1.4)
+        self.set_light_ambient(ke.vec3(0.22, 0.22, 0.22))
 
-        camera = self.getCamera()
+        camera = self.get_camera()
         camera.set_camera_pos(ke.vec3(0.0, 0.0, 5.0))
         camera.set_target_pos(ke.vec3(0.0, 0.0, 0.0))
         camera.set_near_plane(0.01)
@@ -86,10 +86,10 @@ class BrickwallNormalMapViewer(ke.App):
         print("Brickwall normal map test loaded")
         print(f"  diffuse: {root / 'brickwall.jpg'}")
         print(f"  normal : {root / 'brickwall_normal.jpg'}")
-        self.checkError()
+        self.check_error()
 
     def preRender(self):
-        self.checkError()
+        self.check_error()
 
     def render(self):
         imgui.begin("Brickwall Normal Map")
@@ -107,7 +107,7 @@ class BrickwallNormalMapViewer(ke.App):
                 NORMAL_DEBUG_MODES
             )
             self.wall_shader.use()
-            self.wall_shader.setInt("normalDebugMode", self.normal_debug_mode)
+            self.wall_shader.set_int("normalDebugMode", self.normal_debug_mode)
         imgui.text("Use the debug modes to inspect tangent-space data.")
         imgui.end()
 

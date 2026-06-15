@@ -99,25 +99,25 @@ class MotionViewer(ke.App):
         fs = package_asset_path("shaders", "common.fs")
         checker_fs = package_asset_path("shaders", "checkerboard.fs")
 
-        self.robot_shader = device.createShaderFromFile(vs, fs)
-        self.ground_shader = device.createShaderFromFile(vs, checker_fs)
+        self.robot_shader = device.create_shader_from_file(vs, fs)
+        self.ground_shader = device.create_shader_from_file(vs, checker_fs)
 
         for shader in (self.robot_shader, self.ground_shader):
             shader.use()
-            shader.setUniformBlockBinding("cameraUBO", 0)
-            shader.setUniformBlockBinding("lightUBO", 1)
+            shader.set_uniform_block_binding("cameraUBO", 0)
+            shader.set_uniform_block_binding("lightUBO", 1)
 
         self.ground_shader.use()
-        self.ground_shader.setVec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
-        self.ground_shader.setVec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
+        self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
+        self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
 
-        ground = self.getScene().define_prim("/ground", scene.PrimType.Mesh)
+        ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
         ground.set_mesh_data(scene.Prim.create_plane_data(100.0, ke.UpAxis.Z))
         self.add_renderable(self.ground_shader, ground)
 
         self.robot = animation.SkeletonBridge.from_mjcf(
             self.char_file,
-            self.getScene(),
+            self.get_scene(),
             "/kw",
             1.0,
             "DFS",
@@ -132,7 +132,7 @@ class MotionViewer(ke.App):
         )
         print(f"character: {self.char_file}")
         print(f"motion: {self.motion_file}")
-        self.checkError()
+        self.check_error()
 
     def _apply_frame(self, idx: int):
         root = self.root_pos[idx]
@@ -166,7 +166,7 @@ class MotionViewer(ke.App):
         self._frame_accum -= advance
         self.frame_idx = (self.frame_idx + advance) % self.local_rot.shape[0]
         self._apply_frame(self.frame_idx)
-        self.checkError()
+        self.check_error()
 
     def render(self):
         state = "PAUSED" if self.paused else "running"

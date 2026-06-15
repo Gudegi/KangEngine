@@ -50,7 +50,7 @@ class MinimalSimWorldApp(ke.App):
 
         self._reset()
         print("Minimal KangSimWorld example: one dynamic rigid body")
-        self.checkError()
+        self.check_error()
 
     def _reset(self):
         self.world.set_root_state(
@@ -74,7 +74,7 @@ class MinimalSimWorldApp(ke.App):
 
         self.world.step(substeps=2)
         self.visual.sync()
-        self.checkError()
+        self.check_error()
 
     def render(self):
         pos = self.world.state.get_root_pos(0)[0]

@@ -478,49 +478,53 @@ PYBIND11_MODULE(_kangengine, m) {
         .def("use", &Backend::Shader::use)
         .def("bind", &Backend::Shader::bind)
         .def("unbind", &Backend::Shader::unbind)
-        .def("setBool", &Backend::Shader::setBool)
-        .def("setInt", &Backend::Shader::setInt)
-        .def("setFloat", &Backend::Shader::setFloat)
-        .def("setColor", &Backend::Shader::setColor)
-        .def("setVec2", py::overload_cast<const std::string&, const glm::vec2&>(
-                            &Backend::Shader::setVec2))
-        .def("setVec2", py::overload_cast<const std::string&, float, float>(
-                            &Backend::Shader::setVec2))
-        .def("setVec3", py::overload_cast<const std::string&, const glm::vec3&>(
-                            &Backend::Shader::setVec3))
-        .def("setVec3",
+        .def("set_bool", &Backend::Shader::setBool)
+        .def("set_int", &Backend::Shader::setInt)
+        .def("set_float", &Backend::Shader::setFloat)
+        .def("set_color", &Backend::Shader::setColor)
+        .def("set_vec2",
+             py::overload_cast<const std::string&, const glm::vec2&>(
+                 &Backend::Shader::setVec2))
+        .def("set_vec2", py::overload_cast<const std::string&, float, float>(
+                             &Backend::Shader::setVec2))
+        .def("set_vec3",
+             py::overload_cast<const std::string&, const glm::vec3&>(
+                 &Backend::Shader::setVec3))
+        .def("set_vec3",
              py::overload_cast<const std::string&, float, float, float>(
                  &Backend::Shader::setVec3))
-        .def("setVec4", py::overload_cast<const std::string&, const glm::vec4&>(
-                            &Backend::Shader::setVec4))
-        .def("setVec4",
+        .def("set_vec4",
+             py::overload_cast<const std::string&, const glm::vec4&>(
+                 &Backend::Shader::setVec4))
+        .def("set_vec4",
              py::overload_cast<const std::string&, float, float, float, float>(
                  &Backend::Shader::setVec4))
-        .def("setMat2", &Backend::Shader::setMat2)
-        .def("setMat3", &Backend::Shader::setMat3)
-        .def("setMat4", &Backend::Shader::setMat4)
-        .def("setUniformBlockBinding", &Backend::Shader::setUniformBlockBinding,
-             py::arg("block_name"), py::arg("binding_point"));
+        .def("set_mat2", &Backend::Shader::setMat2)
+        .def("set_mat3", &Backend::Shader::setMat3)
+        .def("set_mat4", &Backend::Shader::setMat4)
+        .def("set_uniform_block_binding",
+             &Backend::Shader::setUniformBlockBinding, py::arg("block_name"),
+             py::arg("binding_point"));
 
     // Backend::Texture
     py::class_<Backend::Texture>(m, "Texture")
         .def("bind", &Backend::Texture::bind, py::arg("slot") = 0)
         .def("unbind", &Backend::Texture::unbind)
-        .def("getWidth", &Backend::Texture::getWidth)
-        .def("getHeight", &Backend::Texture::getHeight);
+        .def("get_width", &Backend::Texture::getWidth)
+        .def("get_height", &Backend::Texture::getHeight);
 
     // Backend::GraphicsDevice
     py::class_<Backend::GraphicsDevice,
                std::shared_ptr<Backend::GraphicsDevice>>(m, "GraphicsDevice")
-        .def("createShader",
+        .def("create_shader",
              py::overload_cast<const std::string&, const std::string&>(
                  &Backend::GraphicsDevice::createShader),
              py::return_value_policy::take_ownership)
-        .def("createShaderFromFile",
+        .def("create_shader_from_file",
              &Backend::GraphicsDevice::createShaderFromFile,
              py::arg("vert_path"), py::arg("frag_path"),
              py::return_value_policy::take_ownership)
-        .def("createTexture",
+        .def("create_texture",
              py::overload_cast<const std::string, bool, float, float, float>(
                  &Backend::GraphicsDevice::createTexture),
              py::arg("path"), py::arg("flip") = false,
@@ -1000,7 +1004,7 @@ py::class_<glm::vec3>(m, "vec3")
              py::arg("graphicsBackendType") = Backend::BackendType::OpenGL,
              py::arg("sceneBackendType") = Scene::BackendType::Native,
              py::arg("headless") = false)
-        .def("setRenderHz", &App::setRenderHz, py::arg("renderHz"))
+        .def("set_render_hz", &App::setRenderHz, py::arg("render_hz"))
         .def("get_delta_time", &App::getDeltaTime)
         .def("get_render_hz", &App::getRenderHz)
         .def("get_ui_scale",
@@ -1050,11 +1054,8 @@ py::class_<glm::vec3>(m, "vec3")
         .def("set_interaction_mode", &App::setInteractionMode)
         .def("has_selection", &App::hasSelection)
         .def("clear_selection", &App::clearSelection)
-        .def("getGraphicsDevice", &App::getGraphicsDevice,
+        .def("get_graphics_device", &App::getGraphicsDevice,
              py::return_value_policy::reference)
-        .def(
-            "getRenderer", [](App& self) { return &self.getRenderer(); },
-            py::return_value_policy::reference)
         .def(
             "get_renderer", [](App& self) { return &self.getRenderer(); },
             py::return_value_policy::reference)
@@ -1227,23 +1228,25 @@ py::class_<glm::vec3>(m, "vec3")
             py::arg("path"), py::arg("points"), py::arg("colors") = py::none(),
             py::arg("size") = 6.0f, py::arg("hidden") = false)
         .def("clear_debug_points", &App::clearDebugPoints, py::arg("path"))
-        .def("setLightDirection", &App::setLightDirection, py::arg("direction"))
-        .def("setLightColor", &App::setLightColor, py::arg("color"))
-        .def("setLightIntensity", &App::setLightIntensity, py::arg("intensity"))
-        .def("setLightAmbient", &App::setLightAmbient, py::arg("ambient"))
-        .def("checkError", &App::checkError)
+        .def("set_light_direction", &App::setLightDirection,
+             py::arg("direction"))
+        .def("set_light_color", &App::setLightColor, py::arg("color"))
+        .def("set_light_intensity", &App::setLightIntensity,
+             py::arg("intensity"))
+        .def("set_light_ambient", &App::setLightAmbient, py::arg("ambient"))
+        .def("check_error", &App::checkError)
         .def(
             "is_key_pressed",
             [](App& self, int key) {
                 return glfwGetKey(self.getWindow(), key) == GLFW_PRESS;
             },
             py::arg("key"))
-        .def("getCamera", &App::getCamera, py::return_value_policy::reference)
-        .def("getViewMatrix", &App::getViewMatrix)
-        .def("getProjectionMatrix", &App::getProjectionMatrix)
-        .def("getWidth", &App::getWidth)
-        .def("getHeight", &App::getHeight)
-        .def("getScene", &App::getScene, py::return_value_policy::reference);
+        .def("get_camera", &App::getCamera, py::return_value_policy::reference)
+        .def("get_view_matrix", &App::getViewMatrix)
+        .def("get_projection_matrix", &App::getProjectionMatrix)
+        .def("get_width", &App::getWidth)
+        .def("get_height", &App::getHeight)
+        .def("get_scene", &App::getScene, py::return_value_policy::reference);
 
     py::class_<Bridge::SkinnedCharacterBridge,
                std::unique_ptr<Bridge::SkinnedCharacterBridge>>(

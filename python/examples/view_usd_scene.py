@@ -57,20 +57,20 @@ class USDSceneViewer(ke.App):
         tex_fs = package_asset_path("shaders", "commonTex.fs")
         checker_fs = package_asset_path("shaders", "checkerboard.fs")
 
-        self.mesh_shader = device.createShaderFromFile(vs, fs)
-        self.mesh_texture_shader = device.createShaderFromFile(vs, tex_fs)
-        self.ground_shader = device.createShaderFromFile(vs, checker_fs)
+        self.mesh_shader = device.create_shader_from_file(vs, fs)
+        self.mesh_texture_shader = device.create_shader_from_file(vs, tex_fs)
+        self.ground_shader = device.create_shader_from_file(vs, checker_fs)
 
         for shader in (self.mesh_shader, self.mesh_texture_shader, self.ground_shader):
             shader.use()
-            shader.setUniformBlockBinding("cameraUBO", 0)
-            shader.setUniformBlockBinding("lightUBO", 1)
-            shader.setUniformBlockBinding("shadowUBO", 2)
-            shader.setInt("normalDebugMode", 0)
+            shader.set_uniform_block_binding("cameraUBO", 0)
+            shader.set_uniform_block_binding("lightUBO", 1)
+            shader.set_uniform_block_binding("shadowUBO", 2)
+            shader.set_int("normalDebugMode", 0)
 
         self.ground_shader.use()
-        self.ground_shader.setVec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
-        self.ground_shader.setVec4("checkerColor2", ke.vec4(0.62, 0.82, 0.68, 1.0))
+        self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
+        self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.62, 0.82, 0.68, 1.0))
 
         self._configure_lighting()
 
@@ -79,7 +79,7 @@ class USDSceneViewer(ke.App):
         self._frame_camera()
 
         if self.show_ground:
-            ground = self.getScene().define_prim("/ground", scene.PrimType.Mesh)
+            ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
             ground.set_mesh_data(scene.Prim.create_plane_data(50.0, ke.UpAxis.Y))
             self.add_renderable(self.ground_shader, ground)
 
@@ -87,7 +87,7 @@ class USDSceneViewer(ke.App):
         normal_mapped_count = 0
         for i, mesh in enumerate(self.result.meshes):
             prim_path = "/usd_meshes/" + _safe_prim_name(mesh.name, f"mesh_{i}")
-            prim = self.getScene().define_prim(prim_path, scene.PrimType.Mesh)
+            prim = self.get_scene().define_prim(prim_path, scene.PrimType.Mesh)
             prim.set_mesh_data(mesh.mesh_data)
             prim.set_display_color_alpha(_mesh_color(i))
             self.mesh_prims.append(prim)
@@ -140,13 +140,13 @@ class USDSceneViewer(ke.App):
         pass
 
     def _configure_lighting(self):
-        self.setLightDirection(ke.vec3(-0.35, 0.82, -0.45))
-        self.setLightColor(ke.vec3(1.0, 0.94, 0.86))
-        self.setLightIntensity(1.15)
-        self.setLightAmbient(ke.vec3(0.42, 0.40, 0.36))
+        self.set_light_direction(ke.vec3(-0.35, 0.82, -0.45))
+        self.set_light_color(ke.vec3(1.0, 0.94, 0.86))
+        self.set_light_intensity(1.15)
+        self.set_light_ambient(ke.vec3(0.42, 0.40, 0.36))
 
     def _frame_camera(self):
-        camera = self.getCamera()
+        camera = self.get_camera()
         camera.set_near_plane(0.5)
         camera.set_far_plane(4000.0)
         self.set_camera_move_speed(500.)
@@ -179,7 +179,7 @@ class USDSceneViewer(ke.App):
         key = str(path.resolve())
         if key in self.texture_cache:
             return self.texture_cache[key]
-        texture = self.get_renderer().device().createTexture(str(path), True)
+        texture = self.get_renderer().device().create_texture(str(path), True)
         self.texture_cache[key] = texture
         self.textures.append(texture)
         return texture
@@ -190,7 +190,7 @@ class USDSceneViewer(ke.App):
 
     def _apply_normal_debug_mode(self):
         self.mesh_texture_shader.use()
-        self.mesh_texture_shader.setInt("normalDebugMode", self.normal_debug_mode)
+        self.mesh_texture_shader.set_int("normalDebugMode", self.normal_debug_mode)
 
 
 def _safe_prim_name(name: str, fallback: str) -> str:

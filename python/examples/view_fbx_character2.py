@@ -85,9 +85,9 @@ class FbxCharacterBridgeViewer(ke.App):
         else:
             mesh_fs = debug_checker_fs
 
-        self.textured_mesh_shader = device.createShaderFromFile(skinned_vs, mesh_fs)
-        self.skeleton_shader = device.createShaderFromFile(vs, fs)
-        self.ground_shader = device.createShaderFromFile(vs, checker_fs)
+        self.textured_mesh_shader = device.create_shader_from_file(skinned_vs, mesh_fs)
+        self.skeleton_shader = device.create_shader_from_file(vs, fs)
+        self.ground_shader = device.create_shader_from_file(vs, checker_fs)
 
         for shader in (
             self.textured_mesh_shader,
@@ -95,21 +95,21 @@ class FbxCharacterBridgeViewer(ke.App):
             self.ground_shader,
         ):
             shader.use()
-            shader.setUniformBlockBinding("cameraUBO", 0)
-            shader.setUniformBlockBinding("lightUBO", 1)
-            shader.setUniformBlockBinding("shadowUBO", 2)
+            shader.set_uniform_block_binding("cameraUBO", 0)
+            shader.set_uniform_block_binding("lightUBO", 1)
+            shader.set_uniform_block_binding("shadowUBO", 2)
         self.textured_mesh_shader.use()
-        self.textured_mesh_shader.setInt("uTexture", 0)
+        self.textured_mesh_shader.set_int("uTexture", 0)
 
         self.ground_shader.use()
-        self.ground_shader.setVec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
-        self.ground_shader.setVec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
+        self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
+        self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
 
-        ground = self.getScene().define_prim("/ground", scene.PrimType.Mesh)
+        ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
         ground.set_mesh_data(scene.Prim.create_plane_data(20.0, self.up_axis))
         self.add_renderable(self.ground_shader, ground)
 
-        camera = self.getCamera()
+        camera = self.get_camera()
         camera.set_camera_pos(ke.vec3(0.0, 1.45, 3.2))
         camera.set_target_pos(ke.vec3(0.0, 0.85, 0.0))
 
@@ -192,7 +192,7 @@ class FbxCharacterBridgeViewer(ke.App):
             f"joints={self.motion.num_joints()} "
             f"frames={self.motion.num_frames()}"
         )
-        self.checkError()
+        self.check_error()
 
     def _update_skeleton_lines(self, state):
         positions = state.compute_global_positions()
@@ -284,10 +284,10 @@ class FbxCharacterBridgeViewer(ke.App):
             self._apply_character_time()
         if self.follow_camera:
             self.camera_follower.update(
-                self.getCamera(),
+                self.get_camera(),
                 self.editor.player.frame_index,
             )
-        self.checkError()
+        self.check_error()
 
     def render(self):
         self._render_character_panel()
@@ -332,7 +332,7 @@ class FbxCharacterBridgeViewer(ke.App):
         changed = self.editor.render_panel()
         if changed and self.follow_camera:
             self.camera_follower.update(
-                self.getCamera(),
+                self.get_camera(),
                 self.editor.player.frame_index,
                 force=True,
             )

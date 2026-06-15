@@ -62,7 +62,7 @@ class BVHCharacterViewer(ke.App):
             f"frames={self.motion.num_frames()} "
             f"fps={self.motion.fps():.3f}"
         )
-        self.checkError()
+        self.check_error()
 
     def preRender(self):
         if self.editor.update(self.get_delta_time()):

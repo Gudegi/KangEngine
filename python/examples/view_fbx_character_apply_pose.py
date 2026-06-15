@@ -109,7 +109,7 @@ class FbxCharacterApplyPoseViewer(ke.App):
         self._update_skeleton_lines(self.motion.frame(0))
         self._apply_visibility()
         self._print_import_info()
-        self.checkError()
+        self.check_error()
 
     def _motion_root_translation(self, frame: int) -> np.ndarray:
         root = self.motion.root_translation(frame)
@@ -294,7 +294,7 @@ class FbxCharacterApplyPoseViewer(ke.App):
             self.time += self.get_delta_time()
             self._apply_pose_at_time(self.time)
             self._update_skeleton_lines(self.motion.sample(self.time, loop=True))
-        self.checkError()
+        self.check_error()
 
     def render(self):
         imgui.begin("FBX Apply Pose")

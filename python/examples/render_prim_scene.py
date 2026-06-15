@@ -21,19 +21,19 @@ class MyApp(ke.App):
         fs = asset_path("shaders", "common.fs")
         checker_fs = asset_path("shaders", "checkerboard.fs")
 
-        self.obj_shader = device.createShaderFromFile(vs, fs)
-        self.ground_shader = device.createShaderFromFile(vs, checker_fs)
+        self.obj_shader = device.create_shader_from_file(vs, fs)
+        self.ground_shader = device.create_shader_from_file(vs, checker_fs)
 
         for shader in (self.obj_shader, self.ground_shader):
             shader.use()
-            shader.setUniformBlockBinding("cameraUBO", 0)
-            shader.setUniformBlockBinding("lightUBO", 1)
+            shader.set_uniform_block_binding("cameraUBO", 0)
+            shader.set_uniform_block_binding("lightUBO", 1)
 
         self.ground_shader.use()
-        self.ground_shader.setVec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
-        self.ground_shader.setVec4("checkerColor2", ke.vec4(0.6, 0.9, 0.6, 1.0))
+        self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
+        self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.6, 0.9, 0.6, 1.0))
 
-        sc = self.getScene()
+        sc = self.get_scene()
 
         # Ground plane (Y-up)
         gnd = sc.define_prim("/ground", scene.PrimType.Mesh)
@@ -54,10 +54,10 @@ class MyApp(ke.App):
         sphere.add_translate_op(ke.vec3(2.5, 0.5, 0.0))
         self.add_renderable(self.obj_shader, sphere)
 
-        self.checkError()
+        self.check_error()
 
     def preRender(self):
-        self.checkError()
+        self.check_error()
 
     def render(self):
         pass

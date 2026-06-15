@@ -90,7 +90,7 @@ class MultiEnvSimWorldApp(ke.App):
         self._reset()
         print(f"Multi-env KangSimWorld example: num_envs={self.num_envs}")
         print(f"root_pos tensor shape: {tuple(self.world.state.get_root_pos(0).shape)}")
-        self.checkError()
+        self.check_error()
 
     def _reset(self):
         env_ids = torch.arange(self.num_envs, dtype=torch.int64)
@@ -129,7 +129,7 @@ class MultiEnvSimWorldApp(ke.App):
 
         self.world.step(substeps=2)
         self.visual.sync()
-        self.checkError()
+        self.check_error()
 
     def render(self):
         root_pos = self.world.state.get_root_pos(0)

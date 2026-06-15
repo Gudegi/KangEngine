@@ -71,10 +71,10 @@ class FbxCharacterViewer(ke.App):
         tex_fs = package_asset_path("shaders", "commonTex.fs")
         checker_fs = package_asset_path("shaders", "checkerboard.fs")
 
-        self.mesh_shader = device.createShaderFromFile(skinned_vs, fs)
-        self.textured_mesh_shader = device.createShaderFromFile(skinned_vs, tex_fs)
-        self.skeleton_shader = device.createShaderFromFile(vs, fs)
-        self.ground_shader = device.createShaderFromFile(vs, checker_fs)
+        self.mesh_shader = device.create_shader_from_file(skinned_vs, fs)
+        self.textured_mesh_shader = device.create_shader_from_file(skinned_vs, tex_fs)
+        self.skeleton_shader = device.create_shader_from_file(vs, fs)
+        self.ground_shader = device.create_shader_from_file(vs, checker_fs)
 
         for shader in (
             self.mesh_shader,
@@ -83,21 +83,21 @@ class FbxCharacterViewer(ke.App):
             self.ground_shader,
         ):
             shader.use()
-            shader.setUniformBlockBinding("cameraUBO", 0)
-            shader.setUniformBlockBinding("lightUBO", 1)
-            shader.setUniformBlockBinding("shadowUBO", 2)
+            shader.set_uniform_block_binding("cameraUBO", 0)
+            shader.set_uniform_block_binding("lightUBO", 1)
+            shader.set_uniform_block_binding("shadowUBO", 2)
         self.textured_mesh_shader.use()
-        self.textured_mesh_shader.setInt("uTexture", 0)
+        self.textured_mesh_shader.set_int("uTexture", 0)
 
         self.ground_shader.use()
-        self.ground_shader.setVec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
-        self.ground_shader.setVec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
+        self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
+        self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
 
-        ground = self.getScene().define_prim("/ground", scene.PrimType.Mesh)
+        ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
         ground.set_mesh_data(scene.Prim.create_plane_data(20.0, self.up_axis))
         self.add_renderable(self.ground_shader, ground)
 
-        camera = self.getCamera()
+        camera = self.get_camera()
         camera.set_camera_pos(ke.vec3(0.0, 1.45, 3.2))
         camera.set_target_pos(ke.vec3(0.0, 0.85, 0.0))
 
@@ -124,7 +124,7 @@ class FbxCharacterViewer(ke.App):
         self._apply_shadow_casting()
 
         self._print_fbx_import_info()
-        self.checkError()
+        self.check_error()
 
     def _print_fbx_import_info(self):
         print(f"FBX character loaded: {Path(self.fbx_file).name}")
@@ -181,7 +181,7 @@ class FbxCharacterViewer(ke.App):
         ]
         for idx, mesh in enumerate(self.meshes):
             name = prim_safe_name(mesh.name, f"mesh_{idx}")
-            prim = self.getScene().define_prim(
+            prim = self.get_scene().define_prim(
                 f"/fbx_character/{idx}_{name}",
                 scene.PrimType.Mesh,
             )
@@ -247,7 +247,7 @@ class FbxCharacterViewer(ke.App):
         texture_path = Path(material.diffuse_texture_path)
         if not texture_path.exists():
             return None
-        texture = self.get_renderer().device().createTexture(str(texture_path), True)
+        texture = self.get_renderer().device().create_texture(str(texture_path), True)
         self.textures.append(texture)
         return texture
 
@@ -258,7 +258,7 @@ class FbxCharacterViewer(ke.App):
         texture_path = Path(material.normal_texture_path)
         if not texture_path.exists():
             return None
-        texture = self.get_renderer().device().createTexture(str(texture_path), True)
+        texture = self.get_renderer().device().create_texture(str(texture_path), True)
         self.textures.append(texture)
         return texture
 
@@ -478,7 +478,7 @@ class FbxCharacterViewer(ke.App):
         if self.animate:
             self.time += self.get_delta_time() * max(0.0, self.playback_speed)
             self._apply_time(self.time)
-        self.checkError()
+        self.check_error()
 
     def render(self):
         imgui.begin("FBX Character")

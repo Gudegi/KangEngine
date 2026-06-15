@@ -115,7 +115,7 @@ class KangWorldVisualBridge:
             raise RuntimeError("KangWorldVisualBridge requires PhysicsBridge bindings")
         self.app = app
         self.world = world
-        self.scene = app.getScene()
+        self.scene = app.get_scene()
         self.physics_bridge = _ke.PhysicsBridge(app)
         self.records: dict[tuple[int, int], _VisualArticulationRecord] = {}
         self.rigid_records: dict[tuple[int, int], _VisualRigidRecord] = {}

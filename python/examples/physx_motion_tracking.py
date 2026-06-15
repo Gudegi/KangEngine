@@ -49,23 +49,23 @@ class KwMotionTrackingApp(ke.App):
         fs = package_asset_path("shaders", "common.fs")
         checker_fs = package_asset_path("shaders", "checkerboard.fs")
 
-        self.robot_shader = device.createShaderFromFile(vs, fs)
-        self.ghost_shader = device.createShaderFromFile(vs, fs)
-        self.ground_shader = device.createShaderFromFile(vs, checker_fs)
+        self.robot_shader = device.create_shader_from_file(vs, fs)
+        self.ghost_shader = device.create_shader_from_file(vs, fs)
+        self.ground_shader = device.create_shader_from_file(vs, checker_fs)
 
         for shader in (self.robot_shader, self.ghost_shader, self.ground_shader):
             shader.use()
-            shader.setUniformBlockBinding("cameraUBO", 0)
-            shader.setUniformBlockBinding("lightUBO", 1)
-            shader.setUniformBlockBinding("shadowUBO", 2)
+            shader.set_uniform_block_binding("cameraUBO", 0)
+            shader.set_uniform_block_binding("lightUBO", 1)
+            shader.set_uniform_block_binding("shadowUBO", 2)
 
         self.ground_shader.use()
-        self.ground_shader.setVec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
-        self.ground_shader.setVec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
+        self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
+        self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
 
         self.sim_world = ke.KangSimWorld(add_ground=True)
 
-        ground = self.getScene().define_prim("/ground", scene.PrimType.Mesh)
+        ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
         ground.set_mesh_data(scene.Prim.create_plane_data(100.0, ke.UpAxis.Z))
         self.add_renderable(self.ground_shader, ground)
 
@@ -94,7 +94,7 @@ class KwMotionTrackingApp(ke.App):
 
         self.ghost = animation.SkeletonBridge.from_mjcf(
             self.char_file,
-            self.getScene(),
+            self.get_scene(),
             "/ghost",
             1.0,
             self.order,
@@ -126,7 +126,7 @@ class KwMotionTrackingApp(ke.App):
         )
         print(f"character: {self.char_file}")
         print(f"motion: {self.motion_file}")
-        self.checkError()
+        self.check_error()
 
     def _motion_dof_targets(self, local_rot_frame: np.ndarray) -> list[float]:
         targets: list[float] = []
@@ -198,7 +198,7 @@ class KwMotionTrackingApp(ke.App):
         self.visual_bridge.sync()
 
         self.frame_idx = (self.frame_idx + 1) % self.root_pos.shape[0]
-        self.checkError()
+        self.check_error()
 
     def render(self):
         state = "PAUSED" if self.paused else "running"

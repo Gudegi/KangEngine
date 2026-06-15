@@ -31,22 +31,22 @@ class H1RagdollApp(ke.App):
         fs = asset_path("shaders", "common.fs")
         checker_fs = asset_path("shaders", "checkerboard.fs")
 
-        self.robot_shader = device.createShaderFromFile(vs, fs)
-        self.ground_shader = device.createShaderFromFile(vs, checker_fs)
+        self.robot_shader = device.create_shader_from_file(vs, fs)
+        self.ground_shader = device.create_shader_from_file(vs, checker_fs)
 
         for shader in (self.robot_shader, self.ground_shader):
             shader.use()
-            shader.setUniformBlockBinding("cameraUBO", 0)
-            shader.setUniformBlockBinding("lightUBO", 1)
+            shader.set_uniform_block_binding("cameraUBO", 0)
+            shader.set_uniform_block_binding("lightUBO", 1)
 
         self.ground_shader.use()
-        self.ground_shader.setVec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
-        self.ground_shader.setVec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
+        self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
+        self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
 
         self.physics = ke.PhysicsWorld(ke.PhysicsConfig.z_up())
         self.physics.add_default_ground()
 
-        gnd = self.getScene().define_prim("/ground", scene.PrimType.Mesh)
+        gnd = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
         gnd.set_mesh_data(scene.Prim.create_plane_data(100.0, ke.UpAxis.Z))
         self.add_renderable(self.ground_shader, gnd)
 
@@ -61,7 +61,7 @@ class H1RagdollApp(ke.App):
 
         self.robot = animation.SkeletonBridge.from_mjcf(
             mjcf,
-            self.getScene(),
+            self.get_scene(),
             "/robot",
             1.0,
             "DFS",
@@ -75,7 +75,7 @@ class H1RagdollApp(ke.App):
 
         collision_prims = self.physics_bridge.add_collision_visuals(
             self.articulation,
-            self.getScene(),
+            self.get_scene(),
             "/collision",
             self.show_collision,
         )
@@ -91,7 +91,7 @@ class H1RagdollApp(ke.App):
             f"{self.articulation.num_dofs()} DOFs"
         )
         print("Defaults: kp=0.0, kd=5.0, free base, Z-up")
-        self.checkError()
+        self.check_error()
 
     def reset(self):
         self.articulation.reset_root(
@@ -112,7 +112,7 @@ class H1RagdollApp(ke.App):
         self.articulation.set_drive_targets(self.targets, self.kp, self.kd)
         self.physics.step()
         self.physics_bridge.sync()
-        self.checkError()
+        self.check_error()
 
     def render(self):
         num_links = self.articulation.num_links()

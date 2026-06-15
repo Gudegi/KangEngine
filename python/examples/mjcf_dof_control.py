@@ -97,8 +97,8 @@ class MjcfDofControlApp(ke.App):
         self.print_summary()
 
     def configure_camera(self):
-        self.getCamera().set_camera_pos(ke.vec3(*self.camera_pos))
-        self.getCamera().set_target_pos(ke.vec3(*self.camera_target))
+        self.get_camera().set_camera_pos(ke.vec3(*self.camera_pos))
+        self.get_camera().set_target_pos(ke.vec3(*self.camera_target))
 
     def create_shaders(self):
         device = self.get_renderer().device()
@@ -106,17 +106,17 @@ class MjcfDofControlApp(ke.App):
         fs = package_asset_path("shaders", "common.fs")
         checker_fs = package_asset_path("shaders", "checkerboard.fs")
 
-        self.robot_shader = device.createShaderFromFile(vs, fs)
-        self.ground_shader = device.createShaderFromFile(vs, checker_fs)
+        self.robot_shader = device.create_shader_from_file(vs, fs)
+        self.ground_shader = device.create_shader_from_file(vs, checker_fs)
         for shader in (self.robot_shader, self.ground_shader):
             shader.use()
-            shader.setUniformBlockBinding("cameraUBO", 0)
-            shader.setUniformBlockBinding("lightUBO", 1)
-            shader.setUniformBlockBinding("shadowUBO", 2)
+            shader.set_uniform_block_binding("cameraUBO", 0)
+            shader.set_uniform_block_binding("lightUBO", 1)
+            shader.set_uniform_block_binding("shadowUBO", 2)
 
         self.ground_shader.use()
-        self.ground_shader.setVec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
-        self.ground_shader.setVec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
+        self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
+        self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
 
     def create_world(self):
         self.world = ke.KangSimWorld(
@@ -126,7 +126,7 @@ class MjcfDofControlApp(ke.App):
         )
         self.visual = ke.KangWorldVisualBridge(self, self.world)
 
-        ground = self.getScene().define_prim("/ground", scene.PrimType.Mesh)
+        ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
         ground.set_mesh_data(scene.Prim.create_plane_data(float(self.ground_size), ke.UpAxis.Z))
         self.add_renderable(self.ground_shader, ground)
 
@@ -254,7 +254,7 @@ class MjcfDofControlApp(ke.App):
         self.visual.sync()
         self._update_contact_force_arrows()
         self._update_drag_force_arrow()
-        self.checkError()
+        self.check_error()
 
     def onForceDragBegin(self, result, target):
         if (
