@@ -1,7 +1,7 @@
 #ifndef _RASTERIZER_HPP_
 #define _RASTERIZER_HPP_
 
-#include "engine/graphics/renderer/renderer.hpp"
+#include "engine/graphics/renderer/render_pipeline.hpp"
 #include "engine/graphics/renderer/debug_renderer.hpp"
 #include "engine/graphics/renderer/mesh_instancer.hpp"
 #include "engine/graphics/renderer/renderer_types.hpp"
@@ -45,7 +45,7 @@ namespace KE {
 // interfering.
 // ---------------------------------------------------------------------------
 
-class Rasterizer : public Renderer {
+class Rasterizer : public RenderPipeline {
   public:
     static constexpr int MaxShadowCascades = 4;
 

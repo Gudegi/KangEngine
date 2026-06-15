@@ -36,7 +36,7 @@ class ControlDemo(ke.App):
         self.force_arrow_handle = None
         self.force_arrow_visible = False
 
-        device = self.getGraphicsDevice()
+        device = self.get_renderer().device()
         vs = asset_path("shaders", "common.vs")
         fs = asset_path("shaders", "common.fs")
         checker_fs = asset_path("shaders", "checkerboard.fs")

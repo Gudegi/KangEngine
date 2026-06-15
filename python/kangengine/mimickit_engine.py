@@ -240,7 +240,7 @@ class _KangEngineViewer(App):
         if headless is None:
             headless = self.headless
         self.initialize(width, height, False, _ke.UpAxis.Z, headless=bool(headless))
-        device = self.getGraphicsDevice()
+        device = self.get_renderer().device()
         vs = _asset_path("shaders", "common.vs")
         fs = _asset_path("shaders", "common.fs")
         checker_fs = _asset_path("shaders", "checkerboard.fs")

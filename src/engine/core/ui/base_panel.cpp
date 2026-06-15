@@ -60,7 +60,7 @@ void RendererDebugPanel::buildPanel() {
     }
     ImGui::SliderFloat("GammaCorrection", &_app->_gamma, 0.f, 5.f);
     if (SelectionOutlineProcessor* outline =
-            _app->getSelectionOutlineProcessor()) {
+            _app->getRenderer().selectionOutline()) {
         SelectionOutlineConfig& config = outline->config();
         ImGui::Checkbox("Selection Outline", &config.enabled);
         float outlineColor[4] = {config.color.r, config.color.g, config.color.b,
@@ -75,13 +75,13 @@ void RendererDebugPanel::buildPanel() {
     ImGui::DragFloat("Camera Move Speed", &_app->_cameraMoveSpeed, 0.2f, 0.0f,
                      500.0f, "%.2f");
 
-    Rasterizer* rasterizer = _app->getRasterizer();
+    Rasterizer* rasterizer = _app->getRenderer().rasterizer();
     if (!rasterizer) {
         ImGui::End();
         return;
     }
 
-    DirectionalLight light = _app->getLight();
+    DirectionalLight light = _app->getRenderer().light();
     glm::vec3 direction = light.direction;
     float color[3] = {light.color.r, light.color.g, light.color.b};
     glm::vec3 ambient = light.ambient;

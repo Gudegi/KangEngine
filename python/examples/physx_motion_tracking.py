@@ -44,7 +44,7 @@ class KwMotionTrackingApp(ke.App):
         self.track_root = True
         self.show_collision = False
 
-        device = self.getGraphicsDevice()
+        device = self.get_renderer().device()
         vs = package_asset_path("shaders", "common.vs")
         fs = package_asset_path("shaders", "common.fs")
         checker_fs = package_asset_path("shaders", "checkerboard.fs")

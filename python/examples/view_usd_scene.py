@@ -51,7 +51,7 @@ class USDSceneViewer(ke.App):
         self.bounds_min = None
         self.bounds_max = None
 
-        device = self.getGraphicsDevice()
+        device = self.get_renderer().device()
         vs = package_asset_path("shaders", "common.vs")
         fs = package_asset_path("shaders", "common.fs")
         tex_fs = package_asset_path("shaders", "commonTex.fs")
@@ -179,7 +179,7 @@ class USDSceneViewer(ke.App):
         key = str(path.resolve())
         if key in self.texture_cache:
             return self.texture_cache[key]
-        texture = self.getGraphicsDevice().createTexture(str(path), True)
+        texture = self.get_renderer().device().createTexture(str(path), True)
         self.texture_cache[key] = texture
         self.textures.append(texture)
         return texture

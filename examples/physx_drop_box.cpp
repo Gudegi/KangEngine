@@ -186,10 +186,10 @@ class MyApp : public App {
 
     void setup() override {
         KE_TRACE_FUNCTION();
-        cubeShader = getGraphicsDevice()->createShader(phongVs, phongFs);
-        lightShader = getGraphicsDevice()->createShader(phongVs, lightFs);
+        cubeShader = getRenderer().device()->createShader(phongVs, phongFs);
+        lightShader = getRenderer().device()->createShader(phongVs, lightFs);
         planeShader =
-            getGraphicsDevice()->createShader(groundVs, checkerBoardFs);
+            getRenderer().device()->createShader(groundVs, checkerBoardFs);
 
         cubeShader->setUniformBlockBinding("CameraUBO", 0);
         lightShader->setUniformBlockBinding("CameraUBO", 0);

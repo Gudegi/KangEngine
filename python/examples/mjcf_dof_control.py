@@ -101,7 +101,7 @@ class MjcfDofControlApp(ke.App):
         self.getCamera().set_target_pos(ke.vec3(*self.camera_target))
 
     def create_shaders(self):
-        device = self.getGraphicsDevice()
+        device = self.get_renderer().device()
         vs = package_asset_path("shaders", "common.vs")
         fs = package_asset_path("shaders", "common.fs")
         checker_fs = package_asset_path("shaders", "checkerboard.fs")

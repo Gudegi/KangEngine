@@ -64,7 +64,7 @@ class FbxCharacterViewer(ke.App):
         self.skeleton_colors = None
         self.skinned_meshes = []
 
-        device = self.getGraphicsDevice()
+        device = self.get_renderer().device()
         vs = package_asset_path("shaders", "common.vs")
         skinned_vs = package_asset_path("shaders", "skinned_mesh.vs")
         fs = package_asset_path("shaders", "common.fs")
@@ -247,7 +247,7 @@ class FbxCharacterViewer(ke.App):
         texture_path = Path(material.diffuse_texture_path)
         if not texture_path.exists():
             return None
-        texture = self.getGraphicsDevice().createTexture(str(texture_path), True)
+        texture = self.get_renderer().device().createTexture(str(texture_path), True)
         self.textures.append(texture)
         return texture
 
@@ -258,7 +258,7 @@ class FbxCharacterViewer(ke.App):
         texture_path = Path(material.normal_texture_path)
         if not texture_path.exists():
             return None
-        texture = self.getGraphicsDevice().createTexture(str(texture_path), True)
+        texture = self.get_renderer().device().createTexture(str(texture_path), True)
         self.textures.append(texture)
         return texture
 

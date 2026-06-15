@@ -95,12 +95,12 @@ class FbxCharacterCppApp : public App {
         auto commonTexFSPath = KE::getAssetPath("shaders/commonTex.fs");
         auto checkerFSPath = KE::getAssetPath("shaders/checkerboard.fs");
 
-        skinnedShader = getGraphicsDevice()->createShaderFromFile(
+        skinnedShader = getRenderer().device()->createShaderFromFile(
             skinnedVSPath, commonTexFSPath);
-        lineShader = getGraphicsDevice()->createShaderFromFile(commonVSPath,
-                                                               commonFSPath);
-        groundShader = getGraphicsDevice()->createShaderFromFile(commonVSPath,
-                                                                 checkerFSPath);
+        lineShader = getRenderer().device()->createShaderFromFile(commonVSPath,
+                                                                  commonFSPath);
+        groundShader = getRenderer().device()->createShaderFromFile(
+            commonVSPath, checkerFSPath);
 
         for (auto* shader :
              {skinnedShader.get(), lineShader.get(), groundShader.get()}) {

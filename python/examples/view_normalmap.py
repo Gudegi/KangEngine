@@ -34,7 +34,7 @@ class BrickwallNormalMapViewer(ke.App):
         self.normal_maps_enabled = True
         self.normal_debug_mode = 0
 
-        device = self.getGraphicsDevice()
+        device = self.get_renderer().device()
         vs = package_asset_path("shaders", "common.vs")
         tex_fs = package_asset_path("shaders", "commonTex.fs")
         checker_fs = package_asset_path("shaders", "checkerboard.fs")

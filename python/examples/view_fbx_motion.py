@@ -52,7 +52,7 @@ class FbxMotionViewer(ke.App):
         self.parents = self.motion.parent_indices()
         self.names = self.motion.node_names()
 
-        device = self.getGraphicsDevice()
+        device = self.get_renderer().device()
         vs = package_asset_path("shaders", "common.vs")
         fs = package_asset_path("shaders", "common.fs")
         checker_fs = package_asset_path("shaders", "checkerboard.fs")

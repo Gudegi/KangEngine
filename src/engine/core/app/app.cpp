@@ -183,8 +183,11 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     _postProcessor->init(_graphicsDevice.get(), _width, _height);
     _selectionOutlineProcessor = std::make_unique<SelectionOutlineProcessor>();
     _selectionOutlineProcessor->init(_graphicsDevice.get(), _width, _height);
+    _renderer.bind(_graphicsDevice.get(), _rasterizer.get(),
+                   _postProcessor.get(), _selectionOutlineProcessor.get());
+    _renderer.setViewportSize(_width, _height);
 
-    _rasterizer->setLight(DirectionalLight{
+    getRenderer().setLight(DirectionalLight{
         (_upAxis == UpAxis::Z) ? glm::normalize(glm::vec3(0.2f, 0.5f, 1.0f))
                                : glm::normalize(glm::vec3(0.5f, 1.0f, 0.2f))});
     _initialized = true;
@@ -231,23 +234,8 @@ void App::requestClose() {
 
 void App::renderSceneToFramebuffer(Camera& camera, Backend::Framebuffer* target,
                                    int width, int height, bool clear) {
-    if (!_rasterizer || !_graphicsDevice || !target || width <= 0 ||
-        height <= 0)
-        return;
-
-    const glm::mat4 view = camera.getViewMatrix();
-    const glm::mat4 proj = camera.getProjMatrix();
-
-    _rasterizer->updateFrameData(view, proj);
-    target->bind();
-    _graphicsDevice->setViewport(0, 0, width, height);
-    if (clear)
-        _graphicsDevice->clear(0.2f, 0.3f, 0.3f, 1.0f);
-    _rasterizer->render(view, proj);
-    _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
-    target->resolve();
-    target->unbind();
-    _graphicsDevice->setViewport(0, 0, _width, _height);
+    getRenderer().renderSceneToFramebuffer(camera, target, width, height,
+                                           clear);
 }
 
 void App::renderFrameOnce() {
@@ -879,6 +867,7 @@ void App::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
         _postProcessor->resize(_width, _height);
     if (_selectionOutlineProcessor)
         _selectionOutlineProcessor->resize(_width, _height);
+    _renderer.setViewportSize(_width, _height);
 }
 
 void App::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {

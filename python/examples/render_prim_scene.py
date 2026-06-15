@@ -15,7 +15,7 @@ def asset_path(*parts):
 
 class MyApp(ke.App):
     def setup(self):
-        device = self.getGraphicsDevice()
+        device = self.get_renderer().device()
 
         vs = asset_path("shaders", "common.vs")
         fs = asset_path("shaders", "common.fs")

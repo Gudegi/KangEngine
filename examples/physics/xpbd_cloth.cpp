@@ -60,13 +60,13 @@ class PBDClothApp : public App {
         auto commonFSPath = KE::getAssetPath("shaders/common.fs");
         auto commonTexFSPath = KE::getAssetPath("shaders/commonTex.fs");
         auto groundFSPath = KE::getAssetPath("shaders/checkerboard.fs");
-        clothShader = getGraphicsDevice()->createShaderFromFile(
+        clothShader = getRenderer().device()->createShaderFromFile(
             commonVSPath, commonTexFSPath);
         clothShader->use();
         clothShader->setUniformBlockBinding("cameraUBO", 0);
         clothShader->setUniformBlockBinding("lightUBO", 1);
 
-        groundShader = getGraphicsDevice()->createShaderFromFile(commonVSPath,
+        groundShader = getRenderer().device()->createShaderFromFile(commonVSPath,
                                                                  groundFSPath);
         groundShader->use();
         groundShader->setUniformBlockBinding("cameraUBO", 0);
@@ -86,7 +86,7 @@ class PBDClothApp : public App {
             Scene::Prim::createPlaneData(20.f, UpAxis::Z)));
         addShape(groundShader.get(), gnd);
 
-        texture = getGraphicsDevice()->createTexture(
+        texture = getRenderer().device()->createTexture(
             KE::getAssetPath("textures/awesomeface.png"));
         clothShader->setInt("uTexture", 0);
 

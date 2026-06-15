@@ -49,9 +49,9 @@ class BoxInstancingApp : public App {
         auto commonFSPath = KE::getAssetPath("shaders/common.fs");
         auto groundFSPath = KE::getAssetPath("shaders/checkerboard.fs");
 
-        commonShader = getGraphicsDevice()->createShaderFromFile(commonVSPath,
+        commonShader = getRenderer().device()->createShaderFromFile(commonVSPath,
                                                                  commonFSPath);
-        groundShader = getGraphicsDevice()->createShaderFromFile(commonVSPath,
+        groundShader = getRenderer().device()->createShaderFromFile(commonVSPath,
                                                                  groundFSPath);
 
         commonShader->use();

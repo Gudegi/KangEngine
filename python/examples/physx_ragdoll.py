@@ -25,7 +25,7 @@ class H1RagdollApp(ke.App):
         self.paused = False
         self.show_collision = False
 
-        device = self.getGraphicsDevice()
+        device = self.get_renderer().device()
 
         vs = asset_path("shaders", "common.vs")
         fs = asset_path("shaders", "common.fs")

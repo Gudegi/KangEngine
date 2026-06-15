@@ -30,17 +30,17 @@ class PrimShowcaseApp : public App {
 
     // ---------------------------------------------------------------------------
     void setup() override {
-        setLight(DirectionalLight{defaultSunDirection(), glm::vec3(1.0f), 0.75f,
-                                  glm::vec3(0.10f)});
+        getRenderer().setLight(DirectionalLight{
+            defaultSunDirection(), glm::vec3(1.0f), 0.75f, glm::vec3(0.10f)});
 
         auto commonVSPath = KE::getAssetPath("shaders/common.vs");
         auto commonFSPath = KE::getAssetPath("shaders/common.fs");
         auto groundFSPath = KE::getAssetPath("shaders/checkerboard.fs");
 
-        phongShader = getGraphicsDevice()->createShaderFromFile(commonVSPath,
-                                                                commonFSPath);
-        groundShader = getGraphicsDevice()->createShaderFromFile(commonVSPath,
-                                                                 groundFSPath);
+        phongShader = getRenderer().device()->createShaderFromFile(
+            commonVSPath, commonFSPath);
+        groundShader = getRenderer().device()->createShaderFromFile(
+            commonVSPath, groundFSPath);
 
         phongShader->setUniformBlockBinding("cameraUBO", 0);
         phongShader->setUniformBlockBinding("lightUBO", 1);

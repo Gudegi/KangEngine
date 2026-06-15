@@ -116,15 +116,14 @@ SkinnedCharacterBridge SkinnedCharacterBridge::fromFBXWithBind(
     whiteDesc.data = whitePixel.data();
     whiteDesc.name = "fbx_white_fallback";
     bridge._fallbackWhiteTexture =
-        app->getGraphicsDevice()->createTexture(whiteDesc);
+        app->getRenderer().device()->createTexture(whiteDesc);
     shader->use();
     shader->setInt("uTexture", 0);
 
     for (int i = 0; i < static_cast<int>(meshes.size()); ++i) {
         auto& imported = meshes[static_cast<size_t>(i)];
-        const std::string safeName =
-            Scene::PrimPath::safeToken(imported.metadata.name,
-                                       "mesh_" + std::to_string(i));
+        const std::string safeName = Scene::PrimPath::safeToken(
+            imported.metadata.name, "mesh_" + std::to_string(i));
         const std::string path =
             primBasePath + "/" + std::to_string(i) + "_" + safeName;
         const glm::vec4 fallbackColor =
@@ -158,7 +157,7 @@ SkinnedCharacterBridge SkinnedCharacterBridge::fromFBXWithBind(
         Backend::Texture* diffuseTexture = bridge._fallbackWhiteTexture.get();
         if (!texturePath.empty() && std::filesystem::exists(texturePath)) {
             bridge._textures.push_back(
-                app->getGraphicsDevice()->createTexture(texturePath, true));
+                app->getRenderer().device()->createTexture(texturePath, true));
             diffuseTexture = bridge._textures.back().get();
         }
         const std::string normalTexturePath =
@@ -167,8 +166,9 @@ SkinnedCharacterBridge SkinnedCharacterBridge::fromFBXWithBind(
         Backend::Texture* normalTexture = nullptr;
         if (!normalTexturePath.empty() &&
             std::filesystem::exists(normalTexturePath)) {
-            bridge._textures.push_back(app->getGraphicsDevice()->createTexture(
-                normalTexturePath, true));
+            bridge._textures.push_back(
+                app->getRenderer().device()->createTexture(normalTexturePath,
+                                                           true));
             normalTexture = bridge._textures.back().get();
         }
         if (binding.handle != InvalidHandle && diffuseTexture)

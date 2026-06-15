@@ -174,8 +174,8 @@ class H1PhysicsApp : public App {
 
     // -----------------------------------------------------------------------
     void setup() override {
-        stlShader = getGraphicsDevice()->createShader(stlVs, stlFs);
-        groundShader = getGraphicsDevice()->createShader(groundVs, groundFs);
+        stlShader = getRenderer().device()->createShader(stlVs, stlFs);
+        groundShader = getRenderer().device()->createShader(groundVs, groundFs);
 
         stlShader->use();
         stlShader->setUniformBlockBinding("cameraUBO", 0);

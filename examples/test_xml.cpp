@@ -77,7 +77,7 @@ class MyApp : public App {
 
     void setup() override {
         KE_TRACE_FUNCTION();
-        meshShader = getGraphicsDevice()->createShader(phongVs, phongFs);
+        meshShader = getRenderer().device()->createShader(phongVs, phongFs);
         meshShader->setUniformBlockBinding("CameraUBO", 0);
 
         const std::string mjcfPath =

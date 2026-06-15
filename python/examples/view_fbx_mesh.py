@@ -38,7 +38,7 @@ class FBXMeshViewer(ke.App):
         self.double_sided = True
         self.cast_shadows = True
 
-        device = self.getGraphicsDevice()
+        device = self.get_renderer().device()
         vs = package_asset_path("shaders", "common.vs")
         fs = package_asset_path("shaders", "common.fs")
         tex_fs = package_asset_path("shaders", "commonTex.fs")
@@ -149,7 +149,7 @@ class FBXMeshViewer(ke.App):
         key = str(path.resolve())
         if key in self.texture_cache:
             return self.texture_cache[key]
-        texture = self.getGraphicsDevice().createTexture(str(path), True)
+        texture = self.get_renderer().device().createTexture(str(path), True)
         self.texture_cache[key] = texture
         self.textures.append(texture)
         return texture

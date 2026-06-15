@@ -28,6 +28,7 @@
 #include "engine/graphics/backend/graphics_factory.hpp"
 #include "utils/types.hpp"
 #include "engine/graphics/material/material.hpp"
+#include "engine/graphics/renderer/renderer.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
 #include "engine/graphics/renderer/post_processor.hpp"
 #include "engine/graphics/renderer/selection_outline_processor.hpp"
@@ -92,6 +93,7 @@ class App {
     std::unique_ptr<Rasterizer> _rasterizer;
     std::unique_ptr<PostProcessor> _postProcessor;
     std::unique_ptr<SelectionOutlineProcessor> _selectionOutlineProcessor;
+    Renderer _renderer;
     InteractionController _interaction;
     GizmoController _gizmo;
 
@@ -128,21 +130,24 @@ class App {
     std::unique_ptr<App::IO> _io;
     std::unique_ptr<App::RenderVariable> _renderVariable;
     Camera& getCamera() { return _camera; }
+    Renderer& getRenderer() { return _renderer; }
+    const Renderer& getRenderer() const { return _renderer; }
     void setLight(const DirectionalLight& light) {
-        if (_rasterizer)
-            _rasterizer->setLight(light);
+        getRenderer().setLight(light);
     }
-    const DirectionalLight& getLight() const { return _rasterizer->getLight(); }
+    const DirectionalLight& getLight() const { return getRenderer().light(); }
     GLFWwindow* getWindow() { return _window.getGlfwWindow(); }
     const glm::mat4& getViewMatrix() const { return _viewMatrix; }
     const glm::mat4& getProjectionMatrix() const { return _projectionMatrix; }
     Backend::GraphicsDevice* getGraphicsDevice() {
-        return _graphicsDevice.get();
+        return getRenderer().device();
     }
-    Rasterizer* getRasterizer() { return _rasterizer.get(); }
-    const Rasterizer* getRasterizer() const { return _rasterizer.get(); }
+    Rasterizer* getRasterizer() { return getRenderer().rasterizer(); }
+    const Rasterizer* getRasterizer() const {
+        return getRenderer().rasterizer();
+    }
     SelectionOutlineProcessor* getSelectionOutlineProcessor() {
-        return _selectionOutlineProcessor.get();
+        return getRenderer().selectionOutline();
     }
     InteractionMode getInteractionMode() const { return _interaction.mode(); }
     void setInteractionMode(InteractionMode mode) {
@@ -192,9 +197,7 @@ class App {
                                      int mods);
 
     Scene::SceneBackend* getScene() { return _scene.get(); }
-    Backend::Framebuffer* getShadowFbo() {
-        return _rasterizer ? _rasterizer->getShadowFbo() : nullptr;
-    }
+    Backend::Framebuffer* getShadowFbo() { return getRenderer().shadowFbo(); }
 
     MeshHandle
     addShape(Backend::Shader* shader, Scene::Prim* prim,

@@ -50,8 +50,9 @@ class BvhCharacterCppApp : public App {
     void setup() override {
         getCamera().setCameraPos(glm::vec3(0.0f, 1.2f, 3.0f));
         getCamera().setTargetPos(glm::vec3(0.0f, 0.9f, 0.0f));
-        setLight(DirectionalLight{glm::normalize(glm::vec3(0.25f, 0.8f, 0.5f)),
-                                  glm::vec3(1.0f), 0.9f, glm::vec3(0.18f)});
+        getRenderer().setLight(
+            DirectionalLight{glm::normalize(glm::vec3(0.25f, 0.8f, 0.5f)),
+                             glm::vec3(1.0f), 0.9f, glm::vec3(0.18f)});
 
         const std::string commonVS = KE::getAssetPath("shaders/common.vs");
         const std::string commonFS = KE::getAssetPath("shaders/common.fs");
@@ -59,9 +60,9 @@ class BvhCharacterCppApp : public App {
             KE::getAssetPath("shaders/checkerboard.fs");
 
         skeletonShader =
-            getGraphicsDevice()->createShaderFromFile(commonVS, commonFS);
+            getRenderer().device()->createShaderFromFile(commonVS, commonFS);
         groundShader =
-            getGraphicsDevice()->createShaderFromFile(commonVS, checkerFS);
+            getRenderer().device()->createShaderFromFile(commonVS, checkerFS);
 
         for (auto* shader : {skeletonShader.get(), groundShader.get()}) {
             shader->use();

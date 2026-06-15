@@ -255,7 +255,7 @@ class CameraFrustumDebugApp : public App {
         getCamera().setTargetPos(glm::vec3(0.0f, 1.2f, -70.0f));
         getCamera().setFarPlane(500.0f);
 
-        setLight(
+        getRenderer().setLight(
             DirectionalLight{glm::normalize(glm::vec3(0.35f, 0.85f, 0.45f)),
                              glm::vec3(1.0f), 0.75f, glm::vec3(0.14f)});
 
@@ -264,9 +264,10 @@ class CameraFrustumDebugApp : public App {
         const std::string checkerFS =
             KE::getAssetPath("shaders/checkerboard.fs");
 
-        shader = getGraphicsDevice()->createShaderFromFile(commonVS, commonFS);
+        shader =
+            getRenderer().device()->createShaderFromFile(commonVS, commonFS);
         groundShader =
-            getGraphicsDevice()->createShaderFromFile(commonVS, checkerFS);
+            getRenderer().device()->createShaderFromFile(commonVS, checkerFS);
 
         for (Backend::Shader* s : {shader.get(), groundShader.get()}) {
             s->use();
@@ -294,9 +295,9 @@ class CameraFrustumDebugApp : public App {
             glm::quat(1.0, 0.f, 0.f, 0.f), 1.8f, 0.11f);
 
         addSceneObjects();
-        subjectPreviewFbo = getGraphicsDevice()->createFramebuffer(
+        subjectPreviewFbo = getRenderer().device()->createFramebuffer(
             {previewWidth, previewHeight, false, false, 0});
-        subjectPreviewPost.init(getGraphicsDevice(), previewWidth,
+        subjectPreviewPost.init(getRenderer().device(), previewWidth,
                                 previewHeight);
         initializeSubjectCamera();
         createFrustumDebug();
@@ -560,8 +561,9 @@ class CameraFrustumDebugApp : public App {
     void renderSubjectPreview() {
         if (!subjectPreviewFbo)
             return;
-        renderSceneToFramebuffer(subjectCamera, subjectPreviewFbo.get(),
-                                 previewWidth, previewHeight);
+        getRenderer().renderSceneToFramebuffer(subjectCamera,
+                                               subjectPreviewFbo.get(),
+                                               previewWidth, previewHeight);
         subjectPreviewPost.process(subjectPreviewFbo->getColorTexture(),
                                    _gamma);
     }

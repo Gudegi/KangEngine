@@ -70,7 +70,7 @@ class FbxCharacterBridgeViewer(ke.App):
         self.skeleton_ends = None
         self.skeleton_colors = None
 
-        device = self.getGraphicsDevice()
+        device = self.get_renderer().device()
         vs = package_asset_path("shaders", "common.vs")
         skinned_vs = package_asset_path("shaders", "skinned_mesh.vs")
         fs = package_asset_path("shaders", "common.fs")

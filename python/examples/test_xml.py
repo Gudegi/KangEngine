@@ -45,7 +45,7 @@ def asset_path(*parts):
 class RobotViewer(ke.App):
     def setup(self):
         self.frame_idx = 0
-        device = self.getGraphicsDevice()
+        device = self.get_renderer().device()
 
         vs = asset_path("shaders", "common.vs")
         fs = asset_path("shaders", "common.fs")

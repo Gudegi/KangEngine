@@ -94,7 +94,7 @@ class MotionViewer(ke.App):
         self.playback_speed = 1.0
         self._frame_accum = 0.0
 
-        device = self.getGraphicsDevice()
+        device = self.get_renderer().device()
         vs = package_asset_path("shaders", "common.vs")
         fs = package_asset_path("shaders", "common.fs")
         checker_fs = package_asset_path("shaders", "checkerboard.fs")

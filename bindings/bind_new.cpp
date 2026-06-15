@@ -529,6 +529,11 @@ PYBIND11_MODULE(_kangengine, m) {
              py::arg("maxFilterParam") = GL_LINEAR,
              py::return_value_policy::take_ownership);
 
+    py::class_<Renderer>(m, "Renderer")
+        .def(
+            "device", [](Renderer& self) { return self.device(); },
+            py::return_value_policy::reference);
+
     // GLM types for matrix operations
     // Support implicit conversion from PyGLM types (tuple/list with x,y,z or
     // indexable)
@@ -987,6 +992,12 @@ py::class_<glm::vec3>(m, "vec3")
         .def("clear_selection", &App::clearSelection)
         .def("getGraphicsDevice", &App::getGraphicsDevice,
              py::return_value_policy::reference)
+        .def(
+            "getRenderer", [](App& self) { return &self.getRenderer(); },
+            py::return_value_policy::reference)
+        .def(
+            "get_renderer", [](App& self) { return &self.getRenderer(); },
+            py::return_value_policy::reference)
         .def(
             "addShape",
             [](App* self, Backend::Shader* shader, Scene::Prim* prim,

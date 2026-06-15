@@ -142,9 +142,9 @@ class MyApp : public App {
 
     void setup() override {
         KE_TRACE_FUNCTION();
-        meshShader = getGraphicsDevice()->createShader(phongVs, phongFs);
+        meshShader = getRenderer().device()->createShader(phongVs, phongFs);
         planeShader =
-            getGraphicsDevice()->createShader(groundVs, checkerBoardFs);
+            getRenderer().device()->createShader(groundVs, checkerBoardFs);
 
         meshShader->setUniformBlockBinding("CameraUBO", 0);
         planeShader->setUniformBlockBinding("CameraUBO", 0);

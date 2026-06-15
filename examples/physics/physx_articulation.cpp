@@ -467,8 +467,8 @@ class ScissorLiftApp : public App {
 
     // -----------------------------------------------------------------------
     void setup() override {
-        cubeShader = getGraphicsDevice()->createShader(stlVs, stlFs);
-        planeShader = getGraphicsDevice()->createShader(groundVs, groundFs);
+        cubeShader = getRenderer().device()->createShader(stlVs, stlFs);
+        planeShader = getRenderer().device()->createShader(groundVs, groundFs);
 
         cubeShader->use();
         cubeShader->setUniformBlockBinding("cameraUBO", 0);
@@ -486,7 +486,7 @@ class ScissorLiftApp : public App {
             Scene::Prim::createPlaneData(30.f)));
         addShape(planeShader.get(), planePrim);
 
-        setLight(DirectionalLight{
+        getRenderer().setLight(DirectionalLight{
             .direction = glm::normalize(glm::vec3(0.5f, 1.f, 0.2f)),
             .color = {1.f, 1.f, 1.f},
             .intensity = 1.f,

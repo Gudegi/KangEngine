@@ -56,7 +56,7 @@ class App(NativeApp):
         return shaders[0] if len(shaders) == 1 else shaders
 
     def create_asset_shader(self, vertex_shader: str, fragment_shader: str):
-        shader = self.getGraphicsDevice().createShaderFromFile(
+        shader = self.get_renderer().device().createShaderFromFile(
             self.package_asset_path("shaders", vertex_shader),
             self.package_asset_path("shaders", fragment_shader),
         )
