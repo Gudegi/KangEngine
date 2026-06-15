@@ -401,24 +401,42 @@ void App::coreRender() {
 
 void App::checkError() { _graphicsDevice->checkError(); }
 
+MeshHandle App::addRenderable(Backend::Shader* shader, Scene::Prim* prim,
+                              TransformSource transformSource) {
+    return _rasterizer
+               ? _rasterizer->addRenderable(shader, prim, transformSource)
+               : InvalidHandle;
+}
+
+MeshHandle App::addSkinnedRenderable(Backend::Shader* shader, Scene::Prim* prim,
+                                     const Scene::SkinnedMeshData& skinnedMesh,
+                                     TransformSource transformSource) {
+    return _rasterizer ? _rasterizer->addSkinnedRenderable(
+                             shader, prim, skinnedMesh, transformSource)
+                       : InvalidHandle;
+}
+
+MeshHandle App::addRenderable(PhongMaterial* material, Scene::Prim* prim,
+                              TransformSource transformSource) {
+    return _rasterizer
+               ? _rasterizer->addRenderable(material, prim, transformSource)
+               : InvalidHandle;
+}
+
 MeshHandle App::addShape(Backend::Shader* shader, Scene::Prim* prim,
                          TransformSource transformSource) {
-    return _rasterizer ? _rasterizer->addShape(shader, prim, transformSource)
-                       : InvalidHandle;
+    return addRenderable(shader, prim, transformSource);
 }
 
 MeshHandle App::addSkinnedShape(Backend::Shader* shader, Scene::Prim* prim,
                                 const Scene::SkinnedMeshData& skinnedMesh,
                                 TransformSource transformSource) {
-    return _rasterizer ? _rasterizer->addSkinnedShape(shader, prim, skinnedMesh,
-                                                      transformSource)
-                       : InvalidHandle;
+    return addSkinnedRenderable(shader, prim, skinnedMesh, transformSource);
 }
 
 MeshHandle App::addShape(PhongMaterial* material, Scene::Prim* prim,
                          TransformSource transformSource) {
-    return _rasterizer ? _rasterizer->addShape(material, prim, transformSource)
-                       : InvalidHandle;
+    return addRenderable(material, prim, transformSource);
 }
 
 void App::removePrim(MeshHandle handle, Scene::Prim* prim) {
@@ -439,10 +457,10 @@ App::MeshPrimResult App::addMeshPrim(MeshPrimDesc desc) {
     prim->addScaleOp(desc.scale);
     prim->setDisplayColorAlpha(desc.color);
 
-    MeshHandle handle = addShape(desc.shader, prim);
+    MeshHandle handle = addRenderable(desc.shader, prim);
     if (handle != InvalidHandle) {
-        setShapeDoubleSided(handle, desc.doubleSided);
-        setShapeCastsShadow(handle, desc.castsShadow);
+        setRenderableDoubleSided(handle, desc.doubleSided);
+        setRenderableCastsShadow(handle, desc.castsShadow);
     }
 
     result.prim = prim;
@@ -480,9 +498,9 @@ App::MeshPrimResult App::addSkinnedMeshPrim(Backend::Shader* shader,
     prim->addTranslateOp(position);
     prim->setDisplayColorAlpha(color);
 
-    MeshHandle handle = addSkinnedShape(shader, prim, skinnedMesh);
+    MeshHandle handle = addSkinnedRenderable(shader, prim, skinnedMesh);
     if (handle != InvalidHandle) {
-        setShapeCastsShadow(handle, castsShadow);
+        setRenderableCastsShadow(handle, castsShadow);
     }
 
     result.prim = prim;
@@ -647,30 +665,27 @@ void App::setLightAmbient(const glm::vec3& ambient) {
     }
 }
 
-void App::updateShapeTransforms(MeshHandle handle,
-                                const std::vector<glm::mat4>& transforms,
-                                const std::vector<glm::vec4>* colors) {
-    if (_rasterizer)
-        _rasterizer->updateShapeTransforms(handle, transforms, colors);
+void App::updateRenderableTransforms(MeshHandle handle,
+                                     const std::vector<glm::mat4>& transforms,
+                                     const std::vector<glm::vec4>* colors) {
+    getRenderer().updateRenderableTransforms(handle, transforms, colors);
 }
 
-bool App::getShapeInstanceTransform(MeshHandle handle, int instanceIndex,
-                                    glm::mat4& outTransform) const {
-    return _rasterizer && _rasterizer->getShapeInstanceTransform(
-                              handle, instanceIndex, outTransform);
+bool App::getRenderableInstanceTransform(MeshHandle handle, int instanceIndex,
+                                         glm::mat4& outTransform) const {
+    return getRenderer().getRenderableInstanceTransform(handle, instanceIndex,
+                                                        outTransform);
 }
 
-bool App::setShapeInstanceTransform(MeshHandle handle, int instanceIndex,
-                                    const glm::mat4& transform) {
-    return _rasterizer && _rasterizer->setShapeInstanceTransform(
-                              handle, instanceIndex, transform);
+bool App::setRenderableInstanceTransform(MeshHandle handle, int instanceIndex,
+                                         const glm::mat4& transform) {
+    return getRenderer().setRenderableInstanceTransform(handle, instanceIndex,
+                                                        transform);
 }
 
-void App::updateShapeTransforms(MeshHandle handle, const float* transforms,
-                                const float* colors, size_t count,
-                                size_t colorCount) {
-    if (!_rasterizer)
-        return;
+void App::updateRenderableTransforms(MeshHandle handle, const float* transforms,
+                                     const float* colors, size_t count,
+                                     size_t colorCount) {
     if (count > 0 && !transforms)
         return;
     if (colorCount > 0 && !colors)
@@ -697,18 +712,17 @@ void App::updateShapeTransforms(MeshHandle handle, const float* transforms,
         colorPtr = &colorVec;
     }
 
-    _rasterizer->updateShapeTransforms(handle, transformVec, colorPtr);
+    getRenderer().updateRenderableTransforms(handle, transformVec, colorPtr);
 }
 
-void App::setShapeColors(MeshHandle handle,
-                         const std::vector<glm::vec4>& colors) {
-    if (_rasterizer)
-        _rasterizer->setShapeColors(handle, colors);
+void App::setRenderableColors(MeshHandle handle,
+                              const std::vector<glm::vec4>& colors) {
+    getRenderer().setRenderableColors(handle, colors);
 }
 
-void App::setShapeColors(MeshHandle handle, const float* colors,
-                         size_t colorCount) {
-    if (!_rasterizer || (colorCount > 0 && !colors))
+void App::setRenderableColors(MeshHandle handle, const float* colors,
+                              size_t colorCount) {
+    if (colorCount > 0 && !colors)
         return;
     std::vector<glm::vec4> colorVec;
     colorVec.reserve(colorCount);
@@ -716,36 +730,31 @@ void App::setShapeColors(MeshHandle handle, const float* colors,
         const float* c = colors + i * 4;
         colorVec.emplace_back(c[0], c[1], c[2], c[3]);
     }
-    _rasterizer->setShapeColors(handle, colorVec);
+    getRenderer().setRenderableColors(handle, colorVec);
 }
 
-void App::setShapeDoubleSided(MeshHandle handle, bool doubleSided) {
-    if (_rasterizer)
-        _rasterizer->setShapeDoubleSided(handle, doubleSided);
+void App::setRenderableDoubleSided(MeshHandle handle, bool doubleSided) {
+    getRenderer().setRenderableDoubleSided(handle, doubleSided);
 }
 
-void App::setShapeCastsShadow(MeshHandle handle, bool castsShadow) {
-    if (_rasterizer)
-        _rasterizer->setShapeCastsShadow(handle, castsShadow);
+void App::setRenderableCastsShadow(MeshHandle handle, bool castsShadow) {
+    getRenderer().setRenderableCastsShadow(handle, castsShadow);
 }
 
-void App::setShapeTexture(MeshHandle handle, Backend::Texture* tex, int slot) {
-    if (_rasterizer)
-        _rasterizer->setShapeTexture(handle, tex, slot);
+void App::setRenderableTexture(MeshHandle handle, Backend::Texture* tex,
+                               int slot) {
+    getRenderer().setRenderableTexture(handle, tex, slot);
 }
 
-void App::updateMeshGeometry(MeshHandle handle,
-                             const std::vector<glm::vec3>& positions,
-                             const std::vector<glm::vec3>& normals) {
-    if (_rasterizer)
-        _rasterizer->updateMeshGeometry(handle, positions, normals);
+void App::updateRenderableGeometry(MeshHandle handle,
+                                   const std::vector<glm::vec3>& positions,
+                                   const std::vector<glm::vec3>& normals) {
+    getRenderer().updateRenderableGeometry(handle, positions, normals);
 }
 
-void App::updateMeshGeometry(MeshHandle handle, const float* positions,
-                             const float* normals, size_t count,
-                             size_t normalCount) {
-    if (!_rasterizer)
-        return;
+void App::updateRenderableGeometry(MeshHandle handle, const float* positions,
+                                   const float* normals, size_t count,
+                                   size_t normalCount) {
     if (count > 0 && !positions)
         return;
     if (normalCount > 0 && !normals)
@@ -767,18 +776,18 @@ void App::updateMeshGeometry(MeshHandle handle, const float* positions,
         normalVec.emplace_back(n[0], n[1], n[2]);
     }
 
-    _rasterizer->updateMeshGeometry(handle, positionVec, normalVec);
+    getRenderer().updateRenderableGeometry(handle, positionVec, normalVec);
 }
 
-void App::updateSkinningMatrices(MeshHandle handle,
-                                 const std::vector<glm::mat4>& boneMatrices) {
-    if (_rasterizer)
-        _rasterizer->updateSkinningMatrices(handle, boneMatrices);
+void App::updateRenderableSkinningMatrices(
+    MeshHandle handle, const std::vector<glm::mat4>& boneMatrices) {
+    getRenderer().updateRenderableSkinningMatrices(handle, boneMatrices);
 }
 
-void App::updateSkinningMatrices(MeshHandle handle,
-                                 const float* rowMajorMatrices, size_t count) {
-    if (!_rasterizer || !rowMajorMatrices)
+void App::updateRenderableSkinningMatrices(MeshHandle handle,
+                                           const float* rowMajorMatrices,
+                                           size_t count) {
+    if (!rowMajorMatrices)
         return;
 
     std::vector<glm::mat4> matrices;
@@ -792,7 +801,73 @@ void App::updateSkinningMatrices(MeshHandle handle,
         }
         matrices.push_back(m);
     }
-    _rasterizer->updateSkinningMatrices(handle, matrices);
+    getRenderer().updateRenderableSkinningMatrices(handle, matrices);
+}
+
+void App::updateShapeTransforms(MeshHandle handle,
+                                const std::vector<glm::mat4>& transforms,
+                                const std::vector<glm::vec4>* colors) {
+    updateRenderableTransforms(handle, transforms, colors);
+}
+
+bool App::getShapeInstanceTransform(MeshHandle handle, int instanceIndex,
+                                    glm::mat4& outTransform) const {
+    return getRenderableInstanceTransform(handle, instanceIndex, outTransform);
+}
+
+bool App::setShapeInstanceTransform(MeshHandle handle, int instanceIndex,
+                                    const glm::mat4& transform) {
+    return setRenderableInstanceTransform(handle, instanceIndex, transform);
+}
+
+void App::updateShapeTransforms(MeshHandle handle, const float* transforms,
+                                const float* colors, size_t count,
+                                size_t colorCount) {
+    updateRenderableTransforms(handle, transforms, colors, count, colorCount);
+}
+
+void App::setShapeColors(MeshHandle handle,
+                         const std::vector<glm::vec4>& colors) {
+    setRenderableColors(handle, colors);
+}
+
+void App::setShapeColors(MeshHandle handle, const float* colors,
+                         size_t colorCount) {
+    setRenderableColors(handle, colors, colorCount);
+}
+
+void App::setShapeDoubleSided(MeshHandle handle, bool doubleSided) {
+    setRenderableDoubleSided(handle, doubleSided);
+}
+
+void App::setShapeCastsShadow(MeshHandle handle, bool castsShadow) {
+    setRenderableCastsShadow(handle, castsShadow);
+}
+
+void App::setShapeTexture(MeshHandle handle, Backend::Texture* tex, int slot) {
+    setRenderableTexture(handle, tex, slot);
+}
+
+void App::updateMeshGeometry(MeshHandle handle,
+                             const std::vector<glm::vec3>& positions,
+                             const std::vector<glm::vec3>& normals) {
+    updateRenderableGeometry(handle, positions, normals);
+}
+
+void App::updateMeshGeometry(MeshHandle handle, const float* positions,
+                             const float* normals, size_t count,
+                             size_t normalCount) {
+    updateRenderableGeometry(handle, positions, normals, count, normalCount);
+}
+
+void App::updateSkinningMatrices(MeshHandle handle,
+                                 const std::vector<glm::mat4>& boneMatrices) {
+    updateRenderableSkinningMatrices(handle, boneMatrices);
+}
+
+void App::updateSkinningMatrices(MeshHandle handle,
+                                 const float* rowMajorMatrices, size_t count) {
+    updateRenderableSkinningMatrices(handle, rowMajorMatrices, count);
 }
 
 void App::logDebugLines(const std::string& path,

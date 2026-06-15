@@ -275,12 +275,12 @@ MeshHandle DebugDraw::logLines(App* app, Backend::Shader* shader,
     prim->setMeshData(std::make_shared<MeshData>(
         Prim::createCapsuleData(safeRadius, 1.0f, UpAxis::Y, segments)));
 
-    MeshHandle handle = app->addShape(shader, prim);
+    MeshHandle handle = app->addRenderable(shader, prim);
     if (handle == InvalidHandle)
         return InvalidHandle;
 
-    app->updateShapeTransforms(handle, transforms, &instanceColors);
-    app->setShapeCastsShadow(handle, false);
+    app->updateRenderableTransforms(handle, transforms, &instanceColors);
+    app->setRenderableCastsShadow(handle, false);
     return handle;
 }
 
@@ -305,12 +305,12 @@ MeshHandle DebugDraw::logLines(App* app, Backend::Shader* shader,
     prim->setMeshData(std::make_shared<MeshData>(
         Prim::createCapsuleData(safeRadius, 1.0f, UpAxis::Y, segments)));
 
-    MeshHandle handle = app->addShape(shader, prim);
+    MeshHandle handle = app->addRenderable(shader, prim);
     if (handle == InvalidHandle)
         return InvalidHandle;
 
-    app->updateShapeTransforms(handle, transforms, &instanceColors);
-    app->setShapeCastsShadow(handle, false);
+    app->updateRenderableTransforms(handle, transforms, &instanceColors);
+    app->setRenderableCastsShadow(handle, false);
     return handle;
 }
 
@@ -323,7 +323,7 @@ void DebugDraw::updateLines(App* app, MeshHandle handle,
     validateLineInputs("DebugDraw::updateLines", starts, ends, colors);
     auto [transforms, instanceColors] =
         buildTransforms(starts, ends, colors, makeLineTransform);
-    app->updateShapeTransforms(handle, transforms, &instanceColors);
+    app->updateRenderableTransforms(handle, transforms, &instanceColors);
 }
 
 void DebugDraw::updateLines(App* app, MeshHandle handle, const float* starts,
@@ -335,7 +335,7 @@ void DebugDraw::updateLines(App* app, MeshHandle handle, const float* starts,
                           colorCount);
     auto [transforms, instanceColors] = buildTransforms(
         starts, ends, colors, count, colorCount, makeLineTransform);
-    app->updateShapeTransforms(handle, transforms, &instanceColors);
+    app->updateRenderableTransforms(handle, transforms, &instanceColors);
 }
 
 MeshHandle DebugDraw::logArrows(App* app, Backend::Shader* shader,
@@ -359,12 +359,12 @@ MeshHandle DebugDraw::logArrows(App* app, Backend::Shader* shader,
     prim->setMeshData(std::make_shared<MeshData>(Prim::createArrowData(
         safeRadius, 0.78f, UpAxis::Y, safeRadius * 2.4f, 0.22f, segments)));
 
-    MeshHandle handle = app->addShape(shader, prim);
+    MeshHandle handle = app->addRenderable(shader, prim);
     if (handle == InvalidHandle)
         return InvalidHandle;
 
-    app->updateShapeTransforms(handle, transforms, &instanceColors);
-    app->setShapeCastsShadow(handle, false);
+    app->updateRenderableTransforms(handle, transforms, &instanceColors);
+    app->setRenderableCastsShadow(handle, false);
     return handle;
 }
 
@@ -389,12 +389,12 @@ MeshHandle DebugDraw::logArrows(App* app, Backend::Shader* shader,
     prim->setMeshData(std::make_shared<MeshData>(Prim::createArrowData(
         safeRadius, 0.78f, UpAxis::Y, safeRadius * 2.4f, 0.22f, segments)));
 
-    MeshHandle handle = app->addShape(shader, prim);
+    MeshHandle handle = app->addRenderable(shader, prim);
     if (handle == InvalidHandle)
         return InvalidHandle;
 
-    app->updateShapeTransforms(handle, transforms, &instanceColors);
-    app->setShapeCastsShadow(handle, false);
+    app->updateRenderableTransforms(handle, transforms, &instanceColors);
+    app->setRenderableCastsShadow(handle, false);
     return handle;
 }
 
@@ -407,7 +407,7 @@ void DebugDraw::updateArrows(App* app, MeshHandle handle,
     validateLineInputs("DebugDraw::updateArrows", starts, ends, colors);
     auto [transforms, instanceColors] =
         buildTransforms(starts, ends, colors, makeArrowTransform);
-    app->updateShapeTransforms(handle, transforms, &instanceColors);
+    app->updateRenderableTransforms(handle, transforms, &instanceColors);
 }
 
 void DebugDraw::updateArrows(App* app, MeshHandle handle, const float* starts,
@@ -419,7 +419,7 @@ void DebugDraw::updateArrows(App* app, MeshHandle handle, const float* starts,
                           count, colorCount);
     auto [transforms, instanceColors] = buildTransforms(
         starts, ends, colors, count, colorCount, makeArrowTransform);
-    app->updateShapeTransforms(handle, transforms, &instanceColors);
+    app->updateRenderableTransforms(handle, transforms, &instanceColors);
 }
 
 MeshHandle DebugDraw::logCoordinateAxes(App* app, Backend::Shader* shader,

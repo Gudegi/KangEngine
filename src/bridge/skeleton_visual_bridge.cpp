@@ -65,7 +65,7 @@ void SkeletonVisualBridge::applyState(const Animation::SkeletonState& state) {
         _boneHandle = Scene::DebugDraw::logLines(
             _app, _shader, _basePath + "/bones", bones.starts, bones.ends,
             boneColors, _config.boneRadius, _config.segments);
-        _app->setShapeCastsShadow(_boneHandle, false);
+        _app->setRenderableCastsShadow(_boneHandle, false);
     } else {
         Scene::DebugDraw::updateLines(_app, _boneHandle, bones.starts,
                                       bones.ends, boneColors);
@@ -85,11 +85,11 @@ void SkeletonVisualBridge::applyState(const Animation::SkeletonState& state) {
             desc.meshData = Scene::Prim::createSphereData(1.0f, 16, 8);
             desc.castsShadow = false;
             _jointHandle = _app->addMeshPrim(std::move(desc)).handle;
-            _app->setShapeCastsShadow(_jointHandle, false);
+            _app->setRenderableCastsShadow(_jointHandle, false);
         }
 
         if (_jointHandle != InvalidHandle) {
-            _app->updateShapeTransforms(
+            _app->updateRenderableTransforms(
                 _jointHandle, jointTransforms(joints, _config.jointRadius),
                 &jointColors);
         }

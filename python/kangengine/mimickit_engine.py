@@ -261,7 +261,7 @@ class _KangEngineViewer(App):
 
         ground = self.getScene().define_prim("/ground", _ke.scene.PrimType.Mesh)
         ground.set_mesh_data(_ke.scene.Prim.create_plane_data(100.0, _ke.UpAxis.Z))
-        self.addShape(self.ground_shader, ground)
+        self.add_renderable(self.ground_shader, ground)
         self.visual_bridge = KangWorldVisualBridge(self, self.world)
         self._setup_done = True
 

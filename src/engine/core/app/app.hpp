@@ -199,6 +199,16 @@ class App {
     Scene::SceneBackend* getScene() { return _scene.get(); }
     Backend::Framebuffer* getShadowFbo() { return getRenderer().shadowFbo(); }
 
+    MeshHandle addRenderable(
+        Backend::Shader* shader, Scene::Prim* prim,
+        TransformSource transformSource = TransformSource::SceneGraph);
+    MeshHandle addSkinnedRenderable(
+        Backend::Shader* shader, Scene::Prim* prim,
+        const Scene::SkinnedMeshData& skinnedMesh,
+        TransformSource transformSource = TransformSource::SceneGraph);
+    MeshHandle addRenderable(
+        PhongMaterial* material, Scene::Prim* prim,
+        TransformSource transformSource = TransformSource::SceneGraph);
     MeshHandle
     addShape(Backend::Shader* shader, Scene::Prim* prim,
              TransformSource transformSource = TransformSource::SceneGraph);
@@ -244,6 +254,41 @@ class App {
                                             float scale = 1.0f,
                                             const std::string& scenePath = "");
 
+    // Preferred renderable API. MeshHandle identifies a renderable
+    // batch/instancer; only instance transform APIs address one instance.
+    void
+    updateRenderableTransforms(MeshHandle handle,
+                               const std::vector<glm::mat4>& transforms,
+                               const std::vector<glm::vec4>* colors = nullptr);
+    bool getRenderableInstanceTransform(MeshHandle handle, int instanceIndex,
+                                        glm::mat4& outTransform) const;
+    bool setRenderableInstanceTransform(MeshHandle handle, int instanceIndex,
+                                        const glm::mat4& transform);
+    // std::vector -> * functions for pybind
+    void updateRenderableTransforms(MeshHandle handle, const float* transforms,
+                                    const float* colors, size_t count,
+                                    size_t colorCount);
+    void setRenderableColors(MeshHandle handle,
+                             const std::vector<glm::vec4>& colors);
+    void setRenderableColors(MeshHandle handle, const float* colors,
+                             size_t colorCount);
+    void setRenderableDoubleSided(MeshHandle handle, bool doubleSided = true);
+    void setRenderableCastsShadow(MeshHandle handle, bool castsShadow = true);
+    void setRenderableTexture(MeshHandle handle, Backend::Texture* tex,
+                              int slot = 0);
+    void updateRenderableGeometry(MeshHandle handle,
+                                  const std::vector<glm::vec3>& positions,
+                                  const std::vector<glm::vec3>& normals);
+    void updateRenderableGeometry(MeshHandle handle, const float* positions,
+                                  const float* normals, size_t count,
+                                  size_t normalCount);
+    void updateRenderableSkinningMatrices(
+        MeshHandle handle, const std::vector<glm::mat4>& boneMatrices);
+    void updateRenderableSkinningMatrices(MeshHandle handle,
+                                          const float* rowMajorMatrices,
+                                          size_t count);
+
+    // Legacy compatibility wrappers. Prefer the Renderable names in new code.
     void updateShapeTransforms(MeshHandle handle,
                                const std::vector<glm::mat4>& transforms,
                                const std::vector<glm::vec4>* colors = nullptr);
@@ -251,7 +296,6 @@ class App {
                                    glm::mat4& outTransform) const;
     bool setShapeInstanceTransform(MeshHandle handle, int instanceIndex,
                                    const glm::mat4& transform);
-    // std::vector -> * functions for pybind
     void updateShapeTransforms(MeshHandle handle, const float* transforms,
                                const float* colors, size_t count,
                                size_t colorCount);

@@ -172,9 +172,9 @@ SkinnedCharacterBridge SkinnedCharacterBridge::fromFBXWithBind(
             normalTexture = bridge._textures.back().get();
         }
         if (binding.handle != InvalidHandle && diffuseTexture)
-            app->setShapeTexture(binding.handle, diffuseTexture, 0);
+            app->setRenderableTexture(binding.handle, diffuseTexture, 0);
         if (binding.handle != InvalidHandle && normalTexture)
-            app->setShapeTexture(binding.handle, normalTexture, 5);
+            app->setRenderableTexture(binding.handle, normalTexture, 5);
 
         bridge._meshes.push_back(std::move(binding));
     }
@@ -228,7 +228,7 @@ SkinnedCharacterBridge::applyState(const Animation::SkeletonState& state) {
             mesh.boneMatrices);
 
         if (mesh.handle != InvalidHandle)
-            _app->updateSkinningMatrices(mesh.handle, mesh.boneMatrices);
+            _app->updateRenderableSkinningMatrices(mesh.handle, mesh.boneMatrices);
     }
 
     return state;
@@ -258,7 +258,7 @@ void SkinnedCharacterBridge::setCastsShadow(bool castsShadow) {
         return;
     for (const MeshBinding& mesh : _meshes) {
         if (mesh.handle != InvalidHandle)
-            _app->setShapeCastsShadow(mesh.handle, castsShadow);
+            _app->setRenderableCastsShadow(mesh.handle, castsShadow);
     }
 }
 

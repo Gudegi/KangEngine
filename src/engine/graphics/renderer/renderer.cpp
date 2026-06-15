@@ -55,4 +55,60 @@ void Renderer::renderSceneToFramebuffer(Camera& camera,
         _device->setViewport(0, 0, _viewportWidth, _viewportHeight);
 }
 
+void Renderer::updateRenderableTransforms(
+    MeshHandle handle, const std::vector<glm::mat4>& transforms,
+    const std::vector<glm::vec4>* colors) {
+    if (_rasterizer)
+        _rasterizer->updateRenderableTransforms(handle, transforms, colors);
+}
+
+bool Renderer::getRenderableInstanceTransform(MeshHandle handle,
+                                              int instanceIndex,
+                                              glm::mat4& outTransform) const {
+    return _rasterizer && _rasterizer->getRenderableInstanceTransform(
+                              handle, instanceIndex, outTransform);
+}
+
+bool Renderer::setRenderableInstanceTransform(MeshHandle handle,
+                                              int instanceIndex,
+                                              const glm::mat4& transform) {
+    return _rasterizer && _rasterizer->setRenderableInstanceTransform(
+                              handle, instanceIndex, transform);
+}
+
+void Renderer::setRenderableColors(MeshHandle handle,
+                                   const std::vector<glm::vec4>& colors) {
+    if (_rasterizer)
+        _rasterizer->setRenderableColors(handle, colors);
+}
+
+void Renderer::setRenderableDoubleSided(MeshHandle handle, bool doubleSided) {
+    if (_rasterizer)
+        _rasterizer->setRenderableDoubleSided(handle, doubleSided);
+}
+
+void Renderer::setRenderableCastsShadow(MeshHandle handle, bool castsShadow) {
+    if (_rasterizer)
+        _rasterizer->setRenderableCastsShadow(handle, castsShadow);
+}
+
+void Renderer::setRenderableTexture(MeshHandle handle, Backend::Texture* tex,
+                                    int slot) {
+    if (_rasterizer)
+        _rasterizer->setRenderableTexture(handle, tex, slot);
+}
+
+void Renderer::updateRenderableGeometry(MeshHandle handle,
+                                        const std::vector<glm::vec3>& positions,
+                                        const std::vector<glm::vec3>& normals) {
+    if (_rasterizer)
+        _rasterizer->updateRenderableGeometry(handle, positions, normals);
+}
+
+void Renderer::updateRenderableSkinningMatrices(
+    MeshHandle handle, const std::vector<glm::mat4>& boneMatrices) {
+    if (_rasterizer)
+        _rasterizer->updateRenderableSkinningMatrices(handle, boneMatrices);
+}
+
 } // namespace KE

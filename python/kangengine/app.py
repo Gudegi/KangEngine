@@ -114,7 +114,7 @@ class App(NativeApp):
             self.configure_checker_shader(shader)
         ground = self.getScene().define_prim(path, scene.PrimType.Mesh)
         ground.set_mesh_data(scene.Prim.create_plane_data(float(scale), self.up_axis))
-        handle = self.addShape(shader, ground)
+        handle = self.add_renderable(shader, ground)
         return ground, handle
 
     def add_mesh(self, path: str, mesh_data, shader, color=None):
@@ -122,14 +122,14 @@ class App(NativeApp):
         prim.set_mesh_data(mesh_data)
         if color is not None:
             prim.set_display_color_alpha(color)
-        handle = self.addShape(shader, prim)
+        handle = self.add_renderable(shader, prim)
         return prim, handle
 
     def set_shape_textures(self, handle, diffuse=None, normal=None):
         if diffuse is not None:
-            self.setShapeTexture(handle, diffuse, 0)  # TODO : refactor the hardcoded texture slots
+            self.set_renderable_texture(handle, diffuse, 0)  # TODO : refactor the hardcoded texture slots
         if normal is not None:
-            self.setShapeTexture(handle, normal, 5)
+            self.set_renderable_texture(handle, normal, 5)
         return handle
 
     def as_vec3(self, value):

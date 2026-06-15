@@ -96,8 +96,8 @@ Rasterizer::Rasterizer(Backend::GraphicsDevice* graphicsDevice) {
 
 // Prim-based (instanced)
 
-MeshHandle Rasterizer::addShape(Backend::Shader* shader, Scene::Prim* prim,
-                                TransformSource transformSource) {
+MeshHandle Rasterizer::addRenderable(Backend::Shader* shader, Scene::Prim* prim,
+                                     TransformSource transformSource) {
     auto meshData = prim->resolveMeshData();
     if (!meshData || meshData->vertices.empty() || meshData->indices.empty())
         return InvalidHandle;
@@ -122,9 +122,9 @@ MeshHandle Rasterizer::addShape(Backend::Shader* shader, Scene::Prim* prim,
 }
 
 MeshHandle
-Rasterizer::addSkinnedShape(Backend::Shader* shader, Scene::Prim* prim,
-                            const Scene::SkinnedMeshData& skinnedMesh,
-                            TransformSource transformSource) {
+Rasterizer::addSkinnedRenderable(Backend::Shader* shader, Scene::Prim* prim,
+                                 const Scene::SkinnedMeshData& skinnedMesh,
+                                 TransformSource transformSource) {
     auto meshData = prim->resolveMeshData();
     if (!meshData || meshData->vertices.empty() || meshData->indices.empty() ||
         !skinnedMesh.hasValidVertexSkinning())
@@ -150,8 +150,8 @@ Rasterizer::addSkinnedShape(Backend::Shader* shader, Scene::Prim* prim,
     return hIt->second;
 }
 
-MeshHandle Rasterizer::addShape(PhongMaterial* material, Scene::Prim* prim,
-                                TransformSource transformSource) {
+MeshHandle Rasterizer::addRenderable(PhongMaterial* material, Scene::Prim* prim,
+                                     TransformSource transformSource) {
     auto meshData = prim->resolveMeshData();
     if (!material || !meshData || meshData->vertices.empty() ||
         meshData->indices.empty())
@@ -184,35 +184,35 @@ void Rasterizer::removePrim(MeshHandle handle, Scene::Prim* prim) {
     _handleTable[handle]->removePrim(prim);
 }
 
-void Rasterizer::updateShapeTransforms(MeshHandle handle,
-                                       const std::vector<glm::mat4>& transforms,
-                                       const std::vector<glm::vec4>* colors) {
+void Rasterizer::updateRenderableTransforms(
+    MeshHandle handle, const std::vector<glm::mat4>& transforms,
+    const std::vector<glm::vec4>* colors) {
     if (handle >= _handleTable.size())
         return;
     _handleTable[handle]->updateFromTransforms(transforms, colors);
 }
 
-void Rasterizer::setShapeColors(MeshHandle handle,
-                                const std::vector<glm::vec4>& colors) {
+void Rasterizer::setRenderableColors(MeshHandle handle,
+                                     const std::vector<glm::vec4>& colors) {
     if (handle >= _handleTable.size())
         return;
     _handleTable[handle]->setColors(colors);
 }
 
-void Rasterizer::setShapeDoubleSided(MeshHandle handle, bool doubleSided) {
+void Rasterizer::setRenderableDoubleSided(MeshHandle handle, bool doubleSided) {
     if (handle >= _handleTable.size())
         return;
     _handleTable[handle]->setDoubleSided(doubleSided);
 }
 
-void Rasterizer::setShapeCastsShadow(MeshHandle handle, bool castsShadow) {
+void Rasterizer::setRenderableCastsShadow(MeshHandle handle, bool castsShadow) {
     if (handle >= _handleTable.size())
         return;
     _handleTable[handle]->setCastsShadow(castsShadow);
 }
 
-void Rasterizer::setShapeTexture(MeshHandle handle, Backend::Texture* tex,
-                                 int slot) {
+void Rasterizer::setRenderableTexture(MeshHandle handle, Backend::Texture* tex,
+                                      int slot) {
     if (handle >= _handleTable.size())
         return;
     _handleTable[handle]->setTexture(tex, slot);
@@ -250,16 +250,18 @@ RayPickResult Rasterizer::rayPick(const Geometry::Ray& ray) const {
     return best;
 }
 
-bool Rasterizer::getShapeInstanceTransform(MeshHandle handle, int instanceIndex,
-                                           glm::mat4& outTransform) const {
+bool Rasterizer::getRenderableInstanceTransform(MeshHandle handle,
+                                                int instanceIndex,
+                                                glm::mat4& outTransform) const {
     if (handle >= _handleTable.size() || !_handleTable[handle])
         return false;
     return _handleTable[handle]->getInstanceTransform(instanceIndex,
                                                       outTransform);
 }
 
-bool Rasterizer::setShapeInstanceTransform(MeshHandle handle, int instanceIndex,
-                                           const glm::mat4& transform) {
+bool Rasterizer::setRenderableInstanceTransform(MeshHandle handle,
+                                                int instanceIndex,
+                                                const glm::mat4& transform) {
     if (handle >= _handleTable.size() || !_handleTable[handle])
         return false;
 
@@ -270,15 +272,15 @@ bool Rasterizer::setShapeInstanceTransform(MeshHandle handle, int instanceIndex,
     return instancer->setInstanceTransform(instanceIndex, transform);
 }
 
-void Rasterizer::updateMeshGeometry(MeshHandle handle,
-                                    const std::vector<glm::vec3>& positions,
-                                    const std::vector<glm::vec3>& normals) {
+void Rasterizer::updateRenderableGeometry(
+    MeshHandle handle, const std::vector<glm::vec3>& positions,
+    const std::vector<glm::vec3>& normals) {
     if (handle >= _handleTable.size())
         return;
     _handleTable[handle]->updateGeometry(positions, normals);
 }
 
-void Rasterizer::updateSkinningMatrices(
+void Rasterizer::updateRenderableSkinningMatrices(
     MeshHandle handle, const std::vector<glm::mat4>& boneMatrices) {
     if (handle >= _handleTable.size())
         return;

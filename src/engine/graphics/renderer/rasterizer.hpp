@@ -30,13 +30,13 @@ namespace KE {
 // Two-source transform ownership
 //
 // Source A — SceneGraph-driven
-//   addShape(shader, prim) → instancer polls Prim attributes every frame
+//   addRenderable(shader, prim) → instancer polls Prim attributes every frame
 //   Use for: static geometry, any object the scene graph owns
 //
 // Source B — ExternalBuffer-driven
-//   handle = addShape(shader, prim)       // register once at setup
-//   setShapeColors(handle, colors)        // upload colors once
-//   updateShapeTransforms(handle, mats)   // upload transforms per frame
+//   handle = addRenderable(shader, prim)       // register once at setup
+//   setRenderableColors(handle, colors)        // upload colors once
+//   updateRenderableTransforms(handle, mats)   // upload transforms per frame
 //   Use for: PhysX rigid bodies, large instanced crowds, anything with
 //            per-frame external transform arrays
 //
@@ -183,42 +183,43 @@ class Rasterizer : public RenderPipeline {
     int getCullingTotalInstances() const { return _cullingTotalInstances; }
     int getCullingCulledInstances() const { return _cullingCulledInstances; }
 
-    MeshHandle
-    addShape(Backend::Shader* shader, Scene::Prim* prim,
-             TransformSource transformSource = TransformSource::SceneGraph);
-    MeshHandle addSkinnedShape(
+    MeshHandle addRenderable(
+        Backend::Shader* shader, Scene::Prim* prim,
+        TransformSource transformSource = TransformSource::SceneGraph);
+    MeshHandle addSkinnedRenderable(
         Backend::Shader* shader, Scene::Prim* prim,
         const Scene::SkinnedMeshData& skinnedMesh,
         TransformSource transformSource = TransformSource::SceneGraph);
-    MeshHandle
-    addShape(PhongMaterial* material, Scene::Prim* prim,
-             TransformSource transformSource = TransformSource::SceneGraph);
+    MeshHandle addRenderable(
+        PhongMaterial* material, Scene::Prim* prim,
+        TransformSource transformSource = TransformSource::SceneGraph);
     void removePrim(MeshHandle handle, Scene::Prim* prim);
 
-    void updateShapeTransforms(MeshHandle handle,
+    void
+    updateRenderableTransforms(MeshHandle handle,
                                const std::vector<glm::mat4>& transforms,
                                const std::vector<glm::vec4>* colors = nullptr);
 
-    void setShapeColors(MeshHandle handle,
-                        const std::vector<glm::vec4>& colors);
+    void setRenderableColors(MeshHandle handle,
+                             const std::vector<glm::vec4>& colors);
 
     // Disable back-face culling for this instancer (e.g. cloth, thin surfaces).
-    void setShapeDoubleSided(MeshHandle handle, bool doubleSided = true);
-    void setShapeCastsShadow(MeshHandle handle, bool castsShadow = true);
-    void setShapeTexture(MeshHandle handle, Backend::Texture* tex,
-                         int slot = 0);
+    void setRenderableDoubleSided(MeshHandle handle, bool doubleSided = true);
+    void setRenderableCastsShadow(MeshHandle handle, bool castsShadow = true);
+    void setRenderableTexture(MeshHandle handle, Backend::Texture* tex,
+                              int slot = 0);
     RayPickResult rayPick(const Geometry::Ray& ray) const;
-    bool getShapeInstanceTransform(MeshHandle handle, int instanceIndex,
-                                   glm::mat4& outTransform) const;
-    bool setShapeInstanceTransform(MeshHandle handle, int instanceIndex,
-                                   const glm::mat4& transform);
+    bool getRenderableInstanceTransform(MeshHandle handle, int instanceIndex,
+                                        glm::mat4& outTransform) const;
+    bool setRenderableInstanceTransform(MeshHandle handle, int instanceIndex,
+                                        const glm::mat4& transform);
 
     // Deformable mesh: update vertex positions + normals each frame.
-    void updateMeshGeometry(MeshHandle handle,
-                            const std::vector<glm::vec3>& positions,
-                            const std::vector<glm::vec3>& normals);
-    void updateSkinningMatrices(MeshHandle handle,
-                                const std::vector<glm::mat4>& boneMatrices);
+    void updateRenderableGeometry(MeshHandle handle,
+                                  const std::vector<glm::vec3>& positions,
+                                  const std::vector<glm::vec3>& normals);
+    void updateRenderableSkinningMatrices(
+        MeshHandle handle, const std::vector<glm::mat4>& boneMatrices);
 
     void logDebugLines(const std::string& path,
                        const std::vector<glm::vec3>& starts,

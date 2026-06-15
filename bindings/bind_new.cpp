@@ -532,7 +532,67 @@ PYBIND11_MODULE(_kangengine, m) {
     py::class_<Renderer>(m, "Renderer")
         .def(
             "device", [](Renderer& self) { return self.device(); },
-            py::return_value_policy::reference);
+            py::return_value_policy::reference)
+        .def(
+            "update_renderable_transforms",
+            [](Renderer& self, uint32_t handle, const FloatArray& transforms,
+               py::object colors) {
+                auto transformVec = mat4Array(transforms, "transforms");
+                std::vector<glm::vec4> colorVec;
+                const std::vector<glm::vec4>* colorPtr = nullptr;
+                if (!colors.is_none()) {
+                    auto colorArray = colors.cast<FloatArray>();
+                    colorVec = vec4Array(colorArray, "colors");
+                    if (colorVec.size() != 1 &&
+                        colorVec.size() != transformVec.size()) {
+                        throw py::value_error(
+                            "colors must have length 1 or match transforms");
+                    }
+                    if (colorVec.size() == 1 && transformVec.size() > 1)
+                        colorVec.resize(transformVec.size(), colorVec[0]);
+                    colorPtr = &colorVec;
+                }
+                self.updateRenderableTransforms(handle, transformVec, colorPtr);
+            },
+            py::arg("handle"), py::arg("transforms"),
+            py::arg("colors") = py::none())
+        .def(
+            "set_renderable_colors",
+            [](Renderer& self, uint32_t handle, const FloatArray& colors) {
+                self.setRenderableColors(handle, vec4Array(colors, "colors"));
+            },
+            py::arg("handle"), py::arg("colors"))
+        .def("set_renderable_double_sided", &Renderer::setRenderableDoubleSided,
+             py::arg("handle"), py::arg("double_sided") = true)
+        .def("set_renderable_casts_shadow", &Renderer::setRenderableCastsShadow,
+             py::arg("handle"), py::arg("casts_shadow") = true)
+        .def("set_renderable_texture", &Renderer::setRenderableTexture,
+             py::arg("handle"), py::arg("texture"), py::arg("slot") = 0)
+        .def(
+            "update_renderable_geometry",
+            [](Renderer& self, uint32_t handle, const FloatArray& positions,
+               py::object normals) {
+                auto positionVec = vec3Array(positions, "positions");
+                std::vector<glm::vec3> normalVec;
+                if (!normals.is_none()) {
+                    auto normalArray = normals.cast<FloatArray>();
+                    normalVec = vec3Array(normalArray, "normals");
+                    if (normalVec.size() != positionVec.size()) {
+                        throw py::value_error(
+                            "normals must match positions length");
+                    }
+                }
+                self.updateRenderableGeometry(handle, positionVec, normalVec);
+            },
+            py::arg("handle"), py::arg("positions"),
+            py::arg("normals") = py::none())
+        .def(
+            "update_renderable_skinning_matrices",
+            [](Renderer& self, uint32_t handle, const FloatArray& matrices) {
+                self.updateRenderableSkinningMatrices(
+                    handle, mat4Array(matrices, "bone_matrices"));
+            },
+            py::arg("handle"), py::arg("bone_matrices"));
 
     // GLM types for matrix operations
     // Support implicit conversion from PyGLM types (tuple/list with x,y,z or
@@ -1026,6 +1086,80 @@ py::class_<glm::vec3>(m, "vec3")
             },
             py::arg("material"), py::arg("prim"),
             py::arg("transform_source") = TransformSource::SceneGraph)
+        .def(
+            "add_renderable",
+            [](App* self, Backend::Shader* shader, Scene::Prim* prim,
+               TransformSource transformSource) {
+                return self->addRenderable(shader, prim, transformSource);
+            },
+            py::arg("shader"), py::arg("prim"),
+            py::arg("transform_source") = TransformSource::SceneGraph)
+        .def(
+            "add_skinned_renderable",
+            [](App* self, Backend::Shader* shader, Scene::Prim* prim,
+               std::shared_ptr<Scene::SkinnedMeshData> skinnedMesh,
+               TransformSource transformSource) {
+                if (!skinnedMesh)
+                    throw py::value_error("skinned_mesh_data is None");
+                return self->addSkinnedRenderable(shader, prim, *skinnedMesh,
+                                                  transformSource);
+            },
+            py::arg("shader"), py::arg("prim"), py::arg("skinned_mesh_data"),
+            py::arg("transform_source") = TransformSource::SceneGraph)
+        .def(
+            "add_renderable",
+            [](App* self, PhongMaterial* material, Scene::Prim* prim,
+               TransformSource transformSource) {
+                return self->addRenderable(material, prim, transformSource);
+            },
+            py::arg("material"), py::arg("prim"),
+            py::arg("transform_source") = TransformSource::SceneGraph)
+        .def(
+            "update_renderable_transforms",
+            [](App* self, uint32_t handle, const FloatArray& transforms,
+               py::object colors) {
+                auto t = mat4ArrayView(transforms, "transforms");
+                const float* colorData = nullptr;
+                size_t colorCount = 0;
+                if (!colors.is_none()) {
+                    auto colorArray = colors.cast<FloatArray>();
+                    auto c = vec4ArrayView(colorArray, "colors");
+                    if (c.count != 1 && c.count != t.count) {
+                        throw py::value_error(
+                            "colors must have length 1 or match transforms");
+                    }
+                    colorData = c.data;
+                    colorCount = c.count;
+                }
+                self->updateRenderableTransforms(handle, t.data, colorData,
+                                                 t.count, colorCount);
+            },
+            py::arg("handle"), py::arg("transforms"),
+            py::arg("colors") = py::none())
+        .def(
+            "set_renderable_colors",
+            [](App* self, uint32_t handle, const FloatArray& colors) {
+                auto c = vec4ArrayView(colors, "colors");
+                self->setRenderableColors(handle, c.data, c.count);
+            },
+            py::arg("handle"), py::arg("colors"))
+        .def(
+            "set_renderable_double_sided",
+            [](App* self, uint32_t handle, bool doubleSided) {
+                self->setRenderableDoubleSided(handle, doubleSided);
+            },
+            py::arg("handle"), py::arg("double_sided") = true)
+        .def(
+            "set_renderable_casts_shadow",
+            [](App* self, uint32_t handle, bool castsShadow) {
+                self->setRenderableCastsShadow(handle, castsShadow);
+            },
+            py::arg("handle"), py::arg("casts_shadow") = true)
+        .def(
+            "set_renderable_texture",
+            [](App* self, uint32_t handle, Backend::Texture* texture,
+               int slot) { self->setRenderableTexture(handle, texture, slot); },
+            py::arg("handle"), py::arg("texture"), py::arg("slot") = 0)
         .def(
             "updateShapeTransforms",
             [](App* self, uint32_t handle, const FloatArray& transforms,

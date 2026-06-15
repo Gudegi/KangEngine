@@ -63,7 +63,7 @@ void PhysicsBridge::sync() {
             for (int i = 0; i < numRobots; i++)
                 transforms[i] =
                     pxToMat4(grp.artics[i]->link(b)->getGlobalPose());
-            _app->updateShapeTransforms(grp.handles[b], transforms);
+            _app->updateRenderableTransforms(grp.handles[b], transforms);
         }
     }
 
