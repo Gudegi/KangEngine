@@ -6,29 +6,17 @@
 #include "engine/core/app/app.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/scene/native/prim.hpp"
+#include "engine/scene/prim_path.hpp"
+#include "engine/scene/scene_backend.hpp"
 
 #include <algorithm>
 #include <array>
-#include <cctype>
 #include <filesystem>
 #include <stdexcept>
 
 namespace KE {
 namespace Bridge {
 namespace {
-
-std::string primSafeName(std::string value, const std::string& fallback) {
-    for (char& ch : value) {
-        if (!(std::isalnum(static_cast<unsigned char>(ch)) || ch == '_'))
-            ch = '_';
-    }
-    value.erase(std::remove(value.begin(), value.end(), '\0'), value.end());
-    while (!value.empty() && value.front() == '_')
-        value.erase(value.begin());
-    while (!value.empty() && value.back() == '_')
-        value.pop_back();
-    return value.empty() ? fallback : value;
-}
 
 glm::vec4 diffuseColorFromMaterial(const Asset::FBXMeshMetadata& mesh,
                                    glm::vec4 fallback) {
@@ -108,6 +96,8 @@ SkinnedCharacterBridge SkinnedCharacterBridge::fromFBXWithBind(
             : Asset::FBXLoader::loadCharacterWithBind(
                   motionFbxPath, bindFbxPath, clipIndex, fps, scale);
     bridge._motion = std::move(character.motion);
+    Scene::defineSkeletonTree(app->getScene(), primBasePath + "/skeleton_tree",
+                              bridge._motion.skeletonTree());
     std::vector<Asset::FBXSkinnedMeshInfo>& meshes = character.skinnedMeshes;
     bridge._meshes.reserve(meshes.size());
 
@@ -133,7 +123,8 @@ SkinnedCharacterBridge SkinnedCharacterBridge::fromFBXWithBind(
     for (int i = 0; i < static_cast<int>(meshes.size()); ++i) {
         auto& imported = meshes[static_cast<size_t>(i)];
         const std::string safeName =
-            primSafeName(imported.metadata.name, "mesh_" + std::to_string(i));
+            Scene::PrimPath::safeToken(imported.metadata.name,
+                                       "mesh_" + std::to_string(i));
         const std::string path =
             primBasePath + "/" + std::to_string(i) + "_" + safeName;
         const glm::vec4 fallbackColor =

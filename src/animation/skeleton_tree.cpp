@@ -1,4 +1,5 @@
 #include "skeleton_tree.hpp"
+#include "engine/scene/prim_path.hpp"
 
 #include <fmt/core.h>
 #include <tinyxml2.h>
@@ -32,6 +33,29 @@ int SkeletonTree::index(const std::string& name) const {
             fmt::format("Node '{}' not found in skeleton tree", name));
     }
     return it->second;
+}
+
+std::vector<std::string>
+SkeletonTree::nodePaths(const std::string& basePath) const {
+    std::vector<std::string> paths(static_cast<size_t>(numJoints()));
+    std::unordered_map<std::string, std::unordered_map<std::string, int>>
+        siblingNameCounts;
+    const std::string rootPath = Scene::PrimPath::normalize(basePath);
+
+    for (int i = 0; i < numJoints(); ++i) {
+        const int parent = parentIndex(i);
+        const std::string fallback = "joint_" + std::to_string(i);
+        const std::string safeName =
+            Scene::PrimPath::safeToken(nodeName(i), fallback);
+        const std::string parentPath =
+            parent >= 0 ? paths[static_cast<size_t>(parent)] : rootPath;
+        const std::string uniqueName = Scene::PrimPath::makeUniqueChildName(
+            siblingNameCounts[parentPath], safeName);
+        paths[static_cast<size_t>(i)] =
+            Scene::PrimPath::join(parentPath, uniqueName);
+    }
+
+    return paths;
 }
 
 // Parse "x y z" string into Vector3f

@@ -6,6 +6,27 @@
 #include <cstdint>
 
 namespace KE {
+namespace {
+
+const char* primTypeLabel(Scene::PrimType type) {
+    switch (type) {
+    case Scene::PrimType::Root:
+        return "Root";
+    case Scene::PrimType::Xform:
+        return "Xform";
+    case Scene::PrimType::Mesh:
+        return "Mesh";
+    case Scene::PrimType::MeshInstance:
+        return "MeshInstance";
+    case Scene::PrimType::Camera:
+        return "Camera";
+    case Scene::PrimType::Light:
+        return "Light";
+    }
+    return "Unknown";
+}
+
+} // namespace
 
 PerformancePanel::PerformancePanel() : Panel("Performance") {}
 
@@ -223,6 +244,8 @@ void ScenePanel::buildPanel() {
     ImGui::Begin(name().c_str());
     if (auto* root = _app->getScene()->getRootPrim()) {
         auto drawPrimTree = [&](auto& self, Scene::Prim* prim) -> void {
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
             ImGui::PushID(prim);
             // bool active = prim->isActive();
             // if (ImGui::Checkbox("##active", &active))
@@ -243,7 +266,11 @@ void ScenePanel::buildPanel() {
             const auto& children = prim->getChildren();
             if (children.empty()) {
                 ImGui::Text("%s", prim->getName().c_str());
+                ImGui::TableSetColumnIndex(1);
+                ImGui::TextDisabled("%s", primTypeLabel(prim->getType()));
             } else if (ImGui::TreeNode(prim->getName().c_str())) {
+                ImGui::TableSetColumnIndex(1);
+                ImGui::TextDisabled("%s", primTypeLabel(prim->getType()));
                 if (!activeInHierarchy || !visibleInHierarchy)
                     ImGui::PopStyleColor();
                 for (auto* child : children)
@@ -255,14 +282,25 @@ void ScenePanel::buildPanel() {
 
             if (!activeInHierarchy || !visibleInHierarchy)
                 ImGui::PopStyleColor();
+            if (!children.empty()) {
+                ImGui::TableSetColumnIndex(1);
+                ImGui::TextDisabled("%s", primTypeLabel(prim->getType()));
+            }
             ImGui::PopID();
         };
-        // ImGui::TextDisabled("A");
-        // ImGui::SameLine();
-        ImGui::TextDisabled("Visible");
-        ImGui::Separator();
-        for (auto* child : root->getChildren())
-            drawPrimTree(drawPrimTree, child);
+        if (ImGui::BeginTable("ScenePrimTree", 2,
+                              ImGuiTableFlags_Resizable |
+                                  ImGuiTableFlags_RowBg |
+                                  ImGuiTableFlags_BordersInnerV)) {
+            ImGui::TableSetupColumn("Visible",
+                                    ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed,
+                                    96.0f);
+            ImGui::TableHeadersRow();
+            for (auto* child : root->getChildren())
+                drawPrimTree(drawPrimTree, child);
+            ImGui::EndTable();
+        }
     }
     ImGui::End();
 }

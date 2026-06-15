@@ -82,7 +82,7 @@ class BvhCharacterCppApp : public App {
         ground.doubleSided = true;
         addMeshPrim(std::move(ground));
 
-        motion = Asset::BVHLoader::loadMotion(bvhPath, importScale);
+        motion = loadBVHMotion(bvhPath, importScale, "/bvh_character");
         const std::string motionName =
             motion.motionName().empty()
                 ? std::filesystem::path(bvhPath).filename().string()

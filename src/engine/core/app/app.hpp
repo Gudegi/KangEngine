@@ -36,6 +36,10 @@
 #include "engine/scene/native/prim.hpp"
 namespace KE {
 
+namespace Animation {
+class SkeletonMotion;
+}
+
 class App {
   private:
     class GLFWCallbackWrapper { // https://stackoverflow.com/a/41089765
@@ -233,6 +237,9 @@ class App {
                                       glm::vec3 position = glm::vec3(0.0f),
                                       glm::vec4 color = glm::vec4(1.0f),
                                       bool castsShadow = true);
+    Animation::SkeletonMotion loadBVHMotion(const std::string& bvhPath,
+                                            float scale = 1.0f,
+                                            const std::string& scenePath = "");
 
     void updateShapeTransforms(MeshHandle handle,
                                const std::vector<glm::mat4>& transforms,

@@ -27,10 +27,16 @@ void decomposeTRS(const glm::mat4& matrix, glm::vec3& translation,
     glm::decompose(matrix, scale, rotation, translation, skew, perspective);
     rotation = glm::normalize(rotation);
 }
+
+bool isRenderableType(PrimType type) {
+    return type == PrimType::Mesh || type == PrimType::MeshInstance;
+}
 } // namespace
 
 Prim::Prim(const std::string& name, PrimType type, Prim* parent)
     : _name(name), _type(type), _parent(parent) {
+    _renderable = isRenderableType(type);
+
     // Initialize prim path
     if (parent == nullptr) {
         _path = "/"; // root

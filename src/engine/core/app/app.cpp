@@ -1,8 +1,10 @@
 #include "app.hpp"
+#include "asset/bvh_loader.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
 #include "engine/graphics/renderer/post_processor.hpp"
 #include "engine/scene/native/prim.hpp"
+#include "engine/scene/prim_path.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "engine/scene/debug_draw.hpp"
 #include "engine/core/ui/base_panel.hpp"
@@ -31,6 +33,17 @@
 #include <utility>
 
 namespace KE {
+namespace {
+
+std::string defaultMotionScenePath(const std::string& path,
+                                   const Animation::SkeletonMotion& motion) {
+    std::string name = motion.motionName();
+    if (name.empty())
+        name = std::filesystem::path(path).stem().string();
+    return "/" + Scene::PrimPath::safeToken(name, "motion");
+}
+
+} // namespace
 
 void App::GLFWCallbackWrapper::framebufferSizeCallbackWrapper(
     GLFWwindow* window, int width, int height) {
@@ -487,6 +500,18 @@ App::MeshPrimResult App::addSkinnedMeshPrim(Backend::Shader* shader,
     result.prim = prim;
     result.handle = handle;
     return result;
+}
+
+Animation::SkeletonMotion App::loadBVHMotion(const std::string& bvhPath,
+                                             float scale,
+                                             const std::string& scenePath) {
+    Animation::SkeletonMotion motion =
+        Asset::BVHLoader::loadMotion(bvhPath, scale);
+    const std::string basePath =
+        scenePath.empty() ? defaultMotionScenePath(bvhPath, motion) : scenePath;
+    Scene::defineSkeletonTree(getScene(), basePath + "/skeleton_tree",
+                              motion.skeletonTree());
+    return motion;
 }
 
 glm::vec3 App::upPos(glm::vec3 pos, UpAxis from) const {

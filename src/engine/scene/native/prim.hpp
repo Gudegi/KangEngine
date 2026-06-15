@@ -60,10 +60,9 @@ class Prim {
     std::string _meshSourcePath;
     std::unordered_map<Token, AttributeValue, Token::Hash> _Attributes;
 
-    bool _renderable = true; // whether can render or not  TODO: true only when
-                             // you use proper PrimType
-    bool _visible = true;    // runtime show/hide toggle(just render visibility)
-    bool _active = true;     // Scene traversal / update participation
+    bool _renderable = false; // true for prim types that can submit geometry
+    bool _visible = true; // runtime show/hide toggle(just render visibility)
+    bool _active = true;  // Scene traversal / update participation
     ManipulationPolicy _manipulationPolicy = ManipulationPolicy::Inherit;
 
     bool _localDirty = true;

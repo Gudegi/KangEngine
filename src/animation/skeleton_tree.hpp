@@ -44,6 +44,7 @@ class SkeletonTree {
         return _localRotations[i];
     }
     int numJointsInBody(int i) const { return _numJointsInBody[i]; }
+    std::vector<std::string> nodePaths(const std::string& basePath = "") const;
 
     const std::vector<std::string>& nodeNames() const { return _nodeNames; }
     const std::vector<int>& parentIndices() const { return _parentIndices; }

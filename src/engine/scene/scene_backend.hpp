@@ -18,6 +18,9 @@
 #include "geometry/bounds.hpp"
 
 namespace KE {
+namespace Animation {
+class SkeletonTree;
+}
 namespace Scene {
 
 constexpr std::size_t MaxSkinningBones = 128;
@@ -132,6 +135,12 @@ class SceneFactory {
   public:
     static std::unique_ptr<SceneBackend> createBackend(BackendType type);
 };
+
+// Creates xform-only prims so a SkeletonTree's joint paths are visible in the
+// Scene panel. This is not a skeleton visualizer or render submission path.
+std::vector<Prim*> defineSkeletonTree(SceneBackend* scene,
+                                      const std::string& basePath,
+                                      const Animation::SkeletonTree& tree);
 
 } // namespace Scene
 } // namespace KE
