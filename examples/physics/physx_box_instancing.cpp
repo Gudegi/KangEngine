@@ -76,7 +76,7 @@ class BoxInstancingApp : public App {
         auto* gnd = getScene()->definePrim("/ground", Scene::PrimType::Mesh);
         gnd->setMeshData(std::make_shared<Scene::MeshData>(
             Scene::Prim::createPlaneData(100.f, UpAxis::Z)));
-        addShape(groundShader.get(), gnd);
+        addRenderable(groundShader.get(), gnd);
 
         //_boxMesh =
         //    std::make_shared<Scene::MeshData>(Scene::Prim::createRectangleData(
@@ -128,14 +128,14 @@ class BoxInstancingApp : public App {
             prim->setDisplayColorAlpha(color);
             _colors.push_back(color);
             MeshHandle h =
-                addShape(commonShader.get(), prim,
+                addRenderable(commonShader.get(), prim,
                          TransformSource::ExternalBuffer);
             if (_boxHandle == InvalidHandle)
                 _boxHandle = h;
             _prims.push_back(prim);
         }
         _transforms.resize(NUM_BOXES);
-        setShapeColors(_boxHandle, _colors);
+        setRenderableColors(_boxHandle, _colors);
     }
 
     void resetBoxes() {
@@ -172,7 +172,7 @@ class BoxInstancingApp : public App {
             // direct pass
             for (int i = 0; i < NUM_BOXES; i++)
                 _transforms[i] = pxToMat4(_actors[i]->getGlobalPose());
-            updateShapeTransforms(_boxHandle, _transforms);
+            updateRenderableTransforms(_boxHandle, _transforms);
         }
         checkError();
     }

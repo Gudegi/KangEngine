@@ -215,13 +215,13 @@ class MyApp : public App {
             Scene::Prim::createSphereData(1.0f, 12, 11)));
         lightPrim->addTranslateOp(lightPos);
         lightPrim->addScaleOp(glm::vec3(size));
-        addShape(lightShader.get(), lightPrim);
+        addRenderable(lightShader.get(), lightPrim);
 
         // Ground plane
         groundPrim = getScene()->definePrim("/ground", Scene::PrimType::Mesh);
         groundPrim->setMeshData(std::make_shared<Scene::MeshData>(
             Scene::Prim::createPlaneData(30.f, UpAxis::Y)));
-        addShape(planeShader.get(), groundPrim);
+        addRenderable(planeShader.get(), groundPrim);
 
         // Create box mesh data (shared by all boxes)
         auto boxMesh = Scene::Prim::createSquareData(1.0f);
@@ -238,7 +238,7 @@ class MyApp : public App {
                                boxSpawns[i].color);
             prim->setWorldTranslation(boxSpawns[i].pos);
 
-            addShape(cubeShader.get(), prim);
+            addRenderable(cubeShader.get(), prim);
             physics.addBox(boxSpawns[i].pos.x, boxSpawns[i].pos.y,
                            boxSpawns[i].pos.z);
             boxPrims[i] = prim;

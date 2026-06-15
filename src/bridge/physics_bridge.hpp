@@ -57,7 +57,7 @@ class PhysicsBridge {
     void addInstanced(const Articulation& artic,
                       const std::vector<MeshHandle>& handles);
 
-    // Create one Prim per collision geom. Returns Prims for addShape().
+    // Create one Prim per collision geom. Returns Prims for addRenderable().
     // visibleByDefault=false: debug overlay (invisible until toggled)
     // Debug visual authoring helper, not the primary simulation sync path.
     std::vector<Scene::Prim*>

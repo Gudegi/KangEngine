@@ -160,7 +160,7 @@ class MyApp : public App {
         groundPrim = getScene()->definePrim("/ground", Scene::PrimType::Mesh);
         groundPrim->setMeshData(std::make_shared<Scene::MeshData>(
             Scene::Prim::createPlaneData(30.f, UpAxis::Y)));
-        addShape(planeShader.get(), groundPrim);
+        addRenderable(planeShader.get(), groundPrim);
 
         std::string stlPath =
             std::string(KANGENGINE_ASSETS_ROOT) +
@@ -181,7 +181,7 @@ class MyApp : public App {
             stlPrim->addScaleOp(glm::vec3(10.f));
             stlPrim->addTranslateOp(glm::vec3(0.0f, 1.0f, 0.0f));
 
-            addShape(meshShader.get(), stlPrim);
+            addRenderable(meshShader.get(), stlPrim);
         } catch (const std::exception& e) {
             std::cerr << "STL 로드 실패: " << e.what() << "\n";
         }
@@ -207,7 +207,7 @@ class MyApp : public App {
             objPrim->addTranslateOp(
                 glm::vec3(2.0f, 1.0f, 0.0f)); // STL 옆에 배치
 
-            addShape(meshShader.get(), objPrim);
+            addRenderable(meshShader.get(), objPrim);
         } catch (const std::exception& e) {
             std::cerr << "OBJ 로드 실패: " << e.what() << "\n";
         }

@@ -84,7 +84,7 @@ class PBDClothApp : public App {
         auto* gnd = getScene()->definePrim("/ground", Scene::PrimType::Mesh);
         gnd->setMeshData(std::make_shared<Scene::MeshData>(
             Scene::Prim::createPlaneData(20.f, UpAxis::Z)));
-        addShape(groundShader.get(), gnd);
+        addRenderable(groundShader.get(), gnd);
 
         texture = getRenderer().device()->createTexture(
             KE::getAssetPath("textures/awesomeface.png"));
@@ -122,10 +122,10 @@ class PBDClothApp : public App {
         clothPrim->setMeshData(std::make_shared<Scene::MeshData>(meshData));
         clothPrim->setDisplayColorAlpha(glm::vec4(0.3f, 0.6f, 1.0f, 1.0f));
 
-        clothHandle = addShape(clothShader.get(), clothPrim);
-        setShapeDoubleSided(clothHandle);
+        clothHandle = addRenderable(clothShader.get(), clothPrim);
+        setRenderableDoubleSided(clothHandle);
         if (texture != nullptr)
-            setShapeTexture(clothHandle, texture.get(), 0);
+            setRenderableTexture(clothHandle, texture.get(), 0);
 
         checkError();
     }
@@ -153,7 +153,7 @@ class PBDClothApp : public App {
         }
 
         auto normals = ClothSolver::computeNormals(model, state);
-        updateMeshGeometry(clothHandle, state.pos, normals);
+        updateRenderableGeometry(clothHandle, state.pos, normals);
 
         checkError();
     }

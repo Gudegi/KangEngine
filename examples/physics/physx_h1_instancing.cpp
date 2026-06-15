@@ -86,7 +86,7 @@ class H1InstancingApp : public App {
         auto* gnd = getScene()->definePrim("/ground", Scene::PrimType::Mesh);
         gnd->setMeshData(std::make_shared<Scene::MeshData>(
             Scene::Prim::createPlaneData(100.f, UpAxis::Z)));
-        addShape(groundShader.get(), gnd);
+        addRenderable(groundShader.get(), gnd);
 
         // Load MJCF once.
         const std::string mjcfPath =
@@ -108,7 +108,7 @@ class H1InstancingApp : public App {
         // One handle per body type — each instancer will hold N transforms
         for (auto* prim : refRobot.bodyPrims())
             _bodyHandles.push_back(
-                addShape(commonShader.get(), prim,
+                addRenderable(commonShader.get(), prim,
                          TransformSource::ExternalBuffer));
 
         // Per-robot colors — same color for all bodies of one robot
@@ -119,7 +119,7 @@ class H1InstancingApp : public App {
                                   0.4f + 0.4f * t, 1.0f);
         }
         for (auto h : _bodyHandles)
-            setShapeColors(h, colors);
+            setRenderableColors(h, colors);
 
         // Build N articulations
         _artics.resize(N);

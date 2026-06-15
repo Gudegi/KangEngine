@@ -209,16 +209,6 @@ class App {
     MeshHandle addRenderable(
         PhongMaterial* material, Scene::Prim* prim,
         TransformSource transformSource = TransformSource::SceneGraph);
-    MeshHandle
-    addShape(Backend::Shader* shader, Scene::Prim* prim,
-             TransformSource transformSource = TransformSource::SceneGraph);
-    MeshHandle addSkinnedShape(
-        Backend::Shader* shader, Scene::Prim* prim,
-        const Scene::SkinnedMeshData& skinnedMesh,
-        TransformSource transformSource = TransformSource::SceneGraph);
-    MeshHandle
-    addShape(PhongMaterial* material, Scene::Prim* prim,
-             TransformSource transformSource = TransformSource::SceneGraph);
     void removePrim(MeshHandle handle, Scene::Prim* prim);
 
     struct MeshPrimDesc {
@@ -288,35 +278,6 @@ class App {
                                           const float* rowMajorMatrices,
                                           size_t count);
 
-    // Legacy compatibility wrappers. Prefer the Renderable names in new code.
-    void updateShapeTransforms(MeshHandle handle,
-                               const std::vector<glm::mat4>& transforms,
-                               const std::vector<glm::vec4>* colors = nullptr);
-    bool getShapeInstanceTransform(MeshHandle handle, int instanceIndex,
-                                   glm::mat4& outTransform) const;
-    bool setShapeInstanceTransform(MeshHandle handle, int instanceIndex,
-                                   const glm::mat4& transform);
-    void updateShapeTransforms(MeshHandle handle, const float* transforms,
-                               const float* colors, size_t count,
-                               size_t colorCount);
-    void setShapeColors(MeshHandle handle,
-                        const std::vector<glm::vec4>& colors);
-    void setShapeColors(MeshHandle handle, const float* colors,
-                        size_t colorCount);
-    void setShapeDoubleSided(MeshHandle handle, bool doubleSided = true);
-    void setShapeCastsShadow(MeshHandle handle, bool castsShadow = true);
-    void setShapeTexture(MeshHandle handle, Backend::Texture* tex,
-                         int slot = 0);
-    void updateMeshGeometry(MeshHandle handle,
-                            const std::vector<glm::vec3>& positions,
-                            const std::vector<glm::vec3>& normals);
-    void updateMeshGeometry(MeshHandle handle, const float* positions,
-                            const float* normals, size_t count,
-                            size_t normalCount);
-    void updateSkinningMatrices(MeshHandle handle,
-                                const std::vector<glm::mat4>& boneMatrices);
-    void updateSkinningMatrices(MeshHandle handle,
-                                const float* rowMajorMatrices, size_t count);
     void logDebugLines(const std::string& path,
                        const std::vector<glm::vec3>& starts,
                        const std::vector<glm::vec3>& ends,

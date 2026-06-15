@@ -60,15 +60,15 @@ class BrickwallNormalMapViewer(ke.App):
         wall = self.getScene().define_prim("/brickwall", scene.PrimType.Mesh)
         wall.set_mesh_data(scene.Prim.create_plane_data(4.0, ke.UpAxis.Z))
         wall.set_display_color_alpha(ke.vec4(1.0, 1.0, 1.0, 1.0))
-        self.wall_handle = self.addShape(self.wall_shader, wall)
-        self.setShapeTexture(self.wall_handle, self.diffuse_texture, 0)
-        self.setShapeTexture(self.wall_handle, self.normal_texture, 5)
-        self.setShapeDoubleSided(self.wall_handle, True)
+        self.wall_handle = self.add_renderable(self.wall_shader, wall)
+        self.set_renderable_texture(self.wall_handle, self.diffuse_texture, 0)
+        self.set_renderable_texture(self.wall_handle, self.normal_texture, 5)
+        self.set_renderable_double_sided(self.wall_handle, True)
 
         ground = self.getScene().define_prim("/ground", scene.PrimType.Mesh)
         ground.set_mesh_data(scene.Prim.create_plane_data(6.0, ke.UpAxis.Y))
         ground.add_translate_op(ke.vec3(0.0, -2.0, 0.0))
-        self.addShape(self.ground_shader, ground)
+        self.add_renderable(self.ground_shader, ground)
 
         self.setLightDirection(ke.vec3(-0.45, 0.35, 0.82))
         self.setLightColor(ke.vec3(1.0, 0.96, 0.88))
@@ -97,7 +97,7 @@ class BrickwallNormalMapViewer(ke.App):
             "normal map", self.normal_maps_enabled
         )
         if changed:
-            self.setShapeTexture(
+            self.set_renderable_texture(
                 self.wall_handle,
                 self.normal_texture if self.normal_maps_enabled else None,
                 5,

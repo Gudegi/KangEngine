@@ -81,7 +81,7 @@ class USDSceneViewer(ke.App):
         if self.show_ground:
             ground = self.getScene().define_prim("/ground", scene.PrimType.Mesh)
             ground.set_mesh_data(scene.Prim.create_plane_data(50.0, ke.UpAxis.Y))
-            self.addShape(self.ground_shader, ground)
+            self.add_renderable(self.ground_shader, ground)
 
         textured_count = 0
         normal_mapped_count = 0
@@ -95,15 +95,15 @@ class USDSceneViewer(ke.App):
             diffuse_texture = self._load_texture(getattr(mesh, "diffuse_texture_path", ""))
             normal_texture = self._load_texture(getattr(mesh, "normal_texture_path", ""))
             shader = self.mesh_texture_shader if diffuse_texture is not None else self.mesh_shader
-            handle = self.addShape(shader, prim)
+            handle = self.add_renderable(shader, prim)
             if diffuse_texture is not None:
-                self.setShapeTexture(handle, diffuse_texture, 0)
+                self.set_renderable_texture(handle, diffuse_texture, 0)
                 textured_count += 1
             if diffuse_texture is not None and normal_texture is not None:
-                self.setShapeTexture(handle, normal_texture, 5)
+                self.set_renderable_texture(handle, normal_texture, 5)
                 self.normal_texture_bindings.append((handle, normal_texture))
                 normal_mapped_count += 1
-            self.setShapeDoubleSided(handle, self.double_sided)
+            self.set_renderable_double_sided(handle, self.double_sided)
             self.mesh_handles.append(handle)
 
         print(
@@ -186,7 +186,7 @@ class USDSceneViewer(ke.App):
 
     def _apply_normal_map_toggle(self):
         for handle, texture in self.normal_texture_bindings:
-            self.setShapeTexture(handle, texture if self.normal_maps_enabled else None, 5)
+            self.set_renderable_texture(handle, texture if self.normal_maps_enabled else None, 5)
 
     def _apply_normal_debug_mode(self):
         self.mesh_texture_shader.use()

@@ -48,7 +48,7 @@ class H1RagdollApp(ke.App):
 
         gnd = self.getScene().define_prim("/ground", scene.PrimType.Mesh)
         gnd.set_mesh_data(scene.Prim.create_plane_data(100.0, ke.UpAxis.Z))
-        self.addShape(self.ground_shader, gnd)
+        self.add_renderable(self.ground_shader, gnd)
 
         mjcf = asset_path("external", "retargetted", "kw", "kw5.xml")
         mjcf_data = asset.MJCFLoader.load(mjcf)
@@ -71,7 +71,7 @@ class H1RagdollApp(ke.App):
         self.physics_bridge.add(self.articulation, self.robot)
 
         for prim in self.robot.body_prims():
-            self.addShape(self.robot_shader, prim)
+            self.add_renderable(self.robot_shader, prim)
 
         collision_prims = self.physics_bridge.add_collision_visuals(
             self.articulation,
@@ -80,7 +80,7 @@ class H1RagdollApp(ke.App):
             self.show_collision,
         )
         for prim in collision_prims:
-            self.addShape(self.robot_shader, prim)
+            self.add_renderable(self.robot_shader, prim)
 
         self.targets = [0.0] * self.articulation.num_dofs()
         self.reset()

@@ -62,7 +62,7 @@ class RigidVisualBridge:
             prim = self._define_shape_prim(prim_base_path, idx, spec)
             _apply_prim_color([prim], color)
             if add_shapes and shader is not None:
-                app.addShape(shader, prim)
+                app.add_renderable(shader, prim)
             self.body_prims.append(prim)
 
     def sync(self):
@@ -155,7 +155,7 @@ class KangWorldVisualBridge:
         if add_shapes and shader is not None:
             for prim in body_prims:
                 body_handles.append(
-                    self.app.addShape(
+                    self.app.add_renderable(
                         shader, prim, _ke.TransformSource.ExternalBuffer
                     )
                 )
@@ -193,7 +193,7 @@ class KangWorldVisualBridge:
             shape_shader = collision_shader if collision_shader is not None else shader
             if add_shapes and shape_shader is not None:
                 for prim in collision_prims:
-                    self.app.addShape(shape_shader, prim)
+                    self.app.add_renderable(shape_shader, prim)
 
         record = _VisualArticulationRecord(
             key[0],
@@ -268,7 +268,7 @@ class KangWorldVisualBridge:
         _apply_prim_color(body_prims, color)
         if add_shapes and shader is not None:
             for prim in body_prims:
-                self.app.addShape(shader, prim)
+                self.app.add_renderable(shader, prim)
         _debug_instancing(
             kind="visual-scenegraph",
             env_id=key[0],
@@ -366,7 +366,7 @@ class KangWorldVisualBridge:
             colors = np.concatenate([colors, rgba.reshape(1, 4)], axis=0)
         self._instanced_colors[key] = colors
         for handle in body_handles:
-            self.app.setShapeColors(handle, colors)
+            self.app.set_renderable_colors(handle, colors)
 
     def _skeleton_asset(self, mjcf_path: str, scale: float, order: str):
         scale = float(scale)

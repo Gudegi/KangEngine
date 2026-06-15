@@ -1059,34 +1059,6 @@ py::class_<glm::vec3>(m, "vec3")
             "get_renderer", [](App& self) { return &self.getRenderer(); },
             py::return_value_policy::reference)
         .def(
-            "addShape",
-            [](App* self, Backend::Shader* shader, Scene::Prim* prim,
-               TransformSource transformSource) {
-                return self->addShape(shader, prim, transformSource);
-            },
-            py::arg("shader"), py::arg("prim"),
-            py::arg("transform_source") = TransformSource::SceneGraph)
-        .def(
-            "addSkinnedShape",
-            [](App* self, Backend::Shader* shader, Scene::Prim* prim,
-               std::shared_ptr<Scene::SkinnedMeshData> skinnedMesh,
-               TransformSource transformSource) {
-                if (!skinnedMesh)
-                    throw py::value_error("skinned_mesh_data is None");
-                return self->addSkinnedShape(shader, prim, *skinnedMesh,
-                                             transformSource);
-            },
-            py::arg("shader"), py::arg("prim"), py::arg("skinned_mesh_data"),
-            py::arg("transform_source") = TransformSource::SceneGraph)
-        .def(
-            "addShape",
-            [](App* self, PhongMaterial* material, Scene::Prim* prim,
-               TransformSource transformSource) {
-                return self->addShape(material, prim, transformSource);
-            },
-            py::arg("material"), py::arg("prim"),
-            py::arg("transform_source") = TransformSource::SceneGraph)
-        .def(
             "add_renderable",
             [](App* self, Backend::Shader* shader, Scene::Prim* prim,
                TransformSource transformSource) {
@@ -1161,67 +1133,7 @@ py::class_<glm::vec3>(m, "vec3")
                int slot) { self->setRenderableTexture(handle, texture, slot); },
             py::arg("handle"), py::arg("texture"), py::arg("slot") = 0)
         .def(
-            "updateShapeTransforms",
-            [](App* self, uint32_t handle, const FloatArray& transforms,
-               py::object colors) {
-                auto t = mat4ArrayView(transforms, "transforms");
-                const float* colorData = nullptr;
-                size_t colorCount = 0;
-                if (!colors.is_none()) {
-                    auto colorArray = colors.cast<FloatArray>();
-                    auto c = vec4ArrayView(colorArray, "colors");
-                    if (c.count != 1 && c.count != t.count) {
-                        throw py::value_error(
-                            "colors must have length 1 or match transforms");
-                    }
-                    colorData = c.data;
-                    colorCount = c.count;
-                }
-                self->updateShapeTransforms(handle, t.data, colorData, t.count,
-                                            colorCount);
-            },
-            py::arg("handle"), py::arg("transforms"),
-            py::arg("colors") = py::none())
-        .def(
-            "updateShapeTransforms",
-            [](App* self, uint32_t handle,
-               const std::vector<glm::mat4>& transforms) {
-                self->updateShapeTransforms(handle, transforms);
-            },
-            py::arg("handle"), py::arg("transforms"))
-        .def(
-            "setShapeColors",
-            [](App* self, uint32_t handle, const FloatArray& colors) {
-                auto c = vec4ArrayView(colors, "colors");
-                self->setShapeColors(handle, c.data, c.count);
-            },
-            py::arg("handle"), py::arg("colors"))
-        .def(
-            "setShapeColors",
-            [](App* self, uint32_t handle,
-               const std::vector<glm::vec4>& colors) {
-                self->setShapeColors(handle, colors);
-            },
-            py::arg("handle"), py::arg("colors"))
-        .def(
-            "setShapeDoubleSided",
-            [](App* self, uint32_t handle, bool ds) {
-                self->setShapeDoubleSided(handle, ds);
-            },
-            py::arg("handle"), py::arg("double_sided") = true)
-        .def(
-            "setShapeCastsShadow",
-            [](App* self, uint32_t handle, bool castsShadow) {
-                self->setShapeCastsShadow(handle, castsShadow);
-            },
-            py::arg("handle"), py::arg("casts_shadow") = true)
-        .def(
-            "setShapeTexture",
-            [](App* self, uint32_t handle, Backend::Texture* texture,
-               int slot) { self->setShapeTexture(handle, texture, slot); },
-            py::arg("handle"), py::arg("texture"), py::arg("slot") = 0)
-        .def(
-            "updateMeshGeometry",
+            "update_renderable_geometry",
             [](App* self, uint32_t handle, const FloatArray& positions,
                py::object normals) {
                 auto p = vec3ArrayView(positions, "positions");
@@ -1237,31 +1149,16 @@ py::class_<glm::vec3>(m, "vec3")
                     normalData = n.data;
                     normalCount = n.count;
                 }
-                self->updateMeshGeometry(handle, p.data, normalData, p.count,
-                                         normalCount);
+                self->updateRenderableGeometry(handle, p.data, normalData,
+                                               p.count, normalCount);
             },
             py::arg("handle"), py::arg("positions"),
             py::arg("normals") = py::none())
         .def(
-            "updateMeshGeometry",
-            [](App* self, uint32_t handle,
-               const std::vector<glm::vec3>& positions,
-               const std::vector<glm::vec3>& normals) {
-                self->updateMeshGeometry(handle, positions, normals);
-            },
-            py::arg("handle"), py::arg("positions"), py::arg("normals"))
-        .def(
-            "updateSkinningMatrices",
+            "update_renderable_skinning_matrices",
             [](App* self, uint32_t handle, const FloatArray& matrices) {
                 auto m = mat4ArrayView(matrices, "bone_matrices");
-                self->updateSkinningMatrices(handle, m.data, m.count);
-            },
-            py::arg("handle"), py::arg("bone_matrices"))
-        .def(
-            "updateSkinningMatrices",
-            [](App* self, uint32_t handle,
-               const std::vector<glm::mat4>& matrices) {
-                self->updateSkinningMatrices(handle, matrices);
+                self->updateRenderableSkinningMatrices(handle, m.data, m.count);
             },
             py::arg("handle"), py::arg("bone_matrices"))
         .def(

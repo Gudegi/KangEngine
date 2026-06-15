@@ -128,7 +128,7 @@ class MjcfDofControlApp(ke.App):
 
         ground = self.getScene().define_prim("/ground", scene.PrimType.Mesh)
         ground.set_mesh_data(scene.Prim.create_plane_data(float(self.ground_size), ke.UpAxis.Z))
-        self.addShape(self.ground_shader, ground)
+        self.add_renderable(self.ground_shader, ground)
 
     def load_articulation(self):
         data = self.world.load_mjcf(self.mjcf_path, order=self.order)
@@ -509,7 +509,7 @@ class MjcfDofControlApp(ke.App):
         if self.visual_body_handles:
             colors = color.reshape(1, 4)
             for handle in self.visual_body_handles:
-                self.setShapeColors(handle, colors)
+                self.set_renderable_colors(handle, colors)
 
     def _set_collision_visible(self, visible: bool):
         self.show_collision = bool(visible)

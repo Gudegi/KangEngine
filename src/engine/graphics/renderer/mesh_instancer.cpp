@@ -364,7 +364,7 @@ void MeshInstancer::updateGeometry(const std::vector<glm::vec3>& positions,
     _localSphere = Geometry::computeBoundingSphere(_localBounds);
 }
 
-void MeshInstancer::updateSkinningMatrices(
+void MeshInstancer::updateRenderableSkinningMatrices(
     const std::vector<glm::mat4>& boneMatrices) {
     if (!_hasSkinning)
         return;

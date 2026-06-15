@@ -38,21 +38,21 @@ class MyApp(ke.App):
         # Ground plane (Y-up)
         gnd = sc.define_prim("/ground", scene.PrimType.Mesh)
         gnd.set_mesh_data(scene.Prim.create_plane_data(30.0))
-        self.addShape(self.ground_shader, gnd)
+        self.add_renderable(self.ground_shader, gnd)
 
         # Box
         box = sc.define_prim("/box", scene.PrimType.Mesh)
         box.set_mesh_data(scene.Prim.create_square_data(1.0))
         box.set_display_color_alpha(ke.vec4(0.8, 0.3, 0.02, 1.0))
         box.add_translate_op(ke.vec3(0.0, 2.0, 0.0))
-        self.addShape(self.obj_shader, box)
+        self.add_renderable(self.obj_shader, box)
 
         # Sphere
         sphere = sc.define_prim("/sphere", scene.PrimType.Mesh)
         sphere.set_mesh_data(scene.Prim.create_sphere_data(0.5, 16, 12))
         sphere.set_display_color_alpha(ke.vec4(0.2, 0.4, 0.9, 1.0))
         sphere.add_translate_op(ke.vec3(2.5, 0.5, 0.0))
-        self.addShape(self.obj_shader, sphere)
+        self.add_renderable(self.obj_shader, sphere)
 
         self.checkError()
 

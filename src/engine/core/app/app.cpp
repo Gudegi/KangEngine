@@ -423,22 +423,6 @@ MeshHandle App::addRenderable(PhongMaterial* material, Scene::Prim* prim,
                : InvalidHandle;
 }
 
-MeshHandle App::addShape(Backend::Shader* shader, Scene::Prim* prim,
-                         TransformSource transformSource) {
-    return addRenderable(shader, prim, transformSource);
-}
-
-MeshHandle App::addSkinnedShape(Backend::Shader* shader, Scene::Prim* prim,
-                                const Scene::SkinnedMeshData& skinnedMesh,
-                                TransformSource transformSource) {
-    return addSkinnedRenderable(shader, prim, skinnedMesh, transformSource);
-}
-
-MeshHandle App::addShape(PhongMaterial* material, Scene::Prim* prim,
-                         TransformSource transformSource) {
-    return addRenderable(material, prim, transformSource);
-}
-
 void App::removePrim(MeshHandle handle, Scene::Prim* prim) {
     if (_rasterizer)
         _rasterizer->removePrim(handle, prim);
@@ -802,72 +786,6 @@ void App::updateRenderableSkinningMatrices(MeshHandle handle,
         matrices.push_back(m);
     }
     getRenderer().updateRenderableSkinningMatrices(handle, matrices);
-}
-
-void App::updateShapeTransforms(MeshHandle handle,
-                                const std::vector<glm::mat4>& transforms,
-                                const std::vector<glm::vec4>* colors) {
-    updateRenderableTransforms(handle, transforms, colors);
-}
-
-bool App::getShapeInstanceTransform(MeshHandle handle, int instanceIndex,
-                                    glm::mat4& outTransform) const {
-    return getRenderableInstanceTransform(handle, instanceIndex, outTransform);
-}
-
-bool App::setShapeInstanceTransform(MeshHandle handle, int instanceIndex,
-                                    const glm::mat4& transform) {
-    return setRenderableInstanceTransform(handle, instanceIndex, transform);
-}
-
-void App::updateShapeTransforms(MeshHandle handle, const float* transforms,
-                                const float* colors, size_t count,
-                                size_t colorCount) {
-    updateRenderableTransforms(handle, transforms, colors, count, colorCount);
-}
-
-void App::setShapeColors(MeshHandle handle,
-                         const std::vector<glm::vec4>& colors) {
-    setRenderableColors(handle, colors);
-}
-
-void App::setShapeColors(MeshHandle handle, const float* colors,
-                         size_t colorCount) {
-    setRenderableColors(handle, colors, colorCount);
-}
-
-void App::setShapeDoubleSided(MeshHandle handle, bool doubleSided) {
-    setRenderableDoubleSided(handle, doubleSided);
-}
-
-void App::setShapeCastsShadow(MeshHandle handle, bool castsShadow) {
-    setRenderableCastsShadow(handle, castsShadow);
-}
-
-void App::setShapeTexture(MeshHandle handle, Backend::Texture* tex, int slot) {
-    setRenderableTexture(handle, tex, slot);
-}
-
-void App::updateMeshGeometry(MeshHandle handle,
-                             const std::vector<glm::vec3>& positions,
-                             const std::vector<glm::vec3>& normals) {
-    updateRenderableGeometry(handle, positions, normals);
-}
-
-void App::updateMeshGeometry(MeshHandle handle, const float* positions,
-                             const float* normals, size_t count,
-                             size_t normalCount) {
-    updateRenderableGeometry(handle, positions, normals, count, normalCount);
-}
-
-void App::updateSkinningMatrices(MeshHandle handle,
-                                 const std::vector<glm::mat4>& boneMatrices) {
-    updateRenderableSkinningMatrices(handle, boneMatrices);
-}
-
-void App::updateSkinningMatrices(MeshHandle handle,
-                                 const float* rowMajorMatrices, size_t count) {
-    updateRenderableSkinningMatrices(handle, rowMajorMatrices, count);
 }
 
 void App::logDebugLines(const std::string& path,

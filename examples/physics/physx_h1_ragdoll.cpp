@@ -104,7 +104,7 @@ class H1RagdollApp : public App {
         auto* gnd = getScene()->definePrim("/ground", Scene::PrimType::Mesh);
         gnd->setMeshData(std::make_shared<Scene::MeshData>(
             Scene::Prim::createPlaneData(100.f, UpAxis::Z)));
-        addShape(groundShader.get(), gnd);
+        addRenderable(groundShader.get(), gnd);
 
         // const std::string mjcfPath =
         //     KE::getAssetPath("external/retargetted/unitree_h1/unitree_h1.xml");
@@ -121,12 +121,12 @@ class H1RagdollApp : public App {
         bodyHandles.clear();
         bodyHandles.reserve(robot.bodyPrims().size());
         for (auto* prim : robot.bodyPrims())
-            bodyHandles.push_back(addShape(commonShader.get(), prim));
+            bodyHandles.push_back(addRenderable(commonShader.get(), prim));
         forceDrag.registerArticulation(artic, bodyHandles);
 
         auto colPrims = physicsBridge.addCollisionVisuals(artic, getScene());
         for (auto* p : colPrims)
-            addShape(commonShader.get(), p);
+            addRenderable(commonShader.get(), p);
 
         contactArrowHandle = Scene::DebugDraw::logArrows(
             this, commonShader.get(), "/debug/contact_arrows",
@@ -258,7 +258,7 @@ class H1RagdollApp : public App {
                     glm::vec4(1.0f, 0.9f - 0.7f * heat, 0.05f, 1.0f));
             }
         }
-        updateShapeTransforms(contactArrowHandle, transforms, &colors);
+        updateRenderableTransforms(contactArrowHandle, transforms, &colors);
     }
 
     // -----------------------------------------------------------------------

@@ -95,7 +95,7 @@ class FbxCharacterViewer(ke.App):
 
         ground = self.getScene().define_prim("/ground", scene.PrimType.Mesh)
         ground.set_mesh_data(scene.Prim.create_plane_data(20.0, self.up_axis))
-        self.addShape(self.ground_shader, ground)
+        self.add_renderable(self.ground_shader, ground)
 
         camera = self.getCamera()
         camera.set_camera_pos(ke.vec3(0.0, 1.45, 3.2))
@@ -191,16 +191,16 @@ class FbxCharacterViewer(ke.App):
             texture = self._load_mesh_texture(mesh)
             normal_texture = self._load_mesh_normal_texture(mesh)
             shader = self.textured_mesh_shader if texture is not None else self.mesh_shader
-            handle = self.addSkinnedShape(
+            handle = self.add_skinned_renderable(
                 shader,
                 prim,
                 mesh.skinned_mesh_data,
             )
             if texture is not None:
-                self.setShapeTexture(handle, texture, 0)
+                self.set_renderable_texture(handle, texture, 0)
                 if normal_texture is not None:
-                    self.setShapeTexture(handle, normal_texture, 5)
-            # self.setShapeDoubleSided(handle, True)
+                    self.set_renderable_texture(handle, normal_texture, 5)
+            # self.set_renderable_double_sided(handle, True)
             self.mesh_prims.append(prim)
             self.mesh_colors.append(color)
             self.mesh_handles.append(handle)
@@ -340,7 +340,7 @@ class FbxCharacterViewer(ke.App):
             """
             Reference C++ CPU helper path kept for comparing the GPU path.
             To re-enable it, cache vertices/normals/bone_indices/bone_weights
-            in _create_mesh_prims and call updateMeshGeometry below.
+            in _create_mesh_prims and call update_renderable_geometry below.
 
             skinned = animation.cpu_skin(
                 mesh["vertices"],
@@ -352,7 +352,7 @@ class FbxCharacterViewer(ke.App):
                 global_mats,
             )
 
-            self.updateMeshGeometry(
+            self.update_renderable_geometry(
                 mesh["handle"],
                 skinned["positions"],
                 skinned["normals"],
@@ -368,7 +368,7 @@ class FbxCharacterViewer(ke.App):
                 global_mats,
                 bone_matrices,
             )
-            self.updateSkinningMatrices(
+            self.update_renderable_skinning_matrices(
                 mesh["handle"],
                 bone_matrices,
             )
@@ -439,7 +439,7 @@ class FbxCharacterViewer(ke.App):
 
     def _apply_shadow_casting(self):
         for handle in self.mesh_handles:
-            self.setShapeCastsShadow(handle, self.cast_shadows)
+            self.set_renderable_casts_shadow(handle, self.cast_shadows)
 
     def _apply_skeleton_visibility(self):
         if (

@@ -63,7 +63,7 @@ class ControlDemo(ke.App):
 
         ground = self.getScene().define_prim("/ground", scene.PrimType.Mesh)
         ground.set_mesh_data(scene.Prim.create_plane_data(100.0, ke.UpAxis.Z))
-        self.addShape(self.ground_shader, ground)
+        self.add_renderable(self.ground_shader, ground)
 
         self.robot_xml = asset_path("characters", "kw", "kw5.xml")
         self.ball_xml = asset_path("objects", "ball.xml")

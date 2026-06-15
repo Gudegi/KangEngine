@@ -189,7 +189,7 @@ class H1PhysicsApp : public App {
         auto* gnd = getScene()->definePrim("/ground", Scene::PrimType::Mesh);
         gnd->setMeshData(std::make_shared<Scene::MeshData>(
             Scene::Prim::createPlaneData(10.f, UpAxis::Z)));
-        addShape(groundShader.get(), gnd);
+        addRenderable(groundShader.get(), gnd);
 
         // Load H1 visual (Robot handles Prim creation + STL mesh upload)
         const std::string mjcfPath =
@@ -197,7 +197,7 @@ class H1PhysicsApp : public App {
         const auto mjcfData = MJCFLoader::load(mjcfPath);
         robot = SkeletonBridge::fromData(mjcfData, getScene());
         for (auto* prim : robot.bodyPrims())
-            addShape(stlShader.get(), prim);
+            addRenderable(stlShader.get(), prim);
 
         artic = Articulation::build(physics, mjcfData.skeletonTree,
                                     mjcfData.collisionGeoms, mjcfData.joints,

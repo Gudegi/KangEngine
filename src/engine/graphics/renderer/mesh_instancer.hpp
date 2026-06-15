@@ -154,7 +154,7 @@ class MeshInstancer {
     void updateGeometry(const std::vector<glm::vec3>& positions,
                         const std::vector<glm::vec3>& normals);
     // Store bone matrices; render passes upload them to their active shader.
-    void updateSkinningMatrices(const std::vector<glm::mat4>& boneMatrices);
+    void updateRenderableSkinningMatrices(const std::vector<glm::mat4>& boneMatrices);
     void uploadSkinningMatrices(Backend::Shader* shader = nullptr);
     // Compact instance buffers to objects intersecting the current frustum.
     void applyFrustumCulling(const Geometry::Frustum* frustum);

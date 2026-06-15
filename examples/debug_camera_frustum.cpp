@@ -498,7 +498,7 @@ class CameraFrustumDebugApp : public App {
         subjectBodyHandle = addSphere(
             "/debug/subject_camera_body", 0.12f, subjectCamera.getCameraPos(),
             glm::vec4(1.0f, 0.15f, 0.15f, 1.0f), shader.get());
-        setShapeCastsShadow(subjectBodyHandle, false);
+        setRenderableCastsShadow(subjectBodyHandle, false);
     }
 
     void updateFrustumDebug() {
@@ -554,7 +554,7 @@ class CameraFrustumDebugApp : public App {
                 glm::translate(glm::mat4(1.0f), subjectCamera.getCameraPos()));
             const float alpha = showSubjectBody ? 1.0f : 0.0f;
             std::vector<glm::vec4> colors{glm::vec4(1.0f, 0.15f, 0.15f, alpha)};
-            updateShapeTransforms(subjectBodyHandle, transforms, &colors);
+            updateRenderableTransforms(subjectBodyHandle, transforms, &colors);
         }
     }
 

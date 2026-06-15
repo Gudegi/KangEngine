@@ -184,7 +184,7 @@ class ScissorLiftApp : public App {
         auto* prim = getScene()->definePrim(path, Scene::PrimType::Mesh);
         prim->setMeshData(meshPtr);
         prim->setAttribute("primvars:displaycolorAlpha", color);
-        addShape(cubeShader.get(), prim);
+        addRenderable(cubeShader.get(), prim);
         return prim;
     }
 
@@ -484,7 +484,7 @@ class ScissorLiftApp : public App {
             getScene()->definePrim("/ground", Scene::PrimType::Mesh);
         planePrim->setMeshData(std::make_shared<Scene::MeshData>(
             Scene::Prim::createPlaneData(30.f)));
-        addShape(planeShader.get(), planePrim);
+        addRenderable(planeShader.get(), planePrim);
 
         getRenderer().setLight(DirectionalLight{
             .direction = glm::normalize(glm::vec3(0.5f, 1.f, 0.2f)),

@@ -113,7 +113,7 @@ class MotionViewer(ke.App):
 
         ground = self.getScene().define_prim("/ground", scene.PrimType.Mesh)
         ground.set_mesh_data(scene.Prim.create_plane_data(100.0, ke.UpAxis.Z))
-        self.addShape(self.ground_shader, ground)
+        self.add_renderable(self.ground_shader, ground)
 
         self.robot = animation.SkeletonBridge.from_mjcf(
             self.char_file,
@@ -123,7 +123,7 @@ class MotionViewer(ke.App):
             "DFS",
         )
         for prim in self.robot.body_prims():
-            self.addShape(self.robot_shader, prim)
+            self.add_renderable(self.robot_shader, prim)
 
         self._apply_frame(0)
         print(

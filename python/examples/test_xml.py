@@ -68,7 +68,7 @@ class RobotViewer(ke.App):
         # Ground plane (Z-up)
         gnd = self.getScene().define_prim("/ground", scene.PrimType.Mesh)
         gnd.set_mesh_data(scene.Prim.create_plane_data(100.0, ke.UpAxis.Z))
-        self.addShape(self.ground_shader, gnd)
+        self.add_renderable(self.ground_shader, gnd)
 
         # Robot
         mjcf = asset_path("external", "retargetted", "unitree_h1", "unitree_h1.xml")
@@ -76,7 +76,7 @@ class RobotViewer(ke.App):
             mjcf, self.getScene(), "/robot", 1.0, "BFS"
         )
         for prim in self.robot.body_prims():
-            self.addShape(self.robot_shader, prim)
+            self.add_renderable(self.robot_shader, prim)
 
         print(f"Robot loaded: {self.robot.num_bodies()} bodies")
         self.checkError()

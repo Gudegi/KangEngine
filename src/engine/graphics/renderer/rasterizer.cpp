@@ -284,7 +284,7 @@ void Rasterizer::updateRenderableSkinningMatrices(
     MeshHandle handle, const std::vector<glm::mat4>& boneMatrices) {
     if (handle >= _handleTable.size())
         return;
-    _handleTable[handle]->updateSkinningMatrices(boneMatrices);
+    _handleTable[handle]->updateRenderableSkinningMatrices(boneMatrices);
 }
 
 void Rasterizer::logDebugLines(const std::string& path,

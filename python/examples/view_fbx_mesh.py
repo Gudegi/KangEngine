@@ -67,7 +67,7 @@ class FBXMeshViewer(ke.App):
         if self.show_ground:
             ground = self.getScene().define_prim("/ground", scene.PrimType.Mesh)
             ground.set_mesh_data(scene.Prim.create_plane_data(4.0, self.up_axis))
-            self.addShape(self.ground_shader, ground)
+            self.add_renderable(self.ground_shader, ground)
 
         textured_count = 0
         normal_mapped_count = 0
@@ -81,15 +81,15 @@ class FBXMeshViewer(ke.App):
             diffuse_texture = self._load_texture(_material_texture_path(mesh, "diffuse"))
             normal_texture = self._load_texture(_material_texture_path(mesh, "normal"))
             shader = self.mesh_texture_shader if diffuse_texture is not None else self.mesh_shader
-            handle = self.addShape(shader, prim)
+            handle = self.add_renderable(shader, prim)
             if diffuse_texture is not None:
-                self.setShapeTexture(handle, diffuse_texture, 0)
+                self.set_renderable_texture(handle, diffuse_texture, 0)
                 textured_count += 1
             if diffuse_texture is not None and normal_texture is not None:
-                self.setShapeTexture(handle, normal_texture, 5)
+                self.set_renderable_texture(handle, normal_texture, 5)
                 normal_mapped_count += 1
-            self.setShapeDoubleSided(handle, self.double_sided)
-            self.setShapeCastsShadow(handle, self.cast_shadows)
+            self.set_renderable_double_sided(handle, self.double_sided)
+            self.set_renderable_casts_shadow(handle, self.cast_shadows)
             self.mesh_handles.append(handle)
 
         print(
@@ -116,10 +116,10 @@ class FBXMeshViewer(ke.App):
         )
         if double_changed:
             for handle in self.mesh_handles:
-                self.setShapeDoubleSided(handle, self.double_sided)
+                self.set_renderable_double_sided(handle, self.double_sided)
         if shadow_changed:
             for handle in self.mesh_handles:
-                self.setShapeCastsShadow(handle, self.cast_shadows)
+                self.set_renderable_casts_shadow(handle, self.cast_shadows)
         imgui.end()
 
     def postRender(self):

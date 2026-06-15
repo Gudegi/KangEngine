@@ -83,7 +83,7 @@ print(f"Plane vertices count: {len(plane_data.vertices)}")
 print(f"Plane indices count: {len(plane_data.indices)}")
 
 # Note: set_mesh_data requires shared_ptr<MeshData> which needs special handling
-# For now, skip this test - MeshData is typically used with addShape() directly
+# For now, skip this test - MeshData is typically used with add_renderable() directly
 print("(Skipping set_mesh_data test - requires shared_ptr wrapper)")
 
 # Test Prim hierarchy
