@@ -16,7 +16,8 @@ struct SelectionOutlineConfig {
 class SelectionOutlineProcessor {
   public:
     void init(Backend::GraphicsDevice* device, int width, int height);
-    void process(Backend::Texture* sceneColor, Backend::Texture* selectionMask);
+    void renderOutlineCompositePass(Backend::Texture* sceneColor,
+                                    Backend::Texture* selectionMask);
     Backend::Texture* getResult();
     Backend::Framebuffer* getOutputFramebuffer();
     void blitToScreen(int width, int height);

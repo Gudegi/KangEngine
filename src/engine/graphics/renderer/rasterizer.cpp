@@ -391,119 +391,123 @@ void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
     _cullingCulledBatches = 0;
     _cullingTotalInstances = 0;
     _cullingCulledInstances = 0;
-    // Bind shadow map and upload shadow uniforms onto each instancer's shader
+
+    Backend::Texture* shadowTexture = activeShadowTexture();
+    bindShadowTextures(shadowTexture);
+    renderOpaquePass(shadowTexture);
+    renderSkyboxPass(view, proj);
+    renderTransparentPass(shadowTexture);
+    renderDebugOverlayPass();
+}
+
+Backend::Texture* Rasterizer::activeShadowTexture() const {
     const bool hasShadow = (_shadowMap != nullptr && _shadowDistance > 0.0f);
     Backend::Texture* fallbackShadowTexture =
         _shadowFbo ? _shadowFbo->getDepthTexture() : nullptr;
-    Backend::Texture* shadowTexture =
-        hasShadow ? _shadowMap : fallbackShadowTexture;
+    return hasShadow ? _shadowMap : fallbackShadowTexture;
+}
 
-    auto bindShadowTextures = [&]() {
-        if (!shadowTexture)
-            return;
-        for (int i = 0; i < MaxShadowCascades; ++i) {
-            Backend::Texture* cascadeTexture =
-                (_useCsm && hasShadow && _cascadeMaps[static_cast<size_t>(i)])
-                    ? _cascadeMaps[static_cast<size_t>(i)]
-                    : shadowTexture;
-            cascadeTexture->bind(SHADOW_TEXTURE_SLOT_BASE + i);
-        }
-    };
-    bindShadowTextures();
+void Rasterizer::bindShadowTextures(Backend::Texture* shadowTexture) {
+    if (!shadowTexture)
+        return;
 
-    auto bindShadowSampler = [&](Backend::Shader* sh) {
-        if (!shadowTexture)
-            return;
-        sh->setInt("shadowMap0", SHADOW_TEXTURE_SLOT_BASE);
-        sh->setInt("shadowMap1", SHADOW_TEXTURE_SLOT_BASE + 1);
-        sh->setInt("shadowMap2", SHADOW_TEXTURE_SLOT_BASE + 2);
-        sh->setInt("shadowMap3", SHADOW_TEXTURE_SLOT_BASE + 3);
-        sh->setInt("debugCsmCascadeTint",
+    const bool hasShadow = (_shadowMap != nullptr && _shadowDistance > 0.0f);
+    for (int i = 0; i < MaxShadowCascades; ++i) {
+        Backend::Texture* cascadeTexture =
+            (_useCsm && hasShadow && _cascadeMaps[static_cast<size_t>(i)])
+                ? _cascadeMaps[static_cast<size_t>(i)]
+                : shadowTexture;
+        cascadeTexture->bind(SHADOW_TEXTURE_SLOT_BASE + i);
+    }
+}
+
+void Rasterizer::bindShadowSampler(Backend::Shader* shader,
+                                   Backend::Texture* shadowTexture) {
+    if (!shadowTexture || !shader)
+        return;
+
+    shader->setInt("shadowMap0", SHADOW_TEXTURE_SLOT_BASE);
+    shader->setInt("shadowMap1", SHADOW_TEXTURE_SLOT_BASE + 1);
+    shader->setInt("shadowMap2", SHADOW_TEXTURE_SLOT_BASE + 2);
+    shader->setInt("shadowMap3", SHADOW_TEXTURE_SLOT_BASE + 3);
+    shader->setInt("debugCsmCascadeTint",
                    (_debugCsmCascadeTint && _useCsm) ? 1 : 0);
-    };
+}
 
-    // Pass 1: opaque instanced
-    for (auto& [key, inst] : _instancers) {
-        if (inst.hasTransparent() || inst.visibleCount() == 0)
-            continue;
-        if (_frustumCullingEnabled) {
-            ++_cullingTotalBatches;
-            const int totalInstances = inst.instanceCount();
-            _cullingTotalInstances += totalInstances;
-            inst.applyFrustumCulling(&_viewFrustum);
-            const int culledInstances = totalInstances - inst.visibleCount();
-            _cullingCulledInstances += culledInstances;
-            if (inst.visibleCount() == 0) {
-                ++_cullingCulledBatches;
-                continue;
-            }
+void Rasterizer::renderSceneInstancer(MeshInstancer& inst, bool transparentPass,
+                                      Backend::Texture* shadowTexture) {
+    if (inst.hasTransparent() != transparentPass || inst.visibleCount() == 0)
+        return;
+
+    if (_frustumCullingEnabled) {
+        ++_cullingTotalBatches;
+        const int totalInstances = inst.instanceCount();
+        _cullingTotalInstances += totalInstances;
+        inst.applyFrustumCulling(&_viewFrustum);
+        const int culledInstances = totalInstances - inst.visibleCount();
+        _cullingCulledInstances += culledInstances;
+        if (inst.visibleCount() == 0) {
+            ++_cullingCulledBatches;
+            return;
         }
-        if (inst.isDoubleSided())
-            _graphicsDevice->setCullFace(false);
-        if (inst.material()) {
-            inst.material()->bind();
-            bindShadowSampler(inst.shader());
-        } else {
-            inst.shader()->use();
-            bindShadowSampler(inst.shader());
-        }
-        inst.bindTextures();
+    }
+
+    if (inst.isDoubleSided())
+        _graphicsDevice->setCullFace(false);
+
+    if (inst.material()) {
+        inst.material()->bind();
+        bindShadowSampler(inst.shader(), shadowTexture);
+    } else {
+        inst.shader()->use();
+        bindShadowSampler(inst.shader(), shadowTexture);
+    }
+
+    inst.bindTextures();
+    if (transparentPass) {
+        bindShadowTextures(shadowTexture);
+        inst.uploadSkinningMatrices();
+    } else {
         inst.uploadSkinningMatrices();
         // Re-bind shadow map after bindTextures() to prevent slot 1 conflict
-        bindShadowTextures();
-        inst.render();
-        if (inst.isDoubleSided())
-            _graphicsDevice->setCullFace(true);
+        bindShadowTextures(shadowTexture);
     }
-    // Skybox: drawn last, fills only pixels with no geometry
-    _graphicsDevice->drawSkybox(view, proj);
 
-    // Pass 2: transparent instanced TODO: impl OIT
+    inst.render();
+    if (inst.isDoubleSided())
+        _graphicsDevice->setCullFace(true);
+}
+
+void Rasterizer::renderOpaquePass(Backend::Texture* shadowTexture) {
+    for (auto& entry : _instancers)
+        renderSceneInstancer(entry.second, false, shadowTexture);
+}
+
+void Rasterizer::renderSkyboxPass(const glm::mat4& view,
+                                  const glm::mat4& proj) {
+    // Drawn after opaque geometry so the skybox only fills empty pixels.
+    _graphicsDevice->drawSkybox(view, proj);
+}
+
+void Rasterizer::renderTransparentPass(Backend::Texture* shadowTexture) {
     _graphicsDevice->setBlend(true);
     _graphicsDevice->setBlendFunc(Backend::BlendFactor::SrcAlpha,
                                   Backend::BlendFactor::OneMinusSrcAlpha);
     _graphicsDevice->setDepthWrite(false);
-    for (auto& [key, inst] : _instancers) {
-        if (!inst.hasTransparent() || inst.visibleCount() == 0)
-            continue;
-        if (_frustumCullingEnabled) {
-            ++_cullingTotalBatches;
-            const int totalInstances = inst.instanceCount();
-            _cullingTotalInstances += totalInstances;
-            inst.applyFrustumCulling(&_viewFrustum);
-            const int culledInstances = totalInstances - inst.visibleCount();
-            _cullingCulledInstances += culledInstances;
-            if (inst.visibleCount() == 0) {
-                ++_cullingCulledBatches;
-                continue;
-            }
-        }
-        if (inst.isDoubleSided())
-            _graphicsDevice->setCullFace(false);
-        if (inst.material()) {
-            inst.material()->bind();
-            bindShadowSampler(inst.shader());
-        } else {
-            inst.shader()->use();
-            bindShadowSampler(inst.shader());
-        }
-        inst.bindTextures();
-        bindShadowTextures();
-        inst.uploadSkinningMatrices();
-        inst.render();
-        if (inst.isDoubleSided())
-            _graphicsDevice->setCullFace(true);
-    }
+    for (auto& entry : _instancers)
+        renderSceneInstancer(entry.second, true, shadowTexture);
     _graphicsDevice->setDepthWrite(true);
     _graphicsDevice->setBlend(false);
+}
 
+void Rasterizer::renderDebugOverlayPass() {
     updateDebugRenderAABB();
     _debugRenderer.render();
 }
 
-void Rasterizer::renderSelectionMask(const RayPickResult& selection,
-                                     Backend::Framebuffer* target, int width,
-                                     int height) {
+void Rasterizer::renderSelectionMaskPass(const RayPickResult& selection,
+                                         Backend::Framebuffer* target,
+                                         int width, int height) {
     if (!target || !selection.hit || selection.handle >= _handleTable.size())
         return;
 

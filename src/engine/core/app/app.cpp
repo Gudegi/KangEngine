@@ -295,10 +295,10 @@ void App::renderFrameOnce() {
         _selectionOutlineProcessor->config().enabled &&
         _selectionMaskFramebuffer && _rasterizer &&
         _interaction.hasSelection()) {
-        _rasterizer->renderSelectionMask(_interaction.selection(),
-                                         _selectionMaskFramebuffer.get(),
-                                         _width, _height);
-        _selectionOutlineProcessor->process(
+        _rasterizer->renderSelectionMaskPass(_interaction.selection(),
+                                             _selectionMaskFramebuffer.get(),
+                                             _width, _height);
+        _selectionOutlineProcessor->renderOutlineCompositePass(
             _framebuffer->getColorTexture(),
             _selectionMaskFramebuffer->getColorTexture());
         finalSource = _selectionOutlineProcessor->getResult();

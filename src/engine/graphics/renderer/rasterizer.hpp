@@ -120,6 +120,16 @@ class Rasterizer : public RenderPipeline {
                       float radius, float distance);
     void drawShadowCasters();
     void updateDebugRenderAABB();
+    Backend::Texture* activeShadowTexture() const;
+    void bindShadowTextures(Backend::Texture* shadowTexture);
+    void bindShadowSampler(Backend::Shader* shader,
+                           Backend::Texture* shadowTexture);
+    void renderSceneInstancer(MeshInstancer& inst, bool transparentPass,
+                              Backend::Texture* shadowTexture);
+    void renderOpaquePass(Backend::Texture* shadowTexture);
+    void renderSkyboxPass(const glm::mat4& view, const glm::mat4& proj);
+    void renderTransparentPass(Backend::Texture* shadowTexture);
+    void renderDebugOverlayPass();
 
   public:
     Rasterizer(Backend::GraphicsDevice* graphicsDevice);
@@ -254,9 +264,9 @@ class Rasterizer : public RenderPipeline {
 
     void updateFrameData(const glm::mat4& view, const glm::mat4& proj);
     void render(const glm::mat4& view, const glm::mat4& proj) override;
-    void renderSelectionMask(const RayPickResult& selection,
-                             Backend::Framebuffer* target, int width,
-                             int height);
+    void renderSelectionMaskPass(const RayPickResult& selection,
+                                 Backend::Framebuffer* target, int width,
+                                 int height);
 };
 
 } // namespace KE

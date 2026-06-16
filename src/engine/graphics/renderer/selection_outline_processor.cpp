@@ -84,8 +84,8 @@ void SelectionOutlineProcessor::init(Backend::GraphicsDevice* device, int width,
     _outputFBO = device->createFramebuffer({width, height, false, false, 0});
 }
 
-void SelectionOutlineProcessor::process(Backend::Texture* sceneColor,
-                                        Backend::Texture* selectionMask) {
+void SelectionOutlineProcessor::renderOutlineCompositePass(
+    Backend::Texture* sceneColor, Backend::Texture* selectionMask) {
     if (!sceneColor || !selectionMask)
         return;
 
