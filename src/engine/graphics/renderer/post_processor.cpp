@@ -19,9 +19,62 @@ in vec2 TexCoord;
 out vec4 FragColor;
 uniform sampler2D uScreen;
 uniform float uGamma;
+uniform int uToneMapMode;
+uniform float uToneMapExposure;
+
+// https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+vec3 acesNarkowicz(vec3 x) {
+    const float a = 2.51;
+    const float b = 0.03;
+    const float c = 2.43;
+    const float d = 0.59;
+    const float e = 0.14;
+    return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
+}
+
+// Stephen Hill / MJP BakingLab ACES fit.
+// https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
+vec3 rrtAndOdtFit(vec3 v) {
+    vec3 a = v * (v + 0.0245786) - 0.000090537;
+    vec3 b = v * (0.983729 * v + 0.4329510) + 0.238081;
+    return a / b;
+}
+
+vec3 acesFitted(vec3 color) {
+    const mat3 acesInputMat = mat3(
+        0.59719, 0.07600, 0.02840,
+        0.35458, 0.90834, 0.13383,
+        0.04823, 0.01566, 0.83777
+    );
+    const mat3 acesOutputMat = mat3(
+         1.60475, -0.10208, -0.00327,
+        -0.53108,  1.10813, -0.07276,
+        -0.07367, -0.00605,  1.07602
+    );
+
+    color = acesInputMat * color;
+    color = rrtAndOdtFit(color);
+    color = acesOutputMat * color;
+    return clamp(color, 0.0, 1.0);
+}
+
 void main() {
     vec4 color = texture(uScreen, TexCoord);
-    FragColor = vec4(pow(color.rgb, vec3(1.0 / uGamma)), color.a);
+
+    vec3 mapped = color.rgb;
+    if (uToneMapMode == 1) {
+        mapped = mapped * uToneMapExposure;
+        mapped = mapped / (mapped + vec3(1.0));
+    } else if (uToneMapMode == 2) {
+        mapped = vec3(1.0) - exp(-mapped * uToneMapExposure);
+    } else if (uToneMapMode == 3) {
+        mapped = acesNarkowicz(mapped * uToneMapExposure);
+    } else if (uToneMapMode == 4) {
+        mapped = acesFitted(mapped * uToneMapExposure);
+    }
+
+    vec3 corrected = pow(max(mapped, vec3(0.0)), vec3(1.0 / uGamma));
+    FragColor = vec4(corrected, color.a);
 }
 )";
 
@@ -62,7 +115,8 @@ void PostProcessor::init(Backend::GraphicsDevice* device, int width,
     _outputFBO = device->createFramebuffer({width, height, false, false, 0});
 }
 
-void PostProcessor::process(Backend::Texture* src, float gamma) {
+void PostProcessor::process(Backend::Texture* src, float gamma,
+                            ToneMapMode toneMapMode, float tonemapExposure) {
     _outputFBO->bind();
     _device->setViewport(0, 0, _width, _height);
     _device->clear(0.f, 0.f, 0.f, 1.f);
@@ -71,6 +125,8 @@ void PostProcessor::process(Backend::Texture* src, float gamma) {
     _shader->use();
     _shader->setInt("uScreen", 0);
     _shader->setFloat("uGamma", gamma < 0.01f ? 1.f : gamma);
+    _shader->setInt("uToneMapMode", static_cast<int>(toneMapMode));
+    _shader->setFloat("uToneMapExposure", tonemapExposure);
     src->bind(0);
 
     _quadVAO->bind();

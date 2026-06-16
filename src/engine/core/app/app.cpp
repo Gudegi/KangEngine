@@ -153,8 +153,13 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     // Initialize graphics device after OpenGL context is created
     _graphicsDevice->initialize();
 
-    _framebuffer =
-        _graphicsDevice->createFramebuffer({_width, _height, false, true, 4});
+    Backend::FramebufferDesc sceneFramebufferDesc;
+    sceneFramebufferDesc.width = _width;
+    sceneFramebufferDesc.height = _height;
+    sceneFramebufferDesc.stencil = true;
+    sceneFramebufferDesc.msaaSamples = 4;
+    sceneFramebufferDesc.colorFormat = Backend::FramebufferColorFormat::RGBA16F;
+    _framebuffer = _graphicsDevice->createFramebuffer(sceneFramebufferDesc);
     _selectionMaskFramebuffer =
         _graphicsDevice->createFramebuffer({_width, _height, false, false, 0});
 
@@ -305,7 +310,8 @@ void App::renderFrameOnce() {
     }
 
     if (_postProcessor) {
-        _postProcessor->process(finalSource, _gamma);
+        _postProcessor->process(finalSource, _gamma, _toneMapMode,
+                                _tonemapExposure);
         _postProcessor->blitToScreen(_width, _height);
         _lastPresentedFramebuffer = _postProcessor->getOutputFramebuffer();
     } else {

@@ -88,8 +88,8 @@ class OpenGLTexture : public Texture {
     OpenGLTexture(const TextureDesc& desc);
     OpenGLTexture(const TextureDesc& desc, float warpParam,
                   float filterMinParam, float filterMaxParam);
-    // Empty RGB texture for FBO color attachment
-    OpenGLTexture(int w, int h);
+    // Empty color texture for FBO color attachment.
+    OpenGLTexture(int w, int h, FramebufferColorFormat colorFormat);
     // Depth (or depth+stencil) texture for FBO attachment
     OpenGLTexture(int w, int h, bool stencil);
     ~OpenGLTexture() override;
@@ -126,7 +126,7 @@ class OpenGLFramebuffer : public Framebuffer {
   private:
     // --- Texture FBO (non-MSAA scene FBO) ---
     GLuint _fbo = 0;
-    std::unique_ptr<OpenGLTexture> _colorTexObj; // GL_RGB color texture
+    std::unique_ptr<OpenGLTexture> _colorTexObj;
     std::unique_ptr<OpenGLTexture>
         _depthTexObj; // depth (or depth+stencil) texture
 
@@ -137,7 +137,7 @@ class OpenGLFramebuffer : public Framebuffer {
 
     // --- MSAA FBO (RBO-based) ---
     GLuint _msaaFbo = 0;
-    GLuint _msaaColorRbo = 0; // GL_RGB8
+    GLuint _msaaColorRbo = 0;
     GLuint _msaaDepthRbo = 0; // GL_DEPTH_COMPONENT32
 
     FramebufferDesc _desc;

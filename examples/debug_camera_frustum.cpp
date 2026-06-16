@@ -564,8 +564,8 @@ class CameraFrustumDebugApp : public App {
         getRenderer().renderSceneToFramebuffer(subjectCamera,
                                                subjectPreviewFbo.get(),
                                                previewWidth, previewHeight);
-        subjectPreviewPost.process(subjectPreviewFbo->getColorTexture(),
-                                   _gamma);
+        subjectPreviewPost.process(subjectPreviewFbo->getColorTexture(), _gamma,
+                                   _toneMapMode, _tonemapExposure);
     }
 };
 

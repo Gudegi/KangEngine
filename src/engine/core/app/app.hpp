@@ -72,7 +72,10 @@ class App {
     bool _screenshotRequested = false;
     bool _mousePickRequested = false;
     uint64_t _frameIndex = 0;
-    float _gamma = 2.2; // for Gamma Correction
+    float _gamma = 2.2f; // for Gamma Correction
+    ToneMapMode _toneMapMode =
+        ToneMapMode::None;         // keep legacy LDR look by default
+    float _tonemapExposure = 1.0f; // for Exposure Tone Mapping
     float _cameraMoveSpeed = 15.0f;
     glm::mat4 _viewMatrix,
         _projectionMatrix; // variable to containing main camera's view and

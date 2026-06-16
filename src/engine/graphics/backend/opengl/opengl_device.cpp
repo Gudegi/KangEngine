@@ -15,6 +15,27 @@
 namespace KE {
 namespace Backend {
 
+namespace {
+
+struct GLFramebufferColorFormat {
+    GLenum internalFormat = GL_RGBA8;
+    GLenum format = GL_RGBA;
+    GLenum type = GL_UNSIGNED_BYTE;
+};
+
+GLFramebufferColorFormat
+toGLFramebufferColorFormat(FramebufferColorFormat format) {
+    switch (format) {
+    case FramebufferColorFormat::RGBA8:
+        return {GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE};
+    case FramebufferColorFormat::RGBA16F:
+        return {GL_RGBA16F, GL_RGBA, GL_FLOAT};
+    }
+    return {GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE};
+}
+
+} // namespace
+
 // OpenGLBuffer Implementation
 OpenGLBuffer::OpenGLBuffer(BufferType type, size_t size, const void* data)
     : _type(type), _size(size) {
@@ -296,12 +317,14 @@ OpenGLTexture::OpenGLTexture(const TextureDesc& desc, float warpParam,
     glBindTexture(_target, 0);
 }
 
-OpenGLTexture::OpenGLTexture(int w, int h)
-    : _width(w), _height(h), _channels(3) {
+OpenGLTexture::OpenGLTexture(int w, int h, FramebufferColorFormat colorFormat)
+    : _width(w), _height(h), _channels(4) {
+    const GLFramebufferColorFormat glFormat =
+        toGLFramebufferColorFormat(colorFormat);
     glGenTextures(1, &_textureID);
     glBindTexture(GL_TEXTURE_2D, _textureID);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE,
-                 nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, glFormat.internalFormat, w, h, 0,
+                 glFormat.format, glFormat.type, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -721,9 +744,8 @@ OpenGLFramebuffer::OpenGLFramebuffer(const FramebufferDesc& desc)
     glBindFramebuffer(GL_FRAMEBUFFER, _fbo);
 
     if (!_desc.depthOnly) {
-        // color texture (GL_RGB)
-        _colorTexObj =
-            std::make_unique<OpenGLTexture>(_desc.width, _desc.height);
+        _colorTexObj = std::make_unique<OpenGLTexture>(
+            _desc.width, _desc.height, _desc.colorFormat);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                GL_TEXTURE_2D, _colorTexObj->getHandle(), 0);
     } else {
@@ -759,10 +781,13 @@ OpenGLFramebuffer::OpenGLFramebuffer(const FramebufferDesc& desc)
     // ----------------------------------------------------------------
     if (_desc.msaaSamples > 0) {
         // color RBO
+        const GLFramebufferColorFormat glColorFormat =
+            toGLFramebufferColorFormat(_desc.colorFormat);
         glGenRenderbuffers(1, &_msaaColorRbo);
         glBindRenderbuffer(GL_RENDERBUFFER, _msaaColorRbo);
         glRenderbufferStorageMultisample(GL_RENDERBUFFER, _desc.msaaSamples,
-                                         GL_RGB8, _desc.width, _desc.height);
+                                         glColorFormat.internalFormat,
+                                         _desc.width, _desc.height);
 
         // depth (or depth+stencil) RBO — format mirrors texture FBO
         GLenum msaaDepthFmt =
@@ -826,9 +851,11 @@ void OpenGLFramebuffer::resize(int w, int h) {
 
     // Resize texture FBO attachments
     if (!_desc.depthOnly) {
+        const GLFramebufferColorFormat glColorFormat =
+            toGLFramebufferColorFormat(_desc.colorFormat);
         glBindTexture(GL_TEXTURE_2D, _colorTexObj->getHandle());
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB,
-                     GL_UNSIGNED_BYTE, nullptr);
+        glTexImage2D(GL_TEXTURE_2D, 0, glColorFormat.internalFormat, w, h, 0,
+                     glColorFormat.format, glColorFormat.type, nullptr);
     }
     glBindTexture(GL_TEXTURE_2D, _depthTexObj->getHandle());
     {
@@ -843,9 +870,11 @@ void OpenGLFramebuffer::resize(int w, int h) {
 
     // Resize MSAA RBOs
     if (_desc.msaaSamples > 0) {
+        const GLFramebufferColorFormat glColorFormat =
+            toGLFramebufferColorFormat(_desc.colorFormat);
         glBindRenderbuffer(GL_RENDERBUFFER, _msaaColorRbo);
         glRenderbufferStorageMultisample(GL_RENDERBUFFER, _desc.msaaSamples,
-                                         GL_RGB8, w, h);
+                                         glColorFormat.internalFormat, w, h);
         glBindRenderbuffer(GL_RENDERBUFFER, _msaaDepthRbo);
         GLenum msaaDepthFmt =
             _desc.stencil ? GL_DEPTH24_STENCIL8 : GL_DEPTH_COMPONENT32;

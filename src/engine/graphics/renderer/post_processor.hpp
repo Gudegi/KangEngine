@@ -5,12 +5,21 @@
 
 namespace KE {
 
-// current support post-processing : gamma correction
+// Current post-processing: exposure tone mapping + gamma correction.
+
+enum class ToneMapMode {
+    None = 0,
+    Reinhard = 1,
+    Exponential = 2,
+    AcesNarkowicz = 3,
+    AcesFitted = 4,
+};
 
 class PostProcessor {
   public:
     void init(Backend::GraphicsDevice* device, int width, int height);
-    void process(Backend::Texture* src, float gamma);
+    void process(Backend::Texture* src, float gamma, ToneMapMode toneMapMode,
+                 float tonemapExposure);
     Backend::Texture* getResult();
     Backend::Framebuffer* getOutputFramebuffer();
     void blitToScreen(int width, int height);

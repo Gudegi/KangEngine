@@ -51,6 +51,8 @@ void RendererDebugPanel::buildPanel() {
         return;
 
     ImGui::Begin(name().c_str());
+
+    ImGui::SeparatorText("Controls");
     ImGui::Checkbox("Wireframe", &_app->_renderWireframe);
     const char* interactionLabels[] = {"Inspect", "Edit", "Force"};
     int interactionMode = static_cast<int>(_app->getInteractionMode());
@@ -58,7 +60,23 @@ void RendererDebugPanel::buildPanel() {
                      3)) {
         _app->setInteractionMode(static_cast<InteractionMode>(interactionMode));
     }
+    ImGui::DragFloat("Camera Move Speed", &_app->_cameraMoveSpeed, 0.2f, 0.0f,
+                     500.0f, "%.2f");
+
+    ImGui::SeparatorText("Post Processing");
     ImGui::SliderFloat("GammaCorrection", &_app->_gamma, 0.f, 5.f);
+    const char* toneMapLabels[] = {"None", "Reinhard Simple", "Exponential",
+                                   "ACES Narkowicz", "ACES Hill"};
+    int toneMapMode = static_cast<int>(_app->_toneMapMode);
+    if (ImGui::Combo("Tone Mapping", &toneMapMode, toneMapLabels, 5)) {
+        _app->_toneMapMode = static_cast<ToneMapMode>(toneMapMode);
+    }
+    if (_app->_toneMapMode != ToneMapMode::None) {
+        ImGui::SliderFloat("Exposure(Tone mapping)", &_app->_tonemapExposure,
+                           0.f, 5.f);
+    }
+
+    ImGui::SeparatorText("Selection");
     if (SelectionOutlineProcessor* outline =
             _app->getRenderer().selectionOutline()) {
         SelectionOutlineConfig& config = outline->config();
@@ -72,8 +90,6 @@ void RendererDebugPanel::buildPanel() {
         ImGui::SliderFloat("Selection Outline Radius", &config.radius, 1.0f,
                            8.0f, "%.1f px");
     }
-    ImGui::DragFloat("Camera Move Speed", &_app->_cameraMoveSpeed, 0.2f, 0.0f,
-                     500.0f, "%.2f");
 
     Rasterizer* rasterizer = _app->getRenderer().rasterizer();
     if (!rasterizer) {
@@ -86,6 +102,7 @@ void RendererDebugPanel::buildPanel() {
     float color[3] = {light.color.r, light.color.g, light.color.b};
     glm::vec3 ambient = light.ambient;
 
+    ImGui::SeparatorText("Lighting");
     if (ImGui::DragFloat3("Sun Direction (toward light)", &direction.x,
                           0.02f)) {
         _app->setLightDirection(direction);
@@ -100,6 +117,7 @@ void RendererDebugPanel::buildPanel() {
         _app->setLightAmbient(ambient);
     }
 
+    ImGui::SeparatorText("Shadows");
     float distance = rasterizer->getShadowDistance();
     if (ImGui::SliderFloat("Shadow Distance (Set 0 to disable shadow)",
                            &distance, 0.0f, 300.0f)) {
@@ -134,6 +152,7 @@ void RendererDebugPanel::buildPanel() {
         }
     }
 
+    ImGui::SeparatorText("Diagnostics");
     bool frustumCulling = rasterizer->isFrustumCullingEnabled();
     if (ImGui::Checkbox("Frustum Culling", &frustumCulling)) {
         rasterizer->setFrustumCullingEnabled(frustumCulling);

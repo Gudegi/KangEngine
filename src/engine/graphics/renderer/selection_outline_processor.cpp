@@ -80,8 +80,10 @@ void SelectionOutlineProcessor::init(Backend::GraphicsDevice* device, int width,
     _quadVAO->setVertexAttribute({1, 2, Backend::VertexAttributeType::Float,
                                   false, 2 * sizeof(float), 0});
     _quadVAO->unbind();
-
-    _outputFBO = device->createFramebuffer({width, height, false, false, 0});
+    // Output format must be 16f for HDR.
+    _outputFBO =
+        device->createFramebuffer({width, height, false, false, 0,
+                                   Backend::FramebufferColorFormat::RGBA16F});
 }
 
 void SelectionOutlineProcessor::renderOutlineCompositePass(

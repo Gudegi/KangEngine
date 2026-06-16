@@ -66,6 +66,11 @@ enum class BlendFactor {
     OneMinusDstAlpha,
 };
 
+enum class FramebufferColorFormat {
+    RGBA8,
+    RGBA16F,
+};
+
 struct VertexAttribute {
     int location;
     int size;
@@ -99,6 +104,7 @@ struct FramebufferDesc {
     bool depthOnly = false; // shadow FBO: no color attachment
     bool stencil = false;   // use depth+stencil
     int msaaSamples = 0;    // 0 means No MSAA
+    FramebufferColorFormat colorFormat = FramebufferColorFormat::RGBA8;
 };
 
 // Forward declarations
