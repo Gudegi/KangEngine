@@ -225,7 +225,7 @@ class CameraFrustumDebugApp : public App {
     PostProcessor subjectPreviewPost;
 
     Camera subjectCamera;
-    MeshHandle subjectBodyHandle = InvalidHandle;
+    RenderableHandle subjectBodyHandle = InvalidHandle;
     std::vector<DebugBoundsObject> debugBoundsObjects;
 
     bool animateSubject = true;

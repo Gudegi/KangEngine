@@ -39,7 +39,7 @@ class PBDClothApp : public App {
     std::unique_ptr<ClothSolver> solver;
     ClothSolverConfig cfg;
 
-    MeshHandle clothHandle = InvalidHandle;
+    RenderableHandle clothHandle = InvalidHandle;
     Scene::Prim* clothPrim = nullptr;
 
     bool paused = false;
@@ -66,8 +66,8 @@ class PBDClothApp : public App {
         clothShader->setUniformBlockBinding("cameraUBO", 0);
         clothShader->setUniformBlockBinding("lightUBO", 1);
 
-        groundShader = getRenderer().device()->createShaderFromFile(commonVSPath,
-                                                                 groundFSPath);
+        groundShader = getRenderer().device()->createShaderFromFile(
+            commonVSPath, groundFSPath);
         groundShader->use();
         groundShader->setUniformBlockBinding("cameraUBO", 0);
         groundShader->setUniformBlockBinding("lightUBO", 1);

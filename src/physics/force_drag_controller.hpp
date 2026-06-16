@@ -28,8 +28,8 @@ class ForceDragController {
 
     // Handles are expected to be ordered by body/link index.
     void registerArticulation(Articulation& articulation,
-                              const std::vector<MeshHandle>& bodyHandles);
-    void registerRigid(physx::PxRigidDynamic& rigid, MeshHandle handle);
+                              const std::vector<RenderableHandle>& bodyHandles);
+    void registerRigid(physx::PxRigidDynamic& rigid, RenderableHandle handle);
     void clearBindings();
 
     bool begin(const RayPickResult& pick, const glm::vec3& target);
@@ -49,7 +49,7 @@ class ForceDragController {
     };
 
     ForceDragConfig _config;
-    std::unordered_map<MeshHandle, Binding> _bindings;
+    std::unordered_map<RenderableHandle, Binding> _bindings;
     Binding _activeBinding;
     physx::PxVec3 _localAnchor = physx::PxVec3(0.0f);
     glm::vec3 _lastBodyPosition = glm::vec3(0.0f);

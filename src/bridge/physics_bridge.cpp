@@ -23,7 +23,7 @@ void PhysicsBridge::add(const Articulation& artic,
 }
 
 void PhysicsBridge::addInstanced(std::vector<Articulation*> artics,
-                                 std::vector<MeshHandle> handles) {
+                                 std::vector<RenderableHandle> handles) {
     InstancedGroup group;
     group.handles = std::move(handles);
     group.artics.reserve(artics.size());
@@ -33,7 +33,7 @@ void PhysicsBridge::addInstanced(std::vector<Articulation*> artics,
 }
 
 void PhysicsBridge::addInstanced(const Articulation& artic,
-                                 const std::vector<MeshHandle>& handles) {
+                                 const std::vector<RenderableHandle>& handles) {
     for (auto& group : _instancedGroups) {
         if (group.handles == handles) {
             group.artics.push_back(&artic);

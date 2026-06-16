@@ -401,29 +401,30 @@ void App::coreRender() {
 
 void App::checkError() { _graphicsDevice->checkError(); }
 
-MeshHandle App::addRenderable(Backend::Shader* shader, Scene::Prim* prim,
-                              TransformSource transformSource) {
+RenderableHandle App::addRenderable(Backend::Shader* shader, Scene::Prim* prim,
+                                    TransformSource transformSource) {
     return _rasterizer
                ? _rasterizer->addRenderable(shader, prim, transformSource)
                : InvalidHandle;
 }
 
-MeshHandle App::addSkinnedRenderable(Backend::Shader* shader, Scene::Prim* prim,
-                                     const Scene::SkinnedMeshData& skinnedMesh,
-                                     TransformSource transformSource) {
+RenderableHandle
+App::addSkinnedRenderable(Backend::Shader* shader, Scene::Prim* prim,
+                          const Scene::SkinnedMeshData& skinnedMesh,
+                          TransformSource transformSource) {
     return _rasterizer ? _rasterizer->addSkinnedRenderable(
                              shader, prim, skinnedMesh, transformSource)
                        : InvalidHandle;
 }
 
-MeshHandle App::addRenderable(PhongMaterial* material, Scene::Prim* prim,
-                              TransformSource transformSource) {
+RenderableHandle App::addRenderable(PhongMaterial* material, Scene::Prim* prim,
+                                    TransformSource transformSource) {
     return _rasterizer
                ? _rasterizer->addRenderable(material, prim, transformSource)
                : InvalidHandle;
 }
 
-void App::removePrim(MeshHandle handle, Scene::Prim* prim) {
+void App::removePrim(RenderableHandle handle, Scene::Prim* prim) {
     if (_rasterizer)
         _rasterizer->removePrim(handle, prim);
 }
@@ -441,7 +442,7 @@ App::MeshPrimResult App::addMeshPrim(MeshPrimDesc desc) {
     prim->addScaleOp(desc.scale);
     prim->setDisplayColorAlpha(desc.color);
 
-    MeshHandle handle = addRenderable(desc.shader, prim);
+    RenderableHandle handle = addRenderable(desc.shader, prim);
     if (handle != InvalidHandle) {
         setRenderableDoubleSided(handle, desc.doubleSided);
         setRenderableCastsShadow(handle, desc.castsShadow);
@@ -482,7 +483,7 @@ App::MeshPrimResult App::addSkinnedMeshPrim(Backend::Shader* shader,
     prim->addTranslateOp(position);
     prim->setDisplayColorAlpha(color);
 
-    MeshHandle handle = addSkinnedRenderable(shader, prim, skinnedMesh);
+    RenderableHandle handle = addSkinnedRenderable(shader, prim, skinnedMesh);
     if (handle != InvalidHandle) {
         setRenderableCastsShadow(handle, castsShadow);
     }
@@ -570,9 +571,9 @@ glm::quat App::axisQuat(glm::quat ori, UpAxis from, UpAxis to) const {
     return zUpOri;
 }
 
-MeshHandle App::addCube(const std::string& path, float size, glm::vec3 pos,
-                        glm::quat ori, glm::vec4 color,
-                        Backend::Shader* shader) {
+RenderableHandle App::addCube(const std::string& path, float size,
+                              glm::vec3 pos, glm::quat ori, glm::vec4 color,
+                              Backend::Shader* shader) {
     MeshPrimDesc desc;
     desc.shader = shader;
     desc.path = path;
@@ -583,8 +584,9 @@ MeshHandle App::addCube(const std::string& path, float size, glm::vec3 pos,
     return addMeshPrim(std::move(desc)).handle;
 }
 
-MeshHandle App::addSphere(const std::string& path, float radius, glm::vec3 pos,
-                          glm::vec4 color, Backend::Shader* shader) {
+RenderableHandle App::addSphere(const std::string& path, float radius,
+                                glm::vec3 pos, glm::vec4 color,
+                                Backend::Shader* shader) {
     MeshPrimDesc desc;
     desc.shader = shader;
     desc.path = path;
@@ -594,8 +596,9 @@ MeshHandle App::addSphere(const std::string& path, float radius, glm::vec3 pos,
     return addMeshPrim(std::move(desc)).handle;
 }
 
-MeshHandle App::addPlane(const std::string& path, float size, glm::vec3 pos,
-                         glm::vec4 color, Backend::Shader* shader) {
+RenderableHandle App::addPlane(const std::string& path, float size,
+                               glm::vec3 pos, glm::vec4 color,
+                               Backend::Shader* shader) {
     MeshPrimDesc desc;
     desc.shader = shader;
     desc.path = path;
@@ -649,25 +652,28 @@ void App::setLightAmbient(const glm::vec3& ambient) {
     }
 }
 
-void App::updateRenderableTransforms(MeshHandle handle,
+void App::updateRenderableTransforms(RenderableHandle handle,
                                      const std::vector<glm::mat4>& transforms,
                                      const std::vector<glm::vec4>* colors) {
     getRenderer().updateRenderableTransforms(handle, transforms, colors);
 }
 
-bool App::getRenderableInstanceTransform(MeshHandle handle, int instanceIndex,
+bool App::getRenderableInstanceTransform(RenderableHandle handle,
+                                         int instanceIndex,
                                          glm::mat4& outTransform) const {
     return getRenderer().getRenderableInstanceTransform(handle, instanceIndex,
                                                         outTransform);
 }
 
-bool App::setRenderableInstanceTransform(MeshHandle handle, int instanceIndex,
+bool App::setRenderableInstanceTransform(RenderableHandle handle,
+                                         int instanceIndex,
                                          const glm::mat4& transform) {
     return getRenderer().setRenderableInstanceTransform(handle, instanceIndex,
                                                         transform);
 }
 
-void App::updateRenderableTransforms(MeshHandle handle, const float* transforms,
+void App::updateRenderableTransforms(RenderableHandle handle,
+                                     const float* transforms,
                                      const float* colors, size_t count,
                                      size_t colorCount) {
     if (count > 0 && !transforms)
@@ -699,12 +705,12 @@ void App::updateRenderableTransforms(MeshHandle handle, const float* transforms,
     getRenderer().updateRenderableTransforms(handle, transformVec, colorPtr);
 }
 
-void App::setRenderableColors(MeshHandle handle,
+void App::setRenderableColors(RenderableHandle handle,
                               const std::vector<glm::vec4>& colors) {
     getRenderer().setRenderableColors(handle, colors);
 }
 
-void App::setRenderableColors(MeshHandle handle, const float* colors,
+void App::setRenderableColors(RenderableHandle handle, const float* colors,
                               size_t colorCount) {
     if (colorCount > 0 && !colors)
         return;
@@ -717,28 +723,28 @@ void App::setRenderableColors(MeshHandle handle, const float* colors,
     getRenderer().setRenderableColors(handle, colorVec);
 }
 
-void App::setRenderableDoubleSided(MeshHandle handle, bool doubleSided) {
+void App::setRenderableDoubleSided(RenderableHandle handle, bool doubleSided) {
     getRenderer().setRenderableDoubleSided(handle, doubleSided);
 }
 
-void App::setRenderableCastsShadow(MeshHandle handle, bool castsShadow) {
+void App::setRenderableCastsShadow(RenderableHandle handle, bool castsShadow) {
     getRenderer().setRenderableCastsShadow(handle, castsShadow);
 }
 
-void App::setRenderableTexture(MeshHandle handle, Backend::Texture* tex,
+void App::setRenderableTexture(RenderableHandle handle, Backend::Texture* tex,
                                int slot) {
     getRenderer().setRenderableTexture(handle, tex, slot);
 }
 
-void App::updateRenderableGeometry(MeshHandle handle,
+void App::updateRenderableGeometry(RenderableHandle handle,
                                    const std::vector<glm::vec3>& positions,
                                    const std::vector<glm::vec3>& normals) {
     getRenderer().updateRenderableGeometry(handle, positions, normals);
 }
 
-void App::updateRenderableGeometry(MeshHandle handle, const float* positions,
-                                   const float* normals, size_t count,
-                                   size_t normalCount) {
+void App::updateRenderableGeometry(RenderableHandle handle,
+                                   const float* positions, const float* normals,
+                                   size_t count, size_t normalCount) {
     if (count > 0 && !positions)
         return;
     if (normalCount > 0 && !normals)
@@ -764,11 +770,11 @@ void App::updateRenderableGeometry(MeshHandle handle, const float* positions,
 }
 
 void App::updateRenderableSkinningMatrices(
-    MeshHandle handle, const std::vector<glm::mat4>& boneMatrices) {
+    RenderableHandle handle, const std::vector<glm::mat4>& boneMatrices) {
     getRenderer().updateRenderableSkinningMatrices(handle, boneMatrices);
 }
 
-void App::updateRenderableSkinningMatrices(MeshHandle handle,
+void App::updateRenderableSkinningMatrices(RenderableHandle handle,
                                            const float* rowMajorMatrices,
                                            size_t count) {
     if (!rowMajorMatrices)

@@ -35,7 +35,7 @@ class SkinnedCharacterBridge {
     struct MeshBinding {
         std::string name;
         Scene::Prim* prim = nullptr;
-        MeshHandle handle = InvalidHandle;
+        RenderableHandle handle = InvalidHandle;
         std::vector<std::string> boneNames;
         std::vector<int> boneNodeIndices;
         std::vector<glm::mat4> inverseBindMatrices;

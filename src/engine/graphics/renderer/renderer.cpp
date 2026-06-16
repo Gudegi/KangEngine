@@ -56,49 +56,51 @@ void Renderer::renderSceneToFramebuffer(Camera& camera,
 }
 
 void Renderer::updateRenderableTransforms(
-    MeshHandle handle, const std::vector<glm::mat4>& transforms,
+    RenderableHandle handle, const std::vector<glm::mat4>& transforms,
     const std::vector<glm::vec4>* colors) {
     if (_rasterizer)
         _rasterizer->updateRenderableTransforms(handle, transforms, colors);
 }
 
-bool Renderer::getRenderableInstanceTransform(MeshHandle handle,
+bool Renderer::getRenderableInstanceTransform(RenderableHandle handle,
                                               int instanceIndex,
                                               glm::mat4& outTransform) const {
     return _rasterizer && _rasterizer->getRenderableInstanceTransform(
                               handle, instanceIndex, outTransform);
 }
 
-bool Renderer::setRenderableInstanceTransform(MeshHandle handle,
+bool Renderer::setRenderableInstanceTransform(RenderableHandle handle,
                                               int instanceIndex,
                                               const glm::mat4& transform) {
     return _rasterizer && _rasterizer->setRenderableInstanceTransform(
                               handle, instanceIndex, transform);
 }
 
-void Renderer::setRenderableColors(MeshHandle handle,
+void Renderer::setRenderableColors(RenderableHandle handle,
                                    const std::vector<glm::vec4>& colors) {
     if (_rasterizer)
         _rasterizer->setRenderableColors(handle, colors);
 }
 
-void Renderer::setRenderableDoubleSided(MeshHandle handle, bool doubleSided) {
+void Renderer::setRenderableDoubleSided(RenderableHandle handle,
+                                        bool doubleSided) {
     if (_rasterizer)
         _rasterizer->setRenderableDoubleSided(handle, doubleSided);
 }
 
-void Renderer::setRenderableCastsShadow(MeshHandle handle, bool castsShadow) {
+void Renderer::setRenderableCastsShadow(RenderableHandle handle,
+                                        bool castsShadow) {
     if (_rasterizer)
         _rasterizer->setRenderableCastsShadow(handle, castsShadow);
 }
 
-void Renderer::setRenderableTexture(MeshHandle handle, Backend::Texture* tex,
-                                    int slot) {
+void Renderer::setRenderableTexture(RenderableHandle handle,
+                                    Backend::Texture* tex, int slot) {
     if (_rasterizer)
         _rasterizer->setRenderableTexture(handle, tex, slot);
 }
 
-void Renderer::updateRenderableGeometry(MeshHandle handle,
+void Renderer::updateRenderableGeometry(RenderableHandle handle,
                                         const std::vector<glm::vec3>& positions,
                                         const std::vector<glm::vec3>& normals) {
     if (_rasterizer)
@@ -106,7 +108,7 @@ void Renderer::updateRenderableGeometry(MeshHandle handle,
 }
 
 void Renderer::updateRenderableSkinningMatrices(
-    MeshHandle handle, const std::vector<glm::mat4>& boneMatrices) {
+    RenderableHandle handle, const std::vector<glm::mat4>& boneMatrices) {
     if (_rasterizer)
         _rasterizer->updateRenderableSkinningMatrices(handle, boneMatrices);
 }

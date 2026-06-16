@@ -49,8 +49,8 @@ class H1RagdollApp : public App {
     ForceDragConfig forceDragConfig;
 
     std::vector<float> targets;
-    std::vector<MeshHandle> bodyHandles;
-    MeshHandle contactArrowHandle = InvalidHandle;
+    std::vector<RenderableHandle> bodyHandles;
+    RenderableHandle contactArrowHandle = InvalidHandle;
 
     float spawnHeightOffset = 1.5f;
     float contactImpulseScale = 0.08f;
@@ -71,10 +71,10 @@ class H1RagdollApp : public App {
         auto commonFSPath = KE::getAssetPath("shaders/common.fs");
         auto groundFSPath = KE::getAssetPath("shaders/checkerboard.fs");
 
-        commonShader = getRenderer().device()->createShaderFromFile(commonVSPath,
-                                                                 commonFSPath);
-        groundShader = getRenderer().device()->createShaderFromFile(commonVSPath,
-                                                                 groundFSPath);
+        commonShader = getRenderer().device()->createShaderFromFile(
+            commonVSPath, commonFSPath);
+        groundShader = getRenderer().device()->createShaderFromFile(
+            commonVSPath, groundFSPath);
 
         groundShader->use();
         groundShader->setUniformBlockBinding("cameraUBO", 0);

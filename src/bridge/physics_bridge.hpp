@@ -53,9 +53,9 @@ class PhysicsBridge {
     // N identical articulations, one handle per body type — instanced sync
     // Preferred simulation visual path.
     void addInstanced(std::vector<Articulation*> artics,
-                      std::vector<MeshHandle> handles);
+                      std::vector<RenderableHandle> handles);
     void addInstanced(const Articulation& artic,
-                      const std::vector<MeshHandle>& handles);
+                      const std::vector<RenderableHandle>& handles);
 
     // Create one Prim per collision geom. Returns Prims for addRenderable().
     // visibleByDefault=false: debug overlay (invisible until toggled)
@@ -80,7 +80,7 @@ class PhysicsBridge {
 
     struct InstancedGroup {
         std::vector<const Articulation*> artics;
-        std::vector<MeshHandle> handles;
+        std::vector<RenderableHandle> handles;
     };
 
     struct ColVisual {

@@ -24,11 +24,12 @@ ForceDragController::ForceDragController(ForceDragConfig config)
     : _config(config) {}
 
 void ForceDragController::registerArticulation(
-    Articulation& articulation, const std::vector<MeshHandle>& bodyHandles) {
+    Articulation& articulation,
+    const std::vector<RenderableHandle>& bodyHandles) {
     const int n =
         std::min(static_cast<int>(bodyHandles.size()), articulation.numLinks());
     for (int i = 0; i < n; ++i) {
-        const MeshHandle handle = bodyHandles[static_cast<size_t>(i)];
+        const RenderableHandle handle = bodyHandles[static_cast<size_t>(i)];
         if (handle == InvalidHandle)
             continue;
         _bindings[handle] = Binding{&articulation, nullptr, i};
@@ -36,7 +37,7 @@ void ForceDragController::registerArticulation(
 }
 
 void ForceDragController::registerRigid(physx::PxRigidDynamic& rigid,
-                                        MeshHandle handle) {
+                                        RenderableHandle handle) {
     _bindings[handle] = Binding{nullptr, &rigid, -1};
 }
 

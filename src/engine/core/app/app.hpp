@@ -199,17 +199,17 @@ class App {
     Scene::SceneBackend* getScene() { return _scene.get(); }
     Backend::Framebuffer* getShadowFbo() { return getRenderer().shadowFbo(); }
 
-    MeshHandle addRenderable(
+    RenderableHandle addRenderable(
         Backend::Shader* shader, Scene::Prim* prim,
         TransformSource transformSource = TransformSource::SceneGraph);
-    MeshHandle addSkinnedRenderable(
+    RenderableHandle addSkinnedRenderable(
         Backend::Shader* shader, Scene::Prim* prim,
         const Scene::SkinnedMeshData& skinnedMesh,
         TransformSource transformSource = TransformSource::SceneGraph);
-    MeshHandle addRenderable(
+    RenderableHandle addRenderable(
         PhongMaterial* material, Scene::Prim* prim,
         TransformSource transformSource = TransformSource::SceneGraph);
-    void removePrim(MeshHandle handle, Scene::Prim* prim);
+    void removePrim(RenderableHandle handle, Scene::Prim* prim);
 
     struct MeshPrimDesc {
         Backend::Shader* shader = nullptr;
@@ -225,7 +225,7 @@ class App {
 
     struct MeshPrimResult {
         Scene::Prim* prim = nullptr;
-        MeshHandle handle = InvalidHandle;
+        RenderableHandle handle = InvalidHandle;
     };
 
     MeshPrimResult addMeshPrim(MeshPrimDesc desc);
@@ -244,37 +244,42 @@ class App {
                                             float scale = 1.0f,
                                             const std::string& scenePath = "");
 
-    // Preferred renderable API. MeshHandle identifies a renderable
+    // Preferred renderable API. RenderableHandle identifies a renderable
     // batch/instancer; only instance transform APIs address one instance.
     void
-    updateRenderableTransforms(MeshHandle handle,
+    updateRenderableTransforms(RenderableHandle handle,
                                const std::vector<glm::mat4>& transforms,
                                const std::vector<glm::vec4>* colors = nullptr);
-    bool getRenderableInstanceTransform(MeshHandle handle, int instanceIndex,
+    bool getRenderableInstanceTransform(RenderableHandle handle,
+                                        int instanceIndex,
                                         glm::mat4& outTransform) const;
-    bool setRenderableInstanceTransform(MeshHandle handle, int instanceIndex,
+    bool setRenderableInstanceTransform(RenderableHandle handle,
+                                        int instanceIndex,
                                         const glm::mat4& transform);
     // std::vector -> * functions for pybind
-    void updateRenderableTransforms(MeshHandle handle, const float* transforms,
+    void updateRenderableTransforms(RenderableHandle handle,
+                                    const float* transforms,
                                     const float* colors, size_t count,
                                     size_t colorCount);
-    void setRenderableColors(MeshHandle handle,
+    void setRenderableColors(RenderableHandle handle,
                              const std::vector<glm::vec4>& colors);
-    void setRenderableColors(MeshHandle handle, const float* colors,
+    void setRenderableColors(RenderableHandle handle, const float* colors,
                              size_t colorCount);
-    void setRenderableDoubleSided(MeshHandle handle, bool doubleSided = true);
-    void setRenderableCastsShadow(MeshHandle handle, bool castsShadow = true);
-    void setRenderableTexture(MeshHandle handle, Backend::Texture* tex,
+    void setRenderableDoubleSided(RenderableHandle handle,
+                                  bool doubleSided = true);
+    void setRenderableCastsShadow(RenderableHandle handle,
+                                  bool castsShadow = true);
+    void setRenderableTexture(RenderableHandle handle, Backend::Texture* tex,
                               int slot = 0);
-    void updateRenderableGeometry(MeshHandle handle,
+    void updateRenderableGeometry(RenderableHandle handle,
                                   const std::vector<glm::vec3>& positions,
                                   const std::vector<glm::vec3>& normals);
-    void updateRenderableGeometry(MeshHandle handle, const float* positions,
-                                  const float* normals, size_t count,
-                                  size_t normalCount);
+    void updateRenderableGeometry(RenderableHandle handle,
+                                  const float* positions, const float* normals,
+                                  size_t count, size_t normalCount);
     void updateRenderableSkinningMatrices(
-        MeshHandle handle, const std::vector<glm::mat4>& boneMatrices);
-    void updateRenderableSkinningMatrices(MeshHandle handle,
+        RenderableHandle handle, const std::vector<glm::mat4>& boneMatrices);
+    void updateRenderableSkinningMatrices(RenderableHandle handle,
                                           const float* rowMajorMatrices,
                                           size_t count);
 
@@ -323,19 +328,19 @@ class App {
                        UpAxis to) const;
 
     // Primitive Creation Helpers
-    MeshHandle addCube(const std::string& path, float size = 1.0f,
-                       glm::vec3 pos = glm::vec3(0.0f),
-                       glm::quat ori = glm::quat(1, 0, 0, 0),
-                       glm::vec4 color = glm::vec4(1.0f),
-                       Backend::Shader* shader = nullptr);
-    MeshHandle addSphere(const std::string& path, float radius = 1.0f,
-                         glm::vec3 pos = glm::vec3(0.0f),
-                         glm::vec4 color = glm::vec4(1.0f),
-                         Backend::Shader* shader = nullptr);
-    MeshHandle addPlane(const std::string& path, float size = 10.0f,
-                        glm::vec3 pos = glm::vec3(0.0f),
-                        glm::vec4 color = glm::vec4(1.0f),
-                        Backend::Shader* shader = nullptr);
+    RenderableHandle addCube(const std::string& path, float size = 1.0f,
+                             glm::vec3 pos = glm::vec3(0.0f),
+                             glm::quat ori = glm::quat(1, 0, 0, 0),
+                             glm::vec4 color = glm::vec4(1.0f),
+                             Backend::Shader* shader = nullptr);
+    RenderableHandle addSphere(const std::string& path, float radius = 1.0f,
+                               glm::vec3 pos = glm::vec3(0.0f),
+                               glm::vec4 color = glm::vec4(1.0f),
+                               Backend::Shader* shader = nullptr);
+    RenderableHandle addPlane(const std::string& path, float size = 10.0f,
+                              glm::vec3 pos = glm::vec3(0.0f),
+                              glm::vec4 color = glm::vec4(1.0f),
+                              Backend::Shader* shader = nullptr);
 
     // Debug Drawing Helpers
     void drawLine(const std::string& path, glm::vec3 start, glm::vec3 end,

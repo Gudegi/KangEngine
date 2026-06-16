@@ -34,7 +34,7 @@ class BoxInstancingApp : public App {
     Eigen::MatrixXf _spawnPositions;
     // Bridge::PhysicsBridge physicsBridge;
 
-    MeshHandle _boxHandle = InvalidHandle;
+    RenderableHandle _boxHandle = InvalidHandle;
     std::vector<glm::mat4> _transforms; // 매 프레임 VBO 직접 업로드
     std::vector<glm::vec4> _colors;
 
@@ -49,10 +49,10 @@ class BoxInstancingApp : public App {
         auto commonFSPath = KE::getAssetPath("shaders/common.fs");
         auto groundFSPath = KE::getAssetPath("shaders/checkerboard.fs");
 
-        commonShader = getRenderer().device()->createShaderFromFile(commonVSPath,
-                                                                 commonFSPath);
-        groundShader = getRenderer().device()->createShaderFromFile(commonVSPath,
-                                                                 groundFSPath);
+        commonShader = getRenderer().device()->createShaderFromFile(
+            commonVSPath, commonFSPath);
+        groundShader = getRenderer().device()->createShaderFromFile(
+            commonVSPath, groundFSPath);
 
         commonShader->use();
         commonShader->setUniformBlockBinding("cameraUBO", 0);
@@ -127,9 +127,8 @@ class BoxInstancingApp : public App {
                                         1.0f - 0.6f * t, 1.0f);
             prim->setDisplayColorAlpha(color);
             _colors.push_back(color);
-            MeshHandle h =
-                addRenderable(commonShader.get(), prim,
-                         TransformSource::ExternalBuffer);
+            RenderableHandle h = addRenderable(commonShader.get(), prim,
+                                               TransformSource::ExternalBuffer);
             if (_boxHandle == InvalidHandle)
                 _boxHandle = h;
             _prims.push_back(prim);

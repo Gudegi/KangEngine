@@ -13,8 +13,9 @@ namespace Scene {
 class Prim;
 } // namespace Scene
 
-using MeshHandle = uint32_t;
-static constexpr MeshHandle InvalidHandle = ~0u;
+using RenderableHandle = uint32_t;
+using MeshHandle = RenderableHandle; // Deprecated: use RenderableHandle.
+static constexpr RenderableHandle InvalidHandle = ~0u;
 
 enum class TransformSource {
     SceneGraph,     // Prim/scene graph owns transforms.
@@ -23,7 +24,7 @@ enum class TransformSource {
 
 struct RayPickResult {
     bool hit = false;
-    MeshHandle handle = InvalidHandle;
+    RenderableHandle handle = InvalidHandle;
     int instanceIndex = -1;
     TransformSource transformSource = TransformSource::SceneGraph;
     Scene::Prim* prim = nullptr;

@@ -64,11 +64,11 @@ class FbxCharacterCppApp : public App {
     SkinnedCharacterBridge character;
     MotionSequencerPanel motionPanel;
 
-    MeshHandle skeletonHandle = InvalidHandle;
+    RenderableHandle skeletonHandle = InvalidHandle;
     std::vector<glm::vec3> lineStarts;
     std::vector<glm::vec3> lineEnds;
     std::vector<glm::vec4> lineColors;
-    std::unordered_map<MeshHandle, std::string> pickNames;
+    std::unordered_map<RenderableHandle, std::string> pickNames;
 
     bool animate = true;
     bool showMesh = true;

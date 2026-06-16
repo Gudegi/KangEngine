@@ -44,7 +44,7 @@ class H1InstancingApp : public App {
     std::vector<Articulation> _artics;
     Bridge::PhysicsBridge physicsBridge;
 
-    std::vector<MeshHandle> _bodyHandles;
+    std::vector<RenderableHandle> _bodyHandles;
     std::vector<std::vector<float>> _targets; // per-robot random targets
 
     float kp = 200.f;
@@ -60,10 +60,10 @@ class H1InstancingApp : public App {
         auto commonFSPath = KE::getAssetPath("shaders/common.fs");
         auto groundFSPath = KE::getAssetPath("shaders/checkerboard.fs");
 
-        commonShader = getRenderer().device()->createShaderFromFile(commonVSPath,
-                                                                 commonFSPath);
-        groundShader = getRenderer().device()->createShaderFromFile(commonVSPath,
-                                                                 groundFSPath);
+        commonShader = getRenderer().device()->createShaderFromFile(
+            commonVSPath, commonFSPath);
+        groundShader = getRenderer().device()->createShaderFromFile(
+            commonVSPath, groundFSPath);
 
         commonShader->use();
         commonShader->setUniformBlockBinding("cameraUBO", 0);
@@ -107,9 +107,8 @@ class H1InstancingApp : public App {
 
         // One handle per body type — each instancer will hold N transforms
         for (auto* prim : refRobot.bodyPrims())
-            _bodyHandles.push_back(
-                addRenderable(commonShader.get(), prim,
-                         TransformSource::ExternalBuffer));
+            _bodyHandles.push_back(addRenderable(
+                commonShader.get(), prim, TransformSource::ExternalBuffer));
 
         // Per-robot colors — same color for all bodies of one robot
         std::vector<glm::vec4> colors(N);

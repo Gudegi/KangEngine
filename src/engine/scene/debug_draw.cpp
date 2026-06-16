@@ -254,12 +254,12 @@ DebugDraw::logCoordinateAxes(SceneBackend* scene, const std::string& basePath,
     return logLines(scene, basePath, starts, ends, colors, radius, segments);
 }
 
-MeshHandle DebugDraw::logLines(App* app, Backend::Shader* shader,
-                               const std::string& path,
-                               const std::vector<glm::vec3>& starts,
-                               const std::vector<glm::vec3>& ends,
-                               const std::vector<glm::vec4>& colors,
-                               float radius, int segments) {
+RenderableHandle DebugDraw::logLines(App* app, Backend::Shader* shader,
+                                     const std::string& path,
+                                     const std::vector<glm::vec3>& starts,
+                                     const std::vector<glm::vec3>& ends,
+                                     const std::vector<glm::vec4>& colors,
+                                     float radius, int segments) {
     if (!app || !shader || !app->getScene())
         return InvalidHandle;
 
@@ -275,7 +275,7 @@ MeshHandle DebugDraw::logLines(App* app, Backend::Shader* shader,
     prim->setMeshData(std::make_shared<MeshData>(
         Prim::createCapsuleData(safeRadius, 1.0f, UpAxis::Y, segments)));
 
-    MeshHandle handle = app->addRenderable(shader, prim);
+    RenderableHandle handle = app->addRenderable(shader, prim);
     if (handle == InvalidHandle)
         return InvalidHandle;
 
@@ -284,11 +284,12 @@ MeshHandle DebugDraw::logLines(App* app, Backend::Shader* shader,
     return handle;
 }
 
-MeshHandle DebugDraw::logLines(App* app, Backend::Shader* shader,
-                               const std::string& path, const float* starts,
-                               const float* ends, const float* colors,
-                               size_t count, size_t colorCount, float radius,
-                               int segments) {
+RenderableHandle DebugDraw::logLines(App* app, Backend::Shader* shader,
+                                     const std::string& path,
+                                     const float* starts, const float* ends,
+                                     const float* colors, size_t count,
+                                     size_t colorCount, float radius,
+                                     int segments) {
     if (!app || !shader || !app->getScene())
         return InvalidHandle;
 
@@ -305,7 +306,7 @@ MeshHandle DebugDraw::logLines(App* app, Backend::Shader* shader,
     prim->setMeshData(std::make_shared<MeshData>(
         Prim::createCapsuleData(safeRadius, 1.0f, UpAxis::Y, segments)));
 
-    MeshHandle handle = app->addRenderable(shader, prim);
+    RenderableHandle handle = app->addRenderable(shader, prim);
     if (handle == InvalidHandle)
         return InvalidHandle;
 
@@ -314,7 +315,7 @@ MeshHandle DebugDraw::logLines(App* app, Backend::Shader* shader,
     return handle;
 }
 
-void DebugDraw::updateLines(App* app, MeshHandle handle,
+void DebugDraw::updateLines(App* app, RenderableHandle handle,
                             const std::vector<glm::vec3>& starts,
                             const std::vector<glm::vec3>& ends,
                             const std::vector<glm::vec4>& colors) {
@@ -326,9 +327,10 @@ void DebugDraw::updateLines(App* app, MeshHandle handle,
     app->updateRenderableTransforms(handle, transforms, &instanceColors);
 }
 
-void DebugDraw::updateLines(App* app, MeshHandle handle, const float* starts,
-                            const float* ends, const float* colors,
-                            size_t count, size_t colorCount) {
+void DebugDraw::updateLines(App* app, RenderableHandle handle,
+                            const float* starts, const float* ends,
+                            const float* colors, size_t count,
+                            size_t colorCount) {
     if (!app || handle == InvalidHandle)
         return;
     validateRawLineInputs("DebugDraw::updateLines", starts, ends, colors, count,
@@ -338,12 +340,12 @@ void DebugDraw::updateLines(App* app, MeshHandle handle, const float* starts,
     app->updateRenderableTransforms(handle, transforms, &instanceColors);
 }
 
-MeshHandle DebugDraw::logArrows(App* app, Backend::Shader* shader,
-                                const std::string& path,
-                                const std::vector<glm::vec3>& starts,
-                                const std::vector<glm::vec3>& ends,
-                                const std::vector<glm::vec4>& colors,
-                                float radius, int segments) {
+RenderableHandle DebugDraw::logArrows(App* app, Backend::Shader* shader,
+                                      const std::string& path,
+                                      const std::vector<glm::vec3>& starts,
+                                      const std::vector<glm::vec3>& ends,
+                                      const std::vector<glm::vec4>& colors,
+                                      float radius, int segments) {
     if (!app || !shader || !app->getScene())
         return InvalidHandle;
 
@@ -359,7 +361,7 @@ MeshHandle DebugDraw::logArrows(App* app, Backend::Shader* shader,
     prim->setMeshData(std::make_shared<MeshData>(Prim::createArrowData(
         safeRadius, 0.78f, UpAxis::Y, safeRadius * 2.4f, 0.22f, segments)));
 
-    MeshHandle handle = app->addRenderable(shader, prim);
+    RenderableHandle handle = app->addRenderable(shader, prim);
     if (handle == InvalidHandle)
         return InvalidHandle;
 
@@ -368,11 +370,12 @@ MeshHandle DebugDraw::logArrows(App* app, Backend::Shader* shader,
     return handle;
 }
 
-MeshHandle DebugDraw::logArrows(App* app, Backend::Shader* shader,
-                                const std::string& path, const float* starts,
-                                const float* ends, const float* colors,
-                                size_t count, size_t colorCount, float radius,
-                                int segments) {
+RenderableHandle DebugDraw::logArrows(App* app, Backend::Shader* shader,
+                                      const std::string& path,
+                                      const float* starts, const float* ends,
+                                      const float* colors, size_t count,
+                                      size_t colorCount, float radius,
+                                      int segments) {
     if (!app || !shader || !app->getScene())
         return InvalidHandle;
 
@@ -389,7 +392,7 @@ MeshHandle DebugDraw::logArrows(App* app, Backend::Shader* shader,
     prim->setMeshData(std::make_shared<MeshData>(Prim::createArrowData(
         safeRadius, 0.78f, UpAxis::Y, safeRadius * 2.4f, 0.22f, segments)));
 
-    MeshHandle handle = app->addRenderable(shader, prim);
+    RenderableHandle handle = app->addRenderable(shader, prim);
     if (handle == InvalidHandle)
         return InvalidHandle;
 
@@ -398,7 +401,7 @@ MeshHandle DebugDraw::logArrows(App* app, Backend::Shader* shader,
     return handle;
 }
 
-void DebugDraw::updateArrows(App* app, MeshHandle handle,
+void DebugDraw::updateArrows(App* app, RenderableHandle handle,
                              const std::vector<glm::vec3>& starts,
                              const std::vector<glm::vec3>& ends,
                              const std::vector<glm::vec4>& colors) {
@@ -410,9 +413,10 @@ void DebugDraw::updateArrows(App* app, MeshHandle handle,
     app->updateRenderableTransforms(handle, transforms, &instanceColors);
 }
 
-void DebugDraw::updateArrows(App* app, MeshHandle handle, const float* starts,
-                             const float* ends, const float* colors,
-                             size_t count, size_t colorCount) {
+void DebugDraw::updateArrows(App* app, RenderableHandle handle,
+                             const float* starts, const float* ends,
+                             const float* colors, size_t count,
+                             size_t colorCount) {
     if (!app || handle == InvalidHandle)
         return;
     validateRawLineInputs("DebugDraw::updateArrows", starts, ends, colors,
@@ -422,11 +426,12 @@ void DebugDraw::updateArrows(App* app, MeshHandle handle, const float* starts,
     app->updateRenderableTransforms(handle, transforms, &instanceColors);
 }
 
-MeshHandle DebugDraw::logCoordinateAxes(App* app, Backend::Shader* shader,
-                                        const std::string& path,
-                                        glm::vec3 origin, glm::quat orientation,
-                                        float length, float radius,
-                                        int segments) {
+RenderableHandle DebugDraw::logCoordinateAxes(App* app, Backend::Shader* shader,
+                                              const std::string& path,
+                                              glm::vec3 origin,
+                                              glm::quat orientation,
+                                              float length, float radius,
+                                              int segments) {
     const float safeLength = std::max(length, 1e-4f);
     const glm::mat3 basis = glm::mat3_cast(glm::normalize(orientation));
 

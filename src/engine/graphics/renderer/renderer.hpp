@@ -50,27 +50,32 @@ class Renderer {
     void renderSceneToFramebuffer(Camera& camera, Backend::Framebuffer* target,
                                   int width, int height, bool clear = true);
 
-    // MeshHandle identifies a renderable batch/instancer. Most controls apply
-    // to the whole batch; APIs with instanceIndex can target one instance.
+    // RenderableHandle identifies a renderable batch/instancer. Most controls
+    // apply to the whole batch; APIs with instanceIndex can target one
+    // instance.
     void
-    updateRenderableTransforms(MeshHandle handle,
+    updateRenderableTransforms(RenderableHandle handle,
                                const std::vector<glm::mat4>& transforms,
                                const std::vector<glm::vec4>* colors = nullptr);
-    bool getRenderableInstanceTransform(MeshHandle handle, int instanceIndex,
+    bool getRenderableInstanceTransform(RenderableHandle handle,
+                                        int instanceIndex,
                                         glm::mat4& outTransform) const;
-    bool setRenderableInstanceTransform(MeshHandle handle, int instanceIndex,
+    bool setRenderableInstanceTransform(RenderableHandle handle,
+                                        int instanceIndex,
                                         const glm::mat4& transform);
-    void setRenderableColors(MeshHandle handle,
+    void setRenderableColors(RenderableHandle handle,
                              const std::vector<glm::vec4>& colors);
-    void setRenderableDoubleSided(MeshHandle handle, bool doubleSided = true);
-    void setRenderableCastsShadow(MeshHandle handle, bool castsShadow = true);
-    void setRenderableTexture(MeshHandle handle, Backend::Texture* tex,
+    void setRenderableDoubleSided(RenderableHandle handle,
+                                  bool doubleSided = true);
+    void setRenderableCastsShadow(RenderableHandle handle,
+                                  bool castsShadow = true);
+    void setRenderableTexture(RenderableHandle handle, Backend::Texture* tex,
                               int slot = 0);
-    void updateRenderableGeometry(MeshHandle handle,
+    void updateRenderableGeometry(RenderableHandle handle,
                                   const std::vector<glm::vec3>& positions,
                                   const std::vector<glm::vec3>& normals);
     void updateRenderableSkinningMatrices(
-        MeshHandle handle, const std::vector<glm::mat4>& boneMatrices);
+        RenderableHandle handle, const std::vector<glm::mat4>& boneMatrices);
 
   private:
     Backend::GraphicsDevice* _device = nullptr;

@@ -553,7 +553,7 @@ void bind_physics(py::module& m) {
              py::arg("skel_bridge"))
         .def("add_instanced",
              static_cast<void (PhysicsBridge::*)(
-                 const Articulation&, const std::vector<MeshHandle>&)>(
+                 const Articulation&, const std::vector<RenderableHandle>&)>(
                  &PhysicsBridge::addInstanced),
              py::arg("artic"), py::arg("handles"))
         .def("sync", &PhysicsBridge::sync)

@@ -63,8 +63,8 @@ class SkeletonVisualBridge {
     void setShowJoints(bool showJoints);
     const SkeletonVisualConfig& config() const { return _config; }
 
-    MeshHandle boneHandle() const { return _boneHandle; }
-    MeshHandle jointHandle() const { return _jointHandle; }
+    RenderableHandle boneHandle() const { return _boneHandle; }
+    RenderableHandle jointHandle() const { return _jointHandle; }
 
   private:
     App* _app = nullptr;                // non-owning
@@ -72,8 +72,8 @@ class SkeletonVisualBridge {
     std::string _basePath;
     SkeletonVisualConfig _config;
     std::optional<Animation::SkeletonState> _lastState;
-    MeshHandle _boneHandle = InvalidHandle;
-    MeshHandle _jointHandle = InvalidHandle;
+    RenderableHandle _boneHandle = InvalidHandle;
+    RenderableHandle _jointHandle = InvalidHandle;
 };
 
 } // namespace Bridge

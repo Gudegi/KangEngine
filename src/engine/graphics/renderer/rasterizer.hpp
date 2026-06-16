@@ -68,7 +68,7 @@ class Rasterizer : public RenderPipeline {
     };
     std::map<InstancerKey, MeshInstancer> _instancers;
 
-    std::map<InstancerKey, MeshHandle> _handleMap;
+    std::map<InstancerKey, RenderableHandle> _handleMap;
     std::vector<MeshInstancer*> _handleTable;
     DebugRenderer _debugRenderer;
 
@@ -183,43 +183,47 @@ class Rasterizer : public RenderPipeline {
     int getCullingTotalInstances() const { return _cullingTotalInstances; }
     int getCullingCulledInstances() const { return _cullingCulledInstances; }
 
-    MeshHandle addRenderable(
+    RenderableHandle addRenderable(
         Backend::Shader* shader, Scene::Prim* prim,
         TransformSource transformSource = TransformSource::SceneGraph);
-    MeshHandle addSkinnedRenderable(
+    RenderableHandle addSkinnedRenderable(
         Backend::Shader* shader, Scene::Prim* prim,
         const Scene::SkinnedMeshData& skinnedMesh,
         TransformSource transformSource = TransformSource::SceneGraph);
-    MeshHandle addRenderable(
+    RenderableHandle addRenderable(
         PhongMaterial* material, Scene::Prim* prim,
         TransformSource transformSource = TransformSource::SceneGraph);
-    void removePrim(MeshHandle handle, Scene::Prim* prim);
+    void removePrim(RenderableHandle handle, Scene::Prim* prim);
 
     void
-    updateRenderableTransforms(MeshHandle handle,
+    updateRenderableTransforms(RenderableHandle handle,
                                const std::vector<glm::mat4>& transforms,
                                const std::vector<glm::vec4>* colors = nullptr);
 
-    void setRenderableColors(MeshHandle handle,
+    void setRenderableColors(RenderableHandle handle,
                              const std::vector<glm::vec4>& colors);
 
     // Disable back-face culling for this instancer (e.g. cloth, thin surfaces).
-    void setRenderableDoubleSided(MeshHandle handle, bool doubleSided = true);
-    void setRenderableCastsShadow(MeshHandle handle, bool castsShadow = true);
-    void setRenderableTexture(MeshHandle handle, Backend::Texture* tex,
+    void setRenderableDoubleSided(RenderableHandle handle,
+                                  bool doubleSided = true);
+    void setRenderableCastsShadow(RenderableHandle handle,
+                                  bool castsShadow = true);
+    void setRenderableTexture(RenderableHandle handle, Backend::Texture* tex,
                               int slot = 0);
     RayPickResult rayPick(const Geometry::Ray& ray) const;
-    bool getRenderableInstanceTransform(MeshHandle handle, int instanceIndex,
+    bool getRenderableInstanceTransform(RenderableHandle handle,
+                                        int instanceIndex,
                                         glm::mat4& outTransform) const;
-    bool setRenderableInstanceTransform(MeshHandle handle, int instanceIndex,
+    bool setRenderableInstanceTransform(RenderableHandle handle,
+                                        int instanceIndex,
                                         const glm::mat4& transform);
 
     // Deformable mesh: update vertex positions + normals each frame.
-    void updateRenderableGeometry(MeshHandle handle,
+    void updateRenderableGeometry(RenderableHandle handle,
                                   const std::vector<glm::vec3>& positions,
                                   const std::vector<glm::vec3>& normals);
     void updateRenderableSkinningMatrices(
-        MeshHandle handle, const std::vector<glm::mat4>& boneMatrices);
+        RenderableHandle handle, const std::vector<glm::mat4>& boneMatrices);
 
     void logDebugLines(const std::string& path,
                        const std::vector<glm::vec3>& starts,
