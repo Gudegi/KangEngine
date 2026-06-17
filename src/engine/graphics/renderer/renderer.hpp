@@ -2,6 +2,7 @@
 #define _RENDERER_HPP_
 
 #include "engine/graphics/renderer/light.hpp"
+#include "engine/graphics/renderer/post_processor.hpp"
 #include "engine/graphics/renderer/renderer_types.hpp"
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
@@ -12,7 +13,6 @@ namespace KE {
 
 class Camera;
 class Rasterizer;
-class PostProcessor;
 class SelectionOutlineProcessor;
 
 namespace Backend {
@@ -20,6 +20,13 @@ class Framebuffer;
 class GraphicsDevice;
 class Texture;
 } // namespace Backend
+
+struct RendererSettings {
+    float gamma = 2.2f;
+    ToneMapMode toneMapMode = ToneMapMode::None;
+    float toneMapExposure = 1.0f;
+    BloomConfig bloom;
+};
 
 // Facade for render-system access. App owns the concrete resources; Renderer
 // only groups the public rendering surface so App does not expose every member
@@ -43,6 +50,8 @@ class Renderer {
     const SelectionOutlineProcessor* selectionOutline() const {
         return _selectionOutlineProcessor;
     }
+    RendererSettings& settings() { return _settings; }
+    const RendererSettings& settings() const { return _settings; }
 
     void setLight(const DirectionalLight& light);
     const DirectionalLight& light() const;
@@ -82,6 +91,7 @@ class Renderer {
     Rasterizer* _rasterizer = nullptr;
     PostProcessor* _postProcessor = nullptr;
     SelectionOutlineProcessor* _selectionOutlineProcessor = nullptr;
+    RendererSettings _settings;
     int _viewportWidth = 0;
     int _viewportHeight = 0;
 };

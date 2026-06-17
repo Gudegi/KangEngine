@@ -1245,25 +1245,27 @@ py::class_<glm::vec3>(m, "vec3")
         .def(
             "set_gamma",
             [](App& self, float gamma) {
-                self._gamma = std::max(0.001f, gamma);
+                self.getRenderer().settings().gamma = std::max(0.001f, gamma);
             },
             py::arg("gamma"))
         .def(
             "set_tone_map",
             [](App& self, ToneMapMode mode, float exposure) {
-                self._toneMapMode = mode;
-                self._tonemapExposure = std::max(0.0f, exposure);
+                RendererSettings& settings = self.getRenderer().settings();
+                settings.toneMapMode = mode;
+                settings.toneMapExposure = std::max(0.0f, exposure);
             },
             py::arg("mode"), py::arg("exposure") = 1.0f)
         .def(
             "set_bloom",
             [](App& self, bool enabled, float threshold, float intensity,
                int iterations, int downsample) {
-                self._bloomConfig.enabled = enabled;
-                self._bloomConfig.threshold = std::max(0.0f, threshold);
-                self._bloomConfig.intensity = std::max(0.0f, intensity);
-                self._bloomConfig.iterations = std::clamp(iterations, 0, 32);
-                self._bloomConfig.downsample = std::clamp(downsample, 1, 16);
+                BloomConfig& bloom = self.getRenderer().settings().bloom;
+                bloom.enabled = enabled;
+                bloom.threshold = std::max(0.0f, threshold);
+                bloom.intensity = std::max(0.0f, intensity);
+                bloom.iterations = std::clamp(iterations, 0, 32);
+                bloom.downsample = std::clamp(downsample, 1, 16);
             },
             py::arg("enabled"), py::arg("threshold") = 1.0f,
             py::arg("intensity") = 0.08f, py::arg("iterations") = 6,

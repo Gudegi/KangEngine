@@ -310,8 +310,10 @@ void App::renderFrameOnce() {
     }
 
     if (_postProcessor) {
-        _postProcessor->process(finalSource, _gamma, _toneMapMode,
-                                _tonemapExposure, _bloomConfig);
+        const RendererSettings& settings = getRenderer().settings();
+        _postProcessor->process(finalSource, settings.gamma,
+                                settings.toneMapMode, settings.toneMapExposure,
+                                settings.bloom);
         _postProcessor->blitToScreen(_width, _height);
         _lastPresentedFramebuffer = _postProcessor->getOutputFramebuffer();
     } else {

@@ -64,27 +64,28 @@ void RendererDebugPanel::buildPanel() {
                      500.0f, "%.2f");
 
     ImGui::SeparatorText("Post Processing");
-    ImGui::SliderFloat("GammaCorrection", &_app->_gamma, 0.f, 5.f);
+    RendererSettings& rendererSettings = _app->getRenderer().settings();
+    ImGui::SliderFloat("GammaCorrection", &rendererSettings.gamma, 0.f, 5.f);
     const char* toneMapLabels[] = {"None", "Reinhard Simple", "Exponential",
                                    "ACES Narkowicz", "ACES Hill"};
-    int toneMapMode = static_cast<int>(_app->_toneMapMode);
+    int toneMapMode = static_cast<int>(rendererSettings.toneMapMode);
     if (ImGui::Combo("Tone Mapping", &toneMapMode, toneMapLabels, 5)) {
-        _app->_toneMapMode = static_cast<ToneMapMode>(toneMapMode);
+        rendererSettings.toneMapMode = static_cast<ToneMapMode>(toneMapMode);
     }
-    if (_app->_toneMapMode != ToneMapMode::None) {
-        ImGui::SliderFloat("Exposure(Tone mapping)", &_app->_tonemapExposure,
-                           0.f, 5.f);
+    if (rendererSettings.toneMapMode != ToneMapMode::None) {
+        ImGui::SliderFloat("Exposure(Tone mapping)",
+                           &rendererSettings.toneMapExposure, 0.f, 5.f);
     }
-    ImGui::Checkbox("Bloom", &_app->_bloomConfig.enabled);
-    if (_app->_bloomConfig.enabled) {
-        ImGui::SliderFloat("Bloom Threshold", &_app->_bloomConfig.threshold,
+    ImGui::Checkbox("Bloom", &rendererSettings.bloom.enabled);
+    if (rendererSettings.bloom.enabled) {
+        ImGui::SliderFloat("Bloom Threshold", &rendererSettings.bloom.threshold,
                            0.0f, 10.0f);
-        ImGui::SliderFloat("Bloom Intensity", &_app->_bloomConfig.intensity,
+        ImGui::SliderFloat("Bloom Intensity", &rendererSettings.bloom.intensity,
                            0.0f, 2.0f);
-        ImGui::SliderInt("Bloom Iterations", &_app->_bloomConfig.iterations, 0,
-                         16);
-        ImGui::SliderInt("Bloom Downsample", &_app->_bloomConfig.downsample, 1,
-                         8);
+        ImGui::SliderInt("Bloom Iterations", &rendererSettings.bloom.iterations,
+                         0, 16);
+        ImGui::SliderInt("Bloom Downsample", &rendererSettings.bloom.downsample,
+                         1, 8);
     }
 
     ImGui::SeparatorText("Selection");
