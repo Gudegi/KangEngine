@@ -75,6 +75,7 @@ Camera = _ke.Camera
 UpAxis = _ke.UpAxis
 TransformSource = _ke.TransformSource
 InteractionMode = _ke.InteractionMode
+ToneMapMode = _ke.ToneMapMode
 RayPickResult = _ke.RayPickResult
 ColorLibrary = _ke.ColorLibrary
 ColorType = _ke.ColorType
@@ -149,6 +150,7 @@ __all__ = [
     "UpAxis",
     "TransformSource",
     "InteractionMode",
+    "ToneMapMode",
     "RayPickResult",
     "vec3",
     "vec2",

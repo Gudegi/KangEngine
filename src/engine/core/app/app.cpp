@@ -311,7 +311,7 @@ void App::renderFrameOnce() {
 
     if (_postProcessor) {
         _postProcessor->process(finalSource, _gamma, _toneMapMode,
-                                _tonemapExposure);
+                                _tonemapExposure, _bloomConfig);
         _postProcessor->blitToScreen(_width, _height);
         _lastPresentedFramebuffer = _postProcessor->getOutputFramebuffer();
     } else {

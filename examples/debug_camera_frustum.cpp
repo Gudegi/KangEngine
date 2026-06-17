@@ -565,7 +565,8 @@ class CameraFrustumDebugApp : public App {
                                                subjectPreviewFbo.get(),
                                                previewWidth, previewHeight);
         subjectPreviewPost.process(subjectPreviewFbo->getColorTexture(), _gamma,
-                                   _toneMapMode, _tonemapExposure);
+                                   _toneMapMode, _tonemapExposure,
+                                   _bloomConfig);
     }
 };
 

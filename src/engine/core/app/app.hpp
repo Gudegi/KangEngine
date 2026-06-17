@@ -76,6 +76,7 @@ class App {
     ToneMapMode _toneMapMode =
         ToneMapMode::None;         // keep legacy LDR look by default
     float _tonemapExposure = 1.0f; // for Exposure Tone Mapping
+    BloomConfig _bloomConfig;
     float _cameraMoveSpeed = 15.0f;
     glm::mat4 _viewMatrix,
         _projectionMatrix; // variable to containing main camera's view and

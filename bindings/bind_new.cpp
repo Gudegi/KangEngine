@@ -363,6 +363,14 @@ PYBIND11_MODULE(_kangengine, m) {
         .value("Force", InteractionMode::Force)
         .export_values();
 
+    py::enum_<ToneMapMode>(m, "ToneMapMode")
+        .value("Off", ToneMapMode::None)
+        .value("Reinhard", ToneMapMode::Reinhard)
+        .value("Exponential", ToneMapMode::Exponential)
+        .value("AcesNarkowicz", ToneMapMode::AcesNarkowicz)
+        .value("AcesFitted", ToneMapMode::AcesFitted)
+        .export_values();
+
     py::class_<RayPickResult>(m, "RayPickResult")
         .def_readonly("hit", &RayPickResult::hit)
         .def_readonly("handle", &RayPickResult::handle)
@@ -1234,6 +1242,32 @@ py::class_<glm::vec3>(m, "vec3")
         .def("set_light_intensity", &App::setLightIntensity,
              py::arg("intensity"))
         .def("set_light_ambient", &App::setLightAmbient, py::arg("ambient"))
+        .def(
+            "set_gamma",
+            [](App& self, float gamma) {
+                self._gamma = std::max(0.001f, gamma);
+            },
+            py::arg("gamma"))
+        .def(
+            "set_tone_map",
+            [](App& self, ToneMapMode mode, float exposure) {
+                self._toneMapMode = mode;
+                self._tonemapExposure = std::max(0.0f, exposure);
+            },
+            py::arg("mode"), py::arg("exposure") = 1.0f)
+        .def(
+            "set_bloom",
+            [](App& self, bool enabled, float threshold, float intensity,
+               int iterations, int downsample) {
+                self._bloomConfig.enabled = enabled;
+                self._bloomConfig.threshold = std::max(0.0f, threshold);
+                self._bloomConfig.intensity = std::max(0.0f, intensity);
+                self._bloomConfig.iterations = std::clamp(iterations, 0, 32);
+                self._bloomConfig.downsample = std::clamp(downsample, 1, 16);
+            },
+            py::arg("enabled"), py::arg("threshold") = 1.0f,
+            py::arg("intensity") = 0.08f, py::arg("iterations") = 6,
+            py::arg("downsample") = 2)
         .def("check_error", &App::checkError)
         .def(
             "is_key_pressed",

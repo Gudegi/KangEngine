@@ -1,4 +1,5 @@
 #include "post_processor.hpp"
+#include <algorithm>
 
 namespace KE {
 
@@ -17,6 +18,7 @@ static const char* GLpostFs = R"(
 #version 410 core
 in vec2 TexCoord;
 out vec4 FragColor;
+
 uniform sampler2D uScreen;
 uniform float uGamma;
 uniform int uToneMapMode;
@@ -78,6 +80,64 @@ void main() {
 }
 )";
 
+static const char* GLbrightExtractFs = R"(
+#version 410 core
+in vec2 TexCoord;
+out vec4 FragColor;
+
+uniform sampler2D uScene;
+uniform float uThreshold;
+
+void main() {
+    vec4 color = texture(uScene, TexCoord);
+    float brightness = max(max(color.r, color.g), color.b);
+    vec3 bright = brightness > uThreshold ? color.rgb : vec3(0.0);
+    FragColor = vec4(bright, color.a);
+}
+)";
+
+static const char* GLblurFs = R"(
+#version 410 core
+in vec2 TexCoord;
+out vec4 FragColor;
+
+uniform sampler2D uImage;
+uniform bool uHorizontal;
+
+void main() {
+    vec2 texelSize = 1.0 / vec2(textureSize(uImage, 0));
+    vec3 result = texture(uImage, TexCoord).rgb * 0.227027;
+
+    float weights[4] = float[4](0.1945946, 0.1216216, 0.054054, 0.016216);
+    for (int i = 0; i < 4; ++i) {
+        float offset = float(i + 1);
+        vec2 delta = uHorizontal
+            ? vec2(texelSize.x * offset, 0.0)
+            : vec2(0.0, texelSize.y * offset);
+        result += texture(uImage, TexCoord + delta).rgb * weights[i];
+        result += texture(uImage, TexCoord - delta).rgb * weights[i];
+    }
+
+    FragColor = vec4(result, 1.0);
+}
+)";
+
+static const char* GLbloomCompositeFs = R"(
+#version 410 core
+in vec2 TexCoord;
+out vec4 FragColor;
+
+uniform sampler2D uScene;
+uniform sampler2D uBloom;
+uniform float uBloomIntensity;
+
+void main() {
+    vec4 scene = texture(uScene, TexCoord);
+    vec3 bloom = texture(uBloom, TexCoord).rgb * uBloomIntensity;
+    FragColor = vec4(scene.rgb + bloom, scene.a);
+}
+)";
+
 static const float quadPos[] = {
     -1.f, 1.f, -1.f, -1.f, 1.f, -1.f, 1.f, 1.f,
 };
@@ -92,7 +152,10 @@ void PostProcessor::init(Backend::GraphicsDevice* device, int width,
     _width = width;
     _height = height;
 
-    _shader = device->createShader(GLpostVs, GLpostFs);
+    _toneMapShader = device->createShader(GLpostVs, GLpostFs);
+    _brightExtractShader = device->createShader(GLpostVs, GLbrightExtractFs);
+    _blurShader = device->createShader(GLpostVs, GLblurFs);
+    _bloomCompositeShader = device->createShader(GLpostVs, GLbloomCompositeFs);
 
     _posVBO = device->createBuffer(Backend::BufferType::Vertex, sizeof(quadPos),
                                    quadPos);
@@ -116,22 +179,146 @@ void PostProcessor::init(Backend::GraphicsDevice* device, int width,
 }
 
 void PostProcessor::process(Backend::Texture* src, float gamma,
-                            ToneMapMode toneMapMode, float tonemapExposure) {
+                            ToneMapMode toneMapMode, float tonemapExposure,
+                            const BloomConfig& bloom) {
+    if (!src)
+        return;
+
+    Backend::Texture* HDRSource = src;
+    if (bloom.enabled) {
+        ensureBloomBuffers(bloom);
+        renderBrightExtractPass(src, _bloomPingPongFBO[0].get(),
+                                bloom.threshold);
+        Backend::Texture* blurredBloom =
+            renderBloomBlurPass(_bloomPingPongFBO[0]->getColorTexture(), bloom);
+        renderBloomCompositePass(src, blurredBloom, _bloomCompositeFBO.get(),
+                                 bloom.intensity);
+        HDRSource = _bloomCompositeFBO->getColorTexture();
+    }
+
+    renderToneMapPass(HDRSource, gamma, toneMapMode, tonemapExposure);
+}
+
+void PostProcessor::ensureBloomBuffers(const BloomConfig& bloom) {
+    const int downsample = std::max(1, bloom.downsample);
+    const int width = std::max(1, _width / downsample);
+    const int height = std::max(1, _height / downsample);
+
+    if (!_bloomPingPongFBO[0] || !_bloomPingPongFBO[1] || !_bloomCompositeFBO) {
+        Backend::FramebufferDesc bloomDesc;
+        bloomDesc.width = width;
+        bloomDesc.height = height;
+        bloomDesc.colorFormat = Backend::FramebufferColorFormat::RGBA16F;
+        _bloomPingPongFBO[0] = _device->createFramebuffer(bloomDesc);
+        _bloomPingPongFBO[1] = _device->createFramebuffer(bloomDesc);
+
+        Backend::FramebufferDesc compositeDesc;
+        compositeDesc.width = _width;
+        compositeDesc.height = _height;
+        compositeDesc.colorFormat = Backend::FramebufferColorFormat::RGBA16F;
+        _bloomCompositeFBO = _device->createFramebuffer(compositeDesc);
+        _bloomWidth = width;
+        _bloomHeight = height;
+        _bloomDownsample = downsample;
+        return;
+    }
+
+    if (_bloomWidth != width || _bloomHeight != height ||
+        _bloomDownsample != downsample) {
+        _bloomPingPongFBO[0]->resize(width, height);
+        _bloomPingPongFBO[1]->resize(width, height);
+        _bloomWidth = width;
+        _bloomHeight = height;
+        _bloomDownsample = downsample;
+    }
+
+    _bloomCompositeFBO->resize(_width, _height);
+}
+
+void PostProcessor::drawFullscreen() {
+    _quadVAO->bind();
+    _device->drawIndexed(6);
+    _quadVAO->unbind();
+}
+
+void PostProcessor::renderBrightExtractPass(Backend::Texture* src,
+                                            Backend::Framebuffer* target,
+                                            float threshold) {
+    target->bind();
+    _device->setViewport(0, 0, _bloomWidth, _bloomHeight);
+    _device->clear(0.f, 0.f, 0.f, 1.f);
+    _device->setDepthTest(false);
+
+    _brightExtractShader->use();
+    _brightExtractShader->setInt("uScene", 0);
+    _brightExtractShader->setFloat("uThreshold", threshold);
+    src->bind(0);
+    drawFullscreen();
+
+    target->unbind();
+}
+
+Backend::Texture* PostProcessor::renderBloomBlurPass(Backend::Texture* src,
+                                                     const BloomConfig& bloom) {
+    Backend::Texture* source = src;
+    const int iterations = std::max(0, bloom.iterations);
+    bool horizontal = true;
+
+    _blurShader->use();
+    _blurShader->setInt("uImage", 0);
+    for (int i = 0; i < iterations; ++i) {
+        Backend::Framebuffer* target =
+            _bloomPingPongFBO[horizontal ? 1 : 0].get();
+        target->bind();
+        _device->setViewport(0, 0, _bloomWidth, _bloomHeight);
+        _device->clear(0.f, 0.f, 0.f, 1.f);
+        _blurShader->setBool("uHorizontal", horizontal);
+        source->bind(0);
+        drawFullscreen();
+        target->unbind();
+
+        source = target->getColorTexture();
+        horizontal = !horizontal;
+    }
+
+    return source;
+}
+
+void PostProcessor::renderBloomCompositePass(Backend::Texture* scene,
+                                             Backend::Texture* bloom,
+                                             Backend::Framebuffer* target,
+                                             float intensity) {
+    target->bind();
+    _device->setViewport(0, 0, _width, _height);
+    _device->clear(0.f, 0.f, 0.f, 1.f);
+    _device->setDepthTest(false);
+
+    _bloomCompositeShader->use();
+    _bloomCompositeShader->setInt("uScene", 0);
+    _bloomCompositeShader->setInt("uBloom", 1);
+    _bloomCompositeShader->setFloat("uBloomIntensity", intensity);
+    scene->bind(0);
+    bloom->bind(1);
+    drawFullscreen();
+
+    target->unbind();
+}
+
+void PostProcessor::renderToneMapPass(Backend::Texture* src, float gamma,
+                                      ToneMapMode toneMapMode,
+                                      float tonemapExposure) {
     _outputFBO->bind();
     _device->setViewport(0, 0, _width, _height);
     _device->clear(0.f, 0.f, 0.f, 1.f);
     _device->setDepthTest(false);
 
-    _shader->use();
-    _shader->setInt("uScreen", 0);
-    _shader->setFloat("uGamma", gamma < 0.01f ? 1.f : gamma);
-    _shader->setInt("uToneMapMode", static_cast<int>(toneMapMode));
-    _shader->setFloat("uToneMapExposure", tonemapExposure);
+    _toneMapShader->use();
+    _toneMapShader->setInt("uScreen", 0);
+    _toneMapShader->setFloat("uGamma", gamma < 0.01f ? 1.f : gamma);
+    _toneMapShader->setInt("uToneMapMode", static_cast<int>(toneMapMode));
+    _toneMapShader->setFloat("uToneMapExposure", tonemapExposure);
     src->bind(0);
-
-    _quadVAO->bind();
-    _device->drawIndexed(6);
-    _quadVAO->unbind();
+    drawFullscreen();
 
     _device->setDepthTest(true);
     _outputFBO->unbind();
@@ -153,6 +340,16 @@ void PostProcessor::resize(int width, int height) {
     _width = width;
     _height = height;
     _outputFBO->resize(width, height);
+    if (_bloomCompositeFBO)
+        _bloomCompositeFBO->resize(width, height);
+    if (_bloomPingPongFBO[0] && _bloomPingPongFBO[1]) {
+        const int width = std::max(1, _width / std::max(1, _bloomDownsample));
+        const int height = std::max(1, _height / std::max(1, _bloomDownsample));
+        _bloomPingPongFBO[0]->resize(width, height);
+        _bloomPingPongFBO[1]->resize(width, height);
+        _bloomWidth = width;
+        _bloomHeight = height;
+    }
 }
 
 } // namespace KE

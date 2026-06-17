@@ -75,6 +75,17 @@ void RendererDebugPanel::buildPanel() {
         ImGui::SliderFloat("Exposure(Tone mapping)", &_app->_tonemapExposure,
                            0.f, 5.f);
     }
+    ImGui::Checkbox("Bloom", &_app->_bloomConfig.enabled);
+    if (_app->_bloomConfig.enabled) {
+        ImGui::SliderFloat("Bloom Threshold", &_app->_bloomConfig.threshold,
+                           0.0f, 10.0f);
+        ImGui::SliderFloat("Bloom Intensity", &_app->_bloomConfig.intensity,
+                           0.0f, 2.0f);
+        ImGui::SliderInt("Bloom Iterations", &_app->_bloomConfig.iterations, 0,
+                         16);
+        ImGui::SliderInt("Bloom Downsample", &_app->_bloomConfig.downsample, 1,
+                         8);
+    }
 
     ImGui::SeparatorText("Selection");
     if (SelectionOutlineProcessor* outline =
