@@ -35,15 +35,6 @@ constexpr int Tangent = 10;
 
 } // namespace RendererAttribute
 
-namespace RendererTextureSlot {
-
-constexpr int Diffuse = 0;
-// 1 ~ 4 slots are used as shadowMap(CSM)
-constexpr int Normal = 5;
-constexpr int Specular = 6;
-
-} // namespace RendererTextureSlot
-
 // Instanced renderer for a single (shader, mesh) combination.
 // All Prims sharing the same MeshData pointer + Shader are batched
 // into one glDrawElementsInstanced call.
@@ -57,7 +48,7 @@ class MeshInstancer {
 
     Backend::GraphicsDevice* _device = nullptr;
     Backend::Shader* _shader = nullptr;
-    PhongMaterial* _material = nullptr;
+    Material* _material = nullptr;
 
     // Geometry (static) — shared by all instances
     std::unique_ptr<Backend::VertexArray> _vao;
@@ -124,11 +115,10 @@ class MeshInstancer {
     // Upload static geometry. Must be called before addPrim/update/render.
     void init(Backend::GraphicsDevice* device, Backend::Shader* shader,
               const Scene::MeshData& mesh, TransformSource transformSource,
-              PhongMaterial* material = nullptr);
+              Material* material = nullptr);
     void init(Backend::GraphicsDevice* device, Backend::Shader* shader,
               const Scene::SkinnedMeshData& skinnedMesh,
-              TransformSource transformSource,
-              PhongMaterial* material = nullptr);
+              TransformSource transformSource, Material* material = nullptr);
 
     void addPrim(Scene::Prim* prim);
     void removePrim(Scene::Prim* prim);
@@ -154,7 +144,8 @@ class MeshInstancer {
     void updateGeometry(const std::vector<glm::vec3>& positions,
                         const std::vector<glm::vec3>& normals);
     // Store bone matrices; render passes upload them to their active shader.
-    void updateRenderableSkinningMatrices(const std::vector<glm::mat4>& boneMatrices);
+    void updateRenderableSkinningMatrices(
+        const std::vector<glm::mat4>& boneMatrices);
     void uploadSkinningMatrices(Backend::Shader* shader = nullptr);
     // Compact instance buffers to objects intersecting the current frustum.
     void applyFrustumCulling(const Geometry::Frustum* frustum);
@@ -195,7 +186,8 @@ class MeshInstancer {
         _textures.emplace_back(tex, slot);
     }
     void bindTextures() const {
-        bool hasNormalMap = _hasTangents && _material && _material->normalMap;
+        bool hasNormalMap =
+            _hasTangents && _material && _material->hasNormalMap();
         for (auto& [tex, slot] : _textures)
             if (tex) {
                 tex->bind(slot);
@@ -211,7 +203,7 @@ class MeshInstancer {
     }
 
     Backend::Shader* shader() const { return _shader; }
-    PhongMaterial* material() const { return _material; }
+    Material* material() const { return _material; }
     bool hasTransparent() const { return _hasTransparent; }
     int instanceCount() const { return static_cast<int>(_transforms.size()); }
     int visibleCount() const { return _visibleCount; }

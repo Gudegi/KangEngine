@@ -1,6 +1,7 @@
 .PHONY: build build_debug build_release build_relWithDebInfo \
         build_usd build_usd_debug build_python build_python_debug \
         build_usd_python build_usd_python_debug \
+        docs docs_clean \
         run run2 run_debug run_release run_relWithDebInfo \
         clean_all clean_debug clean_release clean_relWithDebInfo
 
@@ -53,6 +54,13 @@ build_usd_python:
 
 build_usd_python_debug:
 	$(call do_build,vcpkg-debug,$(DEBUG_DIR),-DUSE_USD=ON -DIS_PYTHON_LIB=ON)
+
+# Documentation
+docs:
+	uv run --project python --extra docs sphinx-build -b html _private/sphinx_docs _private/sphinx_docs/_build/html
+
+docs_clean:
+	rm -rf _private/sphinx_docs/_build
 
 # Run commands
 run: run_release

@@ -8,6 +8,8 @@ if _assets_dir.exists():
     _os.environ.setdefault("KANGENGINE_ASSETS_ROOT", str(_assets_dir))
 
 from ._core import _ke
+from ._public import set_public_module as _set_public_module
+from . import animation, asset, physics, scene
 from .app import App, NativeApp
 from .motion_editor import (
     MotionEditor,
@@ -67,39 +69,41 @@ def __getattr__(name):
 
 # Core engine API. Keep top-level exports focused on common viewer/app usage;
 # heavier simulation and MimicKit APIs stay lazy via _LAZY_IMPORTS.
-BackendType = _ke.BackendType
-GraphicsDevice = _ke.GraphicsDevice
-Shader = _ke.Shader
-Texture = _ke.Texture
-Camera = _ke.Camera
-UpAxis = _ke.UpAxis
-TransformSource = _ke.TransformSource
-InteractionMode = _ke.InteractionMode
-ToneMapMode = _ke.ToneMapMode
-RayPickResult = _ke.RayPickResult
-ColorLibrary = _ke.ColorLibrary
-ColorType = _ke.ColorType
-Color = _ke.Color
-PhongMaterial = _ke.PhongMaterial
-SkinnedCharacterBridge = _ke.SkinnedCharacterBridge
-SkeletonVisualBridge = _ke.animation.SkeletonVisualBridge
-SkeletonVisualConfig = _ke.animation.SkeletonVisualConfig
-MotionSequencerPanel = _ke.MotionSequencerPanel
+BackendType = _set_public_module(_ke.BackendType, __name__)
+GraphicsDevice = _set_public_module(_ke.GraphicsDevice, __name__)
+Shader = _set_public_module(_ke.Shader, __name__)
+Texture = _set_public_module(_ke.Texture, __name__)
+Camera = _set_public_module(_ke.Camera, __name__)
+UpAxis = _set_public_module(_ke.UpAxis, __name__)
+TransformSource = _set_public_module(_ke.TransformSource, __name__)
+InteractionMode = _set_public_module(_ke.InteractionMode, __name__)
+ToneMapMode = _set_public_module(_ke.ToneMapMode, __name__)
+TextureRole = _set_public_module(_ke.TextureRole, __name__)
+RayPickResult = _set_public_module(_ke.RayPickResult, __name__)
+ColorLibrary = _set_public_module(_ke.ColorLibrary, __name__)
+ColorType = _set_public_module(_ke.ColorType, __name__)
+Color = _set_public_module(_ke.Color, __name__)
+Material = _set_public_module(_ke.Material, __name__)
+PhongMaterial = _set_public_module(_ke.PhongMaterial, __name__)
+PBRMaterial = _set_public_module(_ke.PBRMaterial, __name__)
+PBRMaterialType = _set_public_module(_ke.PBRMaterialType, __name__)
+Renderer = _set_public_module(_ke.Renderer, __name__)
+SkinnedCharacterBridge = _set_public_module(_ke.SkinnedCharacterBridge, __name__)
+SkeletonVisualBridge = animation.SkeletonVisualBridge
+SkeletonVisualConfig = animation.SkeletonVisualConfig
+MotionSequencerPanel = _set_public_module(_ke.MotionSequencerPanel, __name__)
 
 # GLM-style math types and helpers exposed by the C++ extension.
-vec3 = _ke.vec3
-vec2 = _ke.vec2
-vec4 = _ke.vec4
-quat = _ke.quat
-mat3 = _ke.mat3
-mat4 = _ke.mat4
-translate = _ke.translate
-scale = _ke.scale
+vec3 = _set_public_module(_ke.vec3, __name__)
+vec2 = _set_public_module(_ke.vec2, __name__)
+vec4 = _set_public_module(_ke.vec4, __name__)
+quat = _set_public_module(_ke.quat, __name__)
+mat3 = _set_public_module(_ke.mat3, __name__)
+mat4 = _set_public_module(_ke.mat4, __name__)
+translate = _set_public_module(_ke.translate, __name__)
+scale = _set_public_module(_ke.scale, __name__)
 
-# Bound C++ submodules.
-scene = _ke.scene
-asset = _ke.asset
-animation = _ke.animation
+# Bound C++ submodules exposed through Python wrapper modules.
 imgui = _ke.imgui
 keys = _ke.keys
 
@@ -151,6 +155,7 @@ __all__ = [
     "TransformSource",
     "InteractionMode",
     "ToneMapMode",
+    "TextureRole",
     "RayPickResult",
     "vec3",
     "vec2",
@@ -163,6 +168,7 @@ __all__ = [
     "scene",
     "asset",
     "animation",
+    "physics",
     "imgui",
     "keys",
     "X",
@@ -174,7 +180,11 @@ __all__ = [
     "ColorLibrary",
     "ColorType",
     "Color",
+    "Material",
     "PhongMaterial",
+    "PBRMaterial",
+    "PBRMaterialType",
+    "Renderer",
     "SkinnedCharacterBridge",
     "SkeletonVisualBridge",
     "SkeletonVisualConfig",
@@ -191,8 +201,8 @@ _OPTIONAL_EXPORTS = [
 ]
 
 for _name in _OPTIONAL_EXPORTS:
-    if hasattr(_ke, _name):
-        globals()[_name] = getattr(_ke, _name)
+    if hasattr(physics, _name):
+        globals()[_name] = getattr(physics, _name)
         __all__.append(_name)
 
-del _assets_dir, _name, _OPTIONAL_EXPORTS, _Path, _os, _ke
+del _assets_dir, _name, _OPTIONAL_EXPORTS, _Path, _os, _set_public_module, _ke

@@ -95,6 +95,11 @@ void Renderer::setRenderableCastsShadow(RenderableHandle handle,
 }
 
 void Renderer::setRenderableTexture(RenderableHandle handle,
+                                    Backend::Texture* tex, TextureRole role) {
+    setRenderableTexture(handle, tex, textureRoleSlot(role));
+}
+
+void Renderer::setRenderableTexture(RenderableHandle handle,
                                     Backend::Texture* tex, int slot) {
     if (_rasterizer)
         _rasterizer->setRenderableTexture(handle, tex, slot);
