@@ -20,8 +20,7 @@
 constexpr int CAMERA_UBO_BIND_SLOT = 0;
 constexpr int LIGHT_UBO_BIND_SLOT = 1;
 constexpr int SHADOW_UBO_BIND_SLOT = 2;
-constexpr int SHADOW_TEXTURE_SLOT_BASE =
-    1; // most diffuse textures use 0, TODO: more efficient manage
+constexpr int SHADOW_TEXTURE_SLOT_BASE = KE::RendererTextureSlot::Shadow0;
 
 namespace {
 
@@ -151,7 +150,7 @@ Rasterizer::addSkinnedRenderable(Backend::Shader* shader, Scene::Prim* prim,
     return hIt->second;
 }
 
-RenderableHandle Rasterizer::addRenderable(PhongMaterial* material,
+RenderableHandle Rasterizer::addRenderable(Material* material,
                                            Scene::Prim* prim,
                                            TransformSource transformSource) {
     auto meshData = prim->resolveMeshData();
@@ -213,6 +212,11 @@ void Rasterizer::setRenderableCastsShadow(RenderableHandle handle,
     if (handle >= _handleTable.size())
         return;
     _handleTable[handle]->setCastsShadow(castsShadow);
+}
+
+void Rasterizer::setRenderableTexture(RenderableHandle handle,
+                                      Backend::Texture* tex, TextureRole role) {
+    setRenderableTexture(handle, tex, textureRoleSlot(role));
 }
 
 void Rasterizer::setRenderableTexture(RenderableHandle handle,

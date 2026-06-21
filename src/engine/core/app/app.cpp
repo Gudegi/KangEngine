@@ -425,7 +425,7 @@ App::addSkinnedRenderable(Backend::Shader* shader, Scene::Prim* prim,
                        : InvalidHandle;
 }
 
-RenderableHandle App::addRenderable(PhongMaterial* material, Scene::Prim* prim,
+RenderableHandle App::addRenderable(Material* material, Scene::Prim* prim,
                                     TransformSource transformSource) {
     return _rasterizer
                ? _rasterizer->addRenderable(material, prim, transformSource)
@@ -737,6 +737,11 @@ void App::setRenderableDoubleSided(RenderableHandle handle, bool doubleSided) {
 
 void App::setRenderableCastsShadow(RenderableHandle handle, bool castsShadow) {
     getRenderer().setRenderableCastsShadow(handle, castsShadow);
+}
+
+void App::setRenderableTexture(RenderableHandle handle, Backend::Texture* tex,
+                               TextureRole role) {
+    getRenderer().setRenderableTexture(handle, tex, role);
 }
 
 void App::setRenderableTexture(RenderableHandle handle, Backend::Texture* tex,

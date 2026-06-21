@@ -106,8 +106,7 @@ void MeshInstancer::_setupSkinningAttribs(
 
 void MeshInstancer::init(Backend::GraphicsDevice* device,
                          Backend::Shader* shader, const Scene::MeshData& mesh,
-                         TransformSource transformSource,
-                         PhongMaterial* material) {
+                         TransformSource transformSource, Material* material) {
     _device = device;
     _shader = shader;
     _material = material;
@@ -125,8 +124,7 @@ void MeshInstancer::init(Backend::GraphicsDevice* device,
 void MeshInstancer::init(Backend::GraphicsDevice* device,
                          Backend::Shader* shader,
                          const Scene::SkinnedMeshData& skinnedMesh,
-                         TransformSource transformSource,
-                         PhongMaterial* material) {
+                         TransformSource transformSource, Material* material) {
     _device = device;
     _shader = shader;
     _material = material;

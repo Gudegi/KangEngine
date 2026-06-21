@@ -79,6 +79,8 @@ class Renderer {
     void setRenderableCastsShadow(RenderableHandle handle,
                                   bool castsShadow = true);
     void setRenderableTexture(RenderableHandle handle, Backend::Texture* tex,
+                              TextureRole role);
+    void setRenderableTexture(RenderableHandle handle, Backend::Texture* tex,
                               int slot = 0);
     void updateRenderableGeometry(RenderableHandle handle,
                                   const std::vector<glm::vec3>& positions,

@@ -54,7 +54,7 @@ class Rasterizer : public RenderPipeline {
     struct InstancerKey {
         Backend::Shader* shader;
         const Scene::MeshData* mesh;
-        PhongMaterial* material; // nullptr for shader-only path
+        Material* material; // nullptr for shader-only path
         TransformSource transformSource;
         bool operator<(const InstancerKey& o) const {
             if (shader != o.shader)
@@ -201,7 +201,7 @@ class Rasterizer : public RenderPipeline {
         const Scene::SkinnedMeshData& skinnedMesh,
         TransformSource transformSource = TransformSource::SceneGraph);
     RenderableHandle addRenderable(
-        PhongMaterial* material, Scene::Prim* prim,
+        Material* material, Scene::Prim* prim,
         TransformSource transformSource = TransformSource::SceneGraph);
     void removePrim(RenderableHandle handle, Scene::Prim* prim);
 
@@ -218,6 +218,8 @@ class Rasterizer : public RenderPipeline {
                                   bool doubleSided = true);
     void setRenderableCastsShadow(RenderableHandle handle,
                                   bool castsShadow = true);
+    void setRenderableTexture(RenderableHandle handle, Backend::Texture* tex,
+                              TextureRole role);
     void setRenderableTexture(RenderableHandle handle, Backend::Texture* tex,
                               int slot = 0);
     RayPickResult rayPick(const Geometry::Ray& ray) const;

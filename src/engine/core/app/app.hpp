@@ -206,7 +206,7 @@ class App {
         const Scene::SkinnedMeshData& skinnedMesh,
         TransformSource transformSource = TransformSource::SceneGraph);
     RenderableHandle addRenderable(
-        PhongMaterial* material, Scene::Prim* prim,
+        Material* material, Scene::Prim* prim,
         TransformSource transformSource = TransformSource::SceneGraph);
     void removePrim(RenderableHandle handle, Scene::Prim* prim);
 
@@ -268,6 +268,8 @@ class App {
                                   bool doubleSided = true);
     void setRenderableCastsShadow(RenderableHandle handle,
                                   bool castsShadow = true);
+    void setRenderableTexture(RenderableHandle handle, Backend::Texture* tex,
+                              TextureRole role);
     void setRenderableTexture(RenderableHandle handle, Backend::Texture* tex,
                               int slot = 0);
     void updateRenderableGeometry(RenderableHandle handle,

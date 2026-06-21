@@ -22,6 +22,47 @@ enum class TransformSource {
     ExternalBuffer, // Caller owns per-instance transform arrays.
 };
 
+namespace RendererTextureSlot {
+
+constexpr int BaseColor = 0;
+constexpr int Diffuse =
+    BaseColor; // Compatibility name for Phong/common shaders.
+constexpr int Shadow0 = 1;
+constexpr int Shadow1 = 2;
+constexpr int Shadow2 = 3;
+constexpr int Shadow3 = 4;
+constexpr int Normal = 5;
+constexpr int MetallicRoughness = 6;
+constexpr int AmbientOcclusion = 7;
+constexpr int Emissive = 8;
+
+} // namespace RendererTextureSlot
+
+enum class TextureRole {
+    BaseColor,
+    Diffuse = BaseColor,
+    Normal,
+    MetallicRoughness,
+    AmbientOcclusion,
+    Emissive,
+};
+
+constexpr int textureRoleSlot(TextureRole role) {
+    switch (role) {
+    case TextureRole::BaseColor:
+        return RendererTextureSlot::BaseColor;
+    case TextureRole::Normal:
+        return RendererTextureSlot::Normal;
+    case TextureRole::MetallicRoughness:
+        return RendererTextureSlot::MetallicRoughness;
+    case TextureRole::AmbientOcclusion:
+        return RendererTextureSlot::AmbientOcclusion;
+    case TextureRole::Emissive:
+        return RendererTextureSlot::Emissive;
+    }
+    return RendererTextureSlot::BaseColor;
+}
+
 struct RayPickResult {
     bool hit = false;
     RenderableHandle handle = InvalidHandle;

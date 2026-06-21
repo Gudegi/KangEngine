@@ -127,9 +127,13 @@ class App(NativeApp):
 
     def set_shape_textures(self, handle, diffuse=None, normal=None):
         if diffuse is not None:
-            self.set_renderable_texture(handle, diffuse, 0)  # TODO : refactor the hardcoded texture slots
+            self.set_renderable_texture(
+                handle,
+                diffuse,
+                _ke.TextureRole.BaseColor,
+            )
         if normal is not None:
-            self.set_renderable_texture(handle, normal, 5)
+            self.set_renderable_texture(handle, normal, _ke.TextureRole.Normal)
         return handle
 
     def as_vec3(self, value):
