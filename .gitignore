@@ -57,6 +57,7 @@ references
 *.egg-info
 python/kangengine/assets
 assets/external/
+docs/_build/
 _private
 tmp
 python/examples/smoke_test

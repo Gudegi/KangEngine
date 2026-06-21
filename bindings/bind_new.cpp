@@ -371,6 +371,34 @@ PYBIND11_MODULE(_kangengine, m) {
         .value("AcesFitted", ToneMapMode::AcesFitted)
         .export_values();
 
+    py::enum_<TextureRole>(
+        m, "TextureRole",
+        "Renderer texture binding roles used by material shaders.")
+        .value("BaseColor", TextureRole::BaseColor)
+        .value("Diffuse", TextureRole::Diffuse)
+        .value("Normal", TextureRole::Normal)
+        .value("MetallicRoughness", TextureRole::MetallicRoughness)
+        .value("AmbientOcclusion", TextureRole::AmbientOcclusion)
+        .value("Emissive", TextureRole::Emissive)
+        .export_values();
+
+    py::enum_<PBRMaterialType>(m, "PBRMaterialType",
+                               "Built-in physically based material presets.")
+        .value("GRAY_CARD", PBRMaterialType::GRAY_CARD)
+        .value("WHITE_PLASTIC", PBRMaterialType::WHITE_PLASTIC)
+        .value("BLACK_PLASTIC", PBRMaterialType::BLACK_PLASTIC)
+        .value("BLACK_RUBBER", PBRMaterialType::BLACK_RUBBER)
+        .value("CHARCOAL", PBRMaterialType::CHARCOAL)
+        .value("CARROT", PBRMaterialType::CARROT)
+        .value("CONCRETE", PBRMaterialType::CONCRETE)
+        .value("RED_BRICK", PBRMaterialType::RED_BRICK)
+        .value("ALUMINUM", PBRMaterialType::ALUMINUM)
+        .value("CHROME", PBRMaterialType::CHROME)
+        .value("COPPER", PBRMaterialType::COPPER)
+        .value("GOLD", PBRMaterialType::GOLD)
+        .value("EMISSIVE_BLUE", PBRMaterialType::EMISSIVE_BLUE)
+        .export_values();
+
     py::class_<RayPickResult>(m, "RayPickResult")
         .def_readonly("hit", &RayPickResult::hit)
         .def_readonly("handle", &RayPickResult::handle)
@@ -478,60 +506,142 @@ PYBIND11_MODULE(_kangengine, m) {
     py::class_<ColorLibrary>(m, "ColorLibrary")
         .def_static("get", &ColorLibrary::get, py::arg("type"));
 
-    py::class_<PhongMaterial>(m, "PhongMaterial").def(py::init<>());
-    // .def_readwrite("diffuse", &PhongMaterial::diffuse)
+    py::class_<Material>(m, "Material", "Base class for renderer materials.")
+        .def("set_shader", &Material::setShader, py::arg("shader"),
+             "Attach the shader used when this material is bound.")
+        .def("get_shader", &Material::getShader,
+             py::return_value_policy::reference,
+             "Return the shader currently attached to this material.");
+
+    py::class_<PhongMaterial, Material>(
+        m, "PhongMaterial",
+        "Classic Blinn-Phong material with diffuse/specular factors and "
+        "optional textures.")
+        .def(py::init<>(), "Create a Phong material with default factors.")
+        .def_readwrite("ambient", &PhongMaterial::ambient,
+                       "Ambient RGB factor.")
+        .def_readwrite("diffuse", &PhongMaterial::diffuse,
+                       "Diffuse RGB factor.")
+        .def_readwrite("specular", &PhongMaterial::specular,
+                       "Specular RGB factor.")
+        .def_readwrite("shininess", &PhongMaterial::shininess,
+                       "Specular highlight exponent.")
+        .def_readwrite("diffuse_map", &PhongMaterial::diffuseMap,
+                       "Optional diffuse texture.")
+        .def_readwrite("normal_map", &PhongMaterial::normalMap,
+                       "Optional tangent-space normal map.");
+
+    py::class_<PBRMaterial, Material>(
+        m, "PBRMaterial",
+        "Physically based material using metallic-roughness parameters.")
+        .def(py::init<>(), "Create a PBR material with default factors.")
+        .def("load_from_preset", &PBRMaterial::loadFromPreset, py::arg("type"),
+             "Load material factors from a built-in PBR preset.")
+        .def_readwrite("base_color", &PBRMaterial::baseColor,
+                       "Base color factor as RGBA.")
+        .def_readwrite("metallic", &PBRMaterial::metallic,
+                       "Metallic factor in the range 0..1.")
+        .def_readwrite("roughness", &PBRMaterial::roughness,
+                       "Roughness factor in the range 0..1.")
+        .def_readwrite("emissive_color", &PBRMaterial::emissiveColor,
+                       "Emissive RGB color factor.")
+        .def_readwrite("emissive_strength", &PBRMaterial::emissiveStrength,
+                       "Multiplier for emissive_color.")
+        .def_readwrite("base_color_texture", &PBRMaterial::baseColorTexture,
+                       "Optional base color texture.")
+        .def_readwrite("normal_texture", &PBRMaterial::normalTexture,
+                       "Optional tangent-space normal texture.")
+        .def_readwrite("metallic_roughness_texture",
+                       &PBRMaterial::metallicRoughnessTexture,
+                       "Optional packed metallic-roughness texture.")
+        .def_readwrite("ao_texture", &PBRMaterial::aoTexture,
+                       "Optional ambient occlusion texture.")
+        .def_readwrite("emissive_texture", &PBRMaterial::emissiveTexture,
+                       "Optional emissive texture.");
 
     // Backend::Shader
-    py::class_<Backend::Shader>(m, "Shader")
-        .def("use", &Backend::Shader::use)
-        .def("bind", &Backend::Shader::bind)
-        .def("unbind", &Backend::Shader::unbind)
-        .def("set_bool", &Backend::Shader::setBool)
-        .def("set_int", &Backend::Shader::setInt)
-        .def("set_float", &Backend::Shader::setFloat)
-        .def("set_color", &Backend::Shader::setColor)
+    py::class_<Backend::Shader>(
+        m, "Shader", "Compiled GPU shader program used by renderer materials.")
+        .def("use", &Backend::Shader::use,
+             "Bind this shader program for subsequent draw or uniform calls.")
+        .def("bind", &Backend::Shader::bind, "Bind this shader program.")
+        .def("unbind", &Backend::Shader::unbind,
+             "Unbind the current shader program.")
+        .def("set_bool", &Backend::Shader::setBool, py::arg("name"),
+             py::arg("value"), "Set a boolean uniform.")
+        .def("set_int", &Backend::Shader::setInt, py::arg("name"),
+             py::arg("value"), "Set an integer uniform.")
+        .def("set_float", &Backend::Shader::setFloat, py::arg("name"),
+             py::arg("value"), "Set a float uniform.")
+        .def("set_color", &Backend::Shader::setColor, py::arg("name"),
+             py::arg("r"), py::arg("g"), py::arg("b"), py::arg("a"),
+             "Set a color uniform from RGBA components.")
         .def("set_vec2",
              py::overload_cast<const std::string&, const glm::vec2&>(
-                 &Backend::Shader::setVec2))
-        .def("set_vec2", py::overload_cast<const std::string&, float, float>(
-                             &Backend::Shader::setVec2))
+                 &Backend::Shader::setVec2),
+             py::arg("name"), py::arg("value"), "Set a vec2 uniform.")
+        .def("set_vec2",
+             py::overload_cast<const std::string&, float, float>(
+                 &Backend::Shader::setVec2),
+             py::arg("name"), py::arg("x"), py::arg("y"),
+             "Set a vec2 uniform from components.")
         .def("set_vec3",
              py::overload_cast<const std::string&, const glm::vec3&>(
-                 &Backend::Shader::setVec3))
+                 &Backend::Shader::setVec3),
+             py::arg("name"), py::arg("value"), "Set a vec3 uniform.")
         .def("set_vec3",
              py::overload_cast<const std::string&, float, float, float>(
-                 &Backend::Shader::setVec3))
+                 &Backend::Shader::setVec3),
+             py::arg("name"), py::arg("x"), py::arg("y"), py::arg("z"),
+             "Set a vec3 uniform from components.")
         .def("set_vec4",
              py::overload_cast<const std::string&, const glm::vec4&>(
-                 &Backend::Shader::setVec4))
+                 &Backend::Shader::setVec4),
+             py::arg("name"), py::arg("value"), "Set a vec4 uniform.")
         .def("set_vec4",
              py::overload_cast<const std::string&, float, float, float, float>(
-                 &Backend::Shader::setVec4))
-        .def("set_mat2", &Backend::Shader::setMat2)
-        .def("set_mat3", &Backend::Shader::setMat3)
-        .def("set_mat4", &Backend::Shader::setMat4)
+                 &Backend::Shader::setVec4),
+             py::arg("name"), py::arg("x"), py::arg("y"), py::arg("z"),
+             py::arg("w"), "Set a vec4 uniform from components.")
+        .def("set_mat2", &Backend::Shader::setMat2, py::arg("name"),
+             py::arg("value"), "Set a mat2 uniform.")
+        .def("set_mat3", &Backend::Shader::setMat3, py::arg("name"),
+             py::arg("value"), "Set a mat3 uniform.")
+        .def("set_mat4", &Backend::Shader::setMat4, py::arg("name"),
+             py::arg("value"), "Set a mat4 uniform.")
         .def("set_uniform_block_binding",
              &Backend::Shader::setUniformBlockBinding, py::arg("block_name"),
-             py::arg("binding_point"));
+             py::arg("binding_point"),
+             "Bind a named uniform block to a binding point.");
 
     // Backend::Texture
-    py::class_<Backend::Texture>(m, "Texture")
-        .def("bind", &Backend::Texture::bind, py::arg("slot") = 0)
-        .def("unbind", &Backend::Texture::unbind)
-        .def("get_width", &Backend::Texture::getWidth)
-        .def("get_height", &Backend::Texture::getHeight);
+    py::class_<Backend::Texture>(
+        m, "Texture", "GPU texture object created by a GraphicsDevice.")
+        .def("bind", &Backend::Texture::bind, py::arg("slot") = 0,
+             "Bind this texture to a texture unit.")
+        .def("unbind", &Backend::Texture::unbind,
+             "Unbind this texture from the active context.")
+        .def("get_width", &Backend::Texture::getWidth,
+             "Return the texture width in pixels.")
+        .def("get_height", &Backend::Texture::getHeight,
+             "Return the texture height in pixels.");
 
     // Backend::GraphicsDevice
     py::class_<Backend::GraphicsDevice,
-               std::shared_ptr<Backend::GraphicsDevice>>(m, "GraphicsDevice")
+               std::shared_ptr<Backend::GraphicsDevice>>(
+        m, "GraphicsDevice",
+        "Factory for backend graphics resources such as shaders and textures.")
         .def("create_shader",
              py::overload_cast<const std::string&, const std::string&>(
                  &Backend::GraphicsDevice::createShader),
-             py::return_value_policy::take_ownership)
+             py::arg("vertex_source"), py::arg("fragment_source"),
+             py::return_value_policy::take_ownership,
+             "Create a shader from vertex and fragment shader source strings.")
         .def("create_shader_from_file",
              &Backend::GraphicsDevice::createShaderFromFile,
              py::arg("vert_path"), py::arg("frag_path"),
-             py::return_value_policy::take_ownership)
+             py::return_value_policy::take_ownership,
+             "Create a shader from vertex and fragment shader files.")
         .def("create_texture",
              py::overload_cast<const std::string, bool, float, float, float>(
                  &Backend::GraphicsDevice::createTexture),
@@ -539,12 +649,16 @@ PYBIND11_MODULE(_kangengine, m) {
              py::arg("warpParam") = GL_REPEAT,
              py::arg("minFilterParam") = GL_LINEAR_MIPMAP_LINEAR,
              py::arg("maxFilterParam") = GL_LINEAR,
-             py::return_value_policy::take_ownership);
+             py::return_value_policy::take_ownership,
+             "Load a texture from an image file.");
 
-    py::class_<Renderer>(m, "Renderer")
+    py::class_<Renderer>(
+        m, "Renderer",
+        "Renderer facade for updating renderable resources and draw settings.")
         .def(
             "device", [](Renderer& self) { return self.device(); },
-            py::return_value_policy::reference)
+            py::return_value_policy::reference,
+            "Return the graphics device owned by this renderer.")
         .def(
             "update_renderable_transforms",
             [](Renderer& self, uint32_t handle, const FloatArray& transforms,
@@ -567,19 +681,35 @@ PYBIND11_MODULE(_kangengine, m) {
                 self.updateRenderableTransforms(handle, transformVec, colorPtr);
             },
             py::arg("handle"), py::arg("transforms"),
-            py::arg("colors") = py::none())
+            py::arg("colors") = py::none(),
+            "Replace instance transforms, optionally with per-instance colors.")
         .def(
             "set_renderable_colors",
             [](Renderer& self, uint32_t handle, const FloatArray& colors) {
                 self.setRenderableColors(handle, vec4Array(colors, "colors"));
             },
-            py::arg("handle"), py::arg("colors"))
+            py::arg("handle"), py::arg("colors"),
+            "Set per-instance colors for a renderable.")
         .def("set_renderable_double_sided", &Renderer::setRenderableDoubleSided,
-             py::arg("handle"), py::arg("double_sided") = true)
+             py::arg("handle"), py::arg("double_sided") = true,
+             "Enable or disable double-sided rendering for a renderable.")
         .def("set_renderable_casts_shadow", &Renderer::setRenderableCastsShadow,
-             py::arg("handle"), py::arg("casts_shadow") = true)
-        .def("set_renderable_texture", &Renderer::setRenderableTexture,
-             py::arg("handle"), py::arg("texture"), py::arg("slot") = 0)
+             py::arg("handle"), py::arg("casts_shadow") = true,
+             "Enable or disable shadow casting for a renderable.")
+        .def(
+            "set_renderable_texture",
+            [](Renderer& self, uint32_t handle, Backend::Texture* texture,
+               TextureRole role) {
+                self.setRenderableTexture(handle, texture, role);
+            },
+            py::arg("handle"), py::arg("texture"), py::arg("role"),
+            "Attach a texture to a renderable using a material texture role.")
+        .def(
+            "set_renderable_texture",
+            [](Renderer& self, uint32_t handle, Backend::Texture* texture,
+               int slot) { self.setRenderableTexture(handle, texture, slot); },
+            py::arg("handle"), py::arg("texture"), py::arg("slot") = 0,
+            "Attach a texture to a renderable using a raw texture slot.")
         .def(
             "update_renderable_geometry",
             [](Renderer& self, uint32_t handle, const FloatArray& positions,
@@ -597,14 +727,16 @@ PYBIND11_MODULE(_kangengine, m) {
                 self.updateRenderableGeometry(handle, positionVec, normalVec);
             },
             py::arg("handle"), py::arg("positions"),
-            py::arg("normals") = py::none())
+            py::arg("normals") = py::none(),
+            "Update dynamic vertex positions and optional normals.")
         .def(
             "update_renderable_skinning_matrices",
             [](Renderer& self, uint32_t handle, const FloatArray& matrices) {
                 self.updateRenderableSkinningMatrices(
                     handle, mat4Array(matrices, "bone_matrices"));
             },
-            py::arg("handle"), py::arg("bone_matrices"));
+            py::arg("handle"), py::arg("bone_matrices"),
+            "Update bone matrices for a skinned renderable.");
 
     // GLM types for matrix operations
     // Support implicit conversion from PyGLM types (tuple/list with x,y,z or
@@ -988,40 +1120,64 @@ py::class_<glm::vec3>(m, "vec3")
         },
         "Scale a matrix by a vector");
 
-    py::class_<Camera>(m, "Camera")
-        .def("get_camera_pos", &Camera::getCameraPos)
-        .def("get_target_pos", &Camera::getTargetPos)
-        .def("get_camera_look_dir", &Camera::getCameraLookDir)
-        .def("get_camera_up_dir", &Camera::getCameraUpDir)
-        .def("get_camera_right_dir", &Camera::getCameraRightDir)
-        .def("get_fov", &Camera::getFoV)
-        .def("get_near_plane", &Camera::getNearPlane)
-        .def("get_far_plane", &Camera::getFarPlane)
-        .def("set_camera_pos", &Camera::setCameraPos, py::arg("camera_pos"))
-        .def("set_target_pos", &Camera::setTargetPos, py::arg("target_pos"))
-        .def("set_fov", &Camera::setFoV, py::arg("fov"))
-        .def("set_near_plane", &Camera::setNearPlane, py::arg("distance"))
-        .def("set_far_plane", &Camera::setFarPlane, py::arg("distance"));
+    py::class_<Camera>(m, "Camera",
+                       "View camera used by KangEngine applications.")
+        .def("get_camera_pos", &Camera::getCameraPos,
+             "Return the camera position.")
+        .def("get_target_pos", &Camera::getTargetPos,
+             "Return the current camera target point.")
+        .def("get_camera_look_dir", &Camera::getCameraLookDir,
+             "Return the normalized forward/look direction.")
+        .def("get_camera_up_dir", &Camera::getCameraUpDir,
+             "Return the normalized up direction.")
+        .def("get_camera_right_dir", &Camera::getCameraRightDir,
+             "Return the normalized right direction.")
+        .def("get_fov", &Camera::getFoV,
+             "Return the vertical field of view in degrees.")
+        .def("get_near_plane", &Camera::getNearPlane,
+             "Return the near clipping distance.")
+        .def("get_far_plane", &Camera::getFarPlane,
+             "Return the far clipping distance.")
+        .def("set_camera_pos", &Camera::setCameraPos, py::arg("camera_pos"),
+             "Set the camera position.")
+        .def("set_target_pos", &Camera::setTargetPos, py::arg("target_pos"),
+             "Set the camera target point.")
+        .def("set_fov", &Camera::setFoV, py::arg("fov"),
+             "Set the vertical field of view in degrees.")
+        .def("set_near_plane", &Camera::setNearPlane, py::arg("distance"),
+             "Set the near clipping distance.")
+        .def("set_far_plane", &Camera::setFarPlane, py::arg("distance"),
+             "Set the far clipping distance.");
 
     // App class with trampoline for Python overrides
-    py::class_<App, PyApp>(m, "App")
-        .def(py::init<>())
+    py::class_<App, PyApp>(
+        m, "App",
+        "Native application shell with a window, scene, renderer, and input.")
+        .def(py::init<>(), "Create an uninitialized application.")
         .def("initialize", &App::initialize, py::arg("width"),
              py::arg("height"), py::arg("hideUi") = false,
              py::arg("upAxis") = UpAxis::Y,
              py::arg("graphicsBackendType") = Backend::BackendType::OpenGL,
              py::arg("sceneBackendType") = Scene::BackendType::Native,
-             py::arg("headless") = false)
-        .def("set_render_hz", &App::setRenderHz, py::arg("render_hz"))
-        .def("get_delta_time", &App::getDeltaTime)
-        .def("get_render_hz", &App::getRenderHz)
-        .def("get_ui_scale",
-             [](const App& self) { return self.getUiScale().value(); })
+             py::arg("headless") = false,
+             "Initialize the window, renderer, input, and scene backend.")
+        .def("set_render_hz", &App::setRenderHz, py::arg("render_hz"),
+             "Set the target render/update frequency in Hz.")
+        .def("get_delta_time", &App::getDeltaTime,
+             "Return elapsed seconds between recent frames.")
+        .def("get_render_hz", &App::getRenderHz,
+             "Return the target render/update frequency in Hz.")
+        .def(
+            "get_ui_scale",
+            [](const App& self) { return self.getUiScale().value(); },
+            "Return the current UI scale factor.")
         .def("set_camera_move_speed", &App::setCameraMoveSpeed,
-             py::arg("speed"))
-        .def("get_camera_move_speed", &App::getCameraMoveSpeed)
-        .def("start", &App::start)
-        .def("render_frame_once", &App::renderFrameOnce)
+             py::arg("speed"), "Set interactive camera movement speed.")
+        .def("get_camera_move_speed", &App::getCameraMoveSpeed,
+             "Return interactive camera movement speed.")
+        .def("start", &App::start, "Enter the application render loop.")
+        .def("render_frame_once", &App::renderFrameOnce,
+             "Render and process one frame without entering the main loop.")
         .def(
             "read_rgb_pixels",
             [](App& self, bool flipY) {
@@ -1045,28 +1201,48 @@ py::class_<glm::vec3>(m, "vec3")
                 }
                 return out;
             },
-            py::arg("flip_y") = true)
+            py::arg("flip_y") = true,
+            "Read the current framebuffer as a uint8 RGB numpy array.")
         .def("write_pixels_png", &App::writePixelsPNG, py::arg("path"),
-             py::arg("flip_y") = true)
-        .def("should_close", &App::shouldClose)
-        .def("setup", &App::setup)
-        .def("preRender", &App::preRender)
-        .def("render", &App::render)
-        .def("postRender", &App::postRender)
-        .def("onRayPicked", &App::onRayPicked)
-        .def("onRayPickHover", &App::onRayPickHover)
-        .def("onForceDragBegin", &App::onForceDragBegin)
-        .def("onForceDragUpdate", &App::onForceDragUpdate)
-        .def("onForceDragEnd", &App::onForceDragEnd)
-        .def("get_interaction_mode", &App::getInteractionMode)
-        .def("set_interaction_mode", &App::setInteractionMode)
-        .def("has_selection", &App::hasSelection)
-        .def("clear_selection", &App::clearSelection)
+             py::arg("flip_y") = true,
+             "Write the current framebuffer to a PNG file.")
+        .def("should_close", &App::shouldClose,
+             "Return true when the application window should close.")
+        .def("setup", &App::setup,
+             "User override called once after initialization.")
+        .def("preRender", &App::preRender,
+             "User override called before each frame is rendered.")
+        .def("render", &App::render,
+             "User override called during each frame render.")
+        .def("postRender", &App::postRender,
+             "User override called after each frame is rendered.")
+        .def("onRayPicked", &App::onRayPicked, py::arg("result"),
+             "User override called when ray picking selects an object.")
+        .def("onRayPickHover", &App::onRayPickHover, py::arg("result"),
+             "User override called when ray picking hovers an object.")
+        .def("onForceDragBegin", &App::onForceDragBegin, py::arg("result"),
+             py::arg("target"),
+             "User override called when force dragging begins.")
+        .def("onForceDragUpdate", &App::onForceDragUpdate, py::arg("result"),
+             py::arg("target"),
+             "User override called while force dragging updates.")
+        .def("onForceDragEnd", &App::onForceDragEnd,
+             "User override called when force dragging ends.")
+        .def("get_interaction_mode", &App::getInteractionMode,
+             "Return the active viewport interaction mode.")
+        .def("set_interaction_mode", &App::setInteractionMode, py::arg("mode"),
+             "Set the active viewport interaction mode.")
+        .def("has_selection", &App::hasSelection,
+             "Return true when a scene object is selected.")
+        .def("clear_selection", &App::clearSelection,
+             "Clear the current scene selection.")
         .def("get_graphics_device", &App::getGraphicsDevice,
-             py::return_value_policy::reference)
+             py::return_value_policy::reference,
+             "Return the application's graphics device.")
         .def(
             "get_renderer", [](App& self) { return &self.getRenderer(); },
-            py::return_value_policy::reference)
+            py::return_value_policy::reference,
+            "Return the application's renderer.")
         .def(
             "add_renderable",
             [](App* self, Backend::Shader* shader, Scene::Prim* prim,
@@ -1074,7 +1250,8 @@ py::class_<glm::vec3>(m, "vec3")
                 return self->addRenderable(shader, prim, transformSource);
             },
             py::arg("shader"), py::arg("prim"),
-            py::arg("transform_source") = TransformSource::SceneGraph)
+            py::arg("transform_source") = TransformSource::SceneGraph,
+            "Create a renderable for a scene prim using a shader.")
         .def(
             "add_skinned_renderable",
             [](App* self, Backend::Shader* shader, Scene::Prim* prim,
@@ -1086,15 +1263,17 @@ py::class_<glm::vec3>(m, "vec3")
                                                   transformSource);
             },
             py::arg("shader"), py::arg("prim"), py::arg("skinned_mesh_data"),
-            py::arg("transform_source") = TransformSource::SceneGraph)
+            py::arg("transform_source") = TransformSource::SceneGraph,
+            "Create a skinned renderable for a scene prim.")
         .def(
             "add_renderable",
-            [](App* self, PhongMaterial* material, Scene::Prim* prim,
+            [](App* self, Material* material, Scene::Prim* prim,
                TransformSource transformSource) {
                 return self->addRenderable(material, prim, transformSource);
             },
             py::arg("material"), py::arg("prim"),
-            py::arg("transform_source") = TransformSource::SceneGraph)
+            py::arg("transform_source") = TransformSource::SceneGraph,
+            "Create a renderable for a scene prim using a material.")
         .def(
             "update_renderable_transforms",
             [](App* self, uint32_t handle, const FloatArray& transforms,
@@ -1116,31 +1295,44 @@ py::class_<glm::vec3>(m, "vec3")
                                                  t.count, colorCount);
             },
             py::arg("handle"), py::arg("transforms"),
-            py::arg("colors") = py::none())
+            py::arg("colors") = py::none(),
+            "Replace instance transforms, optionally with per-instance colors.")
         .def(
             "set_renderable_colors",
             [](App* self, uint32_t handle, const FloatArray& colors) {
                 auto c = vec4ArrayView(colors, "colors");
                 self->setRenderableColors(handle, c.data, c.count);
             },
-            py::arg("handle"), py::arg("colors"))
+            py::arg("handle"), py::arg("colors"),
+            "Set per-instance colors for a renderable.")
         .def(
             "set_renderable_double_sided",
             [](App* self, uint32_t handle, bool doubleSided) {
                 self->setRenderableDoubleSided(handle, doubleSided);
             },
-            py::arg("handle"), py::arg("double_sided") = true)
+            py::arg("handle"), py::arg("double_sided") = true,
+            "Enable or disable double-sided rendering for a renderable.")
         .def(
             "set_renderable_casts_shadow",
             [](App* self, uint32_t handle, bool castsShadow) {
                 self->setRenderableCastsShadow(handle, castsShadow);
             },
-            py::arg("handle"), py::arg("casts_shadow") = true)
+            py::arg("handle"), py::arg("casts_shadow") = true,
+            "Enable or disable shadow casting for a renderable.")
+        .def(
+            "set_renderable_texture",
+            [](App* self, uint32_t handle, Backend::Texture* texture,
+               TextureRole role) {
+                self->setRenderableTexture(handle, texture, role);
+            },
+            py::arg("handle"), py::arg("texture"), py::arg("role"),
+            "Attach a texture to a renderable using a material texture role.")
         .def(
             "set_renderable_texture",
             [](App* self, uint32_t handle, Backend::Texture* texture,
                int slot) { self->setRenderableTexture(handle, texture, slot); },
-            py::arg("handle"), py::arg("texture"), py::arg("slot") = 0)
+            py::arg("handle"), py::arg("texture"), py::arg("slot") = 0,
+            "Attach a texture to a renderable using a raw texture slot.")
         .def(
             "update_renderable_geometry",
             [](App* self, uint32_t handle, const FloatArray& positions,
@@ -1162,14 +1354,16 @@ py::class_<glm::vec3>(m, "vec3")
                                                p.count, normalCount);
             },
             py::arg("handle"), py::arg("positions"),
-            py::arg("normals") = py::none())
+            py::arg("normals") = py::none(),
+            "Update dynamic vertex positions and optional normals.")
         .def(
             "update_renderable_skinning_matrices",
             [](App* self, uint32_t handle, const FloatArray& matrices) {
                 auto m = mat4ArrayView(matrices, "bone_matrices");
                 self->updateRenderableSkinningMatrices(handle, m.data, m.count);
             },
-            py::arg("handle"), py::arg("bone_matrices"))
+            py::arg("handle"), py::arg("bone_matrices"),
+            "Update bone matrices for a skinned renderable.")
         .def(
             "log_debug_lines",
             [](App* self, const std::string& path, const FloatArray& starts,
@@ -1194,7 +1388,8 @@ py::class_<glm::vec3>(m, "vec3")
             },
             py::arg("path"), py::arg("starts"), py::arg("ends"),
             py::arg("colors") = py::none(), py::arg("width") = 1.0f,
-            py::arg("hidden") = false)
+            py::arg("hidden") = false,
+            "Draw persistent debug line segments at a debug path.")
         .def(
             "log_debug_axes",
             [](App* self, const std::string& path, const FloatArray& transform,
@@ -1215,8 +1410,10 @@ py::class_<glm::vec3>(m, "vec3")
                 self->logDebugAxes(path, m, length, width, hidden);
             },
             py::arg("path"), py::arg("transform"), py::arg("length") = 1.0f,
-            py::arg("width") = 1.0f, py::arg("hidden") = false)
-        .def("clear_debug_lines", &App::clearDebugLines, py::arg("path"))
+            py::arg("width") = 1.0f, py::arg("hidden") = false,
+            "Draw XYZ debug axes from a transform matrix.")
+        .def("clear_debug_lines", &App::clearDebugLines, py::arg("path"),
+             "Clear debug lines stored at a debug path.")
         .def(
             "log_debug_points",
             [](App* self, const std::string& path, const FloatArray& points,
@@ -1234,20 +1431,24 @@ py::class_<glm::vec3>(m, "vec3")
                 self->logDebugPoints(path, p, c, size, hidden);
             },
             py::arg("path"), py::arg("points"), py::arg("colors") = py::none(),
-            py::arg("size") = 6.0f, py::arg("hidden") = false)
-        .def("clear_debug_points", &App::clearDebugPoints, py::arg("path"))
+            py::arg("size") = 6.0f, py::arg("hidden") = false,
+            "Draw persistent debug points at a debug path.")
+        .def("clear_debug_points", &App::clearDebugPoints, py::arg("path"),
+             "Clear debug points stored at a debug path.")
         .def("set_light_direction", &App::setLightDirection,
-             py::arg("direction"))
-        .def("set_light_color", &App::setLightColor, py::arg("color"))
+             py::arg("direction"), "Set the main directional light direction.")
+        .def("set_light_color", &App::setLightColor, py::arg("color"),
+             "Set the main light color.")
         .def("set_light_intensity", &App::setLightIntensity,
-             py::arg("intensity"))
-        .def("set_light_ambient", &App::setLightAmbient, py::arg("ambient"))
+             py::arg("intensity"), "Set the main light intensity.")
+        .def("set_light_ambient", &App::setLightAmbient, py::arg("ambient"),
+             "Set ambient light intensity.")
         .def(
             "set_gamma",
             [](App& self, float gamma) {
                 self.getRenderer().settings().gamma = std::max(0.001f, gamma);
             },
-            py::arg("gamma"))
+            py::arg("gamma"), "Set display gamma used by post processing.")
         .def(
             "set_tone_map",
             [](App& self, ToneMapMode mode, float exposure) {
@@ -1255,7 +1456,8 @@ py::class_<glm::vec3>(m, "vec3")
                 settings.toneMapMode = mode;
                 settings.toneMapExposure = std::max(0.0f, exposure);
             },
-            py::arg("mode"), py::arg("exposure") = 1.0f)
+            py::arg("mode"), py::arg("exposure") = 1.0f,
+            "Configure tone mapping mode and exposure.")
         .def(
             "set_bloom",
             [](App& self, bool enabled, float threshold, float intensity,
@@ -1269,20 +1471,27 @@ py::class_<glm::vec3>(m, "vec3")
             },
             py::arg("enabled"), py::arg("threshold") = 1.0f,
             py::arg("intensity") = 0.08f, py::arg("iterations") = 6,
-            py::arg("downsample") = 2)
-        .def("check_error", &App::checkError)
+            py::arg("downsample") = 2, "Configure bloom post processing.")
+        .def("check_error", &App::checkError,
+             "Check and report backend graphics errors.")
         .def(
             "is_key_pressed",
             [](App& self, int key) {
                 return glfwGetKey(self.getWindow(), key) == GLFW_PRESS;
             },
-            py::arg("key"))
-        .def("get_camera", &App::getCamera, py::return_value_policy::reference)
-        .def("get_view_matrix", &App::getViewMatrix)
-        .def("get_projection_matrix", &App::getProjectionMatrix)
-        .def("get_width", &App::getWidth)
-        .def("get_height", &App::getHeight)
-        .def("get_scene", &App::getScene, py::return_value_policy::reference);
+            py::arg("key"), "Return true while a keyboard key is pressed.")
+        .def("get_camera", &App::getCamera, py::return_value_policy::reference,
+             "Return the application camera.")
+        .def("get_view_matrix", &App::getViewMatrix,
+             "Return the current camera view matrix.")
+        .def("get_projection_matrix", &App::getProjectionMatrix,
+             "Return the current camera projection matrix.")
+        .def("get_width", &App::getWidth,
+             "Return the framebuffer width in pixels.")
+        .def("get_height", &App::getHeight,
+             "Return the framebuffer height in pixels.")
+        .def("get_scene", &App::getScene, py::return_value_policy::reference,
+             "Return the active scene backend.");
 
     py::class_<Bridge::SkinnedCharacterBridge,
                std::unique_ptr<Bridge::SkinnedCharacterBridge>>(
