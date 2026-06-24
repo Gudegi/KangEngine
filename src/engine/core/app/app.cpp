@@ -244,7 +244,7 @@ void App::requestClose() {
 
 void App::renderSceneToFramebuffer(Camera& camera, Backend::Framebuffer* target,
                                    int width, int height, bool clear) {
-    syncSceneLights();
+    getRenderer().syncSceneLights(getScene());
     getRenderer().renderSceneToFramebuffer(camera, target, width, height,
                                            clear);
 }
@@ -269,7 +269,7 @@ void App::renderFrameOnce() {
 
     this->preRender();
     if (_rasterizer) {
-        syncSceneLights();
+        getRenderer().syncSceneLights(getScene());
         _rasterizer->updateFrameData(_viewMatrix, _projectionMatrix);
         if (_mousePickRequested) {
             const RayPickResult pick = pickMouse();
@@ -419,60 +419,6 @@ Scene::Prim* App::defaultDirectionalLightPrim() {
         return nullptr;
     return _scene->definePrim("/lights/default_directional",
                               Scene::PrimType::Light);
-}
-
-void App::syncSceneLights() {
-    if (!_scene || !_scene->getRootPrim())
-        return;
-
-    // Renderer light sync only scans this subtree. Define scene lights under
-    // /lights so mesh/debug/skeleton prims never join the per-frame search.
-    Scene::Prim* lightsRoot = _scene->getRootPrim()->getPrimAtPath("/lights");
-    if (!lightsRoot)
-        return;
-
-    bool hasLightPrim = false;
-    bool hasDirectionalLight = false;
-    DirectionalLight directionalLight;
-    directionalLight.intensity = 0.0f;
-    directionalLight.ambient = glm::vec3(0.0f);
-    std::vector<PointLight> pointLights;
-    std::vector<SpotLight> spotLights;
-    pointLights.reserve(MaxPointLights);
-    spotLights.reserve(MaxSpotLights);
-
-    lightsRoot->traverse([&](Scene::Prim* prim) {
-        if (!prim || prim->getType() != Scene::PrimType::Light)
-            return;
-
-        hasLightPrim = true;
-        if (!prim->isVisibleInHierarchy())
-            return;
-
-        switch (prim->getLightType()) {
-        case Scene::LightType::Directional:
-            if (!hasDirectionalLight) {
-                directionalLight = prim->getDirectionalLight();
-                hasDirectionalLight = true;
-            }
-            break;
-        case Scene::LightType::Point:
-            if (pointLights.size() < static_cast<size_t>(MaxPointLights))
-                pointLights.push_back(prim->getPointLight());
-            break;
-        case Scene::LightType::Spot:
-            if (spotLights.size() < static_cast<size_t>(MaxSpotLights))
-                spotLights.push_back(prim->getSpotLight());
-            break;
-        }
-    });
-
-    if (!hasLightPrim)
-        return;
-
-    getRenderer().setLight(directionalLight);
-    getRenderer().setPointLights(std::move(pointLights));
-    getRenderer().setSpotLights(std::move(spotLights));
 }
 
 void App::checkError() { _graphicsDevice->checkError(); }

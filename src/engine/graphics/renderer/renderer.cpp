@@ -3,6 +3,8 @@
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/graphics/camera/camera.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
+#include "engine/scene/native/prim.hpp"
+#include "engine/scene/scene_backend.hpp"
 
 #include <utility>
 
@@ -47,6 +49,60 @@ void Renderer::setSpotLights(std::vector<SpotLight> lights) {
 
 const std::vector<SpotLight>& Renderer::spotLights() const {
     return _rasterizer->getSpotLights();
+}
+
+void Renderer::syncSceneLights(Scene::SceneBackend* scene) {
+    if (!scene || !scene->getRootPrim())
+        return;
+
+    // Renderer light sync only scans this subtree. Define scene lights under
+    // /lights so mesh/debug/skeleton prims never join the per-frame search.
+    Scene::Prim* lightsRoot = scene->getRootPrim()->getPrimAtPath("/lights");
+    if (!lightsRoot)
+        return;
+
+    bool hasLightPrim = false;
+    bool hasDirectionalLight = false;
+    DirectionalLight directionalLight;
+    directionalLight.intensity = 0.0f;
+    directionalLight.ambient = glm::vec3(0.0f);
+    std::vector<PointLight> pointLights;
+    std::vector<SpotLight> spotLights;
+    pointLights.reserve(MaxPointLights);
+    spotLights.reserve(MaxSpotLights);
+
+    lightsRoot->traverse([&](Scene::Prim* prim) {
+        if (!prim || prim->getType() != Scene::PrimType::Light)
+            return;
+
+        hasLightPrim = true;
+        if (!prim->isVisibleInHierarchy())
+            return;
+
+        switch (prim->getLightType()) {
+        case Scene::LightType::Directional:
+            if (!hasDirectionalLight) {
+                directionalLight = prim->getDirectionalLight();
+                hasDirectionalLight = true;
+            }
+            break;
+        case Scene::LightType::Point:
+            if (pointLights.size() < static_cast<size_t>(MaxPointLights))
+                pointLights.push_back(prim->getPointLight());
+            break;
+        case Scene::LightType::Spot:
+            if (spotLights.size() < static_cast<size_t>(MaxSpotLights))
+                spotLights.push_back(prim->getSpotLight());
+            break;
+        }
+    });
+
+    if (!hasLightPrim)
+        return;
+
+    setLight(directionalLight);
+    setPointLights(std::move(pointLights));
+    setSpotLights(std::move(spotLights));
 }
 
 Backend::Framebuffer* Renderer::shadowFbo() {

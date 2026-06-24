@@ -15,6 +15,10 @@ class Camera;
 class Rasterizer;
 class SelectionOutlineProcessor;
 
+namespace Scene {
+class SceneBackend;
+} // namespace Scene
+
 namespace Backend {
 class Framebuffer;
 class GraphicsDevice;
@@ -59,6 +63,7 @@ class Renderer {
     const std::vector<PointLight>& pointLights() const;
     void setSpotLights(std::vector<SpotLight> lights);
     const std::vector<SpotLight>& spotLights() const;
+    void syncSceneLights(Scene::SceneBackend* scene);
     Backend::Framebuffer* shadowFbo();
     void renderSceneToFramebuffer(Camera& camera, Backend::Framebuffer* target,
                                   int width, int height, bool clear = true);

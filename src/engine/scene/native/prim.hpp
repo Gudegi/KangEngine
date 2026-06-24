@@ -15,7 +15,7 @@
 #include <map>
 #include <optional>
 #include "../scene_backend.hpp"
-#include "engine/graphics/renderer/light.hpp"
+#include "engine/scene/light.hpp"
 #include "token.hpp"
 #include "utils/types.hpp"
 
@@ -35,12 +35,6 @@ enum class PrimType {
     MeshInstance, // Mesh geometry reference with its own scene identity
     Camera,       // Camera
     Light         // Light
-};
-
-enum class LightType {
-    Directional,
-    Point,
-    Spot,
 };
 
 // ray pick같은 걸로 조작할 때 정책
