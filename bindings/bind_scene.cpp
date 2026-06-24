@@ -24,23 +24,19 @@
 
 namespace py = pybind11;
 
-
 void bind_scene(py::module& m) {
-    py::module scene =
-        m.def_submodule("scene",
-                        "Scene graph, prim, mesh, and debug drawing APIs.");
+    py::module scene = m.def_submodule(
+        "scene", "Scene graph, prim, mesh, and debug drawing APIs.");
 
     // Token class
     py::class_<KE::Scene::Token>(
-        scene, "Token",
-        "Interned-style attribute key used by scene prims.")
+        scene, "Token", "Interned-style attribute key used by scene prims.")
         .def(py::init<>(), "Create an empty token.")
         .def(py::init<const std::string&>(), py::arg("value"),
              "Create a token from a string.")
         .def("id", &KE::Scene::Token::id,
              "Return the token's stable numeric id.")
-        .def("str", &KE::Scene::Token::str,
-             "Return the token string.")
+        .def("str", &KE::Scene::Token::str, "Return the token string.")
         .def("__eq__", &KE::Scene::Token::operator==)
         .def("__ne__", &KE::Scene::Token::operator!=)
         .def("__repr__", [](const KE::Scene::Token& t) {
@@ -69,6 +65,14 @@ void bind_scene(py::module& m) {
         .value("Disabled", KE::Scene::ManipulationPolicy::Disabled)
         .export_values();
 
+    py::enum_<KE::Scene::LightType>(
+        scene, "LightType",
+        "Light prim subtype used by renderer scene-light sync.")
+        .value("Directional", KE::Scene::LightType::Directional)
+        .value("Point", KE::Scene::LightType::Point)
+        .value("Spot", KE::Scene::LightType::Spot)
+        .export_values();
+
     // Prim class
     py::class_<KE::Scene::Prim>(
         scene, "Prim",
@@ -82,8 +86,7 @@ void bind_scene(py::module& m) {
              "Return this prim's local name.")
         .def("get_path", &KE::Scene::Prim::getPath,
              "Return this prim's absolute scene path.")
-        .def("get_type", &KE::Scene::Prim::getType,
-             "Return this prim's type.")
+        .def("get_type", &KE::Scene::Prim::getType, "Return this prim's type.")
         .def("get_parent", &KE::Scene::Prim::getParent,
              py::return_value_policy::reference,
              "Return this prim's parent, or None for the root.")
@@ -112,13 +115,13 @@ void bind_scene(py::module& m) {
              "Return direct mesh data or resolved source mesh data.")
         // Static mesh creation (returns shared_ptr for set_mesh_data
         // compatibility)
-        .def_static("create_square_data",
-                    [](float scale) {
-                        return std::make_shared<KE::Scene::MeshData>(
-                            KE::Scene::Prim::createSquareData(scale));
-                    },
-                    py::arg("scale") = 1.0f,
-                    "Create square mesh data.")
+        .def_static(
+            "create_square_data",
+            [](float scale) {
+                return std::make_shared<KE::Scene::MeshData>(
+                    KE::Scene::Prim::createSquareData(scale));
+            },
+            py::arg("scale") = 1.0f, "Create square mesh data.")
         .def_static(
             "create_plane_data",
             [](float scale, KE::UpAxis upAxis) {
@@ -166,9 +169,8 @@ void bind_scene(py::module& m) {
             py::arg("up_axis") = KE::UpAxis::Y, py::arg("segments") = 32,
             "Create capsule mesh data.")
         .def_static("define_manipulation_group",
-                    &KE::Scene::Prim::defineManipulationGroup,
-                    py::arg("scene"), py::arg("path"),
-                    py::return_value_policy::reference,
+                    &KE::Scene::Prim::defineManipulationGroup, py::arg("scene"),
+                    py::arg("path"), py::return_value_policy::reference,
                     "Create an Xform prim that manipulates as a group.")
         // Transform ops
         .def("set_local_translation", &KE::Scene::Prim::setLocalTranslation,
@@ -186,7 +188,8 @@ void bind_scene(py::module& m) {
         .def("set_world_matrix", &KE::Scene::Prim::setWorldMatrix,
              py::arg("matrix"), "Set world transform matrix.")
         .def("add_translate_op", &KE::Scene::Prim::addTranslateOp,
-             py::arg("translation"), "Compatibility alias for local translation.")
+             py::arg("translation"),
+             "Compatibility alias for local translation.")
         .def("add_scale_op", &KE::Scene::Prim::addScaleOp, py::arg("scale"),
              "Compatibility alias for local scale.")
         .def("add_rotate_quaternion_op",
@@ -201,6 +204,25 @@ void bind_scene(py::module& m) {
              py::arg("color"), "Set RGBA display color metadata.")
         .def("get_display_color_alpha", &KE::Scene::Prim::getDisplayColorAlpha,
              "Return RGBA display color metadata if present.")
+        // Light data
+        .def("set_light_type", &KE::Scene::Prim::setLightType, py::arg("type"),
+             "Set the light subtype for a Light prim.")
+        .def("get_light_type", &KE::Scene::Prim::getLightType,
+             py::arg("default_type") = KE::Scene::LightType::Point,
+             "Return the light subtype for a Light prim.")
+        .def("set_directional_light", &KE::Scene::Prim::setDirectionalLight,
+             py::arg("light"),
+             "Attach directional light data to this Light prim.")
+        .def("get_directional_light", &KE::Scene::Prim::getDirectionalLight,
+             "Return directional light data from this Light prim.")
+        .def("set_point_light", &KE::Scene::Prim::setPointLight,
+             py::arg("light"), "Attach point light data to this Light prim.")
+        .def("get_point_light", &KE::Scene::Prim::getPointLight,
+             "Return point light data from this Light prim.")
+        .def("set_spot_light", &KE::Scene::Prim::setSpotLight, py::arg("light"),
+             "Attach spot light data to this Light prim.")
+        .def("get_spot_light", &KE::Scene::Prim::getSpotLight,
+             "Return spot light data from this Light prim.")
         // Model matrix
         .def("compute_model_matrix", &KE::Scene::Prim::computeModelMatrix,
              "Compute this prim's model matrix.")
@@ -212,8 +234,7 @@ void bind_scene(py::module& m) {
              "Return local visibility state.")
         .def("set_visible", &KE::Scene::Prim::setVisible, py::arg("visible"),
              "Set local visibility state.")
-        .def("is_visible_in_hierarchy",
-             &KE::Scene::Prim::isVisibleInHierarchy,
+        .def("is_visible_in_hierarchy", &KE::Scene::Prim::isVisibleInHierarchy,
              "Return visibility after parent hierarchy is considered.")
         .def("is_active", &KE::Scene::Prim::isActive,
              "Return local active state.")
@@ -221,85 +242,94 @@ void bind_scene(py::module& m) {
              "Set local active state.")
         .def("is_active_in_hierarchy", &KE::Scene::Prim::isActiveInHierarchy,
              "Return active state after parent hierarchy is considered.")
-        .def("get_manipulation_policy",
-             &KE::Scene::Prim::getManipulationPolicy,
+        .def("get_manipulation_policy", &KE::Scene::Prim::getManipulationPolicy,
              "Return this prim's manipulation policy.")
-        .def("set_manipulation_policy",
-             &KE::Scene::Prim::setManipulationPolicy, py::arg("policy"),
-             "Set this prim's manipulation policy.")
+        .def("set_manipulation_policy", &KE::Scene::Prim::setManipulationPolicy,
+             py::arg("policy"), "Set this prim's manipulation policy.")
         .def("resolve_manipulation_target",
              py::overload_cast<>(&KE::Scene::Prim::resolveManipulationTarget),
              py::return_value_policy::reference,
              "Resolve which prim should be manipulated from this prim.")
         // setAttribute with specific types
-        .def("set_attribute_vec3",
-             [](KE::Scene::Prim& self, const std::string& name,
-                const glm::vec3& value) { self.setAttribute(name, value); },
-             py::arg("name"), py::arg("value"), "Set a vec3 attribute.")
-        .def("set_attribute_vec4",
-             [](KE::Scene::Prim& self, const std::string& name,
-                const glm::vec4& value) { self.setAttribute(name, value); },
-             py::arg("name"), py::arg("value"), "Set a vec4 attribute.")
-        .def("set_attribute_quat",
-             [](KE::Scene::Prim& self, const std::string& name,
-                const glm::quat& value) { self.setAttribute(name, value); },
-             py::arg("name"), py::arg("value"),
-             "Set a quaternion attribute.")
-        .def("set_attribute_float",
-             [](KE::Scene::Prim& self, const std::string& name, float value) {
-                 self.setAttribute(name, value);
-             },
-             py::arg("name"), py::arg("value"), "Set a float attribute.")
-        .def("set_attribute_int",
-             [](KE::Scene::Prim& self, const std::string& name, int value) {
-                 self.setAttribute(name, value);
-             },
-             py::arg("name"), py::arg("value"), "Set an integer attribute.")
-        .def("set_attribute_string",
-             [](KE::Scene::Prim& self, const std::string& name,
-                const std::string& value) { self.setAttribute(name, value); },
-             py::arg("name"), py::arg("value"), "Set a string attribute.")
+        .def(
+            "set_attribute_vec3",
+            [](KE::Scene::Prim& self, const std::string& name,
+               const glm::vec3& value) { self.setAttribute(name, value); },
+            py::arg("name"), py::arg("value"), "Set a vec3 attribute.")
+        .def(
+            "set_attribute_vec4",
+            [](KE::Scene::Prim& self, const std::string& name,
+               const glm::vec4& value) { self.setAttribute(name, value); },
+            py::arg("name"), py::arg("value"), "Set a vec4 attribute.")
+        .def(
+            "set_attribute_quat",
+            [](KE::Scene::Prim& self, const std::string& name,
+               const glm::quat& value) { self.setAttribute(name, value); },
+            py::arg("name"), py::arg("value"), "Set a quaternion attribute.")
+        .def(
+            "set_attribute_float",
+            [](KE::Scene::Prim& self, const std::string& name, float value) {
+                self.setAttribute(name, value);
+            },
+            py::arg("name"), py::arg("value"), "Set a float attribute.")
+        .def(
+            "set_attribute_int",
+            [](KE::Scene::Prim& self, const std::string& name, int value) {
+                self.setAttribute(name, value);
+            },
+            py::arg("name"), py::arg("value"), "Set an integer attribute.")
+        .def(
+            "set_attribute_string",
+            [](KE::Scene::Prim& self, const std::string& name,
+               const std::string& value) { self.setAttribute(name, value); },
+            py::arg("name"), py::arg("value"), "Set a string attribute.")
         // getAttribute with specific types
-        .def("get_attribute_vec3",
-             [](KE::Scene::Prim& self, const std::string& name) {
-                 return self.getAttribute<glm::vec3>(name);
-             },
-             py::arg("name"), "Get a vec3 attribute.")
-        .def("get_attribute_vec4",
-             [](KE::Scene::Prim& self, const std::string& name) {
-                 return self.getAttribute<glm::vec4>(name);
-             },
-             py::arg("name"), "Get a vec4 attribute.")
-        .def("get_attribute_quat",
-             [](KE::Scene::Prim& self, const std::string& name) {
-                 return self.getAttribute<glm::quat>(name);
-             },
-             py::arg("name"), "Get a quaternion attribute.")
-        .def("get_attribute_float",
-             [](KE::Scene::Prim& self, const std::string& name) {
-                 return self.getAttribute<float>(name);
-             },
-             py::arg("name"), "Get a float attribute.")
-        .def("get_attribute_int",
-             [](KE::Scene::Prim& self, const std::string& name) {
-                 return self.getAttribute<int>(name);
-             },
-             py::arg("name"), "Get an integer attribute.")
-        .def("get_attribute_string",
-             [](KE::Scene::Prim& self, const std::string& name) {
-                 return self.getAttribute<std::string>(name);
-             },
-             py::arg("name"), "Get a string attribute.")
-        .def("has_attribute", py::overload_cast<const std::string&>(
-                                  &KE::Scene::Prim::hasAttribute, py::const_),
+        .def(
+            "get_attribute_vec3",
+            [](KE::Scene::Prim& self, const std::string& name) {
+                return self.getAttribute<glm::vec3>(name);
+            },
+            py::arg("name"), "Get a vec3 attribute.")
+        .def(
+            "get_attribute_vec4",
+            [](KE::Scene::Prim& self, const std::string& name) {
+                return self.getAttribute<glm::vec4>(name);
+            },
+            py::arg("name"), "Get a vec4 attribute.")
+        .def(
+            "get_attribute_quat",
+            [](KE::Scene::Prim& self, const std::string& name) {
+                return self.getAttribute<glm::quat>(name);
+            },
+            py::arg("name"), "Get a quaternion attribute.")
+        .def(
+            "get_attribute_float",
+            [](KE::Scene::Prim& self, const std::string& name) {
+                return self.getAttribute<float>(name);
+            },
+            py::arg("name"), "Get a float attribute.")
+        .def(
+            "get_attribute_int",
+            [](KE::Scene::Prim& self, const std::string& name) {
+                return self.getAttribute<int>(name);
+            },
+            py::arg("name"), "Get an integer attribute.")
+        .def(
+            "get_attribute_string",
+            [](KE::Scene::Prim& self, const std::string& name) {
+                return self.getAttribute<std::string>(name);
+            },
+            py::arg("name"), "Get a string attribute.")
+        .def("has_attribute",
+             py::overload_cast<const std::string&>(
+                 &KE::Scene::Prim::hasAttribute, py::const_),
              py::arg("name"), "Return true when an attribute exists.")
         .def("traverse", &KE::Scene::Prim::traverse, py::arg("callback"),
              "Traverse this prim subtree and call callback for each prim.");
 
     // BackendType enum
-    py::enum_<KE::Scene::BackendType>(
-        scene, "BackendType",
-        "Scene backend implementation type.")
+    py::enum_<KE::Scene::BackendType>(scene, "BackendType",
+                                      "Scene backend implementation type.")
         .value("Native", KE::Scene::BackendType::Native)
         .value("USD", KE::Scene::BackendType::USD)
         .export_values();
@@ -328,9 +358,10 @@ void bind_scene(py::module& m) {
         .def_readwrite("bone_node_indices",
                        &KE::Scene::SkinnedMeshData::boneNodeIndices,
                        "Skeleton node index for each bound bone.")
-        .def("has_valid_vertex_skinning",
-             &KE::Scene::SkinnedMeshData::hasValidVertexSkinning,
-             "Return true when vertex bone data matches the mesh vertex count.");
+        .def(
+            "has_valid_vertex_skinning",
+            &KE::Scene::SkinnedMeshData::hasValidVertexSkinning,
+            "Return true when vertex bone data matches the mesh vertex count.");
 
     py::class_<KE::Scene::DebugDraw>(
         scene, "DebugDraw",
@@ -349,8 +380,8 @@ void bind_scene(py::module& m) {
                         "starts and ends must have the same length");
                 }
                 return KE::Scene::DebugDraw::logLines(
-                    app, shader, path, s.data, e.data, c.data, s.count,
-                    c.count, radius, segments);
+                    app, shader, path, s.data, e.data, c.data, s.count, c.count,
+                    radius, segments);
             },
             py::arg("app"), py::arg("shader"), py::arg("path"),
             py::arg("starts"), py::arg("ends"), py::arg("colors"),
@@ -413,8 +444,8 @@ void bind_scene(py::module& m) {
                         "starts and ends must have the same length");
                 }
                 return KE::Scene::DebugDraw::logArrows(
-                    app, shader, path, s.data, e.data, c.data, s.count,
-                    c.count, radius, segments);
+                    app, shader, path, s.data, e.data, c.data, s.count, c.count,
+                    radius, segments);
             },
             py::arg("app"), py::arg("shader"), py::arg("path"),
             py::arg("starts"), py::arg("ends"), py::arg("colors"),
@@ -560,10 +591,10 @@ void bind_scene(py::module& m) {
         "Abstract scene backend interface for native and USD scenes.")
         .def("get_backend_type", &KE::Scene::SceneBackend::getBackendType,
              "Return the backend implementation type.")
-        .def("load_scene", &KE::Scene::SceneBackend::loadScene,
-             py::arg("path"), "Load a scene from a file.")
-        .def("save_scene", &KE::Scene::SceneBackend::saveScene,
-             py::arg("path"), "Save a scene to a file.")
+        .def("load_scene", &KE::Scene::SceneBackend::loadScene, py::arg("path"),
+             "Load a scene from a file.")
+        .def("save_scene", &KE::Scene::SceneBackend::saveScene, py::arg("path"),
+             "Save a scene to a file.")
         .def("load_mesh", &KE::Scene::SceneBackend::loadMesh,
              py::arg("prim_path"), "Load mesh data for a prim path.")
         .def("list_meshes", &KE::Scene::SceneBackend::listMeshes,
@@ -573,8 +604,7 @@ void bind_scene(py::module& m) {
              py::return_value_policy::reference,
              "Define and return a prim at a scene path.")
         .def("get_root_prim", &KE::Scene::SceneBackend::getRootPrim,
-             py::return_value_policy::reference,
-             "Return the scene root prim.");
+             py::return_value_policy::reference, "Return the scene root prim.");
 
 #ifdef KANGENGINE_USE_USD
     // USDScene with direct USD Stage access!

@@ -80,6 +80,9 @@ InteractionMode = _set_public_module(_ke.InteractionMode, __name__)
 ToneMapMode = _set_public_module(_ke.ToneMapMode, __name__)
 TextureRole = _set_public_module(_ke.TextureRole, __name__)
 RayPickResult = _set_public_module(_ke.RayPickResult, __name__)
+DirectionalLight = _set_public_module(_ke.DirectionalLight, __name__)
+PointLight = _set_public_module(_ke.PointLight, __name__)
+SpotLight = _set_public_module(_ke.SpotLight, __name__)
 ColorLibrary = _set_public_module(_ke.ColorLibrary, __name__)
 ColorType = _set_public_module(_ke.ColorType, __name__)
 Color = _set_public_module(_ke.Color, __name__)
@@ -157,6 +160,9 @@ __all__ = [
     "ToneMapMode",
     "TextureRole",
     "RayPickResult",
+    "DirectionalLight",
+    "PointLight",
+    "SpotLight",
     "vec3",
     "vec2",
     "vec4",

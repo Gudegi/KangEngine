@@ -55,6 +55,10 @@ class Renderer {
 
     void setLight(const DirectionalLight& light);
     const DirectionalLight& light() const;
+    void setPointLights(std::vector<PointLight> lights);
+    const std::vector<PointLight>& pointLights() const;
+    void setSpotLights(std::vector<SpotLight> lights);
+    const std::vector<SpotLight>& spotLights() const;
     Backend::Framebuffer* shadowFbo();
     void renderSceneToFramebuffer(Camera& camera, Backend::Framebuffer* target,
                                   int width, int height, bool clear = true);

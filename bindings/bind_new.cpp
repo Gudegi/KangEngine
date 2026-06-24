@@ -380,6 +380,10 @@ PYBIND11_MODULE(_kangengine, m) {
         .value("MetallicRoughness", TextureRole::MetallicRoughness)
         .value("AmbientOcclusion", TextureRole::AmbientOcclusion)
         .value("Emissive", TextureRole::Emissive)
+        .value("Metallic", TextureRole::Metallic)
+        .value("Roughness", TextureRole::Roughness)
+        .value("OcclusionRoughnessMetallic",
+               TextureRole::OcclusionRoughnessMetallic)
         .export_values();
 
     py::enum_<PBRMaterialType>(m, "PBRMaterialType",
@@ -554,8 +558,14 @@ PYBIND11_MODULE(_kangengine, m) {
         .def_readwrite("metallic_roughness_texture",
                        &PBRMaterial::metallicRoughnessTexture,
                        "Optional packed metallic-roughness texture.")
+        .def_readwrite("metallic_texture", &PBRMaterial::metallicTexture,
+                       "Optional single-channel metallic texture.")
+        .def_readwrite("roughness_texture", &PBRMaterial::roughnessTexture,
+                       "Optional single-channel roughness texture.")
         .def_readwrite("ao_texture", &PBRMaterial::aoTexture,
                        "Optional ambient occlusion texture.")
+        .def_readwrite("orm_texture", &PBRMaterial::ormTexture,
+                       "Optional packed occlusion-roughness-metallic texture.")
         .def_readwrite("emissive_texture", &PBRMaterial::emissiveTexture,
                        "Optional emissive texture.");
 
@@ -652,6 +662,37 @@ PYBIND11_MODULE(_kangengine, m) {
              py::return_value_policy::take_ownership,
              "Load a texture from an image file.");
 
+    py::class_<DirectionalLight>(
+        m, "DirectionalLight",
+        "Infinite-distance light used as the renderer's main sun light.")
+        .def(py::init<>())
+        .def_readwrite("direction", &DirectionalLight::direction)
+        .def_readwrite("color", &DirectionalLight::color)
+        .def_readwrite("intensity", &DirectionalLight::intensity)
+        .def_readwrite("ambient", &DirectionalLight::ambient);
+
+    py::class_<PointLight>(
+        m, "PointLight",
+        "Finite local light with position, color, intensity, and range.")
+        .def(py::init<>())
+        .def_readwrite("position", &PointLight::position)
+        .def_readwrite("color", &PointLight::color)
+        .def_readwrite("intensity", &PointLight::intensity)
+        .def_readwrite("range", &PointLight::range);
+
+    py::class_<SpotLight>(
+        m, "SpotLight",
+        "Finite cone light with position, direction, color, intensity, and "
+        "range.")
+        .def(py::init<>())
+        .def_readwrite("position", &SpotLight::position)
+        .def_readwrite("direction", &SpotLight::direction)
+        .def_readwrite("color", &SpotLight::color)
+        .def_readwrite("intensity", &SpotLight::intensity)
+        .def_readwrite("range", &SpotLight::range)
+        .def_readwrite("inner_cone_angle", &SpotLight::innerConeAngle)
+        .def_readwrite("outer_cone_angle", &SpotLight::outerConeAngle);
+
     py::class_<Renderer>(
         m, "Renderer",
         "Renderer facade for updating renderable resources and draw settings.")
@@ -659,6 +700,16 @@ PYBIND11_MODULE(_kangengine, m) {
             "device", [](Renderer& self) { return self.device(); },
             py::return_value_policy::reference,
             "Return the graphics device owned by this renderer.")
+        .def("set_point_lights", &Renderer::setPointLights, py::arg("lights"),
+             "Store point lights for renderers/shaders that support them.")
+        .def("point_lights", &Renderer::pointLights,
+             py::return_value_policy::reference_internal,
+             "Return stored point lights.")
+        .def("set_spot_lights", &Renderer::setSpotLights, py::arg("lights"),
+             "Store spot lights for renderers/shaders that support them.")
+        .def("spot_lights", &Renderer::spotLights,
+             py::return_value_policy::reference_internal,
+             "Return stored spot lights.")
         .def(
             "update_renderable_transforms",
             [](Renderer& self, uint32_t handle, const FloatArray& transforms,

@@ -21,6 +21,8 @@ constexpr int CAMERA_UBO_BIND_SLOT = 0;
 constexpr int LIGHT_UBO_BIND_SLOT = 1;
 constexpr int SHADOW_UBO_BIND_SLOT = 2;
 constexpr int SHADOW_TEXTURE_SLOT_BASE = KE::RendererTextureSlot::Shadow0;
+constexpr size_t LIGHT_UBO_VEC4_COUNT =
+    3 + KE::MaxPointLights * 2 + KE::MaxSpotLights * 3 + 1;
 
 namespace {
 
@@ -58,8 +60,8 @@ Rasterizer::Rasterizer(Backend::GraphicsDevice* graphicsDevice) {
     _cameraUBO = _graphicsDevice->createBuffer(Backend::BufferType::Uniform,
                                                2 * sizeof(glm::mat4));
     _graphicsDevice->bindUniformBuffer(_cameraUBO.get(), CAMERA_UBO_BIND_SLOT);
-    _lightUBO = _graphicsDevice->createBuffer(Backend::BufferType::Uniform,
-                                              3 * sizeof(glm::vec4));
+    _lightUBO = _graphicsDevice->createBuffer(
+        Backend::BufferType::Uniform, LIGHT_UBO_VEC4_COUNT * sizeof(glm::vec4));
     _graphicsDevice->bindUniformBuffer(_lightUBO.get(), LIGHT_UBO_BIND_SLOT);
     // std140 shadow data: mat4[4] cascade matrices, vec4 cascade splits,
     // vec4 cascade ortho half-sizes, vec4 cascade map sizes, vec4 params,
@@ -375,15 +377,76 @@ void Rasterizer::updateFrameData(const glm::mat4& view, const glm::mat4& proj) {
     glm::vec4 viewDir =
         glm::vec4(glm::normalize(glm::mat3(view) * _light.direction), 0.f);
     _lightUBO->setData(&viewDir, sizeof(glm::vec4), 0 * sizeof(glm::vec4));
-    if (_lightDirty) {
-        // std140 layout: vec4 direction | vec4 color | vec4 ambient
-        glm::vec4 lightColor = glm::vec4(_light.color * _light.intensity, 1.f);
-        glm::vec4 ambient = glm::vec4(_light.ambient, 0.f);
-        _lightUBO->setData(&lightColor, sizeof(glm::vec4),
-                           1 * sizeof(glm::vec4));
-        _lightUBO->setData(&ambient, sizeof(glm::vec4), 2 * sizeof(glm::vec4));
-        _lightDirty = false;
+
+    // std140 layout keeps legacy fields first:
+    // vec4 directional dir | vec4 directional color | vec4 ambient
+    // vec4 point position+range[4] | vec4 point color+intensity[4]
+    // vec4 spot position+range[2] | vec4 spot direction+innerCos[2]
+    // vec4 spot color+outerCos[2] | ivec4 counts
+    glm::vec4 lightColor = glm::vec4(_light.color * _light.intensity, 1.f);
+    glm::vec4 ambient = glm::vec4(_light.ambient, 0.f);
+    _lightUBO->setData(&lightColor, sizeof(glm::vec4), 1 * sizeof(glm::vec4));
+    _lightUBO->setData(&ambient, sizeof(glm::vec4), 2 * sizeof(glm::vec4));
+
+    std::array<glm::vec4, MaxPointLights> pointPositionRange{};
+    std::array<glm::vec4, MaxPointLights> pointColorIntensity{};
+    const size_t pointCount =
+        std::min(_pointLights.size(), static_cast<size_t>(MaxPointLights));
+    for (size_t i = 0; i < pointCount; ++i) {
+        const PointLight& light = _pointLights[i];
+        const glm::vec3 viewPos =
+            glm::vec3(view * glm::vec4(light.position, 1.0f));
+        pointPositionRange[i] =
+            glm::vec4(viewPos, std::max(light.range, 0.0001f));
+        pointColorIntensity[i] = glm::vec4(light.color * light.intensity, 1.0f);
     }
+
+    std::array<glm::vec4, MaxSpotLights> spotPositionRange{};
+    std::array<glm::vec4, MaxSpotLights> spotDirectionInner{};
+    std::array<glm::vec4, MaxSpotLights> spotColorOuter{};
+    const size_t spotCount =
+        std::min(_spotLights.size(), static_cast<size_t>(MaxSpotLights));
+    for (size_t i = 0; i < spotCount; ++i) {
+        const SpotLight& light = _spotLights[i];
+        const glm::vec3 viewPos =
+            glm::vec3(view * glm::vec4(light.position, 1.0f));
+        glm::vec3 direction = light.direction;
+        if (glm::length(direction) <= 0.0001f)
+            direction = glm::vec3(0.0f, 0.0f, -1.0f);
+        const glm::vec3 viewDir = glm::normalize(glm::mat3(view) * direction);
+        const float innerAngle =
+            std::min(light.innerConeAngle, light.outerConeAngle);
+        const float outerAngle =
+            std::max(light.innerConeAngle, light.outerConeAngle);
+        spotPositionRange[i] =
+            glm::vec4(viewPos, std::max(light.range, 0.0001f));
+        spotDirectionInner[i] = glm::vec4(viewDir, std::cos(innerAngle));
+        spotColorOuter[i] =
+            glm::vec4(light.color * light.intensity, std::cos(outerAngle));
+    }
+
+    constexpr size_t pointPositionOffset = 3;
+    constexpr size_t pointColorOffset = pointPositionOffset + MaxPointLights;
+    constexpr size_t spotPositionOffset = pointColorOffset + MaxPointLights;
+    constexpr size_t spotDirectionOffset = spotPositionOffset + MaxSpotLights;
+    constexpr size_t spotColorOffset = spotDirectionOffset + MaxSpotLights;
+    constexpr size_t countOffset = spotColorOffset + MaxSpotLights;
+
+    _lightUBO->setData(pointPositionRange.data(), sizeof(pointPositionRange),
+                       pointPositionOffset * sizeof(glm::vec4));
+    _lightUBO->setData(pointColorIntensity.data(), sizeof(pointColorIntensity),
+                       pointColorOffset * sizeof(glm::vec4));
+    _lightUBO->setData(spotPositionRange.data(), sizeof(spotPositionRange),
+                       spotPositionOffset * sizeof(glm::vec4));
+    _lightUBO->setData(spotDirectionInner.data(), sizeof(spotDirectionInner),
+                       spotDirectionOffset * sizeof(glm::vec4));
+    _lightUBO->setData(spotColorOuter.data(), sizeof(spotColorOuter),
+                       spotColorOffset * sizeof(glm::vec4));
+    glm::ivec4 lightCounts(static_cast<int>(pointCount),
+                           static_cast<int>(spotCount), 0, 0);
+    _lightUBO->setData(&lightCounts, sizeof(lightCounts),
+                       countOffset * sizeof(glm::vec4));
+    _lightDirty = false;
 
     // Update all instancers (must run before shadow pass AND scene pass)
     for (auto& [key, inst] : _instancers)

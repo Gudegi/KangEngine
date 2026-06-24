@@ -22,6 +22,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace KE {
@@ -76,6 +77,8 @@ class Rasterizer : public RenderPipeline {
     std::unique_ptr<Backend::Buffer> _lightUBO;
     std::unique_ptr<Backend::Buffer> _shadowUBO;
     DirectionalLight _light;
+    std::vector<PointLight> _pointLights;
+    std::vector<SpotLight> _spotLights;
     bool _lightDirty = true;
 
     std::unique_ptr<Backend::Framebuffer> _shadowFbo; // depth-only
@@ -139,6 +142,22 @@ class Rasterizer : public RenderPipeline {
         _lightDirty = true;
     }
     const DirectionalLight& getLight() const { return _light; }
+    void setPointLights(std::vector<PointLight> lights) {
+        if (lights.size() > MaxPointLights)
+            lights.resize(MaxPointLights);
+        _pointLights = std::move(lights);
+        _lightDirty = true;
+    }
+    const std::vector<PointLight>& getPointLights() const {
+        return _pointLights;
+    }
+    void setSpotLights(std::vector<SpotLight> lights) {
+        if (lights.size() > MaxSpotLights)
+            lights.resize(MaxSpotLights);
+        _spotLights = std::move(lights);
+        _lightDirty = true;
+    }
+    const std::vector<SpotLight>& getSpotLights() const { return _spotLights; }
 
     // shadow
     void setShadowDistance(float distance) {

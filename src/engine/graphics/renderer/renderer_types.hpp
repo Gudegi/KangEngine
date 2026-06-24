@@ -35,6 +35,9 @@ constexpr int Normal = 5;
 constexpr int MetallicRoughness = 6;
 constexpr int AmbientOcclusion = 7;
 constexpr int Emissive = 8;
+constexpr int Metallic = 9;
+constexpr int Roughness = 10;
+constexpr int OcclusionRoughnessMetallic = 11;
 
 } // namespace RendererTextureSlot
 
@@ -45,6 +48,9 @@ enum class TextureRole {
     MetallicRoughness,
     AmbientOcclusion,
     Emissive,
+    Metallic,
+    Roughness,
+    OcclusionRoughnessMetallic,
 };
 
 constexpr int textureRoleSlot(TextureRole role) {
@@ -59,6 +65,12 @@ constexpr int textureRoleSlot(TextureRole role) {
         return RendererTextureSlot::AmbientOcclusion;
     case TextureRole::Emissive:
         return RendererTextureSlot::Emissive;
+    case TextureRole::Metallic:
+        return RendererTextureSlot::Metallic;
+    case TextureRole::Roughness:
+        return RendererTextureSlot::Roughness;
+    case TextureRole::OcclusionRoughnessMetallic:
+        return RendererTextureSlot::OcclusionRoughnessMetallic;
     }
     return RendererTextureSlot::BaseColor;
 }

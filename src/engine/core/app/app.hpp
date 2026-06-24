@@ -96,9 +96,11 @@ class App {
     InteractionController _interaction;
     GizmoController _gizmo;
 
+    Scene::Prim* defaultDirectionalLightPrim();
     void registerCallbacks();
     bool writeScreenshotFrame();
     void renderSelectionGizmo();
+    void syncSceneLights();
     bool getPickTransform(const RayPickResult& result,
                           glm::mat4& outTransform) const;
     bool setPickTransform(const RayPickResult& result,

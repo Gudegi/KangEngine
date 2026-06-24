@@ -11,9 +11,11 @@
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/ext/scalar_constants.hpp>
 #include <glm/fwd.hpp>
+#include <glm/geometric.hpp>
 #include <glm/trigonometric.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <sstream>
+#include <algorithm>
 #include "xform_token.hpp"
 
 namespace KE {
@@ -30,6 +32,12 @@ void decomposeTRS(const glm::mat4& matrix, glm::vec3& translation,
 
 bool isRenderableType(PrimType type) {
     return type == PrimType::Mesh || type == PrimType::MeshInstance;
+}
+
+glm::vec3 safeDirection(glm::vec3 direction, glm::vec3 fallback) {
+    if (glm::length(direction) < 1e-4f)
+        return glm::normalize(fallback);
+    return glm::normalize(direction);
 }
 } // namespace
 
@@ -136,6 +144,98 @@ std::shared_ptr<MeshData> Prim::resolveMeshData() const {
         return nullptr;
 
     return source->resolveMeshData();
+}
+
+void Prim::setLightType(LightType type) {
+    setAttribute("light:type", static_cast<int>(type));
+}
+
+LightType Prim::getLightType(LightType defaultType) const {
+    if (!hasAttribute("light:type"))
+        return defaultType;
+    const int value = getAttribute<int>("light:type");
+    if (value < static_cast<int>(LightType::Directional) ||
+        value > static_cast<int>(LightType::Spot))
+        return defaultType;
+    return static_cast<LightType>(value);
+}
+
+void Prim::setDirectionalLight(const DirectionalLight& light) {
+    setLightType(LightType::Directional);
+    setAttribute("light:direction",
+                 safeDirection(light.direction, glm::vec3(0.0f, 0.0f, -1.0f)));
+    setAttribute("light:color", light.color);
+    setAttribute("light:intensity", std::max(0.0f, light.intensity));
+    setAttribute("light:ambient", light.ambient);
+}
+
+DirectionalLight Prim::getDirectionalLight() {
+    DirectionalLight light;
+    const glm::vec3 localDirection =
+        getAttribute<glm::vec3>("light:direction", light.direction);
+    const glm::mat3 worldRotation(computeWorldMatrix());
+    light.direction =
+        safeDirection(worldRotation * localDirection, light.direction);
+    light.color = getAttribute<glm::vec3>("light:color", light.color);
+    light.intensity =
+        std::max(0.0f, getAttribute<float>("light:intensity", light.intensity));
+    light.ambient = getAttribute<glm::vec3>("light:ambient", light.ambient);
+    return light;
+}
+
+void Prim::setPointLight(const PointLight& light) {
+    setLightType(LightType::Point);
+    setLocalTranslation(light.position);
+    setAttribute("light:color", light.color);
+    setAttribute("light:intensity", std::max(0.0f, light.intensity));
+    setAttribute("light:range", std::max(0.0f, light.range));
+}
+
+PointLight Prim::getPointLight() {
+    PointLight light;
+    const glm::mat4 world = computeWorldMatrix();
+    light.position = glm::vec3(world[3]);
+    light.color = getAttribute<glm::vec3>("light:color", light.color);
+    light.intensity =
+        std::max(0.0f, getAttribute<float>("light:intensity", light.intensity));
+    light.range =
+        std::max(0.0f, getAttribute<float>("light:range", light.range));
+    return light;
+}
+
+void Prim::setSpotLight(const SpotLight& light) {
+    setLightType(LightType::Spot);
+    setLocalTranslation(light.position);
+    setAttribute("light:direction",
+                 safeDirection(light.direction, glm::vec3(0.0f, 0.0f, -1.0f)));
+    setAttribute("light:color", light.color);
+    setAttribute("light:intensity", std::max(0.0f, light.intensity));
+    setAttribute("light:range", std::max(0.0f, light.range));
+    setAttribute("light:innerConeAngle", std::max(0.0f, light.innerConeAngle));
+    setAttribute("light:outerConeAngle",
+                 std::max(light.innerConeAngle, light.outerConeAngle));
+}
+
+SpotLight Prim::getSpotLight() {
+    SpotLight light;
+    const glm::mat4 world = computeWorldMatrix();
+    const glm::vec3 localDirection =
+        getAttribute<glm::vec3>("light:direction", light.direction);
+    light.position = glm::vec3(world[3]);
+    light.direction =
+        safeDirection(glm::mat3(world) * localDirection, light.direction);
+    light.color = getAttribute<glm::vec3>("light:color", light.color);
+    light.intensity =
+        std::max(0.0f, getAttribute<float>("light:intensity", light.intensity));
+    light.range =
+        std::max(0.0f, getAttribute<float>("light:range", light.range));
+    light.innerConeAngle =
+        std::max(0.0f, getAttribute<float>("light:innerConeAngle",
+                                           light.innerConeAngle));
+    light.outerConeAngle = std::max(
+        light.innerConeAngle,
+        getAttribute<float>("light:outerConeAngle", light.outerConeAngle));
+    return light;
 }
 
 bool Prim::isActiveInHierarchy() const {

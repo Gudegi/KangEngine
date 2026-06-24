@@ -192,9 +192,14 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
                    _postProcessor.get(), _selectionOutlineProcessor.get());
     _renderer.setViewportSize(_width, _height);
 
-    getRenderer().setLight(DirectionalLight{
-        (_upAxis == UpAxis::Z) ? glm::normalize(glm::vec3(0.2f, 0.5f, 1.0f))
-                               : glm::normalize(glm::vec3(0.5f, 1.0f, 0.2f))});
+    DirectionalLight defaultLight;
+    defaultLight.direction = (_upAxis == UpAxis::Z)
+                                 ? glm::normalize(glm::vec3(0.2f, 0.5f, 1.0f))
+                                 : glm::normalize(glm::vec3(0.5f, 1.0f, 0.2f));
+    if (Scene::Prim* lightPrim = defaultDirectionalLightPrim())
+        lightPrim->setDirectionalLight(defaultLight);
+    else
+        getRenderer().setLight(defaultLight);
     _initialized = true;
 }
 
@@ -239,6 +244,7 @@ void App::requestClose() {
 
 void App::renderSceneToFramebuffer(Camera& camera, Backend::Framebuffer* target,
                                    int width, int height, bool clear) {
+    syncSceneLights();
     getRenderer().renderSceneToFramebuffer(camera, target, width, height,
                                            clear);
 }
@@ -263,6 +269,7 @@ void App::renderFrameOnce() {
 
     this->preRender();
     if (_rasterizer) {
+        syncSceneLights();
         _rasterizer->updateFrameData(_viewMatrix, _projectionMatrix);
         if (_mousePickRequested) {
             const RayPickResult pick = pickMouse();
@@ -405,6 +412,67 @@ void App::coreRender() {
 
     if (_rasterizer)
         _rasterizer->render(_viewMatrix, _projectionMatrix);
+}
+
+Scene::Prim* App::defaultDirectionalLightPrim() {
+    if (!_scene)
+        return nullptr;
+    return _scene->definePrim("/lights/default_directional",
+                              Scene::PrimType::Light);
+}
+
+void App::syncSceneLights() {
+    if (!_scene || !_scene->getRootPrim())
+        return;
+
+    // Renderer light sync only scans this subtree. Define scene lights under
+    // /lights so mesh/debug/skeleton prims never join the per-frame search.
+    Scene::Prim* lightsRoot = _scene->getRootPrim()->getPrimAtPath("/lights");
+    if (!lightsRoot)
+        return;
+
+    bool hasLightPrim = false;
+    bool hasDirectionalLight = false;
+    DirectionalLight directionalLight;
+    directionalLight.intensity = 0.0f;
+    directionalLight.ambient = glm::vec3(0.0f);
+    std::vector<PointLight> pointLights;
+    std::vector<SpotLight> spotLights;
+    pointLights.reserve(MaxPointLights);
+    spotLights.reserve(MaxSpotLights);
+
+    lightsRoot->traverse([&](Scene::Prim* prim) {
+        if (!prim || prim->getType() != Scene::PrimType::Light)
+            return;
+
+        hasLightPrim = true;
+        if (!prim->isVisibleInHierarchy())
+            return;
+
+        switch (prim->getLightType()) {
+        case Scene::LightType::Directional:
+            if (!hasDirectionalLight) {
+                directionalLight = prim->getDirectionalLight();
+                hasDirectionalLight = true;
+            }
+            break;
+        case Scene::LightType::Point:
+            if (pointLights.size() < static_cast<size_t>(MaxPointLights))
+                pointLights.push_back(prim->getPointLight());
+            break;
+        case Scene::LightType::Spot:
+            if (spotLights.size() < static_cast<size_t>(MaxSpotLights))
+                spotLights.push_back(prim->getSpotLight());
+            break;
+        }
+    });
+
+    if (!hasLightPrim)
+        return;
+
+    getRenderer().setLight(directionalLight);
+    getRenderer().setPointLights(std::move(pointLights));
+    getRenderer().setSpotLights(std::move(spotLights));
 }
 
 void App::checkError() { _graphicsDevice->checkError(); }
@@ -630,34 +698,38 @@ void App::drawArrow(const std::string& path, glm::vec3 start, glm::vec3 end,
 }
 
 void App::setLightDirection(const glm::vec3& dir) {
-    if (_rasterizer) {
-        DirectionalLight light = getLight();
-        if (glm::length(dir) < 1e-4f)
-            return;
-        light.direction = glm::normalize(dir);
+    if (glm::length(dir) < 1e-4f)
+        return;
+    DirectionalLight light = getLight();
+    light.direction = glm::normalize(dir);
+    if (Scene::Prim* lightPrim = defaultDirectionalLightPrim())
+        lightPrim->setDirectionalLight(light);
+    else
         setLight(light);
-    }
 }
 void App::setLightColor(const glm::vec3& color) {
-    if (_rasterizer) {
-        DirectionalLight light = getLight();
-        light.color = glm::clamp(color, glm::vec3(0.0f), glm::vec3(1.0f));
+    DirectionalLight light = getLight();
+    light.color = glm::clamp(color, glm::vec3(0.0f), glm::vec3(1.0f));
+    if (Scene::Prim* lightPrim = defaultDirectionalLightPrim())
+        lightPrim->setDirectionalLight(light);
+    else
         setLight(light);
-    }
 }
 void App::setLightIntensity(float intensity) {
-    if (_rasterizer) {
-        DirectionalLight light = getLight();
-        light.intensity = std::max(0.0f, intensity);
+    DirectionalLight light = getLight();
+    light.intensity = std::max(0.0f, intensity);
+    if (Scene::Prim* lightPrim = defaultDirectionalLightPrim())
+        lightPrim->setDirectionalLight(light);
+    else
         setLight(light);
-    }
 }
 void App::setLightAmbient(const glm::vec3& ambient) {
-    if (_rasterizer) {
-        DirectionalLight light = getLight();
-        light.ambient = glm::clamp(ambient, glm::vec3(0.0f), glm::vec3(1.0f));
+    DirectionalLight light = getLight();
+    light.ambient = glm::clamp(ambient, glm::vec3(0.0f), glm::vec3(1.0f));
+    if (Scene::Prim* lightPrim = defaultDirectionalLightPrim())
+        lightPrim->setDirectionalLight(light);
+    else
         setLight(light);
-    }
 }
 
 void App::updateRenderableTransforms(RenderableHandle handle,

@@ -4,6 +4,8 @@
 #include "engine/graphics/camera/camera.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
 
+#include <utility>
+
 namespace KE {
 
 void Renderer::bind(Backend::GraphicsDevice* device, Rasterizer* rasterizer,
@@ -27,6 +29,24 @@ void Renderer::setLight(const DirectionalLight& light) {
 
 const DirectionalLight& Renderer::light() const {
     return _rasterizer->getLight();
+}
+
+void Renderer::setPointLights(std::vector<PointLight> lights) {
+    if (_rasterizer)
+        _rasterizer->setPointLights(std::move(lights));
+}
+
+const std::vector<PointLight>& Renderer::pointLights() const {
+    return _rasterizer->getPointLights();
+}
+
+void Renderer::setSpotLights(std::vector<SpotLight> lights) {
+    if (_rasterizer)
+        _rasterizer->setSpotLights(std::move(lights));
+}
+
+const std::vector<SpotLight>& Renderer::spotLights() const {
+    return _rasterizer->getSpotLights();
 }
 
 Backend::Framebuffer* Renderer::shadowFbo() {

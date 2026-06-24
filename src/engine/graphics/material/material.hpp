@@ -101,7 +101,10 @@ class PBRMaterial : public Material {
     Backend::Texture* baseColorTexture = nullptr;
     Backend::Texture* normalTexture = nullptr;
     Backend::Texture* metallicRoughnessTexture = nullptr;
+    Backend::Texture* metallicTexture = nullptr;
+    Backend::Texture* roughnessTexture = nullptr;
     Backend::Texture* aoTexture = nullptr;
+    Backend::Texture* ormTexture = nullptr;
     Backend::Texture* emissiveTexture = nullptr;
 
     bool hasNormalMap() const override { return normalTexture != nullptr; }
@@ -121,8 +124,14 @@ class PBRMaterial : public Material {
         bindTexture("uMetallicRoughnessMap", "useMetallicRoughnessMap",
                     metallicRoughnessTexture,
                     RendererTextureSlot::MetallicRoughness);
+        bindTexture("uMetallicMap", "useMetallicMap", metallicTexture,
+                    RendererTextureSlot::Metallic);
+        bindTexture("uRoughnessMap", "useRoughnessMap", roughnessTexture,
+                    RendererTextureSlot::Roughness);
         bindTexture("uAoMap", "useAoMap", aoTexture,
                     RendererTextureSlot::AmbientOcclusion);
+        bindTexture("uOrmMap", "useOrmMap", ormTexture,
+                    RendererTextureSlot::OcclusionRoughnessMetallic);
         bindTexture("uEmissiveMap", "useEmissiveMap", emissiveTexture,
                     RendererTextureSlot::Emissive);
     }

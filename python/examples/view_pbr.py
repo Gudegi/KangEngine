@@ -11,15 +11,18 @@ class PBRViewer(ke.App):
         self.shaders = self.create_standard_shaders()
         self.pbr_shader = self.create_asset_shader("common.vs", "pbr_forward.fs")
         self.materials = []
+        self.local_lights_enabled = True
+        self.local_light_prims = []
 
         self.add_ground(shader=self.shaders.ground, scale=16.0)
         self._build_material_grid()
         self._add_emissive_sphere()
+        self._configure_local_lights()
 
         self.set_light_direction(ke.vec3(-0.45, 0.55, 0.72))
         self.set_light_color(ke.vec3(1.0, 0.96, 0.88))
-        self.set_light_intensity(3.0)
-        self.set_light_ambient(ke.vec3(0.035, 0.04, 0.05))
+        self.set_light_intensity(0.45)
+        self.set_light_ambient(ke.vec3(0.025, 0.028, 0.032))
         self.set_tone_map(ke.ToneMapMode.AcesNarkowicz, 1.0)
         self.set_bloom(
             True,
@@ -77,10 +80,58 @@ class PBRViewer(ke.App):
         )
         self.set_renderable_casts_shadow(handle, False)
 
+    def _configure_local_lights(self):
+        warm_light = ke.PointLight()
+        warm_light.position = ke.vec3(-1.45, -1.35, 1.25)
+        warm_light.color = ke.vec3(1.0, 0.55, 0.28)
+        warm_light.intensity = 85.0
+        warm_light.range = 5.0
+        warm_prim = self.get_scene().define_prim(
+            "/lights/warm_point", scene.PrimType.Light
+        )
+        warm_prim.set_point_light(warm_light)
+
+        cool_light = ke.PointLight()
+        cool_light.position = ke.vec3(1.45, 0.95, 1.15)
+        cool_light.color = ke.vec3(0.25, 0.55, 1.0)
+        cool_light.intensity = 70.0
+        cool_light.range = 4.8
+        cool_prim = self.get_scene().define_prim(
+            "/lights/cool_point", scene.PrimType.Light
+        )
+        cool_prim.set_point_light(cool_light)
+
+        spot_light = ke.SpotLight()
+        spot_light.position = ke.vec3(0.0, -3.2, 2.8)
+        spot_light.direction = ke.vec3(0.0, 0.82, -0.58)
+        spot_light.color = ke.vec3(1.0, 0.92, 0.78)
+        spot_light.intensity = 90.0
+        spot_light.range = 6.0
+        spot_light.inner_cone_angle = 0.34
+        spot_light.outer_cone_angle = 0.62
+        spot_prim = self.get_scene().define_prim(
+            "/lights/soft_spot", scene.PrimType.Light
+        )
+        spot_prim.set_spot_light(spot_light)
+
+        self.local_light_prims = [warm_prim, cool_prim, spot_prim]
+        self._apply_local_lights()
+
+    def _apply_local_lights(self):
+        for prim in self.local_light_prims:
+            prim.set_visible(self.local_lights_enabled)
+
     def render(self):
         imgui.begin("PBR")
         imgui.text("Rows: carrot / charcoal / gold")
         imgui.text("Columns: roughness 0.18 / 0.42 / 0.78")
+        changed, self.local_lights_enabled = imgui.checkbox(
+            "local lights",
+            self.local_lights_enabled,
+        )
+        if changed:
+            self._apply_local_lights()
+        imgui.text("Local lights: warm point / cool point / soft spot")
         imgui.text("The small blue sphere is emissive and feeds HDR bloom.")
         imgui.end()
 
