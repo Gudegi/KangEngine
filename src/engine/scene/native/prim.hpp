@@ -87,6 +87,7 @@ class Prim {
 
     // 계층 구조
     Prim* addChild(const std::string& name, PrimType type);
+    bool removeChild(const std::string& name);
     Prim* getChild(const std::string& name) const;
     Prim* getPrimAtPath(const std::string& path); // "/World/Cube" 경로로 탐색
     std::vector<Prim*> getChildren() const;

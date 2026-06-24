@@ -41,8 +41,7 @@ class USDSceneViewer(ke.App):
         self.double_sided = double_sided
 
     def setup(self):
-        self.mesh_prims = []
-        self.mesh_handles = []
+        self.mesh_views = []
         self.textures = []
         self.texture_cache = {}
         self.normal_maps_enabled = True
@@ -79,32 +78,34 @@ class USDSceneViewer(ke.App):
         self._frame_camera()
 
         if self.show_ground:
-            ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
-            ground.set_mesh_data(scene.Prim.create_plane_data(50.0, ke.UpAxis.Y))
-            self.add_renderable(self.ground_shader, ground)
+            self.scene.add_mesh(
+                "/ground",
+                scene.Prim.create_plane_data(50.0, ke.UpAxis.Y),
+                self.ground_shader,
+            )
 
         textured_count = 0
         normal_mapped_count = 0
         for i, mesh in enumerate(self.result.meshes):
             prim_path = "/usd_meshes/" + _safe_prim_name(mesh.name, f"mesh_{i}")
-            prim = self.get_scene().define_prim(prim_path, scene.PrimType.Mesh)
-            prim.set_mesh_data(mesh.mesh_data)
-            prim.set_display_color_alpha(_mesh_color(i))
-            self.mesh_prims.append(prim)
-
             diffuse_texture = self._load_texture(getattr(mesh, "diffuse_texture_path", ""))
             normal_texture = self._load_texture(getattr(mesh, "normal_texture_path", ""))
             shader = self.mesh_texture_shader if diffuse_texture is not None else self.mesh_shader
-            handle = self.add_renderable(shader, prim)
+            view = self.scene.add_mesh(
+                prim_path,
+                mesh.mesh_data,
+                shader,
+                color=_mesh_color(i),
+            )
             if diffuse_texture is not None:
-                self.set_renderable_texture(handle, diffuse_texture, 0)
+                view.set_texture(diffuse_texture, 0)
                 textured_count += 1
             if diffuse_texture is not None and normal_texture is not None:
-                self.set_renderable_texture(handle, normal_texture, 5)
-                self.normal_texture_bindings.append((handle, normal_texture))
+                view.set_texture(normal_texture, 5)
+                self.normal_texture_bindings.append((view, normal_texture))
                 normal_mapped_count += 1
-            self.set_renderable_double_sided(handle, self.double_sided)
-            self.mesh_handles.append(handle)
+            view.set_double_sided(self.double_sided)
+            self.mesh_views.append(view)
 
         print(
             f"USD loaded: {self.usd_file} meshes={len(self.result.meshes)} "
@@ -119,7 +120,7 @@ class USDSceneViewer(ke.App):
     def render(self):
         imgui.begin("USD")
         imgui.text(Path(self.usd_file).name)
-        imgui.text(f"meshes: {len(self.mesh_prims)}")
+        imgui.text(f"meshes: {len(self.mesh_views)}")
         imgui.text(f"textures: {len(self.textures)}")
         imgui.text(f"normal maps: {len(self.normal_texture_bindings)}")
         changed, self.normal_maps_enabled = imgui.checkbox(
@@ -185,8 +186,8 @@ class USDSceneViewer(ke.App):
         return texture
 
     def _apply_normal_map_toggle(self):
-        for handle, texture in self.normal_texture_bindings:
-            self.set_renderable_texture(handle, texture if self.normal_maps_enabled else None, 5)
+        for view, texture in self.normal_texture_bindings:
+            view.set_texture(texture if self.normal_maps_enabled else None, 5)
 
     def _apply_normal_debug_mode(self):
         self.mesh_texture_shader.use()

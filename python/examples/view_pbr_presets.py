@@ -50,10 +50,13 @@ class PBRPresetViewer(ke.App):
         return material
 
     def _add_sphere(self, path, position, material):
-        prim = self.get_scene().define_prim(path, scene.PrimType.Mesh)
-        prim.set_mesh_data(scene.Prim.create_sphere_data(0.32, 48, 24))
-        prim.add_translate_op(ke.vec3(*position))
-        return self.add_renderable(material, prim)
+        view = self.scene.add_mesh(
+            path,
+            scene.Prim.create_sphere_data(0.32, 48, 24),
+            material,
+        )
+        view.prim.add_translate_op(ke.vec3(*position))
+        return view
 
     def _build_preset_grid(self):
         columns = 4

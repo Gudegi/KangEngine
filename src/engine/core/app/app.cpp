@@ -451,6 +451,35 @@ void App::removePrim(RenderableHandle handle, Scene::Prim* prim) {
         _rasterizer->removePrim(handle, prim);
 }
 
+bool App::removePrim(Scene::Prim* prim) {
+    if (!prim)
+        return false;
+    return removePrim(prim->getPath());
+}
+
+bool App::removePrim(const std::string& path) {
+    if (!_scene || path.empty() || path == "/")
+        return false;
+
+    Scene::Prim* prim = _scene->getPrimAtPath(path);
+    if (!prim)
+        return false;
+
+    std::vector<Scene::Prim*> subtree;
+    prim->traverse([&](Scene::Prim* child) {
+        if (child)
+            subtree.push_back(child);
+    });
+
+    if (_rasterizer) {
+        for (Scene::Prim* child : subtree)
+            _rasterizer->removePrim(child);
+    }
+
+    clearSelection();
+    return _scene->removePrim(path);
+}
+
 App::MeshPrimResult App::addMeshPrim(MeshPrimDesc desc) {
     MeshPrimResult result;
     if (!desc.shader || !_scene || desc.path.empty())

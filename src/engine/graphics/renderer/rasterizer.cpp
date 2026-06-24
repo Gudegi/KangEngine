@@ -187,6 +187,13 @@ void Rasterizer::removePrim(RenderableHandle handle, Scene::Prim* prim) {
     _handleTable[handle]->removePrim(prim);
 }
 
+void Rasterizer::removePrim(Scene::Prim* prim) {
+    if (!prim)
+        return;
+    for (auto& [key, instancer] : _instancers)
+        instancer.removePrim(prim);
+}
+
 void Rasterizer::updateRenderableTransforms(
     RenderableHandle handle, const std::vector<glm::mat4>& transforms,
     const std::vector<glm::vec4>* colors) {

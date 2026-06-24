@@ -27,10 +27,11 @@ public:
     MeshData loadMesh(const std::string& primPath) override;
     std::vector<std::string> listMeshes() override;
     Prim* definePrim(const std::string& path, PrimType type) override;
+    Prim* getPrimAtPath(const std::string& path) override;
+    bool removePrim(const std::string& path) override;
 
     // Scene Graph API
     Prim* getRootPrim() override { return _root.get(); }
-    Prim* getPrimAtPath(const std::string& path);
     Prim* createPrim(const std::string& path, PrimType type);
 };
 

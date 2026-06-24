@@ -57,18 +57,22 @@ class BrickwallNormalMapViewer(ke.App):
         self.diffuse_texture = device.create_texture(str(root / "brickwall.jpg"), True)
         self.normal_texture = device.create_texture(str(root / "brickwall_normal.jpg"), True)
 
-        wall = self.get_scene().define_prim("/brickwall", scene.PrimType.Mesh)
-        wall.set_mesh_data(scene.Prim.create_plane_data(4.0, ke.UpAxis.Z))
-        wall.set_display_color_alpha(ke.vec4(1.0, 1.0, 1.0, 1.0))
-        self.wall_handle = self.add_renderable(self.wall_shader, wall)
-        self.set_renderable_texture(self.wall_handle, self.diffuse_texture, 0)
-        self.set_renderable_texture(self.wall_handle, self.normal_texture, 5)
-        self.set_renderable_double_sided(self.wall_handle, True)
+        self.wall_view = self.scene.add_mesh(
+            "/brickwall",
+            scene.Prim.create_plane_data(4.0, ke.UpAxis.Z),
+            self.wall_shader,
+            color=ke.vec4(1.0, 1.0, 1.0, 1.0),
+        )
+        self.wall_view.set_texture(self.diffuse_texture, 0)
+        self.wall_view.set_texture(self.normal_texture, 5)
+        self.wall_view.set_double_sided(True)
 
-        ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
-        ground.set_mesh_data(scene.Prim.create_plane_data(6.0, ke.UpAxis.Y))
-        ground.add_translate_op(ke.vec3(0.0, -2.0, 0.0))
-        self.add_renderable(self.ground_shader, ground)
+        ground_view = self.scene.add_mesh(
+            "/ground",
+            scene.Prim.create_plane_data(6.0, ke.UpAxis.Y),
+            self.ground_shader,
+        )
+        ground_view.prim.add_translate_op(ke.vec3(0.0, -2.0, 0.0))
 
         self.set_light_direction(ke.vec3(-0.45, 0.35, 0.82))
         self.set_light_color(ke.vec3(1.0, 0.96, 0.88))
@@ -97,8 +101,7 @@ class BrickwallNormalMapViewer(ke.App):
             "normal map", self.normal_maps_enabled
         )
         if changed:
-            self.set_renderable_texture(
-                self.wall_handle,
+            self.wall_view.set_texture(
                 self.normal_texture if self.normal_maps_enabled else None,
                 5,
             )

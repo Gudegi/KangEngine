@@ -46,10 +46,13 @@ class PBRViewer(ke.App):
         return material
 
     def _add_pbr_sphere(self, path, position, material, radius=0.34):
-        prim = self.get_scene().define_prim(path, scene.PrimType.Mesh)
-        prim.set_mesh_data(scene.Prim.create_sphere_data(radius, 48, 24))
-        prim.add_translate_op(ke.vec3(*position))
-        return self.add_renderable(material, prim)
+        view = self.scene.add_mesh(
+            path,
+            scene.Prim.create_sphere_data(radius, 48, 24),
+            material,
+        )
+        view.prim.add_translate_op(ke.vec3(*position))
+        return view
 
     def _build_material_grid(self):
         presets = [
@@ -72,13 +75,13 @@ class PBRViewer(ke.App):
 
     def _add_emissive_sphere(self):
         material = self._make_material(ke.PBRMaterialType.EMISSIVE_BLUE)
-        handle = self._add_pbr_sphere(
+        view = self._add_pbr_sphere(
             "/pbr/emissive",
             [2.45, -1.7, 0.9],
             material,
             0.28,
         )
-        self.set_renderable_casts_shadow(handle, False)
+        view.set_casts_shadow(False)
 
     def _configure_local_lights(self):
         warm_light = ke.PointLight()

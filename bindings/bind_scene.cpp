@@ -603,6 +603,14 @@ void bind_scene(py::module& m) {
              py::arg("path"), py::arg("type"),
              py::return_value_policy::reference,
              "Define and return a prim at a scene path.")
+        .def("get_prim_at_path", &KE::Scene::SceneBackend::getPrimAtPath,
+             py::arg("path"), py::return_value_policy::reference,
+             "Return a prim at a scene path, or None if it does not exist.")
+        .def("remove_prim", &KE::Scene::SceneBackend::removePrim,
+             py::arg("path"),
+             "Remove a prim subtree from this scene backend. This does not "
+             "detach renderer resources by itself; prefer App scene helpers "
+             "for user-facing workflows.")
         .def("get_root_prim", &KE::Scene::SceneBackend::getRootPrim,
              py::return_value_policy::reference, "Return the scene root prim.");
 

@@ -10,7 +10,7 @@ if _assets_dir.exists():
 from ._core import _ke
 from ._public import set_public_module as _set_public_module
 from . import animation, asset, physics, scene
-from .app import App, NativeApp
+from .app import App, NativeApp, RenderablePrimView, SceneContext
 from .motion_editor import (
     MotionEditor,
     MotionPlayer,
@@ -121,6 +121,8 @@ WebGPU = _ke.WebGPU
 __all__ = [
     "App",
     "NativeApp",
+    "RenderablePrimView",
+    "SceneContext",
     "MotionEditor",
     "MotionModule",
     "MotionPlayer",

@@ -223,6 +223,7 @@ class Rasterizer : public RenderPipeline {
         Material* material, Scene::Prim* prim,
         TransformSource transformSource = TransformSource::SceneGraph);
     void removePrim(RenderableHandle handle, Scene::Prim* prim);
+    void removePrim(Scene::Prim* prim);
 
     void
     updateRenderableTransforms(RenderableHandle handle,

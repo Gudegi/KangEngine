@@ -31,8 +31,7 @@ class FBXMeshViewer(ke.App):
         self.show_ground = show_ground
 
     def setup(self):
-        self.mesh_prims = []
-        self.mesh_handles = []
+        self.mesh_views = []
         self.textures = []
         self.texture_cache = {}
         self.double_sided = True
@@ -65,32 +64,34 @@ class FBXMeshViewer(ke.App):
         scene.Prim.define_manipulation_group(self.get_scene(), FBX_ROOT_PATH)
 
         if self.show_ground:
-            ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
-            ground.set_mesh_data(scene.Prim.create_plane_data(4.0, self.up_axis))
-            self.add_renderable(self.ground_shader, ground)
+            self.scene.add_mesh(
+                "/ground",
+                scene.Prim.create_plane_data(4.0, self.up_axis),
+                self.ground_shader,
+            )
 
         textured_count = 0
         normal_mapped_count = 0
         for idx, mesh in enumerate(self.meshes):
             prim_path = f"{FBX_ROOT_PATH}/{_safe_prim_name(mesh.name, f'mesh_{idx}')}"
-            prim = self.get_scene().define_prim(prim_path, scene.PrimType.Mesh)
-            prim.set_mesh_data(mesh.mesh_data)
-            prim.set_display_color_alpha(_mesh_color(idx))
-            self.mesh_prims.append(prim)
-
             diffuse_texture = self._load_texture(_material_texture_path(mesh, "diffuse"))
             normal_texture = self._load_texture(_material_texture_path(mesh, "normal"))
             shader = self.mesh_texture_shader if diffuse_texture is not None else self.mesh_shader
-            handle = self.add_renderable(shader, prim)
+            view = self.scene.add_mesh(
+                prim_path,
+                mesh.mesh_data,
+                shader,
+                color=_mesh_color(idx),
+            )
             if diffuse_texture is not None:
-                self.set_renderable_texture(handle, diffuse_texture, 0)
+                view.set_texture(diffuse_texture, 0)
                 textured_count += 1
             if diffuse_texture is not None and normal_texture is not None:
-                self.set_renderable_texture(handle, normal_texture, 5)
+                view.set_texture(normal_texture, 5)
                 normal_mapped_count += 1
-            self.set_renderable_double_sided(handle, self.double_sided)
-            self.set_renderable_casts_shadow(handle, self.cast_shadows)
-            self.mesh_handles.append(handle)
+            view.set_double_sided(self.double_sided)
+            view.set_casts_shadow(self.cast_shadows)
+            self.mesh_views.append(view)
 
         print(
             f"FBX mesh loaded: {self.fbx_file} "
@@ -115,11 +116,11 @@ class FBXMeshViewer(ke.App):
             "cast shadows", self.cast_shadows
         )
         if double_changed:
-            for handle in self.mesh_handles:
-                self.set_renderable_double_sided(handle, self.double_sided)
+            for view in self.mesh_views:
+                view.set_double_sided(self.double_sided)
         if shadow_changed:
-            for handle in self.mesh_handles:
-                self.set_renderable_casts_shadow(handle, self.cast_shadows)
+            for view in self.mesh_views:
+                view.set_casts_shadow(self.cast_shadows)
         imgui.end()
 
     def postRender(self):

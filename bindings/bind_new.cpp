@@ -637,8 +637,7 @@ PYBIND11_MODULE(_kangengine, m) {
              "Return the texture height in pixels.");
 
     py::enum_<Backend::TextureWrap>(
-        m, "TextureWrap",
-        "Backend-neutral texture coordinate wrapping mode.")
+        m, "TextureWrap", "Backend-neutral texture coordinate wrapping mode.")
         .value("Repeat", Backend::TextureWrap::Repeat)
         .value("ClampToEdge", Backend::TextureWrap::ClampToEdge)
         .value("MirroredRepeat", Backend::TextureWrap::MirroredRepeat);
@@ -674,15 +673,16 @@ PYBIND11_MODULE(_kangengine, m) {
              py::arg("vert_path"), py::arg("frag_path"),
              py::return_value_policy::take_ownership,
              "Create a shader from vertex and fragment shader files.")
-        .def("create_texture",
-             [](Backend::GraphicsDevice& device, const std::string& path,
-                bool flip, const Backend::SamplerDesc& sampler) {
-                 return device.createTexture(path, flip, sampler);
-             },
-             py::arg("path"), py::arg("flip") = false,
-             py::arg("sampler") = Backend::SamplerDesc(),
-             py::return_value_policy::take_ownership,
-             "Load a texture from an image file.");
+        .def(
+            "create_texture",
+            [](Backend::GraphicsDevice& device, const std::string& path,
+               bool flip, const Backend::SamplerDesc& sampler) {
+                return device.createTexture(path, flip, sampler);
+            },
+            py::arg("path"), py::arg("flip") = false,
+            py::arg("sampler") = Backend::SamplerDesc(),
+            py::return_value_policy::take_ownership,
+            "Load a texture from an image file.");
 
     py::class_<DirectionalLight>(
         m, "DirectionalLight",
@@ -1347,6 +1347,18 @@ py::class_<glm::vec3>(m, "vec3")
             py::arg("material"), py::arg("prim"),
             py::arg("transform_source") = TransformSource::SceneGraph,
             "Create a renderable for a scene prim using a material.")
+        .def(
+            "remove_prim",
+            [](App* self, const std::string& path) {
+                return self->removePrim(path);
+            },
+            py::arg("path"),
+            "Remove a scene prim subtree and detach its renderable instances.")
+        .def(
+            "remove_prim",
+            [](App* self, Scene::Prim* prim) { return self->removePrim(prim); },
+            py::arg("prim"),
+            "Remove a scene prim subtree and detach its renderable instances.")
         .def(
             "update_renderable_transforms",
             [](App* self, uint32_t handle, const FloatArray& transforms,

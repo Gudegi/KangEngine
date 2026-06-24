@@ -58,6 +58,17 @@ Prim* NativeScene::getPrimAtPath(const std::string& path) {
     return _root->getPrimAtPath(path);
 }
 
+bool NativeScene::removePrim(const std::string& path) {
+    if (path.empty() || path == "/")
+        return false;
+
+    Prim* prim = getPrimAtPath(path);
+    if (!prim || !prim->getParent())
+        return false;
+
+    return prim->getParent()->removeChild(prim->getName());
+}
+
 Prim* NativeScene::createPrim(const std::string& path, PrimType type) {
     // "/World/Cube" → [World, Cube]
     std::string pathCopy = path;

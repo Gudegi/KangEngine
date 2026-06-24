@@ -48,16 +48,19 @@ class BloomViewer(ke.App):
         self.check_error()
 
     def _add_sphere(self, path, pos, radius, color):
-        prim = self.get_scene().define_prim(path, scene.PrimType.Mesh)
-        prim.set_mesh_data(scene.Prim.create_sphere_data(radius, 32, 16))
-        prim.set_display_color_alpha(ke.vec4(*color))
-        prim.add_translate_op(ke.vec3(*pos))
-        return self.add_renderable(self.shaders.common, prim)
+        view = self.scene.add_mesh(
+            path,
+            scene.Prim.create_sphere_data(radius, 32, 16),
+            self.shaders.common,
+            color=ke.vec4(*color),
+        )
+        view.prim.add_translate_op(ke.vec3(*pos))
+        return view
 
     def _add_glow_sphere(self, path, pos, radius, color):
-        handle = self._add_sphere(path, pos, radius, color)
-        # self.set_renderable_casts_shadow(handle, False)
-        return handle
+        view = self._add_sphere(path, pos, radius, color)
+        # view.set_casts_shadow(False)
+        return view
 
     def _apply_bloom(self):
         self.set_bloom(

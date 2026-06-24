@@ -125,6 +125,8 @@ class SceneBackend {
     virtual Prim* definePrim(const std::string& path, PrimType type) {
         return nullptr;
     }
+    virtual Prim* getPrimAtPath(const std::string& path) { return nullptr; }
+    virtual bool removePrim(const std::string& path) { return false; }
 
     // Scene graph root
     virtual Prim* getRootPrim() { return nullptr; }

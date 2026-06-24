@@ -33,26 +33,30 @@ class MyApp(ke.App):
         self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
         self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.6, 0.9, 0.6, 1.0))
 
-        sc = self.get_scene()
-
         # Ground plane (Y-up)
-        gnd = sc.define_prim("/ground", scene.PrimType.Mesh)
-        gnd.set_mesh_data(scene.Prim.create_plane_data(30.0))
-        self.add_renderable(self.ground_shader, gnd)
+        self.scene.add_mesh(
+            "/ground",
+            scene.Prim.create_plane_data(30.0),
+            self.ground_shader,
+        )
 
         # Box
-        box = sc.define_prim("/box", scene.PrimType.Mesh)
-        box.set_mesh_data(scene.Prim.create_square_data(1.0))
-        box.set_display_color_alpha(ke.vec4(0.8, 0.3, 0.02, 1.0))
-        box.add_translate_op(ke.vec3(0.0, 2.0, 0.0))
-        self.add_renderable(self.obj_shader, box)
+        box = self.scene.add_mesh(
+            "/box",
+            scene.Prim.create_square_data(1.0),
+            self.obj_shader,
+            color=ke.vec4(0.8, 0.3, 0.02, 1.0),
+        )
+        box.prim.add_translate_op(ke.vec3(0.0, 2.0, 0.0))
 
         # Sphere
-        sphere = sc.define_prim("/sphere", scene.PrimType.Mesh)
-        sphere.set_mesh_data(scene.Prim.create_sphere_data(0.5, 16, 12))
-        sphere.set_display_color_alpha(ke.vec4(0.2, 0.4, 0.9, 1.0))
-        sphere.add_translate_op(ke.vec3(2.5, 0.5, 0.0))
-        self.add_renderable(self.obj_shader, sphere)
+        sphere = self.scene.add_mesh(
+            "/sphere",
+            scene.Prim.create_sphere_data(0.5, 16, 12),
+            self.obj_shader,
+            color=ke.vec4(0.2, 0.4, 0.9, 1.0),
+        )
+        sphere.prim.add_translate_op(ke.vec3(2.5, 0.5, 0.0))
 
         self.check_error()
 

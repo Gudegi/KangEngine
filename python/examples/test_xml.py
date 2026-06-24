@@ -66,9 +66,7 @@ class RobotViewer(ke.App):
         self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
 
         # Ground plane (Z-up)
-        gnd = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
-        gnd.set_mesh_data(scene.Prim.create_plane_data(100.0, ke.UpAxis.Z))
-        self.add_renderable(self.ground_shader, gnd)
+        self.scene.add_ground(scale=100.0, shader=self.ground_shader)
 
         # Robot
         mjcf = asset_path("external", "retargetted", "unitree_h1", "unitree_h1.xml")
@@ -76,7 +74,7 @@ class RobotViewer(ke.App):
             mjcf, self.get_scene(), "/robot", 1.0, "BFS"
         )
         for prim in self.robot.body_prims():
-            self.add_renderable(self.robot_shader, prim)
+            self.scene.add_renderable(prim, self.robot_shader)
 
         print(f"Robot loaded: {self.robot.num_bodies()} bodies")
         self.check_error()

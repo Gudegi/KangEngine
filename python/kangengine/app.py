@@ -17,6 +17,104 @@ scene = _ke.scene
 NativeApp = _ke.App
 
 
+class RenderablePrimView:
+    """User-facing view for one scene prim and its renderer resources."""
+
+    def __init__(self, app: "App", prim, handles):
+        self._app = app
+        self.prim = prim
+        self._handles = tuple(int(handle) for handle in handles)
+
+    @property
+    def path(self) -> str:
+        return self.prim.get_path()
+
+    def set_visible(self, visible: bool):
+        self.prim.set_visible(bool(visible))
+        return self
+
+    def set_double_sided(self, enabled: bool = True):
+        for handle in self._handles:
+            self._app.set_renderable_double_sided(handle, bool(enabled))
+        return self
+
+    def set_casts_shadow(self, enabled: bool = True):
+        for handle in self._handles:
+            self._app.set_renderable_casts_shadow(handle, bool(enabled))
+        return self
+
+    def set_texture(self, texture, role_or_slot=_ke.TextureRole.BaseColor):
+        for handle in self._handles:
+            self._app.set_renderable_texture(handle, texture, role_or_slot)
+        return self
+
+    def remove(self):
+        return self._app.remove_prim(self.prim)
+
+
+class SceneContext:
+    """Scene-facing facade connected to the owning App renderer.
+
+    Use this for common add/remove workflows. It keeps renderer handles inside
+    the app-facing layer while preserving access to the underlying scene backend
+    for lower-level operations.
+    """
+
+    def __init__(self, app: "App"):
+        self._app = app
+
+    @property
+    def backend(self):
+        return self._app.get_scene()
+
+    def define_prim(self, path: str, prim_type):
+        return self.backend.define_prim(path, prim_type)
+
+    def get_prim_at_path(self, path: str):
+        return self.backend.get_prim_at_path(path)
+
+    def get_root_prim(self):
+        return self.backend.get_root_prim()
+
+    def add_renderable(
+        self,
+        prim,
+        material_or_shader,
+        transform_source=None,
+    ):
+        if transform_source is None:
+            transform_source = _ke.TransformSource.SceneGraph
+        handle = self._app.add_renderable(material_or_shader, prim, transform_source)
+        return RenderablePrimView(self._app, prim, [handle])
+
+    def add_mesh(
+        self,
+        path: str,
+        mesh_data,
+        material_or_shader,
+        color=None,
+        transform_source=None,
+    ):
+        prim = self.define_prim(path, scene.PrimType.Mesh)
+        prim.set_mesh_data(mesh_data)
+        if color is not None:
+            prim.set_display_color_alpha(color)
+        return self.add_renderable(prim, material_or_shader, transform_source)
+
+    def add_ground(self, path: str = "/ground", scale: float = 20.0, shader=None):
+        if shader is None:
+            shader = self._app.create_asset_shader("common.vs", "checkerboard.fs")
+            self._app.configure_checker_shader(shader)
+        return self.add_mesh(
+            path,
+            scene.Prim.create_plane_data(float(scale), self._app.up_axis),
+            shader,
+        )
+
+    def remove_prim(self, path_or_prim):
+        return self._app.remove_prim(path_or_prim)
+
+
 class App(NativeApp):
     """Base class for Python KangEngine apps.
 
@@ -42,6 +140,7 @@ class App(NativeApp):
         self.graphics_backend_type = _ke.BackendType.OpenGL
         self.scene_backend_type = scene.BackendType.Native
         self.headless = False
+        self.scene = SceneContext(self)
 
     def package_asset_path(self, *parts: str) -> str:
         return str(Path(_ke.__file__).resolve().parent / "assets" / Path(*parts))
@@ -109,32 +208,10 @@ class App(NativeApp):
 
     ############# Helpers ###########################################
     def add_ground(self, path: str = "/ground", scale: float = 20.0, shader=None):
-        if shader is None:
-            shader = self.create_asset_shader("common.vs", "checkerboard.fs")
-            self.configure_checker_shader(shader)
-        ground = self.get_scene().define_prim(path, scene.PrimType.Mesh)
-        ground.set_mesh_data(scene.Prim.create_plane_data(float(scale), self.up_axis))
-        handle = self.add_renderable(shader, ground)
-        return ground, handle
+        return self.scene.add_ground(path, scale, shader)
 
     def add_mesh(self, path: str, mesh_data, shader, color=None):
-        prim = self.get_scene().define_prim(path, scene.PrimType.Mesh)
-        prim.set_mesh_data(mesh_data)
-        if color is not None:
-            prim.set_display_color_alpha(color)
-        handle = self.add_renderable(shader, prim)
-        return prim, handle
-
-    def set_shape_textures(self, handle, diffuse=None, normal=None):
-        if diffuse is not None:
-            self.set_renderable_texture(
-                handle,
-                diffuse,
-                _ke.TextureRole.BaseColor,
-            )
-        if normal is not None:
-            self.set_renderable_texture(handle, normal, _ke.TextureRole.Normal)
-        return handle
+        return self.scene.add_mesh(path, mesh_data, shader, color=color)
 
     def as_vec3(self, value):
         if isinstance(value, _ke.vec3):

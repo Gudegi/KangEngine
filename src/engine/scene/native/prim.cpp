@@ -65,6 +65,22 @@ Prim* Prim::addChild(const std::string& name, PrimType type) {
     return childPtr;
 }
 
+bool Prim::removeChild(const std::string& name) {
+    auto mapIt = _childrenMap.find(name);
+    if (mapIt == _childrenMap.end())
+        return false;
+
+    Prim* target = mapIt->second;
+    _childrenMap.erase(mapIt);
+    _children.erase(std::remove_if(_children.begin(), _children.end(),
+                                   [target](const auto& child) {
+                                       return child.get() == target;
+                                   }),
+                    _children.end());
+    markWorldTransformDirtyRecursive();
+    return true;
+}
+
 Prim* Prim::getChild(const std::string& name) const {
     auto it = _childrenMap.find(name);
     if (it != _childrenMap.end()) {
