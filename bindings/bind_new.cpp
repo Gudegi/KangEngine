@@ -636,6 +636,28 @@ PYBIND11_MODULE(_kangengine, m) {
         .def("get_height", &Backend::Texture::getHeight,
              "Return the texture height in pixels.");
 
+    py::enum_<Backend::TextureWrap>(
+        m, "TextureWrap",
+        "Backend-neutral texture coordinate wrapping mode.")
+        .value("Repeat", Backend::TextureWrap::Repeat)
+        .value("ClampToEdge", Backend::TextureWrap::ClampToEdge)
+        .value("MirroredRepeat", Backend::TextureWrap::MirroredRepeat);
+
+    py::enum_<Backend::TextureFilter>(
+        m, "TextureFilter", "Backend-neutral texture sampling filter.")
+        .value("Nearest", Backend::TextureFilter::Nearest)
+        .value("Linear", Backend::TextureFilter::Linear)
+        .value("LinearMipmapLinear",
+               Backend::TextureFilter::LinearMipmapLinear);
+
+    py::class_<Backend::SamplerDesc>(
+        m, "SamplerDesc", "Texture sampler settings independent of GL/WebGPU.")
+        .def(py::init<>())
+        .def_readwrite("wrap_u", &Backend::SamplerDesc::wrapU)
+        .def_readwrite("wrap_v", &Backend::SamplerDesc::wrapV)
+        .def_readwrite("min_filter", &Backend::SamplerDesc::minFilter)
+        .def_readwrite("mag_filter", &Backend::SamplerDesc::magFilter);
+
     // Backend::GraphicsDevice
     py::class_<Backend::GraphicsDevice,
                std::shared_ptr<Backend::GraphicsDevice>>(
@@ -653,12 +675,12 @@ PYBIND11_MODULE(_kangengine, m) {
              py::return_value_policy::take_ownership,
              "Create a shader from vertex and fragment shader files.")
         .def("create_texture",
-             py::overload_cast<const std::string, bool, float, float, float>(
-                 &Backend::GraphicsDevice::createTexture),
+             [](Backend::GraphicsDevice& device, const std::string& path,
+                bool flip, const Backend::SamplerDesc& sampler) {
+                 return device.createTexture(path, flip, sampler);
+             },
              py::arg("path"), py::arg("flip") = false,
-             py::arg("warpParam") = GL_REPEAT,
-             py::arg("minFilterParam") = GL_LINEAR_MIPMAP_LINEAR,
-             py::arg("maxFilterParam") = GL_LINEAR,
+             py::arg("sampler") = Backend::SamplerDesc(),
              py::return_value_policy::take_ownership,
              "Load a texture from an image file.");
 

@@ -86,6 +86,7 @@ class OpenGLTexture : public Texture {
 
   public:
     OpenGLTexture(const TextureDesc& desc);
+    OpenGLTexture(const TextureDesc& desc, const SamplerDesc& sampler);
     OpenGLTexture(const TextureDesc& desc, float warpParam,
                   float filterMinParam, float filterMaxParam);
     // Empty color texture for FBO color attachment.
@@ -96,6 +97,7 @@ class OpenGLTexture : public Texture {
 
     void bind(int slot = 0) override;
     void unbind() override;
+    void setWrapParam(GLenum wrapU, GLenum wrapV) const;
     void setWarpParam(GLfloat warpParam = GL_REPEAT) const;
     void setFilterParam(GLfloat filterMinParam = GL_LINEAR_MIPMAP_LINEAR,
                         GLfloat filterMaxParam = GL_LINEAR) const;
@@ -229,6 +231,9 @@ class OpenGLDevice : public GraphicsDevice {
                  const std::string& fragmentSource) override;
     std::unique_ptr<Texture> createTexture(const std::string path,
                                            bool flip = false) override;
+    std::unique_ptr<Texture>
+    createTexture(const std::string path, bool flip,
+                  const SamplerDesc& sampler) override;
     std::unique_ptr<Texture>
     createTexture(const std::string path, bool flip = false,
                   float warpParam = GL_REPEAT,

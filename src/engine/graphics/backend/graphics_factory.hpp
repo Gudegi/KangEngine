@@ -7,6 +7,7 @@
 
 #include "base/graphics_device.hpp"
 #include "opengl/opengl_device.hpp"
+#include "webgpu/webgpu_device.hpp"
 #include <memory>
 #include <iostream>
 
@@ -24,9 +25,7 @@ public:
                 std::cerr << "Vulkan backend not implemented yet" << std::endl;
                 return nullptr;
             case BackendType::WebGPU:
-                // TODO: Implement WebGPUDevice
-                std::cerr << "WebGPU backend not implemented yet" << std::endl;
-                return nullptr;
+                return std::make_unique<WebGPUDevice>();
             default:
                 std::cerr << "Unknown backend type" << std::endl;
                 return nullptr;

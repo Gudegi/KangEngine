@@ -34,6 +34,34 @@ toGLFramebufferColorFormat(FramebufferColorFormat format) {
     return {GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE};
 }
 
+GLenum toGLTextureWrap(TextureWrap wrap) {
+    switch (wrap) {
+    case TextureWrap::Repeat:
+        return GL_REPEAT;
+    case TextureWrap::ClampToEdge:
+        return GL_CLAMP_TO_EDGE;
+    case TextureWrap::MirroredRepeat:
+        return GL_MIRRORED_REPEAT;
+    }
+    return GL_REPEAT;
+}
+
+GLenum toGLTextureFilter(TextureFilter filter) {
+    switch (filter) {
+    case TextureFilter::Nearest:
+        return GL_NEAREST;
+    case TextureFilter::Linear:
+        return GL_LINEAR;
+    case TextureFilter::LinearMipmapLinear:
+        return GL_LINEAR_MIPMAP_LINEAR;
+    }
+    return GL_LINEAR;
+}
+
+GLenum toGLTextureMagFilter(TextureFilter filter) {
+    return filter == TextureFilter::Nearest ? GL_NEAREST : GL_LINEAR;
+}
+
 } // namespace
 
 // OpenGLBuffer Implementation
@@ -282,6 +310,41 @@ OpenGLTexture::OpenGLTexture(const TextureDesc& desc)
     glBindTexture(_target, 0);
 }
 
+OpenGLTexture::OpenGLTexture(const TextureDesc& desc,
+                             const SamplerDesc& sampler)
+    : _width(desc.width), _height(desc.height), _channels(desc.channels) {
+
+    glGenTextures(1, &_textureID);
+    glBindTexture(_target, _textureID);
+
+    GLenum format;
+    switch (_channels) {
+    case 4:
+        format = GL_RGBA;
+        break;
+    case 3:
+        format = GL_RGB;
+        break;
+    case 1:
+        format = GL_RED;
+        break;
+    default:
+        std::cerr << "Unsupported channel count: " << _channels << std::endl;
+        format = GL_RGBA;
+    }
+
+    glTexImage2D(_target, 0, format, _width, _height, 0, format,
+                 GL_UNSIGNED_BYTE, desc.data);
+    glGenerateMipmap(_target);
+
+    setWrapParam(toGLTextureWrap(sampler.wrapU),
+                 toGLTextureWrap(sampler.wrapV));
+    setFilterParam(toGLTextureFilter(sampler.minFilter),
+                   toGLTextureMagFilter(sampler.magFilter));
+
+    glBindTexture(_target, 0);
+}
+
 OpenGLTexture::OpenGLTexture(const TextureDesc& desc, float warpParam,
                              float filterMinParam, float filterMaxParam)
     : _width(desc.width), _height(desc.height), _channels(desc.channels),
@@ -362,6 +425,11 @@ void OpenGLTexture::bind(int slot) {
 }
 
 void OpenGLTexture::unbind() { glBindTexture(_target, 0); }
+
+void OpenGLTexture::setWrapParam(GLenum wrapU, GLenum wrapV) const {
+    glTexParameteri(_target, GL_TEXTURE_WRAP_S, wrapU);
+    glTexParameteri(_target, GL_TEXTURE_WRAP_T, wrapV);
+}
 
 void OpenGLTexture::setWarpParam(GLfloat warpParam) const {
     glTexParameteri(_target, GL_TEXTURE_WRAP_S, warpParam);
@@ -519,6 +587,15 @@ std::unique_ptr<Texture> OpenGLDevice::createTexture(const std::string path,
                                                      bool flip) {
     TextureDesc desc = loadImage(path, flip);
     auto texture = std::make_unique<OpenGLTexture>(desc);
+    stbi_image_free((void*)desc.data); // release memory
+    return texture;
+}
+
+std::unique_ptr<Texture>
+OpenGLDevice::createTexture(const std::string path, bool flip,
+                            const SamplerDesc& sampler) {
+    TextureDesc desc = loadImage(path, flip);
+    auto texture = std::make_unique<OpenGLTexture>(desc, sampler);
     stbi_image_free((void*)desc.data); // release memory
     return texture;
 }

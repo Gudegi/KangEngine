@@ -8,7 +8,6 @@
 #include "shader_preprocessor.hpp"
 #include "utils/types.hpp"
 #include <glm/glm.hpp>
-#include <glad/glad.h>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -71,6 +70,18 @@ enum class FramebufferColorFormat {
     RGBA16F,
 };
 
+enum class TextureWrap {
+    Repeat,
+    ClampToEdge,
+    MirroredRepeat,
+};
+
+enum class TextureFilter {
+    Nearest,
+    Linear,
+    LinearMipmapLinear,
+};
+
 struct VertexAttribute {
     int location;
     int size;
@@ -97,6 +108,13 @@ struct TextureDesc {
     int channels = 4;
     const void* data = nullptr;
     std::string name;
+};
+
+struct SamplerDesc {
+    TextureWrap wrapU = TextureWrap::Repeat;
+    TextureWrap wrapV = TextureWrap::Repeat;
+    TextureFilter minFilter = TextureFilter::LinearMipmapLinear;
+    TextureFilter magFilter = TextureFilter::Linear;
 };
 
 struct FramebufferDesc {
@@ -160,7 +178,9 @@ class GraphicsDevice {
     virtual std::unique_ptr<Texture> createTexture(const TextureDesc& desc) = 0;
     virtual std::unique_ptr<VertexArray> createVertexArray() = 0;
 
-    // OpenGL specific functions
+    // Legacy shader convenience path for OpenGL/debug shaders.
+    // New backend-neutral features should use typed buffers and material/pass
+    // bindings instead of expanding name-based uniforms.
     virtual std::unique_ptr<Shader>
     createShader(const char* vertexSource, const char* fragmentSource) = 0;
     virtual std::unique_ptr<Shader>
@@ -174,6 +194,9 @@ class GraphicsDevice {
     }
     virtual std::unique_ptr<Texture> createTexture(const std::string path,
                                                    bool flip = false) = 0;
+    virtual std::unique_ptr<Texture>
+    createTexture(const std::string path, bool flip,
+                  const SamplerDesc& sampler) = 0;
     virtual std::unique_ptr<Texture> createTexture(const std::string path,
                                                    bool flip, float warpParam,
                                                    float minFilferParam,
@@ -220,6 +243,13 @@ class Shader {
     virtual void bind() = 0;
     virtual void unbind() = 0;
 
+    // Legacy immediate-uniform API.
+    //
+    // This maps naturally to OpenGL uniform calls and remains useful for
+    // debug shaders and the existing forward renderer. WebGPU/Vulkan-style
+    // paths should treat it as compatibility glue, not as the long-term
+    // material/pass binding model.
+
     // KE::Shader compatibility
     virtual void use() = 0; // Alias for bind()
 
@@ -244,7 +274,7 @@ class Shader {
     virtual void setMat4Array(const std::string& name, const glm::mat4* values,
                               size_t count) = 0;
 
-    // for OpenGL UBO binding
+    // Legacy OpenGL-style UBO binding by shader block name.
     virtual void setUniformBlockBinding(const std::string& blockName,
                                         int slot) = 0;
 };
