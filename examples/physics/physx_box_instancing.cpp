@@ -2,6 +2,7 @@
 #include "foundation/Px.h"
 #include "kangEngine.hpp"
 #include "physics/physics.hpp"
+#include "physics/sim_model.hpp"
 #include <Eigen/Core>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -35,7 +36,9 @@ class BoxInstancingApp : public App {
     // Bridge::PhysicsBridge physicsBridge;
 
     RenderableHandle _boxHandle = InvalidHandle;
-    std::vector<glm::mat4> _transforms; // 매 프레임 VBO 직접 업로드
+    SimModel _simModel;
+    SimState _simState;
+    SimVisualBatch _simVisualBatch;
     std::vector<glm::vec4> _colors;
 
     bool paused = false;
@@ -133,7 +136,8 @@ class BoxInstancingApp : public App {
                 _boxHandle = h;
             _prims.push_back(prim);
         }
-        _transforms.resize(NUM_BOXES);
+        _simModel.setBodyRenderables(std::vector<RenderableHandle>{_boxHandle});
+        _simVisualBatch.setModel(&_simModel);
         setRenderableColors(_boxHandle, _colors);
     }
 
@@ -168,10 +172,15 @@ class BoxInstancingApp : public App {
             physics.step();
             // bypass
             // physicsBridge.syncAllVisuals();
-            // direct pass
-            for (int i = 0; i < NUM_BOXES; i++)
-                _transforms[i] = pxToMat4(_actors[i]->getGlobalPose());
-            updateRenderableTransforms(_boxHandle, _transforms);
+            _simState.resize(NUM_BOXES, 1);
+            for (int i = 0; i < NUM_BOXES; i++) {
+                PxTransform pose = _actors[i]->getGlobalPose();
+                _simState.setBodyTransform(i, 0, pxToGlm(pose.p),
+                                           pxToGlm(pose.q));
+            }
+            _simVisualBatch.prepareFromState(_simState);
+            updateRenderableTransforms(_simVisualBatch.renderable(0),
+                                       _simVisualBatch.transforms(0));
         }
         checkError();
     }

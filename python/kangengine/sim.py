@@ -81,18 +81,644 @@ def _sim_device_uses_gpu(sim_device) -> bool:
 
 @dataclass(slots=True)
 class SimArticulation:
+    """Simulation-facing view for one registered articulation.
+
+    This is the lightweight public object users should grow into using. It
+    keeps the native articulation accessible for compatibility, while routing
+    common commands and state access through ``KangSimWorld``.
+    """
+
     env_id: int
     obj_id: int
     name: str
     articulation: object
+    world: object | None = None
+
+    @property
+    def key(self):
+        return (self.env_id, self.obj_id)
+
+    @property
+    def env_ids(self):
+        return (self.env_id,)
+
+    @property
+    def data(self):
+        return self._require_world().state.object_state(self.env_id, self.obj_id)
+
+    def get_data(self, env_ids: EnvIdLike | None = None):
+        if env_ids is None:
+            return self.data
+        return self._require_world().state.object_states(
+            self.obj_id, self._selected_env_ids(env_ids)
+        )
+
+    def get_root_pos(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).root_pos
+
+    def get_root_rot(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).root_rot
+
+    def get_root_vel(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).root_vel
+
+    def get_root_ang_vel(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).root_ang_vel
+
+    def get_body_pos(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).body_pos
+
+    def get_body_rot(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).body_rot
+
+    def get_dof_pos(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).dof_pos
+
+    def get_dof_vel(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).dof_vel
+
+    def get_dof_force(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).dof_force
+
+    @property
+    def num_dofs(self) -> int:
+        return int(self.articulation.num_dofs())
+
+    @property
+    def num_bodies(self) -> int:
+        return int(self.articulation.num_links())
+
+    @property
+    def joint_names(self) -> list[str]:
+        return list(self.articulation.get_dof_names())
+
+    @property
+    def body_names(self) -> list[str]:
+        return [f"body_{i}" for i in range(self.num_bodies)]
+
+    def get_joint_id(self, name: str) -> int:
+        return _find_name(self.joint_names, name, "joint")
+
+    def get_body_id(self, name: str) -> int:
+        return _find_name(self.body_names, name, "body")
+
+    def set_cmd(
+        self,
+        env_ids: EnvIdLike | None,
+        cmd,
+        mode: "ControlMode | str" = "pos",
+        kp: float | None = 200.0,
+        kd: float | None = 10.0,
+    ):
+        self._require_world().set_cmd(
+            self._selected_env_ids(env_ids),
+            self.obj_id,
+            cmd,
+            mode,
+            kp,
+            kd,
+        )
+        return self
+
+    def clear_cmd(self, env_ids: EnvIdLike | None = None):
+        self._require_world().clear_cmd(
+            self._selected_env_ids(env_ids),
+            self.obj_id,
+        )
+        return self
+
+    def set_root_state(
+        self,
+        env_ids: EnvIdLike | None,
+        pos,
+        rot_xyzw,
+        linear_velocity=None,
+        angular_velocity=None,
+        immediate: bool = False,
+    ):
+        self._require_world().set_root_state(
+            self._selected_env_ids(env_ids),
+            self.obj_id,
+            pos,
+            rot_xyzw,
+            linear_velocity,
+            angular_velocity,
+            immediate=immediate,
+        )
+        return self
+
+    def set_dof_state(
+        self,
+        env_ids: EnvIdLike | None,
+        positions,
+        velocities=None,
+        immediate: bool = False,
+    ):
+        self._require_world().set_dof_state(
+            self._selected_env_ids(env_ids),
+            self.obj_id,
+            positions,
+            velocities,
+            immediate=immediate,
+        )
+        return self
+
+    def set_body_force(
+        self,
+        env_ids: EnvIdLike | None,
+        body_id: int,
+        force,
+    ):
+        self._require_world().set_body_force(
+            self._selected_env_ids(env_ids),
+            self.obj_id,
+            body_id,
+            force,
+        )
+        return self
+
+    def set_body_force_at_position(
+        self,
+        env_ids: EnvIdLike | None,
+        body_id: int,
+        force,
+        position,
+    ):
+        self._require_world().set_body_force_at_position(
+            self._selected_env_ids(env_ids),
+            self.obj_id,
+            body_id,
+            force,
+            position,
+        )
+        return self
+
+    def _selected_env_ids(self, env_ids: EnvIdLike | None):
+        if env_ids is None:
+            return self.env_id
+        selected = tuple(env_id_list(env_ids, self.env_id + 1))
+        if selected != (self.env_id,):
+            raise KeyError(
+                f"SimArticulation only contains env_id={self.env_id}, got {selected}"
+            )
+        return self.env_id
+
+    def _require_world(self):
+        if self.world is None:
+            raise RuntimeError("SimArticulation is not attached to a KangSimWorld")
+        return self.world
 
 
 @dataclass(slots=True)
 class SimRigid:
+    """Simulation-facing view for one registered rigid object."""
+
     env_id: int
     obj_id: int
     name: str
     rigid: object
+    world: object | None = None
+
+    @property
+    def key(self):
+        return (self.env_id, self.obj_id)
+
+    @property
+    def env_ids(self):
+        return (self.env_id,)
+
+    @property
+    def data(self):
+        return self._require_world().state.object_state(self.env_id, self.obj_id)
+
+    def get_data(self, env_ids: EnvIdLike | None = None):
+        if env_ids is None:
+            return self.data
+        return self._require_world().state.object_states(
+            self.obj_id, self._selected_env_ids(env_ids)
+        )
+
+    def get_root_pos(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).root_pos
+
+    def get_root_rot(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).root_rot
+
+    def get_root_vel(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).root_vel
+
+    def get_root_ang_vel(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).root_ang_vel
+
+    def get_body_pos(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).body_pos
+
+    def get_body_rot(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).body_rot
+
+    @property
+    def num_bodies(self) -> int:
+        if self.world is not None:
+            return int(self.world.state.record(self.env_id, self.obj_id).cache.num_bodies)
+        return 1
+
+    @property
+    def body_names(self) -> list[str]:
+        if self.world is None:
+            return [f"body_{i}" for i in range(self.num_bodies)]
+        cache = self.world.state.record(self.env_id, self.obj_id).cache
+        return list(
+            getattr(cache, "body_names", [f"body_{i}" for i in range(self.num_bodies)])
+        )
+
+    def get_body_id(self, name: str) -> int:
+        return _find_name(self.body_names, name, "body")
+
+    def set_root_state(
+        self,
+        env_ids: EnvIdLike | None,
+        pos,
+        rot_xyzw,
+        linear_velocity=None,
+        angular_velocity=None,
+        immediate: bool = False,
+    ):
+        self._require_world().set_root_state(
+            self._selected_env_ids(env_ids),
+            self.obj_id,
+            pos,
+            rot_xyzw,
+            linear_velocity,
+            angular_velocity,
+            immediate=immediate,
+        )
+        return self
+
+    def set_body_force(
+        self,
+        env_ids: EnvIdLike | None,
+        body_id: int,
+        force,
+    ):
+        self._require_world().set_body_force(
+            self._selected_env_ids(env_ids),
+            self.obj_id,
+            body_id,
+            force,
+        )
+        return self
+
+    def set_body_force_at_position(
+        self,
+        env_ids: EnvIdLike | None,
+        body_id: int,
+        force,
+        position,
+    ):
+        self._require_world().set_body_force_at_position(
+            self._selected_env_ids(env_ids),
+            self.obj_id,
+            body_id,
+            force,
+            position,
+        )
+        return self
+
+    def _selected_env_ids(self, env_ids: EnvIdLike | None):
+        if env_ids is None:
+            return self.env_id
+        selected = tuple(env_id_list(env_ids, self.env_id + 1))
+        if selected != (self.env_id,):
+            raise KeyError(f"SimRigid only contains env_id={self.env_id}, got {selected}")
+        return self.env_id
+
+    def _require_world(self):
+        if self.world is None:
+            raise RuntimeError("SimRigid is not attached to a KangSimWorld")
+        return self.world
+
+
+@dataclass(slots=True)
+class SimArticulationView:
+    """Batched simulation-facing view for one logical articulation object."""
+
+    world: object
+    obj_id: int
+    env_ids: tuple[int, ...]
+    name: str = ""
+
+    @property
+    def key(self):
+        return (self.env_ids, self.obj_id)
+
+    @property
+    def data(self):
+        return self.get_data()
+
+    def get_data(self, env_ids: EnvIdLike | None = None):
+        return self.world.state.object_states(
+            self.obj_id, self._selected_env_ids(env_ids)
+        )
+
+    def get_root_pos(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).root_pos
+
+    def get_root_rot(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).root_rot
+
+    def get_root_vel(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).root_vel
+
+    def get_root_ang_vel(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).root_ang_vel
+
+    def get_body_pos(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).body_pos
+
+    def get_body_rot(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).body_rot
+
+    def get_dof_pos(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).dof_pos
+
+    def get_dof_vel(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).dof_vel
+
+    def get_dof_force(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).dof_force
+
+    @property
+    def records(self) -> tuple[SimArticulation, ...]:
+        return tuple(self.world.articulations[(eid, self.obj_id)] for eid in self.env_ids)
+
+    @property
+    def first(self) -> SimArticulation:
+        return self.records[0]
+
+    @property
+    def articulation(self):
+        return self.first.articulation
+
+    @property
+    def num_envs(self) -> int:
+        return len(self.env_ids)
+
+    @property
+    def num_dofs(self) -> int:
+        return self.first.num_dofs
+
+    @property
+    def num_bodies(self) -> int:
+        return self.first.num_bodies
+
+    @property
+    def joint_names(self) -> list[str]:
+        return self.first.joint_names
+
+    @property
+    def body_names(self) -> list[str]:
+        return self.first.body_names
+
+    def get_joint_id(self, name: str) -> int:
+        return self.first.get_joint_id(name)
+
+    def get_body_id(self, name: str) -> int:
+        return self.first.get_body_id(name)
+
+    def set_cmd(
+        self,
+        env_ids: EnvIdLike | None,
+        cmd,
+        mode: "ControlMode | str" = "pos",
+        kp: float | None = 200.0,
+        kd: float | None = 10.0,
+    ):
+        self.world.set_cmd(
+            self._selected_env_ids(env_ids),
+            self.obj_id,
+            cmd,
+            mode,
+            kp,
+            kd,
+        )
+        return self
+
+    def clear_cmd(self, env_ids: EnvIdLike | None = None):
+        self.world.clear_cmd(self._selected_env_ids(env_ids), self.obj_id)
+        return self
+
+    def set_root_state(
+        self,
+        env_ids: EnvIdLike | None,
+        pos,
+        rot_xyzw,
+        linear_velocity=None,
+        angular_velocity=None,
+        immediate: bool = False,
+    ):
+        self.world.set_root_state(
+            self._selected_env_ids(env_ids),
+            self.obj_id,
+            pos,
+            rot_xyzw,
+            linear_velocity,
+            angular_velocity,
+            immediate=immediate,
+        )
+        return self
+
+    def set_dof_state(
+        self,
+        env_ids: EnvIdLike | None,
+        positions,
+        velocities=None,
+        immediate: bool = False,
+    ):
+        self.world.set_dof_state(
+            self._selected_env_ids(env_ids),
+            self.obj_id,
+            positions,
+            velocities,
+            immediate=immediate,
+        )
+        return self
+
+    def set_body_force(
+        self,
+        env_ids: EnvIdLike | None,
+        body_id: int,
+        force,
+    ):
+        self.world.set_body_force(
+            self._selected_env_ids(env_ids),
+            self.obj_id,
+            body_id,
+            force,
+        )
+        return self
+
+    def set_body_force_at_position(
+        self,
+        env_ids: EnvIdLike | None,
+        body_id: int,
+        force,
+        position,
+    ):
+        self.world.set_body_force_at_position(
+            self._selected_env_ids(env_ids),
+            self.obj_id,
+            body_id,
+            force,
+            position,
+        )
+        return self
+
+    def _selected_env_ids(self, env_ids: EnvIdLike | None):
+        if env_ids is None:
+            return self.env_ids
+        selected = tuple(env_id_list(env_ids, self.world.num_envs))
+        missing = [eid for eid in selected if eid not in self.env_ids]
+        if missing:
+            raise KeyError(
+                f"env ids {missing} are outside this view's env_ids={self.env_ids}"
+            )
+        return selected
+
+
+@dataclass(slots=True)
+class SimRigidView:
+    """Batched simulation-facing view for one logical rigid object."""
+
+    world: object
+    obj_id: int
+    env_ids: tuple[int, ...]
+    name: str = ""
+
+    @property
+    def key(self):
+        return (self.env_ids, self.obj_id)
+
+    @property
+    def data(self):
+        return self.get_data()
+
+    def get_data(self, env_ids: EnvIdLike | None = None):
+        return self.world.state.object_states(
+            self.obj_id, self._selected_env_ids(env_ids)
+        )
+
+    def get_root_pos(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).root_pos
+
+    def get_root_rot(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).root_rot
+
+    def get_root_vel(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).root_vel
+
+    def get_root_ang_vel(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).root_ang_vel
+
+    def get_body_pos(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).body_pos
+
+    def get_body_rot(self, env_ids: EnvIdLike | None = None):
+        return self.get_data(env_ids).body_rot
+
+    @property
+    def records(self) -> tuple[SimRigid, ...]:
+        return tuple(self.world.rigids[(eid, self.obj_id)] for eid in self.env_ids)
+
+    @property
+    def first(self) -> SimRigid:
+        return self.records[0]
+
+    @property
+    def rigid(self):
+        return self.first.rigid
+
+    @property
+    def num_envs(self) -> int:
+        return len(self.env_ids)
+
+    @property
+    def num_bodies(self) -> int:
+        return self.first.num_bodies
+
+    @property
+    def body_names(self) -> list[str]:
+        return self.first.body_names
+
+    def get_body_id(self, name: str) -> int:
+        return self.first.get_body_id(name)
+
+    def set_root_state(
+        self,
+        env_ids: EnvIdLike | None,
+        pos,
+        rot_xyzw,
+        linear_velocity=None,
+        angular_velocity=None,
+        immediate: bool = False,
+    ):
+        self.world.set_root_state(
+            self._selected_env_ids(env_ids),
+            self.obj_id,
+            pos,
+            rot_xyzw,
+            linear_velocity,
+            angular_velocity,
+            immediate=immediate,
+        )
+        return self
+
+    def set_body_force(
+        self,
+        env_ids: EnvIdLike | None,
+        body_id: int,
+        force,
+    ):
+        self.world.set_body_force(
+            self._selected_env_ids(env_ids),
+            self.obj_id,
+            body_id,
+            force,
+        )
+        return self
+
+    def set_body_force_at_position(
+        self,
+        env_ids: EnvIdLike | None,
+        body_id: int,
+        force,
+        position,
+    ):
+        self.world.set_body_force_at_position(
+            self._selected_env_ids(env_ids),
+            self.obj_id,
+            body_id,
+            force,
+            position,
+        )
+        return self
+
+    def _selected_env_ids(self, env_ids: EnvIdLike | None):
+        if env_ids is None:
+            return self.env_ids
+        selected = tuple(env_id_list(env_ids, self.world.num_envs))
+        missing = [eid for eid in selected if eid not in self.env_ids]
+        if missing:
+            raise KeyError(
+                f"env ids {missing} are outside this view's env_ids={self.env_ids}"
+            )
+        return selected
+
+
+def _find_name(names: list[str], name: str, kind: str) -> int:
+    try:
+        return names.index(str(name))
+    except ValueError as exc:
+        raise KeyError(f"{kind} {name!r} not found") from exc
 
 
 class ControlMode(str, Enum):
@@ -208,7 +834,7 @@ class KangSimWorld:
             raise ValueError(f"object already registered at env={key[0]}, obj={key[1]}")
 
         articulation = _ke.Articulation.build(self.physics, data, config)
-        record = SimArticulation(key[0], key[1], str(name), articulation)
+        record = SimArticulation(key[0], key[1], str(name), articulation, self)
         self.articulations[key] = record
         self.state.add_articulation(
             articulation, key[0], key[1], name, physics=self.physics
@@ -258,7 +884,7 @@ class KangSimWorld:
         body_names = [spec.name for spec in shape_specs]
         local_pos = np.stack([spec.local_pos for spec in shape_specs], axis=0)
         local_rot = np.stack([spec.local_rot for spec in shape_specs], axis=0)
-        record = SimRigid(key[0], key[1], str(name), rigid)
+        record = SimRigid(key[0], key[1], str(name), rigid, self)
         self.rigids[key] = record
         self.state.add_rigid(
             rigid,
@@ -290,6 +916,55 @@ class KangSimWorld:
     ) -> SimArticulation:
         data = self.load_mjcf(mjcf_path, scale=scale, order=order)
         return self.add_articulation(data, env_id, obj_id, name, config)
+
+    def get_articulation_view(
+        self,
+        env_ids: EnvIdLike = None,
+        obj_id: int = 0,
+        name: str | None = None,
+    ) -> SimArticulationView:
+        obj_id = int(obj_id)
+        selected_env_ids = self._object_env_ids(self.articulations, obj_id, env_ids)
+        if name is None:
+            name = self.articulations[(selected_env_ids[0], obj_id)].name
+        return SimArticulationView(self, obj_id, selected_env_ids, str(name))
+
+    def get_rigid_view(
+        self,
+        env_ids: EnvIdLike = None,
+        obj_id: int = 0,
+        name: str | None = None,
+    ) -> SimRigidView:
+        obj_id = int(obj_id)
+        selected_env_ids = self._object_env_ids(self.rigids, obj_id, env_ids)
+        if name is None:
+            name = self.rigids[(selected_env_ids[0], obj_id)].name
+        return SimRigidView(self, obj_id, selected_env_ids, str(name))
+
+    def get_object_view(
+        self,
+        env_ids: EnvIdLike = None,
+        obj_id: int = 0,
+        name: str | None = None,
+    ) -> SimArticulationView | SimRigidView:
+        obj_id = int(obj_id)
+        if any(key[1] == obj_id for key in self.articulations):
+            return self.get_articulation_view(env_ids, obj_id, name)
+        if any(key[1] == obj_id for key in self.rigids):
+            return self.get_rigid_view(env_ids, obj_id, name)
+        raise KeyError(f"no object registered with obj_id={obj_id}")
+
+    def _object_env_ids(self, records, obj_id: int, env_ids: EnvIdLike):
+        registered = sorted(env_id for env_id, oid in records if oid == int(obj_id))
+        if not registered:
+            raise KeyError(f"no object registered with obj_id={obj_id}")
+        if env_ids is None:
+            return tuple(registered)
+        selected = tuple(env_id_list(env_ids, self.num_envs))
+        missing = [eid for eid in selected if (eid, int(obj_id)) not in records]
+        if missing:
+            raise KeyError(f"object obj={obj_id} is missing env registrations: {missing}")
+        return selected
 
     def load_mjcf(self, mjcf_path: str, scale: float = 1.0, order: str = "DFS"):
         key = (str(Path(mjcf_path).expanduser().resolve()), float(scale), str(order))
@@ -381,9 +1056,9 @@ class KangSimWorld:
                     articulation.set_kds(buffer.kd)
                 else:
                     kd = as_cpu_numpy(articulation.get_kds()).reshape(-1)
-                dof_pos = as_cpu_numpy(articulation.get_dof_positions()).reshape(-1)
-                dof_vel = as_cpu_numpy(articulation.get_dof_velocities()).reshape(-1)
-                torque = kp * (buffer.cmd - dof_pos) - kd * dof_vel
+                get_dof_pos = as_cpu_numpy(articulation.dof_positions()).reshape(-1)
+                get_dof_vel = as_cpu_numpy(articulation.dof_velocities()).reshape(-1)
+                torque = kp * (buffer.cmd - get_dof_pos) - kd * get_dof_vel
                 torque = _clip_forces(torque, articulation.get_effort_limits())
                 articulation.set_joint_forces(torque)
             else:

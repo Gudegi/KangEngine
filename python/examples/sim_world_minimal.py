@@ -31,7 +31,7 @@ class MinimalSimWorldApp(ke.App):
 
         self.ball_xml = package_asset_path("objects", "ball.xml")
         ball_data = self.world.load_mjcf(self.ball_xml)
-        self.world.add_rigid(
+        self.ball = self.world.add_rigid(
             ball_data,
             env_id=0,
             obj_id=0,
@@ -39,9 +39,8 @@ class MinimalSimWorldApp(ke.App):
             pos=self.spawn_pos,
             density=600.0,
         )
-        self.visual.add_rigid(
-            0,
-            0,
+        self.ball_visual = self.visual.add(
+            self.ball,
             self.ball_xml,
             prim_base_path="/ball",
             shader=self.shaders.common,
@@ -53,9 +52,8 @@ class MinimalSimWorldApp(ke.App):
         self.check_error()
 
     def _reset(self):
-        self.world.set_root_state(
-            0,
-            0,
+        self.ball.set_root_state(
+            None,
             self.spawn_pos,
             [0.0, 0.0, 0.0, 1.0],
             linear_velocity=[0.0, 0.0, 0.0],
@@ -77,7 +75,7 @@ class MinimalSimWorldApp(ke.App):
         self.check_error()
 
     def render(self):
-        pos = self.world.state.get_root_pos(0)[0]
+        pos = self.ball.get_root_pos()
 
         imgui.begin("Minimal Sim World")
         imgui.text("KangSimWorld + KangWorldVisualBridge")

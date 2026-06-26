@@ -39,12 +39,21 @@ from .utils import (
     MIXAMO,
     preset_rgba,
 )
-from .visual import KangWorldVisualBridge
+from .visual import (
+    ArticulationVisualView,
+    KangWorldVisualBridge,
+    RigidVisualView,
+    SimVisualBatch,
+)
 # TODO: Keep Torch-heavy modules lazy until CUDA context interop is explicit.
 # This avoids accidental Torch CUDA initialization before PhysX GPU setup.
 _LAZY_IMPORTS = {
     "ControlMode": (".sim", "ControlMode"),
     "SimDevice": (".sim", "SimDevice"),
+    "SimArticulation": (".sim", "SimArticulation"),
+    "SimArticulationView": (".sim", "SimArticulationView"),
+    "SimRigid": (".sim", "SimRigid"),
+    "SimRigidView": (".sim", "SimRigidView"),
     "KangSimWorld": (".sim", "KangSimWorld"),
     "KangEngineEngine": (".mimickit_engine", "KangEngineEngine"),
     "build_mimickit_engine": (".mimickit_engine", "build_engine"),
@@ -146,8 +155,15 @@ __all__ = [
     "MIXAMO",
     "ControlMode",
     "SimDevice",
+    "SimArticulation",
+    "SimArticulationView",
+    "SimRigid",
+    "SimRigidView",
     "KangSimWorld",
     "KangWorldVisualBridge",
+    "ArticulationVisualView",
+    "RigidVisualView",
+    "SimVisualBatch",
     "KangEngineEngine",
     "build_mimickit_engine",
     "install_mimickit_engine_builder",

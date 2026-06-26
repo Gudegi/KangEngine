@@ -26,6 +26,8 @@ void PhysicsBridge::addInstanced(std::vector<Articulation*> artics,
                                  std::vector<RenderableHandle> handles) {
     InstancedGroup group;
     group.handles = std::move(handles);
+    group.model.setBodyRenderables(group.handles);
+    group.visualBatch.setModel(&group.model);
     group.artics.reserve(artics.size());
     for (auto* artic : artics)
         group.artics.push_back(artic);
@@ -42,7 +44,13 @@ void PhysicsBridge::addInstanced(const Articulation& artic,
     }
 
     _instancedGroups.push_back(
-        {std::vector<const Articulation*>{&artic}, handles});
+        {std::vector<const Articulation*>{&artic},
+         handles,
+         SimModel{},
+         SimState{},
+         SimVisualBatch{}});
+    _instancedGroups.back().model.setBodyRenderables(handles);
+    _instancedGroups.back().visualBatch.setModel(&_instancedGroups.back().model);
 }
 
 void PhysicsBridge::sync() {
@@ -56,15 +64,8 @@ void PhysicsBridge::sync() {
     assert((_instancedGroups.empty() || _app) &&
            "App* required for instanced sync — pass it to PhysicsBridge ctor");
     for (auto& grp : _instancedGroups) {
-        int numBodies = (int)grp.handles.size();
-        int numRobots = (int)grp.artics.size();
-        std::vector<glm::mat4> transforms(numRobots);
-        for (int b = 0; b < numBodies; b++) {
-            for (int i = 0; i < numRobots; i++)
-                transforms[i] =
-                    pxToMat4(grp.artics[i]->link(b)->getGlobalPose());
-            _app->updateRenderableTransforms(grp.handles[b], transforms);
-        }
+        fillSimStateFromPhysX(grp);
+        uploadSimVisualBatch(grp);
     }
 
     // Collision visuals: link pose * local offset
@@ -76,6 +77,31 @@ void PhysicsBridge::sync() {
         const glm::quat worldRot = linkRot * cv.localQuat;
         cv.prim->setWorldMatrix(glm::translate(glm::mat4(1.0f), worldPos) *
                                 glm::mat4_cast(worldRot));
+    }
+}
+
+void PhysicsBridge::fillSimStateFromPhysX(InstancedGroup& group) {
+    const int numBodies = group.model.bodyCount();
+    const int numRobots = static_cast<int>(group.artics.size());
+    group.state.resize(numRobots, numBodies);
+
+    for (int bodyId = 0; bodyId < numBodies; ++bodyId) {
+        for (int envId = 0; envId < numRobots; ++envId) {
+            physx::PxTransform pose =
+                group.artics[static_cast<size_t>(envId)]->link(bodyId)
+                    ->getGlobalPose();
+            group.state.setBodyTransform(envId, bodyId, pxToGlm(pose.p),
+                                         pxToGlm(pose.q));
+        }
+    }
+}
+
+void PhysicsBridge::uploadSimVisualBatch(InstancedGroup& group) {
+    group.visualBatch.prepareFromState(group.state);
+    for (int shapeId = 0; shapeId < group.visualBatch.renderableCount();
+         ++shapeId) {
+        _app->updateRenderableTransforms(group.visualBatch.renderable(shapeId),
+                                         group.visualBatch.transforms(shapeId));
     }
 }
 

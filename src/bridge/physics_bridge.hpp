@@ -18,6 +18,7 @@
 #define _PHYSICS_BRIDGE_HPP_
 
 #include "engine/graphics/renderer/renderer_types.hpp"
+#include "physics/sim_model.hpp"
 #include "PxPhysicsAPI.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -81,6 +82,9 @@ class PhysicsBridge {
     struct InstancedGroup {
         std::vector<const Articulation*> artics;
         std::vector<RenderableHandle> handles;
+        SimModel model;
+        SimState state;
+        SimVisualBatch visualBatch;
     };
 
     struct ColVisual {
@@ -89,6 +93,9 @@ class PhysicsBridge {
         glm::vec3 localPos{0.f};
         glm::quat localQuat{1.f, 0.f, 0.f, 0.f};
     };
+
+    void fillSimStateFromPhysX(InstancedGroup& group);
+    void uploadSimVisualBatch(InstancedGroup& group);
 
     std::vector<PrimVisual> _primVisuals;
     std::vector<InstancedGroup> _instancedGroups;

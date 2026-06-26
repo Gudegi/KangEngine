@@ -9,7 +9,7 @@ from pathlib import Path
 import numpy as np
 
 import kangengine as ke
-from kangengine import imgui, keys, scene
+from kangengine import imgui, keys
 
 
 def package_asset_path(*parts: str) -> str:
@@ -126,9 +126,11 @@ class MjcfDofControlApp(ke.App):
         )
         self.visual = ke.KangWorldVisualBridge(self, self.world)
 
-        ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
-        ground.set_mesh_data(scene.Prim.create_plane_data(float(self.ground_size), ke.UpAxis.Z))
-        self.add_renderable(self.ground_shader, ground)
+        self.ground_view = self.scene.add_ground(
+            "/ground",
+            scale=float(self.ground_size),
+            shader=self.ground_shader,
+        )
 
     def load_articulation(self):
         data = self.world.load_mjcf(self.mjcf_path, order=self.order)
@@ -146,7 +148,7 @@ class MjcfDofControlApp(ke.App):
             config=config,
         ).articulation
 
-        self.articulation_visual_record = self.visual.add_articulation(
+        self.articulation_visual_view = self.visual.add_articulation(
             0,
             self.obj_id,
             self.mjcf_path,
@@ -157,13 +159,8 @@ class MjcfDofControlApp(ke.App):
             show_collision=self.show_collision,
             color=np.array(self.visual_color, dtype=np.float32),
         )
-        self.visual_body_prims = self.articulation_visual_record.body_prims
-        self.visual_body_handles = self.articulation_visual_record.body_handles
-        self._body_id_by_handle = {
-            int(handle): body_id
-            for body_id, handle in enumerate(self.visual_body_handles)
-        }
-        # self.collision_body_prims = self.articulation_visual_record.collision_prims
+        self.visual_body_prims = self.articulation_visual_view.prims
+        # self.collision_body_prims = self.articulation_visual_view.collision_visuals
 
         self.num_dofs = self.robot.num_dofs()
         self.dof_names = self.world.state.get_obj_dof_names(self.obj_id)
@@ -265,7 +262,9 @@ class MjcfDofControlApp(ke.App):
             self._clear_drag_force()
             return
 
-        body_id = self._body_id_by_handle.get(int(result.handle))
+        body_id = self.articulation_visual_view.body_id_from_render_handle(
+            result.handle
+        )
         if body_id is None:
             self._clear_drag_force()
             return
@@ -503,17 +502,11 @@ class MjcfDofControlApp(ke.App):
             color = np.concatenate([color, np.ones(1, dtype=np.float32)])
         color = color[:4].copy()
         color[3] = float(alpha)
-        rgba = ke.vec4(float(color[0]), float(color[1]), float(color[2]), float(color[3]))
-        for prim in self.visual_body_prims:
-            prim.set_display_color_alpha(rgba)
-        if self.visual_body_handles:
-            colors = color.reshape(1, 4)
-            for handle in self.visual_body_handles:
-                self.set_renderable_colors(handle, colors)
+        self.articulation_visual_view.set_color(color)
 
     def _set_collision_visible(self, visible: bool):
         self.show_collision = bool(visible)
-        self.visual.set_collision_visible(self.show_collision)
+        self.articulation_visual_view.set_collision_visible(self.show_collision)
         self._set_visual_alpha(
             self.visual_alpha_with_collision if self.show_collision else 1.0
         )

@@ -19,22 +19,203 @@ from .rigid import expand_rigid_body_state, rigid_shape_specs
 
 
 @dataclass(slots=True)
-class _VisualArticulationRecord:
+class ArticulationVisualView:
+    """Viewer-side visual wrapper for one articulation.
+
+    This does not own simulation state. It keeps the scene prims and hidden
+    render handles needed to draw one robot/reference articulation, then exposes
+    small visual controls such as color, visibility, collision visibility, and
+    render-pick handle to body-id lookup.
+    """
+
     env_id: int
     obj_id: int
     skeleton_bridge: object
     body_prims: list[object]
     collision_prims: list[object]
     body_handles: list[int]
+    app: object | None = None
+
+    @property
+    def key(self):
+        return (self.env_id, self.obj_id)
+
+    @property
+    def prims(self):
+        return tuple(self.body_prims)
+
+    @property
+    def num_bodies(self) -> int:
+        return len(self.body_prims)
+
+    @property
+    def collision_visuals(self):
+        return tuple(self.collision_prims)
+
+    def body_id_from_render_handle(self, handle) -> int | None:
+        handle = int(handle)
+        for body_id, body_handle in enumerate(self.body_handles):
+            if int(body_handle) == handle:
+                return body_id
+        return None
+
+    def set_color(self, color):
+        rgba_vec = _normalize_color(color)
+        if rgba_vec is not None:
+            for prim in self.body_prims:
+                prim.set_display_color_alpha(rgba_vec)
+
+        rgba = _normalize_color_array(color)
+        if rgba is None or self.app is None or not self.body_handles:
+            return self
+        colors = rgba.reshape(1, 4)
+        for handle in self.body_handles:
+            self.app.set_renderable_colors(handle, colors)
+        return self
+
+    def set_visible(self, visible: bool):
+        for prim in self.body_prims:
+            prim.set_visible(bool(visible))
+        return self
+
+    def set_collision_visible(self, visible: bool):
+        for prim in self.collision_prims:
+            prim.set_visible(bool(visible))
+        return self
 
 
 @dataclass(slots=True)
-class _VisualRigidRecord:
+class RigidVisualView:
+    """Viewer-side visual wrapper for one rigid object.
+
+    This does not own simulation state. It keeps the scene prims used to draw
+    one rigid or compound rigid object and exposes lightweight visual controls
+    such as color and visibility.
+    """
+
     env_id: int
     obj_id: int
     rigid: object
     rigid_bridge: object
     body_prims: list[object]
+    body_handles: list[int]
+    app: object | None = None
+
+    @property
+    def key(self):
+        return (self.env_id, self.obj_id)
+
+    @property
+    def prims(self):
+        return tuple(self.body_prims)
+
+    @property
+    def num_bodies(self) -> int:
+        return len(self.body_prims)
+
+    def body_id_from_render_handle(self, handle) -> int | None:
+        handle = int(handle)
+        for body_id, body_handle in enumerate(self.body_handles):
+            if int(body_handle) == handle:
+                return body_id
+        return None
+
+    def set_color(self, color):
+        rgba = _normalize_color(color)
+        if rgba is not None:
+            for prim in self.body_prims:
+                prim.set_display_color_alpha(rgba)
+        rgba_arr = _normalize_color_array(color)
+        if rgba_arr is None or self.app is None or not self.body_handles:
+            return self
+        colors = rgba_arr.reshape(1, 4)
+        for handle in self.body_handles:
+            self.app.set_renderable_colors(handle, colors)
+        return self
+
+    def set_visible(self, visible: bool):
+        for prim in self.body_prims:
+            prim.set_visible(bool(visible))
+        return self
+
+
+@dataclass(slots=True)
+class SimVisualBatch:
+    """Viewer-side batch returned when one simulation view spans many envs.
+
+    This is a lightweight Python step toward the future SimVisualBatch fast
+    path. It groups per-env visual views without owning simulation state.
+    """
+
+    obj_id: int
+    env_ids: tuple[int, ...]
+    records: tuple[ArticulationVisualView | RigidVisualView, ...]
+
+    @property
+    def key(self):
+        return (self.env_ids, self.obj_id)
+
+    @property
+    def num_envs(self) -> int:
+        return len(self.env_ids)
+
+    @property
+    def num_bodies(self) -> int:
+        return self.records[0].num_bodies if self.records else 0
+
+    @property
+    def prims(self):
+        return tuple(prim for record in self.records for prim in record.prims)
+
+    @property
+    def body_handles(self):
+        return tuple(
+            int(handle)
+            for record in self.records
+            for handle in getattr(record, "body_handles", [])
+        )
+
+    def __len__(self) -> int:
+        return len(self.records)
+
+    def __iter__(self):
+        return iter(self.records)
+
+    def __getitem__(self, index):
+        return self.records[index]
+
+    def get_env_view(self, env_id: int):
+        env_id = int(env_id)
+        for record in self.records:
+            if int(record.env_id) == env_id:
+                return record
+        raise KeyError(f"env_id {env_id} is outside this visual batch")
+
+    def body_id_from_render_handle(self, handle) -> tuple[int, int] | None:
+        for record in self.records:
+            if hasattr(record, "body_id_from_render_handle"):
+                body_id = record.body_id_from_render_handle(handle)
+                if body_id is not None:
+                    return int(record.env_id), int(body_id)
+        return None
+
+    def set_visible(self, visible: bool):
+        for record in self.records:
+            record.set_visible(visible)
+        return self
+
+    def set_color(self, color):
+        for index, record in enumerate(self.records):
+            record.set_color(
+                _select_env_visual_value(color, index, len(self.records), record.env_id)
+            )
+        return self
+
+    def set_collision_visible(self, visible: bool):
+        for record in self.records:
+            if hasattr(record, "set_collision_visible"):
+                record.set_collision_visible(visible)
+        return self
 
 
 class RigidVisualBridge:
@@ -58,11 +239,12 @@ class RigidVisualBridge:
         self.local_pos = np.stack([spec.local_pos for spec in self.specs], axis=0)
         self.local_rot = np.stack([spec.local_rot for spec in self.specs], axis=0)
         self.body_prims = []
+        self.body_handles = []
         for idx, spec in enumerate(self.specs):
             prim = self._define_shape_prim(prim_base_path, idx, spec)
             _apply_prim_color([prim], color)
             if add_shapes and shader is not None:
-                app.add_renderable(shader, prim)
+                self.body_handles.append(app.add_renderable(shader, prim))
             self.body_prims.append(prim)
 
     def sync(self):
@@ -117,10 +299,63 @@ class KangWorldVisualBridge:
         self.world = world
         self.scene = app.get_scene()
         self.physics_bridge = _ke.PhysicsBridge(app)
-        self.records: dict[tuple[int, int], _VisualArticulationRecord] = {}
-        self.rigid_records: dict[tuple[int, int], _VisualRigidRecord] = {}
+        self.records: dict[tuple[int, int], ArticulationVisualView] = {}
+        self.rigid_records: dict[tuple[int, int], RigidVisualView] = {}
+        self.visual_batches: dict[int, SimVisualBatch] = {}
         self._skeleton_assets = {}
         self._instanced_colors: dict[tuple[int, ...], np.ndarray] = {}
+
+    def add(
+        self,
+        sim_view,
+        mjcf_path: str,
+        prim_base_path: str | None = None,
+        **kwargs,
+    ):
+        """Create viewer visuals from a simulation object/view.
+
+        This is the preferred high-level path for user code: the simulation
+        object owns env/object identity, while this bridge only creates and
+        syncs viewer-side prims.
+        """
+        obj_id = int(sim_view.obj_id)
+        env_ids = tuple(int(eid) for eid in sim_view.env_ids)
+        name = _safe_prim_name(getattr(sim_view, "name", "") or f"obj_{obj_id}")
+        base_path = prim_base_path or f"/{name}"
+
+        if all((eid, obj_id) in self.world.articulations for eid in env_ids):
+            add_one = self.add_articulation
+        elif all((eid, obj_id) in self.world.rigids for eid in env_ids):
+            add_one = self.add_rigid
+        else:
+            raise KeyError(
+                f"simulation view obj_id={obj_id} does not match registered objects"
+            )
+
+        records = []
+        for index, env_id in enumerate(env_ids):
+            path = base_path if len(env_ids) == 1 else f"{base_path}/env_{env_id}"
+            env_kwargs = dict(kwargs)
+            if "color" in env_kwargs:
+                env_kwargs["color"] = _select_env_visual_value(
+                    env_kwargs["color"], index, len(env_ids), env_id
+                )
+            env_kwargs["_debug_registration"] = False
+            records.append(
+                add_one(
+                    env_id,
+                    obj_id,
+                    mjcf_path,
+                    prim_base_path=path,
+                    **env_kwargs,
+                )
+            )
+        if len(records) == 1:
+            return records[0]
+        batch = SimVisualBatch(obj_id, env_ids, tuple(records))
+        self.visual_batches[obj_id] = batch
+        _debug_visual_batch(batch)
+        return batch
 
     def add_articulation(
         self,
@@ -136,7 +371,8 @@ class KangWorldVisualBridge:
         collision_shader=None,
         show_collision: bool = False,
         color=None,
-    ) -> _VisualArticulationRecord:
+        _debug_registration: bool = True,
+    ) -> ArticulationVisualView:
         key = (int(env_id), int(obj_id))
         if key in self.records:
             raise ValueError(f"visual already registered for env={key[0]}, obj={key[1]}")
@@ -161,24 +397,26 @@ class KangWorldVisualBridge:
                 )
             self.physics_bridge.add_instanced(articulation, body_handles)
             self._append_instanced_color(body_handles, color)
-            _debug_instancing(
-                kind="sim",
-                env_id=key[0],
-                obj_id=key[1],
-                num_bodies=len(body_prims),
-                handles=body_handles,
-                mesh_asset_base_path=mesh_asset_base_path,
-            )
+            if _debug_registration:
+                _debug_instancing(
+                    kind="sim",
+                    env_id=key[0],
+                    obj_id=key[1],
+                    num_bodies=len(body_prims),
+                    handles=body_handles,
+                    mesh_asset_base_path=mesh_asset_base_path,
+                )
         else:
             self.physics_bridge.add(articulation, skeleton_bridge)
-            _debug_instancing(
-                kind="sim-scenegraph",
-                env_id=key[0],
-                obj_id=key[1],
-                num_bodies=len(body_prims),
-                handles=[],
-                mesh_asset_base_path=mesh_asset_base_path,
-            )
+            if _debug_registration:
+                _debug_instancing(
+                    kind="sim-scenegraph",
+                    env_id=key[0],
+                    obj_id=key[1],
+                    num_bodies=len(body_prims),
+                    handles=[],
+                    mesh_asset_base_path=mesh_asset_base_path,
+                )
 
         collision_prims = []
         if collision_base_path is not None:
@@ -195,13 +433,14 @@ class KangWorldVisualBridge:
                 for prim in collision_prims:
                     self.app.add_renderable(shape_shader, prim)
 
-        record = _VisualArticulationRecord(
+        record = ArticulationVisualView(
             key[0],
             key[1],
             skeleton_bridge,
             body_prims,
             collision_prims,
             body_handles,
+            self.app,
         )
         self.records[key] = record
         return record
@@ -217,7 +456,8 @@ class KangWorldVisualBridge:
         shader=None,
         add_shapes: bool = True,
         color=None,
-    ) -> _VisualRigidRecord:
+        _debug_registration: bool = True,
+    ) -> RigidVisualView:
         key = (int(env_id), int(obj_id))
         if key in self.rigid_records or key in self.records:
             raise ValueError(f"visual already registered for env={key[0]}, obj={key[1]}")
@@ -235,10 +475,25 @@ class KangWorldVisualBridge:
             color=color,
         )
 
-        record = _VisualRigidRecord(
-            key[0], key[1], rigid, rigid_bridge, list(rigid_bridge.body_prims)
+        record = RigidVisualView(
+            key[0],
+            key[1],
+            rigid,
+            rigid_bridge,
+            list(rigid_bridge.body_prims),
+            list(rigid_bridge.body_handles),
+            self.app,
         )
         self.rigid_records[key] = record
+        if _debug_registration:
+            _debug_instancing(
+                kind="rigid",
+                env_id=key[0],
+                obj_id=key[1],
+                num_bodies=len(record.body_prims),
+                handles=record.body_handles,
+                mesh_asset_base_path="",
+            )
         return record
 
     def add_visual_articulation(
@@ -252,7 +507,7 @@ class KangWorldVisualBridge:
         shader=None,
         add_shapes: bool = True,
         color=None,
-    ) -> _VisualArticulationRecord:
+    ) -> ArticulationVisualView:
         """Create a rendered skeleton that is not attached to a PhysX articulation."""
         key = (int(env_id), int(obj_id))
         if key in self.records:
@@ -278,13 +533,14 @@ class KangWorldVisualBridge:
             mesh_asset_base_path=mesh_asset_base_path,
         )
 
-        record = _VisualArticulationRecord(
+        record = ArticulationVisualView(
             key[0],
             key[1],
             skeleton_bridge,
             body_prims,
             [],
             [],
+            self.app,
         )
         self.records[key] = record
         return record
@@ -292,6 +548,27 @@ class KangWorldVisualBridge:
     def sync(self):
         self.physics_bridge.sync()
         self._sync_rigids()
+
+    def get_articulation_view(
+        self,
+        env_id: int,
+        obj_id: int,
+    ) -> ArticulationVisualView | None:
+        return self.records.get((int(env_id), int(obj_id)))
+
+    def get_rigid_view(self, env_id: int, obj_id: int) -> RigidVisualView | None:
+        return self.rigid_records.get((int(env_id), int(obj_id)))
+
+    def get_visual_view(
+        self,
+        env_id: int,
+        obj_id: int,
+    ) -> ArticulationVisualView | RigidVisualView | None:
+        key = (int(env_id), int(obj_id))
+        return self.records.get(key) or self.rigid_records.get(key)
+
+    def get_visual_batch(self, obj_id: int) -> SimVisualBatch | None:
+        return self.visual_batches.get(int(obj_id))
 
     def _sync_rigids(self):
         for record in self.rigid_records.values():
@@ -303,7 +580,7 @@ class KangWorldVisualBridge:
         This is used by MimicKit view_motion, where the environment computes the
         reference pose itself and expects the engine viewer to draw that pose.
         """
-        record = self.records.get((int(env_id), int(obj_id)))
+        record = self.get_articulation_view(env_id, obj_id)
         if record is None:
             return
 
@@ -329,7 +606,7 @@ class KangWorldVisualBridge:
         SkeletonBridge keeps a zero-pose FK model that can at least move the
         whole rendered character with that root pose.
         """
-        record = self.records.get((int(env_id), int(obj_id)))
+        record = self.get_articulation_view(env_id, obj_id)
         if record is None:
             return
 
@@ -351,6 +628,18 @@ class KangWorldVisualBridge:
 
     def set_collision_visible(self, visible: bool):
         self.physics_bridge.set_collision_visible(bool(visible))
+
+    def body_id_from_render_handle(self, env_id: int, obj_id: int, handle) -> int | None:
+        record = self.get_articulation_view(env_id, obj_id)
+        if record is None:
+            return None
+        return record.body_id_from_render_handle(handle)
+
+    def set_articulation_color(self, env_id: int, obj_id: int, color):
+        record = self.get_articulation_view(env_id, obj_id)
+        if record is None:
+            return
+        record.set_color(color)
 
     def _append_instanced_color(self, body_handles, color):
         if not body_handles:
@@ -413,6 +702,15 @@ def _apply_prim_color(prims, color):
         prim.set_display_color_alpha(rgba)
 
 
+def _select_env_visual_value(value, index: int, env_count: int, env_id: int):
+    if callable(value):
+        return value(env_id)
+    arr = np.asarray(value)
+    if arr.ndim > 1 and arr.shape[0] == env_count:
+        return arr[index]
+    return value
+
+
 def _safe_prim_name(name: str) -> str:
     safe = re.sub(r"[^A-Za-z0-9_]+", "_", str(name)).strip("_")
     return safe or "shape"
@@ -435,6 +733,23 @@ def _debug_instancing(kind, env_id, obj_id, num_bodies, handles, mesh_asset_base
     )
 
 
+def _debug_visual_batch(batch: SimVisualBatch):
+    if os.environ.get("KANGENGINE_DEBUG_RENDER_INSTANCING", "").lower() not in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        return
+    handles = batch.body_handles
+    print(
+        "[kangengine render instancing] "
+        f"kind=sim-batch obj={batch.obj_id} envs={batch.num_envs} "
+        f"bodies_per_env={batch.num_bodies} handles={len(handles)} "
+        f"unique_handles={len(set(handles))}"
+    )
+
+
 def _mesh_asset_base_path(mjcf_path: str, scale: float, order: str) -> str:
     stem = re.sub(r"[^A-Za-z0-9_]+", "_", str(mjcf_path).split("/")[-1]).strip("_")
     if not stem:
@@ -442,3 +757,8 @@ def _mesh_asset_base_path(mjcf_path: str, scale: float, order: str) -> str:
     digest_src = f"{mjcf_path}|{float(scale):.9g}|{order}".encode("utf-8")
     digest = hashlib.sha1(digest_src).hexdigest()[:10]
     return f"/mesh_assets/skeletons/{stem}_{digest}"
+
+
+# Backward-compatible aliases for older experimental code.
+_VisualArticulationRecord = ArticulationVisualView
+_VisualRigidRecord = RigidVisualView

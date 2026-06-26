@@ -66,7 +66,6 @@ class MultiEnvSimWorldApp(ke.App):
         self.visual = ke.KangWorldVisualBridge(self, self.world)
         self.ball_xml = package_asset_path("objects", "ball.xml")
         ball_data = self.world.load_mjcf(self.ball_xml)
-
         for env_id in range(self.num_envs):
             pos = grid_position(env_id, self.columns, self.spacing, self.spawn_height)
             self.world.add_rigid(
@@ -78,22 +77,21 @@ class MultiEnvSimWorldApp(ke.App):
                 density=60.0,
             )
 
-            self.visual.add_rigid(
-                env_id,
-                0,
-                self.ball_xml,
-                prim_base_path=f"/group/env_{env_id}/ball",
-                shader=self.shaders.common,
-                color=env_color(env_id, self.num_envs),
-            )
+        self.ball = self.world.get_rigid_view(obj_id=0)
+        self.ball_visual_batch = self.visual.add(
+            self.ball,
+            self.ball_xml,
+            prim_base_path="/group/ball",
+            shader=self.shaders.common,
+            color=[env_color(env_id, self.num_envs) for env_id in range(self.num_envs)],
+        )
 
         self._reset()
         print(f"Multi-env KangSimWorld example: num_envs={self.num_envs}")
-        print(f"root_pos tensor shape: {tuple(self.world.state.get_root_pos(0).shape)}")
+        print(f"root_pos tensor shape: {tuple(self.ball.get_root_pos().shape)}")
         self.check_error()
 
     def _reset(self):
-        env_ids = torch.arange(self.num_envs, dtype=torch.int64)
         positions = grid_positions(
             self.num_envs,
             self.columns,
@@ -108,9 +106,8 @@ class MultiEnvSimWorldApp(ke.App):
         velocities[:, 1] = 1.0
         velocities[:, 2] = 5.0
 
-        self.world.set_root_state(
-            env_ids,
-            0,
+        self.ball.set_root_state(
+            None,
             positions,
             rotations,
             linear_velocity=velocities,
@@ -132,7 +129,7 @@ class MultiEnvSimWorldApp(ke.App):
         self.check_error()
 
     def render(self):
-        root_pos = self.world.state.get_root_pos(0)
+        root_pos = self.ball.get_root_pos()
         mean_height = float(root_pos[:, 2].mean().item())
         min_height = float(root_pos[:, 2].min().item())
         max_height = float(root_pos[:, 2].max().item())
