@@ -229,6 +229,8 @@ class Rasterizer : public RenderPipeline {
     updateRenderableTransforms(RenderableHandle handle,
                                const std::vector<glm::mat4>& transforms,
                                const std::vector<glm::vec4>* colors = nullptr);
+    void setRenderableExternalBuffer(RenderableHandle handle,
+                                     const ExternalBufferDesc& desc);
 
     void setRenderableColors(RenderableHandle handle,
                              const std::vector<glm::vec4>& colors);

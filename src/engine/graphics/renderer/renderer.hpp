@@ -75,6 +75,8 @@ class Renderer {
     updateRenderableTransforms(RenderableHandle handle,
                                const std::vector<glm::mat4>& transforms,
                                const std::vector<glm::vec4>* colors = nullptr);
+    void setRenderableExternalBuffer(RenderableHandle handle,
+                                     const ExternalBufferDesc& desc);
     bool getRenderableInstanceTransform(RenderableHandle handle,
                                         int instanceIndex,
                                         glm::mat4& outTransform) const;

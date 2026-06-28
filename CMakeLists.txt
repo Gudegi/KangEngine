@@ -34,6 +34,7 @@ set(BIND_DIR "${CMAKE_SOURCE_DIR}/bindings")
 option(IS_PYTHON_LIB "Build Python bindings" OFF) # Use -DIS_PYTHON_LIB=ON to enable
 option(USE_USD "Enable USD support" OFF) # Use -DUSE_USD=ON to enable
 option(USE_PHYSX "Enable Physx support" ON) # Use -DUSE_PHYSX=ON to enable
+option(USE_CUDA_INTEROP "Enable CUDA/graphics buffer interop when available" ON)
 
 
 ##### Link pre-compiled libs #####
@@ -150,6 +151,9 @@ find_package(Eigen3 CONFIG REQUIRED)
 find_package(tinyxml2 CONFIG REQUIRED)
 find_package(unofficial-openfbx CONFIG REQUIRED)
 find_package(mikktspace CONFIG REQUIRED)
+if(UNIX AND NOT APPLE AND USE_CUDA_INTEROP)
+    find_package(CUDAToolkit QUIET)
+endif()
 if(IS_PYTHON_LIB)
     # Prefer system Python over vcpkg's Python
     set(Python_FIND_STRATEGY LOCATION)
@@ -182,6 +186,14 @@ target_link_libraries(engine_core PUBLIC
     mikktspace::mikktspace
 )
 target_link_libraries(engine_core PUBLIC pre_compiled_ext)
+if(CUDAToolkit_FOUND)
+    target_compile_definitions(engine_core PUBLIC
+        KANGENGINE_USE_CUDA
+        KANGENGINE_USE_CUDA_GL_INTEROP
+    )
+    target_link_libraries(engine_core PUBLIC CUDA::cudart)
+    message(STATUS "CUDA/OpenGL external buffer interop enabled")
+endif()
 ###### core libs END ######
 
 # Executable for KangEngine
@@ -196,11 +208,12 @@ target_link_libraries(engine_core PUBLIC pre_compiled_ext)
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_articulation.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_jointmonkey.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_ragdoll.cpp")
-#file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_box_instancing.cpp")
+file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_box_instancing.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_instancing.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/view_fbx_character.cpp")
+#file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_mimickit_assets.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/view_bvh_character.cpp")
-file(GLOB MAIN_FILE "${MAIN_DIR}/debug_camera_frustum.cpp")
+#file(GLOB MAIN_FILE "${MAIN_DIR}/debug_camera_frustum.cpp")
 
 add_executable(${PROJECT_NAME} ${MAIN_FILE})
 target_link_libraries(${PROJECT_NAME} PRIVATE engine_core)
@@ -230,7 +243,9 @@ if(IS_PYTHON_LIB)
         "${BIND_DIR}/bind_new.cpp"
         "${BIND_DIR}/bind_scene.cpp"
         "${BIND_DIR}/bind_animation.cpp"
+        "${BIND_DIR}/bind_sim.cpp"
         "${BIND_DIR}/bind_physics.cpp"
+        "${BIND_DIR}/bind_physics_gpu.cpp"
     )
     message(STATUS "PY_SOURCE: ${PYBIND_SOURCE_FILES}")
     

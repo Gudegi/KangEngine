@@ -214,6 +214,29 @@ void bind_physics(py::module& m) {
         .def("clear_contacts", &PhysicsWorld::clearContacts,
              "Clear collected contact points.")
         .def(
+            "create_dynamic_box",
+            [](PhysicsWorld& self, const std::vector<float>& halfExtents,
+               const std::vector<float>& pos,
+               const std::vector<float>& rotXyzw, float density) {
+                if (halfExtents.size() != 3 || pos.size() != 3 ||
+                    rotXyzw.size() != 4) {
+                    throw py::value_error(
+                        "create_dynamic_box expects half_extents[3], pos[3], "
+                        "and rot_xyzw[4]");
+                }
+                return self.createDynamicBox(
+                    glm::vec3(halfExtents[0], halfExtents[1], halfExtents[2]),
+                    glm::vec3(pos[0], pos[1], pos[2]),
+                    glm::quat(rotXyzw[3], rotXyzw[0], rotXyzw[1],
+                              rotXyzw[2]),
+                    density);
+            },
+            py::arg("half_extents"), py::arg("pos"),
+            py::arg("rot_xyzw") = std::vector<float>{0.f, 0.f, 0.f, 1.f},
+            py::arg("density") = 1.0f,
+            py::return_value_policy::reference,
+            "Create a dynamic box for low-level physics tests and tools.")
+        .def(
             "get_contact_forces",
             [](const PhysicsWorld& self, const Articulation& articulation,
                bool groundOnly) {

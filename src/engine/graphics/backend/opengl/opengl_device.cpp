@@ -91,7 +91,13 @@ OpenGLBuffer::OpenGLBuffer(BufferType type, size_t size, const void* data)
     glBindBuffer(_target, 0);
 }
 
-OpenGLBuffer::~OpenGLBuffer() { glDeleteBuffers(1, &_buffer); }
+OpenGLBuffer::~OpenGLBuffer() {
+#ifdef KANGENGINE_USE_CUDA_GL_INTEROP
+    if (_cudaResource)
+        cudaGraphicsUnregisterResource(_cudaResource);
+#endif
+    glDeleteBuffers(1, &_buffer);
+}
 
 void OpenGLBuffer::bind() { glBindBuffer(_target, _buffer); }
 
@@ -107,6 +113,83 @@ void OpenGLBuffer::setData(const void* data, size_t size, size_t offset) {
     glBufferSubData(_target, offset, size, data);
     glBindBuffer(_target, 0);
 }
+
+#ifdef KANGENGINE_USE_CUDA_GL_INTEROP
+namespace {
+
+void checkCudaInterop(cudaError_t result, const char* operation) {
+    if (result != cudaSuccess)
+        throw std::runtime_error(std::string(operation) + ": " +
+                                 cudaGetErrorString(result));
+}
+
+} // namespace
+
+bool OpenGLBuffer::setExternalData(const Sim::GpuArrayView& view,
+                                   size_t count, size_t elementSize,
+                                   size_t sourceStrideBytes) {
+    if (!view.isCuda())
+        return false;
+    if (!view.data)
+        throw std::runtime_error("CUDA external buffer has a null pointer");
+    if (count * elementSize > _size)
+        throw std::runtime_error(
+            "CUDA external data exceeds the OpenGL buffer capacity");
+
+    int previousDevice = 0;
+    checkCudaInterop(cudaGetDevice(&previousDevice), "cudaGetDevice");
+    if (view.deviceId >= 0 && view.deviceId != previousDevice)
+        checkCudaInterop(cudaSetDevice(view.deviceId), "cudaSetDevice");
+
+    if (!_cudaResource) {
+        checkCudaInterop(
+            cudaGraphicsGLRegisterBuffer(&_cudaResource, _buffer,
+                                         cudaGraphicsRegisterFlagsWriteDiscard),
+            "cudaGraphicsGLRegisterBuffer");
+    }
+
+    auto stream = reinterpret_cast<cudaStream_t>(view.streamHandle);
+    if (view.readyEventHandle != 0) {
+        auto event = reinterpret_cast<cudaEvent_t>(view.readyEventHandle);
+        checkCudaInterop(cudaStreamWaitEvent(stream, event, 0),
+                         "cudaStreamWaitEvent");
+    }
+
+    checkCudaInterop(cudaGraphicsMapResources(1, &_cudaResource, stream),
+                     "cudaGraphicsMapResources");
+
+    void* destination = nullptr;
+    size_t mappedSize = 0;
+    cudaError_t mappedResult = cudaGraphicsResourceGetMappedPointer(
+        &destination, &mappedSize, _cudaResource);
+    if (mappedResult != cudaSuccess) {
+        cudaGraphicsUnmapResources(1, &_cudaResource, stream);
+        checkCudaInterop(mappedResult,
+                         "cudaGraphicsResourceGetMappedPointer");
+    }
+    if (count * elementSize > mappedSize) {
+        cudaGraphicsUnmapResources(1, &_cudaResource, stream);
+        throw std::runtime_error(
+            "Mapped OpenGL buffer is smaller than the CUDA source data");
+    }
+
+    const size_t sourcePitch =
+        sourceStrideBytes == 0 ? elementSize : sourceStrideBytes;
+    cudaError_t copyResult = cudaMemcpy2DAsync(
+        destination, elementSize, view.data, sourcePitch, elementSize, count,
+        cudaMemcpyDeviceToDevice, stream);
+    if (copyResult != cudaSuccess) {
+        cudaGraphicsUnmapResources(1, &_cudaResource, stream);
+        checkCudaInterop(copyResult, "cudaMemcpy2DAsync");
+    }
+
+    checkCudaInterop(cudaGraphicsUnmapResources(1, &_cudaResource, stream),
+                     "cudaGraphicsUnmapResources");
+    if (view.deviceId >= 0 && view.deviceId != previousDevice)
+        checkCudaInterop(cudaSetDevice(previousDevice), "cudaSetDevice");
+    return true;
+}
+#endif
 
 // OpenGLShader Implementation
 OpenGLShader::OpenGLShader(const ShaderDesc& desc) : _name(desc.name) {

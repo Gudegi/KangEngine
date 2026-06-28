@@ -6,6 +6,7 @@
 #define _GRAPHICS_DEVICE_HPP_
 
 #include "shader_preprocessor.hpp"
+#include "sim/gpu_array_view.hpp"
 #include "utils/types.hpp"
 #include <glm/glm.hpp>
 #include <cstdint>
@@ -219,6 +220,12 @@ class Buffer {
     virtual void bind() = 0;
     virtual void unbind() = 0;
     virtual void setData(const void* data, size_t size, size_t offset = 0) = 0;
+    // Upload external device memory without staging through CPU memory.
+    // Backends return false when the source memory type is unsupported.
+    virtual bool setExternalData(const Sim::GpuArrayView&, size_t, size_t,
+                                 size_t) {
+        return false;
+    }
     virtual BufferType getType() const = 0;
 };
 

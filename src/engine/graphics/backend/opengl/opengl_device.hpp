@@ -9,6 +9,9 @@
 #include <cstdint>
 #include <glad/glad.h>
 #include <memory>
+#ifdef KANGENGINE_USE_CUDA_GL_INTEROP
+#include <cuda_gl_interop.h>
+#endif
 #include "../base/graphics_device.hpp"
 #include "utils/types.hpp"
 
@@ -21,6 +24,9 @@ class OpenGLBuffer : public Buffer {
     GLenum _target;
     BufferType _type;
     size_t _size;
+#ifdef KANGENGINE_USE_CUDA_GL_INTEROP
+    cudaGraphicsResource* _cudaResource = nullptr;
+#endif
 
   public:
     OpenGLBuffer(BufferType type, size_t size, const void* data = nullptr);
@@ -29,6 +35,11 @@ class OpenGLBuffer : public Buffer {
     void bind() override;
     void unbind() override;
     void setData(const void* data, size_t size, size_t offset = 0) override;
+#ifdef KANGENGINE_USE_CUDA_GL_INTEROP
+    bool setExternalData(const Sim::GpuArrayView& view, size_t count,
+                         size_t elementSize,
+                         size_t sourceStrideBytes) override;
+#endif
     BufferType getType() const override { return _type; }
     GLuint getHandle() const { return _buffer; }
 };

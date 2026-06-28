@@ -143,6 +143,14 @@ class PhysicsWorld {
     PxPhysics* getPhysics() { return _physics; }
     PxMaterial* getMaterial() { return _material; }
     PxScene* getScene() { return _scene; }
+    const PxScene* getScene() const { return _scene; }
+    PxCudaContextManager* getCudaContextManager() {
+        return _cudaContextManager;
+    }
+    const PxCudaContextManager* getCudaContextManager() const {
+        return _cudaContextManager;
+    }
+    bool isGpuEnabled() const { return _cudaContextManager != nullptr; }
 };
 
 // PhysX > GLM conversion

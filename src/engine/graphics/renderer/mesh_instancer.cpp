@@ -2,6 +2,7 @@
 #include "engine/graphics/material/material.hpp"
 #include "geometry/mesh_utils.hpp"
 #include <algorithm>
+#include <cstring>
 #include <glm/glm.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
@@ -309,7 +310,141 @@ void MeshInstancer::updateFromTransforms(
     _useExternalTransforms = true;
 }
 
+void MeshInstancer::setExternalBuffer(const ExternalBufferDesc& desc) {
+    const bool sameStorage =
+        _hasExternalBufferDesc &&
+        _externalBufferDesc.view.data == desc.view.data &&
+        _externalBufferDesc.view.memoryType == desc.view.memoryType &&
+        _externalBufferDesc.view.dtype == desc.view.dtype &&
+        _externalBufferDesc.format == desc.format &&
+        _externalBufferDesc.count == desc.count &&
+        _externalBufferDesc.strideBytes == desc.strideBytes &&
+        _externalBufferDesc.syncPolicy == desc.syncPolicy;
+    _externalBufferDesc = desc;
+    _hasExternalBufferDesc = true;
+    if (!sameStorage)
+        _externalBufferLoaded = false;
+    _useExternalTransforms = false;
+}
+
+void MeshInstancer::_consumeExternalBuffer() {
+    const ExternalBufferDesc& desc = _externalBufferDesc;
+    const Sim::GpuArrayView& view = desc.view;
+
+    if (view.empty())
+        throw std::runtime_error("External transform buffer is empty");
+    if (desc.format != ExternalBufferFormat::Mat4)
+        throw std::runtime_error(
+            "Only ExternalBufferFormat::Mat4 is currently supported");
+    if (view.dtype != Sim::SimDType::Float32)
+        throw std::runtime_error(
+            "External Mat4 transform buffer must use float32 elements");
+    if (desc.syncPolicy == ExternalSyncPolicy::Fence)
+        throw std::runtime_error(
+            "ExternalSyncPolicy::Fence is not implemented by this backend");
+    if (desc.syncPolicy == ExternalSyncPolicy::Event &&
+        view.readyEventHandle == 0)
+        throw std::runtime_error(
+            "ExternalSyncPolicy::Event requires ready_event_handle");
+
+    if (desc.syncPolicy == ExternalSyncPolicy::Versioned &&
+        _externalBufferLoaded && _externalBufferVersion == view.version)
+        return;
+
+    int count = desc.count;
+    if (count == 0) {
+        if (view.shape.size() < 2)
+            throw std::runtime_error(
+                "External Mat4 buffer count requires shape [N, 16] or "
+                "[N, 4, 4]");
+        count = static_cast<int>(view.shape[0]);
+    }
+    if (count < 0)
+        throw std::runtime_error(
+            "External transform buffer count cannot be negative");
+    if (!view.shape.empty() && view.shape[0] < count)
+        throw std::runtime_error(
+            "External transform buffer count exceeds view.shape[0]");
+    if (view.shape.size() == 2 && view.shape[1] != 16)
+        throw std::runtime_error(
+            "External Mat4 buffer shape must be [N, 16] or [N, 4, 4]");
+    if (view.shape.size() == 3 &&
+        (view.shape[1] != 4 || view.shape[2] != 4))
+        throw std::runtime_error(
+            "External Mat4 buffer shape must be [N, 16] or [N, 4, 4]");
+    if (view.shape.size() > 3)
+        throw std::runtime_error(
+            "External Mat4 buffer shape must be [N, 16] or [N, 4, 4]");
+    if (view.strides.size() == 2 && view.strides[1] != 1)
+        throw std::runtime_error(
+            "External [N, 16] matrices must be contiguous per instance");
+    if (view.strides.size() == 3 &&
+        (view.strides[1] != 4 || view.strides[2] != 1))
+        throw std::runtime_error(
+            "External [N, 4, 4] matrices must be contiguous per instance");
+
+    int64_t strideBytes = desc.strideBytes;
+    if (strideBytes == 0 && !view.strides.empty())
+        strideBytes = view.strides[0] *
+                      static_cast<int64_t>(Sim::simDTypeSize(view.dtype));
+    if (strideBytes == 0)
+        strideBytes = sizeof(glm::mat4);
+    if (strideBytes < static_cast<int64_t>(sizeof(glm::mat4)))
+        throw std::runtime_error(
+            "External Mat4 buffer stride is smaller than one matrix");
+
+    _instancePrims.clear();
+    if (view.isCpu()) {
+        _usesGpuExternalTransforms = false;
+        _transforms.resize(static_cast<size_t>(count));
+        const auto* source = static_cast<const unsigned char*>(view.data);
+        for (int i = 0; i < count; ++i) {
+            std::memcpy(&_transforms[static_cast<size_t>(i)],
+                        source + static_cast<int64_t>(i) * strideBytes,
+                        sizeof(glm::mat4));
+        }
+
+        if (_colors.size() != _transforms.size())
+            _colors.assign(_transforms.size(), glm::vec4(1.0f));
+        _updateTransparency();
+        _updateWorldBounds(_transforms);
+        _uploadInstanceData(_transforms, _colors);
+    } else {
+        _usesGpuExternalTransforms = true;
+        _transforms.clear();
+        _worldBounds.clear();
+        _combinedWorldBounds = Geometry::AABB::empty();
+        _visibleCount = count;
+        if (_visibleCount > _allocatedInstances)
+            _reallocate(std::max(1, _visibleCount * 2));
+        if (_colors.size() != static_cast<size_t>(count))
+            _colors.assign(static_cast<size_t>(count), glm::vec4(1.0f));
+        _colorVBO->setData(_colors.data(), sizeof(glm::vec4) * count);
+        if (!_transformVBO->setExternalData(
+                view, static_cast<size_t>(count), sizeof(glm::mat4),
+                static_cast<size_t>(strideBytes)))
+            throw std::runtime_error(
+                "The active graphics backend cannot consume this external "
+                "GPU buffer");
+    }
+    _externalBufferVersion = view.version;
+    _externalBufferLoaded = true;
+}
+
 void MeshInstancer::update() {
+    if (_hasExternalBufferDesc) {
+        if (!_hasVisibleOwnerPrim()) {
+            static const std::vector<glm::mat4> emptyTransforms;
+            static const std::vector<glm::vec4> emptyColors;
+            _updateWorldBounds(emptyTransforms);
+            _uploadInstanceData(emptyTransforms, emptyColors);
+            _externalBufferLoaded = false;
+            return;
+        }
+        _consumeExternalBuffer();
+        return;
+    }
+
     if (_useExternalTransforms) {
         if (!_hasVisibleOwnerPrim()) {
             static const std::vector<glm::mat4> emptyTransforms;
@@ -370,6 +505,8 @@ void MeshInstancer::updateRenderableSkinningMatrices(
 }
 
 void MeshInstancer::applyFrustumCulling(const Geometry::Frustum* frustum) {
+    if (_usesGpuExternalTransforms)
+        return;
     if (!frustum || _hasSkinning || _worldBounds.size() != _transforms.size()) {
         _uploadInstanceData(_transforms, _colors);
         return;

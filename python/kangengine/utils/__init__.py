@@ -28,10 +28,11 @@ from .math import (
 
 _LAZY_IMPORTS = {
     "as_cpu_numpy": (".tensor", "as_cpu_numpy"),
-    "as_sim_buffer": (".tensor", "as_sim_buffer"),
+    "as_sim_buffer": (".sim_buffer", "as_sim_buffer"),
     "as_tensor": (".tensor", "as_tensor"),
     "resolve_device": (".tensor", "resolve_device"),
-    "SimBuffer": (".tensor", "SimBuffer"),
+    "SimBuffer": (".sim_buffer", "SimBuffer"),
+    "to_gpu_array_view": (".sim_buffer", "to_gpu_array_view"),
     "quat_wxyz_conjugate": (".batched_rotations", "quat_wxyz_conjugate"),
     "quat_wxyz_from_angle_axis": (
         ".batched_rotations",
@@ -80,6 +81,7 @@ __all__ = [
     "as_sim_buffer",
     "as_tensor",
     "SimBuffer",
+    "to_gpu_array_view",
     "quat_wxyz_conjugate",
     "quat_wxyz_from_angle_axis",
     "quat_wxyz_multiply",

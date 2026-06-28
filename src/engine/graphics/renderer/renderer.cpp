@@ -138,6 +138,12 @@ void Renderer::updateRenderableTransforms(
         _rasterizer->updateRenderableTransforms(handle, transforms, colors);
 }
 
+void Renderer::setRenderableExternalBuffer(RenderableHandle handle,
+                                           const ExternalBufferDesc& desc) {
+    if (_rasterizer)
+        _rasterizer->setRenderableExternalBuffer(handle, desc);
+}
+
 bool Renderer::getRenderableInstanceTransform(RenderableHandle handle,
                                               int instanceIndex,
                                               glm::mat4& outTransform) const {

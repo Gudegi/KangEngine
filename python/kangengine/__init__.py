@@ -85,6 +85,9 @@ Texture = _set_public_module(_ke.Texture, __name__)
 Camera = _set_public_module(_ke.Camera, __name__)
 UpAxis = _set_public_module(_ke.UpAxis, __name__)
 TransformSource = _set_public_module(_ke.TransformSource, __name__)
+ExternalBufferFormat = _set_public_module(_ke.ExternalBufferFormat, __name__)
+ExternalSyncPolicy = _set_public_module(_ke.ExternalSyncPolicy, __name__)
+ExternalBufferDesc = _set_public_module(_ke.ExternalBufferDesc, __name__)
 InteractionMode = _set_public_module(_ke.InteractionMode, __name__)
 ToneMapMode = _set_public_module(_ke.ToneMapMode, __name__)
 TextureRole = _set_public_module(_ke.TextureRole, __name__)
@@ -174,6 +177,9 @@ __all__ = [
     "Camera",
     "UpAxis",
     "TransformSource",
+    "ExternalBufferFormat",
+    "ExternalSyncPolicy",
+    "ExternalBufferDesc",
     "InteractionMode",
     "ToneMapMode",
     "TextureRole",
@@ -222,6 +228,13 @@ _OPTIONAL_EXPORTS = [
     "ArticulationConfig",
     "Articulation",
     "PhysicsBridge",
+    "SimMemoryType",
+    "SimDType",
+    "SimLifetimePolicy",
+    "GpuArrayView",
+    "GpuPhysicsConfig",
+    "PhysicsGpuStateViews",
+    "PhysicsGpuSystem",
 ]
 
 for _name in _OPTIONAL_EXPORTS:

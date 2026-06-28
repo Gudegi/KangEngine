@@ -6,6 +6,7 @@
 #include <glm/vec3.hpp>
 
 #include "geometry/bounds.hpp"
+#include "sim/gpu_array_view.hpp"
 
 namespace KE {
 
@@ -20,6 +21,30 @@ static constexpr RenderableHandle InvalidHandle = ~0u;
 enum class TransformSource {
     SceneGraph,     // Prim/scene graph owns transforms.
     ExternalBuffer, // Caller owns per-instance transform arrays.
+};
+
+enum class ExternalBufferFormat {
+    Mat4, // float32 column-major matrices, one per instance
+    PositionRotation,
+    PositionRotationScale,
+    Custom,
+};
+
+enum class ExternalSyncPolicy {
+    None,
+    Versioned,
+    Fence,
+    Event,
+};
+
+// External transform source attached to a renderable. The descriptor is a view:
+// memory ownership and synchronization are provided by GpuArrayView metadata.
+struct ExternalBufferDesc {
+    Sim::GpuArrayView view;
+    ExternalBufferFormat format = ExternalBufferFormat::Mat4;
+    int count = 0;       // 0 derives the count from view.shape[0].
+    int strideBytes = 0; // 0 derives the stride from view metadata.
+    ExternalSyncPolicy syncPolicy = ExternalSyncPolicy::None;
 };
 
 namespace RendererTextureSlot {

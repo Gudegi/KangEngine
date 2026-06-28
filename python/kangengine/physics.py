@@ -12,6 +12,13 @@ _NAMES = [
     "ArticulationConfig",
     "Articulation",
     "PhysicsBridge",
+    "SimMemoryType",
+    "SimDType",
+    "SimLifetimePolicy",
+    "GpuArrayView",
+    "GpuPhysicsConfig",
+    "PhysicsGpuStateViews",
+    "PhysicsGpuSystem",
 ]
 
 __all__ = []

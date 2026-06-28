@@ -202,6 +202,13 @@ void Rasterizer::updateRenderableTransforms(
     _handleTable[handle]->updateFromTransforms(transforms, colors);
 }
 
+void Rasterizer::setRenderableExternalBuffer(RenderableHandle handle,
+                                             const ExternalBufferDesc& desc) {
+    if (handle >= _handleTable.size())
+        return;
+    _handleTable[handle]->setExternalBuffer(desc);
+}
+
 void Rasterizer::setRenderableColors(RenderableHandle handle,
                                      const std::vector<glm::vec4>& colors) {
     if (handle >= _handleTable.size())

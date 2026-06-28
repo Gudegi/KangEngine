@@ -40,6 +40,7 @@ class BoxInstancingApp : public App {
     SimState _simState;
     SimVisualBatch _simVisualBatch;
     std::vector<glm::vec4> _colors;
+    uint64_t _transformVersion = 0;
 
     bool paused = false;
     bool spaceWasDown = false;
@@ -179,8 +180,20 @@ class BoxInstancingApp : public App {
                                            pxToGlm(pose.q));
             }
             _simVisualBatch.prepareFromState(_simState);
-            updateRenderableTransforms(_simVisualBatch.renderable(0),
-                                       _simVisualBatch.transforms(0));
+            const auto& transforms = _simVisualBatch.transforms(0);
+            ExternalBufferDesc desc;
+            desc.view.data = const_cast<glm::mat4*>(transforms.data());
+            desc.view.memoryType = Sim::SimMemoryType::CpuHost;
+            desc.view.dtype = Sim::SimDType::Float32;
+            desc.view.lifetime = Sim::SimLifetimePolicy::ExternalOwner;
+            desc.view.shape = {static_cast<int64_t>(transforms.size()), 4, 4};
+            desc.view.strides = {16, 4, 1};
+            desc.view.version = ++_transformVersion;
+            desc.view.name = "box_world_transforms";
+            desc.format = ExternalBufferFormat::Mat4;
+            desc.syncPolicy = ExternalSyncPolicy::Versioned;
+            getRenderer().setRenderableExternalBuffer(
+                _simVisualBatch.renderable(0), desc);
         }
         checkError();
     }
