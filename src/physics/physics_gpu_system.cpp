@@ -2,12 +2,16 @@
 
 #include "physics.hpp"
 
-#include <cstring>
+#include <cstdint>
 #include <string>
 #include <vector>
 
 #ifdef KANGENGINE_USE_CUDA
 #include <cuda_runtime.h>
+#include <cudamanager/PxCudaContext.h>
+#ifdef KANGENGINE_HAS_PHYSX_DIRECT_GPU_API
+#include <PxDirectGPUAPI.h>
+#endif
 #endif
 
 namespace KE {
@@ -18,8 +22,15 @@ PhysicsGpuSystem::PhysicsGpuSystem(PhysicsWorld* world,
 
 PhysicsGpuSystem::~PhysicsGpuSystem() { releaseGpuBuffers(); }
 
-#ifdef KANGENGINE_USE_CUDA
 namespace {
+
+#ifdef KANGENGINE_USE_CUDA
+void checkCuda(PxCUresult result, const char* operation) {
+    if (result.value != 0)
+        throw std::runtime_error(std::string(operation) +
+                                 " failed with CUDA driver error " +
+                                 std::to_string(result.value));
+}
 
 void checkCuda(cudaError_t result, const char* operation) {
     if (result != cudaSuccess)
@@ -27,15 +38,31 @@ void checkCuda(cudaError_t result, const char* operation) {
                                  cudaGetErrorString(result));
 }
 
-} // namespace
+CUdeviceptr toDevicePtr(void* ptr) {
+    return static_cast<CUdeviceptr>(reinterpret_cast<uintptr_t>(ptr));
+}
 #endif
+
+void setFloatCudaView(Sim::GpuArrayView& view, void* data, int deviceId,
+                      uint32_t rows, uint32_t cols, uint64_t streamHandle,
+                      uint64_t readyEventHandle, const char* name) {
+    view.data = data;
+    view.memoryType = Sim::SimMemoryType::CudaDevice;
+    view.dtype = Sim::SimDType::Float32;
+    view.lifetime = Sim::SimLifetimePolicy::ExternalOwner;
+    view.deviceId = deviceId;
+    view.shape = {static_cast<int64_t>(rows), static_cast<int64_t>(cols)};
+    view.strides = {static_cast<int64_t>(cols), 1};
+    view.streamHandle = streamHandle;
+    view.readyEventHandle = readyEventHandle;
+    view.name = name;
+}
+
+} // namespace
 
 void PhysicsGpuSystem::init() {
     if (!_world)
         throw std::runtime_error("PhysicsGpuSystem requires a PhysicsWorld");
-    if (!_config.enableDirectGpuApi)
-        throw std::runtime_error(
-            "PhysicsGpuSystem requires enableDirectGpuApi=true");
     if (!_world->isGpuEnabled())
         throw std::runtime_error(
             "PhysicsGpuSystem requires a PhysX GPU-enabled PhysicsWorld");
@@ -44,6 +71,10 @@ void PhysicsGpuSystem::init() {
             "PhysicsGpuSystem could not find a scene CUDA context manager");
 
 #ifdef KANGENGINE_USE_CUDA
+#ifndef KANGENGINE_HAS_PHYSX_DIRECT_GPU_API
+    throw std::runtime_error(
+        "PhysicsGpuSystem requires PhysX Direct GPU API support");
+#else
     releaseGpuBuffers();
     checkCuda(cudaSetDevice(_config.cudaDeviceId), "cudaSetDevice");
 
@@ -56,28 +87,42 @@ void PhysicsGpuSystem::init() {
         std::vector<PxActor*> actors(_rigidCount);
         _rigidCount = scene->getActors(PxActorTypeFlag::eRIGID_DYNAMIC,
                                        actors.data(), _rigidCount);
-        std::vector<PxGpuActorPair> actorPairs(_rigidCount);
+        std::vector<PxRigidDynamicGPUIndex> actorIndices(_rigidCount);
         for (uint32_t i = 0; i < _rigidCount; ++i) {
-            auto* body = actors[i] ? actors[i]->is<PxRigidBody>() : nullptr;
+            auto* body = actors[i] ? actors[i]->is<PxRigidDynamic>() : nullptr;
             if (!body)
                 throw std::runtime_error(
                     "PhysicsGpuSystem found a non-rigid dynamic actor");
-            std::memset(&actorPairs[i], 0, sizeof(PxGpuActorPair));
-            actorPairs[i].srcIndex = i;
-            actorPairs[i].nodeIndex = body->getInternalIslandNodeIndex();
+            actorIndices[i] = body->getGPUIndex();
+            if (actorIndices[i] == 0xFFFFFFFFu)
+                throw std::runtime_error(
+                    "PhysicsGpuSystem found an invalid PhysX rigid GPU index");
         }
 
         checkCuda(cudaMalloc(&_rigidIndexBuffer,
-                             sizeof(PxGpuActorPair) * _rigidCount),
+                             sizeof(PxRigidDynamicGPUIndex) * _rigidCount),
                   "cudaMalloc(rigid indices)");
         checkCuda(cudaMalloc(&_rigidScratchBuffer,
-                             sizeof(PxGpuBodyData) * _rigidCount),
+                             (sizeof(PxTransform) + 2 * sizeof(PxVec3)) *
+                                 _rigidCount),
                   "cudaMalloc(rigid scratch)");
         checkCuda(cudaMalloc(&_rigidMirrorBuffer,
                              sizeof(float) * 13 * _rigidCount),
                   "cudaMalloc(rigid mirror)");
-        checkCuda(cudaMemcpy(_rigidIndexBuffer, actorPairs.data(),
-                             sizeof(PxGpuActorPair) * _rigidCount,
+        checkCuda(cudaMalloc(&_rigidForceBuffer,
+                             sizeof(float) * 3 * _rigidCount),
+                  "cudaMalloc(rigid force)");
+        checkCuda(cudaMalloc(&_rigidTorqueBuffer,
+                             sizeof(float) * 3 * _rigidCount),
+                  "cudaMalloc(rigid torque)");
+        checkCuda(cudaMemset(_rigidForceBuffer, 0,
+                             sizeof(float) * 3 * _rigidCount),
+                  "cudaMemset(rigid force)");
+        checkCuda(cudaMemset(_rigidTorqueBuffer, 0,
+                             sizeof(float) * 3 * _rigidCount),
+                  "cudaMemset(rigid torque)");
+        checkCuda(cudaMemcpy(_rigidIndexBuffer, actorIndices.data(),
+                             sizeof(PxRigidDynamicGPUIndex) * _rigidCount,
                              cudaMemcpyHostToDevice),
                   "cudaMemcpy(rigid indices)");
         cudaEvent_t copyEvent = nullptr;
@@ -90,18 +135,18 @@ void PhysicsGpuSystem::init() {
         _readyEvent = readyEvent;
     }
 
-    _views.rigidData.data = _rigidMirrorBuffer;
-    _views.rigidData.memoryType = Sim::SimMemoryType::CudaDevice;
-    _views.rigidData.dtype = Sim::SimDType::Float32;
-    _views.rigidData.lifetime = Sim::SimLifetimePolicy::ExternalOwner;
-    _views.rigidData.deviceId = _config.cudaDeviceId;
-    _views.rigidData.shape = {static_cast<int64_t>(_rigidCount), 13};
-    _views.rigidData.strides = {13, 1};
-    _views.rigidData.streamHandle = _streamHandle;
-    _views.rigidData.readyEventHandle =
-        reinterpret_cast<uint64_t>(_readyEvent);
-    _views.rigidData.name = "physics_rigid_data";
+    const uint64_t readyEventHandle = reinterpret_cast<uint64_t>(_readyEvent);
+    setFloatCudaView(_views.rigidData, _rigidMirrorBuffer,
+                     _config.cudaDeviceId, _rigidCount, 13, _streamHandle,
+                     readyEventHandle, "physics_rigid_data");
+    setFloatCudaView(_views.rigidForce, _rigidForceBuffer,
+                     _config.cudaDeviceId, _rigidCount, 3, _streamHandle,
+                     readyEventHandle, "physics_rigid_force");
+    setFloatCudaView(_views.rigidTorque, _rigidTorqueBuffer,
+                     _config.cudaDeviceId, _rigidCount, 3, _streamHandle,
+                     readyEventHandle, "physics_rigid_torque");
     _initialized = true;
+#endif
 #else
     throw std::runtime_error(
         "PhysicsGpuSystem requires a CUDA-enabled KangEngine build");
@@ -121,6 +166,8 @@ void PhysicsGpuSystem::checkInitialized() const {
 void PhysicsGpuSystem::setCudaStream(uint64_t streamHandle) {
     _streamHandle = streamHandle;
     _views.rigidData.streamHandle = streamHandle;
+    _views.rigidForce.streamHandle = streamHandle;
+    _views.rigidTorque.streamHandle = streamHandle;
 }
 
 void PhysicsGpuSystem::stepStart() { checkInitialized(); }
@@ -137,44 +184,67 @@ void PhysicsGpuSystem::fetchRigidData() {
     auto stream = reinterpret_cast<cudaStream_t>(_streamHandle);
     auto copyEvent = reinterpret_cast<cudaEvent_t>(_copyEvent);
     auto readyEvent = reinterpret_cast<cudaEvent_t>(_readyEvent);
+    auto physxCopyEvent = reinterpret_cast<CUevent>(_copyEvent);
 
-    _world->getScene()->copyBodyData(
-        static_cast<PxGpuBodyData*>(_rigidScratchBuffer),
-        static_cast<PxGpuActorPair*>(_rigidIndexBuffer), _rigidCount,
-        _copyEvent);
+#ifndef KANGENGINE_HAS_PHYSX_DIRECT_GPU_API
+    throw std::runtime_error(
+        "PhysicsGpuSystem requires PhysX Direct GPU API support");
+#else
+    auto* scratch = static_cast<unsigned char*>(_rigidScratchBuffer);
+    void* poseBuffer = scratch;
+    void* linearVelocityBuffer = scratch + sizeof(PxTransform) * _rigidCount;
+    void* angularVelocityBuffer =
+        scratch + (sizeof(PxTransform) + sizeof(PxVec3)) * _rigidCount;
+    PxDirectGPUAPI& directGpuApi = _world->getScene()->getDirectGPUAPI();
+    auto* gpuIndices = static_cast<PxRigidDynamicGPUIndex*>(_rigidIndexBuffer);
+    if (!directGpuApi.getRigidDynamicData(
+            poseBuffer, gpuIndices, PxRigidDynamicGPUAPIReadType::eGLOBAL_POSE,
+            _rigidCount, nullptr, physxCopyEvent))
+        throw std::runtime_error("PxDirectGPUAPI::getRigidDynamicData(pose) failed");
+    if (!directGpuApi.getRigidDynamicData(
+            linearVelocityBuffer, gpuIndices,
+            PxRigidDynamicGPUAPIReadType::eLINEAR_VELOCITY, _rigidCount, nullptr,
+            physxCopyEvent))
+        throw std::runtime_error(
+            "PxDirectGPUAPI::getRigidDynamicData(linear velocity) failed");
+    if (!directGpuApi.getRigidDynamicData(
+            angularVelocityBuffer, gpuIndices,
+            PxRigidDynamicGPUAPIReadType::eANGULAR_VELOCITY, _rigidCount, nullptr,
+            physxCopyEvent))
+        throw std::runtime_error(
+            "PxDirectGPUAPI::getRigidDynamicData(angular velocity) failed");
     checkCuda(cudaStreamWaitEvent(stream, copyEvent, 0),
               "cudaStreamWaitEvent(PhysX body copy)");
 
-    auto* source = static_cast<unsigned char*>(_rigidScratchBuffer);
     auto* destination = static_cast<unsigned char*>(_rigidMirrorBuffer);
-    constexpr size_t sourcePitch = sizeof(PxGpuBodyData);
     constexpr size_t destinationPitch = sizeof(float) * 13;
     checkCuda(cudaMemcpy2DAsync(destination, destinationPitch,
-                                source + offsetof(PxGpuBodyData, pos),
-                                sourcePitch, sizeof(float) * 3, _rigidCount,
-                                cudaMemcpyDeviceToDevice, stream),
+                                static_cast<unsigned char*>(poseBuffer) +
+                                    offsetof(PxTransform, p),
+                                sizeof(PxTransform), sizeof(float) * 3,
+                                _rigidCount, cudaMemcpyDeviceToDevice, stream),
               "cudaMemcpy2DAsync(rigid position)");
     checkCuda(cudaMemcpy2DAsync(destination + sizeof(float) * 3,
                                 destinationPitch,
-                                source + offsetof(PxGpuBodyData, quat),
-                                sourcePitch, sizeof(float) * 4, _rigidCount,
-                                cudaMemcpyDeviceToDevice, stream),
+                                static_cast<unsigned char*>(poseBuffer) +
+                                    offsetof(PxTransform, q),
+                                sizeof(PxTransform), sizeof(float) * 4,
+                                _rigidCount, cudaMemcpyDeviceToDevice, stream),
               "cudaMemcpy2DAsync(rigid rotation)");
     checkCuda(cudaMemcpy2DAsync(destination + sizeof(float) * 7,
-                                destinationPitch,
-                                source + offsetof(PxGpuBodyData, linVel),
-                                sourcePitch, sizeof(float) * 3, _rigidCount,
+                                destinationPitch, linearVelocityBuffer,
+                                sizeof(PxVec3), sizeof(float) * 3, _rigidCount,
                                 cudaMemcpyDeviceToDevice, stream),
               "cudaMemcpy2DAsync(rigid linear velocity)");
     checkCuda(cudaMemcpy2DAsync(destination + sizeof(float) * 10,
-                                destinationPitch,
-                                source + offsetof(PxGpuBodyData, angVel),
-                                sourcePitch, sizeof(float) * 3, _rigidCount,
+                                destinationPitch, angularVelocityBuffer,
+                                sizeof(PxVec3), sizeof(float) * 3, _rigidCount,
                                 cudaMemcpyDeviceToDevice, stream),
               "cudaMemcpy2DAsync(rigid angular velocity)");
     checkCuda(cudaEventRecord(readyEvent, stream),
               "cudaEventRecord(rigid data ready)");
     ++_views.rigidData.version;
+#endif
 #else
     notImplemented("fetchRigidData");
 #endif
@@ -279,6 +349,10 @@ void PhysicsGpuSystem::releaseGpuBuffers() {
         cudaEventDestroy(reinterpret_cast<cudaEvent_t>(_copyEvent));
     if (_rigidMirrorBuffer)
         cudaFree(_rigidMirrorBuffer);
+    if (_rigidForceBuffer)
+        cudaFree(_rigidForceBuffer);
+    if (_rigidTorqueBuffer)
+        cudaFree(_rigidTorqueBuffer);
     if (_rigidScratchBuffer)
         cudaFree(_rigidScratchBuffer);
     if (_rigidIndexBuffer)
@@ -288,9 +362,13 @@ void PhysicsGpuSystem::releaseGpuBuffers() {
     _rigidIndexBuffer = nullptr;
     _rigidScratchBuffer = nullptr;
     _rigidMirrorBuffer = nullptr;
+    _rigidForceBuffer = nullptr;
+    _rigidTorqueBuffer = nullptr;
     _copyEvent = nullptr;
     _readyEvent = nullptr;
     _views.rigidData = {};
+    _views.rigidForce = {};
+    _views.rigidTorque = {};
 }
 
 } // namespace KE

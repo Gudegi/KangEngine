@@ -3,16 +3,20 @@
 #include "PxSceneDesc.h"
 #include "animation/character_description.hpp"
 #include "articulation.hpp"
-#include "foundation/Px.h"
 #ifndef __APPLE__
 #include "gpu/PxGpu.h"
+#endif
+#ifdef KANGENGINE_USE_CUDA
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <dlfcn.h>
 #endif
 #include <Eigen/Geometry>
 #include <algorithm>
 #include <cmath>
+#include <stdexcept>
 #include <unordered_map>
 #include <vector>
-
 namespace KE {
 
 namespace {
@@ -63,6 +67,30 @@ void setRigidCollisionFilterData(PxRigidActor* actor, PxU32 collisionGroup) {
         shape->setQueryFilterData(filterData);
     }
 }
+
+#ifdef KANGENGINE_USE_CUDA
+void checkCudaRuntime(cudaError_t result, const char* operation) {
+    if (result != cudaSuccess)
+        throw std::runtime_error(std::string(operation) + ": " +
+                                 cudaGetErrorString(result));
+}
+
+CUcontext getCurrentCudaDriverContext() {
+    using CuCtxGetCurrentFn = CUresult (*)(CUcontext*);
+    void* libcuda = dlopen("libcuda.so", RTLD_NOW | RTLD_GLOBAL);
+    if (!libcuda)
+        throw std::runtime_error("failed to dlopen libcuda.so");
+    auto* cuCtxGetCurrent =
+        reinterpret_cast<CuCtxGetCurrentFn>(dlsym(libcuda, "cuCtxGetCurrent"));
+    if (!cuCtxGetCurrent)
+        throw std::runtime_error("failed to find cuCtxGetCurrent");
+
+    CUcontext context = nullptr;
+    if (cuCtxGetCurrent(&context) != CUDA_SUCCESS || !context)
+        throw std::runtime_error("failed to get current CUDA context");
+    return context;
+}
+#endif
 
 } // namespace
 
@@ -177,6 +205,14 @@ PhysicsWorld::PhysicsWorld(PhysicsConfig config) {
             "PhysX GPU is not available on Apple builds; using CPU PhysX.\n");
 #else
         PxCudaContextManagerDesc cudaContextManagerDesc;
+#ifdef KANGENGINE_USE_CUDA
+        checkCudaRuntime(cudaSetDevice(0), "cudaSetDevice");
+        // Force the CUDA runtime context to exist, then give
+        // that exact driver context to PhysX instead of letting PhysX make one.
+        checkCudaRuntime(cudaFree(nullptr), "cudaFree(0)");
+        CUcontext cudaContext = getCurrentCudaDriverContext();
+        cudaContextManagerDesc.ctx = &cudaContext;
+#endif
         _cudaContextManager = PxCreateCudaContextManager(
             *_foundation, cudaContextManagerDesc, PxGetProfilerCallback());
         if (_cudaContextManager && !_cudaContextManager->contextIsValid()) {
@@ -186,9 +222,13 @@ PhysicsWorld::PhysicsWorld(PhysicsConfig config) {
         if (_cudaContextManager) {
             sceneDesc.cudaContextManager = _cudaContextManager;
             sceneDesc.flags |= PxSceneFlag::eENABLE_GPU_DYNAMICS;
+            sceneDesc.flags |= PxSceneFlag::eENABLE_PCM;
+#ifdef KANGENGINE_HAS_PHYSX_DIRECT_GPU_API
+            sceneDesc.flags |= PxSceneFlag::eENABLE_DIRECT_GPU_API;
+#endif
             sceneDesc.broadPhaseType = PxBroadPhaseType::eGPU;
-            // sceneDesc.gpuDynamicsConfig;
-            fmt::print("PhysX GPU is enabled.\n");
+            fmt::print("PhysX GPU is enabled (broadphase: gpu, compute: {}).\n",
+                       sceneDesc.gpuComputeVersion);
         } else {
             fmt::print(
                 "Failed to initialize PhysX CUDA context; using CPU PhysX.\n");

@@ -1,6 +1,7 @@
-.PHONY: build build_debug build_release build_relWithDebInfo \
+.PHONY: build build_cuda build_debug build_release build_relWithDebInfo \
         build_usd build_usd_debug build_python build_python_debug \
-        build_usd_python build_usd_python_debug \
+        build_python_cuda build_usd_python build_usd_python_debug \
+        validate_physx_gpu validate_physx_gpu_cpp \
         docs docs_clean \
         run run2 run_debug run_release run_relWithDebInfo \
         clean_all clean_debug clean_release clean_relWithDebInfo
@@ -10,11 +11,22 @@ RELEASE_DIR := $(BUILD_DIR)/release
 DEBUG_DIR := $(BUILD_DIR)/debug
 REL_DIR := $(BUILD_DIR)/relWithDebInfo
 EXECUTABLE := KangEngine
+PYTHON ?= python/.venv/bin/python
+DEFAULT_CMAKE_FLAGS := -DUSE_CUDA_INTEROP=OFF
+CUDA_TOOLKIT_ROOT ?= /usr/local/cuda
+PHYSX_CUDA_BIN_PLATFORM ?= linux.x86_64
+CUDA_INTEROP_CMAKE_FLAGS := -DUSE_CUDA_INTEROP=ON -DCUDAToolkit_ROOT=$(CUDA_TOOLKIT_ROOT) -DCUDAToolkit_NVCC_EXECUTABLE=$(CUDA_TOOLKIT_ROOT)/bin/nvcc -DPHYSX_BIN_PLATFORM=$(PHYSX_CUDA_BIN_PLATFORM)
 
 # configure + build + copy compile_commands
 # $(1): preset, $(2): build dir, $(3): extra cmake flags
 define do_build
-	cmake --preset=$(1) $(3)
+	cmake --preset=$(1) $(DEFAULT_CMAKE_FLAGS) $(3)
+	cmake --build $(2)
+	@cp -f $(2)/compile_commands.json $(BUILD_DIR)/compile_commands.json 2>/dev/null || true
+endef
+
+define do_cuda_build
+	cmake --preset=$(1) $(CUDA_INTEROP_CMAKE_FLAGS) $(3)
 	cmake --build $(2)
 	@cp -f $(2)/compile_commands.json $(BUILD_DIR)/compile_commands.json 2>/dev/null || true
 endef
@@ -22,6 +34,9 @@ endef
 # Default build (Release)
 build:
 	$(call do_build,vcpkg,$(RELEASE_DIR),)
+
+build_cuda:
+	$(call do_cuda_build,vcpkg,$(RELEASE_DIR),)
 
 # Debug build
 build_debug:
@@ -47,6 +62,15 @@ build_python:
 
 build_python_debug:
 	$(call do_build,vcpkg-debug,$(DEBUG_DIR),-DIS_PYTHON_LIB=ON)
+
+build_python_cuda:
+	$(call do_cuda_build,vcpkg,$(RELEASE_DIR),-DIS_PYTHON_LIB=ON)
+
+validate_physx_gpu: build_python_cuda
+	PYTHONPATH=python $(PYTHON) python/examples/physics_gpu_system_smoke.py
+
+validate_physx_gpu_cpp: build_cuda
+	./$(RELEASE_DIR)/physx_gpu_step_smoke
 
 # USD + Python builds
 build_usd_python:

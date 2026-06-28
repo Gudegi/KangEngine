@@ -100,6 +100,121 @@ If you build PhysX with GPU support, KangEngine links `PhysXGpu_64` on Linux. Th
 
 PhysX GPU support is still experimental in KangEngine, especially when used from Python together with Torch CUDA.
 
+For the reproducible Linux validation procedure, see
+[`PHYSX_GPU_VALIDATION.md`](PHYSX_GPU_VALIDATION.md).
+
+<details>
+<summary>[EXPERIMENTAL] PhysX 5.8.0 GPU build notes for CUDA 13 / RTX 4090</summary>
+
+These notes document the Linux build that produced a PhysX 5.8.0 GPU library
+with native `sm_89` cubins for RTX 4090. Use this path when the older PhysX
+5.1 GPU binary reports PhysX internal CUDA kernel launch failures on Ada GPUs.
+
+The tested checkout lives at:
+
+```bash
+/home/asaid/Physics/PhysX
+```
+
+The build directory is:
+
+```bash
+/home/asaid/Physics/PhysX/physx/compiler/linux-clang-release
+```
+
+### CUDA 13 Architecture Fix
+
+CUDA 13.0 `nvcc` no longer accepts `compute_70`. PhysX 5.8.0's default GPU
+architecture list includes it unless reduced GPU architectures are enabled.
+Configure with `PX_GENERATE_GPU_REDUCED_ARCHITECTURES=ON` so the generated
+`ARCH_CODE_LIST` starts at `compute_80` and includes `compute_89`.
+
+```bash
+cmake -S /home/asaid/Physics/PhysX/physx/compiler/public \
+  -B /home/asaid/Physics/PhysX/physx/compiler/linux-clang-release \
+  -DPX_GENERATE_GPU_REDUCED_ARCHITECTURES=ON \
+  -DPX_BUILDSNIPPETS=OFF
+```
+
+`PX_BUILDSNIPPETS=OFF` is intentional. The SDK snippets are not required by
+KangEngine, and on this setup they fail later while linking the bundled
+packman OpenGL `libGL.so` against `libglapi.so.0`.
+
+After configure, confirm `compute_70` is gone:
+
+```bash
+sed -n '565,572p' /home/asaid/Physics/PhysX/physx/compiler/linux-clang-release/CMakeCache.txt
+```
+
+Expected `ARCH_CODE_LIST` includes:
+
+```text
+compute_80, compute_86, compute_89, compute_90, compute_100, compute_120
+```
+
+### CUDA 13 `cuCtxCreate` Patch
+
+PhysX 5.8.0 calls the older 3-argument CUDA Driver API form:
+
+```cpp
+cuCtxCreate(&mCtx, (unsigned int)flags, mDevHandle);
+```
+
+With CUDA 13 headers, `cuCtxCreate` maps to `cuCtxCreate_v4`, which expects a
+`CUctxCreateParams*` argument. Patch
+`/home/asaid/Physics/PhysX/physx/source/cudamanager/src/CudaContextManager.cpp`
+near the CUDA context creation call:
+
+```cpp
+#if CUDA_VERSION >= 13000
+CUctxCreateParams ctxCreateParams = {};
+status = cuCtxCreate(&mCtx, &ctxCreateParams, (unsigned int)flags, mDevHandle);
+#else
+status = cuCtxCreate(&mCtx, (unsigned int)flags, mDevHandle);
+#endif
+```
+
+Then build:
+
+```bash
+make -C /home/asaid/Physics/PhysX/physx/compiler/linux-clang-release -j$(nproc)
+```
+
+The build should finish with:
+
+```text
+[100%] Built target PhysXVehicle2
+```
+
+### Verify Native Ada GPU Kernels
+
+Check that the rebuilt GPU library contains `sm_89` cubins:
+
+```bash
+/usr/local/cuda/bin/cuobjdump --list-elf \
+  /home/asaid/Physics/PhysX/physx/bin/linux.x86_64/release/libPhysXGpu_64.so \
+  | rg 'sm_89'
+```
+
+You should see entries such as:
+
+```text
+broadphase.sm_89.cubin
+MemCopyBalanced.sm_89.cubin
+solver.sm_89.cubin
+solverTGS.sm_89.cubin
+integrationTGS.sm_89.cubin
+```
+
+Use this PhysX binary directory when linking KangEngine against the 5.8.0
+checkout:
+
+```bash
+/home/asaid/Physics/PhysX/physx/bin/linux.x86_64/release
+```
+
+</details>
+
 ## macOS
 
 Tested with Apple Silicon.

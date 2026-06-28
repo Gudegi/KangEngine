@@ -3,7 +3,6 @@
 
 #include "sim/gpu_array_view.hpp"
 
-#include <cstddef>
 #include <cstdint>
 #include <stdexcept>
 
@@ -13,13 +12,6 @@ class PhysicsWorld;
 
 struct GpuPhysicsConfig {
     int cudaDeviceId = 0;
-    bool enableDirectGpuApi = true;
-    bool enableGpuDynamics = true;
-    bool enableGpuBroadphase = true;
-    bool requirePcm = true;
-    size_t tempBufferCapacity = 0;
-    size_t heapCapacity = 0;
-    size_t foundLostPairsCapacity = 0;
 };
 
 struct PhysicsGpuStateViews {
@@ -136,6 +128,8 @@ class PhysicsGpuSystem {
     void* _rigidIndexBuffer = nullptr;
     void* _rigidScratchBuffer = nullptr;
     void* _rigidMirrorBuffer = nullptr;
+    void* _rigidForceBuffer = nullptr;
+    void* _rigidTorqueBuffer = nullptr;
     void* _copyEvent = nullptr;
     void* _readyEvent = nullptr;
 };

@@ -501,7 +501,13 @@ Articulation Articulation::build(
             joint->setChildPose(childPose);
             joint->setMotion(PxArticulationAxis::eTWIST,
                              PxArticulationMotion::eLIMITED);
-            joint->setLimit(PxArticulationAxis::eTWIST, jd.loLimit, jd.hiLimit);
+            // joint->setLimit(PxArticulationAxis::eTWIST, jd.loLimit,
+            // jd.hiLimit); // PhysX 5.1
+            joint->setLimitParams(
+                PxArticulationAxis::eTWIST,
+                PxArticulationLimit(
+                    jd.loLimit,
+                    jd.hiLimit)); // >= PhysX 5.2, TODO: temporal code to build
             artic._dofs.push_back({i, jd.name, PxArticulationAxis::eTWIST,
                                    jd.loLimit, jd.hiLimit, jd.kp, jd.kd,
                                    jd.effortLimit});
@@ -521,9 +527,12 @@ Articulation Articulation::build(
                 else
                     axis = PxArticulationAxis::eSWING2;
                 joint->setMotion(axis, PxArticulationMotion::eLIMITED);
-                joint->setLimit(axis, jd.loLimit, jd.hiLimit);
+                // joint->setLimit(axis, jd.loLimit, jd.hiLimit); // PhysX 5.1
+                joint->setLimitParams(
+                    axis, PxArticulationLimit(jd.loLimit, jd.hiLimit));
                 artic._dofs.push_back({i, jd.name, axis, jd.loLimit, jd.hiLimit,
-                                       jd.kp, jd.kd, jd.effortLimit});
+                                       jd.kp, jd.kd,
+                                       jd.effortLimit}); // >= PhysX 5.2
             }
         }
     }

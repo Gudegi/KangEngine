@@ -16,7 +16,6 @@
 ///
 
 #include "kangEngine.hpp"
-#include "foundation/Px.h"
 #include "physics/force_drag_controller.hpp"
 #include <glm/glm.hpp>
 #include <glm/geometric.hpp>

@@ -20,19 +20,7 @@ void bind_physics_gpu(py::module& m) {
         m, "GpuPhysicsConfig",
         "Configuration for explicit GPU physics state synchronization.")
         .def(py::init<>())
-        .def_readwrite("cuda_device_id", &GpuPhysicsConfig::cudaDeviceId)
-        .def_readwrite("enable_direct_gpu_api",
-                       &GpuPhysicsConfig::enableDirectGpuApi)
-        .def_readwrite("enable_gpu_dynamics",
-                       &GpuPhysicsConfig::enableGpuDynamics)
-        .def_readwrite("enable_gpu_broadphase",
-                       &GpuPhysicsConfig::enableGpuBroadphase)
-        .def_readwrite("require_pcm", &GpuPhysicsConfig::requirePcm)
-        .def_readwrite("temp_buffer_capacity",
-                       &GpuPhysicsConfig::tempBufferCapacity)
-        .def_readwrite("heap_capacity", &GpuPhysicsConfig::heapCapacity)
-        .def_readwrite("found_lost_pairs_capacity",
-                       &GpuPhysicsConfig::foundLostPairsCapacity);
+        .def_readwrite("cuda_device_id", &GpuPhysicsConfig::cudaDeviceId);
 
     py::class_<PhysicsGpuStateViews>(
         m, "PhysicsGpuStateViews",
