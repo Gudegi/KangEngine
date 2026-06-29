@@ -1,6 +1,7 @@
 #include "kangEngine.hpp"
 #include "physics/physics.hpp"
 #include "physics/physics_gpu_system.hpp"
+#include "sim/gpu_transform_kernels.hpp"
 
 using namespace KE;
 using namespace physx;
@@ -11,12 +12,6 @@ void checkCuda(cudaError_t result, const char* operation) {
     if (result != cudaSuccess)
         throw std::runtime_error(std::string(operation) + ": " +
                                  cudaGetErrorString(result));
-}
-
-glm::mat4 rigidRowToMat4(const float* row) {
-    const glm::vec3 pos(row[0], row[1], row[2]);
-    const glm::quat rot(row[6], row[3], row[4], row[5]); // xyzw to wxyz
-    return glm::translate(glm::mat4(1.0f), pos) * glm::mat4_cast(rot);
 }
 
 float noise(int index, int multiplier) {
@@ -48,14 +43,13 @@ class GpuBoxInstancingApp : public App {
     std::shared_ptr<Scene::MeshData> _boxMesh;
     Eigen::MatrixXf _spawnPositions;
     RenderableHandle _boxHandle = InvalidHandle;
-    std::vector<glm::mat4> _transforms;
     std::vector<glm::vec4> _colors;
-    std::vector<float> _rigidHost;
     std::vector<float> _resetRigidHost;
-    glm::vec3 _positionMin{0.0f};
-    glm::vec3 _positionMax{0.0f};
+    Sim::GpuArrayView _cudaTransformView;
+    ExternalBufferDesc _transformBufferDesc;
+    bool _transformBufferDescReady = false;
     uint64_t _transformVersion = 0;
-
+    void* _cudaTransformBuffer = nullptr;
     bool paused = false;
     bool noiseEnabled = true;
     bool spaceWasDown = false;
@@ -126,11 +120,10 @@ class GpuBoxInstancingApp : public App {
         gpuSystem = std::make_unique<PhysicsGpuSystem>(&physics, gpuConfig);
         gpuSystem->init();
 
-        _rigidHost.resize(static_cast<size_t>(NUM_BOXES) * 13);
-        _transforms.resize(NUM_BOXES, glm::mat4(1.0f));
-        uploadGpuTransforms();
-        _resetRigidHost = _rigidHost;
+        _resetRigidHost.resize(static_cast<size_t>(NUM_BOXES) * 13);
         updateResetRigidState();
+        initTransformBufferDesc();
+        uploadGpuTransforms();
         checkError();
     }
 
@@ -151,6 +144,10 @@ class GpuBoxInstancingApp : public App {
             row[0] = position.x;
             row[1] = position.y;
             row[2] = position.z;
+            row[3] = 0.0f;
+            row[4] = 0.0f;
+            row[5] = 0.0f;
+            row[6] = 1.0f;
             row[7] = 0.0f;
             row[8] = 0.0f;
             row[9] = 0.0f;
@@ -184,6 +181,25 @@ class GpuBoxInstancingApp : public App {
         setRenderableColors(_boxHandle, _colors);
     }
 
+    void initTransformBufferDesc() {
+        checkCuda(cudaMalloc(&_cudaTransformBuffer,
+                             sizeof(float) * static_cast<size_t>(NUM_BOXES) *
+                                 16),
+                  "cudaMalloc(transform mat4 buffer)");
+
+        _cudaTransformView.data = _cudaTransformBuffer;
+        _cudaTransformView.memoryType = Sim::SimMemoryType::CUDADevice;
+        _cudaTransformView.dtype = Sim::SimDType::Float32;
+        _cudaTransformView.lifetime = Sim::SimLifetimePolicy::ExternalOwner;
+        _cudaTransformView.deviceId = 0;
+        _cudaTransformView.shape = {NUM_BOXES, 4, 4};
+        _cudaTransformView.strides = {16, 4, 1};
+        _cudaTransformView.name = "gpu_box_world_transforms_cuda";
+        _transformBufferDesc =
+            makeExternalMat4BufferDesc(_cudaTransformView, NUM_BOXES);
+        _transformBufferDescReady = true;
+    }
+
     void resetBoxes() {
         const auto& rigidView = gpuSystem->rigidData();
         checkCuda(cudaMemcpy(rigidView.data, _resetRigidHost.data(),
@@ -202,36 +218,14 @@ class GpuBoxInstancingApp : public App {
             rigidView.shape[1] != 13)
             throw std::runtime_error("unexpected rigid GPU state shape");
 
-        checkCuda(cudaDeviceSynchronize(), "cudaDeviceSynchronize");
-        checkCuda(cudaMemcpy(_rigidHost.data(), rigidView.data,
-                             sizeof(float) * _rigidHost.size(),
-                             cudaMemcpyDeviceToHost),
-                  "cudaMemcpy(rigid state)");
-
-        _positionMin = glm::vec3(std::numeric_limits<float>::max());
-        _positionMax = glm::vec3(std::numeric_limits<float>::lowest());
-        for (int i = 0; i < NUM_BOXES; ++i) {
-            const float* row = &_rigidHost[static_cast<size_t>(i) * 13];
-            const glm::vec3 position(row[0], row[1], row[2]);
-            _positionMin = glm::min(_positionMin, position);
-            _positionMax = glm::max(_positionMax, position);
-            _transforms[static_cast<size_t>(i)] = rigidRowToMat4(row);
-        }
-
-        ExternalBufferDesc desc;
-        desc.view.data = _transforms.data();
-        desc.view.memoryType =
-            Sim::SimMemoryType::CpuHost; // TODO: GPU compatible
-        desc.view.dtype = Sim::SimDType::Float32;
-        desc.view.lifetime = Sim::SimLifetimePolicy::ExternalOwner;
-        desc.view.shape = {NUM_BOXES, 4, 4};
-        desc.view.strides = {16, 4, 1};
-        desc.view.version = ++_transformVersion;
-        desc.view.name = "gpu_box_world_transforms";
-        desc.format = ExternalBufferFormat::Mat4;
-        desc.count = NUM_BOXES;
-        desc.syncPolicy = ExternalSyncPolicy::Versioned;
-        getRenderer().setRenderableExternalBuffer(_boxHandle, desc);
+        if (!_transformBufferDescReady)
+            initTransformBufferDesc();
+        Sim::launchRigidStateToMat4CUDA(rigidView, _cudaTransformView,
+                                        NUM_BOXES);
+        _cudaTransformView.version = ++_transformVersion;
+        _transformBufferDesc.view = _cudaTransformView;
+        getRenderer().setRenderableExternalBuffer(_boxHandle,
+                                                  _transformBufferDesc);
     }
 
     void preRender() override {
@@ -260,14 +254,17 @@ class GpuBoxInstancingApp : public App {
         checkError();
     }
 
+    ~GpuBoxInstancingApp() override {
+        if (_cudaTransformBuffer)
+            cudaFree(_cudaTransformBuffer);
+    }
+
     void render() override {
         ImGui::Begin("GPU Box Instancing");
         ImGui::Text("Boxes: %d  |  %s", NUM_BOXES,
                     paused ? "PAUSED" : "running");
         ImGui::Text("Source: PhysX Direct GPU rigid buffer");
-        ImGui::Text("Renderer upload: CPU mat4 external buffer");
-        ImGui::Text("X range: %.2f .. %.2f", _positionMin.x, _positionMax.x);
-        ImGui::Text("Y range: %.2f .. %.2f", _positionMin.y, _positionMax.y);
+        ImGui::Text("Renderer upload: CUDA mat4 external buffer");
         ImGui::Text("Noise: %s", noiseEnabled ? "ON" : "OFF");
         ImGui::Text("Space: pause/resume    R: reset    N: toggle noise");
         ImGui::Separator();

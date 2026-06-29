@@ -47,7 +47,7 @@ void setFloatCudaView(Sim::GpuArrayView& view, void* data, int deviceId,
                       uint32_t rows, uint32_t cols, uint64_t streamHandle,
                       uint64_t readyEventHandle, const char* name) {
     view.data = data;
-    view.memoryType = Sim::SimMemoryType::CudaDevice;
+    view.memoryType = Sim::SimMemoryType::CUDADevice;
     view.dtype = Sim::SimDType::Float32;
     view.lifetime = Sim::SimLifetimePolicy::ExternalOwner;
     view.deviceId = deviceId;

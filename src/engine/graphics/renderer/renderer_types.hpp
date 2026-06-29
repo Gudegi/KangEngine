@@ -2,6 +2,7 @@
 #define _RENDERER_TYPES_HPP_
 
 #include <cstdint>
+#include <utility>
 
 #include <glm/vec3.hpp>
 
@@ -46,6 +47,25 @@ struct ExternalBufferDesc {
     int strideBytes = 0; // 0 derives the stride from view metadata.
     ExternalSyncPolicy syncPolicy = ExternalSyncPolicy::None;
 };
+
+// Wraps a CPU/CUDA Mat4 view as a renderer-owned external transform source.
+inline ExternalBufferDesc makeExternalMat4BufferDesc(
+    Sim::GpuArrayView view, int count = 0,
+    ExternalSyncPolicy syncPolicy = ExternalSyncPolicy::Versioned) {
+    view.dtype = Sim::SimDType::Float32;
+    if (count > 0 && view.shape.empty())
+        view.shape = {count, 4, 4};
+    if (view.strides.empty())
+        view.strides = {16, 4, 1};
+
+    ExternalBufferDesc desc;
+    desc.view = std::move(view);
+    desc.format = ExternalBufferFormat::Mat4;
+    desc.count = count;
+    desc.strideBytes = 0;
+    desc.syncPolicy = syncPolicy;
+    return desc;
+}
 
 namespace RendererTextureSlot {
 

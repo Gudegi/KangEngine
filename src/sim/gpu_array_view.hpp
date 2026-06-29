@@ -10,9 +10,9 @@ namespace KE {
 namespace Sim {
 
 enum class SimMemoryType {
-    CpuHost,
-    CpuPinned,
-    CudaDevice,
+    CPUHost,
+    CPUPinned,
+    CUDADevice,
     OpenGLBuffer,
     VulkanBuffer,
     WebGPUBuffer,
@@ -63,7 +63,7 @@ inline size_t simDTypeSize(SimDType dtype) {
 // on this shape instead of exposing raw pointers as the public API.
 struct GpuArrayView {
     void* data = nullptr;
-    SimMemoryType memoryType = SimMemoryType::CpuHost;
+    SimMemoryType memoryType = SimMemoryType::CPUHost;
     SimDType dtype = SimDType::Unknown;
     SimLifetimePolicy lifetime = SimLifetimePolicy::Borrowed;
     int deviceId = -1;
@@ -77,11 +77,13 @@ struct GpuArrayView {
 
     bool empty() const { return data == nullptr || numel() == 0; }
     bool hasOwner() const { return owner != nullptr; }
-    bool isCuda() const { return memoryType == SimMemoryType::CudaDevice; }
-    bool isCpu() const {
-        return memoryType == SimMemoryType::CpuHost ||
-               memoryType == SimMemoryType::CpuPinned;
+    bool isCUDA() const { return memoryType == SimMemoryType::CUDADevice; }
+    bool isCuda() const { return isCUDA(); }
+    bool isCPU() const {
+        return memoryType == SimMemoryType::CPUHost ||
+               memoryType == SimMemoryType::CPUPinned;
     }
+    bool isCpu() const { return isCPU(); }
 
     int64_t numel() const {
         if (shape.empty())

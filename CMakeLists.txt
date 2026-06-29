@@ -164,6 +164,11 @@ if(UNIX AND NOT APPLE AND USE_CUDA_INTEROP)
     find_package(CUDAToolkit QUIET)
     if(CUDAToolkit_FOUND AND TARGET CUDA::cudart)
         set(KANGENGINE_HAS_CUDA ON)
+        enable_language(CUDA)
+        if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+            # 89 : 40xx graphics card
+            set(CMAKE_CUDA_ARCHITECTURES 89 CACHE STRING "CUDA architectures for KangEngine CUDA kernels")
+        endif()
     else()
         message(FATAL_ERROR "USE_CUDA_INTEROP=ON requires an explicitly configured CUDA Toolkit")
     endif()
@@ -201,6 +206,13 @@ target_link_libraries(engine_core PUBLIC
 )
 target_link_libraries(engine_core PUBLIC pre_compiled_ext)
 if(KANGENGINE_HAS_CUDA)
+    target_sources(engine_core PRIVATE
+        ${SRC_DIR}/sim/gpu_transform_kernels.cu
+    )
+    set_source_files_properties(
+        ${SRC_DIR}/sim/gpu_transform_kernels.cpp
+        PROPERTIES HEADER_FILE_ONLY ON
+    )
     target_compile_definitions(engine_core PUBLIC
         KANGENGINE_USE_CUDA
         KANGENGINE_USE_CUDA_GL_INTEROP

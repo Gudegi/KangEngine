@@ -28,7 +28,7 @@ const char* primTypeLabel(Scene::PrimType type) {
 
 } // namespace
 
-PerformancePanel::PerformancePanel() : Panel("Performance") {}
+PerformancePanel::PerformancePanel(App* app) : Panel("Performance"), _app(app) {}
 
 PerformancePanel::~PerformancePanel() {}
 
@@ -36,8 +36,19 @@ void PerformancePanel::buildPanel() {
     ImGui::Begin(name().c_str());
     ImGui::Text("Performance");
     ImGui::Separator();
-    ImGui::Text("FPS: %.1f (%.3f ms/frame)", ImGui::GetIO().Framerate,
-                1000.0f / ImGui::GetIO().Framerate);
+    if (_app) {
+        bool vsync = _app->getVSync();
+        if (ImGui::Checkbox("VSync", &vsync))
+            _app->setVSync(vsync);
+        ImGui::Text("Displayed FPS: %.1f", _app->getMeasuredRenderFPS());
+        ImGui::Text("Frame CPU: %.3f ms", _app->getFrameCPUTimeMs());
+        ImGui::Text("Update CPU: %.3f ms", _app->getUpdateCPUTimeMs());
+        ImGui::Text("Render CPU: %.3f ms", _app->getRenderCPUTimeMs());
+        ImGui::Text("Present: %.3f ms", _app->getPresentCPUTimeMs());
+    }
+    const float imguiFPS = ImGui::GetIO().Framerate;
+    ImGui::Text("ImGui FPS: %.1f (%.3f ms/frame)", imguiFPS,
+                imguiFPS > 0.0f ? 1000.0f / imguiFPS : 0.0f);
     ImGui::End();
 }
 

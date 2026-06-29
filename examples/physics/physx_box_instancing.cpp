@@ -189,17 +189,15 @@ class BoxInstancingApp : public App {
             }
             _simVisualBatch.prepareFromState(_simState);
             const auto& transforms = _simVisualBatch.transforms(0);
-            ExternalBufferDesc desc;
-            desc.view.data = const_cast<glm::mat4*>(transforms.data());
-            desc.view.memoryType = Sim::SimMemoryType::CpuHost;
-            desc.view.dtype = Sim::SimDType::Float32;
-            desc.view.lifetime = Sim::SimLifetimePolicy::ExternalOwner;
-            desc.view.shape = {static_cast<int64_t>(transforms.size()), 4, 4};
-            desc.view.strides = {16, 4, 1};
-            desc.view.version = ++_transformVersion;
-            desc.view.name = "box_world_transforms";
-            desc.format = ExternalBufferFormat::Mat4;
-            desc.syncPolicy = ExternalSyncPolicy::Versioned;
+            Sim::GpuArrayView transformView;
+            transformView.data = const_cast<glm::mat4*>(transforms.data());
+            transformView.memoryType = Sim::SimMemoryType::CPUHost;
+            transformView.lifetime = Sim::SimLifetimePolicy::ExternalOwner;
+            transformView.shape = {static_cast<int64_t>(transforms.size()), 4, 4};
+            transformView.version = ++_transformVersion;
+            transformView.name = "box_world_transforms";
+            ExternalBufferDesc desc = makeExternalMat4BufferDesc(
+                transformView, static_cast<int>(transforms.size()));
             getRenderer().setRenderableExternalBuffer(
                 _simVisualBatch.renderable(0), desc);
         }

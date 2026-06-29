@@ -12,8 +12,10 @@ class App;
 
 class PerformancePanel : public Panel {
   private:
+    App* _app;
+
   public:
-    PerformancePanel();
+    PerformancePanel(App* app = nullptr);
     ~PerformancePanel();
     virtual void buildPanel();
 };

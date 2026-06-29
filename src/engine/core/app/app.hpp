@@ -178,6 +178,13 @@ class App {
 
     // Frame rate control
     float getDeltaTime() const;
+    float getMeasuredRenderFPS() const { return _measuredRenderFPS; }
+    float getFrameCPUTimeMs() const { return _frameCPUTimeMs; }
+    float getUpdateCPUTimeMs() const { return _updateCPUTimeMs; }
+    float getRenderCPUTimeMs() const { return _renderCPUTimeMs; }
+    float getPresentCPUTimeMs() const { return _presentCPUTimeMs; }
+    void setVSync(bool enabled);
+    bool getVSync() const;
     void setRenderHz(float renderHz);
     float getRenderHz() const { return _renderHz; }
     void setCameraMoveSpeed(float speed);
@@ -185,6 +192,13 @@ class App {
 
   private:
     float _renderHz = 0;
+    float _measuredRenderFPS = 0.0f;
+    float _frameCPUTimeMs = 0.0f;
+    float _updateCPUTimeMs = 0.0f;
+    float _renderCPUTimeMs = 0.0f;
+    float _presentCPUTimeMs = 0.0f;
+    double _fpsWindowStart = 0.0;
+    int _fpsWindowFrames = 0;
 
   public:
     virtual void framebufferSizeCallback(GLFWwindow* window, int width,
