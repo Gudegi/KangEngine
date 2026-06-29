@@ -43,11 +43,7 @@ struct PhysicsConfig {
     // PxSolverType::Enum solverType = PxSolverType::ePGS;
     PxSolverType::Enum solverType = PxSolverType::eTGS;
     PhysicsGpuDynamicsConfig gpuDynamics;
-#ifdef __APPLE__
     bool enableGPU = false;
-#else
-    bool enableGPU = true;
-#endif
 
     static PhysicsConfig yUp() { return {}; }
 

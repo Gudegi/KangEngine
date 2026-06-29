@@ -25,12 +25,18 @@ float noise(int index, int multiplier) {
 
 } // namespace
 
+static PhysicsConfig makeGPUBoxConfig() {
+    PhysicsConfig cfg = PhysicsConfig::zUp();
+    cfg.enableGPU = true;
+    return cfg;
+}
+
 class GpuBoxInstancingApp : public App {
   public:
     std::unique_ptr<Backend::Shader> commonShader;
     std::unique_ptr<Backend::Shader> groundShader;
 
-    PhysicsWorld physics{PhysicsConfig::zUp()};
+    PhysicsWorld physics{makeGPUBoxConfig()};
     std::unique_ptr<PhysicsGpuSystem> gpuSystem;
 
     static constexpr int NUM_BOXES = 10000;

@@ -116,10 +116,11 @@ The tested checkout lives at:
 /home/asaid/Physics/PhysX
 ```
 
-The build directory is:
+The build directory name is not special. Use any clean directory outside older
+PhysX build trees; this document uses:
 
 ```bash
-/home/asaid/Physics/PhysX/physx/compiler/linux-clang-release
+/home/asaid/Physics/PhysX/physx/compiler/linux-clang-release-5.8
 ```
 
 ### CUDA 13 Architecture Fix
@@ -129,21 +130,34 @@ architecture list includes it unless reduced GPU architectures are enabled.
 Configure with `PX_GENERATE_GPU_REDUCED_ARCHITECTURES=ON` so the generated
 `ARCH_CODE_LIST` starts at `compute_80` and includes `compute_89`.
 
+This is the minimal direct CMake invocation used for KangEngine:
+
 ```bash
-cmake -S /home/asaid/Physics/PhysX/physx/compiler/public \
-  -B /home/asaid/Physics/PhysX/physx/compiler/linux-clang-release \
-  -DPX_GENERATE_GPU_REDUCED_ARCHITECTURES=ON \
-  -DPX_BUILDSNIPPETS=OFF
+export PHYSX_ROOT=/home/asaid/Physics/PhysX/physx
+export PHYSX_BUILD=$PHYSX_ROOT/compiler/linux-clang-release-5.8
+
+cmake -S $PHYSX_ROOT/compiler/public \
+  -B $PHYSX_BUILD \
+  -DPHYSX_ROOT_DIR=$PHYSX_ROOT \
+  -DTARGET_BUILD_PLATFORM=linux \
+  -DCMAKE_BUILD_TYPE=release \
+  -DPX_OUTPUT_LIB_DIR=$PHYSX_ROOT \
+  -DPX_OUTPUT_BIN_DIR=$PHYSX_ROOT \
+  -DPX_GENERATE_STATIC_LIBRARIES=ON \
+  -DPX_GENERATE_GPU_PROJECTS=ON \
+  -DPX_GENERATE_GPU_REDUCED_ARCHITECTURES=ON
 ```
 
-`PX_BUILDSNIPPETS=OFF` is intentional. The SDK snippets are not required by
-KangEngine, and on this setup they fail later while linking the bundled
-packman OpenGL `libGL.so` against `libglapi.so.0`.
+`PHYSX_BUILD` can point to any clean build directory. Keep the remaining options
+explicit: PhysX's public CMake entry point requires the root/output paths, while
+KangEngine needs static PhysX libraries, GPU projects, and the reduced CUDA
+architecture list for CUDA 13.
 
 After configure, confirm `compute_70` is gone:
 
 ```bash
-sed -n '565,572p' /home/asaid/Physics/PhysX/physx/compiler/linux-clang-release/CMakeCache.txt
+rg 'ARCH_CODE_LIST' \
+  $PHYSX_BUILD/CMakeCache.txt
 ```
 
 Expected `ARCH_CODE_LIST` includes:
@@ -177,7 +191,9 @@ status = cuCtxCreate(&mCtx, (unsigned int)flags, mDevHandle);
 Then build:
 
 ```bash
-make -C /home/asaid/Physics/PhysX/physx/compiler/linux-clang-release -j$(nproc)
+cmake --build \
+  $PHYSX_BUILD \
+  --parallel
 ```
 
 The build should finish with:

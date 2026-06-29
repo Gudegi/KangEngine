@@ -1,5 +1,6 @@
 #include "articulation.hpp"
 #include "animation/skeleton_state.hpp"
+#include "physics/physx_compat.hpp"
 
 #include <Eigen/Geometry>
 #include <extensions/PxRigidBodyExt.h>
@@ -501,13 +502,8 @@ Articulation Articulation::build(
             joint->setChildPose(childPose);
             joint->setMotion(PxArticulationAxis::eTWIST,
                              PxArticulationMotion::eLIMITED);
-            // joint->setLimit(PxArticulationAxis::eTWIST, jd.loLimit,
-            // jd.hiLimit); // PhysX 5.1
-            joint->setLimitParams(
-                PxArticulationAxis::eTWIST,
-                PxArticulationLimit(
-                    jd.loLimit,
-                    jd.hiLimit)); // >= PhysX 5.2, TODO: temporal code to build
+            PhysXCompat::setArticulationLimit(
+                *joint, PxArticulationAxis::eTWIST, jd.loLimit, jd.hiLimit);
             artic._dofs.push_back({i, jd.name, PxArticulationAxis::eTWIST,
                                    jd.loLimit, jd.hiLimit, jd.kp, jd.kd,
                                    jd.effortLimit});
@@ -527,9 +523,8 @@ Articulation Articulation::build(
                 else
                     axis = PxArticulationAxis::eSWING2;
                 joint->setMotion(axis, PxArticulationMotion::eLIMITED);
-                // joint->setLimit(axis, jd.loLimit, jd.hiLimit); // PhysX 5.1
-                joint->setLimitParams(
-                    axis, PxArticulationLimit(jd.loLimit, jd.hiLimit));
+                PhysXCompat::setArticulationLimit(*joint, axis, jd.loLimit,
+                                                  jd.hiLimit);
                 artic._dofs.push_back({i, jd.name, axis, jd.loLimit, jd.hiLimit,
                                        jd.kp, jd.kd,
                                        jd.effortLimit}); // >= PhysX 5.2
@@ -557,8 +552,6 @@ void Articulation::setDriveTargets(const std::vector<float>& targets, float kp,
     if (!_artic)
         return;
 
-    PxArticulationDrive drive{kp, kd, PX_MAX_F32,
-                              PxArticulationDriveType::eFORCE};
     int dofIdx = 0;
     for (const auto& dof : _dofs) {
         if (dofIdx >= static_cast<int>(targets.size()))
@@ -566,7 +559,8 @@ void Articulation::setDriveTargets(const std::vector<float>& targets, float kp,
         auto* joint = inboundJoint(_links, dof.linkIndex);
         if (!joint)
             continue;
-        joint->setDriveParams(dof.axis, drive);
+        PhysXCompat::setArticulationDrive(*joint, dof.axis, kp, kd,
+                                          PX_MAX_F32);
         joint->setDriveTarget(dof.axis, targets[dofIdx++]);
     }
 
@@ -596,10 +590,9 @@ void Articulation::setDriveTargets(const std::vector<float>& targets) {
             dofIdx++;
             continue;
         }
-        PxArticulationDrive drive{_KPs[dofIdx], _KDs[dofIdx],
-                                  _effortLimits[dofIdx],
-                                  PxArticulationDriveType::eFORCE};
-        joint->setDriveParams(dof.axis, drive);
+        PhysXCompat::setArticulationDrive(
+            *joint, dof.axis, _KPs[dofIdx], _KDs[dofIdx],
+            _effortLimits[dofIdx]);
         joint->setDriveTarget(dof.axis, targets[dofIdx]);
         if (_KPs[dofIdx] > 0.f)
             anyKp = true;
@@ -631,9 +624,8 @@ void Articulation::setDriveVelocityTargets(const std::vector<float>& targets) {
             dofIdx++;
             continue;
         }
-        PxArticulationDrive drive{0.f, _KDs[dofIdx], _effortLimits[dofIdx],
-                                  PxArticulationDriveType::eFORCE};
-        joint->setDriveParams(dof.axis, drive);
+        PhysXCompat::setArticulationDrive(
+            *joint, dof.axis, 0.f, _KDs[dofIdx], _effortLimits[dofIdx]);
         joint->setDriveVelocity(dof.axis, targets[dofIdx]);
         if (_KDs[dofIdx] > 0.f)
             anyKd = true;

@@ -339,8 +339,7 @@ class H1RagdollApp : public App {
 
         PxArticulationCache* cache = artic.raw()->createCache();
         artic.raw()->copyInternalStateToCache(
-            *cache, PxArticulationCacheFlag::eJOINT_SOLVER_FORCES |
-                        PxArticulationCacheFlag::eFORCE |
+            *cache, PxArticulationCacheFlag::eFORCE |
                         PxArticulationCacheFlag::ePOSITION |
                         PxArticulationCacheFlag::eVELOCITY);
 

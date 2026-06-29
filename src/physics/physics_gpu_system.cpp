@@ -1,6 +1,7 @@
 #include "physics_gpu_system.hpp"
 
 #include "physics.hpp"
+#include "physics/physx_compat.hpp"
 
 #include <cstdint>
 #include <string>

@@ -79,12 +79,6 @@ if(USE_PHYSX)
     endif()
     
     target_compile_definitions(pre_compiled_ext INTERFACE KANGENGINE_USE_PHYSX)
-    if(EXISTS "${physx_DIR}/include/PxDirectGPUAPI.h")
-        target_compile_definitions(pre_compiled_ext INTERFACE
-            KANGENGINE_HAS_PHYSX_DIRECT_GPU_API
-        )
-        message(STATUS "PhysX Direct GPU API enabled")
-    endif()
     #set(PHYSX_BUILD_TYPE "checked" CACHE STRING "The build type of PhysX")
     set(PHYSX_BUILD_TYPE "release" CACHE STRING "The build type of PhysX")
     set_property(CACHE PHYSX_BUILD_TYPE PROPERTY STRINGS debug checked profile release)

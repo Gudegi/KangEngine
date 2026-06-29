@@ -3,6 +3,7 @@
 #include "PxSceneDesc.h"
 #include "animation/character_description.hpp"
 #include "articulation.hpp"
+#include "physics/physx_compat.hpp"
 #ifndef __APPLE__
 #include "gpu/PxGpu.h"
 #endif
