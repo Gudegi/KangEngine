@@ -28,6 +28,23 @@ void bind_physics(py::module& m) {
     using namespace KE::Animation;
     using namespace KE::Bridge;
 
+    py::class_<PhysicsGpuDynamicsConfig>(
+        m, "PhysicsGpuDynamicsConfig",
+        "PhysX GPU dynamics buffer capacities used during scene creation.")
+        .def(py::init<>())
+        .def_readwrite("temp_buffer_capacity",
+                       &PhysicsGpuDynamicsConfig::tempBufferCapacity)
+        .def_readwrite("max_rigid_contact_count",
+                       &PhysicsGpuDynamicsConfig::maxRigidContactCount)
+        .def_readwrite("max_rigid_patch_count",
+                       &PhysicsGpuDynamicsConfig::maxRigidPatchCount)
+        .def_readwrite("heap_capacity",
+                       &PhysicsGpuDynamicsConfig::heapCapacity)
+        .def_readwrite("found_lost_pairs_capacity",
+                       &PhysicsGpuDynamicsConfig::foundLostPairsCapacity)
+        .def_readwrite("collision_stack_size",
+                       &PhysicsGpuDynamicsConfig::collisionStackSize);
+
     // PhysicsConfig
     py::class_<PhysicsConfig>(
         m, "PhysicsConfig",
@@ -41,6 +58,8 @@ void bind_physics(py::module& m) {
                        "Simulation timestep in seconds.")
         .def_readwrite("enable_gpu", &PhysicsConfig::enableGPU,
                        "Enable PhysX GPU features when available.")
+        .def_readwrite("gpu_dynamics", &PhysicsConfig::gpuDynamics,
+                       "GPU dynamics memory capacities used at scene creation.")
         .def_readwrite("enable_contact_reports",
                        &PhysicsConfig::enableContactReports,
                        "Enable contact collection during simulation.");

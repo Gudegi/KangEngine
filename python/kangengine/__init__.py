@@ -223,6 +223,7 @@ __all__ = [
 ]
 
 _OPTIONAL_EXPORTS = [
+    "PhysicsGpuDynamicsConfig",
     "PhysicsConfig",
     "PhysicsWorld",
     "ArticulationConfig",

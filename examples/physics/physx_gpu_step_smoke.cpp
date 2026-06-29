@@ -20,7 +20,7 @@ glm::quat zQuat(float angle) {
     return glm::angleAxis(angle, glm::vec3(0.0f, 0.0f, 1.0f));
 }
 
-float maxAbs(float a, float b) { return std::fabs(a - b); }
+float absDiff(float a, float b) { return std::fabs(a - b); }
 
 } // namespace
 
@@ -29,7 +29,7 @@ int main() {
     config.enableGPU = true;
     config.gravity[0] = 0.0f;
     config.gravity[1] = 0.0f;
-    config.gravity[2] = 0.0f;
+    config.gravity[2] = -9.8f;
     config.enableContactReports = false;
 
     PhysicsWorld world(config);
@@ -40,9 +40,9 @@ int main() {
             glm::vec3(x, 0.35f * static_cast<float>(i % 3),
                       2.0f + 0.15f * static_cast<float>(i)),
             zQuat(0.07f * static_cast<float>(i)), 1.0f);
-        actor->setLinearVelocity(
-            PxVec3(0.04f * static_cast<float>(i + 1),
-                   -0.03f * static_cast<float>(i % 2), 0.02f));
+        actor->setLinearVelocity(PxVec3(0.04f * static_cast<float>(i + 1),
+                                        -0.03f * static_cast<float>(i % 2),
+                                        0.02f));
         actor->setAngularVelocity(PxVec3(0.0f));
         actor->wakeUp();
     }
@@ -56,7 +56,8 @@ int main() {
 
     const auto& view = gpuSystem.rigidData();
     fmt::print("C++ PhysX GPU smoke\n");
-    fmt::print("  rigid shape : [{}, {}]\n", view.shape.at(0), view.shape.at(1));
+    fmt::print("  rigid shape : [{}, {}]\n", view.shape.at(0),
+               view.shape.at(1));
     fmt::print("  version     : {}\n", view.version);
     fmt::print("  ptr         : {}\n", view.data);
 
@@ -69,44 +70,126 @@ int main() {
                    cudaMemcpyDeviceToHost) != cudaSuccess)
         throw std::runtime_error("cudaMemcpy rigid data failed");
 
-    std::vector<PxActor*> actors(static_cast<size_t>(view.shape.at(0)));
-    const PxU32 actorCount = world.getScene()->getActors(
-        PxActorTypeFlag::eRIGID_DYNAMIC, actors.data(),
-        static_cast<PxU32>(actors.size()));
+    const PxU32 actorCount = static_cast<PxU32>(view.shape.at(0));
+    if (actorCount != 8)
+        throw std::runtime_error("unexpected rigid actor count");
 
     float maxPositionError = 0.0f;
     float maxQuatError = 0.0f;
+    float maxVelocityError = 0.0f;
     for (PxU32 i = 0; i < actorCount; ++i) {
-        auto* body = actors[i] ? actors[i]->is<PxRigidBody>() : nullptr;
-        if (!body)
-            throw std::runtime_error("expected rigid body actor");
-
-        const PxTransform pose = body->getGlobalPose();
-        PxVec3 expectedPosition = pose.p;
-#ifdef KANGENGINE_HAS_PHYSX_DIRECT_GPU_API
-        expectedPosition += body->getLinearVelocity() * config.dt;
-#endif
         const size_t row = static_cast<size_t>(i) * 13;
+        const PxVec3 initialPosition(
+            static_cast<float>(static_cast<int>(i) - 4) * 1.25f,
+            0.35f * static_cast<float>(i % 3),
+            2.0f + 0.15f * static_cast<float>(i));
+        const PxVec3 initialVelocity(0.04f * static_cast<float>(i + 1),
+                                     -0.03f * static_cast<float>(i % 2), 0.02f);
+        const PxVec3 expectedVelocity(
+            initialVelocity.x + config.gravity[0] * config.dt,
+            initialVelocity.y + config.gravity[1] * config.dt,
+            initialVelocity.z + config.gravity[2] * config.dt);
+        const PxVec3 expectedPosition =
+            initialPosition + expectedVelocity * config.dt;
+        const glm::quat expectedRotation = zQuat(0.07f * static_cast<float>(i));
         maxPositionError = std::max(maxPositionError,
-                                    maxAbs(host[row + 0], expectedPosition.x));
+                                    absDiff(host[row + 0], expectedPosition.x));
         maxPositionError = std::max(maxPositionError,
-                                    maxAbs(host[row + 1], expectedPosition.y));
+                                    absDiff(host[row + 1], expectedPosition.y));
         maxPositionError = std::max(maxPositionError,
-                                    maxAbs(host[row + 2], expectedPosition.z));
-        maxQuatError = std::max(maxQuatError, maxAbs(host[row + 3], pose.q.x));
-        maxQuatError = std::max(maxQuatError, maxAbs(host[row + 4], pose.q.y));
-        maxQuatError = std::max(maxQuatError, maxAbs(host[row + 5], pose.q.z));
-        maxQuatError = std::max(maxQuatError, maxAbs(host[row + 6], pose.q.w));
+                                    absDiff(host[row + 2], expectedPosition.z));
+        maxQuatError =
+            std::max(maxQuatError, absDiff(host[row + 3], expectedRotation.x));
+        maxQuatError =
+            std::max(maxQuatError, absDiff(host[row + 4], expectedRotation.y));
+        maxQuatError =
+            std::max(maxQuatError, absDiff(host[row + 5], expectedRotation.z));
+        maxQuatError =
+            std::max(maxQuatError, absDiff(host[row + 6], expectedRotation.w));
+        maxVelocityError = std::max(maxVelocityError,
+                                    absDiff(host[row + 7], expectedVelocity.x));
+        maxVelocityError = std::max(maxVelocityError,
+                                    absDiff(host[row + 8], expectedVelocity.y));
+        maxVelocityError = std::max(maxVelocityError,
+                                    absDiff(host[row + 9], expectedVelocity.z));
     }
     fmt::print("  max pos err : {}\n", maxPositionError);
     fmt::print("  max quat err: {}\n", maxQuatError);
-    if (maxPositionError > 1e-4f || maxQuatError > 1e-4f) {
-        fmt::print("  first gpu row: [{}, {}, {}, {}, {}, {}, {}]\n",
-                   host[0], host[1], host[2], host[3], host[4], host[5], host[6]);
-        throw std::runtime_error("GPU rigid data does not match CPU actor state");
+    fmt::print("  max vel err : {}\n", maxVelocityError);
+    if (maxPositionError > 1e-4f || maxQuatError > 1e-4f ||
+        maxVelocityError > 1e-4f) {
+        fmt::print("  first gpu row: [{}, {}, {}, {}, {}, {}, {}]\n", host[0],
+                   host[1], host[2], host[3], host[4], host[5], host[6]);
+        throw std::runtime_error(
+            "GPU rigid data does not match CPU actor state");
     }
+
+    std::vector<float> applied(host.size(), 0.0f);
+    for (PxU32 i = 0; i < actorCount; ++i) {
+        const size_t row = static_cast<size_t>(i) * 13;
+        const glm::quat rotation = zQuat(0.11f * static_cast<float>(i));
+        applied[row + 0] = -8.0f + 2.0f * static_cast<float>(i);
+        applied[row + 1] = 1.0f + 0.2f * static_cast<float>(i);
+        applied[row + 2] = 4.0f + 0.1f * static_cast<float>(i);
+        applied[row + 3] = rotation.x;
+        applied[row + 4] = rotation.y;
+        applied[row + 5] = rotation.z;
+        applied[row + 6] = rotation.w;
+        applied[row + 7] = 0.1f * static_cast<float>(i + 1);
+        applied[row + 8] = -0.04f * static_cast<float>(i);
+        applied[row + 9] = 0.03f;
+    }
+
+    if (cudaMemcpy(view.data, applied.data(), sizeof(float) * applied.size(),
+                   cudaMemcpyHostToDevice) != cudaSuccess)
+        throw std::runtime_error("cudaMemcpy applied rigid data failed");
+    gpuSystem.applyRigidData();
+    if (cudaDeviceSynchronize() != cudaSuccess)
+        throw std::runtime_error("cudaDeviceSynchronize after apply failed");
+
+    world.step();
+    gpuSystem.fetchRigidData();
+    if (cudaDeviceSynchronize() != cudaSuccess)
+        throw std::runtime_error("cudaDeviceSynchronize after fetch failed");
+    if (cudaMemcpy(host.data(), view.data, sizeof(float) * host.size(),
+                   cudaMemcpyDeviceToHost) != cudaSuccess)
+        throw std::runtime_error("cudaMemcpy applied rigid result failed");
+
+    float maxAppliedPositionError = 0.0f;
+    float maxAppliedQuatError = 0.0f;
+    float maxAppliedVelocityError = 0.0f;
+    for (PxU32 i = 0; i < actorCount; ++i) {
+        const size_t row = static_cast<size_t>(i) * 13;
+        for (size_t axis = 0; axis < 3; ++axis) {
+            const float expectedVelocity =
+                applied[row + 7 + axis] + config.gravity[axis] * config.dt;
+            const float expectedPosition =
+                applied[row + axis] + expectedVelocity * config.dt;
+            maxAppliedPositionError =
+                std::max(maxAppliedPositionError,
+                         absDiff(host[row + axis], expectedPosition));
+            maxAppliedVelocityError =
+                std::max(maxAppliedVelocityError,
+                         absDiff(host[row + 7 + axis], expectedVelocity));
+            maxAppliedVelocityError = std::max(
+                maxAppliedVelocityError,
+                absDiff(host[row + 10 + axis], applied[row + 10 + axis]));
+        }
+        for (size_t component = 3; component < 7; ++component)
+            maxAppliedQuatError = std::max(
+                maxAppliedQuatError,
+                absDiff(host[row + component], applied[row + component]));
+    }
+
+    fmt::print("  apply pos err: {}\n", maxAppliedPositionError);
+    fmt::print("  apply quat err: {}\n", maxAppliedQuatError);
+    fmt::print("  apply vel err: {}\n", maxAppliedVelocityError);
+    if (maxAppliedPositionError > 1e-4f || maxAppliedQuatError > 1e-4f ||
+        maxAppliedVelocityError > 1e-4f)
+        throw std::runtime_error("GPU rigid apply/step/fetch round trip did "
+                                 "not match expected state");
 #endif
 
-    fmt::print("PASS: C++ PhysX GPU rigid fetch completed\n");
+    fmt::print("PASS: C++ PhysX GPU rigid fetch/apply round trip completed\n");
     return 0;
 }

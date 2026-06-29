@@ -12,6 +12,16 @@
 using namespace KE;
 using namespace physx;
 
+namespace {
+
+PhysicsConfig makeBoxInstancingPhysicsConfig() {
+    PhysicsConfig config = PhysicsConfig::zUp();
+    config.enableGPU = false;
+    return config;
+}
+
+} // namespace
+
 // ---------------------------------------------------------------------------
 // App
 // ---------------------------------------------------------------------------
@@ -20,8 +30,7 @@ class BoxInstancingApp : public App {
   public:
     std::unique_ptr<Backend::Shader> commonShader;
     std::unique_ptr<Backend::Shader> groundShader;
-
-    PhysicsWorld physics{PhysicsConfig::zUp()};
+    PhysicsWorld physics{makeBoxInstancingPhysicsConfig()};
 
     static constexpr int NUM_BOXES = 10000;
     static constexpr float BOX_HALF = 0.15f; // 30cm box

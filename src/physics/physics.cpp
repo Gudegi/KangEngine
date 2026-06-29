@@ -223,6 +223,18 @@ PhysicsWorld::PhysicsWorld(PhysicsConfig config) {
             sceneDesc.cudaContextManager = _cudaContextManager;
             sceneDesc.flags |= PxSceneFlag::eENABLE_GPU_DYNAMICS;
             sceneDesc.flags |= PxSceneFlag::eENABLE_PCM;
+            sceneDesc.gpuDynamicsConfig.tempBufferCapacity =
+                config.gpuDynamics.tempBufferCapacity;
+            sceneDesc.gpuDynamicsConfig.maxRigidContactCount =
+                config.gpuDynamics.maxRigidContactCount;
+            sceneDesc.gpuDynamicsConfig.maxRigidPatchCount =
+                config.gpuDynamics.maxRigidPatchCount;
+            sceneDesc.gpuDynamicsConfig.heapCapacity =
+                config.gpuDynamics.heapCapacity;
+            sceneDesc.gpuDynamicsConfig.foundLostPairsCapacity =
+                config.gpuDynamics.foundLostPairsCapacity;
+            sceneDesc.gpuDynamicsConfig.collisionStackSize =
+                config.gpuDynamics.collisionStackSize;
 #ifdef KANGENGINE_HAS_PHYSX_DIRECT_GPU_API
             sceneDesc.flags |= PxSceneFlag::eENABLE_DIRECT_GPU_API;
 #endif

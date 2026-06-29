@@ -5,6 +5,7 @@ from ._core import _ke
 from ._public import set_public_module
 
 _NAMES = [
+    "PhysicsGpuDynamicsConfig",
     "PhysicsConfig",
     "ContactPoint",
     "RigidDynamic",
