@@ -62,6 +62,8 @@ void bind_physics_gpu(py::module& m) {
         .def("set_cuda_stream", &PhysicsGpuSystem::setCudaStream,
              py::arg("stream_handle"))
         .def("cuda_stream", &PhysicsGpuSystem::cudaStream)
+        .def("rigid_row", &PhysicsGpuSystem::rigidRow, py::arg("rigid"),
+             "Return the logical row used by PhysicsGpuSystem for a rigid.")
         .def("step_start", &PhysicsGpuSystem::stepStart)
         .def("step_finish", &PhysicsGpuSystem::stepFinish)
         .def("rigid_data", &PhysicsGpuSystem::rigidData,

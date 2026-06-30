@@ -5,6 +5,11 @@
 
 #include <cstdint>
 #include <stdexcept>
+#include <unordered_map>
+
+namespace physx {
+class PxRigidDynamic;
+}
 
 namespace KE {
 
@@ -28,11 +33,27 @@ struct PhysicsGpuStateViews {
     Sim::GpuArrayView articulationLinkIncomingJointForces;
 };
 
-// Skeleton for SAPIEN-style explicit GPU PhysX state synchronization.
+// SAPIEN-style explicit GPU PhysX state synchronization.
 //
 // This class intentionally does not hide GPU simulation behind PhysicsWorld's
 // CPU getters/setters. GPU state should be synchronized through explicit
 // init/fetch/apply/stepStart/stepFinish verbs.
+//
+// Buffer ownership:
+// - rigidData/rigidForce/rigidTorque are owned by PhysicsGpuSystem.
+// - GpuArrayView objects are metadata views; do not free their ptr values.
+// - Views become invalid after invalidate(), destruction, or a later init().
+//
+// Stream/sync:
+// - setCudaStream() selects the stream used for CUDA pack/copy kernels.
+// - fetch/apply record and wait on the exported ready_event_handle.
+// - External CUDA producers should set their GpuArrayView stream/event metadata
+//   before passing views as indices.
+//
+// Sparse indices:
+// - apply* indices are logical rigid rows in these views, not PhysX GPU indices.
+// - indices must be a contiguous CUDA int32/uint32 [count] view on cudaDeviceId.
+// - nullptr means dense apply over all rigid rows.
 class PhysicsGpuSystem {
   public:
     PhysicsGpuSystem(PhysicsWorld* world, GpuPhysicsConfig config = {});
@@ -45,6 +66,10 @@ class PhysicsGpuSystem {
 
     void setCudaStream(uint64_t streamHandle);
     uint64_t cudaStream() const { return _streamHandle; }
+    // TODO: Treat this as a bootstrap lookup for high-level row caches, not as
+    // a per-frame path. KangSimWorld should precompute env/object -> rigid row
+    // tables and reuse CUDA index buffers for batched sparse apply.
+    uint32_t rigidRow(const physx::PxRigidDynamic& rigid) const;
 
     void stepStart();
     void stepFinish();
@@ -117,6 +142,7 @@ class PhysicsGpuSystem {
 
   private:
     [[noreturn]] void notImplemented(const char* functionName) const;
+    void applyRigidCommand(const Sim::GpuArrayView* indices, bool torque);
     void releaseGpuBuffers();
 
     PhysicsWorld* _world = nullptr;
@@ -130,6 +156,7 @@ class PhysicsGpuSystem {
     void* _rigidMirrorBuffer = nullptr;
     void* _rigidForceBuffer = nullptr;
     void* _rigidTorqueBuffer = nullptr;
+    std::unordered_map<const void*, uint32_t> _rigidRows;
     void* _copyEvent = nullptr;
     void* _readyEvent = nullptr;
 };

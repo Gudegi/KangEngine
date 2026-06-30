@@ -9,10 +9,6 @@
 namespace KE {
 namespace Sim {
 
-// Build selection: gpu_transform_kernels.cpp provides the no-CUDA fallback,
-// while gpu_transform_kernels.cu provides the CUDA implementation when
-// KANGENGINE_USE_CUDA is enabled by CMake.
-
 class CUDAExternalTransformBuffer {
   public:
     CUDAExternalTransformBuffer() = default;

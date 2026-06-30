@@ -68,6 +68,7 @@ build_python_cuda:
 
 validate_physx_gpu: build_python_cuda
 	PYTHONPATH=python $(PYTHON) python/examples/physics_gpu_system_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/kangsimworld_gpu_root_state_smoke.py
 
 validate_physx_gpu_cpp: build_cuda
 	./$(RELEASE_DIR)/physx_gpu_step_smoke

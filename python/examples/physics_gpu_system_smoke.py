@@ -7,7 +7,10 @@ layout.
 """
 
 from __future__ import annotations
+import gc
+
 from kangengine import physics
+from kangengine.utils import to_gpu_array_view
 import math
 import platform
 
@@ -169,6 +172,56 @@ def _print_step_sample(step_index: int, state: np.ndarray):
     )
 
 
+def _assert_sparse_root_state_apply(world, gpu_system, rigid_state, rigid_view, config):
+    target_row = 3
+    target_pos = torch.tensor([20.0, -7.0, 10.0], device="cuda:0")
+    target_rot = torch.tensor([0.0, 0.0, 0.0, 1.0], device="cuda:0")
+    target_lin_vel = torch.zeros(3, device="cuda:0")
+    target_ang_vel = torch.zeros(3, device="cuda:0")
+
+    rigid_state[target_row, RIGID_LAYOUT["position"]] = target_pos
+    rigid_state[target_row, RIGID_LAYOUT["rotation_xyzw"]] = target_rot
+    rigid_state[target_row, RIGID_LAYOUT["linear_velocity"]] = target_lin_vel
+    rigid_state[target_row, RIGID_LAYOUT["angular_velocity"]] = target_ang_vel
+
+    index_tensor = torch.tensor([target_row], device="cuda:0", dtype=torch.int32)
+    sparse_data_indices = to_gpu_array_view(
+        index_tensor,
+        dtype=torch.int32,
+        name="physics_rigid_sparse_data_indices",
+    )
+    previous_version = rigid_view.version
+    gpu_system.apply_rigid_data(sparse_data_indices)
+    torch.cuda.synchronize(0)
+    if rigid_view.version != previous_version + 1:
+        raise AssertionError(
+            "expected rigid data version to advance after sparse apply, "
+            f"got {rigid_view.version}"
+        )
+
+    world.step()
+    gpu_system.fetch_rigid_data()
+    torch.cuda.synchronize(0)
+
+    gravity_z = -9.81
+    expected_z = target_pos[2] + gravity_z * config.dt * config.dt
+    selected = rigid_state[target_row].detach().cpu().numpy()
+    np.testing.assert_allclose(
+        selected[RIGID_LAYOUT["position"]],
+        np.array([target_pos[0].item(), target_pos[1].item(), expected_z.item()]),
+        rtol=1e-5,
+        atol=1e-5,
+        err_msg="sparse rigid root-state apply selected row mismatch",
+    )
+    for row in range(RIGID_COUNT):
+        if row == target_row:
+            continue
+        if torch.allclose(rigid_state[row, :3], target_pos, atol=1.0):
+            raise AssertionError(
+                f"sparse rigid root-state apply unexpectedly moved row {row}"
+            )
+
+
 def main():
     _print_python_environment()
 
@@ -178,16 +231,21 @@ def main():
     world = physics.PhysicsWorld(config)
 
     initial_rows = []
+    actors = []
     for i in range(RIGID_COUNT):
         pos, rot, linear_velocity, angular_velocity = _make_rigid_state(i)
         actor = world.create_dynamic_box([0.18, 0.16, 0.14], pos, rot)
         actor.set_root_state(pos, rot, linear_velocity, angular_velocity)
         initial_rows.append((pos, rot, linear_velocity, angular_velocity))
+        actors.append(actor)
 
     gpu_config = physics.GpuPhysicsConfig()
     gpu_config.cuda_device_id = 0
     gpu_system = physics.PhysicsGpuSystem(world, gpu_config)
     gpu_system.init()
+    rigid_rows = [gpu_system.rigid_row(actor) for actor in actors]
+    if sorted(rigid_rows) != list(range(RIGID_COUNT)):
+        raise AssertionError(f"unexpected rigid row mapping {rigid_rows}")
 
     stream = torch.cuda.current_stream(device=0)
     stream_handle = int(stream.cuda_stream)
@@ -221,6 +279,38 @@ def main():
         raise AssertionError("rigid force mirror should start at zero")
     if not torch.allclose(rigid_torque, torch.zeros_like(rigid_torque)):
         raise AssertionError("rigid torque mirror should start at zero")
+    rigid_force.zero_()
+    rigid_torque.zero_()
+    gpu_system.apply_rigid_force()
+    gpu_system.apply_rigid_torque()
+    torch.cuda.synchronize(0)
+    if force_view.version != 1:
+        raise AssertionError(
+            f"expected rigid force version 1 after apply, got {force_view.version}"
+        )
+    if torque_view.version != 1:
+        raise AssertionError(
+            f"expected rigid torque version 1 after apply, got {torque_view.version}"
+        )
+    sparse_indices = torch.tensor(
+        [0, RIGID_COUNT - 1], device="cuda:0", dtype=torch.int32
+    )
+    sparse_index_view = to_gpu_array_view(
+        sparse_indices,
+        dtype=torch.int32,
+        name="physics_rigid_sparse_indices",
+    )
+    gpu_system.apply_rigid_force(sparse_index_view)
+    gpu_system.apply_rigid_torque(sparse_index_view)
+    torch.cuda.synchronize(0)
+    if force_view.version != 2:
+        raise AssertionError(
+            f"expected rigid force version 2 after sparse apply, got {force_view.version}"
+        )
+    if torque_view.version != 2:
+        raise AssertionError(
+            f"expected rigid torque version 2 after sparse apply, got {torque_view.version}"
+        )
 
     print("Rigid mirror")
     print(f"  count        : {RIGID_COUNT}")
@@ -232,7 +322,10 @@ def main():
     print(f"  ready event  : 0x{rigid_view.ready_event_handle:x}")
     print("Rigid command mirrors")
     print(f"  force ptr    : 0x{force_view.ptr:x}")
+    print(f"  force ver    : {force_view.version}")
     print(f"  torque ptr   : 0x{torque_view.ptr:x}")
+    print(f"  torque ver   : {torque_view.version}")
+    print(f"  sparse idx   : {sparse_index_view.shape}")
     print()
     print("Step samples")
 
@@ -262,6 +355,22 @@ def main():
         )
         sorted_state = _validate_state(gpu_state, expected_state, step_index)
         _print_step_sample(step_index, sorted_state)
+
+    _assert_sparse_root_state_apply(
+        world, gpu_system, rigid_state, rigid_view, config
+    )
+
+    del rigid_state
+    del rigid_force
+    del rigid_torque
+    del sparse_index_view
+    gpu_system.invalidate()
+    for actor in actors:
+        actor.release()
+    del actors
+    del gpu_system
+    del world
+    gc.collect()
 
     print()
     print(

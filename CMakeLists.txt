@@ -208,10 +208,7 @@ target_link_libraries(engine_core PUBLIC pre_compiled_ext)
 if(KANGENGINE_HAS_CUDA)
     target_sources(engine_core PRIVATE
         ${SRC_DIR}/sim/gpu_transform_kernels.cu
-    )
-    set_source_files_properties(
-        ${SRC_DIR}/sim/gpu_transform_kernels.cpp
-        PROPERTIES HEADER_FILE_ONLY ON
+        ${SRC_DIR}/physics/physics_gpu_system_kernels.cu
     )
     target_compile_definitions(engine_core PUBLIC
         KANGENGINE_USE_CUDA

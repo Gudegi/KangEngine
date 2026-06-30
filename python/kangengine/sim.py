@@ -16,13 +16,25 @@ from .utils.env_utils import (
     select_env_value,
     select_optional_env_value,
 )
-from .utils.tensor import as_cpu_numpy
+
+
+def _as_cpu_numpy(value, *, shape=None, dtype=np.float32):
+    import sys
+
+    torch = sys.modules.get("torch")
+    if torch is not None and torch.is_tensor(value):
+        array = value.detach().cpu().numpy()
+    else:
+        array = np.asarray(value, dtype=dtype)
+    if dtype is not None and array.dtype != np.dtype(dtype):
+        array = np.asarray(array, dtype=dtype)
+    return array if shape is None else array.reshape(shape)
 
 
 def _optional_drive_array(value, size: int):
     if value is None:
         return None
-    arr = as_cpu_numpy(value).reshape(-1)
+    arr = _as_cpu_numpy(value).reshape(-1)
     if arr.size == 1:
         arr = np.full(size, float(arr[0]), dtype=np.float32)
     if arr.size != size:
@@ -31,7 +43,7 @@ def _optional_drive_array(value, size: int):
 
 
 def _clip_forces(forces, limits):
-    limits = as_cpu_numpy(limits).reshape(-1)
+    limits = _as_cpu_numpy(limits).reshape(-1)
     if limits.size == 1:
         limits = np.full_like(forces, float(limits[0]), dtype=np.float32)
     return np.clip(forces, -limits, limits).astype(np.float32, copy=False)
@@ -790,8 +802,9 @@ class KangSimWorld:
             physics_config = _ke.PhysicsConfig.z_up()
         if sim_dt is not None:
             physics_config.dt = float(sim_dt)
+        uses_gpu_sim = _sim_device_uses_gpu(sim_device)
         if hasattr(physics_config, "enable_gpu"):
-            physics_config.enable_gpu = _sim_device_uses_gpu(sim_device)
+            physics_config.enable_gpu = uses_gpu_sim
 
         self.num_envs = int(num_envs)
         self.physics = _ke.PhysicsWorld(physics_config)
@@ -815,6 +828,11 @@ class KangSimWorld:
         self._mjcf_load_count = 0
         self.sim_time = 0.0
         self.sim_dt = float(physics_config.dt)
+        self.sim_device = str(sim_device)
+        self._uses_gpu_sim = uses_gpu_sim
+        self._gpu_system = None
+        self._rigid_gpu_rows: dict[tuple[int, int], int] = {}
+        self._rigid_gpu_index_tensors: dict[tuple[tuple[int, int], ...], object] = {}
         self._released = False
 
     def add_articulation(
@@ -829,6 +847,7 @@ class KangSimWorld:
             config = _ke.ArticulationConfig.free_base()
         if hasattr(config, "collision_group") and int(config.collision_group) == 0:
             config.collision_group = int(env_id) + 1
+        self._require_gpu_runtime_uninitialized("add_articulation")
         key = (int(env_id), int(obj_id))
         if key in self.articulations or key in self.rigids:
             raise ValueError(f"object already registered at env={key[0]}, obj={key[1]}")
@@ -862,6 +881,7 @@ class KangSimWorld:
         contact_offset: float = 0.02,
         rest_offset: float = 0.0,
     ) -> SimRigid:
+        self._require_gpu_runtime_uninitialized("add_rigid")
         key = (int(env_id), int(obj_id))
         if key in self.articulations or key in self.rigids:
             raise ValueError(f"object already registered at env={key[0]}, obj={key[1]}")
@@ -873,8 +893,8 @@ class KangSimWorld:
             collision_group = key[0] + 1
         rigid = self.physics.create_dynamic_rigid(
             data,
-            as_cpu_numpy(pos).reshape(3),
-            as_cpu_numpy(rot_xyzw).reshape(4),
+            _as_cpu_numpy(pos).reshape(3),
+            _as_cpu_numpy(rot_xyzw).reshape(4),
             float(density),
             int(collision_group),
             float(contact_offset),
@@ -1051,13 +1071,13 @@ class KangSimWorld:
                 if buffer.kp is not None:
                     articulation.set_kps(buffer.kp)
                 else:
-                    kp = as_cpu_numpy(articulation.get_kps()).reshape(-1)
+                    kp = _as_cpu_numpy(articulation.get_kps()).reshape(-1)
                 if buffer.kd is not None:
                     articulation.set_kds(buffer.kd)
                 else:
-                    kd = as_cpu_numpy(articulation.get_kds()).reshape(-1)
-                get_dof_pos = as_cpu_numpy(articulation.dof_positions()).reshape(-1)
-                get_dof_vel = as_cpu_numpy(articulation.dof_velocities()).reshape(-1)
+                    kd = _as_cpu_numpy(articulation.get_kds()).reshape(-1)
+                get_dof_pos = _as_cpu_numpy(articulation.dof_positions()).reshape(-1)
+                get_dof_vel = _as_cpu_numpy(articulation.dof_velocities()).reshape(-1)
                 torque = kp * (buffer.cmd - get_dof_pos) - kd * get_dof_vel
                 torque = _clip_forces(torque, articulation.get_effort_limits())
                 articulation.set_joint_forces(torque)
@@ -1071,6 +1091,7 @@ class KangSimWorld:
             return
         pending_keys = list(self._pending_reset_keys)
         self._pending_reset_keys.clear()
+        gpu_rigid_root_resets: list[tuple[tuple[int, int], RootStateReset]] = []
         for key in pending_keys:
             reset = self.resets[key]
             if not reset.pending:
@@ -1078,12 +1099,15 @@ class KangSimWorld:
             env_id, obj_id = key
             cache = self.state.record(env_id, obj_id).cache
             if reset.root is not None:
-                cache.set_root(
-                    reset.root.pos,
-                    reset.root.rot_xyzw,
-                    reset.root.linear_velocity,
-                    reset.root.angular_velocity,
-                )
+                if self._gpu_system is not None and key in self.rigids:
+                    gpu_rigid_root_resets.append((key, reset.root))
+                else:
+                    cache.set_root(
+                        reset.root.pos,
+                        reset.root.rot_xyzw,
+                        reset.root.linear_velocity,
+                        reset.root.angular_velocity,
+                    )
             if reset.dof is not None:
                 cache.set_dofs(reset.dof.positions, reset.dof.velocities)
                 command = self.commands.get(key)
@@ -1092,6 +1116,50 @@ class KangSimWorld:
                         reset.dof.positions, dtype=np.float32
                     ).reshape(-1).copy()
             self.resets[key] = ResetBuffer()
+        if gpu_rigid_root_resets:
+            self._apply_gpu_rigid_root_resets(gpu_rigid_root_resets)
+
+    def _apply_gpu_rigid_root_resets(
+        self, resets: list[tuple[tuple[int, int], RootStateReset]]
+    ):
+        import torch
+
+        gpu_system = self.gpu_system
+        rigid_view = gpu_system.rigid_data()
+        device_id = int(rigid_view.device_id)
+        device = torch.device(f"cuda:{device_id}")
+        rigid_state = torch.as_tensor(rigid_view, device=device)
+        keys = tuple(key for key, _ in resets)
+
+        for reset_index, (key, reset) in enumerate(resets):
+            row = self.rigid_gpu_row(key[0], key[1])
+            rigid_state[row, 0:3] = torch.as_tensor(
+                reset.pos, dtype=torch.float32, device=device
+            )
+            rigid_state[row, 3:7] = torch.as_tensor(
+                reset.rot_xyzw, dtype=torch.float32, device=device
+            )
+            linear_velocity = (
+                np.zeros(3, dtype=np.float32)
+                if reset.linear_velocity is None
+                else reset.linear_velocity
+            )
+            angular_velocity = (
+                np.zeros(3, dtype=np.float32)
+                if reset.angular_velocity is None
+                else reset.angular_velocity
+            )
+            rigid_state[row, 7:10] = torch.as_tensor(
+                linear_velocity, dtype=torch.float32, device=device
+            )
+            rigid_state[row, 10:13] = torch.as_tensor(
+                angular_velocity, dtype=torch.float32, device=device
+            )
+
+        index_view = self._rigid_gpu_index_view_for_keys(
+            keys, device=device, name="kangsimworld_rigid_root_reset_indices"
+        )
+        gpu_system.apply_rigid_data(index_view)
 
     def set_body_force(
         self,
@@ -1206,6 +1274,87 @@ class KangSimWorld:
     def rigid(self, env_id: int = 0, obj_id: int = 0):
         return self.rigids[(int(env_id), int(obj_id))].rigid
 
+    def init_gpu_system(self, cuda_device_id: int = 0, stream_handle: int | None = None):
+        """Initialize explicit PhysX GPU mirrors and cache rigid row mappings.
+
+        Call this after registering simulation objects and before using
+        low-level GPU mirror apply/fetch paths. It intentionally performs a
+        visible runtime boundary instead of hiding PhysX GPU warm-up inside a
+        high-level setter.
+        """
+        if not self._uses_gpu_sim:
+            raise RuntimeError(
+                "KangSimWorld.init_gpu_system() requires sim_device='cuda'"
+            )
+        if not hasattr(_ke, "PhysicsGpuSystem") or not hasattr(_ke, "GpuPhysicsConfig"):
+            raise RuntimeError("KangEngine was built without PhysicsGpuSystem bindings")
+        if self._gpu_system is not None:
+            return self._gpu_system
+
+        config = _ke.GpuPhysicsConfig()
+        config.cuda_device_id = int(cuda_device_id)
+        gpu_system = _ke.PhysicsGpuSystem(self.physics, config)
+        gpu_system.init()
+        if stream_handle is not None:
+            gpu_system.set_cuda_stream(int(stream_handle))
+
+        self._gpu_system = gpu_system
+        self._rigid_gpu_rows = {
+            key: int(gpu_system.rigid_row(record.rigid))
+            for key, record in self.rigids.items()
+        }
+        self._rigid_gpu_index_tensors.clear()
+        return gpu_system
+
+    @property
+    def gpu_system(self):
+        if self._gpu_system is None:
+            raise RuntimeError(
+                "GPU system is not initialized; call init_gpu_system() first"
+            )
+        return self._gpu_system
+
+    def rigid_gpu_row(self, env_id: int, obj_id: int = 0) -> int:
+        key = (int(env_id), int(obj_id))
+        if key not in self._rigid_gpu_rows:
+            raise KeyError(
+                f"no cached PhysX GPU rigid row for env={key[0]}, obj={key[1]}"
+            )
+        return self._rigid_gpu_rows[key]
+
+    def rigid_gpu_index_view(self, env_id: EnvIdLike, obj_id: int = 0):
+        """Return a cached CUDA int32 logical-row index view for rigid batches."""
+        rigid_view = self.gpu_system.rigid_data()
+        keys = tuple((env, int(obj_id)) for env in env_id_list(env_id, self.num_envs))
+
+        import torch
+
+        device = torch.device(f"cuda:{int(rigid_view.device_id)}")
+        return self._rigid_gpu_index_view_for_keys(
+            keys, device=device, name="kangsimworld_rigid_indices"
+        )
+
+    def _rigid_gpu_index_view_for_keys(self, keys, *, device, name: str):
+        import torch
+
+        from .utils import to_gpu_array_view
+
+        keys = tuple((int(env_id), int(obj_id)) for env_id, obj_id in keys)
+        tensor = self._rigid_gpu_index_tensors.get(keys)
+        if tensor is None or tensor.device != device:
+            rows = [self.rigid_gpu_row(env_id, obj_id) for env_id, obj_id in keys]
+            tensor = torch.tensor(rows, dtype=torch.int32, device=device)
+            self._rigid_gpu_index_tensors[keys] = tensor
+        return to_gpu_array_view(tensor, dtype=torch.int32, name=name)
+
+    def _require_gpu_runtime_uninitialized(self, operation: str):
+        if self._gpu_system is not None:
+            raise RuntimeError(
+                f"KangSimWorld.{operation}() cannot be called after "
+                "init_gpu_system(); register objects before initializing GPU "
+                "mirrors"
+            )
+
     def set_root_state(
         self,
         env_id: EnvIdLike,
@@ -1293,6 +1442,11 @@ class KangSimWorld:
     def release(self):
         if self._released:
             return
+        if self._gpu_system is not None:
+            self._gpu_system.invalidate()
+            self._gpu_system = None
+        self._rigid_gpu_rows.clear()
+        self._rigid_gpu_index_tensors.clear()
         for record in self.articulations.values():
             record.articulation.release()
         for record in self.rigids.values():

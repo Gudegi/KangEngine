@@ -5,9 +5,11 @@
 #include <cmath>
 #include <fmt/base.h>
 #include <PxActor.h>
+#include <algorithm>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <limits>
 #include <stdexcept>
 #include <vector>
 
@@ -27,6 +29,8 @@ float absDiff(float a, float b) { return std::fabs(a - b); }
 
 } // namespace
 
+#define NUM_ACTORS 8
+
 int main() {
     PhysicsConfig config = PhysicsConfig::zUp();
     config.enableGPU = true;
@@ -36,7 +40,9 @@ int main() {
     config.enableContactReports = false;
 
     PhysicsWorld world(config);
-    for (int i = 0; i < 8; ++i) {
+    std::vector<PxRigidDynamic*> actors;
+    actors.reserve(NUM_ACTORS);
+    for (int i = 0; i < NUM_ACTORS; ++i) {
         const float x = static_cast<float>(i - 4) * 1.25f;
         auto* actor = world.createDynamicBox(
             glm::vec3(0.18f, 0.16f, 0.14f),
@@ -48,6 +54,7 @@ int main() {
                                         0.02f));
         actor->setAngularVelocity(PxVec3(0.0f));
         actor->wakeUp();
+        actors.push_back(actor);
     }
 
     GpuPhysicsConfig gpuConfig;
@@ -74,8 +81,39 @@ int main() {
         throw std::runtime_error("cudaMemcpy rigid data failed");
 
     const PxU32 actorCount = static_cast<PxU32>(view.shape.at(0));
-    if (actorCount != 8)
+    if (actorCount != NUM_ACTORS)
         throw std::runtime_error("unexpected rigid actor count");
+    std::vector<bool> seenRows(actorCount, false);
+    for (auto* actor : actors) {
+        const uint32_t row = gpuSystem.rigidRow(*actor);
+        if (row >= actorCount)
+            throw std::runtime_error("rigid row is out of range");
+        if (seenRows[row])
+            throw std::runtime_error("rigid row mapping contains duplicates");
+        seenRows[row] = true;
+    }
+    const auto& forceView = gpuSystem.rigidForce();
+    const auto& torqueView = gpuSystem.rigidTorque();
+    if (forceView.shape.size() != 2 || forceView.shape.at(0) != actorCount ||
+        forceView.shape.at(1) != 3)
+        throw std::runtime_error("unexpected rigid force shape");
+    if (torqueView.shape.size() != 2 || torqueView.shape.at(0) != actorCount ||
+        torqueView.shape.at(1) != 3)
+        throw std::runtime_error("unexpected rigid torque shape");
+    if (cudaMemset(forceView.data, 0, sizeof(float) * actorCount * 3) !=
+        cudaSuccess)
+        throw std::runtime_error("cudaMemset rigid force failed");
+    if (cudaMemset(torqueView.data, 0, sizeof(float) * actorCount * 3) !=
+        cudaSuccess)
+        throw std::runtime_error("cudaMemset rigid torque failed");
+    gpuSystem.applyRigidForce();
+    gpuSystem.applyRigidTorque();
+    if (cudaDeviceSynchronize() != cudaSuccess)
+        throw std::runtime_error(
+            "cudaDeviceSynchronize after rigid force/torque apply failed");
+    if (forceView.version != 1 || torqueView.version != 1)
+        throw std::runtime_error(
+            "rigid force/torque apply did not update command versions");
 
     float maxPositionError = 0.0f;
     float maxQuatError = 0.0f;
@@ -144,9 +182,8 @@ int main() {
         const size_t matrix = static_cast<size_t>(i) * 16;
         for (size_t component = 0; component < 16; ++component) {
             maxTransformError = std::max(
-                maxTransformError,
-                absDiff(transformHost[matrix + component],
-                        expectedData[component]));
+                maxTransformError, absDiff(transformHost[matrix + component],
+                                           expectedData[component]));
         }
     }
     fmt::print("  mat4 err    : {}\n", maxTransformError);
@@ -229,6 +266,235 @@ int main() {
         maxAppliedVelocityError > 1e-4f)
         throw std::runtime_error("GPU rigid apply/step/fetch round trip did "
                                  "not match expected state");
+
+    for (PxU32 i = 0; i < actorCount; ++i) {
+        const size_t row = static_cast<size_t>(i) * 13;
+        applied[row + 0] = -4.0f + static_cast<float>(i);
+        applied[row + 1] = -2.0f;
+        applied[row + 2] = 6.0f + 0.05f * static_cast<float>(i);
+        applied[row + 3] = 0.0f;
+        applied[row + 4] = 0.0f;
+        applied[row + 5] = 0.0f;
+        applied[row + 6] = 1.0f;
+        applied[row + 7] = 0.0f;
+        applied[row + 8] = 0.0f;
+        applied[row + 9] = 0.0f;
+        applied[row + 10] = 0.0f;
+        applied[row + 11] = 0.0f;
+        applied[row + 12] = 0.0f;
+    }
+    if (cudaMemcpy(view.data, applied.data(), sizeof(float) * applied.size(),
+                   cudaMemcpyHostToDevice) != cudaSuccess)
+        throw std::runtime_error(
+            "cudaMemcpy command-effect reset rigid data failed");
+    gpuSystem.applyRigidData();
+    if (cudaDeviceSynchronize() != cudaSuccess)
+        throw std::runtime_error(
+            "cudaDeviceSynchronize after command-effect reset failed");
+
+    std::vector<float> forces(static_cast<size_t>(actorCount) * 3, 0.0f);
+    std::vector<float> torques(static_cast<size_t>(actorCount) * 3, 0.0f);
+    for (PxU32 i = 0; i < actorCount; ++i) {
+        const size_t row = static_cast<size_t>(i) * 3;
+        forces[row + 2] = 100.0f;
+        torques[row + 2] = 10.0f;
+    }
+    if (cudaMemcpy(forceView.data, forces.data(), sizeof(float) * forces.size(),
+                   cudaMemcpyHostToDevice) != cudaSuccess)
+        throw std::runtime_error("cudaMemcpy nonzero rigid force failed");
+    if (cudaMemcpy(torqueView.data, torques.data(),
+                   sizeof(float) * torques.size(),
+                   cudaMemcpyHostToDevice) != cudaSuccess)
+        throw std::runtime_error("cudaMemcpy nonzero rigid torque failed");
+    gpuSystem.applyRigidForce();
+    gpuSystem.applyRigidTorque();
+    if (cudaDeviceSynchronize() != cudaSuccess)
+        throw std::runtime_error(
+            "cudaDeviceSynchronize after nonzero force/torque apply failed");
+
+    world.step();
+    gpuSystem.fetchRigidData();
+    if (cudaDeviceSynchronize() != cudaSuccess)
+        throw std::runtime_error(
+            "cudaDeviceSynchronize after command-effect fetch failed");
+    if (cudaMemcpy(host.data(), view.data, sizeof(float) * host.size(),
+                   cudaMemcpyDeviceToHost) != cudaSuccess)
+        throw std::runtime_error("cudaMemcpy command-effect result failed");
+
+    const float gravityOnlyVz = config.gravity[2] * config.dt;
+    float minForceVelocityDelta = std::numeric_limits<float>::max();
+    float maxTorqueAngularZ = 0.0f;
+    for (PxU32 i = 0; i < actorCount; ++i) {
+        const size_t row = static_cast<size_t>(i) * 13;
+        minForceVelocityDelta =
+            std::min(minForceVelocityDelta, host[row + 9] - gravityOnlyVz);
+        maxTorqueAngularZ =
+            std::max(maxTorqueAngularZ, std::fabs(host[row + 12]));
+    }
+    fmt::print("  force dv z  : {}\n", minForceVelocityDelta);
+    fmt::print("  torque wz   : {}\n", maxTorqueAngularZ);
+    if (minForceVelocityDelta <= 0.01f || maxTorqueAngularZ <= 0.01f)
+        throw std::runtime_error(
+            "nonzero rigid force/torque command did not affect dynamics");
+
+    for (PxU32 i = 0; i < actorCount; ++i) {
+        const size_t row = static_cast<size_t>(i) * 13;
+        applied[row + 0] = -4.0f + static_cast<float>(i);
+        applied[row + 1] = 2.0f;
+        applied[row + 2] = 8.0f + 0.05f * static_cast<float>(i);
+        applied[row + 3] = 0.0f;
+        applied[row + 4] = 0.0f;
+        applied[row + 5] = 0.0f;
+        applied[row + 6] = 1.0f;
+        applied[row + 7] = 0.0f;
+        applied[row + 8] = 0.0f;
+        applied[row + 9] = 0.0f;
+        applied[row + 10] = 0.0f;
+        applied[row + 11] = 0.0f;
+        applied[row + 12] = 0.0f;
+    }
+    if (cudaMemcpy(view.data, applied.data(), sizeof(float) * applied.size(),
+                   cudaMemcpyHostToDevice) != cudaSuccess)
+        throw std::runtime_error(
+            "cudaMemcpy sparse command reset rigid data failed");
+    gpuSystem.applyRigidData();
+
+    std::fill(forces.begin(), forces.end(), 0.0f);
+    constexpr uint32_t sparseActor = 2;
+    forces[static_cast<size_t>(sparseActor) * 3 + 2] = 120.0f;
+    if (cudaMemcpy(forceView.data, forces.data(), sizeof(float) * forces.size(),
+                   cudaMemcpyHostToDevice) != cudaSuccess)
+        throw std::runtime_error("cudaMemcpy sparse rigid force failed");
+
+    uint32_t* sparseIndicesData = nullptr;
+    if (cudaMalloc(&sparseIndicesData, sizeof(uint32_t)) != cudaSuccess)
+        throw std::runtime_error("cudaMalloc sparse rigid indices failed");
+    if (cudaMemcpy(sparseIndicesData, &sparseActor, sizeof(uint32_t),
+                   cudaMemcpyHostToDevice) != cudaSuccess)
+        throw std::runtime_error("cudaMemcpy sparse rigid indices failed");
+    Sim::GpuArrayView sparseIndices;
+    sparseIndices.data = sparseIndicesData;
+    sparseIndices.memoryType = Sim::SimMemoryType::CUDADevice;
+    sparseIndices.dtype = Sim::SimDType::UInt32;
+    sparseIndices.deviceId = gpuConfig.cudaDeviceId;
+    sparseIndices.shape = {1};
+    sparseIndices.strides = {1};
+    sparseIndices.streamHandle = gpuSystem.cudaStream();
+    sparseIndices.name = "physx_gpu_step_smoke_sparse_indices";
+
+    gpuSystem.applyRigidForce(&sparseIndices);
+    if (cudaDeviceSynchronize() != cudaSuccess)
+        throw std::runtime_error(
+            "cudaDeviceSynchronize after sparse force apply failed");
+    cudaFree(sparseIndicesData);
+
+    world.step();
+    gpuSystem.fetchRigidData();
+    if (cudaDeviceSynchronize() != cudaSuccess)
+        throw std::runtime_error(
+            "cudaDeviceSynchronize after sparse command fetch failed");
+    if (cudaMemcpy(host.data(), view.data, sizeof(float) * host.size(),
+                   cudaMemcpyDeviceToHost) != cudaSuccess)
+        throw std::runtime_error("cudaMemcpy sparse command result failed");
+
+    float sparseSelectedDelta = 0.0f;
+    float sparseOtherMaxDelta = 0.0f;
+    for (PxU32 i = 0; i < actorCount; ++i) {
+        const size_t row = static_cast<size_t>(i) * 13;
+        const float delta = host[row + 9] - gravityOnlyVz;
+        if (i == sparseActor)
+            sparseSelectedDelta = delta;
+        else
+            sparseOtherMaxDelta =
+                std::max(sparseOtherMaxDelta, std::fabs(delta));
+    }
+    fmt::print("  sparse dv z : {} (other max {})\n", sparseSelectedDelta,
+               sparseOtherMaxDelta);
+    if (sparseSelectedDelta <= 0.01f || sparseOtherMaxDelta > 1e-4f)
+        throw std::runtime_error(
+            "sparse rigid force command did not affect only the selected row");
+
+    if (cudaMemset(forceView.data, 0, sizeof(float) * actorCount * 3) !=
+        cudaSuccess)
+        throw std::runtime_error("cudaMemset clear rigid force failed");
+    if (cudaMemset(torqueView.data, 0, sizeof(float) * actorCount * 3) !=
+        cudaSuccess)
+        throw std::runtime_error("cudaMemset clear rigid torque failed");
+    gpuSystem.applyRigidForce();
+    gpuSystem.applyRigidTorque();
+
+    for (PxU32 i = 0; i < actorCount; ++i) {
+        const size_t row = static_cast<size_t>(i) * 13;
+        applied[row + 0] = 100.0f + static_cast<float>(i);
+        applied[row + 1] = -50.0f - static_cast<float>(i);
+        applied[row + 2] = 12.0f;
+        applied[row + 3] = 0.0f;
+        applied[row + 4] = 0.0f;
+        applied[row + 5] = 0.0f;
+        applied[row + 6] = 1.0f;
+        applied[row + 7] = 0.0f;
+        applied[row + 8] = 0.0f;
+        applied[row + 9] = 0.0f;
+        applied[row + 10] = 0.0f;
+        applied[row + 11] = 0.0f;
+        applied[row + 12] = 0.0f;
+    }
+    if (cudaMemcpy(view.data, applied.data(), sizeof(float) * applied.size(),
+                   cudaMemcpyHostToDevice) != cudaSuccess)
+        throw std::runtime_error("cudaMemcpy sparse rigid data source failed");
+
+    constexpr uint32_t sparseStateActor = 5;
+    if (cudaMalloc(&sparseIndicesData, sizeof(uint32_t)) != cudaSuccess)
+        throw std::runtime_error("cudaMalloc sparse rigid data indices failed");
+    if (cudaMemcpy(sparseIndicesData, &sparseStateActor, sizeof(uint32_t),
+                   cudaMemcpyHostToDevice) != cudaSuccess)
+        throw std::runtime_error("cudaMemcpy sparse rigid data indices failed");
+    sparseIndices.data = sparseIndicesData;
+    sparseIndices.dtype = Sim::SimDType::UInt32;
+    sparseIndices.shape = {1};
+    sparseIndices.strides = {1};
+    sparseIndices.name = "physx_gpu_step_smoke_sparse_state_indices";
+
+    gpuSystem.applyRigidData(&sparseIndices);
+    if (cudaDeviceSynchronize() != cudaSuccess)
+        throw std::runtime_error(
+            "cudaDeviceSynchronize after sparse rigid data apply failed");
+    cudaFree(sparseIndicesData);
+
+    world.step();
+    gpuSystem.fetchRigidData();
+    if (cudaDeviceSynchronize() != cudaSuccess)
+        throw std::runtime_error(
+            "cudaDeviceSynchronize after sparse rigid data fetch failed");
+    if (cudaMemcpy(host.data(), view.data, sizeof(float) * host.size(),
+                   cudaMemcpyDeviceToHost) != cudaSuccess)
+        throw std::runtime_error("cudaMemcpy sparse rigid data result failed");
+
+    float sparseStatePositionError = 0.0f;
+    float sparseStateOtherMaxX = 0.0f;
+    for (PxU32 i = 0; i < actorCount; ++i) {
+        const size_t row = static_cast<size_t>(i) * 13;
+        if (i == sparseStateActor) {
+            const float expectedZ =
+                applied[row + 2] + config.gravity[2] * config.dt * config.dt;
+            sparseStatePositionError =
+                std::max(sparseStatePositionError,
+                         absDiff(host[row + 0], applied[row + 0]));
+            sparseStatePositionError =
+                std::max(sparseStatePositionError,
+                         absDiff(host[row + 1], applied[row + 1]));
+            sparseStatePositionError = std::max(
+                sparseStatePositionError, absDiff(host[row + 2], expectedZ));
+        } else {
+            sparseStateOtherMaxX =
+                std::max(sparseStateOtherMaxX, std::fabs(host[row + 0]));
+        }
+    }
+    fmt::print("  sparse state err: {} (other max x {})\n",
+               sparseStatePositionError, sparseStateOtherMaxX);
+    if (sparseStatePositionError > 1e-4f || sparseStateOtherMaxX > 50.0f)
+        throw std::runtime_error(
+            "sparse rigid data apply did not affect only the selected row");
 #endif
 
     fmt::print("PASS: C++ PhysX GPU rigid fetch/apply round trip completed\n");

@@ -2,6 +2,7 @@
 
 #include "physics.hpp"
 #include "physics/physx_compat.hpp"
+#include "physics/physics_gpu_system_kernels.hpp"
 
 #include <cstdint>
 #include <string>
@@ -58,6 +59,30 @@ void setFloatCudaView(Sim::GpuArrayView& view, void* data, int deviceId,
     view.name = name;
 }
 
+void validateDenseRigidVec3View(const Sim::GpuArrayView& view,
+                                const void* expectedData, int deviceId,
+                                uint32_t rows, const char* name) {
+    if (view.data != expectedData)
+        throw std::runtime_error(std::string(name) +
+                                 " view does not point to its owned buffer");
+    if (view.memoryType != Sim::SimMemoryType::CUDADevice)
+        throw std::runtime_error(std::string(name) + " must be a CUDA view");
+    if (view.dtype != Sim::SimDType::Float32)
+        throw std::runtime_error(std::string(name) + " must use float32");
+    if (view.deviceId != deviceId)
+        throw std::runtime_error(std::string(name) +
+                                 " device_id does not match PhysicsGpuSystem");
+    if (view.shape.size() != 2 || view.shape[0] != static_cast<int64_t>(rows) ||
+        view.shape[1] != 3)
+        throw std::runtime_error(std::string(name) +
+                                 " must have shape [rigid_count, 3]");
+    if (!view.strides.empty() &&
+        (view.strides.size() != 2 || view.strides[0] != 3 ||
+         view.strides[1] != 1))
+        throw std::runtime_error(std::string(name) +
+                                 " must be contiguous with strides [3, 1]");
+}
+
 } // namespace
 
 void PhysicsGpuSystem::init() {
@@ -88,11 +113,13 @@ void PhysicsGpuSystem::init() {
         _rigidCount = scene->getActors(PxActorTypeFlag::eRIGID_DYNAMIC,
                                        actors.data(), _rigidCount);
         std::vector<PxRigidDynamicGPUIndex> actorIndices(_rigidCount);
+        _rigidRows.clear();
         for (uint32_t i = 0; i < _rigidCount; ++i) {
             auto* body = actors[i] ? actors[i]->is<PxRigidDynamic>() : nullptr;
             if (!body)
                 throw std::runtime_error(
                     "PhysicsGpuSystem found a non-rigid dynamic actor");
+            _rigidRows[body] = i;
             actorIndices[i] = body->getGPUIndex();
             if (actorIndices[i] == 0xFFFFFFFFu)
                 throw std::runtime_error(
@@ -103,7 +130,8 @@ void PhysicsGpuSystem::init() {
                              sizeof(PxRigidDynamicGPUIndex) * _rigidCount),
                   "cudaMalloc(rigid indices)");
         checkCuda(cudaMalloc(&_rigidScratchBuffer,
-                             (sizeof(PxTransform) + 2 * sizeof(PxVec3)) *
+                             (sizeof(PxRigidDynamicGPUIndex) +
+                              sizeof(PxTransform) + 2 * sizeof(PxVec3)) *
                                  _rigidCount),
                   "cudaMalloc(rigid scratch)");
         checkCuda(
@@ -168,6 +196,15 @@ void PhysicsGpuSystem::setCudaStream(uint64_t streamHandle) {
     _views.rigidData.streamHandle = streamHandle;
     _views.rigidForce.streamHandle = streamHandle;
     _views.rigidTorque.streamHandle = streamHandle;
+}
+
+uint32_t PhysicsGpuSystem::rigidRow(const physx::PxRigidDynamic& rigid) const {
+    checkInitialized();
+    auto it = _rigidRows.find(&rigid);
+    if (it == _rigidRows.end())
+        throw std::runtime_error(
+            "PhysicsGpuSystem could not find the rigid actor row");
+    return it->second;
 }
 
 void PhysicsGpuSystem::stepStart() { checkInitialized(); }
@@ -283,7 +320,7 @@ void PhysicsGpuSystem::fetchArticulationLinkIncomingJointForce() {
     notImplemented("fetchArticulationLinkIncomingJointForce");
 }
 
-void PhysicsGpuSystem::applyRigidData(const Sim::GpuArrayView*) {
+void PhysicsGpuSystem::applyRigidData(const Sim::GpuArrayView* indices) {
     checkInitialized();
 #ifdef KANGENGINE_USE_CUDA
     if (_rigidCount == 0)
@@ -306,38 +343,68 @@ void PhysicsGpuSystem::applyRigidData(const Sim::GpuArrayView*) {
     void* linearVelocityBuffer = scratch + sizeof(PxTransform) * _rigidCount;
     void* angularVelocityBuffer =
         scratch + (sizeof(PxTransform) + sizeof(PxVec3)) * _rigidCount;
+    auto* gpuIndices = static_cast<PxRigidDynamicGPUIndex*>(_rigidIndexBuffer);
+    uint32_t applyCount = _rigidCount;
 
-    constexpr size_t sourcePitch = sizeof(float) * 13;
-    checkCuda(cudaMemcpy2DAsync(static_cast<unsigned char*>(poseBuffer) +
-                                    offsetof(PxTransform, p),
-                                sizeof(PxTransform), source, sourcePitch,
-                                sizeof(float) * 3, _rigidCount,
-                                cudaMemcpyDeviceToDevice, stream),
-              "cudaMemcpy2DAsync(apply rigid position)");
-    checkCuda(cudaMemcpy2DAsync(static_cast<unsigned char*>(poseBuffer) +
-                                    offsetof(PxTransform, q),
-                                sizeof(PxTransform), source + sizeof(float) * 3,
-                                sourcePitch, sizeof(float) * 4, _rigidCount,
-                                cudaMemcpyDeviceToDevice, stream),
-              "cudaMemcpy2DAsync(apply rigid rotation)");
-    checkCuda(cudaMemcpy2DAsync(linearVelocityBuffer, sizeof(PxVec3),
-                                source + sizeof(float) * 7, sourcePitch,
-                                sizeof(float) * 3, _rigidCount,
-                                cudaMemcpyDeviceToDevice, stream),
-              "cudaMemcpy2DAsync(apply rigid linear velocity)");
-    checkCuda(cudaMemcpy2DAsync(angularVelocityBuffer, sizeof(PxVec3),
-                                source + sizeof(float) * 10, sourcePitch,
-                                sizeof(float) * 3, _rigidCount,
-                                cudaMemcpyDeviceToDevice, stream),
-              "cudaMemcpy2DAsync(apply rigid angular velocity)");
+    if (indices) {
+        if (indices->deviceId != _config.cudaDeviceId)
+            throw std::runtime_error(
+                "sparse rigid data indices device_id does not match "
+                "PhysicsGpuSystem");
+        const int64_t indexCount = indices->numel();
+        if (indexCount < 0 || indexCount > static_cast<int64_t>(_rigidCount))
+            throw std::runtime_error(
+                "sparse rigid data index count exceeds rigid count");
+        if (indexCount == 0)
+            return;
+        applyCount = static_cast<uint32_t>(indexCount);
+        gpuIndices = reinterpret_cast<PxRigidDynamicGPUIndex*>(scratch);
+        poseBuffer = scratch + sizeof(PxRigidDynamicGPUIndex) * applyCount;
+        linearVelocityBuffer =
+            static_cast<unsigned char*>(poseBuffer) +
+            sizeof(PxTransform) * applyCount;
+        angularVelocityBuffer =
+            static_cast<unsigned char*>(linearVelocityBuffer) +
+            sizeof(PxVec3) * applyCount;
+        PhysicsGpuKernels::packSparseRigidStateCUDA(
+            *indices, _rigidIndexBuffer, _rigidMirrorBuffer, gpuIndices,
+            poseBuffer, linearVelocityBuffer, angularVelocityBuffer,
+            _rigidCount, _streamHandle, sizeof(PxTransform),
+            offsetof(PxTransform, p), offsetof(PxTransform, q),
+            sizeof(PxVec3));
+    } else {
+        constexpr size_t sourcePitch = sizeof(float) * 13;
+        checkCuda(cudaMemcpy2DAsync(static_cast<unsigned char*>(poseBuffer) +
+                                        offsetof(PxTransform, p),
+                                    sizeof(PxTransform), source, sourcePitch,
+                                    sizeof(float) * 3, _rigidCount,
+                                    cudaMemcpyDeviceToDevice, stream),
+                  "cudaMemcpy2DAsync(apply rigid position)");
+        checkCuda(cudaMemcpy2DAsync(static_cast<unsigned char*>(poseBuffer) +
+                                        offsetof(PxTransform, q),
+                                    sizeof(PxTransform),
+                                    source + sizeof(float) * 3, sourcePitch,
+                                    sizeof(float) * 4, _rigidCount,
+                                    cudaMemcpyDeviceToDevice, stream),
+                  "cudaMemcpy2DAsync(apply rigid rotation)");
+        checkCuda(cudaMemcpy2DAsync(linearVelocityBuffer, sizeof(PxVec3),
+                                    source + sizeof(float) * 7, sourcePitch,
+                                    sizeof(float) * 3, _rigidCount,
+                                    cudaMemcpyDeviceToDevice, stream),
+                  "cudaMemcpy2DAsync(apply rigid linear velocity)");
+        checkCuda(cudaMemcpy2DAsync(angularVelocityBuffer, sizeof(PxVec3),
+                                    source + sizeof(float) * 10, sourcePitch,
+                                    sizeof(float) * 3, _rigidCount,
+                                    cudaMemcpyDeviceToDevice, stream),
+                  "cudaMemcpy2DAsync(apply rigid angular velocity)");
+    }
     checkCuda(cudaEventRecord(packEvent, stream),
               "cudaEventRecord(apply rigid pack)");
 
     PxDirectGPUAPI& directGpuApi = _world->getScene()->getDirectGPUAPI();
-    auto* gpuIndices = static_cast<PxRigidDynamicGPUIndex*>(_rigidIndexBuffer);
     if (!directGpuApi.setRigidDynamicData(
             poseBuffer, gpuIndices, PxRigidDynamicGPUAPIWriteType::eGLOBAL_POSE,
-            _rigidCount, physxStartEvent, physxFinishEvent))
+            applyCount, physxStartEvent, physxFinishEvent))
         throw std::runtime_error(
             "PxDirectGPUAPI::setRigidDynamicData(pose) failed");
     checkCuda(cudaStreamWaitEvent(stream, readyEvent, 0),
@@ -345,7 +412,7 @@ void PhysicsGpuSystem::applyRigidData(const Sim::GpuArrayView*) {
 
     if (!directGpuApi.setRigidDynamicData(
             linearVelocityBuffer, gpuIndices,
-            PxRigidDynamicGPUAPIWriteType::eLINEAR_VELOCITY, _rigidCount,
+            PxRigidDynamicGPUAPIWriteType::eLINEAR_VELOCITY, applyCount,
             physxStartEvent, physxFinishEvent))
         throw std::runtime_error(
             "PxDirectGPUAPI::setRigidDynamicData(linear velocity) failed");
@@ -354,7 +421,7 @@ void PhysicsGpuSystem::applyRigidData(const Sim::GpuArrayView*) {
 
     if (!directGpuApi.setRigidDynamicData(
             angularVelocityBuffer, gpuIndices,
-            PxRigidDynamicGPUAPIWriteType::eANGULAR_VELOCITY, _rigidCount,
+            PxRigidDynamicGPUAPIWriteType::eANGULAR_VELOCITY, applyCount,
             physxStartEvent, physxFinishEvent))
         throw std::runtime_error(
             "PxDirectGPUAPI::setRigidDynamicData(angular velocity) failed");
@@ -367,12 +434,12 @@ void PhysicsGpuSystem::applyRigidData(const Sim::GpuArrayView*) {
 #endif
 }
 
-void PhysicsGpuSystem::applyRigidForce(const Sim::GpuArrayView*) {
-    notImplemented("applyRigidForce");
+void PhysicsGpuSystem::applyRigidForce(const Sim::GpuArrayView* indices) {
+    applyRigidCommand(indices, false);
 }
 
-void PhysicsGpuSystem::applyRigidTorque(const Sim::GpuArrayView*) {
-    notImplemented("applyRigidTorque");
+void PhysicsGpuSystem::applyRigidTorque(const Sim::GpuArrayView* indices) {
+    applyRigidCommand(indices, true);
 }
 
 void PhysicsGpuSystem::applyArticulationRootPose(const Sim::GpuArrayView*) {
@@ -420,6 +487,76 @@ void PhysicsGpuSystem::notImplemented(const char* functionName) const {
                              " is not implemented yet");
 }
 
+void PhysicsGpuSystem::applyRigidCommand(const Sim::GpuArrayView* indices,
+                                         bool torque) {
+    checkInitialized();
+#ifdef KANGENGINE_USE_CUDA
+    if (_rigidCount == 0)
+        return;
+
+    Sim::GpuArrayView& view = torque ? _views.rigidTorque : _views.rigidForce;
+    void* commandBuffer = torque ? _rigidTorqueBuffer : _rigidForceBuffer;
+    const char* name = torque ? "physics_rigid_torque" : "physics_rigid_force";
+    validateDenseRigidVec3View(view, commandBuffer, _config.cudaDeviceId,
+                               _rigidCount, name);
+
+    checkCuda(cudaSetDevice(_config.cudaDeviceId), "cudaSetDevice");
+    auto stream = reinterpret_cast<cudaStream_t>(_streamHandle);
+    auto startEvent = reinterpret_cast<cudaEvent_t>(_copyEvent);
+    auto finishEvent = reinterpret_cast<cudaEvent_t>(_readyEvent);
+    auto physxStartEvent = reinterpret_cast<CUevent>(_copyEvent);
+    auto physxFinishEvent = reinterpret_cast<CUevent>(_readyEvent);
+
+#ifndef KANGENGINE_HAS_PHYSX_DIRECT_GPU_API
+    throw std::runtime_error(
+        "PhysicsGpuSystem requires PhysX Direct GPU API support");
+#else
+    PxDirectGPUAPI& directGpuApi = _world->getScene()->getDirectGPUAPI();
+    auto* gpuIndices = static_cast<PxRigidDynamicGPUIndex*>(_rigidIndexBuffer);
+    uint32_t applyCount = _rigidCount;
+    if (indices) {
+        if (indices->deviceId != _config.cudaDeviceId)
+            throw std::runtime_error(
+                "sparse rigid command indices device_id does not match "
+                "PhysicsGpuSystem");
+        const int64_t indexCount = indices->numel();
+        if (indexCount < 0 || indexCount > static_cast<int64_t>(_rigidCount))
+            throw std::runtime_error(
+                "sparse rigid command index count exceeds rigid count");
+        if (indexCount == 0)
+            return;
+        applyCount = static_cast<uint32_t>(indexCount);
+        auto* scratch = static_cast<unsigned char*>(_rigidScratchBuffer);
+        gpuIndices = reinterpret_cast<PxRigidDynamicGPUIndex*>(scratch);
+        commandBuffer = scratch + sizeof(PxRigidDynamicGPUIndex) * applyCount;
+        PhysicsGpuKernels::packSparseRigidCommandCUDA(
+            *indices, _rigidIndexBuffer,
+            torque ? _rigidTorqueBuffer : _rigidForceBuffer, gpuIndices,
+            commandBuffer, _rigidCount, _streamHandle);
+    }
+
+    checkCuda(cudaEventRecord(startEvent, stream),
+              torque ? "cudaEventRecord(apply rigid torque)"
+                     : "cudaEventRecord(apply rigid force)");
+
+    const auto writeType = torque ? PxRigidDynamicGPUAPIWriteType::eTORQUE
+                                  : PxRigidDynamicGPUAPIWriteType::eFORCE;
+    if (!directGpuApi.setRigidDynamicData(commandBuffer, gpuIndices, writeType,
+                                          applyCount, physxStartEvent,
+                                          physxFinishEvent))
+        throw std::runtime_error(
+            torque ? "PxDirectGPUAPI::setRigidDynamicData(torque) failed"
+                   : "PxDirectGPUAPI::setRigidDynamicData(force) failed");
+    checkCuda(cudaStreamWaitEvent(stream, finishEvent, 0),
+              torque ? "cudaStreamWaitEvent(apply rigid torque)"
+                     : "cudaStreamWaitEvent(apply rigid force)");
+    ++view.version;
+#endif
+#else
+    notImplemented(torque ? "applyRigidTorque" : "applyRigidForce");
+#endif
+}
+
 void PhysicsGpuSystem::releaseGpuBuffers() {
 #ifdef KANGENGINE_USE_CUDA
     cudaSetDevice(_config.cudaDeviceId);
@@ -444,6 +581,7 @@ void PhysicsGpuSystem::releaseGpuBuffers() {
     _rigidMirrorBuffer = nullptr;
     _rigidForceBuffer = nullptr;
     _rigidTorqueBuffer = nullptr;
+    _rigidRows.clear();
     _copyEvent = nullptr;
     _readyEvent = nullptr;
     _views.rigidData = {};
