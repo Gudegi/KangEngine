@@ -3,6 +3,8 @@
 ///
 
 #include "sim/gpu_array_view.hpp"
+#include "physics/sim_model.hpp"
+#include "py_array_view.hpp"
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -33,13 +35,6 @@ const char* simDTypeTypestr(KE::Sim::SimDType dtype) {
         return "";
     }
     return "";
-}
-
-py::tuple intVectorTuple(const std::vector<int64_t>& values) {
-    py::tuple result(values.size());
-    for (size_t i = 0; i < values.size(); ++i)
-        result[i] = values[i];
-    return result;
 }
 
 py::dict cudaArrayInterface(const KE::Sim::GpuArrayView& view) {
@@ -81,9 +76,9 @@ void bind_sim(py::module& m) {
     using namespace KE::Sim;
 
     py::enum_<SimMemoryType>(m, "SimMemoryType")
-        .value("CPU_HOST", SimMemoryType::CpuHost)
-        .value("CPU_PINNED", SimMemoryType::CpuPinned)
-        .value("CUDA_DEVICE", SimMemoryType::CudaDevice)
+        .value("CPU_HOST", SimMemoryType::CPUHost)
+        .value("CPU_PINNED", SimMemoryType::CPUPinned)
+        .value("CUDA_DEVICE", SimMemoryType::CUDADevice)
         .value("OPENGL_BUFFER", SimMemoryType::OpenGLBuffer)
         .value("VULKAN_BUFFER", SimMemoryType::VulkanBuffer)
         .value("WEBGPU_BUFFER", SimMemoryType::WebGPUBuffer)
@@ -137,4 +132,84 @@ void bind_sim(py::module& m) {
         .def_property_readonly("byte_size", &GpuArrayView::byteSize)
         .def_property_readonly("__cuda_array_interface__",
                                &cudaArrayInterface);
+
+    py::class_<KE::SimModel>(
+        m, "SimModel",
+        "Low-level C++ simulation topology used by renderer batch paths.")
+        .def(py::init<>())
+        .def("set_body_renderables", &KE::SimModel::setBodyRenderables)
+        .def("add_shape",
+             [](KE::SimModel& self, int bodyId, KE::RenderableHandle renderable,
+                py::sequence localPos, py::sequence localRot,
+                const std::string& name) {
+                 return self.addShape(bodyId, renderable,
+                                      vec3FromSequence(localPos),
+                                      quatFromXYZWSequence(localRot), name);
+             },
+             py::arg("body_id"), py::arg("renderable"),
+             py::arg("local_pos") = py::make_tuple(0.0f, 0.0f, 0.0f),
+             py::arg("local_rot") = py::make_tuple(0.0f, 0.0f, 0.0f, 1.0f),
+             py::arg("name") = "")
+        .def("add_object_boundary", &KE::SimModel::addObjectBoundary,
+             py::arg("body_start"), py::arg("body_count"),
+             py::arg("name") = "")
+        .def_property_readonly("body_count", &KE::SimModel::bodyCount)
+        .def_property_readonly("shape_count", &KE::SimModel::shapeCount)
+        .def("is_valid", &KE::SimModel::isValid)
+        .def_readwrite("body_names", &KE::SimModel::bodyNames)
+        .def_readwrite("shape_names", &KE::SimModel::shapeNames)
+        .def_readwrite("object_names", &KE::SimModel::objectNames);
+
+    py::class_<KE::SimState>(
+        m, "SimState",
+        "Low-level C++ simulation state used by renderer batch paths.")
+        .def(py::init<>())
+        .def("resize", &KE::SimState::resize)
+        .def("body_index", &KE::SimState::bodyIndex)
+        .def("set_body_transform",
+             [](KE::SimState& self, int envId, int bodyId, py::sequence pos,
+                py::sequence rot) {
+                 self.setBodyTransform(envId, bodyId, vec3FromSequence(pos),
+                                       quatFromXYZWSequence(rot));
+             },
+             py::arg("env_id"), py::arg("body_id"), py::arg("pos"),
+             py::arg("rot"))
+        .def("get_body_pos",
+             [](const KE::SimState& self, int envId, int bodyId) {
+                 return vec3Tuple(self.bodyPos[static_cast<size_t>(
+                     self.bodyIndex(envId, bodyId))]);
+             })
+        .def("get_body_rot",
+             [](const KE::SimState& self, int envId, int bodyId) {
+                 return quatXYZWTuple(self.bodyRot[static_cast<size_t>(
+                     self.bodyIndex(envId, bodyId))]);
+             })
+        .def("body_matrix",
+             [](const KE::SimState& self, int envId, int bodyId) {
+                 return mat4Tuple(self.bodyMatrix(envId, bodyId));
+             })
+        .def_readonly("num_envs", &KE::SimState::numEnvs)
+        .def_readonly("num_bodies", &KE::SimState::numBodies);
+
+    py::class_<KE::SimVisualBatch>(
+        m, "SimVisualBatch",
+        "Low-level C++ SimState-to-renderable transform batch.")
+        .def(py::init<>())
+        .def("clear", &KE::SimVisualBatch::clear)
+        .def("set_model",
+             [](KE::SimVisualBatch& self, const KE::SimModel& model) {
+                 self.setModel(&model);
+             })
+        .def("prepare_from_state", &KE::SimVisualBatch::prepareFromState)
+        .def_property_readonly("renderable_count",
+                               &KE::SimVisualBatch::renderableCount)
+        .def("renderable", &KE::SimVisualBatch::renderable)
+        .def("transforms",
+             [](const KE::SimVisualBatch& self, int shapeId) {
+                 return mat4List(self.transforms(shapeId));
+             })
+        .def("external_transform_desc",
+             &KE::SimVisualBatch::externalTransformDesc,
+             py::arg("shape_id"), py::arg("version"),
+             py::arg("name") = "sim_visual_batch_transforms");
 }

@@ -60,7 +60,7 @@ void PhysicsBridge::sync() {
         v.prim->setWorldMatrix(pxToMat4(pose));
     }
 
-    // Handle-based instanced: collect N transforms per body, upload to VBO
+    // Handle-based instanced: collect N transforms per body, expose as external buffers
     assert((_instancedGroups.empty() || _app) &&
            "App* required for instanced sync — pass it to PhysicsBridge ctor");
     for (auto& grp : _instancedGroups) {
@@ -98,10 +98,13 @@ void PhysicsBridge::fillSimStateFromPhysX(InstancedGroup& group) {
 
 void PhysicsBridge::uploadSimVisualBatch(InstancedGroup& group) {
     group.visualBatch.prepareFromState(group.state);
+    ++group.transformVersion;
     for (int shapeId = 0; shapeId < group.visualBatch.renderableCount();
          ++shapeId) {
-        _app->updateRenderableTransforms(group.visualBatch.renderable(shapeId),
-                                         group.visualBatch.transforms(shapeId));
+        auto desc = group.visualBatch.externalTransformDesc(
+            shapeId, group.transformVersion, "physics_bridge_transforms");
+        _app->setRenderableExternalBuffer(group.visualBatch.renderable(shapeId),
+                                          desc);
     }
 }
 

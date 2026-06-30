@@ -1,10 +1,13 @@
 #include "physics/physics.hpp"
 #include "physics/physics_gpu_system.hpp"
+#include "sim/gpu_transform_kernels.hpp"
 
 #include <cmath>
 #include <fmt/base.h>
 #include <PxActor.h>
+#include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <stdexcept>
 #include <vector>
 
@@ -113,6 +116,44 @@ int main() {
         maxVelocityError = std::max(maxVelocityError,
                                     absDiff(host[row + 9], expectedVelocity.z));
     }
+    Sim::CUDAExternalTransformBuffer transformBuffer(
+        static_cast<int>(actorCount), gpuConfig.cudaDeviceId,
+        "physx_gpu_step_smoke_transforms");
+    Sim::launchRigidStateToMat4CUDA(view, transformBuffer.view(),
+                                    static_cast<int>(actorCount));
+    transformBuffer.incrementVersion();
+    if (cudaDeviceSynchronize() != cudaSuccess)
+        throw std::runtime_error(
+            "cudaDeviceSynchronize after rigid state to mat4 failed");
+
+    std::vector<float> transformHost(static_cast<size_t>(actorCount) * 16);
+    if (cudaMemcpy(transformHost.data(), transformBuffer.view().data,
+                   sizeof(float) * transformHost.size(),
+                   cudaMemcpyDeviceToHost) != cudaSuccess)
+        throw std::runtime_error("cudaMemcpy transform data failed");
+
+    float maxTransformError = 0.0f;
+    for (PxU32 i = 0; i < actorCount; ++i) {
+        const size_t row = static_cast<size_t>(i) * 13;
+        const glm::vec3 pos(host[row + 0], host[row + 1], host[row + 2]);
+        const glm::quat rot(host[row + 6], host[row + 3], host[row + 4],
+                            host[row + 5]);
+        const glm::mat4 expected =
+            glm::translate(glm::mat4(1.0f), pos) * glm::mat4_cast(rot);
+        const float* expectedData = glm::value_ptr(expected);
+        const size_t matrix = static_cast<size_t>(i) * 16;
+        for (size_t component = 0; component < 16; ++component) {
+            maxTransformError = std::max(
+                maxTransformError,
+                absDiff(transformHost[matrix + component],
+                        expectedData[component]));
+        }
+    }
+    fmt::print("  mat4 err    : {}\n", maxTransformError);
+    if (maxTransformError > 1e-4f)
+        throw std::runtime_error(
+            "CUDA rigid state to Mat4 transform does not match CPU layout");
+
     fmt::print("  max pos err : {}\n", maxPositionError);
     fmt::print("  max quat err: {}\n", maxQuatError);
     fmt::print("  max vel err : {}\n", maxVelocityError);

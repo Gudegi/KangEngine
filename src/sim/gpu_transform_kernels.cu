@@ -4,6 +4,7 @@
 
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 namespace KE {
 namespace Sim {
@@ -60,7 +61,52 @@ __global__ void rigidStateToMat4Kernel(const float* rigidState, float* out,
 
 } // namespace
 
-// rigidState to transforms to render 
+
+CUDAExternalTransformBuffer::CUDAExternalTransformBuffer(
+    int count, int deviceId, std::string name) {
+    allocate(count, deviceId, std::move(name));
+}
+
+CUDAExternalTransformBuffer::~CUDAExternalTransformBuffer() { release(); }
+
+void CUDAExternalTransformBuffer::allocate(int count, int deviceId,
+                                             std::string name) {
+    if (count < 0)
+        throw std::runtime_error(
+            "CUDAExternalTransformBuffer count cannot be negative");
+    release();
+    if (count == 0)
+        return;
+
+    checkCUDA(cudaSetDevice(deviceId),
+              "cudaSetDevice(CUDAExternalTransformBuffer)");
+    void* data = nullptr;
+    checkCUDA(cudaMalloc(&data, sizeof(float) * static_cast<size_t>(count) * 16),
+              "cudaMalloc(CUDAExternalTransformBuffer)");
+
+    _count = count;
+    _view.data = data;
+    _view.memoryType = SimMemoryType::CUDADevice;
+    _view.dtype = SimDType::Float32;
+    _view.lifetime = SimLifetimePolicy::ExternalOwner;
+    _view.deviceId = deviceId;
+    _view.shape = {count, 4, 4};
+    _view.strides = {16, 4, 1};
+    _view.name = std::move(name);
+}
+
+void CUDAExternalTransformBuffer::release() {
+    if (_view.data)
+        cudaFree(_view.data);
+    _count = 0;
+    _view = {};
+}
+
+uint64_t CUDAExternalTransformBuffer::incrementVersion() {
+    return ++_view.version;
+}
+
+// Convert PhysX rigid state rows into renderer Mat4 transforms.
 void launchRigidStateToMat4CUDA(const GpuArrayView& rigidState,
                                 GpuArrayView& transforms, int count) {
     if (!rigidState.isCUDA() || !transforms.isCUDA())

@@ -277,6 +277,8 @@ class App {
                                     const float* transforms,
                                     const float* colors, size_t count,
                                     size_t colorCount);
+    void setRenderableExternalBuffer(RenderableHandle handle,
+                                     const ExternalBufferDesc& desc);
     void setRenderableColors(RenderableHandle handle,
                              const std::vector<glm::vec4>& colors);
     void setRenderableColors(RenderableHandle handle, const float* colors,

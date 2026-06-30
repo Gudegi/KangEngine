@@ -57,30 +57,18 @@ class RenderablePrimView:
         sync_policy=None,
     ):
         """Use a float32 column-major ``[N, 4, 4]`` transform buffer."""
-        from .utils.sim_buffer import SimBuffer, as_sim_buffer, to_gpu_array_view
+        from .utils.sim_buffer import to_external_transform_desc
 
-        buffer = (
-            transforms
-            if isinstance(transforms, SimBuffer)
-            else as_sim_buffer(
-                transforms,
-                sim_device=sim_device,
-                dtype="float32",
-            )
-        )
-        if buffer.shape is None or len(buffer.shape) != 3:
-            raise ValueError("transform buffer must have shape [N, 4, 4]")
-        if tuple(int(dim) for dim in buffer.shape[1:]) != (4, 4):
-            raise ValueError("transform buffer must have shape [N, 4, 4]")
-
-        descriptor = _ke.ExternalBufferDesc()
-        descriptor.view = to_gpu_array_view(buffer, name=f"{self.path}:transforms")
-        descriptor.format = _ke.ExternalBufferFormat.MAT4
-        descriptor.count = int(buffer.shape[0])
-        descriptor.sync_policy = (
-            _ke.ExternalSyncPolicy.NONE
-            if sync_policy is None
-            else sync_policy
+        descriptor, buffer = to_external_transform_desc(
+            transforms,
+            sim_device=sim_device,
+            dtype="float32",
+            name=f"{self.path}:transforms",
+            sync_policy=(
+                _ke.ExternalSyncPolicy.NONE
+                if sync_policy is None
+                else sync_policy
+            ),
         )
 
         renderer = self._app.get_renderer()

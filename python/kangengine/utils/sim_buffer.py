@@ -246,3 +246,49 @@ def to_gpu_array_view(
     view.ready_event_handle = int(buffer.ready_event_handle)
     view.name = name
     return view
+
+
+def to_external_transform_desc(
+    value,
+    *,
+    shape=None,
+    sim_device=None,
+    dtype=torch.float32,
+    name="",
+    version=None,
+    sync_policy=None,
+):
+    """Build an ExternalBufferDesc for float32 column-major [N, 4, 4] transforms."""
+    from .._core import _ke
+
+    buffer = (
+        value
+        if isinstance(value, SimBuffer)
+        else as_sim_buffer(
+            value,
+            shape=shape,
+            sim_device=sim_device,
+            dtype=dtype,
+        )
+    )
+    if len(buffer.shape) != 3 or tuple(
+        int(dim) for dim in buffer.shape[1:]
+    ) != (4, 4):
+        raise ValueError("transform buffer must have shape [N, 4, 4]")
+
+    view = to_gpu_array_view(buffer, name=name)
+    if version is not None:
+        view.version = int(version)
+
+    desc = _ke.ExternalBufferDesc()
+    desc.view = view
+    desc.format = _ke.ExternalBufferFormat.MAT4
+    desc.count = int(buffer.shape[0])
+    desc.stride_bytes = 0
+    desc.sync_policy = (
+        _ke.ExternalSyncPolicy.VERSIONED
+        if sync_policy is None
+        else sync_policy
+    )
+    return desc, buffer
+

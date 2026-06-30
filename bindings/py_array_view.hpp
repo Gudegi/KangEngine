@@ -9,6 +9,7 @@
 #include <glm/glm.hpp>
 #include <array>
 #include <cstring>
+#include <string>
 #include <vector>
 
 namespace py = pybind11;
@@ -72,6 +73,13 @@ inline py::array_t<float> floatArrayFromVector(const std::vector<float>& values)
     return array;
 }
 
+inline py::tuple intVectorTuple(const std::vector<int64_t>& values) {
+    py::tuple result(values.size());
+    for (size_t i = 0; i < values.size(); ++i)
+        result[i] = values[i];
+    return result;
+}
+
 inline py::array_t<float>
 floatArrayFromVec2Vector(const std::vector<std::array<float, 2>>& values) {
     py::array_t<float> array(
@@ -82,6 +90,48 @@ floatArrayFromVec2Vector(const std::vector<std::array<float, 2>>& values) {
         view(i, 1) = values[static_cast<size_t>(i)][1];
     }
     return array;
+}
+
+inline glm::vec3 vec3FromSequence(const py::sequence& values,
+                                  const char* name = "vec3") {
+    if (py::len(values) != 3)
+        throw py::value_error(std::string(name) +
+                              " input must have exactly 3 values");
+    return glm::vec3(values[0].cast<float>(), values[1].cast<float>(),
+                     values[2].cast<float>());
+}
+
+inline glm::quat quatFromXYZWSequence(const py::sequence& values,
+                                      const char* name = "quat") {
+    if (py::len(values) != 4)
+        throw py::value_error(std::string(name) +
+                              " input must have exactly 4 xyzw values");
+    return glm::quat(values[3].cast<float>(), values[0].cast<float>(),
+                     values[1].cast<float>(), values[2].cast<float>());
+}
+
+inline py::tuple vec3Tuple(const glm::vec3& value) {
+    return py::make_tuple(value.x, value.y, value.z);
+}
+
+inline py::tuple quatXYZWTuple(const glm::quat& value) {
+    return py::make_tuple(value.x, value.y, value.z, value.w);
+}
+
+inline py::tuple mat4Tuple(const glm::mat4& value) {
+    py::tuple result(16);
+    for (int col = 0; col < 4; ++col) {
+        for (int row = 0; row < 4; ++row)
+            result[static_cast<size_t>(col * 4 + row)] = value[col][row];
+    }
+    return result;
+}
+
+inline py::list mat4List(const std::vector<glm::mat4>& matrices) {
+    py::list result;
+    for (const glm::mat4& matrix : matrices)
+        result.append(mat4Tuple(matrix));
+    return result;
 }
 
 inline Vec3ArrayView vec3ArrayView(const FloatArray& array, const char* name) {

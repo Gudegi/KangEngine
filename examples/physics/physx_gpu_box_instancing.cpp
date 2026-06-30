@@ -45,11 +45,9 @@ class GpuBoxInstancingApp : public App {
     RenderableHandle _boxHandle = InvalidHandle;
     std::vector<glm::vec4> _colors;
     std::vector<float> _resetRigidHost;
-    Sim::GpuArrayView _cudaTransformView;
+    Sim::CUDAExternalTransformBuffer _cudaTransforms;
     ExternalBufferDesc _transformBufferDesc;
     bool _transformBufferDescReady = false;
-    uint64_t _transformVersion = 0;
-    void* _cudaTransformBuffer = nullptr;
     bool paused = false;
     bool noiseEnabled = true;
     bool spaceWasDown = false;
@@ -182,21 +180,10 @@ class GpuBoxInstancingApp : public App {
     }
 
     void initTransformBufferDesc() {
-        checkCuda(cudaMalloc(&_cudaTransformBuffer,
-                             sizeof(float) * static_cast<size_t>(NUM_BOXES) *
-                                 16),
-                  "cudaMalloc(transform mat4 buffer)");
-
-        _cudaTransformView.data = _cudaTransformBuffer;
-        _cudaTransformView.memoryType = Sim::SimMemoryType::CUDADevice;
-        _cudaTransformView.dtype = Sim::SimDType::Float32;
-        _cudaTransformView.lifetime = Sim::SimLifetimePolicy::ExternalOwner;
-        _cudaTransformView.deviceId = 0;
-        _cudaTransformView.shape = {NUM_BOXES, 4, 4};
-        _cudaTransformView.strides = {16, 4, 1};
-        _cudaTransformView.name = "gpu_box_world_transforms_cuda";
+        _cudaTransforms.allocate(NUM_BOXES, 0,
+                                  "gpu_box_world_transforms_cuda");
         _transformBufferDesc =
-            makeExternalMat4BufferDesc(_cudaTransformView, NUM_BOXES);
+            makeExternalMat4BufferDesc(_cudaTransforms.view(), NUM_BOXES);
         _transformBufferDescReady = true;
     }
 
@@ -220,12 +207,11 @@ class GpuBoxInstancingApp : public App {
 
         if (!_transformBufferDescReady)
             initTransformBufferDesc();
-        Sim::launchRigidStateToMat4CUDA(rigidView, _cudaTransformView,
+        Sim::launchRigidStateToMat4CUDA(rigidView, _cudaTransforms.view(),
                                         NUM_BOXES);
-        _cudaTransformView.version = ++_transformVersion;
-        _transformBufferDesc.view = _cudaTransformView;
-        getRenderer().setRenderableExternalBuffer(_boxHandle,
-                                                  _transformBufferDesc);
+        _cudaTransforms.incrementVersion();
+        _transformBufferDesc.view = _cudaTransforms.view();
+        setRenderableExternalBuffer(_boxHandle, _transformBufferDesc);
     }
 
     void preRender() override {
@@ -252,11 +238,6 @@ class GpuBoxInstancingApp : public App {
             uploadGpuTransforms();
         }
         checkError();
-    }
-
-    ~GpuBoxInstancingApp() override {
-        if (_cudaTransformBuffer)
-            cudaFree(_cudaTransformBuffer);
     }
 
     void render() override {

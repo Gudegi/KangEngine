@@ -9,6 +9,7 @@
 #include <glm/vec3.hpp>
 
 #include <cassert>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -38,19 +39,24 @@ struct SimModel {
         shapeRenderables.clear();
         objectBodyStart.clear();
         objectBodyCount.clear();
+        bodyNames.clear();
         shapeNames.clear();
+        objectNames.clear();
         for (int i = 0; i < static_cast<int>(handles.size()); ++i)
             addShape(i, handles[static_cast<size_t>(i)]);
         addObjectBoundary(0, numBodies);
-        assert(isValid() && "SimModel setBodyRenderables produced invalid data");
+        if (!isValid())
+            throw std::runtime_error(
+                "SimModel setBodyRenderables produced invalid data");
     }
 
     int addShape(int bodyId, RenderableHandle renderable,
                  const glm::vec3& localPos = glm::vec3(0.0f),
-                 const glm::quat& localRot =
-                     glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+                 const glm::quat& localRot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
                  const std::string& name = {}) {
-        assert(bodyId >= 0 && "SimModel shape body index must be non-negative");
+        if (bodyId < 0)
+            throw std::invalid_argument(
+                "SimModel shape body index must be non-negative");
         if (bodyId >= numBodies)
             numBodies = bodyId + 1;
         shapeBody.push_back(bodyId);
@@ -63,17 +69,19 @@ struct SimModel {
 
     int addObjectBoundary(int bodyStart, int bodyCount,
                           const std::string& name = {}) {
-        assert(bodyStart >= 0 && bodyCount >= 0 &&
-               "SimModel object boundary must be non-negative");
+        if (bodyStart < 0 || bodyCount < 0)
+            throw std::invalid_argument(
+                "SimModel object boundary must be non-negative");
+        if (bodyStart + bodyCount > numBodies)
+            throw std::out_of_range(
+                "SimModel object boundary exceeds body count");
         objectBodyStart.push_back(bodyStart);
         objectBodyCount.push_back(bodyCount);
         objectNames.push_back(name);
         return static_cast<int>(objectBodyStart.size()) - 1;
     }
 
-    int bodyCount() const {
-        return numBodies;
-    }
+    int bodyCount() const { return numBodies; }
 
     int shapeCount() const { return static_cast<int>(shapeRenderables.size()); }
 
@@ -118,10 +126,10 @@ struct SimState {
     }
 
     int bodyIndex(int envId, int bodyId) const {
-        assert(envId >= 0 && envId < numEnvs &&
-               "SimState env index out of range");
-        assert(bodyId >= 0 && bodyId < numBodies &&
-               "SimState body index out of range");
+        if (envId < 0 || envId >= numEnvs)
+            throw std::out_of_range("SimState env index out of range");
+        if (bodyId < 0 || bodyId >= numBodies)
+            throw std::out_of_range("SimState body index out of range");
         return envId * numBodies + bodyId;
     }
 
@@ -141,28 +149,37 @@ struct SimState {
 };
 
 // Converts SimState body transforms into per-renderable instance transform
-// arrays.  Renderer upload still happens outside this class for now.
+// arrays and exposes them as renderer ExternalBuffer descriptors.
 class SimVisualBatch {
   public:
+    void clear() {
+        _shapeBody.clear();
+        _shapeLocalPos.clear();
+        _shapeLocalRot.clear();
+        _renderables.clear();
+        _renderableTransforms.clear();
+    }
+
     void setModel(const SimModel* model) {
         if (!model) {
-            _shapeBody.clear();
-            _shapeLocalPos.clear();
-            _shapeLocalRot.clear();
-            _renderables.clear();
+            clear();
             return;
         }
         _shapeBody = model->shapeBody;
         _shapeLocalPos = model->shapeLocalPos;
         _shapeLocalRot = model->shapeLocalRot;
         _renderables = model->shapeRenderables;
-        assert(model->isValid() && "SimVisualBatch received invalid SimModel");
+        _renderableTransforms.clear();
+        if (!model->isValid())
+            throw std::invalid_argument(
+                "SimVisualBatch received invalid SimModel");
     }
 
     void prepareFromState(const SimState& state) {
         if (_renderables.empty()) {
-            assert(state.numBodies == 0 &&
-                   "SimVisualBatch requires a SimModel before prepareFromState");
+            assert(
+                state.numBodies == 0 &&
+                "SimVisualBatch requires a SimModel before prepareFromState");
             _renderableTransforms.clear();
             return;
         }
@@ -176,8 +193,9 @@ class SimVisualBatch {
 
         for (int shapeId = 0; shapeId < shapeCount; ++shapeId) {
             const int bodyId = _shapeBody[static_cast<size_t>(shapeId)];
-            assert(bodyId >= 0 && bodyId < state.numBodies &&
-                   "SimVisualBatch shape body index is outside SimState");
+            if (bodyId < 0 || bodyId >= state.numBodies)
+                throw std::out_of_range(
+                    "SimVisualBatch shape body index is outside SimState");
             const glm::mat4 local =
                 glm::translate(glm::mat4(1.0f),
                                _shapeLocalPos[static_cast<size_t>(shapeId)]) *
@@ -196,16 +214,39 @@ class SimVisualBatch {
     }
 
     RenderableHandle renderable(int shapeId) const {
-        if (_renderables.empty())
-            return InvalidHandle;
+        validateShapeId(shapeId);
         return _renderables[static_cast<size_t>(shapeId)];
     }
 
     const std::vector<glm::mat4>& transforms(int shapeId) const {
+        validateShapeId(shapeId);
+        if (shapeId >= static_cast<int>(_renderableTransforms.size()))
+            throw std::runtime_error(
+                "SimVisualBatch transforms are not prepared for this shape");
         return _renderableTransforms[static_cast<size_t>(shapeId)];
     }
 
+    ExternalBufferDesc externalTransformDesc(
+        int shapeId, uint64_t version,
+        const std::string& name = "sim_visual_batch_transforms") const {
+        const auto& matrices = transforms(shapeId);
+        Sim::GpuArrayView view;
+        view.data = const_cast<glm::mat4*>(matrices.data());
+        view.memoryType = Sim::SimMemoryType::CPUHost;
+        view.lifetime = Sim::SimLifetimePolicy::ExternalOwner;
+        view.shape = {static_cast<int64_t>(matrices.size()), 4, 4};
+        view.version = version;
+        view.name = name;
+        return makeExternalMat4BufferDesc(view,
+                                          static_cast<int>(matrices.size()));
+    }
+
   private:
+    void validateShapeId(int shapeId) const {
+        if (shapeId < 0 || shapeId >= static_cast<int>(_renderables.size()))
+            throw std::out_of_range("SimVisualBatch shape index out of range");
+    }
+
     std::vector<int> _shapeBody;
     std::vector<glm::vec3> _shapeLocalPos;
     std::vector<glm::quat> _shapeLocalRot;

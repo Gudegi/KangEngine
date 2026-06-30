@@ -33,6 +33,7 @@ _LAZY_IMPORTS = {
     "resolve_device": (".tensor", "resolve_device"),
     "SimBuffer": (".sim_buffer", "SimBuffer"),
     "to_gpu_array_view": (".sim_buffer", "to_gpu_array_view"),
+    "to_external_transform_desc": (".sim_buffer", "to_external_transform_desc"),
     "quat_wxyz_conjugate": (".batched_rotations", "quat_wxyz_conjugate"),
     "quat_wxyz_from_angle_axis": (
         ".batched_rotations",
@@ -82,6 +83,7 @@ __all__ = [
     "as_tensor",
     "SimBuffer",
     "to_gpu_array_view",
+    "to_external_transform_desc",
     "quat_wxyz_conjugate",
     "quat_wxyz_from_angle_axis",
     "quat_wxyz_multiply",

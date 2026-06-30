@@ -1,7 +1,7 @@
 .PHONY: build build_cuda build_debug build_release build_relWithDebInfo \
         build_usd build_usd_debug build_python build_python_debug \
         build_python_cuda build_usd_python build_usd_python_debug \
-        validate_physx_gpu validate_physx_gpu_cpp \
+        validate_physx_gpu validate_physx_gpu_cpp validate_sim_visual_batch \
         docs docs_clean \
         run run2 run_debug run_release run_relWithDebInfo \
         clean_all clean_debug clean_release clean_relWithDebInfo
@@ -71,6 +71,9 @@ validate_physx_gpu: build_python_cuda
 
 validate_physx_gpu_cpp: build_cuda
 	./$(RELEASE_DIR)/physx_gpu_step_smoke
+
+validate_sim_visual_batch: build_python
+	PYTHONPATH=python $(PYTHON) python/examples/sim_visual_batch_smoke.py
 
 # USD + Python builds
 build_usd_python:

@@ -143,8 +143,9 @@ class RigidVisualView:
 class SimVisualBatch:
     """Viewer-side batch returned when one simulation view spans many envs.
 
-    This is a lightweight Python step toward the future SimVisualBatch fast
-    path. It groups per-env visual views without owning simulation state.
+    This groups per-env visual views without owning simulation state. The
+    low-level C++ transform batch is exposed separately as
+    ``kangengine.physics.SimVisualBatch``.
     """
 
     obj_id: int

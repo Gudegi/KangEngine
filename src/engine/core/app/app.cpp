@@ -795,6 +795,11 @@ void App::updateRenderableTransforms(RenderableHandle handle,
     getRenderer().updateRenderableTransforms(handle, transformVec, colorPtr);
 }
 
+void App::setRenderableExternalBuffer(RenderableHandle handle,
+                                      const ExternalBufferDesc& desc) {
+    getRenderer().setRenderableExternalBuffer(handle, desc);
+}
+
 void App::setRenderableColors(RenderableHandle handle,
                               const std::vector<glm::vec4>& colors) {
     getRenderer().setRenderableColors(handle, colors);
