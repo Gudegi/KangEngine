@@ -1,4 +1,4 @@
-.PHONY: build build_cuda build_debug build_release build_relWithDebInfo \
+.PHONY: build build_all build_cuda build_current build_debug build_release build_relWithDebInfo \
         build_usd build_usd_debug build_python build_python_debug \
         build_python_cuda build_usd_python build_usd_python_debug \
         validate_physx_gpu validate_physx_gpu_cpp validate_sim_visual_batch \
@@ -12,10 +12,15 @@ DEBUG_DIR := $(BUILD_DIR)/debug
 REL_DIR := $(BUILD_DIR)/relWithDebInfo
 EXECUTABLE := KangEngine
 PYTHON ?= python/.venv/bin/python
+UNAME_S := $(shell uname -s)
 DEFAULT_CMAKE_FLAGS := -DUSE_CUDA_INTEROP=OFF
 CUDA_TOOLKIT_ROOT ?= /usr/local/cuda
 PHYSX_CUDA_BIN_PLATFORM ?= linux.x86_64
 CUDA_INTEROP_CMAKE_FLAGS := -DUSE_CUDA_INTEROP=ON -DCUDAToolkit_ROOT=$(CUDA_TOOLKIT_ROOT) -DCUDAToolkit_NVCC_EXECUTABLE=$(CUDA_TOOLKIT_ROOT)/bin/nvcc -DPHYSX_BIN_PLATFORM=$(PHYSX_CUDA_BIN_PLATFORM)
+
+# Easy workflow
+# 1. make build_all
+# 2. make run2
 
 # configure + build + copy compile_commands
 # $(1): preset, $(2): build dir, $(3): extra cmake flags
@@ -35,8 +40,19 @@ endef
 build:
 	$(call do_build,vcpkg,$(RELEASE_DIR),)
 
+ifeq ($(UNAME_S),Linux)
+build_all:
+	$(call do_cuda_build,vcpkg,$(RELEASE_DIR),-DUSE_USD=ON -DIS_PYTHON_LIB=ON)
+else
+build_all:
+	$(call do_build,vcpkg,$(RELEASE_DIR),-DUSE_USD=ON -DIS_PYTHON_LIB=ON)
+endif
+
 build_cuda:
 	$(call do_cuda_build,vcpkg,$(RELEASE_DIR),)
+
+build_current:
+	cmake --build $(RELEASE_DIR)
 
 # Debug build
 build_debug:
@@ -95,8 +111,8 @@ docs_clean:
 # Run commands
 run: run_release
 
-run2:
-	cmake --build ./build/release
+# Build and run
+run2: build_current
 	$(MAKE) run_release
 
 run_debug:
