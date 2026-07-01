@@ -5,11 +5,14 @@
 #include <Eigen/Geometry>
 #include <extensions/PxRigidBodyExt.h>
 #include <algorithm>
+#include <limits>
 #include <stdexcept>
 #include <utility>
 
 namespace KE {
 namespace {
+
+constexpr PxU32 kInvalidLinkIndex = std::numeric_limits<PxU32>::max();
 
 PxQuat toPxQuat(const Eigen::Quaternionf& q) {
     return PxQuat(q.x(), q.y(), q.z(), q.w());
@@ -321,6 +324,19 @@ std::vector<float> Articulation::getLinkAngularVelocitiesFlat() const {
         out.insert(out.end(), {v.x, v.y, v.z});
     }
     return out;
+}
+
+std::vector<int> Articulation::getLinkIndices() const {
+    std::vector<int> result;
+    result.reserve(_links.size());
+    for (const auto* link : _links) {
+        const PxU32 index = link ? link->getLinkIndex() : kInvalidLinkIndex;
+        if (index == kInvalidLinkIndex)
+            throw std::runtime_error(
+                "articulation link index is unavailable before scene insertion");
+        result.push_back(static_cast<int>(index));
+    }
+    return result;
 }
 
 std::vector<float> Articulation::getDofPositions() const {

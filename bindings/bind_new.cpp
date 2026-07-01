@@ -793,6 +793,16 @@ PYBIND11_MODULE(_kangengine, m) {
              &Renderer::setRenderableExternalBuffer, py::arg("handle"),
              py::arg("descriptor"),
              "Attach an external CPU/GPU transform buffer to a renderable.")
+        .def("map_renderable_cuda_transform_buffers",
+             &Renderer::mapRenderableCudaTransformBuffers,
+             py::arg("handles"), py::arg("count"), py::arg("device_id"),
+             py::arg("stream_handle") = 0,
+             "Map multiple renderable transform VBOs for direct CUDA writes.")
+        .def("unmap_renderable_cuda_transform_buffers",
+             &Renderer::unmapRenderableCudaTransformBuffers,
+             py::arg("handles"), py::arg("device_id"),
+             py::arg("stream_handle") = 0,
+             "Unmap transform VBOs after direct CUDA writes.")
         .def("set_renderable_double_sided", &Renderer::setRenderableDoubleSided,
              py::arg("handle"), py::arg("double_sided") = true,
              "Enable or disable double-sided rendering for a renderable.")

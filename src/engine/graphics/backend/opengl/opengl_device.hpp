@@ -39,9 +39,11 @@ class OpenGLBuffer : public Buffer {
     bool setExternalData(const Sim::GpuArrayView& view, size_t count,
                          size_t elementSize,
                          size_t sourceStrideBytes) override;
+    cudaGraphicsResource* cudaResource();
 #endif
     BufferType getType() const override { return _type; }
     GLuint getHandle() const { return _buffer; }
+    size_t size() const { return _size; }
 };
 
 class OpenGLShader : public Shader {
@@ -252,6 +254,14 @@ class OpenGLDevice : public GraphicsDevice {
                   float maxFilterParam = GL_LINEAR) override;
     std::unique_ptr<Framebuffer>
     createFramebuffer(const FramebufferDesc& desc) override;
+#ifdef KANGENGINE_USE_CUDA_GL_INTEROP
+    bool mapCudaBuffers(const std::vector<Buffer*>& buffers,
+                        std::vector<Sim::GpuArrayView>& views, size_t count,
+                        size_t elementSize, int deviceId,
+                        uint64_t streamHandle) override;
+    void unmapCudaBuffers(const std::vector<Buffer*>& buffers, int deviceId,
+                          uint64_t streamHandle) override;
+#endif
 
     void bindUniformBuffer(Buffer* buffer, int slot) override;
 

@@ -2,6 +2,7 @@
 
 import os as _os
 from pathlib import Path as _Path
+from typing import TYPE_CHECKING as _TYPE_CHECKING
 
 _assets_dir = _Path(__file__).resolve().parent / "assets"
 if _assets_dir.exists():
@@ -62,6 +63,22 @@ _LAZY_IMPORTS = {
         "install_mimickit_engine_builder",
     ),
 }
+
+if _TYPE_CHECKING:
+    from .sim import (
+        ControlMode,
+        KangSimWorld,
+        SimArticulation,
+        SimArticulationView,
+        SimDevice,
+        SimRigid,
+        SimRigidView,
+    )
+    from .mimickit_engine import (
+        KangEngineEngine,
+        build_engine as build_mimickit_engine,
+        install_mimickit_engine_builder,
+    )
 
 
 def __getattr__(name):

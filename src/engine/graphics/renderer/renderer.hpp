@@ -77,6 +77,12 @@ class Renderer {
                                const std::vector<glm::vec4>* colors = nullptr);
     void setRenderableExternalBuffer(RenderableHandle handle,
                                      const ExternalBufferDesc& desc);
+    std::vector<Sim::GpuArrayView> mapRenderableCudaTransformBuffers(
+        const std::vector<RenderableHandle>& handles, int count, int deviceId,
+        uint64_t streamHandle);
+    void unmapRenderableCudaTransformBuffers(
+        const std::vector<RenderableHandle>& handles, int deviceId,
+        uint64_t streamHandle);
     bool getRenderableInstanceTransform(RenderableHandle handle,
                                         int instanceIndex,
                                         glm::mat4& outTransform) const;

@@ -231,6 +231,12 @@ class Rasterizer : public RenderPipeline {
                                const std::vector<glm::vec4>* colors = nullptr);
     void setRenderableExternalBuffer(RenderableHandle handle,
                                      const ExternalBufferDesc& desc);
+    std::vector<Sim::GpuArrayView> mapRenderableCudaTransformBuffers(
+        const std::vector<RenderableHandle>& handles, int count, int deviceId,
+        uint64_t streamHandle);
+    void unmapRenderableCudaTransformBuffers(
+        const std::vector<RenderableHandle>& handles, int deviceId,
+        uint64_t streamHandle);
 
     void setRenderableColors(RenderableHandle handle,
                              const std::vector<glm::vec4>& colors);

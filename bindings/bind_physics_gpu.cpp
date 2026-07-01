@@ -6,6 +6,7 @@
 #include <pybind11/stl.h>
 
 #ifdef KANGENGINE_USE_PHYSX
+#include "physics/articulation.hpp"
 #include "physics/physics.hpp"
 #include "physics/physics_gpu_system.hpp"
 #endif
@@ -64,6 +65,28 @@ void bind_physics_gpu(py::module& m) {
         .def("cuda_stream", &PhysicsGpuSystem::cudaStream)
         .def("rigid_row", &PhysicsGpuSystem::rigidRow, py::arg("rigid"),
              "Return the logical row used by PhysicsGpuSystem for a rigid.")
+        .def(
+            "articulation_row",
+            [](const PhysicsGpuSystem& self, Articulation& articulation) {
+                if (!articulation.raw())
+                    throw std::runtime_error(
+                        "articulation_row requires a valid articulation");
+                return self.articulationRow(*articulation.raw());
+            },
+            py::arg("articulation"),
+            "Return the logical row used by PhysicsGpuSystem for an "
+            "articulation.")
+        .def("articulation_link_count",
+             &PhysicsGpuSystem::articulationLinkCount,
+             py::arg("articulation_row"))
+        .def("articulation_dof_count",
+             &PhysicsGpuSystem::articulationDofCount,
+             py::arg("articulation_row"))
+        .def("articulation_count", &PhysicsGpuSystem::articulationCount)
+        .def("articulation_max_links",
+             &PhysicsGpuSystem::articulationMaxLinks)
+        .def("articulation_max_dofs",
+             &PhysicsGpuSystem::articulationMaxDofs)
         .def("step_start", &PhysicsGpuSystem::stepStart)
         .def("step_finish", &PhysicsGpuSystem::stepFinish)
         .def("rigid_data", &PhysicsGpuSystem::rigidData,
@@ -107,6 +130,8 @@ void bind_physics_gpu(py::module& m) {
              &PhysicsGpuSystem::fetchArticulationJointVelocities)
         .def("fetch_articulation_joint_accelerations",
              &PhysicsGpuSystem::fetchArticulationJointAccelerations)
+        .def("fetch_articulation_joint_forces",
+             &PhysicsGpuSystem::fetchArticulationJointForces)
         .def("fetch_articulation_target_joint_positions",
              &PhysicsGpuSystem::fetchArticulationTargetJointPositions)
         .def("fetch_articulation_target_joint_velocities",

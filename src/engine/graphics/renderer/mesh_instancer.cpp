@@ -290,6 +290,7 @@ void MeshInstancer::_updateTransparency() {
 
 void MeshInstancer::setColors(const std::vector<glm::vec4>& colors) {
     _colors = colors;
+    _colorsDirty = true;
     _updateTransparency();
     _uploadInstanceData(_transforms, _colors);
 }
@@ -322,9 +323,35 @@ void MeshInstancer::setExternalBuffer(const ExternalBufferDesc& desc) {
         _externalBufferDesc.syncPolicy == desc.syncPolicy;
     _externalBufferDesc = desc;
     _hasExternalBufferDesc = true;
+    _hasDirectCudaTransforms = false;
     if (!sameStorage)
         _externalBufferLoaded = false;
     _useExternalTransforms = false;
+}
+
+void MeshInstancer::prepareDirectCudaTransforms(int count) {
+    if (count < 0)
+        throw std::runtime_error(
+            "direct CUDA transform count cannot be negative");
+    _visibleCount = count;
+    const bool reallocated = _visibleCount > _allocatedInstances;
+    if (reallocated)
+        _reallocate(std::max(1, _visibleCount * 2));
+    const bool colorsResized = _colors.size() != static_cast<size_t>(count);
+    if (colorsResized)
+        _colors.assign(static_cast<size_t>(count), glm::vec4(1.0f));
+    if (count > 0 && (reallocated || colorsResized || _colorsDirty)) {
+        _colorVBO->setData(_colors.data(), sizeof(glm::vec4) * count);
+        _colorsDirty = false;
+    }
+    _transforms.clear();
+    _worldBounds.clear();
+    _combinedWorldBounds = Geometry::AABB::empty();
+    _hasExternalBufferDesc = false;
+    _externalBufferLoaded = false;
+    _useExternalTransforms = false;
+    _usesGpuExternalTransforms = true;
+    _hasDirectCudaTransforms = true;
 }
 
 void MeshInstancer::_consumeExternalBuffer() {
@@ -432,6 +459,11 @@ void MeshInstancer::_consumeExternalBuffer() {
 }
 
 void MeshInstancer::update() {
+    if (_hasDirectCudaTransforms) {
+        if (!_hasVisibleOwnerPrim())
+            _visibleCount = 0;
+        return;
+    }
     if (_hasExternalBufferDesc) {
         if (!_hasVisibleOwnerPrim()) {
             static const std::vector<glm::mat4> emptyTransforms;

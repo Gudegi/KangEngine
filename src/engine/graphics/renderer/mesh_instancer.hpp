@@ -64,6 +64,7 @@ class MeshInstancer {
     int _allocatedInstances = 0;
     int _visibleCount = 0;
     bool _hasTransparent = false;
+    bool _colorsDirty = false;
     bool _useExternalTransforms = false;
     bool _doubleSided = false;
     bool _castsShadow = true;
@@ -86,6 +87,7 @@ class MeshInstancer {
     bool _hasExternalBufferDesc = false;
     bool _externalBufferLoaded = false;
     bool _usesGpuExternalTransforms = false;
+    bool _hasDirectCudaTransforms = false;
     uint64_t _externalBufferVersion = 0;
 
     std::vector<Scene::Prim*> _prims;
@@ -143,6 +145,8 @@ class MeshInstancer {
     void updateFromTransforms(const std::vector<glm::mat4>& transforms,
                               const std::vector<glm::vec4>* colors = nullptr);
     void setExternalBuffer(const ExternalBufferDesc& desc);
+    void prepareDirectCudaTransforms(int count);
+    Backend::Buffer* transformBuffer() { return _transformVBO.get(); }
     bool hasExternalBuffer() const { return _hasExternalBufferDesc; }
     const ExternalBufferDesc& externalBuffer() const {
         return _externalBufferDesc;

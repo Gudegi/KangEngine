@@ -5,6 +5,8 @@
 #include <cmath>
 #include <fmt/base.h>
 #include <PxActor.h>
+#include <extensions/PxRigidActorExt.h>
+#include <extensions/PxRigidBodyExt.h>
 #include <algorithm>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -26,6 +28,35 @@ glm::quat zQuat(float angle) {
 }
 
 float absDiff(float a, float b) { return std::fabs(a - b); }
+
+PxArticulationReducedCoordinate* createFixedTestArticulation(
+    PhysicsWorld& world) {
+    auto* articulation =
+        world.getPhysics()->createArticulationReducedCoordinate();
+    articulation->setArticulationFlag(PxArticulationFlag::eFIX_BASE, true);
+
+    auto* root = articulation->createLink(
+        nullptr, PxTransform(PxVec3(0.0f, 4.0f, 0.0f)));
+    PxRigidActorExt::createExclusiveShape(
+        *root, PxBoxGeometry(0.1f, 0.1f, 0.1f), *world.getMaterial());
+    PxRigidBodyExt::updateMassAndInertia(*root, 1.0f);
+
+    auto* child = articulation->createLink(
+        root, PxTransform(PxVec3(0.0f, 4.0f, 1.0f)));
+    PxRigidActorExt::createExclusiveShape(
+        *child, PxBoxGeometry(0.1f, 0.1f, 0.1f), *world.getMaterial());
+    PxRigidBodyExt::updateMassAndInertia(*child, 1.0f);
+    auto* joint = static_cast<PxArticulationJointReducedCoordinate*>(
+        child->getInboundJoint());
+    joint->setJointType(PxArticulationJointType::eREVOLUTE);
+    joint->setParentPose(PxTransform(PxVec3(0.0f, 0.0f, 0.5f)));
+    joint->setChildPose(PxTransform(PxVec3(0.0f, 0.0f, -0.5f)));
+    joint->setMotion(PxArticulationAxis::eTWIST,
+                     PxArticulationMotion::eFREE);
+
+    world.getScene()->addArticulation(*articulation);
+    return articulation;
+}
 
 } // namespace
 
@@ -56,6 +87,7 @@ int main() {
         actor->wakeUp();
         actors.push_back(actor);
     }
+    auto* articulation = createFixedTestArticulation(world);
 
     GpuPhysicsConfig gpuConfig;
     gpuConfig.cudaDeviceId = 0;
@@ -79,6 +111,316 @@ int main() {
     if (cudaMemcpy(host.data(), view.data, sizeof(float) * host.size(),
                    cudaMemcpyDeviceToHost) != cudaSuccess)
         throw std::runtime_error("cudaMemcpy rigid data failed");
+
+    gpuSystem.fetchArticulationLinkPose();
+    const auto& linkView = gpuSystem.articulationLinkData();
+    if (linkView.shape.size() != 3 || linkView.shape.at(0) != 1 ||
+        linkView.shape.at(1) != 2 || linkView.shape.at(2) != 13)
+        throw std::runtime_error("unexpected articulation link data shape");
+    const uint32_t articulationRow = gpuSystem.articulationRow(*articulation);
+    if (articulationRow != 0 || gpuSystem.articulationCount() != 1 ||
+        gpuSystem.articulationMaxLinks() != 2 ||
+        gpuSystem.articulationLinkCount(articulationRow) != 2)
+        throw std::runtime_error("unexpected articulation GPU row metadata");
+    if (linkView.version != 1)
+        throw std::runtime_error(
+            "articulation link pose fetch did not advance the view version");
+    if (cudaDeviceSynchronize() != cudaSuccess)
+        throw std::runtime_error(
+            "cudaDeviceSynchronize after articulation link fetch failed");
+
+    std::vector<float> linkHost(2 * 13);
+    if (cudaMemcpy(linkHost.data(), linkView.data,
+                   sizeof(float) * linkHost.size(), cudaMemcpyDeviceToHost) !=
+        cudaSuccess)
+        throw std::runtime_error("cudaMemcpy articulation link data failed");
+    const PxVec3 expectedLinkPositions[2] = {
+        PxVec3(0.0f, 4.0f, 0.0f), PxVec3(0.0f, 4.0f, 1.0f)};
+    float maxLinkPositionError = 0.0f;
+    float maxLinkQuaternionError = 0.0f;
+    for (size_t link = 0; link < 2; ++link) {
+        const size_t row = link * 13;
+        maxLinkPositionError = std::max(
+            maxLinkPositionError,
+            absDiff(linkHost[row + 0], expectedLinkPositions[link].x));
+        maxLinkPositionError = std::max(
+            maxLinkPositionError,
+            absDiff(linkHost[row + 1], expectedLinkPositions[link].y));
+        maxLinkPositionError = std::max(
+            maxLinkPositionError,
+            absDiff(linkHost[row + 2], expectedLinkPositions[link].z));
+        maxLinkQuaternionError =
+            std::max(maxLinkQuaternionError, std::fabs(linkHost[row + 3]));
+        maxLinkQuaternionError =
+            std::max(maxLinkQuaternionError, std::fabs(linkHost[row + 4]));
+        maxLinkQuaternionError =
+            std::max(maxLinkQuaternionError, std::fabs(linkHost[row + 5]));
+        maxLinkQuaternionError = std::max(
+            maxLinkQuaternionError, absDiff(linkHost[row + 6], 1.0f));
+    }
+    fmt::print("  articulation shape: [{}, {}, {}]\n",
+               linkView.shape.at(0), linkView.shape.at(1),
+               linkView.shape.at(2));
+    fmt::print("  articulation pose err: {} / {}\n",
+               maxLinkPositionError, maxLinkQuaternionError);
+    if (maxLinkPositionError > 1e-4f || maxLinkQuaternionError > 1e-4f)
+        throw std::runtime_error(
+            "GPU articulation link pose does not match expected state");
+
+    gpuSystem.fetchArticulationLinkVel();
+    if (linkView.version != 2)
+        throw std::runtime_error(
+            "articulation link velocity fetch did not advance the view "
+            "version");
+    if (cudaDeviceSynchronize() != cudaSuccess)
+        throw std::runtime_error(
+            "cudaDeviceSynchronize after articulation link velocity fetch "
+            "failed");
+    if (cudaMemcpy(linkHost.data(), linkView.data,
+                   sizeof(float) * linkHost.size(), cudaMemcpyDeviceToHost) !=
+        cudaSuccess)
+        throw std::runtime_error(
+            "cudaMemcpy articulation link velocity data failed");
+    float maxLinkVelocity = 0.0f;
+    for (size_t link = 0; link < 2; ++link) {
+        const size_t row = link * 13;
+        for (size_t component = 7; component < 13; ++component)
+            maxLinkVelocity =
+                std::max(maxLinkVelocity, std::fabs(linkHost[row + component]));
+    }
+    fmt::print("  articulation max vel: {}\n", maxLinkVelocity);
+    if (maxLinkVelocity > 1e-5f)
+        throw std::runtime_error(
+            "fixed articulation GPU link velocity is not zero");
+
+    if (gpuSystem.articulationMaxDofs() != 1 ||
+        gpuSystem.articulationDofCount(articulationRow) != 1)
+        throw std::runtime_error("unexpected articulation GPU DOF metadata");
+    gpuSystem.fetchArticulationJointPositions();
+    gpuSystem.fetchArticulationJointVelocities();
+    gpuSystem.fetchArticulationJointAccelerations();
+    gpuSystem.fetchArticulationJointForces();
+    gpuSystem.fetchArticulationTargetJointPositions();
+    gpuSystem.fetchArticulationTargetJointVelocities();
+    gpuSystem.fetchArticulationLinkIncomingJointForce();
+    const auto& jointPositionView =
+        gpuSystem.articulationJointPositions();
+    const auto& jointVelocityView =
+        gpuSystem.articulationJointVelocities();
+    const auto& jointAccelerationView =
+        gpuSystem.articulationJointAccelerations();
+    const auto& jointForceView = gpuSystem.articulationJointForces();
+    const auto& targetJointPositionView =
+        gpuSystem.articulationTargetJointPositions();
+    const auto& targetJointVelocityView =
+        gpuSystem.articulationTargetJointVelocities();
+    const auto& incomingJointForceView =
+        gpuSystem.articulationLinkIncomingJointForces();
+    if (jointPositionView.shape != std::vector<int64_t>({1, 1}) ||
+        jointVelocityView.shape != std::vector<int64_t>({1, 1}) ||
+        jointAccelerationView.shape != std::vector<int64_t>({1, 1}) ||
+        jointForceView.shape != std::vector<int64_t>({1, 1}) ||
+        targetJointPositionView.shape != std::vector<int64_t>({1, 1}) ||
+        targetJointVelocityView.shape != std::vector<int64_t>({1, 1}) ||
+        incomingJointForceView.shape != std::vector<int64_t>({1, 2, 6}))
+        throw std::runtime_error("unexpected articulation joint view shape");
+    if (jointPositionView.version != 1 || jointVelocityView.version != 1 ||
+        jointAccelerationView.version != 1 || jointForceView.version != 1 ||
+        targetJointPositionView.version != 1 ||
+        targetJointVelocityView.version != 1 ||
+        incomingJointForceView.version != 1)
+        throw std::runtime_error(
+            "articulation joint fetch did not advance view versions");
+    if (cudaDeviceSynchronize() != cudaSuccess)
+        throw std::runtime_error(
+            "cudaDeviceSynchronize after articulation joint fetch failed");
+    float jointPosition = 0.0f;
+    float jointVelocity = 0.0f;
+    float jointAcceleration = 0.0f;
+    float jointForce = 0.0f;
+    float targetJointPosition = 0.0f;
+    float targetJointVelocity = 0.0f;
+    if (cudaMemcpy(&jointPosition, jointPositionView.data, sizeof(float),
+                   cudaMemcpyDeviceToHost) != cudaSuccess ||
+        cudaMemcpy(&jointVelocity, jointVelocityView.data, sizeof(float),
+                   cudaMemcpyDeviceToHost) != cudaSuccess ||
+        cudaMemcpy(&jointAcceleration, jointAccelerationView.data,
+                   sizeof(float), cudaMemcpyDeviceToHost) != cudaSuccess ||
+        cudaMemcpy(&jointForce, jointForceView.data, sizeof(float),
+                   cudaMemcpyDeviceToHost) != cudaSuccess ||
+        cudaMemcpy(&targetJointPosition, targetJointPositionView.data,
+                   sizeof(float), cudaMemcpyDeviceToHost) != cudaSuccess ||
+        cudaMemcpy(&targetJointVelocity, targetJointVelocityView.data,
+                   sizeof(float), cudaMemcpyDeviceToHost) != cudaSuccess)
+        throw std::runtime_error("cudaMemcpy articulation joint state failed");
+    std::vector<float> incomingJointForce(2 * 6);
+    if (cudaMemcpy(incomingJointForce.data(), incomingJointForceView.data,
+                   sizeof(float) * incomingJointForce.size(),
+                   cudaMemcpyDeviceToHost) != cudaSuccess)
+        throw std::runtime_error(
+            "cudaMemcpy articulation incoming joint force failed");
+    fmt::print("  articulation qpos/qvel: {} / {}\n", jointPosition,
+               jointVelocity);
+    fmt::print("  articulation qacc/qf/target: {} / {} / {} / {}\n",
+               jointAcceleration, jointForce, targetJointPosition,
+               targetJointVelocity);
+    if (std::fabs(jointPosition) > 1e-5f ||
+        std::fabs(jointVelocity) > 1e-5f ||
+        !std::isfinite(jointAcceleration) || !std::isfinite(jointForce) ||
+        !std::isfinite(targetJointPosition) ||
+        !std::isfinite(targetJointVelocity) ||
+        std::any_of(incomingJointForce.begin(), incomingJointForce.end(),
+                    [](float value) { return !std::isfinite(value); }))
+        throw std::runtime_error(
+            "articulation joint GPU state does not match expected state");
+
+    jointForce = 1.5f;
+    targetJointPosition = 0.125f;
+    targetJointVelocity = -0.25f;
+    if (cudaMemcpy(jointForceView.data, &jointForce, sizeof(float),
+                   cudaMemcpyHostToDevice) != cudaSuccess ||
+        cudaMemcpy(targetJointPositionView.data, &targetJointPosition,
+                   sizeof(float), cudaMemcpyHostToDevice) != cudaSuccess ||
+        cudaMemcpy(targetJointVelocityView.data, &targetJointVelocity,
+                   sizeof(float), cudaMemcpyHostToDevice) != cudaSuccess)
+        throw std::runtime_error(
+            "cudaMemcpy articulation joint command buffers failed");
+    gpuSystem.applyArticulationJointForces();
+    gpuSystem.applyArticulationTargetJointPositions();
+    gpuSystem.applyArticulationTargetJointVelocities();
+    gpuSystem.fetchArticulationJointForces();
+    gpuSystem.fetchArticulationTargetJointPositions();
+    gpuSystem.fetchArticulationTargetJointVelocities();
+    if (jointForceView.version != 3 || targetJointPositionView.version != 3 ||
+        targetJointVelocityView.version != 3)
+        throw std::runtime_error(
+            "articulation joint command apply/fetch did not advance versions");
+    if (cudaDeviceSynchronize() != cudaSuccess)
+        throw std::runtime_error(
+            "cudaDeviceSynchronize after articulation command apply failed");
+    float appliedJointForce = 0.0f;
+    float appliedTargetJointPosition = 0.0f;
+    float appliedTargetJointVelocity = 0.0f;
+    if (cudaMemcpy(&appliedJointForce, jointForceView.data, sizeof(float),
+                   cudaMemcpyDeviceToHost) != cudaSuccess ||
+        cudaMemcpy(&appliedTargetJointPosition, targetJointPositionView.data,
+                   sizeof(float), cudaMemcpyDeviceToHost) != cudaSuccess ||
+        cudaMemcpy(&appliedTargetJointVelocity, targetJointVelocityView.data,
+                   sizeof(float), cudaMemcpyDeviceToHost) != cudaSuccess)
+        throw std::runtime_error(
+            "cudaMemcpy applied articulation joint command state failed");
+    fmt::print("  articulation command echo: {} / {} / {}\n",
+               appliedJointForce, appliedTargetJointPosition,
+               appliedTargetJointVelocity);
+    if (absDiff(appliedJointForce, jointForce) > 1e-5f ||
+        absDiff(appliedTargetJointPosition, targetJointPosition) > 1e-5f ||
+        absDiff(appliedTargetJointVelocity, targetJointVelocity) > 1e-5f)
+        throw std::runtime_error(
+            "articulation joint command GPU echo does not match");
+
+    constexpr uint32_t sparseArticulation = 0;
+    uint32_t* sparseArticulationData = nullptr;
+    if (cudaMalloc(&sparseArticulationData, sizeof(uint32_t)) != cudaSuccess)
+        throw std::runtime_error(
+            "cudaMalloc sparse articulation indices failed");
+    if (cudaMemcpy(sparseArticulationData, &sparseArticulation,
+                   sizeof(uint32_t), cudaMemcpyHostToDevice) != cudaSuccess)
+        throw std::runtime_error(
+            "cudaMemcpy sparse articulation indices failed");
+    Sim::GpuArrayView sparseArticulationIndices;
+    sparseArticulationIndices.data = sparseArticulationData;
+    sparseArticulationIndices.memoryType = Sim::SimMemoryType::CUDADevice;
+    sparseArticulationIndices.dtype = Sim::SimDType::UInt32;
+    sparseArticulationIndices.deviceId = gpuConfig.cudaDeviceId;
+    sparseArticulationIndices.shape = {1};
+    sparseArticulationIndices.strides = {1};
+    sparseArticulationIndices.streamHandle = gpuSystem.cudaStream();
+    sparseArticulationIndices.name =
+        "physx_gpu_step_smoke_sparse_articulation_indices";
+
+    jointForce = 2.5f;
+    targetJointPosition = 0.375f;
+    targetJointVelocity = -0.5f;
+    if (cudaMemcpy(jointForceView.data, &jointForce, sizeof(float),
+                   cudaMemcpyHostToDevice) != cudaSuccess ||
+        cudaMemcpy(targetJointPositionView.data, &targetJointPosition,
+                   sizeof(float), cudaMemcpyHostToDevice) != cudaSuccess ||
+        cudaMemcpy(targetJointVelocityView.data, &targetJointVelocity,
+                   sizeof(float), cudaMemcpyHostToDevice) != cudaSuccess)
+        throw std::runtime_error(
+            "cudaMemcpy sparse articulation joint command buffers failed");
+    gpuSystem.applyArticulationJointForces(&sparseArticulationIndices);
+    gpuSystem.applyArticulationTargetJointPositions(
+        &sparseArticulationIndices);
+    gpuSystem.applyArticulationTargetJointVelocities(
+        &sparseArticulationIndices);
+    if (cudaDeviceSynchronize() != cudaSuccess)
+        throw std::runtime_error(
+            "cudaDeviceSynchronize after sparse articulation command apply "
+            "failed");
+    cudaFree(sparseArticulationData);
+    gpuSystem.fetchArticulationJointForces();
+    gpuSystem.fetchArticulationTargetJointPositions();
+    gpuSystem.fetchArticulationTargetJointVelocities();
+    if (jointForceView.version != 5 || targetJointPositionView.version != 5 ||
+        targetJointVelocityView.version != 5)
+        throw std::runtime_error(
+            "sparse articulation command apply/fetch did not advance "
+            "versions");
+    if (cudaDeviceSynchronize() != cudaSuccess)
+        throw std::runtime_error(
+            "cudaDeviceSynchronize after sparse articulation command fetch "
+            "failed");
+    if (cudaMemcpy(&appliedJointForce, jointForceView.data, sizeof(float),
+                   cudaMemcpyDeviceToHost) != cudaSuccess ||
+        cudaMemcpy(&appliedTargetJointPosition, targetJointPositionView.data,
+                   sizeof(float), cudaMemcpyDeviceToHost) != cudaSuccess ||
+        cudaMemcpy(&appliedTargetJointVelocity, targetJointVelocityView.data,
+                   sizeof(float), cudaMemcpyDeviceToHost) != cudaSuccess)
+        throw std::runtime_error(
+            "cudaMemcpy sparse articulation joint command state failed");
+    fmt::print("  sparse articulation command echo: {} / {} / {}\n",
+               appliedJointForce, appliedTargetJointPosition,
+               appliedTargetJointVelocity);
+    if (absDiff(appliedJointForce, jointForce) > 1e-5f ||
+        absDiff(appliedTargetJointPosition, targetJointPosition) > 1e-5f ||
+        absDiff(appliedTargetJointVelocity, targetJointVelocity) > 1e-5f)
+        throw std::runtime_error(
+            "sparse articulation joint command GPU echo does not match");
+
+    const float rootCommand[13] = {0.25f, 4.5f, 0.75f, 0.0f, 0.0f,
+                                   0.0f,  1.0f, 0.2f, 0.0f, -0.1f,
+                                   0.0f,  0.3f, 0.0f};
+    if (cudaMemcpy(linkView.data, rootCommand, sizeof(rootCommand),
+                   cudaMemcpyHostToDevice) != cudaSuccess)
+        throw std::runtime_error(
+            "cudaMemcpy articulation root command state failed");
+    gpuSystem.applyArticulationRootPose();
+    gpuSystem.applyArticulationRootVel();
+    gpuSystem.updateArticulationKinematics();
+    gpuSystem.fetchArticulationLinkPose();
+    gpuSystem.fetchArticulationLinkVel();
+    if (cudaDeviceSynchronize() != cudaSuccess)
+        throw std::runtime_error(
+            "cudaDeviceSynchronize after articulation root apply failed");
+    if (cudaMemcpy(linkHost.data(), linkView.data,
+                   sizeof(float) * linkHost.size(), cudaMemcpyDeviceToHost) !=
+        cudaSuccess)
+        throw std::runtime_error(
+            "cudaMemcpy articulation root applied state failed");
+    float rootPoseError = 0.0f;
+    float rootVelError = 0.0f;
+    for (size_t i = 0; i < 7; ++i)
+        rootPoseError =
+            std::max(rootPoseError, absDiff(linkHost[i], rootCommand[i]));
+    for (size_t i = 7; i < 13; ++i)
+        rootVelError =
+            std::max(rootVelError, absDiff(linkHost[i], rootCommand[i]));
+    fmt::print("  articulation root apply err: {} / {}\n", rootPoseError,
+               rootVelError);
+    if (rootPoseError > 1e-5f || rootVelError > 1e-5f)
+        throw std::runtime_error(
+            "articulation root GPU apply does not match fetched state");
 
     const PxU32 actorCount = static_cast<PxU32>(view.shape.at(0));
     if (actorCount != NUM_ACTORS)
@@ -497,6 +839,8 @@ int main() {
             "sparse rigid data apply did not affect only the selected row");
 #endif
 
-    fmt::print("PASS: C++ PhysX GPU rigid fetch/apply round trip completed\n");
+    fmt::print(
+        "PASS: C++ PhysX GPU rigid fetch/apply and articulation link/joint "
+        "state/command completed\n");
     return 0;
 }

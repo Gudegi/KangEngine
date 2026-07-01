@@ -219,6 +219,159 @@ class SimVisualBatch:
         return self
 
 
+class GpuArticulationVisualBatch:
+    """CUDA articulation link poses consumed as renderer instance buffers."""
+
+    def __init__(self, app, world, obj_id, env_ids, body_prims, body_handles):
+        import torch
+
+        from .utils import to_gpu_array_view
+
+        self.app = app
+        self.world = world
+        self.obj_id = int(obj_id)
+        self.env_ids = tuple(int(env_id) for env_id in env_ids)
+        self.body_prims = tuple(body_prims)
+        self.body_handles = tuple(int(handle) for handle in body_handles)
+        self.num_bodies = len(self.body_handles)
+        self.num_envs = len(self.env_ids)
+        self._rows = world.articulation_gpu_index_view(
+            self.env_ids, self.obj_id
+        )
+        link_view = world.gpu_system.articulation_link_data()
+        device = torch.device(f"cuda:{int(link_view.device_id)}")
+        link_indices = world.articulations[
+            (self.env_ids[0], self.obj_id)
+        ].articulation.get_link_indices()
+        for env_id in self.env_ids[1:]:
+            other = world.articulations[
+                (env_id, self.obj_id)
+            ].articulation.get_link_indices()
+            if other != link_indices:
+                raise RuntimeError(
+                    "GPU articulation instances have different link index maps"
+                )
+        self._link_indices_tensor = torch.tensor(
+            link_indices, dtype=torch.int32, device=device
+        )
+        self._link_indices = to_gpu_array_view(
+            self._link_indices_tensor,
+            dtype=torch.int32,
+            name=f"gpu_articulation_{self.obj_id}_link_indices",
+        )
+        self.device_id = int(link_view.device_id)
+        self.stream_handle = int(
+            torch.cuda.current_stream(device).cuda_stream
+        )
+
+    @property
+    def prims(self):
+        return self.body_prims
+
+    def sync(self):
+        gpu_system = self.world.gpu_system
+        gpu_system.fetch_articulation_link_pose()
+        link_view = gpu_system.articulation_link_data()
+        renderer = self.app.get_renderer()
+        mapped = renderer.map_renderable_cuda_transform_buffers(
+            self.body_handles,
+            self.num_envs,
+            self.device_id,
+            self.stream_handle,
+        )
+        try:
+            _ke.articulation_link_state_to_mapped_mat4_cuda(
+                link_view,
+                self._rows,
+                self._link_indices,
+                mapped,
+            )
+        finally:
+            renderer.unmap_renderable_cuda_transform_buffers(
+                self.body_handles,
+                self.device_id,
+                self.stream_handle,
+            )
+        return self
+
+    def set_visible(self, visible: bool):
+        for prim in self.body_prims:
+            prim.set_visible(bool(visible))
+        return self
+
+    def set_color(self, color):
+        colors = _batch_colors(color, self.env_ids)
+        for handle in self.body_handles:
+            self.app.set_renderable_colors(handle, colors)
+        return self
+
+    def body_id_from_render_handle(self, handle) -> int | None:
+        handle = int(handle)
+        for body_id, body_handle in enumerate(self.body_handles):
+            if body_handle == handle:
+                return body_id
+        return None
+
+
+class GpuRigidVisualBatch:
+    """CUDA rigid root poses consumed as one renderer instance buffer."""
+
+    def __init__(self, app, world, obj_id, env_ids, prim, handle):
+        import torch
+
+        self.app = app
+        self.world = world
+        self.obj_id = int(obj_id)
+        self.env_ids = tuple(int(env_id) for env_id in env_ids)
+        self.body_prims = (prim,)
+        self.body_handles = (int(handle),)
+        self.num_bodies = 1
+        self.num_envs = len(self.env_ids)
+        self._rows = world.rigid_gpu_index_view(self.env_ids, self.obj_id)
+        rigid_view = world.gpu_system.rigid_data()
+        device = torch.device(f"cuda:{int(rigid_view.device_id)}")
+        self.device_id = int(rigid_view.device_id)
+        self.stream_handle = int(
+            torch.cuda.current_stream(device).cuda_stream
+        )
+
+    @property
+    def prims(self):
+        return self.body_prims
+
+    def sync(self):
+        gpu_system = self.world.gpu_system
+        gpu_system.fetch_rigid_data()
+        renderer = self.app.get_renderer()
+        mapped = renderer.map_renderable_cuda_transform_buffers(
+            self.body_handles,
+            self.num_envs,
+            self.device_id,
+            self.stream_handle,
+        )
+        try:
+            _ke.indexed_rigid_state_to_mat4_cuda(
+                gpu_system.rigid_data(), self._rows, mapped[0]
+            )
+        finally:
+            renderer.unmap_renderable_cuda_transform_buffers(
+                self.body_handles,
+                self.device_id,
+                self.stream_handle,
+            )
+        return self
+
+    def set_visible(self, visible: bool):
+        self.body_prims[0].set_visible(bool(visible))
+        return self
+
+    def set_color(self, color):
+        self.app.set_renderable_colors(
+            self.body_handles[0], _batch_colors(color, self.env_ids)
+        )
+        return self
+
+
 class RigidVisualBridge:
     """Viewer-side visualizer for one compound rigid actor."""
 
@@ -303,6 +456,9 @@ class KangWorldVisualBridge:
         self.records: dict[tuple[int, int], ArticulationVisualView] = {}
         self.rigid_records: dict[tuple[int, int], RigidVisualView] = {}
         self.visual_batches: dict[int, SimVisualBatch] = {}
+        self.gpu_visual_batches: dict[
+            int, GpuArticulationVisualBatch | GpuRigidVisualBatch
+        ] = {}
         self._skeleton_assets = {}
         self._instanced_colors: dict[tuple[int, ...], np.ndarray] = {}
 
@@ -446,6 +602,100 @@ class KangWorldVisualBridge:
         self.records[key] = record
         return record
 
+    def add_gpu_articulation(
+        self,
+        sim_view,
+        mjcf_path: str,
+        prim_base_path: str = "/gpu_robot",
+        scale: float = 1.0,
+        order: str = "DFS",
+        shader=None,
+        color=None,
+    ) -> GpuArticulationVisualBatch:
+        """Create one renderable per link backed by CUDA instance transforms."""
+        if shader is None:
+            raise ValueError("add_gpu_articulation requires a shader")
+        if not hasattr(_ke, "articulation_link_state_to_mat4_cuda"):
+            raise RuntimeError("KangEngine was built without CUDA transform kernels")
+
+        obj_id = int(sim_view.obj_id)
+        env_ids = tuple(int(env_id) for env_id in sim_view.env_ids)
+        if obj_id in self.gpu_visual_batches:
+            raise ValueError(f"GPU visual batch already registered for obj={obj_id}")
+        if any((env_id, obj_id) not in self.world.articulations for env_id in env_ids):
+            raise KeyError(f"articulation obj={obj_id} is not registered in every env")
+
+        asset, mesh_asset_base_path = self._skeleton_asset(mjcf_path, scale, order)
+        skeleton_bridge = asset.instantiate(
+            self.scene, prim_base_path, mesh_asset_base_path
+        )
+        body_prims = list(skeleton_bridge.body_prims())
+        if len(body_prims) != sim_view.num_bodies:
+            raise RuntimeError(
+                "GPU articulation visual body count does not match PhysX links"
+            )
+        body_handles = [
+            self.app.add_renderable(
+                shader, prim, _ke.TransformSource.ExternalBuffer
+            )
+            for prim in body_prims
+        ]
+        batch = GpuArticulationVisualBatch(
+            self.app, self.world, obj_id, env_ids, body_prims, body_handles
+        )
+        batch.set_color(color)
+        batch.sync()
+        self.gpu_visual_batches[obj_id] = batch
+        self.visual_batches[obj_id] = batch
+        return batch
+
+    def add_gpu_rigid(
+        self,
+        sim_view,
+        mjcf_path: str,
+        prim_base_path: str = "/gpu_rigid",
+        scale: float = 1.0,
+        order: str = "DFS",
+        shader=None,
+        color=None,
+    ) -> GpuRigidVisualBatch:
+        """Create a single-shape rigid batch backed by CUDA transforms."""
+        if shader is None:
+            raise ValueError("add_gpu_rigid requires a shader")
+        if not hasattr(_ke, "indexed_rigid_state_to_mat4_cuda"):
+            raise RuntimeError("KangEngine was built without CUDA transform kernels")
+
+        obj_id = int(sim_view.obj_id)
+        env_ids = tuple(int(env_id) for env_id in sim_view.env_ids)
+        if obj_id in self.gpu_visual_batches:
+            raise ValueError(f"GPU visual batch already registered for obj={obj_id}")
+        data = self.world.load_mjcf(mjcf_path, scale=scale, order=order)
+        rigid_bridge = RigidVisualBridge(
+            self.app,
+            self.scene,
+            sim_view.first.rigid,
+            data,
+            prim_base_path,
+            add_shapes=False,
+            color=color,
+        )
+        if len(rigid_bridge.body_prims) != 1:
+            raise NotImplementedError(
+                "GPU rigid visual batches currently require one MJCF shape"
+            )
+        prim = rigid_bridge.body_prims[0]
+        handle = self.app.add_renderable(
+            shader, prim, _ke.TransformSource.ExternalBuffer
+        )
+        batch = GpuRigidVisualBatch(
+            self.app, self.world, obj_id, env_ids, prim, handle
+        )
+        batch.set_color(color)
+        batch.sync()
+        self.gpu_visual_batches[obj_id] = batch
+        self.visual_batches[obj_id] = batch
+        return batch
+
     def add_rigid(
         self,
         env_id: int,
@@ -549,6 +799,8 @@ class KangWorldVisualBridge:
     def sync(self):
         self.physics_bridge.sync()
         self._sync_rigids()
+        for batch in self.gpu_visual_batches.values():
+            batch.sync()
 
     def get_articulation_view(
         self,
@@ -693,6 +945,22 @@ def _normalize_color_array(color):
     if arr.size < 4:
         raise ValueError(f"color must have 1, 3, or 4 values; got {arr.size}")
     return np.clip(arr[:4], 0.0, 1.0).astype(np.float32, copy=False)
+
+
+def _batch_colors(color, env_ids):
+    env_ids = tuple(env_ids)
+    if color is None:
+        return np.tile(
+            np.asarray([0.15, 0.15, 0.15, 1.0], dtype=np.float32),
+            (len(env_ids), 1),
+        )
+    rows = [
+        _normalize_color_array(
+            _select_env_visual_value(color, index, len(env_ids), env_id)
+        )
+        for index, env_id in enumerate(env_ids)
+    ]
+    return np.stack(rows, axis=0).astype(np.float32, copy=False)
 
 
 def _apply_prim_color(prims, color):

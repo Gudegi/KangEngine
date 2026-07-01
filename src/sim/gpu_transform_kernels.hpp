@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace KE {
 namespace Sim {
@@ -36,6 +37,22 @@ class CUDAExternalTransformBuffer {
 
 void launchRigidStateToMat4CUDA(const GpuArrayView& rigidState,
                                 GpuArrayView& transforms, int count);
+
+void launchIndexedRigidStateToMat4CUDA(const GpuArrayView& rigidState,
+                                       const GpuArrayView& rigidRows,
+                                       GpuArrayView& transforms);
+
+// Gather selected articulation rows into link-major renderer transforms:
+// [articulation, link, 13] -> [link, selected_articulation, 4, 4].
+void launchArticulationLinkStateToMat4CUDA(
+    const GpuArrayView& articulationLinkState,
+    const GpuArrayView& articulationRows, const GpuArrayView& linkIndices,
+    GpuArrayView& transforms, int linkCount);
+
+void launchArticulationLinkStateToMappedMat4CUDA(
+    const GpuArrayView& articulationLinkState,
+    const GpuArrayView& articulationRows, const GpuArrayView& linkIndices,
+    const std::vector<GpuArrayView>& mappedTransforms);
 
 } // namespace Sim
 } // namespace KE

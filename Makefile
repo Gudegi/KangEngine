@@ -67,14 +67,16 @@ build_python_cuda:
 	$(call do_cuda_build,vcpkg,$(RELEASE_DIR),-DIS_PYTHON_LIB=ON)
 
 validate_physx_gpu: build_python_cuda
-	PYTHONPATH=python $(PYTHON) python/examples/physics_gpu_system_smoke.py
-	PYTHONPATH=python $(PYTHON) python/examples/kangsimworld_gpu_root_state_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/physics_gpu_system_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/kangsimworld_gpu_root_state_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/kangsimworld_gpu_articulation_state_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/kangsimworld_gpu_articulation_control_smoke.py
 
 validate_physx_gpu_cpp: build_cuda
 	./$(RELEASE_DIR)/physx_gpu_step_smoke
 
 validate_sim_visual_batch: build_python
-	PYTHONPATH=python $(PYTHON) python/examples/sim_visual_batch_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/sim_visual_batch_smoke.py
 
 # USD + Python builds
 build_usd_python:

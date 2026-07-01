@@ -209,6 +209,41 @@ void Rasterizer::setRenderableExternalBuffer(RenderableHandle handle,
     _handleTable[handle]->setExternalBuffer(desc);
 }
 
+std::vector<Sim::GpuArrayView>
+Rasterizer::mapRenderableCudaTransformBuffers(
+    const std::vector<RenderableHandle>& handles, int count, int deviceId,
+    uint64_t streamHandle) {
+    std::vector<Backend::Buffer*> buffers;
+    buffers.reserve(handles.size());
+    for (auto handle : handles) {
+        if (handle >= _handleTable.size())
+            throw std::out_of_range("invalid renderable handle for CUDA map");
+        auto* instancer = _handleTable[handle];
+        instancer->prepareDirectCudaTransforms(count);
+        buffers.push_back(instancer->transformBuffer());
+    }
+    std::vector<Sim::GpuArrayView> views;
+    if (!_graphicsDevice->mapCudaBuffers(
+            buffers, views, static_cast<size_t>(count), sizeof(glm::mat4),
+            deviceId, streamHandle))
+        throw std::runtime_error(
+            "graphics backend cannot map CUDA transform buffers");
+    return views;
+}
+
+void Rasterizer::unmapRenderableCudaTransformBuffers(
+    const std::vector<RenderableHandle>& handles, int deviceId,
+    uint64_t streamHandle) {
+    std::vector<Backend::Buffer*> buffers;
+    buffers.reserve(handles.size());
+    for (auto handle : handles) {
+        if (handle >= _handleTable.size())
+            throw std::out_of_range("invalid renderable handle for CUDA unmap");
+        buffers.push_back(_handleTable[handle]->transformBuffer());
+    }
+    _graphicsDevice->unmapCudaBuffers(buffers, deviceId, streamHandle);
+}
+
 void Rasterizer::setRenderableColors(RenderableHandle handle,
                                      const std::vector<glm::vec4>& colors) {
     if (handle >= _handleTable.size())

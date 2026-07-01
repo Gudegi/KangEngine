@@ -5,6 +5,9 @@
 #include "sim/gpu_array_view.hpp"
 #include "physics/sim_model.hpp"
 #include "py_array_view.hpp"
+#ifdef KANGENGINE_USE_CUDA
+#include "sim/gpu_transform_kernels.hpp"
+#endif
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -70,6 +73,23 @@ py::dict cudaArrayInterface(const KE::Sim::GpuArrayView& view) {
     return result;
 }
 
+py::object gpuArrayViewTorch(const KE::Sim::GpuArrayView& view) {
+    if (!view.isCuda())
+        throw std::runtime_error("GpuArrayView.torch() requires a CUDA buffer");
+
+    KE::Sim::GpuArrayView tensorView = view;
+    if (tensorView.dtype == KE::Sim::SimDType::UInt32)
+        tensorView.dtype = KE::Sim::SimDType::Int32;
+    else if (tensorView.dtype == KE::Sim::SimDType::UInt64)
+        tensorView.dtype = KE::Sim::SimDType::Int64;
+
+    py::object object = py::cast(tensorView);
+    py::object asTensor = py::module_::import("torch").attr("as_tensor");
+    std::string device =
+        view.deviceId >= 0 ? "cuda:" + std::to_string(view.deviceId) : "cuda";
+    return asTensor(py::arg("data") = object, py::arg("device") = device);
+}
+
 } // namespace
 
 void bind_sim(py::module& m) {
@@ -131,7 +151,30 @@ void bind_sim(py::module& m) {
         .def_property_readonly("numel", &GpuArrayView::numel)
         .def_property_readonly("byte_size", &GpuArrayView::byteSize)
         .def_property_readonly("__cuda_array_interface__",
-                               &cudaArrayInterface);
+                               &cudaArrayInterface)
+        .def("torch", &gpuArrayViewTorch,
+             "Return a zero-copy Torch CUDA tensor view of this buffer.");
+
+#ifdef KANGENGINE_USE_CUDA
+    m.def("indexed_rigid_state_to_mat4_cuda",
+          &launchIndexedRigidStateToMat4CUDA, py::arg("rigid_state"),
+          py::arg("rigid_rows"), py::arg("transforms"),
+          "Gather selected rigid state rows into CUDA Mat4 transforms.");
+    m.def("articulation_link_state_to_mat4_cuda",
+          &launchArticulationLinkStateToMat4CUDA,
+          py::arg("articulation_link_state"),
+          py::arg("articulation_rows"), py::arg("link_indices"),
+          py::arg("transforms"), py::arg("link_count"),
+          "Gather articulation link state into link-major CUDA Mat4 "
+          "transforms.");
+    m.def("articulation_link_state_to_mapped_mat4_cuda",
+          &launchArticulationLinkStateToMappedMat4CUDA,
+          py::arg("articulation_link_state"),
+          py::arg("articulation_rows"), py::arg("link_indices"),
+          py::arg("mapped_transforms"),
+          "Write articulation link transforms directly into mapped graphics "
+          "buffers.");
+#endif
 
     py::class_<KE::SimModel>(
         m, "SimModel",

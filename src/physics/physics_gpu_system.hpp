@@ -6,8 +6,10 @@
 #include <cstdint>
 #include <stdexcept>
 #include <unordered_map>
+#include <vector>
 
 namespace physx {
+class PxArticulationReducedCoordinate;
 class PxRigidDynamic;
 }
 
@@ -40,7 +42,8 @@ struct PhysicsGpuStateViews {
 // init/fetch/apply/stepStart/stepFinish verbs.
 //
 // Buffer ownership:
-// - rigidData/rigidForce/rigidTorque are owned by PhysicsGpuSystem.
+// - rigidData/rigidForce/rigidTorque and articulationLinkData are owned by
+//   PhysicsGpuSystem.
 // - GpuArrayView objects are metadata views; do not free their ptr values.
 // - Views become invalid after invalidate(), destruction, or a later init().
 //
@@ -70,6 +73,13 @@ class PhysicsGpuSystem {
     // a per-frame path. KangSimWorld should precompute env/object -> rigid row
     // tables and reuse CUDA index buffers for batched sparse apply.
     uint32_t rigidRow(const physx::PxRigidDynamic& rigid) const;
+    uint32_t articulationRow(
+        const physx::PxArticulationReducedCoordinate& articulation) const;
+    uint32_t articulationLinkCount(uint32_t articulationRow) const;
+    uint32_t articulationDofCount(uint32_t articulationRow) const;
+    uint32_t articulationCount() const { return _articulationCount; }
+    uint32_t articulationMaxLinks() const { return _articulationMaxLinks; }
+    uint32_t articulationMaxDofs() const { return _articulationMaxDofs; }
 
     void stepStart();
     void stepFinish();
@@ -114,6 +124,7 @@ class PhysicsGpuSystem {
     void fetchArticulationJointPositions();
     void fetchArticulationJointVelocities();
     void fetchArticulationJointAccelerations();
+    void fetchArticulationJointForces();
     void fetchArticulationTargetJointPositions();
     void fetchArticulationTargetJointVelocities();
     void fetchArticulationLinkIncomingJointForce();
@@ -142,6 +153,20 @@ class PhysicsGpuSystem {
 
   private:
     [[noreturn]] void notImplemented(const char* functionName) const;
+    void fetchArticulationDofBuffer(void* buffer, Sim::GpuArrayView& view,
+                                    int readType, const char* dataName,
+                                    const char* waitOperation,
+                                    const char* readyOperation);
+    void applyArticulationDofBuffer(const Sim::GpuArrayView* indices,
+                                    void* buffer, Sim::GpuArrayView& view,
+                                    int writeType, const char* dataName,
+                                    const char* waitOperation,
+                                    const char* readyOperation);
+    void packArticulationRootState(const Sim::GpuArrayView* indices,
+                                   void*& poseBuffer,
+                                   void*& linearVelocityBuffer,
+                                   void*& angularVelocityBuffer,
+                                   void*& gpuIndices, uint32_t& applyCount);
     void applyRigidCommand(const Sim::GpuArrayView* indices, bool torque);
     void releaseGpuBuffers();
 
@@ -157,6 +182,23 @@ class PhysicsGpuSystem {
     void* _rigidForceBuffer = nullptr;
     void* _rigidTorqueBuffer = nullptr;
     std::unordered_map<const void*, uint32_t> _rigidRows;
+    uint32_t _articulationCount = 0;
+    uint32_t _articulationMaxLinks = 0;
+    uint32_t _articulationMaxDofs = 0;
+    void* _articulationIndexBuffer = nullptr;
+    void* _articulationLinkScratchBuffer = nullptr;
+    void* _articulationDofScratchBuffer = nullptr;
+    void* _articulationLinkMirrorBuffer = nullptr;
+    void* _articulationJointPositionBuffer = nullptr;
+    void* _articulationJointVelocityBuffer = nullptr;
+    void* _articulationJointAccelerationBuffer = nullptr;
+    void* _articulationJointForceBuffer = nullptr;
+    void* _articulationTargetJointPositionBuffer = nullptr;
+    void* _articulationTargetJointVelocityBuffer = nullptr;
+    void* _articulationLinkIncomingJointForceBuffer = nullptr;
+    std::vector<uint32_t> _articulationLinkCounts;
+    std::vector<uint32_t> _articulationDofCounts;
+    std::unordered_map<const void*, uint32_t> _articulationRows;
     void* _copyEvent = nullptr;
     void* _readyEvent = nullptr;
 };

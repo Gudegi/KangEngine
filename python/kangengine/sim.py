@@ -17,6 +17,8 @@ from .utils.env_utils import (
     select_optional_env_value,
 )
 
+_TORCH = None
+
 
 def _as_cpu_numpy(value, *, shape=None, dtype=np.float32):
     import sys
@@ -47,6 +49,19 @@ def _clip_forces(forces, limits):
     if limits.size == 1:
         limits = np.full_like(forces, float(limits[0]), dtype=np.float32)
     return np.clip(forces, -limits, limits).astype(np.float32, copy=False)
+
+
+def _torch():
+    global _TORCH
+    if _TORCH is None:
+        import torch
+
+        _TORCH = torch
+    return _TORCH
+
+
+def _gpu_view_tensor(view):
+    return view.torch()
 
 
 def _require_physx():
@@ -502,8 +517,8 @@ class SimArticulationView:
         env_ids: EnvIdLike | None,
         cmd,
         mode: "ControlMode | str" = "pos",
-        kp: float | None = 200.0,
-        kd: float | None = 10.0,
+        kp: object | None = 200.0,
+        kd: object | None = 10.0,
     ):
         self.world.set_cmd(
             self._selected_env_ids(env_ids),
@@ -744,9 +759,9 @@ class ControlMode(str, Enum):
 @dataclass(slots=True)
 class CommandBuffer:
     mode: ControlMode
-    cmd: np.ndarray | None = None
-    kp: np.ndarray | None = None
-    kd: np.ndarray | None = None
+    cmd: object | None = None
+    kp: object | None = None
+    kd: object | None = None
 
 
 @dataclass(slots=True)
@@ -833,6 +848,10 @@ class KangSimWorld:
         self._gpu_system = None
         self._rigid_gpu_rows: dict[tuple[int, int], int] = {}
         self._rigid_gpu_index_tensors: dict[tuple[tuple[int, int], ...], object] = {}
+        self._articulation_gpu_rows: dict[tuple[int, int], int] = {}
+        self._articulation_gpu_index_tensors: dict[
+            tuple[tuple[int, int], ...], object
+        ] = {}
         self._released = False
 
     def add_articulation(
@@ -845,14 +864,20 @@ class KangSimWorld:
     ) -> SimArticulation:
         if config is None:
             config = _ke.ArticulationConfig.free_base()
+        restore_collision_group = None
         if hasattr(config, "collision_group") and int(config.collision_group) == 0:
+            restore_collision_group = int(config.collision_group)
             config.collision_group = int(env_id) + 1
         self._require_gpu_runtime_uninitialized("add_articulation")
         key = (int(env_id), int(obj_id))
         if key in self.articulations or key in self.rigids:
             raise ValueError(f"object already registered at env={key[0]}, obj={key[1]}")
 
-        articulation = _ke.Articulation.build(self.physics, data, config)
+        try:
+            articulation = _ke.Articulation.build(self.physics, data, config)
+        finally:
+            if restore_collision_group is not None:
+                config.collision_group = restore_collision_group
         record = SimArticulation(key[0], key[1], str(name), articulation, self)
         self.articulations[key] = record
         self.state.add_articulation(
@@ -1007,26 +1032,189 @@ class KangSimWorld:
         obj_id: int,
         cmd,
         mode: ControlMode | str = ControlMode.POS,
-        kp: float | None = 200.0,
-        kd: float | None = 10.0,
+        kp: object | None = 200.0,
+        kd: object | None = 10.0,
     ):
+        import sys
+
         mode = ControlMode(mode)
         env_ids = env_id_list(env_id, self.num_envs)
+        torch = sys.modules.get("torch")
+        cuda_cmd = (
+            torch is not None
+            and torch.is_tensor(cmd)
+            and cmd.device.type == "cuda"
+        )
+        if cuda_cmd:
+            if self._gpu_system is None:
+                raise RuntimeError(
+                    "CUDA command tensors require init_gpu_system(); "
+                    "KangSimWorld will not silently copy them to CPU"
+                )
+            if mode not in (
+                ControlMode.POS,
+                ControlMode.VEL,
+                ControlMode.TORQUE,
+                ControlMode.PD_EXPLICIT,
+            ):
+                raise ValueError(
+                    f"CUDA command tensors do not support mode={mode.value!r}"
+                )
+            if cmd.dtype != torch.float32:
+                raise TypeError("CUDA command tensor must have dtype=torch.float32")
+            if not cmd.is_contiguous():
+                raise ValueError("CUDA command tensor must be contiguous")
+
         for env_index, eid in enumerate(env_ids):
             key = (eid, int(obj_id))
             if key in self.rigids:
-                raise TypeError(f"rigid body at env={eid}, obj={obj_id} does not accept commands")
+                raise TypeError(
+                    f"rigid body at env={eid}, obj={obj_id} does not accept "
+                    "commands"
+                )
             record = self.articulations[key]
             expected = record.articulation.num_dofs()
-            arr = select_env_value(cmd, env_index, len(env_ids), (expected,))
-            if mode in (ControlMode.POS, ControlMode.VEL) and arr.size != expected:
+            if cuda_cmd:
+                gpu_device = int(self.gpu_system.articulation_joint_forces().device_id)
+                cmd_device = cmd.device.index if cmd.device.index is not None else 0
+                if cmd_device != gpu_device:
+                    raise ValueError(
+                        f"CUDA command tensor is on cuda:{cmd_device}, expected "
+                        f"cuda:{gpu_device}"
+                    )
+                if cmd.ndim == 1 and tuple(cmd.shape) == (expected,):
+                    arr = cmd
+                elif cmd.ndim == 2 and tuple(cmd.shape) == (
+                    len(env_ids),
+                    expected,
+                ):
+                    arr = cmd[env_index]
+                else:
+                    raise ValueError(
+                        "CUDA command tensor expected shape "
+                        f"[{expected}] or [{len(env_ids)}, {expected}], got "
+                        f"{list(cmd.shape)}"
+                    )
+            else:
+                arr = select_env_value(cmd, env_index, len(env_ids), (expected,))
+            value_count = int(arr.numel()) if cuda_cmd else int(arr.size)
+            if (
+                mode in (ControlMode.POS, ControlMode.VEL, ControlMode.PD_EXPLICIT)
+                and value_count != expected
+            ):
                 raise ValueError(
                     f"{mode.value} command for env={eid}, obj={obj_id} expected "
-                    f"{expected} values, got {arr.size}"
+                    f"{expected} values, got {value_count}"
                 )
-            kp_arr = _optional_drive_array(kp, expected)
-            kd_arr = _optional_drive_array(kd, expected)
-            self.commands[key] = CommandBuffer(mode, arr.copy(), kp_arr, kd_arr)
+            if mode == ControlMode.PD_EXPLICIT:
+                if cuda_cmd:
+                    kp_arr = self._select_cuda_pd_gain(
+                        kp,
+                        env_index,
+                        len(env_ids),
+                        expected,
+                        torch=torch,
+                        device=cmd.device,
+                        name="kp",
+                    )
+                    kd_arr = self._select_cuda_pd_gain(
+                        kd,
+                        env_index,
+                        len(env_ids),
+                        expected,
+                        torch=torch,
+                        device=cmd.device,
+                        name="kd",
+                    )
+                else:
+                    kp_arr = self._select_pd_gain_array(
+                        kp, env_index, len(env_ids), expected, name="kp"
+                    )
+                    kd_arr = self._select_pd_gain_array(
+                        kd, env_index, len(env_ids), expected, name="kd"
+                    )
+            else:
+                kp_arr = _optional_drive_array(kp, expected)
+                kd_arr = _optional_drive_array(kd, expected)
+            stored = arr if cuda_cmd else arr.copy()
+            self.commands[key] = CommandBuffer(mode, stored, kp_arr, kd_arr)
+
+    def _select_cuda_pd_gain(
+        self,
+        value,
+        env_index: int,
+        env_count: int,
+        expected: int,
+        *,
+        torch,
+        device,
+        name: str,
+    ):
+        if value is None:
+            raise ValueError(f"GPU PD_EXPLICIT requires per-DOF {name} array")
+        if torch.is_tensor(value):
+            if value.device.type != "cuda":
+                raise RuntimeError(
+                    f"GPU PD_EXPLICIT {name} tensor must be CUDA; mixed "
+                    "CPU/CUDA gains are not allowed"
+                )
+            value_device = value.device.index if value.device.index is not None else 0
+            cmd_device = device.index if device.index is not None else 0
+            if value_device != cmd_device:
+                raise ValueError(
+                    f"GPU PD_EXPLICIT {name} tensor is on cuda:{value_device}, "
+                    f"expected cuda:{cmd_device}"
+                )
+            if value.dtype != torch.float32:
+                raise TypeError(
+                    f"GPU PD_EXPLICIT {name} tensor must have dtype=torch.float32"
+                )
+            if not value.is_contiguous():
+                raise ValueError(f"GPU PD_EXPLICIT {name} tensor must be contiguous")
+            if value.ndim == 1 and tuple(value.shape) == (expected,):
+                return value
+            if value.ndim == 2 and tuple(value.shape) == (env_count, expected):
+                return value[env_index]
+            raise ValueError(
+                f"GPU PD_EXPLICIT {name} tensor expected shape "
+                f"[{expected}] or [{env_count}, {expected}], got "
+                f"{list(value.shape)}"
+            )
+
+        array = _as_cpu_numpy(value).astype(np.float32, copy=False)
+        if array.ndim == 0 or array.size == 1:
+            raise ValueError(f"GPU PD_EXPLICIT {name} must be a per-DOF array")
+        if array.shape == (expected,):
+            return array.copy()
+        if array.shape == (env_count, expected):
+            return array[env_index].copy()
+        raise ValueError(
+            f"GPU PD_EXPLICIT {name} array expected shape "
+            f"[{expected}] or [{env_count}, {expected}], got {list(array.shape)}"
+        )
+
+    def _select_pd_gain_array(
+        self,
+        value,
+        env_index: int,
+        env_count: int,
+        expected: int,
+        *,
+        name: str,
+    ):
+        if value is None:
+            raise ValueError(f"PD_EXPLICIT requires per-DOF {name} array")
+        array = _as_cpu_numpy(value).astype(np.float32, copy=False)
+        if array.ndim == 0 or array.size == 1:
+            raise ValueError(f"PD_EXPLICIT {name} must be a per-DOF array")
+        if array.shape == (expected,):
+            return array.copy()
+        if array.shape == (env_count, expected):
+            return array[env_index].copy()
+        raise ValueError(
+            f"PD_EXPLICIT {name} array expected shape "
+            f"[{expected}] or [{env_count}, {expected}], got {list(array.shape)}"
+        )
 
     def clear_cmd(self, env_id: EnvIdLike = None, obj_id: int | None = None):
         keys = list(self.commands.keys())
@@ -1039,8 +1227,22 @@ class KangSimWorld:
             self.commands[key] = CommandBuffer(ControlMode.NONE)
 
     def apply_commands(self):
+        gpu_articulation_commands = []
         for key, buffer in self.commands.items():
             if buffer.mode == ControlMode.NONE or buffer.cmd is None:
+                continue
+            if (
+                self._gpu_system is not None
+                and key in self.articulations
+                and buffer.mode
+                in (
+                    ControlMode.POS,
+                    ControlMode.VEL,
+                    ControlMode.TORQUE,
+                    ControlMode.PD_EXPLICIT,
+                )
+            ):
+                gpu_articulation_commands.append((key, buffer))
                 continue
             articulation = self.articulations[key].articulation
             if buffer.mode == ControlMode.POS:
@@ -1085,6 +1287,87 @@ class KangSimWorld:
                 raise NotImplementedError(
                     f"control mode '{buffer.mode.value}' is not implemented yet"
                 )
+        if gpu_articulation_commands:
+            self._apply_gpu_articulation_commands(gpu_articulation_commands)
+
+    def _apply_gpu_articulation_commands(
+        self, commands: list[tuple[tuple[int, int], CommandBuffer]]
+    ):
+        torch = _torch()
+        gpu_system = self.gpu_system
+        target_qpos_view = gpu_system.articulation_target_joint_positions()
+        target_qvel_view = gpu_system.articulation_target_joint_velocities()
+        qf_view = gpu_system.articulation_joint_forces()
+        qpos_view = gpu_system.articulation_joint_positions()
+        qvel_view = gpu_system.articulation_joint_velocities()
+        device_id = int(target_qpos_view.device_id)
+        device = torch.device(f"cuda:{device_id}")
+        target_qpos = target_qpos_view.torch()
+        target_qvel = target_qvel_view.torch()
+        qf = qf_view.torch()
+        qpos = qpos_view.torch()
+        qvel = qvel_view.torch()
+
+        pos_keys = []
+        vel_keys = []
+        torque_keys = []
+        for key, buffer in commands:
+            row = self.articulation_gpu_row(key[0], key[1])
+            dof_count = int(gpu_system.articulation_dof_count(row))
+            cmd = torch.as_tensor(buffer.cmd, dtype=torch.float32, device=device)
+            if buffer.mode == ControlMode.POS:
+                target_qpos[row, :dof_count] = cmd
+                pos_keys.append(key)
+            elif buffer.mode == ControlMode.VEL:
+                target_qvel[row, :dof_count] = cmd
+                vel_keys.append(key)
+            elif buffer.mode == ControlMode.TORQUE:
+                limits = torch.as_tensor(
+                    self.articulations[key].articulation.get_effort_limits(),
+                    dtype=torch.float32,
+                    device=device,
+                )
+                qf[row, :dof_count] = torch.clamp(cmd, -limits, limits)
+                torque_keys.append(key)
+            elif buffer.mode == ControlMode.PD_EXPLICIT:
+                kp = torch.as_tensor(buffer.kp, dtype=torch.float32, device=device)
+                kd = torch.as_tensor(buffer.kd, dtype=torch.float32, device=device)
+                limits = torch.as_tensor(
+                    self.articulations[key].articulation.get_effort_limits(),
+                    dtype=torch.float32,
+                    device=device,
+                )
+                torque = (
+                    kp[:dof_count] * (cmd[:dof_count] - qpos[row, :dof_count])
+                    - kd[:dof_count] * qvel[row, :dof_count]
+                )
+                qf[row, :dof_count] = torch.clamp(torque, -limits, limits)
+                torque_keys.append(key)
+
+        if pos_keys:
+            gpu_system.apply_articulation_target_joint_positions(
+                self._articulation_gpu_index_view_for_keys(
+                    tuple(pos_keys),
+                    device=device,
+                    name="kangsimworld_articulation_pos_command_indices",
+                )
+            )
+        if vel_keys:
+            gpu_system.apply_articulation_target_joint_velocities(
+                self._articulation_gpu_index_view_for_keys(
+                    tuple(vel_keys),
+                    device=device,
+                    name="kangsimworld_articulation_vel_command_indices",
+                )
+            )
+        if torque_keys:
+            gpu_system.apply_articulation_joint_forces(
+                self._articulation_gpu_index_view_for_keys(
+                    tuple(torque_keys),
+                    device=device,
+                    name="kangsimworld_articulation_torque_command_indices",
+                )
+            )
 
     def apply_resets(self):
         if not self._pending_reset_keys:
@@ -1092,6 +1375,12 @@ class KangSimWorld:
         pending_keys = list(self._pending_reset_keys)
         self._pending_reset_keys.clear()
         gpu_rigid_root_resets: list[tuple[tuple[int, int], RootStateReset]] = []
+        gpu_articulation_root_resets: list[
+            tuple[tuple[int, int], RootStateReset]
+        ] = []
+        gpu_articulation_dof_resets: list[
+            tuple[tuple[int, int], DofStateReset]
+        ] = []
         for key in pending_keys:
             reset = self.resets[key]
             if not reset.pending:
@@ -1101,6 +1390,8 @@ class KangSimWorld:
             if reset.root is not None:
                 if self._gpu_system is not None and key in self.rigids:
                     gpu_rigid_root_resets.append((key, reset.root))
+                elif self._gpu_system is not None and key in self.articulations:
+                    gpu_articulation_root_resets.append((key, reset.root))
                 else:
                     cache.set_root(
                         reset.root.pos,
@@ -1109,7 +1400,10 @@ class KangSimWorld:
                         reset.root.angular_velocity,
                     )
             if reset.dof is not None:
-                cache.set_dofs(reset.dof.positions, reset.dof.velocities)
+                if self._gpu_system is not None and key in self.articulations:
+                    gpu_articulation_dof_resets.append((key, reset.dof))
+                else:
+                    cache.set_dofs(reset.dof.positions, reset.dof.velocities)
                 command = self.commands.get(key)
                 if command is not None and command.mode == ControlMode.POS:
                     command.cmd = np.asarray(
@@ -1118,17 +1412,22 @@ class KangSimWorld:
             self.resets[key] = ResetBuffer()
         if gpu_rigid_root_resets:
             self._apply_gpu_rigid_root_resets(gpu_rigid_root_resets)
+        if gpu_articulation_root_resets:
+            self._apply_gpu_articulation_root_resets(
+                gpu_articulation_root_resets
+            )
+        if gpu_articulation_dof_resets:
+            self._apply_gpu_articulation_dof_resets(gpu_articulation_dof_resets)
 
     def _apply_gpu_rigid_root_resets(
         self, resets: list[tuple[tuple[int, int], RootStateReset]]
     ):
-        import torch
-
+        torch = _torch()
         gpu_system = self.gpu_system
         rigid_view = gpu_system.rigid_data()
         device_id = int(rigid_view.device_id)
         device = torch.device(f"cuda:{device_id}")
-        rigid_state = torch.as_tensor(rigid_view, device=device)
+        rigid_state = rigid_view.torch()
         keys = tuple(key for key, _ in resets)
 
         for reset_index, (key, reset) in enumerate(resets):
@@ -1160,6 +1459,84 @@ class KangSimWorld:
             keys, device=device, name="kangsimworld_rigid_root_reset_indices"
         )
         gpu_system.apply_rigid_data(index_view)
+
+    def _apply_gpu_articulation_root_resets(
+        self, resets: list[tuple[tuple[int, int], RootStateReset]]
+    ):
+        torch = _torch()
+        gpu_system = self.gpu_system
+        link_view = gpu_system.articulation_link_data()
+        device_id = int(link_view.device_id)
+        device = torch.device(f"cuda:{device_id}")
+        link_state = link_view.torch()
+        keys = tuple(key for key, _ in resets)
+
+        for key, reset in resets:
+            row = self.articulation_gpu_row(key[0], key[1])
+            link_state[row, 0, 0:3] = torch.as_tensor(
+                reset.pos, dtype=torch.float32, device=device
+            )
+            link_state[row, 0, 3:7] = torch.as_tensor(
+                reset.rot_xyzw, dtype=torch.float32, device=device
+            )
+            linear_velocity = (
+                np.zeros(3, dtype=np.float32)
+                if reset.linear_velocity is None
+                else reset.linear_velocity
+            )
+            angular_velocity = (
+                np.zeros(3, dtype=np.float32)
+                if reset.angular_velocity is None
+                else reset.angular_velocity
+            )
+            link_state[row, 0, 7:10] = torch.as_tensor(
+                linear_velocity, dtype=torch.float32, device=device
+            )
+            link_state[row, 0, 10:13] = torch.as_tensor(
+                angular_velocity, dtype=torch.float32, device=device
+            )
+
+        index_view = self._articulation_gpu_index_view_for_keys(
+            keys, device=device, name="kangsimworld_articulation_root_reset_indices"
+        )
+        gpu_system.apply_articulation_root_pose(index_view)
+        gpu_system.apply_articulation_root_vel(index_view)
+        gpu_system.update_articulation_kinematics()
+
+    def _apply_gpu_articulation_dof_resets(
+        self, resets: list[tuple[tuple[int, int], DofStateReset]]
+    ):
+        torch = _torch()
+        gpu_system = self.gpu_system
+        qpos_view = gpu_system.articulation_joint_positions()
+        qvel_view = gpu_system.articulation_joint_velocities()
+        device_id = int(qpos_view.device_id)
+        device = torch.device(f"cuda:{device_id}")
+        qpos = qpos_view.torch()
+        qvel = qvel_view.torch()
+        keys = tuple(key for key, _ in resets)
+
+        for key, reset in resets:
+            row = self.articulation_gpu_row(key[0], key[1])
+            dof_count = int(gpu_system.articulation_dof_count(row))
+            qpos[row, :dof_count] = torch.as_tensor(
+                reset.positions, dtype=torch.float32, device=device
+            )
+            velocity = (
+                np.zeros(dof_count, dtype=np.float32)
+                if reset.velocities is None
+                else reset.velocities
+            )
+            qvel[row, :dof_count] = torch.as_tensor(
+                velocity, dtype=torch.float32, device=device
+            )
+
+        index_view = self._articulation_gpu_index_view_for_keys(
+            keys, device=device, name="kangsimworld_articulation_dof_reset_indices"
+        )
+        gpu_system.apply_articulation_joint_positions(index_view)
+        gpu_system.apply_articulation_joint_velocities(index_view)
+        gpu_system.update_articulation_kinematics()
 
     def set_body_force(
         self,
@@ -1303,7 +1680,12 @@ class KangSimWorld:
             key: int(gpu_system.rigid_row(record.rigid))
             for key, record in self.rigids.items()
         }
+        self._articulation_gpu_rows = {
+            key: int(gpu_system.articulation_row(record.articulation))
+            for key, record in self.articulations.items()
+        }
         self._rigid_gpu_index_tensors.clear()
+        self._articulation_gpu_index_tensors.clear()
         return gpu_system
 
     @property
@@ -1327,16 +1709,98 @@ class KangSimWorld:
         rigid_view = self.gpu_system.rigid_data()
         keys = tuple((env, int(obj_id)) for env in env_id_list(env_id, self.num_envs))
 
-        import torch
-
+        torch = _torch()
         device = torch.device(f"cuda:{int(rigid_view.device_id)}")
         return self._rigid_gpu_index_view_for_keys(
             keys, device=device, name="kangsimworld_rigid_indices"
         )
 
-    def _rigid_gpu_index_view_for_keys(self, keys, *, device, name: str):
-        import torch
+    def articulation_gpu_row(self, env_id: int, obj_id: int = 0) -> int:
+        key = (int(env_id), int(obj_id))
+        if key not in self._articulation_gpu_rows:
+            raise KeyError(
+                f"no cached PhysX GPU articulation row for env={key[0]}, "
+                f"obj={key[1]}"
+            )
+        return self._articulation_gpu_rows[key]
 
+    def articulation_gpu_index_view(self, env_id: EnvIdLike, obj_id: int = 0):
+        """Return a cached CUDA int32 logical-row index view for articulations."""
+        link_view = self.gpu_system.articulation_link_data()
+        keys = tuple((env, int(obj_id)) for env in env_id_list(env_id, self.num_envs))
+
+        torch = _torch()
+        device = torch.device(f"cuda:{int(link_view.device_id)}")
+        return self._articulation_gpu_index_view_for_keys(
+            keys, device=device, name="kangsimworld_articulation_indices"
+        )
+
+    def get_gpu_rigid_data(self, *, fetch: bool = True):
+        """Return the full PhysX GPU rigid mirror as a Torch CUDA view."""
+        gpu_system = self.gpu_system
+        if fetch:
+            gpu_system.fetch_rigid_data()
+        return _gpu_view_tensor(gpu_system.rigid_data())
+
+    def get_gpu_articulation_link_data(
+        self, *, fetch_pose: bool = True, fetch_velocity: bool = True
+    ):
+        """Return the full articulation link mirror as a Torch CUDA view.
+
+        Layout is ``[articulation_count, max_links, 13]`` with
+        ``[pos xyz, quat xyzw, linear velocity xyz, angular velocity xyz]``.
+        """
+        gpu_system = self.gpu_system
+        if fetch_pose:
+            gpu_system.fetch_articulation_link_pose()
+        if fetch_velocity:
+            gpu_system.fetch_articulation_link_vel()
+        return _gpu_view_tensor(gpu_system.articulation_link_data())
+
+    def get_gpu_articulation_joint_positions(self, *, fetch: bool = True):
+        gpu_system = self.gpu_system
+        if fetch:
+            gpu_system.fetch_articulation_joint_positions()
+        return _gpu_view_tensor(gpu_system.articulation_joint_positions())
+
+    def get_gpu_articulation_joint_velocities(self, *, fetch: bool = True):
+        gpu_system = self.gpu_system
+        if fetch:
+            gpu_system.fetch_articulation_joint_velocities()
+        return _gpu_view_tensor(gpu_system.articulation_joint_velocities())
+
+    def get_gpu_articulation_joint_accelerations(self, *, fetch: bool = True):
+        gpu_system = self.gpu_system
+        if fetch:
+            gpu_system.fetch_articulation_joint_accelerations()
+        return _gpu_view_tensor(gpu_system.articulation_joint_accelerations())
+
+    def get_gpu_articulation_joint_forces(self, *, fetch: bool = True):
+        gpu_system = self.gpu_system
+        if fetch:
+            gpu_system.fetch_articulation_joint_forces()
+        return _gpu_view_tensor(gpu_system.articulation_joint_forces())
+
+    def get_gpu_articulation_target_joint_positions(self, *, fetch: bool = True):
+        gpu_system = self.gpu_system
+        if fetch:
+            gpu_system.fetch_articulation_target_joint_positions()
+        return _gpu_view_tensor(gpu_system.articulation_target_joint_positions())
+
+    def get_gpu_articulation_target_joint_velocities(self, *, fetch: bool = True):
+        gpu_system = self.gpu_system
+        if fetch:
+            gpu_system.fetch_articulation_target_joint_velocities()
+        return _gpu_view_tensor(gpu_system.articulation_target_joint_velocities())
+
+    def get_gpu_articulation_link_incoming_joint_forces(self, *, fetch: bool = True):
+        gpu_system = self.gpu_system
+        if fetch:
+            gpu_system.fetch_articulation_link_incoming_joint_force()
+        return _gpu_view_tensor(gpu_system.articulation_link_incoming_joint_forces())
+
+    def _rigid_gpu_index_view_for_keys(self, keys, *, device, name: str):
+        torch = _torch()
         from .utils import to_gpu_array_view
 
         keys = tuple((int(env_id), int(obj_id)) for env_id, obj_id in keys)
@@ -1345,6 +1809,21 @@ class KangSimWorld:
             rows = [self.rigid_gpu_row(env_id, obj_id) for env_id, obj_id in keys]
             tensor = torch.tensor(rows, dtype=torch.int32, device=device)
             self._rigid_gpu_index_tensors[keys] = tensor
+        return to_gpu_array_view(tensor, dtype=torch.int32, name=name)
+
+    def _articulation_gpu_index_view_for_keys(self, keys, *, device, name: str):
+        torch = _torch()
+        from .utils import to_gpu_array_view
+
+        keys = tuple((int(env_id), int(obj_id)) for env_id, obj_id in keys)
+        tensor = self._articulation_gpu_index_tensors.get(keys)
+        if tensor is None or tensor.device != device:
+            rows = [
+                self.articulation_gpu_row(env_id, obj_id)
+                for env_id, obj_id in keys
+            ]
+            tensor = torch.tensor(rows, dtype=torch.int32, device=device)
+            self._articulation_gpu_index_tensors[keys] = tensor
         return to_gpu_array_view(tensor, dtype=torch.int32, name=name)
 
     def _require_gpu_runtime_uninitialized(self, operation: str):
@@ -1365,6 +1844,38 @@ class KangSimWorld:
         angular_velocity=None,
         immediate: bool = False,
     ):
+        import sys
+
+        torch = sys.modules.get("torch")
+        cuda_pos = (
+            torch is not None and torch.is_tensor(pos) and pos.device.type == "cuda"
+        )
+        cuda_rot = (
+            torch is not None
+            and torch.is_tensor(rot_xyzw)
+            and rot_xyzw.device.type == "cuda"
+        )
+        cuda_lin_vel = (
+            torch is not None
+            and torch.is_tensor(linear_velocity)
+            and linear_velocity.device.type == "cuda"
+        )
+        cuda_ang_vel = (
+            torch is not None
+            and torch.is_tensor(angular_velocity)
+            and angular_velocity.device.type == "cuda"
+        )
+        cuda_root_reset = cuda_pos or cuda_rot or cuda_lin_vel or cuda_ang_vel
+        if cuda_root_reset and not (cuda_pos and cuda_rot):
+            raise RuntimeError(
+                "If any root reset tensor is CUDA, the whole root reset must "
+                "use CUDA tensors; position and rotation are required"
+            )
+        if immediate and cuda_root_reset:
+            raise RuntimeError(
+                "immediate=True does not support CUDA root reset tensors; use "
+                "the deferred GPU reset path"
+            )
         if immediate:
             self.state.set_root_state(
                 env_id, obj_id, pos, rot_xyzw, linear_velocity, angular_velocity
@@ -1377,10 +1888,87 @@ class KangSimWorld:
             return
 
         env_ids = env_id_list(env_id, self.num_envs)
+        if cuda_root_reset:
+            if self._gpu_system is None:
+                raise RuntimeError(
+                    "CUDA root reset tensors require init_gpu_system(); "
+                    "KangSimWorld will not silently copy them to CPU"
+                )
+            first_key = (env_ids[0], int(obj_id))
+            if first_key in self.articulations:
+                gpu_device = int(
+                    self.gpu_system.articulation_link_data().device_id
+                )
+            else:
+                gpu_device = int(self.gpu_system.rigid_data().device_id)
+            for name, value, is_cuda, width in (
+                ("position", pos, cuda_pos, 3),
+                ("rotation", rot_xyzw, cuda_rot, 4),
+                ("linear velocity", linear_velocity, cuda_lin_vel, 3),
+                ("angular velocity", angular_velocity, cuda_ang_vel, 3),
+            ):
+                if value is None:
+                    continue
+                if not is_cuda:
+                    raise RuntimeError(
+                        f"CUDA root reset {name} must be a CUDA tensor or None; "
+                        "mixed CPU/CUDA root reset tensors are not allowed"
+                    )
+                value_device = value.device.index if value.device.index is not None else 0
+                if value_device != gpu_device:
+                    raise ValueError(
+                        f"CUDA root reset {name} tensor is on cuda:{value_device}, "
+                        f"expected cuda:{gpu_device}"
+                    )
+                if value.dtype != torch.float32:
+                    raise TypeError(
+                        f"CUDA root reset {name} tensor must have "
+                        "dtype=torch.float32"
+                    )
+                if not value.is_contiguous():
+                    raise ValueError(
+                        f"CUDA root reset {name} tensor must be contiguous"
+                    )
+                if value.ndim == 1 and tuple(value.shape) == (width,):
+                    continue
+                if value.ndim == 2 and tuple(value.shape) == (len(env_ids), width):
+                    continue
+                raise ValueError(
+                    f"CUDA root reset {name} tensor expected shape "
+                    f"[{width}] or [{len(env_ids)}, {width}], got "
+                    f"{list(value.shape)}"
+                )
+
         for env_index, eid in enumerate(env_ids):
             key = (eid, int(obj_id))
             if key not in self.articulations and key not in self.rigids:
                 raise KeyError(f"no object registered at env={eid}, obj={obj_id}")
+            if cuda_root_reset:
+                pos_arr = pos if pos.ndim == 1 else pos[env_index]
+                rot_arr = rot_xyzw if rot_xyzw.ndim == 1 else rot_xyzw[env_index]
+                linear_velocity_arr = None
+                if linear_velocity is not None:
+                    linear_velocity_arr = (
+                        linear_velocity
+                        if linear_velocity.ndim == 1
+                        else linear_velocity[env_index]
+                    )
+                angular_velocity_arr = None
+                if angular_velocity is not None:
+                    angular_velocity_arr = (
+                        angular_velocity
+                        if angular_velocity.ndim == 1
+                        else angular_velocity[env_index]
+                    )
+                self.resets[key].root = RootStateReset(
+                    pos_arr,
+                    rot_arr,
+                    linear_velocity_arr,
+                    angular_velocity_arr,
+                )
+                self._pending_reset_keys.add(key)
+                continue
+
             pos_arr = select_env_value(pos, env_index, len(env_ids), (3,))
             rot_arr = select_env_value(rot_xyzw, env_index, len(env_ids), (4,))
             linear_velocity_arr = select_optional_env_value(
@@ -1405,6 +1993,29 @@ class KangSimWorld:
         velocities=None,
         immediate: bool = False,
     ):
+        import sys
+
+        torch = sys.modules.get("torch")
+        cuda_positions = (
+            torch is not None
+            and torch.is_tensor(positions)
+            and positions.device.type == "cuda"
+        )
+        cuda_velocities = (
+            torch is not None
+            and torch.is_tensor(velocities)
+            and velocities.device.type == "cuda"
+        )
+        if cuda_velocities and not cuda_positions:
+            raise RuntimeError(
+                "CUDA DOF velocity reset tensors require CUDA position tensors; "
+                "KangSimWorld will not silently copy them to CPU"
+            )
+        if immediate and (cuda_positions or cuda_velocities):
+            raise RuntimeError(
+                "immediate=True does not support CUDA DOF reset tensors; use "
+                "the deferred GPU reset path"
+            )
         if immediate:
             self.state.set_dof_state(env_id, obj_id, positions, velocities)
             env_ids = env_id_list(env_id, self.num_envs)
@@ -1415,11 +2026,83 @@ class KangSimWorld:
             return
 
         env_ids = env_id_list(env_id, self.num_envs)
+        if cuda_positions:
+            if self._gpu_system is None:
+                raise RuntimeError(
+                    "CUDA DOF reset tensors require init_gpu_system(); "
+                    "KangSimWorld will not silently copy them to CPU"
+                )
+            gpu_device = int(
+                self.gpu_system.articulation_joint_positions().device_id
+            )
+            pos_device = positions.device.index if positions.device.index is not None else 0
+            if pos_device != gpu_device:
+                raise ValueError(
+                    f"CUDA DOF position tensor is on cuda:{pos_device}, "
+                    f"expected cuda:{gpu_device}"
+                )
+            if positions.dtype != torch.float32:
+                raise TypeError("CUDA DOF position tensor must have dtype=torch.float32")
+            if not positions.is_contiguous():
+                raise ValueError("CUDA DOF position tensor must be contiguous")
+            if velocities is not None:
+                if not cuda_velocities:
+                    raise RuntimeError(
+                        "CUDA DOF position reset tensors require velocities to "
+                        "be CUDA tensors or None; KangSimWorld will not silently "
+                        "copy mixed reset tensors to CPU"
+                    )
+                vel_device = velocities.device.index if velocities.device.index is not None else 0
+                if vel_device != gpu_device:
+                    raise ValueError(
+                        f"CUDA DOF velocity tensor is on cuda:{vel_device}, "
+                        f"expected cuda:{gpu_device}"
+                    )
+                if velocities.dtype != torch.float32:
+                    raise TypeError("CUDA DOF velocity tensor must have dtype=torch.float32")
+                if not velocities.is_contiguous():
+                    raise ValueError("CUDA DOF velocity tensor must be contiguous")
+
         for env_index, eid in enumerate(env_ids):
             key = (eid, int(obj_id))
             if key in self.rigids:
-                raise TypeError(f"rigid body at env={eid}, obj={obj_id} does not have DOF state")
+                raise TypeError(
+                    f"rigid body at env={eid}, obj={obj_id} does not have DOF state"
+                )
             expected = self.articulations[key].articulation.num_dofs()
+            if cuda_positions:
+                if positions.ndim == 1 and tuple(positions.shape) == (expected,):
+                    pos = positions
+                elif positions.ndim == 2 and tuple(positions.shape) == (
+                    len(env_ids),
+                    expected,
+                ):
+                    pos = positions[env_index]
+                else:
+                    raise ValueError(
+                        "CUDA DOF position tensor expected shape "
+                        f"[{expected}] or [{len(env_ids)}, {expected}], got "
+                        f"{list(positions.shape)}"
+                    )
+                vel = None
+                if velocities is not None:
+                    if velocities.ndim == 1 and tuple(velocities.shape) == (expected,):
+                        vel = velocities
+                    elif velocities.ndim == 2 and tuple(velocities.shape) == (
+                        len(env_ids),
+                        expected,
+                    ):
+                        vel = velocities[env_index]
+                    else:
+                        raise ValueError(
+                            "CUDA DOF velocity tensor expected shape "
+                            f"[{expected}] or [{len(env_ids)}, {expected}], got "
+                            f"{list(velocities.shape)}"
+                        )
+                self.resets[key].dof = DofStateReset(pos, vel)
+                self._pending_reset_keys.add(key)
+                continue
+
             pos = select_env_value(positions, env_index, len(env_ids), (expected,))
             if pos.size != expected:
                 raise ValueError(
@@ -1447,6 +2130,8 @@ class KangSimWorld:
             self._gpu_system = None
         self._rigid_gpu_rows.clear()
         self._rigid_gpu_index_tensors.clear()
+        self._articulation_gpu_rows.clear()
+        self._articulation_gpu_index_tensors.clear()
         for record in self.articulations.values():
             record.articulation.release()
         for record in self.rigids.values():

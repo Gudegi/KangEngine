@@ -132,6 +132,7 @@ class Articulation {
     std::vector<float> getLinkRotationsFlat() const;
     std::vector<float> getLinkLinearVelocitiesFlat() const;
     std::vector<float> getLinkAngularVelocitiesFlat() const;
+    std::vector<int> getLinkIndices() const;
     std::vector<float> getDofPositions() const;
     std::vector<float> getDofVelocities() const;
     std::vector<float> getDofForces() const;

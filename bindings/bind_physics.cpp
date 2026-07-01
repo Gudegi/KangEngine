@@ -440,6 +440,8 @@ void bind_physics(py::module& m) {
                      self.getLinkAngularVelocitiesFlat());
              },
              "Return flat per-link angular velocities.")
+        .def("get_link_indices", &Articulation::getLinkIndices,
+             "Return PhysX low-level link indices in visual link order.")
         .def("get_dof_positions",
              [](const Articulation& self) {
                  return floatArrayFromVector(self.getDofPositions());

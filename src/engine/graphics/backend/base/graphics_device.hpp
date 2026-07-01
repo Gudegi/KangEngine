@@ -11,6 +11,7 @@
 #include <glm/glm.hpp>
 #include <cstdint>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -205,6 +206,19 @@ class GraphicsDevice {
 
     virtual std::unique_ptr<Framebuffer>
     createFramebuffer(const FramebufferDesc& desc) = 0;
+
+    // Short-lived CUDA access to backend buffers. The buffers must be
+    // unmapped before graphics commands consume them.
+    virtual bool mapCudaBuffers(const std::vector<Buffer*>&,
+                                std::vector<Sim::GpuArrayView>&, size_t,
+                                size_t, int, uint64_t) {
+        return false;
+    }
+    virtual void unmapCudaBuffers(const std::vector<Buffer*>&, int,
+                                  uint64_t) {
+        throw std::runtime_error(
+            "CUDA buffer unmap is unsupported by this graphics backend");
+    }
 
     // Skybox (optional — no-op on backends that don't support it)
     virtual void setSkybox(const std::string& path, UpAxis upAxis = UpAxis::Y) {
