@@ -6,12 +6,14 @@
 
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 #ifdef KANGENGINE_USE_CUDA
 #include <cuda_runtime.h>
 #include <cudamanager/PxCudaContext.h>
 #ifdef KANGENGINE_HAS_PHYSX_DIRECT_GPU_API
+#include <PxContact.h>
 #include <PxDirectGPUAPI.h>
 #endif
 #endif
@@ -26,6 +28,9 @@ PhysicsGpuSystem::~PhysicsGpuSystem() { releaseGpuBuffers(); }
 namespace {
 
 #if defined(KANGENGINE_USE_CUDA) && defined(KANGENGINE_HAS_PHYSX_DIRECT_GPU_API)
+constexpr int32_t kContactRefUnknown = -1;
+constexpr int32_t kContactRefRigid = 0;
+constexpr int32_t kContactRefArticulation = 1;
 constexpr int kArticulationReadJointPosition =
     PxArticulationGPUAPIReadType::eJOINT_POSITION;
 constexpr int kArticulationReadJointVelocity =
@@ -87,6 +92,21 @@ void checkCuda(cudaError_t result, const char* operation) {
 CUdeviceptr toDevicePtr(void* ptr) {
     return static_cast<CUdeviceptr>(reinterpret_cast<uintptr_t>(ptr));
 }
+
+#ifdef KANGENGINE_HAS_PHYSX_DIRECT_GPU_API
+void setContactBodyRef(std::vector<int32_t>& refs, PxNodeIndex node,
+                       int32_t kind, int32_t row, int32_t body) {
+    if (!node.isValid())
+        return;
+    const uint32_t nodeIndex = node.index();
+    const size_t offset = static_cast<size_t>(nodeIndex) * 3;
+    if (refs.size() < offset + 3)
+        refs.resize(offset + 3, kContactRefUnknown);
+    refs[offset + 0] = kind;
+    refs[offset + 1] = row;
+    refs[offset + 2] = body;
+}
+#endif
 #endif
 
 void setFloatCudaView(Sim::GpuArrayView& view, void* data, int deviceId,
@@ -117,6 +137,22 @@ void setFloatCudaView3D(Sim::GpuArrayView& view, void* data, int deviceId,
                   static_cast<int64_t>(dim2)};
     view.strides = {static_cast<int64_t>(dim1) * dim2,
                     static_cast<int64_t>(dim2), 1};
+    view.streamHandle = streamHandle;
+    view.readyEventHandle = readyEventHandle;
+    view.name = name;
+}
+
+void setUintCudaView(Sim::GpuArrayView& view, void* data, int deviceId,
+                     Sim::SimDType dtype, std::vector<int64_t> shape,
+                     std::vector<int64_t> strides, uint64_t streamHandle,
+                     uint64_t readyEventHandle, const char* name) {
+    view.data = data;
+    view.memoryType = Sim::SimMemoryType::CUDADevice;
+    view.dtype = dtype;
+    view.lifetime = Sim::SimLifetimePolicy::ExternalOwner;
+    view.deviceId = deviceId;
+    view.shape = std::move(shape);
+    view.strides = std::move(strides);
     view.streamHandle = streamHandle;
     view.readyEventHandle = readyEventHandle;
     view.name = name;
@@ -198,6 +234,7 @@ void PhysicsGpuSystem::init() {
     _world->step();
 
     PxScene* scene = _world->getScene();
+    std::vector<int32_t> contactNodeBodyRefs;
     _rigidCount = scene->getNbActors(PxActorTypeFlag::eRIGID_DYNAMIC);
     if (_rigidCount > 0) {
         std::vector<PxActor*> actors(_rigidCount);
@@ -215,6 +252,9 @@ void PhysicsGpuSystem::init() {
             if (actorIndices[i] == 0xFFFFFFFFu)
                 throw std::runtime_error(
                     "PhysicsGpuSystem found an invalid PhysX rigid GPU index");
+            setContactBodyRef(contactNodeBodyRefs,
+                              body->getInternalIslandNodeIndex(),
+                              kContactRefRigid, static_cast<int32_t>(i), 0);
         }
 
         checkCuda(cudaMalloc(&_rigidIndexBuffer,
@@ -283,6 +323,19 @@ void PhysicsGpuSystem::init() {
             if (articulationIndices[i] == 0xFFFFFFFFu)
                 throw std::runtime_error(
                     "PhysicsGpuSystem found an invalid articulation GPU index");
+            std::vector<PxArticulationLink*> links(_articulationLinkCounts[i]);
+            const PxU32 linkCount =
+                articulation->getLinks(links.data(), _articulationLinkCounts[i]);
+            for (PxU32 linkSlot = 0; linkSlot < linkCount; ++linkSlot) {
+                PxArticulationLink* link = links[linkSlot];
+                if (!link)
+                    continue;
+                setContactBodyRef(contactNodeBodyRefs,
+                                  link->getInternalIslandNodeIndex(),
+                                  kContactRefArticulation,
+                                  static_cast<int32_t>(i),
+                                  static_cast<int32_t>(link->getLinkIndex()));
+            }
         }
 
         const size_t paddedLinkCount =
@@ -361,7 +414,69 @@ void PhysicsGpuSystem::init() {
                   "cudaMemset(articulation link incoming joint forces)");
     }
 
-    if (_rigidCount > 0 || _articulationCount > 0) {
+    if (_config.maxContactPairs > 0) {
+        checkCuda(cudaMalloc(&_contactPairBuffer,
+                             sizeof(PxGpuContactPair) *
+                                 _config.maxContactPairs),
+                  "cudaMalloc(contact pairs)");
+        checkCuda(cudaMalloc(&_contactPairCountBuffer, sizeof(PxU32)),
+                  "cudaMalloc(contact pair count)");
+        checkCuda(cudaMalloc(&_contactPairHeaderBuffer,
+                             sizeof(uint64_t) * 6 *
+                                 _config.maxContactPairs),
+                  "cudaMalloc(contact pair headers)");
+        checkCuda(cudaMalloc(&_contactPairBodyRefBuffer,
+                             sizeof(int32_t) * 6 *
+                                 _config.maxContactPairs),
+                  "cudaMalloc(contact pair body refs)");
+        checkCuda(cudaMemset(_contactPairBuffer, 0,
+                             sizeof(PxGpuContactPair) *
+                                 _config.maxContactPairs),
+                  "cudaMemset(contact pairs)");
+        checkCuda(cudaMemset(_contactPairCountBuffer, 0, sizeof(PxU32)),
+                  "cudaMemset(contact pair count)");
+        checkCuda(cudaMemset(_contactPairHeaderBuffer, 0,
+                             sizeof(uint64_t) * 6 *
+                                 _config.maxContactPairs),
+                  "cudaMemset(contact pair headers)");
+        checkCuda(cudaMemset(_contactPairBodyRefBuffer, 0xFF,
+                             sizeof(int32_t) * 6 *
+                                 _config.maxContactPairs),
+                  "cudaMemset(contact pair body refs)");
+        if (!contactNodeBodyRefs.empty()) {
+            _contactNodeBodyRefCapacity =
+                static_cast<uint32_t>(contactNodeBodyRefs.size() / 3);
+            checkCuda(cudaMalloc(&_contactNodeBodyRefBuffer,
+                                 sizeof(int32_t) * contactNodeBodyRefs.size()),
+                      "cudaMalloc(contact node body refs)");
+            checkCuda(cudaMemcpy(_contactNodeBodyRefBuffer,
+                                 contactNodeBodyRefs.data(),
+                                 sizeof(int32_t) * contactNodeBodyRefs.size(),
+                                 cudaMemcpyHostToDevice),
+                      "cudaMemcpy(contact node body refs)");
+        }
+    }
+    if (_config.maxContactPoints > 0) {
+        checkCuda(cudaMalloc(&_contactPointBuffer,
+                             sizeof(float) * 10 * _config.maxContactPoints),
+                  "cudaMalloc(contact points)");
+        checkCuda(cudaMalloc(&_contactPointCountBuffer, sizeof(PxU32)),
+                  "cudaMalloc(contact point count)");
+        checkCuda(cudaMalloc(&_contactPointPairIndexBuffer,
+                             sizeof(PxU32) * _config.maxContactPoints),
+                  "cudaMalloc(contact point pair indices)");
+        checkCuda(cudaMemset(_contactPointBuffer, 0,
+                             sizeof(float) * 10 * _config.maxContactPoints),
+                  "cudaMemset(contact points)");
+        checkCuda(cudaMemset(_contactPointCountBuffer, 0, sizeof(PxU32)),
+                  "cudaMemset(contact point count)");
+        checkCuda(cudaMemset(_contactPointPairIndexBuffer, 0xFF,
+                             sizeof(PxU32) * _config.maxContactPoints),
+                  "cudaMemset(contact point pair indices)");
+    }
+
+    if (_rigidCount > 0 || _articulationCount > 0 ||
+        _config.maxContactPairs > 0 || _config.maxContactPoints > 0) {
         cudaEvent_t copyEvent = nullptr;
         cudaEvent_t readyEvent = nullptr;
         checkCuda(cudaEventCreateWithFlags(&copyEvent, cudaEventDisableTiming),
@@ -418,6 +533,40 @@ void PhysicsGpuSystem::init() {
         _articulationLinkIncomingJointForceBuffer, _config.cudaDeviceId,
         _articulationCount, _articulationMaxLinks, 6, _streamHandle,
         readyEventHandle, "physics_articulation_link_incoming_joint_forces");
+    setUintCudaView(
+        _views.contactPairs, _contactPairBuffer, _config.cudaDeviceId,
+        Sim::SimDType::UInt8,
+        {static_cast<int64_t>(sizeof(PxGpuContactPair)) *
+         static_cast<int64_t>(_config.maxContactPairs)},
+        {1}, _streamHandle, readyEventHandle, "physics_contact_pairs_raw");
+    setUintCudaView(_views.contactPairCount, _contactPairCountBuffer,
+                    _config.cudaDeviceId, Sim::SimDType::UInt32, {1}, {1},
+                    _streamHandle, readyEventHandle,
+                    "physics_contact_pair_count");
+    setUintCudaView(_views.contactPairHeaders, _contactPairHeaderBuffer,
+                    _config.cudaDeviceId, Sim::SimDType::UInt64,
+                    {static_cast<int64_t>(_config.maxContactPairs), 6},
+                    {6, 1}, _streamHandle, readyEventHandle,
+                    "physics_contact_pair_headers");
+    setUintCudaView(_views.contactPairBodyRefs, _contactPairBodyRefBuffer,
+                    _config.cudaDeviceId, Sim::SimDType::Int32,
+                    {static_cast<int64_t>(_config.maxContactPairs), 6},
+                    {6, 1}, _streamHandle, readyEventHandle,
+                    "physics_contact_pair_body_refs");
+    setFloatCudaView(_views.contactPoints, _contactPointBuffer,
+                     _config.cudaDeviceId, _config.maxContactPoints, 10,
+                     _streamHandle, readyEventHandle,
+                     "physics_contact_points");
+    setUintCudaView(_views.contactPointCount, _contactPointCountBuffer,
+                    _config.cudaDeviceId, Sim::SimDType::UInt32, {1}, {1},
+                    _streamHandle, readyEventHandle,
+                    "physics_contact_point_count");
+    setUintCudaView(_views.contactPointPairIndices,
+                    _contactPointPairIndexBuffer, _config.cudaDeviceId,
+                    Sim::SimDType::UInt32,
+                    {static_cast<int64_t>(_config.maxContactPoints)}, {1},
+                    _streamHandle, readyEventHandle,
+                    "physics_contact_point_pair_indices");
     _initialized = true;
 #endif
 #else
@@ -449,6 +598,13 @@ void PhysicsGpuSystem::setCudaStream(uint64_t streamHandle) {
     _views.articulationTargetJointPositions.streamHandle = streamHandle;
     _views.articulationTargetJointVelocities.streamHandle = streamHandle;
     _views.articulationLinkIncomingJointForces.streamHandle = streamHandle;
+    _views.contactPairs.streamHandle = streamHandle;
+    _views.contactPairCount.streamHandle = streamHandle;
+    _views.contactPairHeaders.streamHandle = streamHandle;
+    _views.contactPairBodyRefs.streamHandle = streamHandle;
+    _views.contactPoints.streamHandle = streamHandle;
+    _views.contactPointCount.streamHandle = streamHandle;
+    _views.contactPointPairIndices.streamHandle = streamHandle;
 }
 
 uint32_t PhysicsGpuSystem::rigidRow(const physx::PxRigidDynamic& rigid) const {
@@ -824,6 +980,57 @@ void PhysicsGpuSystem::fetchArticulationLinkIncomingJointForce() {
 #endif
 }
 
+void PhysicsGpuSystem::fetchContactPairs() {
+    checkInitialized();
+#ifdef KANGENGINE_USE_CUDA
+    if (!_contactPairBuffer || !_contactPairCountBuffer ||
+        _config.maxContactPairs == 0)
+        return;
+
+    checkCuda(cudaSetDevice(_config.cudaDeviceId), "cudaSetDevice");
+    auto stream = reinterpret_cast<cudaStream_t>(_streamHandle);
+    auto copyEvent = reinterpret_cast<cudaEvent_t>(_copyEvent);
+    auto readyEvent = reinterpret_cast<cudaEvent_t>(_readyEvent);
+    auto physxStartEvent = reinterpret_cast<CUevent>(_readyEvent);
+    auto physxCopyEvent = reinterpret_cast<CUevent>(_copyEvent);
+
+#ifndef KANGENGINE_HAS_PHYSX_DIRECT_GPU_API
+    throw std::runtime_error(
+        "PhysicsGpuSystem requires PhysX Direct GPU API support");
+#else
+    checkCuda(cudaMemsetAsync(_contactPairCountBuffer, 0, sizeof(PxU32),
+                              stream),
+              "cudaMemsetAsync(contact pair count)");
+    checkCuda(cudaEventRecord(readyEvent, stream),
+              "cudaEventRecord(contact pair clear)");
+    PxDirectGPUAPI& directGpuApi = _world->getScene()->getDirectGPUAPI();
+    if (!directGpuApi.copyContactData(
+            _contactPairBuffer, static_cast<PxU32*>(_contactPairCountBuffer),
+            _config.maxContactPairs, physxStartEvent, physxCopyEvent))
+        throw std::runtime_error("PxDirectGPUAPI::copyContactData failed");
+    checkCuda(cudaStreamWaitEvent(stream, copyEvent, 0),
+              "cudaStreamWaitEvent(PhysX contact pair copy)");
+    PhysicsGpuKernels::flattenContactPairsCUDA(
+        _contactPairBuffer, _contactPairCountBuffer, _contactPairHeaderBuffer,
+        _contactNodeBodyRefBuffer, _contactNodeBodyRefCapacity,
+        _contactPairBodyRefBuffer, _contactPointBuffer,
+        _contactPointCountBuffer, _contactPointPairIndexBuffer,
+        _config.maxContactPairs, _config.maxContactPoints, _streamHandle);
+    checkCuda(cudaEventRecord(readyEvent, stream),
+              "cudaEventRecord(contact pair ready)");
+    ++_views.contactPairs.version;
+    ++_views.contactPairCount.version;
+    ++_views.contactPairHeaders.version;
+    ++_views.contactPairBodyRefs.version;
+    ++_views.contactPoints.version;
+    ++_views.contactPointCount.version;
+    ++_views.contactPointPairIndices.version;
+#endif
+#else
+    notImplemented("fetchContactPairs");
+#endif
+}
+
 void PhysicsGpuSystem::applyRigidData(const Sim::GpuArrayView* indices) {
     checkInitialized();
 #ifdef KANGENGINE_USE_CUDA
@@ -1097,6 +1304,84 @@ void PhysicsGpuSystem::applyArticulationTargetJointVelocities(
         kArticulationWriteTargetJointVelocity, "target joint velocity",
         "cudaStreamWaitEvent(apply articulation target joint velocity)",
         "cudaEventRecord(apply articulation target joint velocity)");
+}
+
+void PhysicsGpuSystem::clearRigidCommands(const Sim::GpuArrayView* indices) {
+    checkInitialized();
+#ifdef KANGENGINE_USE_CUDA
+    if (_rigidCount == 0 || !_rigidForceBuffer || !_rigidTorqueBuffer)
+        return;
+
+    checkCuda(cudaSetDevice(_config.cudaDeviceId), "cudaSetDevice");
+    auto stream = reinterpret_cast<cudaStream_t>(_streamHandle);
+    if (indices) {
+        if (indices->deviceId != _config.cudaDeviceId)
+            throw std::runtime_error(
+                "sparse rigid command clear indices device_id does not match "
+                "PhysicsGpuSystem");
+        PhysicsGpuKernels::clearSparseRigidCommandsCUDA(
+            *indices, _rigidForceBuffer, _rigidTorqueBuffer, _rigidCount,
+            _streamHandle);
+    } else {
+        const size_t bytes = sizeof(float) * static_cast<size_t>(_rigidCount) * 3;
+        checkCuda(cudaMemsetAsync(_rigidForceBuffer, 0, bytes, stream),
+                  "cudaMemsetAsync(clear rigid force)");
+        checkCuda(cudaMemsetAsync(_rigidTorqueBuffer, 0, bytes, stream),
+                  "cudaMemsetAsync(clear rigid torque)");
+    }
+    applyRigidForce(indices);
+    applyRigidTorque(indices);
+#else
+    (void)indices;
+    notImplemented("clearRigidCommands");
+#endif
+}
+
+void PhysicsGpuSystem::clearArticulationCommands(
+    const Sim::GpuArrayView* indices) {
+    checkInitialized();
+#ifdef KANGENGINE_USE_CUDA
+    if (_articulationCount == 0 || _articulationMaxDofs == 0 ||
+        !_articulationJointPositionBuffer || !_articulationJointForceBuffer ||
+        !_articulationTargetJointPositionBuffer ||
+        !_articulationTargetJointVelocityBuffer)
+        return;
+
+    checkCuda(cudaSetDevice(_config.cudaDeviceId), "cudaSetDevice");
+    auto stream = reinterpret_cast<cudaStream_t>(_streamHandle);
+    const size_t bytes = sizeof(float) *
+                         static_cast<size_t>(_articulationCount) *
+                         _articulationMaxDofs;
+    if (indices) {
+        if (indices->deviceId != _config.cudaDeviceId)
+            throw std::runtime_error(
+                "sparse articulation command clear indices device_id does not "
+                "match PhysicsGpuSystem");
+        PhysicsGpuKernels::clearSparseArticulationCommandsCUDA(
+            *indices, _articulationJointPositionBuffer,
+            _articulationJointForceBuffer,
+            _articulationTargetJointPositionBuffer,
+            _articulationTargetJointVelocityBuffer, _articulationCount,
+            _articulationMaxDofs, _streamHandle);
+    } else {
+        checkCuda(cudaMemcpyAsync(_articulationTargetJointPositionBuffer,
+                                  _articulationJointPositionBuffer, bytes,
+                                  cudaMemcpyDeviceToDevice, stream),
+                  "cudaMemcpyAsync(clear articulation target joint position)");
+        checkCuda(cudaMemsetAsync(_articulationTargetJointVelocityBuffer, 0,
+                                  bytes, stream),
+                  "cudaMemsetAsync(clear articulation target joint velocity)");
+        checkCuda(cudaMemsetAsync(_articulationJointForceBuffer, 0, bytes,
+                                  stream),
+                  "cudaMemsetAsync(clear articulation joint force)");
+    }
+    applyArticulationTargetJointPositions(indices);
+    applyArticulationTargetJointVelocities(indices);
+    applyArticulationJointForces(indices);
+#else
+    (void)indices;
+    notImplemented("clearArticulationCommands");
+#endif
 }
 
 void PhysicsGpuSystem::updateArticulationKinematics() {
@@ -1422,6 +1707,22 @@ void PhysicsGpuSystem::releaseGpuBuffers() {
         cudaFree(_articulationTargetJointVelocityBuffer);
     if (_articulationLinkIncomingJointForceBuffer)
         cudaFree(_articulationLinkIncomingJointForceBuffer);
+    if (_contactPairBuffer)
+        cudaFree(_contactPairBuffer);
+    if (_contactPairCountBuffer)
+        cudaFree(_contactPairCountBuffer);
+    if (_contactPairHeaderBuffer)
+        cudaFree(_contactPairHeaderBuffer);
+    if (_contactNodeBodyRefBuffer)
+        cudaFree(_contactNodeBodyRefBuffer);
+    if (_contactPairBodyRefBuffer)
+        cudaFree(_contactPairBodyRefBuffer);
+    if (_contactPointBuffer)
+        cudaFree(_contactPointBuffer);
+    if (_contactPointCountBuffer)
+        cudaFree(_contactPointCountBuffer);
+    if (_contactPointPairIndexBuffer)
+        cudaFree(_contactPointPairIndexBuffer);
 #endif
     _rigidCount = 0;
     _rigidIndexBuffer = nullptr;
@@ -1444,6 +1745,15 @@ void PhysicsGpuSystem::releaseGpuBuffers() {
     _articulationTargetJointPositionBuffer = nullptr;
     _articulationTargetJointVelocityBuffer = nullptr;
     _articulationLinkIncomingJointForceBuffer = nullptr;
+    _contactPairBuffer = nullptr;
+    _contactPairCountBuffer = nullptr;
+    _contactPairHeaderBuffer = nullptr;
+    _contactNodeBodyRefBuffer = nullptr;
+    _contactNodeBodyRefCapacity = 0;
+    _contactPairBodyRefBuffer = nullptr;
+    _contactPointBuffer = nullptr;
+    _contactPointCountBuffer = nullptr;
+    _contactPointPairIndexBuffer = nullptr;
     _articulationLinkCounts.clear();
     _articulationDofCounts.clear();
     _articulationRows.clear();
@@ -1460,6 +1770,13 @@ void PhysicsGpuSystem::releaseGpuBuffers() {
     _views.articulationTargetJointPositions = {};
     _views.articulationTargetJointVelocities = {};
     _views.articulationLinkIncomingJointForces = {};
+    _views.contactPairs = {};
+    _views.contactPairCount = {};
+    _views.contactPairHeaders = {};
+    _views.contactPairBodyRefs = {};
+    _views.contactPoints = {};
+    _views.contactPointCount = {};
+    _views.contactPointPairIndices = {};
 }
 
 } // namespace KE

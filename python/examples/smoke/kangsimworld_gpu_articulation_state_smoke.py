@@ -243,6 +243,59 @@ def main():
             err_msg="KangSimWorld GPU articulation TORQUE command mismatch",
         )
 
+        reset_after_command_qpos = np.zeros_like(target_qpos)
+        reset_after_command_qvel = np.zeros_like(target_qvel)
+        reset_after_command_qpos[0] = -0.125
+        reset_after_command_qvel[0] = 0.0625
+        world.set_dof_state(
+            [1],
+            0,
+            reset_after_command_qpos,
+            reset_after_command_qvel,
+        )
+        world.apply_resets()
+        if world.commands[(1, 0)].mode != ke.ControlMode.NONE:
+            raise AssertionError("GPU reset did not clear stale articulation command")
+        qpos = world.get_gpu_articulation_joint_positions()
+        target_pos = world.get_gpu_articulation_target_joint_positions()
+        target_vel = world.get_gpu_articulation_target_joint_velocities()
+        qf = world.get_gpu_articulation_joint_forces()
+        torch.cuda.synchronize(0)
+        np.testing.assert_allclose(
+            qpos[selected_row, : reset_after_command_qpos.size].detach().cpu().numpy(),
+            reset_after_command_qpos,
+            rtol=1e-5,
+            atol=1e-5,
+            err_msg="GPU reset qpos clear baseline mismatch",
+        )
+        np.testing.assert_allclose(
+            target_pos[selected_row, : reset_after_command_qpos.size]
+            .detach()
+            .cpu()
+            .numpy(),
+            reset_after_command_qpos,
+            rtol=1e-5,
+            atol=1e-5,
+            err_msg="GPU reset did not clear stale target qpos",
+        )
+        np.testing.assert_allclose(
+            target_vel[selected_row, : reset_after_command_qvel.size]
+            .detach()
+            .cpu()
+            .numpy(),
+            np.zeros_like(reset_after_command_qvel),
+            rtol=1e-5,
+            atol=1e-5,
+            err_msg="GPU reset did not clear stale target qvel",
+        )
+        np.testing.assert_allclose(
+            qf[selected_row, : command_qf.size].detach().cpu().numpy(),
+            np.zeros_like(command_qf),
+            rtol=1e-5,
+            atol=1e-5,
+            err_msg="GPU reset did not clear stale joint force command",
+        )
+
         print(
             "PASS: KangSimWorld GPU articulation state/command and CUDA Mat4 "
             "gather path"

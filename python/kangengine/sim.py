@@ -60,10 +60,6 @@ def _torch():
     return _TORCH
 
 
-def _gpu_view_tensor(view):
-    return view.torch()
-
-
 def _require_physx():
     missing = [
         name
@@ -90,20 +86,50 @@ class SimDevice(str, Enum):
 
 
 def _sim_device_uses_gpu(sim_device) -> bool:
+    return _resolve_sim_device(sim_device).type == "cuda"
+
+
+def _resolve_sim_device(sim_device):
+    from .utils.tensor import resolve_device
+
     if sim_device is None:
-        return False
+        return resolve_device("cpu")
     if isinstance(sim_device, SimDevice):
         sim_device = sim_device.value
-    if isinstance(sim_device, str):
-        device = sim_device.strip().lower()
-        if device == "cpu":
-            return False
-        if device == "cuda" or device.startswith("cuda:"):
-            return True
+    try:
+        device = resolve_device(sim_device)
+    except Exception as exc:
+        raise ValueError(
+            "sim_device must be 'cpu', 'cuda', or 'cuda:<ordinal>' "
+            f"(got {sim_device!r})"
+        ) from exc
+    if device.type in ("cpu", "cuda"):
+        return device
     raise ValueError(
         "sim_device must be 'cpu', 'cuda', or 'cuda:<ordinal>' "
         f"(got {sim_device!r})"
     )
+
+
+def _resolve_state_device(*, state_device=None, device=None):
+    from .utils.tensor import resolve_device
+
+    if state_device is not None and device is not None:
+        resolved_state = resolve_device(state_device)
+        resolved_compat = resolve_device(device)
+        if _device_key(resolved_state) != _device_key(resolved_compat):
+            raise ValueError(
+                "KangSimWorld received both state_device and device with "
+                f"different values: {resolved_state} != {resolved_compat}"
+            )
+        return resolved_state
+    return resolve_device(state_device if state_device is not None else device)
+
+
+def _device_key(device):
+    if device.type == "cuda":
+        return device.type, 0 if device.index is None else int(device.index)
+    return device.type, device.index
 
 
 @dataclass(slots=True)
@@ -188,6 +214,16 @@ class SimArticulation:
 
     def get_body_id(self, name: str) -> int:
         return _find_name(self.body_names, name, "body")
+
+    def add_contact_sensor(self, body_ids=None, *, name: str = ""):
+        return self._require_world().add_contact_sensor(
+            self, body_ids=body_ids, name=name
+        )
+
+    def add_force_sensor(self, body_ids=None, *, name: str = ""):
+        return self._require_world().add_force_sensor(
+            self, body_ids=body_ids, name=name
+        )
 
     def set_cmd(
         self,
@@ -361,6 +397,16 @@ class SimRigid:
     def get_body_id(self, name: str) -> int:
         return _find_name(self.body_names, name, "body")
 
+    def add_contact_sensor(self, body_ids=None, *, name: str = ""):
+        return self._require_world().add_contact_sensor(
+            self, body_ids=body_ids, name=name
+        )
+
+    def add_force_sensor(self, body_ids=None, *, name: str = ""):
+        return self._require_world().add_force_sensor(
+            self, body_ids=body_ids, name=name
+        )
+
     def set_root_state(
         self,
         env_ids: EnvIdLike | None,
@@ -511,6 +557,12 @@ class SimArticulationView:
 
     def get_body_id(self, name: str) -> int:
         return self.first.get_body_id(name)
+
+    def add_contact_sensor(self, body_ids=None, *, name: str = ""):
+        return self.world.add_contact_sensor(self, body_ids=body_ids, name=name)
+
+    def add_force_sensor(self, body_ids=None, *, name: str = ""):
+        return self.world.add_force_sensor(self, body_ids=body_ids, name=name)
 
     def set_cmd(
         self,
@@ -679,6 +731,12 @@ class SimRigidView:
     def get_body_id(self, name: str) -> int:
         return self.first.get_body_id(name)
 
+    def add_contact_sensor(self, body_ids=None, *, name: str = ""):
+        return self.world.add_contact_sensor(self, body_ids=body_ids, name=name)
+
+    def add_force_sensor(self, body_ids=None, *, name: str = ""):
+        return self.world.add_force_sensor(self, body_ids=body_ids, name=name)
+
     def set_root_state(
         self,
         env_ids: EnvIdLike | None,
@@ -789,18 +847,19 @@ class ResetBuffer:
 
 
 class KangSimWorld:
-    """Owns a PhysX world, registered articulations, and batched state cache.
+    """Owns a PhysX world, registered objects, commands, and world state.
 
-    ``state`` is the canonical Python runtime state. ``step(refresh=True)`` and
-    ``refresh()`` update this cache from PhysX and return it. Viewer helpers may
-    sync render objects separately, but policy/training code should read state
-    from this cache.
+    In CPU simulation, ``state`` is the canonical Python runtime state. In GPU
+    simulation, PhysX ``GpuArrayView`` buffers are canonical and ``state`` is the
+    latest explicit CPU/Torch snapshot refreshed by ``refresh()`` or
+    ``step(refresh=True)``.
 
     Args:
         sim_device: Simulation backend/device. ``"cpu"`` is the default PhysX
             CPU path. ``"cuda"`` enables the experimental PhysX GPU path.
-        device: Torch state/cache device for returned batched tensors. This is
-            intentionally separate from ``sim_device``.
+        state_device: Torch device for ``world.state`` snapshot tensors. This
+            is intentionally separate from ``sim_device``.
+        device: Compatibility alias for ``state_device``.
     """
 
     def __init__(
@@ -811,13 +870,15 @@ class KangSimWorld:
         add_ground: bool = False,
         sim_device="cpu",
         device=None,
+        state_device=None,
     ):
         _require_physx()
         if physics_config is None:
             physics_config = _ke.PhysicsConfig.z_up()
         if sim_dt is not None:
             physics_config.dt = float(sim_dt)
-        uses_gpu_sim = _sim_device_uses_gpu(sim_device)
+        sim_device = _resolve_sim_device(sim_device)
+        uses_gpu_sim = sim_device.type == "cuda"
         if hasattr(physics_config, "enable_gpu"):
             physics_config.enable_gpu = uses_gpu_sim
 
@@ -826,11 +887,20 @@ class KangSimWorld:
         if add_ground:
             self.physics.add_default_ground()
 
-        from .state import KangStateCache
-        from .utils.tensor import resolve_device
+        from .state import KangWorldState
 
-        self.device = resolve_device(device)
-        self.state = KangStateCache(num_envs=self.num_envs, device=self.device)
+        self.sim_device = sim_device
+        self.state_device = _resolve_state_device(
+            state_device=state_device, device=device
+        )
+        self.device = self.state_device
+        self.state = KangWorldState(
+            num_envs=self.num_envs,
+            device=self.state_device,
+            canonical_source="gpu" if uses_gpu_sim else "cpu",
+            snapshot=uses_gpu_sim,
+            gpu_system_provider=lambda: self.gpu_system,
+        )
         self.articulations: dict[tuple[int, int], SimArticulation] = {}
         self.rigids: dict[tuple[int, int], SimRigid] = {}
         self.commands: dict[tuple[int, int], CommandBuffer] = {}
@@ -843,7 +913,6 @@ class KangSimWorld:
         self._mjcf_load_count = 0
         self.sim_time = 0.0
         self.sim_dt = float(physics_config.dt)
-        self.sim_device = str(sim_device)
         self._uses_gpu_sim = uses_gpu_sim
         self._gpu_system = None
         self._rigid_gpu_rows: dict[tuple[int, int], int] = {}
@@ -852,7 +921,60 @@ class KangSimWorld:
         self._articulation_gpu_index_tensors: dict[
             tuple[tuple[int, int], ...], object
         ] = {}
+        self.sensors: dict[str, object] = {}
+        self._contact_sensor_batch = None
         self._released = False
+
+    def add_contact_sensor(self, target, body_ids=None, *, name: str = ""):
+        """Attach a GPU contact sensor to a simulation object or object view."""
+        from .sensor import ContactSensor
+
+        return self._add_contact_sensor(
+            ContactSensor, target, body_ids, name=name, suffix="contact"
+        )
+
+    def add_force_sensor(self, target, body_ids=None, *, name: str = ""):
+        """Attach a normal-force sensor to a simulation object or view."""
+        from .sensor import ForceSensor
+
+        return self._add_contact_sensor(
+            ForceSensor, target, body_ids, name=name, suffix="force"
+        )
+
+    def _add_contact_sensor(
+        self, sensor_type, target, body_ids, *, name: str, suffix: str
+    ):
+        from .sensor import ContactSensorBatch
+
+        if not name:
+            target_name = target.name or f"object_{target.obj_id}"
+            name = f"{target_name}_{suffix}"
+        name = str(name)
+        if name in self.sensors:
+            raise ValueError(f"sensor name already registered: {name!r}")
+        sensor = sensor_type(self, target, body_ids, name=name)
+        self.sensors[name] = sensor
+        if self._contact_sensor_batch is None:
+            self._contact_sensor_batch = ContactSensorBatch(self)
+        self._contact_sensor_batch.mark_dirty()
+        return sensor
+
+    def refresh_sensors(self):
+        """Refresh all sensor modules, sharing raw producer fetches per frame."""
+        if not self.sensors:
+            return {}
+        contact_sensors = tuple(
+            sensor
+            for sensor in self.sensors.values()
+            if sensor.requires_contact_data
+        )
+        if contact_sensors:
+            self.gpu_system.fetch_contact_pairs()
+            self._contact_sensor_batch.refresh(contact_sensors)
+        for sensor in self.sensors.values():
+            if not sensor.requires_contact_data:
+                sensor.refresh(fetch=False)
+        return {name: sensor.data for name, sensor in self.sensors.items()}
 
     def add_articulation(
         self,
@@ -1387,6 +1509,7 @@ class KangSimWorld:
                 continue
             env_id, obj_id = key
             cache = self.state.record(env_id, obj_id).cache
+            self._clear_body_force_for_key(key)
             if reset.root is not None:
                 if self._gpu_system is not None and key in self.rigids:
                     gpu_rigid_root_resets.append((key, reset.root))
@@ -1412,12 +1535,28 @@ class KangSimWorld:
             self.resets[key] = ResetBuffer()
         if gpu_rigid_root_resets:
             self._apply_gpu_rigid_root_resets(gpu_rigid_root_resets)
+            self._clear_gpu_rigid_commands_after_reset(
+                tuple(key for key, _ in gpu_rigid_root_resets)
+            )
+            self.state.mark_stale()
         if gpu_articulation_root_resets:
             self._apply_gpu_articulation_root_resets(
                 gpu_articulation_root_resets
             )
+            self.state.mark_stale()
         if gpu_articulation_dof_resets:
             self._apply_gpu_articulation_dof_resets(gpu_articulation_dof_resets)
+            self.state.mark_stale()
+        gpu_articulation_reset_keys = tuple(
+            dict.fromkeys(
+                [key for key, _ in gpu_articulation_root_resets]
+                + [key for key, _ in gpu_articulation_dof_resets]
+            )
+        )
+        if gpu_articulation_reset_keys:
+            self._clear_gpu_articulation_commands_after_reset(
+                gpu_articulation_reset_keys
+            )
 
     def _apply_gpu_rigid_root_resets(
         self, resets: list[tuple[tuple[int, int], RootStateReset]]
@@ -1538,6 +1677,37 @@ class KangSimWorld:
         gpu_system.apply_articulation_joint_velocities(index_view)
         gpu_system.update_articulation_kinematics()
 
+    def _clear_gpu_rigid_commands_after_reset(
+        self, keys: tuple[tuple[int, int], ...]
+    ):
+        if not keys:
+            return
+        torch = _torch()
+        gpu_system = self.gpu_system
+        rigid_view = gpu_system.rigid_data()
+        device = torch.device(f"cuda:{int(rigid_view.device_id)}")
+        index_view = self._rigid_gpu_index_view_for_keys(
+            keys, device=device, name="kangsimworld_rigid_reset_clear_indices"
+        )
+        gpu_system.clear_rigid_commands(index_view)
+
+    def _clear_gpu_articulation_commands_after_reset(
+        self, keys: tuple[tuple[int, int], ...]
+    ):
+        if not keys:
+            return
+        torch = _torch()
+        gpu_system = self.gpu_system
+        link_view = gpu_system.articulation_link_data()
+        device = torch.device(f"cuda:{int(link_view.device_id)}")
+        for key in keys:
+            self.commands[key] = CommandBuffer(ControlMode.NONE)
+
+        index_view = self._articulation_gpu_index_view_for_keys(
+            keys, device=device, name="kangsimworld_articulation_reset_clear_indices"
+        )
+        gpu_system.clear_articulation_commands(index_view)
+
     def set_body_force(
         self,
         env_id: EnvIdLike,
@@ -1627,8 +1797,19 @@ class KangSimWorld:
             self.body_force_positions[key].fill(np.nan)
         self._active_body_force_keys.clear()
 
+    def _clear_body_force_for_key(self, key: tuple[int, int]):
+        if key in self.body_forces:
+            self.body_forces[key].fill(0.0)
+        if key in self.body_force_positions:
+            self.body_force_positions[key].fill(np.nan)
+        self._active_body_force_keys.discard(key)
+
     def step(self, substeps: int = 1, refresh: bool = True, apply_commands: bool = True):
-        """Advance simulation and return the canonical batched state cache."""
+        """Advance simulation and return ``world.state``.
+
+        For GPU simulation this returns a CPU/Torch snapshot. Use GPU view
+        helpers for the latest canonical CUDA state when avoiding readback.
+        """
         self.apply_resets()
         if apply_commands:
             self.apply_commands()
@@ -1637,12 +1818,18 @@ class KangSimWorld:
             self.physics.step()
             self.sim_time += self.sim_dt
         self.clear_body_forces()
+        if self._uses_gpu_sim:
+            self.state.mark_stale()
+        self.refresh_sensors()
         if refresh:
             self.state.refresh()
         return self.state
 
     def refresh(self):
-        """Refresh and return the canonical batched state cache."""
+        """Refresh and return ``world.state``.
+
+        In GPU simulation this performs an explicit CPU/Torch snapshot update.
+        """
         return self.state.refresh()
 
     def articulation(self, env_id: int = 0, obj_id: int = 0):
@@ -1651,7 +1838,9 @@ class KangSimWorld:
     def rigid(self, env_id: int = 0, obj_id: int = 0):
         return self.rigids[(int(env_id), int(obj_id))].rigid
 
-    def init_gpu_system(self, cuda_device_id: int = 0, stream_handle: int | None = None):
+    def init_gpu_system(
+        self, cuda_device_id: int | None = None, stream_handle: int | None = None
+    ):
         """Initialize explicit PhysX GPU mirrors and cache rigid row mappings.
 
         Call this after registering simulation objects and before using
@@ -1668,6 +1857,8 @@ class KangSimWorld:
         if self._gpu_system is not None:
             return self._gpu_system
 
+        if cuda_device_id is None:
+            cuda_device_id = 0 if self.sim_device.index is None else self.sim_device.index
         config = _ke.GpuPhysicsConfig()
         config.cuda_device_id = int(cuda_device_id)
         gpu_system = _ke.PhysicsGpuSystem(self.physics, config)
@@ -1737,10 +1928,7 @@ class KangSimWorld:
 
     def get_gpu_rigid_data(self, *, fetch: bool = True):
         """Return the full PhysX GPU rigid mirror as a Torch CUDA view."""
-        gpu_system = self.gpu_system
-        if fetch:
-            gpu_system.fetch_rigid_data()
-        return _gpu_view_tensor(gpu_system.rigid_data())
+        return self.state.gpu.rigid_data_tensor(fetch=fetch)
 
     def get_gpu_articulation_link_data(
         self, *, fetch_pose: bool = True, fetch_velocity: bool = True
@@ -1750,54 +1938,53 @@ class KangSimWorld:
         Layout is ``[articulation_count, max_links, 13]`` with
         ``[pos xyz, quat xyzw, linear velocity xyz, angular velocity xyz]``.
         """
-        gpu_system = self.gpu_system
-        if fetch_pose:
-            gpu_system.fetch_articulation_link_pose()
         if fetch_velocity:
-            gpu_system.fetch_articulation_link_vel()
-        return _gpu_view_tensor(gpu_system.articulation_link_data())
+            self.gpu_system.fetch_articulation_link_vel()
+        return self.state.gpu.articulation_link_data_tensor(fetch=fetch_pose)
 
     def get_gpu_articulation_joint_positions(self, *, fetch: bool = True):
-        gpu_system = self.gpu_system
-        if fetch:
-            gpu_system.fetch_articulation_joint_positions()
-        return _gpu_view_tensor(gpu_system.articulation_joint_positions())
+        return self.state.gpu.articulation_joint_positions_tensor(fetch=fetch)
 
     def get_gpu_articulation_joint_velocities(self, *, fetch: bool = True):
-        gpu_system = self.gpu_system
-        if fetch:
-            gpu_system.fetch_articulation_joint_velocities()
-        return _gpu_view_tensor(gpu_system.articulation_joint_velocities())
+        return self.state.gpu.articulation_joint_velocities_tensor(fetch=fetch)
 
     def get_gpu_articulation_joint_accelerations(self, *, fetch: bool = True):
-        gpu_system = self.gpu_system
-        if fetch:
-            gpu_system.fetch_articulation_joint_accelerations()
-        return _gpu_view_tensor(gpu_system.articulation_joint_accelerations())
+        return self.state.gpu.articulation_joint_accelerations_tensor(fetch=fetch)
 
     def get_gpu_articulation_joint_forces(self, *, fetch: bool = True):
-        gpu_system = self.gpu_system
-        if fetch:
-            gpu_system.fetch_articulation_joint_forces()
-        return _gpu_view_tensor(gpu_system.articulation_joint_forces())
+        return self.state.gpu.articulation_joint_forces_tensor(fetch=fetch)
 
     def get_gpu_articulation_target_joint_positions(self, *, fetch: bool = True):
-        gpu_system = self.gpu_system
-        if fetch:
-            gpu_system.fetch_articulation_target_joint_positions()
-        return _gpu_view_tensor(gpu_system.articulation_target_joint_positions())
+        return self.state.gpu.articulation_target_joint_positions_tensor(fetch=fetch)
 
     def get_gpu_articulation_target_joint_velocities(self, *, fetch: bool = True):
-        gpu_system = self.gpu_system
-        if fetch:
-            gpu_system.fetch_articulation_target_joint_velocities()
-        return _gpu_view_tensor(gpu_system.articulation_target_joint_velocities())
+        return self.state.gpu.articulation_target_joint_velocities_tensor(fetch=fetch)
 
     def get_gpu_articulation_link_incoming_joint_forces(self, *, fetch: bool = True):
-        gpu_system = self.gpu_system
-        if fetch:
-            gpu_system.fetch_articulation_link_incoming_joint_force()
-        return _gpu_view_tensor(gpu_system.articulation_link_incoming_joint_forces())
+        return self.state.gpu.articulation_link_incoming_joint_forces_tensor(
+            fetch=fetch
+        )
+
+    def get_gpu_contact_pairs(self, *, fetch: bool = True):
+        return self.state.gpu.contact_pairs_tensor(fetch=fetch)
+
+    def get_gpu_contact_pair_count(self, *, fetch: bool = True):
+        return self.state.gpu.contact_pair_count_tensor(fetch=fetch)
+
+    def get_gpu_contact_pair_headers(self, *, fetch: bool = True):
+        return self.state.gpu.contact_pair_headers_tensor(fetch=fetch)
+
+    def get_gpu_contact_pair_body_refs(self, *, fetch: bool = True):
+        return self.state.gpu.contact_pair_body_refs_tensor(fetch=fetch)
+
+    def get_gpu_contact_points(self, *, fetch: bool = True):
+        return self.state.gpu.contact_points_tensor(fetch=fetch)
+
+    def get_gpu_contact_point_count(self, *, fetch: bool = True):
+        return self.state.gpu.contact_point_count_tensor(fetch=fetch)
+
+    def get_gpu_contact_point_pair_indices(self, *, fetch: bool = True):
+        return self.state.gpu.contact_point_pair_indices_tensor(fetch=fetch)
 
     def _rigid_gpu_index_view_for_keys(self, keys, *, device, name: str):
         torch = _torch()
@@ -2125,6 +2312,12 @@ class KangSimWorld:
     def release(self):
         if self._released:
             return
+        for sensor in self.sensors.values():
+            sensor.release()
+        self.sensors.clear()
+        if self._contact_sensor_batch is not None:
+            self._contact_sensor_batch.release()
+            self._contact_sensor_batch = None
         if self._gpu_system is not None:
             self._gpu_system.invalidate()
             self._gpu_system = None
@@ -2142,6 +2335,8 @@ class KangSimWorld:
         self.resets.clear()
         self.body_forces.clear()
         self.body_force_positions.clear()
+        if self.state is not None and hasattr(self.state, "release"):
+            self.state.release()
         self.physics = None
         self._pending_reset_keys.clear()
         self._active_body_force_keys.clear()

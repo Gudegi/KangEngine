@@ -115,6 +115,7 @@ def run_gpu_pos(steps: int, kp: float, kd: float, cuda_device: int):
         row = world.articulation_gpu_row(0, OBJ_ID)
         q_samples = []
         target_samples = []
+        max_target_echo_error = 0.0
         for _ in range(steps):
             target = target_tensor(
                 num_dofs, world.sim_time, device=f"cuda:{cuda_device}"
@@ -129,10 +130,20 @@ def run_gpu_pos(steps: int, kp: float, kd: float, cuda_device: int):
             )
             world.step(substeps=1, refresh=False)
             q = world.get_gpu_articulation_joint_positions()[row, :num_dofs]
+            target_echo = world.get_gpu_articulation_target_joint_positions()[
+                row, :num_dofs
+            ]
+            max_target_echo_error = max(
+                max_target_echo_error,
+                float((target_echo - target).abs().max().item()),
+            )
             q_samples.append(q.detach().cpu().clone())
             target_samples.append(target.detach().cpu().clone())
         torch.cuda.synchronize(cuda_device)
-        return summarize("GPU POS target", q_samples, target_samples)
+        result = summarize("GPU POS target", q_samples, target_samples)
+        result["max_target_echo_error"] = max_target_echo_error
+        print(f"{'GPU POS target':16s} | target_echo_err={max_target_echo_error: .6g}")
+        return result
     finally:
         world.release()
 
@@ -188,10 +199,11 @@ def main():
     if gpu_pd["last_motion"] <= 1e-5:
         raise AssertionError("GPU explicit PD did not keep moving")
     if gpu_pos["last_motion"] <= 1e-4:
-        print(
-            "NOTE: GPU POS target path stalled; keep using PD_EXPLICIT "
-            "for GPU articulation control until PhysX drive sync is resolved."
-        )
+        if gpu_pos["max_target_echo_error"] > 1e-5:
+            raise AssertionError(
+                "GPU POS target buffer did not echo the uploaded target"
+            )
+        raise AssertionError("GPU POS target drive did not keep moving")
 
     print("PASS: articulation control comparison completed")
 

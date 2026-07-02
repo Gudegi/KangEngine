@@ -75,6 +75,8 @@ class Articulation {
     std::vector<float> _effortLimits;
     std::vector<float> _appliedForces;
 
+    void syncDriveParams();
+
   public:
     Articulation() = default;
     ~Articulation();

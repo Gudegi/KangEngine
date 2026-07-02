@@ -1,4 +1,4 @@
-"""Canonical Python-side batched state cache for KangEngine simulation objects."""
+"""Python-side world state and snapshots for KangEngine simulation objects."""
 
 from __future__ import annotations
 
@@ -305,21 +305,61 @@ ArticulationState = SimObjectState
 ArticulationRecord = ObjectRecord
 
 
-class KangStateCache:
-    """Canonical runtime state cache keyed by ``(env_id, obj_id)``.
+class CPUStateBackend:
+    """CPU-backed object state table keyed by ``(env_id, obj_id)``.
 
-    This is the Python-side bridge toward MimicKit/Newton/Isaac-style APIs:
-    object getters return preallocated tensors batched over envs, e.g.
-    ``get_root_pos(obj_id) -> [num_envs, 3]``.
+    CPU simulation uses this cache as canonical runtime state. GPU simulation
+    uses the same storage layout for explicit CPU/Torch snapshots.
     """
 
-    def __init__(self, num_envs: int = 1, device=None):
+    def __init__(
+        self,
+        num_envs: int = 1,
+        device=None,
+        *,
+        canonical_source: str = "cpu",
+        snapshot: bool = False,
+    ):
         self.num_envs = int(num_envs)
         self.device = resolve_device(device)
+        self.canonical_source = str(canonical_source)
+        self.is_snapshot = bool(snapshot)
+        self.version = 0
+        self.stale = False
+        self.strict_snapshot_reads = False
         self._records: dict[tuple[int, int], ObjectRecord] = {}
         self._states: dict[int, SimObjectState] = {}
         self._registered_env_ids: dict[int, set[int]] = {}
         self._complete_obj_ids: set[int] = set()
+
+    def configure_source(self, *, canonical_source: str, snapshot: bool):
+        self.canonical_source = str(canonical_source)
+        self.is_snapshot = bool(snapshot)
+        self.stale = bool(snapshot)
+        return self
+
+    def set_strict_snapshot_reads(self, enabled: bool = True):
+        """Raise on stale GPU snapshot reads when debugging policy data flow."""
+        self.strict_snapshot_reads = bool(enabled)
+        return self
+
+    def mark_stale(self):
+        if self.is_snapshot:
+            self.stale = True
+        return self
+
+    def mark_fresh(self):
+        self.stale = False
+        self.version += 1
+        return self
+
+    def _check_snapshot_read(self):
+        if self.is_snapshot and self.stale and self.strict_snapshot_reads:
+            raise RuntimeError(
+                "world.state is a stale CPU/Torch snapshot of canonical GPU "
+                "state; call world.refresh(), world.step(refresh=True), or use "
+                "world.get_gpu_*() for the latest CUDA view"
+            )
 
     def _register_record(self, record: ObjectRecord) -> ObjectRecord:
         cache = record.cache
@@ -402,6 +442,7 @@ class KangStateCache:
             record.cache.refresh_into(
                 _state_slice(self._states[record.obj_id], record.env_id)
             )
+        self.mark_fresh()
         return self
 
     def record(self, env_id: int, obj_id: int) -> ObjectRecord:
@@ -412,10 +453,12 @@ class KangStateCache:
             raise KeyError(f"no object registered at env={key[0]}, obj={key[1]}") from exc
 
     def object_state(self, env_id: int, obj_id: int) -> SimObjectState:
+        self._check_snapshot_read()
         record = self.record(env_id, obj_id)
         return _state_slice(self._states[record.obj_id], record.env_id)
 
     def object_states(self, obj_id: int, env_ids: EnvIdLike = None) -> SimObjectState:
+        self._check_snapshot_read()
         env_ids = env_id_list(env_ids, self.num_envs)
         for eid in env_ids:
             self.record(eid, obj_id)
@@ -428,6 +471,7 @@ class KangStateCache:
         return self.object_states(obj_id, env_ids)
 
     def _batched_state(self, obj_id: int) -> SimObjectState:
+        self._check_snapshot_read()
         obj_id = int(obj_id)
         if obj_id not in self._complete_obj_ids:
             registered = self._registered_env_ids.get(obj_id, set())
@@ -543,3 +587,375 @@ class KangStateCache:
                     velocities, env_index, len(env_ids), (expected,)
                 ),
             )
+
+    def release(self):
+        self._records.clear()
+        self._states.clear()
+        self._registered_env_ids.clear()
+        self._complete_obj_ids.clear()
+        return self
+
+
+class StateSnapshotBackend(CPUStateBackend):
+    """CPU/Torch readback snapshot backend for GPU simulation."""
+
+
+class GPUStateBackend:
+    """Thin placeholder for canonical PhysX GPU ``GpuArrayView`` state."""
+
+    def __init__(self, num_envs: int = 1, device=None, gpu_system_provider=None):
+        self.num_envs = int(num_envs)
+        self.device = resolve_device(device)
+        self._gpu_system_provider = gpu_system_provider
+
+    @property
+    def gpu_system(self):
+        if self._gpu_system_provider is None:
+            return None
+        return self._gpu_system_provider()
+
+    def _require_gpu_system(self):
+        gpu_system = self.gpu_system
+        if gpu_system is None:
+            raise RuntimeError("GPU state backend is not attached to PhysicsGpuSystem")
+        return gpu_system
+
+    def rigid_data(self, *, fetch: bool = True):
+        gpu_system = self._require_gpu_system()
+        if fetch:
+            gpu_system.fetch_rigid_data()
+        return gpu_system.rigid_data()
+
+    def rigid_data_tensor(self, *, fetch: bool = True):
+        return self.rigid_data(fetch=fetch).torch()
+
+    def articulation_link_data(self, *, fetch: bool = True):
+        gpu_system = self._require_gpu_system()
+        if fetch:
+            gpu_system.fetch_articulation_link_pose()
+        return gpu_system.articulation_link_data()
+
+    def articulation_link_data_tensor(self, *, fetch: bool = True):
+        return self.articulation_link_data(fetch=fetch).torch()
+
+    def articulation_joint_positions(self, *, fetch: bool = True):
+        gpu_system = self._require_gpu_system()
+        if fetch:
+            gpu_system.fetch_articulation_joint_positions()
+        return gpu_system.articulation_joint_positions()
+
+    def articulation_joint_positions_tensor(self, *, fetch: bool = True):
+        return self.articulation_joint_positions(fetch=fetch).torch()
+
+    def articulation_joint_velocities(self, *, fetch: bool = True):
+        gpu_system = self._require_gpu_system()
+        if fetch:
+            gpu_system.fetch_articulation_joint_velocities()
+        return gpu_system.articulation_joint_velocities()
+
+    def articulation_joint_velocities_tensor(self, *, fetch: bool = True):
+        return self.articulation_joint_velocities(fetch=fetch).torch()
+
+    def articulation_joint_accelerations(self, *, fetch: bool = True):
+        gpu_system = self._require_gpu_system()
+        if fetch:
+            gpu_system.fetch_articulation_joint_accelerations()
+        return gpu_system.articulation_joint_accelerations()
+
+    def articulation_joint_accelerations_tensor(self, *, fetch: bool = True):
+        return self.articulation_joint_accelerations(fetch=fetch).torch()
+
+    def articulation_joint_forces(self, *, fetch: bool = True):
+        gpu_system = self._require_gpu_system()
+        if fetch:
+            gpu_system.fetch_articulation_joint_forces()
+        return gpu_system.articulation_joint_forces()
+
+    def articulation_joint_forces_tensor(self, *, fetch: bool = True):
+        return self.articulation_joint_forces(fetch=fetch).torch()
+
+    def articulation_target_joint_positions(self, *, fetch: bool = True):
+        gpu_system = self._require_gpu_system()
+        if fetch:
+            gpu_system.fetch_articulation_target_joint_positions()
+        return gpu_system.articulation_target_joint_positions()
+
+    def articulation_target_joint_positions_tensor(self, *, fetch: bool = True):
+        return self.articulation_target_joint_positions(fetch=fetch).torch()
+
+    def articulation_target_joint_velocities(self, *, fetch: bool = True):
+        gpu_system = self._require_gpu_system()
+        if fetch:
+            gpu_system.fetch_articulation_target_joint_velocities()
+        return gpu_system.articulation_target_joint_velocities()
+
+    def articulation_target_joint_velocities_tensor(self, *, fetch: bool = True):
+        return self.articulation_target_joint_velocities(fetch=fetch).torch()
+
+    def articulation_link_incoming_joint_forces(self, *, fetch: bool = True):
+        gpu_system = self._require_gpu_system()
+        if fetch:
+            gpu_system.fetch_articulation_link_incoming_joint_force()
+        return gpu_system.articulation_link_incoming_joint_forces()
+
+    def articulation_link_incoming_joint_forces_tensor(self, *, fetch: bool = True):
+        return self.articulation_link_incoming_joint_forces(fetch=fetch).torch()
+
+    def contact_pairs(self, *, fetch: bool = True):
+        gpu_system = self._require_gpu_system()
+        if fetch:
+            gpu_system.fetch_contact_pairs()
+        return gpu_system.contact_pairs()
+
+    def contact_pairs_tensor(self, *, fetch: bool = True):
+        return self.contact_pairs(fetch=fetch).torch()
+
+    def contact_pair_count(self, *, fetch: bool = True):
+        gpu_system = self._require_gpu_system()
+        if fetch:
+            gpu_system.fetch_contact_pairs()
+        return gpu_system.contact_pair_count()
+
+    def contact_pair_count_tensor(self, *, fetch: bool = True):
+        return self.contact_pair_count(fetch=fetch).torch()
+
+    def contact_pair_headers(self, *, fetch: bool = True):
+        gpu_system = self._require_gpu_system()
+        if fetch:
+            gpu_system.fetch_contact_pairs()
+        return gpu_system.contact_pair_headers()
+
+    def contact_pair_headers_tensor(self, *, fetch: bool = True):
+        return self.contact_pair_headers(fetch=fetch).torch()
+
+    def contact_pair_body_refs(self, *, fetch: bool = True):
+        gpu_system = self._require_gpu_system()
+        if fetch:
+            gpu_system.fetch_contact_pairs()
+        return gpu_system.contact_pair_body_refs()
+
+    def contact_pair_body_refs_tensor(self, *, fetch: bool = True):
+        return self.contact_pair_body_refs(fetch=fetch).torch()
+
+    def contact_points(self, *, fetch: bool = True):
+        gpu_system = self._require_gpu_system()
+        if fetch:
+            gpu_system.fetch_contact_pairs()
+        return gpu_system.contact_points()
+
+    def contact_points_tensor(self, *, fetch: bool = True):
+        return self.contact_points(fetch=fetch).torch()
+
+    def contact_point_count(self, *, fetch: bool = True):
+        gpu_system = self._require_gpu_system()
+        if fetch:
+            gpu_system.fetch_contact_pairs()
+        return gpu_system.contact_point_count()
+
+    def contact_point_count_tensor(self, *, fetch: bool = True):
+        return self.contact_point_count(fetch=fetch).torch()
+
+    def contact_point_pair_indices(self, *, fetch: bool = True):
+        gpu_system = self._require_gpu_system()
+        if fetch:
+            gpu_system.fetch_contact_pairs()
+        return gpu_system.contact_point_pair_indices()
+
+    def contact_point_pair_indices_tensor(self, *, fetch: bool = True):
+        return self.contact_point_pair_indices(fetch=fetch).torch()
+
+    def release(self):
+        self._gpu_system_provider = None
+        return self
+
+
+class KangWorldState:
+    """Public world state handle.
+
+    CPU simulation delegates reads to ``CPUStateBackend``. GPU simulation keeps
+    canonical state in ``GPUStateBackend`` and delegates ``get_*`` reads to the
+    explicit ``StateSnapshotBackend`` updated by ``refresh()``.
+    """
+
+    def __init__(
+        self,
+        num_envs: int = 1,
+        device=None,
+        *,
+        canonical_source: str = "cpu",
+        snapshot: bool = False,
+        gpu_system_provider=None,
+    ):
+        self.num_envs = int(num_envs)
+        self.device = resolve_device(device)
+        self.canonical_source = str(canonical_source)
+        self.is_snapshot = bool(snapshot)
+        self.version = 0
+        self.stale = False
+        self.strict_snapshot_reads = False
+        if self.canonical_source == "gpu":
+            self.backend = GPUStateBackend(
+                self.num_envs, self.device, gpu_system_provider
+            )
+            self.snapshot = StateSnapshotBackend(
+                self.num_envs,
+                self.device,
+                canonical_source="gpu",
+                snapshot=True,
+            )
+        else:
+            self.backend = CPUStateBackend(
+                self.num_envs,
+                self.device,
+                canonical_source="cpu",
+                snapshot=False,
+            )
+            self.snapshot = self.backend
+
+    @property
+    def gpu(self):
+        if self.canonical_source != "gpu":
+            raise RuntimeError("world.state.gpu is only available for GPU simulation")
+        return self.backend
+
+    def configure_source(self, *, canonical_source: str, snapshot: bool):
+        self.canonical_source = str(canonical_source)
+        self.is_snapshot = bool(snapshot)
+        self.stale = bool(snapshot)
+        return self
+
+    def set_strict_snapshot_reads(self, enabled: bool = True):
+        """Raise on stale GPU snapshot reads when debugging policy data flow."""
+        self.strict_snapshot_reads = bool(enabled)
+        return self
+
+    def mark_stale(self):
+        if self.is_snapshot:
+            self.stale = True
+            if hasattr(self.snapshot, "mark_stale"):
+                self.snapshot.mark_stale()
+        return self
+
+    def mark_fresh(self):
+        self.stale = False
+        self.version += 1
+        return self
+
+    def _check_snapshot_read(self):
+        if self.is_snapshot and self.stale and self.strict_snapshot_reads:
+            raise RuntimeError(
+                "world.state is a stale CPU/Torch snapshot of canonical GPU "
+                "state; call world.refresh(), world.step(refresh=True), or use "
+                "world.get_gpu_*() for the latest CUDA view"
+            )
+
+    def _read_backend(self):
+        self._check_snapshot_read()
+        return self.snapshot
+
+    def add_articulation(self, *args, **kwargs):
+        return self.snapshot.add_articulation(*args, **kwargs)
+
+    def add_rigid(self, *args, **kwargs):
+        return self.snapshot.add_rigid(*args, **kwargs)
+
+    def refresh(self):
+        self.snapshot.refresh()
+        self.mark_fresh()
+        return self
+
+    def record(self, *args, **kwargs):
+        return self.snapshot.record(*args, **kwargs)
+
+    def object_state(self, *args, **kwargs):
+        return self._read_backend().object_state(*args, **kwargs)
+
+    def object_states(self, *args, **kwargs):
+        return self._read_backend().object_states(*args, **kwargs)
+
+    def articulation_state(self, *args, **kwargs):
+        return self.object_state(*args, **kwargs)
+
+    def articulation_states(self, *args, **kwargs):
+        return self.object_states(*args, **kwargs)
+
+    def get_root_pos(self, obj_id: int):
+        return self._read_backend().get_root_pos(obj_id)
+
+    def get_root_rot(self, obj_id: int):
+        return self._read_backend().get_root_rot(obj_id)
+
+    def get_root_vel(self, obj_id: int):
+        return self._read_backend().get_root_vel(obj_id)
+
+    def get_root_ang_vel(self, obj_id: int):
+        return self._read_backend().get_root_ang_vel(obj_id)
+
+    def get_body_pos(self, obj_id: int):
+        return self._read_backend().get_body_pos(obj_id)
+
+    def get_body_rot(self, obj_id: int):
+        return self._read_backend().get_body_rot(obj_id)
+
+    def get_body_vel(self, obj_id: int):
+        return self._read_backend().get_body_vel(obj_id)
+
+    def get_body_ang_vel(self, obj_id: int):
+        return self._read_backend().get_body_ang_vel(obj_id)
+
+    def get_contact_forces(self, obj_id: int):
+        return self._read_backend().get_contact_forces(obj_id)
+
+    def get_ground_contact_forces(self, obj_id: int):
+        return self._read_backend().get_ground_contact_forces(obj_id)
+
+    def get_dof_pos(self, obj_id: int):
+        return self._read_backend().get_dof_pos(obj_id)
+
+    def get_dof_vel(self, obj_id: int):
+        return self._read_backend().get_dof_vel(obj_id)
+
+    def get_dof_forces(self, obj_id: int):
+        return self._read_backend().get_dof_forces(obj_id)
+
+    def get_obj_num_bodies(self, obj_id: int) -> int:
+        return self.snapshot.get_obj_num_bodies(obj_id)
+
+    def get_obj_num_dofs(self, obj_id: int) -> int:
+        return self.snapshot.get_obj_num_dofs(obj_id)
+
+    def get_obj_dof_names(self, obj_id: int) -> list[str]:
+        return self.snapshot.get_obj_dof_names(obj_id)
+
+    def get_obj_dof_limits(self, obj_id: int):
+        return self.snapshot.get_obj_dof_limits(obj_id)
+
+    def get_obj_pd_gains(self, obj_id: int):
+        return self.snapshot.get_obj_pd_gains(obj_id)
+
+    def get_obj_effort_limits(self, obj_id: int):
+        return self.snapshot.get_obj_effort_limits(obj_id)
+
+    def get_obj_body_masses(self, obj_id: int):
+        return self.snapshot.get_obj_body_masses(obj_id)
+
+    def calc_obj_mass(self, *args, **kwargs):
+        return self.snapshot.calc_obj_mass(*args, **kwargs)
+
+    def set_root_state(self, *args, **kwargs):
+        return self.snapshot.set_root_state(*args, **kwargs)
+
+    def set_dof_state(self, *args, **kwargs):
+        return self.snapshot.set_dof_state(*args, **kwargs)
+
+    def release(self):
+        if self.snapshot is not self.backend and hasattr(self.snapshot, "release"):
+            self.snapshot.release()
+        if hasattr(self.backend, "release"):
+            self.backend.release()
+        self.snapshot = None
+        self.backend = None
+        return self
+
+
+KangStateCache = KangWorldState

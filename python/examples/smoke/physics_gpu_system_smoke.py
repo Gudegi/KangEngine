@@ -1,9 +1,9 @@
-"""Validate the PhysX GPU rigid mirror against expected warm-up state.
+"""Validate the PhysX GPU rigid/contact mirrors against expected state.
 
 Run this on Linux with an NVIDIA GPU after building the Python extension. A
 successful run verifies CUDA context compatibility, PhysX Direct GPU API rigid
-fetch, the zero-copy Torch view, and the engine's ``[N, 13]`` rigid-state
-layout.
+fetch, contact fetch/flattening, zero-copy Torch views, and the engine's
+``[N, 13]`` rigid-state layout.
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ import torch
 
 RIGID_COUNT = 8
 VALIDATION_STEPS = 4
+CONTACT_RIGID_ROWS = (0, 1)
 RIGID_LAYOUT = {
     "position": slice(0, 3),
     "rotation_xyzw": slice(3, 7),
@@ -52,6 +53,14 @@ def _z_quat(angle: float) -> list[float]:
 
 
 def _make_rigid_state(i: int):
+    if i in CONTACT_RIGID_ROWS:
+        x = -6.0 + 0.41 * float(i)
+        pos = [x, 0.0, 1.0]
+        rot = _z_quat(0.0)
+        linear_velocity = [0.5 if i == 0 else -0.5, 0.0, 0.0]
+        angular_velocity = [0.0, 0.0, 0.0]
+        return pos, rot, linear_velocity, angular_velocity
+
     x = float(i - RIGID_COUNT // 2) * 1.25
     pos = [x, 0.35 * float(i % 3), 2.0 + 0.15 * float(i)]
     rot = _z_quat(0.07 * float(i))
@@ -142,13 +151,77 @@ def _assert_cuda_float_view(view, *, shape, name, stream_handle):
     return tensor
 
 
+def _assert_cuda_uint_view(view, *, shape, name, stream_handle, dtype, typestr):
+    if view.name != name:
+        raise AssertionError(f"expected view name {name!r}, got {view.name!r}")
+    if not view.is_cuda:
+        raise AssertionError(f"{name} is not a CUDA view")
+    if view.ptr == 0:
+        raise AssertionError(f"{name} has a null pointer")
+    if tuple(view.shape) != tuple(shape):
+        raise AssertionError(f"expected {name} shape {shape}, got {view.shape}")
+    expected_strides = []
+    stride = 1
+    for extent in reversed(shape):
+        expected_strides.append(stride)
+        stride *= extent
+    expected_strides = tuple(reversed(expected_strides))
+    if tuple(view.strides) != expected_strides:
+        raise AssertionError(
+            f"expected {name} strides {expected_strides}, got {view.strides}"
+        )
+    if view.device_id != 0:
+        raise AssertionError(f"expected {name} device_id 0, got {view.device_id}")
+    if view.stream_handle != stream_handle:
+        raise AssertionError(
+            f"expected {name} stream 0x{stream_handle:x}, got 0x{view.stream_handle:x}"
+        )
+    if view.ready_event_handle == 0:
+        raise AssertionError(f"{name} does not expose a ready event")
+    expected_numel = math.prod(shape)
+    if view.numel != expected_numel:
+        raise AssertionError(f"unexpected {name} numel {view.numel}")
+
+    cuda_iface = view.__cuda_array_interface__
+    if cuda_iface["version"] != 3:
+        raise AssertionError(f"{name} exposes CUDA array interface version mismatch")
+    if tuple(cuda_iface["shape"]) != tuple(shape):
+        raise AssertionError(f"{name} CUDA interface shape mismatch")
+    if cuda_iface["typestr"] != typestr:
+        raise AssertionError(f"{name} CUDA interface dtype mismatch")
+    if int(cuda_iface["data"][0]) != view.ptr:
+        raise AssertionError(f"{name} CUDA interface pointer mismatch")
+
+    tensor = view.torch()
+    if tensor.device.type != "cuda":
+        raise AssertionError(f"{name} did not produce a CUDA tensor")
+    if tensor.data_ptr() != view.ptr:
+        raise AssertionError(f"Torch did not create a zero-copy tensor for {name}")
+    if tuple(tensor.shape) != tuple(shape):
+        raise AssertionError(f"{name} tensor shape mismatch")
+    if tensor.dtype != dtype:
+        raise AssertionError(f"{name} tensor dtype mismatch")
+    return tensor
+
+
 def _sorted_by_x(state: np.ndarray) -> np.ndarray:
     return state[np.argsort(state[:, 0])]
 
 
-def _validate_state(gpu_state: np.ndarray, expected_state: np.ndarray, step_index: int):
+def _validate_state(
+    gpu_state: np.ndarray,
+    expected_state: np.ndarray,
+    step_index: int,
+    *,
+    skip_sorted_rows: tuple[int, ...] = (),
+):
     gpu_state = _sorted_by_x(gpu_state)
     expected_state = _sorted_by_x(expected_state)
+    if skip_sorted_rows:
+        mask = np.ones(gpu_state.shape[0], dtype=bool)
+        mask[list(skip_sorted_rows)] = False
+        gpu_state = gpu_state[mask]
+        expected_state = expected_state[mask]
 
     for label, field_slice in RIGID_LAYOUT.items():
         np.testing.assert_allclose(
@@ -167,6 +240,23 @@ def _validate_state(gpu_state: np.ndarray, expected_state: np.ndarray, step_inde
         err_msg=f"step {step_index} rigid state mismatch",
     )
     return gpu_state
+
+
+def _assert_nonzero_contact_points(contact_points: torch.Tensor, point_count: int):
+    if point_count <= 0:
+        raise AssertionError("expected nonzero flattened GPU contact points")
+    active = contact_points[:point_count].detach().cpu().numpy()
+    if not np.isfinite(active).all():
+        raise AssertionError("flattened GPU contact points contain non-finite values")
+
+    normal_norms = np.linalg.norm(active[:, 3:6], axis=1)
+    impulse_norms = np.linalg.norm(active[:, 6:9], axis=1)
+    if float(np.max(normal_norms)) < 0.5:
+        raise AssertionError("flattened GPU contact normals look invalid")
+    if not np.isfinite(impulse_norms).all():
+        raise AssertionError("flattened GPU contact impulses contain non-finite values")
+
+    return active, float(np.max(impulse_norms))
 
 
 def _print_step_sample(step_index: int, state: np.ndarray):
@@ -542,6 +632,37 @@ def main():
         raise AssertionError(
             "sparse articulation GPU target qvel command echo mismatch"
         )
+    gpu_system.clear_articulation_commands(sparse_articulation_index_view)
+    gpu_system.fetch_articulation_joint_forces()
+    gpu_system.fetch_articulation_target_joint_positions()
+    gpu_system.fetch_articulation_target_joint_velocities()
+    torch.cuda.synchronize(0)
+    active_dofs = slice(0, articulation_dof_count)
+    if not torch.allclose(
+        articulation_qf[articulation_row, active_dofs],
+        torch.zeros_like(articulation_qf[articulation_row, active_dofs]),
+        rtol=1e-5,
+        atol=1e-5,
+    ):
+        raise AssertionError("clear_articulation_commands left stale joint forces")
+    if not torch.allclose(
+        articulation_target_qvel[articulation_row, active_dofs],
+        torch.zeros_like(articulation_target_qvel[articulation_row, active_dofs]),
+        rtol=1e-5,
+        atol=1e-5,
+    ):
+        raise AssertionError(
+            "clear_articulation_commands left stale target joint velocities"
+        )
+    if not torch.allclose(
+        articulation_target_qpos[articulation_row, active_dofs],
+        articulation_qpos[articulation_row, active_dofs],
+        rtol=1e-5,
+        atol=1e-5,
+    ):
+        raise AssertionError(
+            "clear_articulation_commands did not restore target qpos to qpos"
+        )
     root_command = torch.tensor(
         [0.25, 4.5, 0.75, 0.0, 0.0, 0.0, 1.0, 0.2, 0.0, -0.1, 0.0, 0.3, 0.0],
         device="cuda:0",
@@ -614,6 +735,22 @@ def main():
         raise AssertionError(
             f"expected rigid torque version 2 after sparse apply, got {torque_view.version}"
         )
+    rigid_force[0] = torch.tensor([1.0, 2.0, 3.0], device="cuda:0")
+    rigid_torque[RIGID_COUNT - 1] = torch.tensor(
+        [-3.0, -2.0, -1.0], device="cuda:0"
+    )
+    gpu_system.clear_rigid_commands(sparse_index_view)
+    torch.cuda.synchronize(0)
+    if force_view.version != 3 or torque_view.version != 3:
+        raise AssertionError("clear_rigid_commands did not advance command versions")
+    if not torch.allclose(
+        rigid_force[sparse_indices], torch.zeros_like(rigid_force[sparse_indices])
+    ):
+        raise AssertionError("clear_rigid_commands left stale rigid force")
+    if not torch.allclose(
+        rigid_torque[sparse_indices], torch.zeros_like(rigid_torque[sparse_indices])
+    ):
+        raise AssertionError("clear_rigid_commands left stale rigid torque")
 
     print("Rigid mirror")
     print(f"  count        : {RIGID_COUNT}")
@@ -677,8 +814,145 @@ def main():
                 for pos, rot, linear_velocity, angular_velocity in initial_rows
             ]
         )
-        sorted_state = _validate_state(gpu_state, expected_state, step_index)
+        sorted_state = _validate_state(
+            gpu_state,
+            expected_state,
+            step_index,
+            skip_sorted_rows=tuple(range(len(CONTACT_RIGID_ROWS))),
+        )
         _print_step_sample(step_index, sorted_state)
+
+    gpu_system.fetch_contact_pairs()
+    contact_pairs_view = gpu_system.contact_pairs()
+    contact_pair_count_view = gpu_system.contact_pair_count()
+    contact_pair_headers_view = gpu_system.contact_pair_headers()
+    contact_pair_body_refs_view = gpu_system.contact_pair_body_refs()
+    contact_points_view = gpu_system.contact_points()
+    contact_point_count_view = gpu_system.contact_point_count()
+    contact_point_pair_indices_view = gpu_system.contact_point_pair_indices()
+    contact_pairs_raw = _assert_cuda_uint_view(
+        contact_pairs_view,
+        shape=tuple(contact_pairs_view.shape),
+        name="physics_contact_pairs_raw",
+        stream_handle=stream_handle,
+        dtype=torch.uint8,
+        typestr="|u1",
+    )
+    contact_pair_count = _assert_cuda_uint_view(
+        contact_pair_count_view,
+        shape=(1,),
+        name="physics_contact_pair_count",
+        stream_handle=stream_handle,
+        dtype=torch.int32,
+        typestr="<u4",
+    )
+    contact_pair_headers = _assert_cuda_uint_view(
+        contact_pair_headers_view,
+        shape=tuple(contact_pair_headers_view.shape),
+        name="physics_contact_pair_headers",
+        stream_handle=stream_handle,
+        dtype=torch.int64,
+        typestr="<u8",
+    )
+    contact_pair_body_refs = _assert_cuda_uint_view(
+        contact_pair_body_refs_view,
+        shape=tuple(contact_pair_body_refs_view.shape),
+        name="physics_contact_pair_body_refs",
+        stream_handle=stream_handle,
+        dtype=torch.int32,
+        typestr="<i4",
+    )
+    contact_points = _assert_cuda_float_view(
+        contact_points_view,
+        shape=tuple(contact_points_view.shape),
+        name="physics_contact_points",
+        stream_handle=stream_handle,
+    )
+    contact_point_count = _assert_cuda_uint_view(
+        contact_point_count_view,
+        shape=(1,),
+        name="physics_contact_point_count",
+        stream_handle=stream_handle,
+        dtype=torch.int32,
+        typestr="<u4",
+    )
+    contact_point_pair_indices = _assert_cuda_uint_view(
+        contact_point_pair_indices_view,
+        shape=tuple(contact_point_pair_indices_view.shape),
+        name="physics_contact_point_pair_indices",
+        stream_handle=stream_handle,
+        dtype=torch.int32,
+        typestr="<u4",
+    )
+    torch.cuda.synchronize(0)
+    pair_count = int(contact_pair_count.detach().cpu().item())
+    point_count = int(contact_point_count.detach().cpu().item())
+    if pair_count <= 0:
+        raise AssertionError("expected nonzero GPU contact pairs")
+    if point_count > contact_points_view.shape[0]:
+        raise AssertionError("contact point count exceeds flattened contact capacity")
+    if (
+        contact_pairs_view.version != 1
+        or contact_pair_count_view.version != 1
+        or contact_pair_headers_view.version != 1
+        or contact_pair_body_refs_view.version != 1
+        or contact_points_view.version != 1
+        or contact_point_count_view.version != 1
+        or contact_point_pair_indices_view.version != 1
+    ):
+        raise AssertionError("contact pair fetch did not advance view versions")
+    active_contact_points, max_contact_impulse = _assert_nonzero_contact_points(
+        contact_points, point_count
+    )
+    if max_contact_impulse <= 0.0:
+        raise AssertionError("PhysX GPU impact contacts did not report solver impulse")
+    active_pair_indices = contact_point_pair_indices[:point_count]
+    if not torch.all((active_pair_indices >= 0) & (active_pair_indices < pair_count)):
+        raise AssertionError("flattened contact point pair indices are invalid")
+    active_headers = contact_pair_headers[:pair_count].detach().cpu().numpy()
+    if active_headers.shape[1] != 6:
+        raise AssertionError("contact pair header layout mismatch")
+    if not np.any(active_headers[:, 0:2]):
+        raise AssertionError("contact pair headers did not capture node indices")
+    if not np.any(active_headers[:, 2:4]):
+        raise AssertionError("contact pair headers did not capture actor pointers")
+    active_body_refs = contact_pair_body_refs[:pair_count].detach().cpu().numpy()
+    if active_body_refs.shape[1] != 6:
+        raise AssertionError("contact pair body-ref layout mismatch")
+    expected_contact_rows = sorted(rigid_rows[i] for i in CONTACT_RIGID_ROWS)
+    found_expected_rigid_pair = False
+    for row in active_body_refs:
+        if row[0] != 0 or row[3] != 0:
+            continue
+        if row[2] != 0 or row[5] != 0:
+            continue
+        if sorted((int(row[1]), int(row[4]))) == expected_contact_rows:
+            found_expected_rigid_pair = True
+            break
+    if not found_expected_rigid_pair:
+        raise AssertionError(
+            "contact pair body refs did not map the overlapping rigid actors"
+        )
+    print()
+    print("Contact pair mirror")
+    print(f"  raw bytes    : {contact_pairs_raw.numel()}")
+    print(f"  pair count   : {pair_count}")
+    print(f"  headers shape: {contact_pair_headers_view.shape}")
+    print(f"  body refs    : {contact_pair_body_refs_view.shape}")
+    print(f"  points shape : {contact_points_view.shape}")
+    print(f"  point count  : {point_count}")
+    print(f"  point pairs  : {contact_point_pair_indices_view.shape}")
+    print(f"  max impulse  : {max_contact_impulse:.6f}")
+    print(
+        "  first point  : "
+        f"pos=[{active_contact_points[0, 0]: .5f}, "
+        f"{active_contact_points[0, 1]: .5f}, "
+        f"{active_contact_points[0, 2]: .5f}] "
+        f"normal=[{active_contact_points[0, 3]: .5f}, "
+        f"{active_contact_points[0, 4]: .5f}, "
+        f"{active_contact_points[0, 5]: .5f}]"
+    )
+    print(f"  version      : {contact_pairs_view.version}")
 
     _assert_sparse_root_state_apply(
         world, gpu_system, rigid_state, rigid_view, config
@@ -696,6 +970,13 @@ def main():
     del articulation_target_qpos
     del articulation_target_qvel
     del articulation_incoming_joint_force
+    del contact_pairs_raw
+    del contact_pair_count
+    del contact_pair_headers
+    del contact_pair_body_refs
+    del contact_points
+    del contact_point_count
+    del contact_point_pair_indices
     del root_command
     del sparse_articulation_index_view
     del sparse_articulation_indices

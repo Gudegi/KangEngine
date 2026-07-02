@@ -56,6 +56,9 @@ _LAZY_IMPORTS = {
     "SimRigid": (".sim", "SimRigid"),
     "SimRigidView": (".sim", "SimRigidView"),
     "KangSimWorld": (".sim", "KangSimWorld"),
+    "ContactSensor": (".sensor", "ContactSensor"),
+    "ContactSensorData": (".sensor", "ContactSensorData"),
+    "ForceSensor": (".sensor", "ForceSensor"),
     "KangEngineEngine": (".mimickit_engine", "KangEngineEngine"),
     "build_mimickit_engine": (".mimickit_engine", "build_engine"),
     "install_mimickit_engine_builder": (
@@ -74,6 +77,7 @@ if _TYPE_CHECKING:
         SimRigid,
         SimRigidView,
     )
+    from .sensor import ContactSensor, ContactSensorData, ForceSensor
     from .mimickit_engine import (
         KangEngineEngine,
         build_engine as build_mimickit_engine,
@@ -180,6 +184,9 @@ __all__ = [
     "SimRigid",
     "SimRigidView",
     "KangSimWorld",
+    "ContactSensor",
+    "ContactSensorData",
+    "ForceSensor",
     "KangWorldVisualBridge",
     "ArticulationVisualView",
     "RigidVisualView",

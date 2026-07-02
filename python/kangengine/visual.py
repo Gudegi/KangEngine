@@ -139,37 +139,47 @@ class RigidVisualView:
         return self
 
 
-@dataclass(slots=True)
-class SimVisualBatch:
-    """Viewer-side batch returned when one simulation view spans many envs.
-
-    This groups per-env visual views without owning simulation state. The
-    low-level C++ transform batch is exposed separately as
-    ``kangengine.physics.SimVisualBatch``.
-    """
-
-    obj_id: int
-    env_ids: tuple[int, ...]
-    records: tuple[ArticulationVisualView | RigidVisualView, ...]
+class _VisualLifetime:
+    def _mark_released(self):
+        self._released = True
 
     @property
-    def key(self):
-        return (self.env_ids, self.obj_id)
+    def is_valid(self) -> bool:
+        return not getattr(self, "_released", False)
+
+    def _require_valid(self):
+        if not self.is_valid:
+            raise RuntimeError(f"{type(self).__name__} has been released")
+
+
+class _SceneBatchBackend:
+    """Per-env scene/PhysicsBridge visual records behind a visual batch."""
+
+    def __init__(self, records):
+        self.records = tuple(records)
+        self._released = False
 
     @property
-    def num_envs(self) -> int:
-        return len(self.env_ids)
+    def is_valid(self) -> bool:
+        return not self._released
+
+    def _require_valid(self):
+        if self._released:
+            raise RuntimeError(f"{type(self).__name__} has been released")
 
     @property
     def num_bodies(self) -> int:
+        self._require_valid()
         return self.records[0].num_bodies if self.records else 0
 
     @property
     def prims(self):
+        self._require_valid()
         return tuple(prim for record in self.records for prim in record.prims)
 
     @property
     def body_handles(self):
+        self._require_valid()
         return tuple(
             int(handle)
             for record in self.records
@@ -177,15 +187,19 @@ class SimVisualBatch:
         )
 
     def __len__(self) -> int:
+        self._require_valid()
         return len(self.records)
 
     def __iter__(self):
+        self._require_valid()
         return iter(self.records)
 
     def __getitem__(self, index):
+        self._require_valid()
         return self.records[index]
 
     def get_env_view(self, env_id: int):
+        self._require_valid()
         env_id = int(env_id)
         for record in self.records:
             if int(record.env_id) == env_id:
@@ -193,6 +207,7 @@ class SimVisualBatch:
         raise KeyError(f"env_id {env_id} is outside this visual batch")
 
     def body_id_from_render_handle(self, handle) -> tuple[int, int] | None:
+        self._require_valid()
         for record in self.records:
             if hasattr(record, "body_id_from_render_handle"):
                 body_id = record.body_id_from_render_handle(handle)
@@ -201,11 +216,13 @@ class SimVisualBatch:
         return None
 
     def set_visible(self, visible: bool):
+        self._require_valid()
         for record in self.records:
             record.set_visible(visible)
         return self
 
     def set_color(self, color):
+        self._require_valid()
         for index, record in enumerate(self.records):
             record.set_color(
                 _select_env_visual_value(color, index, len(self.records), record.env_id)
@@ -213,13 +230,326 @@ class SimVisualBatch:
         return self
 
     def set_collision_visible(self, visible: bool):
+        self._require_valid()
         for record in self.records:
             if hasattr(record, "set_collision_visible"):
                 record.set_collision_visible(visible)
         return self
 
+    def release(self):
+        if self._released:
+            return self
+        self.records = ()
+        self._released = True
+        return self
 
-class GpuArticulationVisualBatch:
+
+class RigidSceneGraphBackend(_SceneBatchBackend):
+    """Rigid visual records synced through the existing scene/bridge path."""
+
+
+class ArticulationSceneGraphBackend(_SceneBatchBackend):
+    """Articulation visual records synced through the existing scene/bridge path."""
+
+
+class RigidCPUExternalBackend(_VisualLifetime):
+    """CPU rigid root poses -> native SimVisualBatch -> ExternalBuffer."""
+
+    def __init__(self, app, world, obj_id, env_ids, prim, handle, local_pos, local_rot):
+        from . import physics
+
+        self._released = False
+        self.app = app
+        self.world = world
+        self.obj_id = int(obj_id)
+        self.env_ids = tuple(int(env_id) for env_id in env_ids)
+        self.body_prims = (prim,)
+        self.body_handles = (int(handle),)
+        self.num_bodies = 1
+        self.num_envs = len(self.env_ids)
+        self._version = 0
+
+        self._model = physics.SimModel()
+        self._model.add_shape(
+            0,
+            int(handle),
+            tuple(float(v) for v in np.asarray(local_pos, dtype=np.float32).reshape(3)),
+            tuple(float(v) for v in np.asarray(local_rot, dtype=np.float32).reshape(4)),
+            "rigid_shape",
+        )
+        self._model.add_object_boundary(0, 1, f"rigid_{self.obj_id}")
+        self._state = physics.SimState()
+        self._state.resize(self.num_envs, 1)
+        self._batch = physics.SimVisualBatch()
+        self._batch.set_model(self._model)
+
+    @property
+    def prims(self):
+        return self.body_prims
+
+    @property
+    def body_handles(self):
+        return self._body_handles
+
+    @body_handles.setter
+    def body_handles(self, value):
+        self._body_handles = tuple(int(handle) for handle in value)
+
+    def __len__(self) -> int:
+        self._require_valid()
+        return self.num_envs
+
+    def sync(self):
+        self._require_valid()
+        for row, env_id in enumerate(self.env_ids):
+            rigid = self.world.rigid(env_id, self.obj_id)
+            self._state.set_body_transform(
+                row,
+                0,
+                rigid.get_root_position(),
+                rigid.get_root_rotation(),
+            )
+        self._batch.prepare_from_state(self._state)
+        self._version += 1
+        desc = self._batch.external_transform_desc(
+            0, self._version, f"rigid_cpu_external_{self.obj_id}"
+        )
+        self.app.get_renderer().set_renderable_external_buffer(
+            self.body_handles[0], desc
+        )
+        return self
+
+    def set_visible(self, visible: bool):
+        self._require_valid()
+        self.body_prims[0].set_visible(bool(visible))
+        return self
+
+    def set_color(self, color):
+        self._require_valid()
+        self.app.set_renderable_colors(
+            self.body_handles[0], _batch_colors(color, self.env_ids)
+        )
+        return self
+
+    def body_id_from_render_handle(self, handle) -> int | None:
+        self._require_valid()
+        return 0 if int(handle) == self.body_handles[0] else None
+
+    def release(self):
+        if not self.is_valid:
+            return self
+        self._batch = None
+        self._state = None
+        self._model = None
+        self.body_prims = ()
+        self.body_handles = ()
+        self.app = None
+        self.world = None
+        self._mark_released()
+        return self
+
+
+class ArticulationCPUExternalBackend(_VisualLifetime):
+    """CPU articulation link poses -> native SimVisualBatch -> ExternalBuffer."""
+
+    def __init__(self, app, world, obj_id, env_ids, body_prims, body_handles):
+        from . import physics
+
+        self._released = False
+        self.app = app
+        self.world = world
+        self.obj_id = int(obj_id)
+        self.env_ids = tuple(int(env_id) for env_id in env_ids)
+        self.body_prims = tuple(body_prims)
+        self.body_handles = tuple(int(handle) for handle in body_handles)
+        self.num_bodies = len(self.body_handles)
+        self.num_envs = len(self.env_ids)
+        self._version = 0
+
+        self._model = physics.SimModel()
+        self._model.set_body_renderables(list(self.body_handles))
+        self._state = physics.SimState()
+        self._state.resize(self.num_envs, self.num_bodies)
+        self._batch = physics.SimVisualBatch()
+        self._batch.set_model(self._model)
+
+    @property
+    def prims(self):
+        return self.body_prims
+
+    def __len__(self) -> int:
+        self._require_valid()
+        return self.num_envs
+
+    def sync(self):
+        self._require_valid()
+        for row, env_id in enumerate(self.env_ids):
+            articulation = self.world.articulation(env_id, self.obj_id)
+            pos = np.asarray(
+                articulation.get_link_positions(), dtype=np.float32
+            ).reshape(self.num_bodies, 3)
+            rot = np.asarray(
+                articulation.get_link_rotations(), dtype=np.float32
+            ).reshape(self.num_bodies, 4)
+            for body_id in range(self.num_bodies):
+                self._state.set_body_transform(
+                    row,
+                    body_id,
+                    pos[body_id],
+                    rot[body_id],
+                )
+        self._batch.prepare_from_state(self._state)
+        self._version += 1
+        renderer = self.app.get_renderer()
+        for shape_id, handle in enumerate(self.body_handles):
+            desc = self._batch.external_transform_desc(
+                shape_id,
+                self._version,
+                f"articulation_cpu_external_{self.obj_id}_{shape_id}",
+            )
+            renderer.set_renderable_external_buffer(handle, desc)
+        return self
+
+    def set_visible(self, visible: bool):
+        self._require_valid()
+        for prim in self.body_prims:
+            prim.set_visible(bool(visible))
+        return self
+
+    def set_color(self, color):
+        self._require_valid()
+        colors = _batch_colors(color, self.env_ids)
+        for handle in self.body_handles:
+            self.app.set_renderable_colors(handle, colors)
+        return self
+
+    def body_id_from_render_handle(self, handle) -> int | None:
+        self._require_valid()
+        handle = int(handle)
+        for body_id, body_handle in enumerate(self.body_handles):
+            if body_handle == handle:
+                return body_id
+        return None
+
+    def release(self):
+        if not self.is_valid:
+            return self
+        self._batch = None
+        self._state = None
+        self._model = None
+        self.body_prims = ()
+        self.body_handles = ()
+        self.app = None
+        self.world = None
+        self._mark_released()
+        return self
+
+
+class SimVisualBatch:
+    """Public visual batch handle returned when one sim view spans many envs.
+
+    The handle owns no simulation state. It delegates visual operations to a
+    backend such as scene/PhysicsBridge records or GPU ExternalBuffer batches.
+    The low-level C++ transform batch remains exposed as
+    ``kangengine.physics.SimVisualBatch``.
+    """
+
+    def __init__(self, obj_id, env_ids, records=(), *, backend=None):
+        self.obj_id = int(obj_id)
+        self.env_ids = tuple(int(env_id) for env_id in env_ids)
+        self._backend = (
+            backend if backend is not None else _SceneBatchBackend(records)
+        )
+        self._released = False
+
+    @property
+    def key(self):
+        self._require_valid()
+        return (self.env_ids, self.obj_id)
+
+    @property
+    def num_envs(self) -> int:
+        self._require_valid()
+        return len(self.env_ids)
+
+    @property
+    def num_bodies(self) -> int:
+        self._require_valid()
+        return self._backend.num_bodies
+
+    @property
+    def prims(self):
+        self._require_valid()
+        return self._backend.prims
+
+    @property
+    def body_handles(self):
+        self._require_valid()
+        return self._backend.body_handles
+
+    def __len__(self) -> int:
+        self._require_valid()
+        return len(self._backend)
+
+    def __iter__(self):
+        self._require_valid()
+        return iter(self._backend)
+
+    def __getitem__(self, index):
+        self._require_valid()
+        return self._backend[index]
+
+    def sync(self):
+        self._require_valid()
+        if hasattr(self._backend, "sync"):
+            self._backend.sync()
+        return self
+
+    def get_env_view(self, env_id: int):
+        self._require_valid()
+        if not hasattr(self._backend, "get_env_view"):
+            raise TypeError(f"{type(self._backend).__name__} has no per-env views")
+        return self._backend.get_env_view(env_id)
+
+    def body_id_from_render_handle(self, handle):
+        self._require_valid()
+        return self._backend.body_id_from_render_handle(handle)
+
+    def set_visible(self, visible: bool):
+        self._require_valid()
+        self._backend.set_visible(visible)
+        return self
+
+    def set_color(self, color):
+        self._require_valid()
+        self._backend.set_color(color)
+        return self
+
+    def set_collision_visible(self, visible: bool):
+        self._require_valid()
+        if hasattr(self._backend, "set_collision_visible"):
+            self._backend.set_collision_visible(visible)
+        return self
+
+    @property
+    def is_valid(self) -> bool:
+        return not self._released
+
+    def _require_valid(self):
+        if self._released:
+            raise RuntimeError("SimVisualBatch has been released")
+
+    def release(self):
+        if self._released:
+            return self
+        if hasattr(self._backend, "release"):
+            self._backend.release()
+        self._backend = None
+        self._released = True
+        return self
+
+
+class ArticulationGPUExternalBackend(_VisualLifetime):
     """CUDA articulation link poses consumed as renderer instance buffers."""
 
     def __init__(self, app, world, obj_id, env_ids, body_prims, body_handles):
@@ -227,6 +557,7 @@ class GpuArticulationVisualBatch:
 
         from .utils import to_gpu_array_view
 
+        self._released = False
         self.app = app
         self.world = world
         self.obj_id = int(obj_id)
@@ -268,7 +599,12 @@ class GpuArticulationVisualBatch:
     def prims(self):
         return self.body_prims
 
+    def __len__(self) -> int:
+        self._require_valid()
+        return self.num_envs
+
     def sync(self):
+        self._require_valid()
         gpu_system = self.world.gpu_system
         gpu_system.fetch_articulation_link_pose()
         link_view = gpu_system.articulation_link_data()
@@ -295,30 +631,47 @@ class GpuArticulationVisualBatch:
         return self
 
     def set_visible(self, visible: bool):
+        self._require_valid()
         for prim in self.body_prims:
             prim.set_visible(bool(visible))
         return self
 
     def set_color(self, color):
+        self._require_valid()
         colors = _batch_colors(color, self.env_ids)
         for handle in self.body_handles:
             self.app.set_renderable_colors(handle, colors)
         return self
 
     def body_id_from_render_handle(self, handle) -> int | None:
+        self._require_valid()
         handle = int(handle)
         for body_id, body_handle in enumerate(self.body_handles):
             if body_handle == handle:
                 return body_id
         return None
 
+    def release(self):
+        if not self.is_valid:
+            return self
+        self._rows = None
+        self._link_indices = None
+        self._link_indices_tensor = None
+        self.body_prims = ()
+        self.body_handles = ()
+        self.app = None
+        self.world = None
+        self._mark_released()
+        return self
 
-class GpuRigidVisualBatch:
+
+class RigidGPUExternalBackend(_VisualLifetime):
     """CUDA rigid root poses consumed as one renderer instance buffer."""
 
     def __init__(self, app, world, obj_id, env_ids, prim, handle):
         import torch
 
+        self._released = False
         self.app = app
         self.world = world
         self.obj_id = int(obj_id)
@@ -339,7 +692,12 @@ class GpuRigidVisualBatch:
     def prims(self):
         return self.body_prims
 
+    def __len__(self) -> int:
+        self._require_valid()
+        return self.num_envs
+
     def sync(self):
+        self._require_valid()
         gpu_system = self.world.gpu_system
         gpu_system.fetch_rigid_data()
         renderer = self.app.get_renderer()
@@ -362,14 +720,35 @@ class GpuRigidVisualBatch:
         return self
 
     def set_visible(self, visible: bool):
+        self._require_valid()
         self.body_prims[0].set_visible(bool(visible))
         return self
 
     def set_color(self, color):
+        self._require_valid()
         self.app.set_renderable_colors(
             self.body_handles[0], _batch_colors(color, self.env_ids)
         )
         return self
+
+    def body_id_from_render_handle(self, handle) -> int | None:
+        self._require_valid()
+        return 0 if int(handle) == self.body_handles[0] else None
+
+    def release(self):
+        if not self.is_valid:
+            return self
+        self._rows = None
+        self.body_prims = ()
+        self.body_handles = ()
+        self.app = None
+        self.world = None
+        self._mark_released()
+        return self
+
+
+GpuArticulationVisualBatch = ArticulationGPUExternalBackend
+GpuRigidVisualBatch = RigidGPUExternalBackend
 
 
 class RigidVisualBridge:
@@ -456,11 +835,47 @@ class KangWorldVisualBridge:
         self.records: dict[tuple[int, int], ArticulationVisualView] = {}
         self.rigid_records: dict[tuple[int, int], RigidVisualView] = {}
         self.visual_batches: dict[int, SimVisualBatch] = {}
-        self.gpu_visual_batches: dict[
-            int, GpuArticulationVisualBatch | GpuRigidVisualBatch
-        ] = {}
+        self.cpu_external_visual_batches: dict[int, SimVisualBatch] = {}
+        self.gpu_visual_batches: dict[int, SimVisualBatch] = {}
         self._skeleton_assets = {}
         self._instanced_colors: dict[tuple[int, ...], np.ndarray] = {}
+        self._released = False
+
+    @property
+    def is_valid(self) -> bool:
+        return not self._released
+
+    def _require_valid(self):
+        if self._released:
+            raise RuntimeError("KangWorldVisualBridge has been released")
+
+    def release(self):
+        if self._released:
+            return self
+        batches = (
+            list(self.visual_batches.values())
+            + list(self.cpu_external_visual_batches.values())
+            + list(self.gpu_visual_batches.values())
+        )
+        seen = set()
+        for batch in batches:
+            marker = id(batch)
+            if marker in seen:
+                continue
+            seen.add(marker)
+            if hasattr(batch, "release"):
+                batch.release()
+        self.gpu_visual_batches.clear()
+        self.cpu_external_visual_batches.clear()
+        self.visual_batches.clear()
+        self.records.clear()
+        self.rigid_records.clear()
+        self._skeleton_assets.clear()
+        self._instanced_colors.clear()
+        self._released = True
+        return self
+
+    cleanup = release
 
     def add(
         self,
@@ -475,6 +890,7 @@ class KangWorldVisualBridge:
         object owns env/object identity, while this bridge only creates and
         syncs viewer-side prims.
         """
+        self._require_valid()
         obj_id = int(sim_view.obj_id)
         env_ids = tuple(int(eid) for eid in sim_view.env_ids)
         name = _safe_prim_name(getattr(sim_view, "name", "") or f"obj_{obj_id}")
@@ -482,8 +898,10 @@ class KangWorldVisualBridge:
 
         if all((eid, obj_id) in self.world.articulations for eid in env_ids):
             add_one = self.add_articulation
+            backend_type = ArticulationSceneGraphBackend
         elif all((eid, obj_id) in self.world.rigids for eid in env_ids):
             add_one = self.add_rigid
+            backend_type = RigidSceneGraphBackend
         else:
             raise KeyError(
                 f"simulation view obj_id={obj_id} does not match registered objects"
@@ -509,7 +927,7 @@ class KangWorldVisualBridge:
             )
         if len(records) == 1:
             return records[0]
-        batch = SimVisualBatch(obj_id, env_ids, tuple(records))
+        batch = SimVisualBatch(obj_id, env_ids, backend=backend_type(records))
         self.visual_batches[obj_id] = batch
         _debug_visual_batch(batch)
         return batch
@@ -530,6 +948,7 @@ class KangWorldVisualBridge:
         color=None,
         _debug_registration: bool = True,
     ) -> ArticulationVisualView:
+        self._require_valid()
         key = (int(env_id), int(obj_id))
         if key in self.records:
             raise ValueError(f"visual already registered for env={key[0]}, obj={key[1]}")
@@ -611,8 +1030,9 @@ class KangWorldVisualBridge:
         order: str = "DFS",
         shader=None,
         color=None,
-    ) -> GpuArticulationVisualBatch:
+    ) -> SimVisualBatch:
         """Create one renderable per link backed by CUDA instance transforms."""
+        self._require_valid()
         if shader is None:
             raise ValueError("add_gpu_articulation requires a shader")
         if not hasattr(_ke, "articulation_link_state_to_mat4_cuda"):
@@ -640,12 +1060,66 @@ class KangWorldVisualBridge:
             )
             for prim in body_prims
         ]
-        batch = GpuArticulationVisualBatch(
+        backend = ArticulationGPUExternalBackend(
             self.app, self.world, obj_id, env_ids, body_prims, body_handles
         )
+        batch = SimVisualBatch(obj_id, env_ids, backend=backend)
         batch.set_color(color)
         batch.sync()
         self.gpu_visual_batches[obj_id] = batch
+        self.visual_batches[obj_id] = batch
+        return batch
+
+    def add_cpu_external_articulation(
+        self,
+        sim_view,
+        mjcf_path: str,
+        prim_base_path: str = "/cpu_external_robot",
+        scale: float = 1.0,
+        order: str = "DFS",
+        shader=None,
+        color=None,
+    ) -> SimVisualBatch:
+        """Create one renderable per link backed by CPU ExternalBuffer."""
+        self._require_valid()
+        if shader is None:
+            raise ValueError("add_cpu_external_articulation requires a shader")
+
+        obj_id = int(sim_view.obj_id)
+        env_ids = tuple(int(env_id) for env_id in sim_view.env_ids)
+        if obj_id in self.visual_batches:
+            raise ValueError(f"visual batch already registered for obj={obj_id}")
+        if obj_id in self.cpu_external_visual_batches:
+            raise ValueError(
+                f"CPU external visual batch already registered for obj={obj_id}"
+            )
+        if obj_id in self.gpu_visual_batches:
+            raise ValueError(f"GPU visual batch already registered for obj={obj_id}")
+        if any((env_id, obj_id) not in self.world.articulations for env_id in env_ids):
+            raise KeyError(f"articulation obj={obj_id} is not registered in every env")
+
+        asset, mesh_asset_base_path = self._skeleton_asset(mjcf_path, scale, order)
+        skeleton_bridge = asset.instantiate(
+            self.scene, prim_base_path, mesh_asset_base_path
+        )
+        body_prims = list(skeleton_bridge.body_prims())
+        if len(body_prims) != sim_view.num_bodies:
+            raise RuntimeError(
+                "CPU external articulation body count does not match PhysX links"
+            )
+        body_handles = [
+            self.app.add_renderable(
+                shader, prim, _ke.TransformSource.ExternalBuffer
+            )
+            for prim in body_prims
+        ]
+        backend = ArticulationCPUExternalBackend(
+            self.app, self.world, obj_id, env_ids, body_prims, body_handles
+        )
+        batch = SimVisualBatch(obj_id, env_ids, backend=backend)
+        batch.set_color(color)
+        batch.sync()
+        self.cpu_external_visual_batches[obj_id] = batch
         self.visual_batches[obj_id] = batch
         return batch
 
@@ -658,8 +1132,9 @@ class KangWorldVisualBridge:
         order: str = "DFS",
         shader=None,
         color=None,
-    ) -> GpuRigidVisualBatch:
+    ) -> SimVisualBatch:
         """Create a single-shape rigid batch backed by CUDA transforms."""
+        self._require_valid()
         if shader is None:
             raise ValueError("add_gpu_rigid requires a shader")
         if not hasattr(_ke, "indexed_rigid_state_to_mat4_cuda"):
@@ -687,12 +1162,74 @@ class KangWorldVisualBridge:
         handle = self.app.add_renderable(
             shader, prim, _ke.TransformSource.ExternalBuffer
         )
-        batch = GpuRigidVisualBatch(
+        backend = RigidGPUExternalBackend(
             self.app, self.world, obj_id, env_ids, prim, handle
         )
+        batch = SimVisualBatch(obj_id, env_ids, backend=backend)
         batch.set_color(color)
         batch.sync()
         self.gpu_visual_batches[obj_id] = batch
+        self.visual_batches[obj_id] = batch
+        return batch
+
+    def add_cpu_external_rigid(
+        self,
+        sim_view,
+        mjcf_path: str,
+        prim_base_path: str = "/cpu_external_rigid",
+        scale: float = 1.0,
+        order: str = "DFS",
+        shader=None,
+        color=None,
+    ) -> SimVisualBatch:
+        """Create a single-shape rigid batch backed by CPU ExternalBuffer."""
+        self._require_valid()
+        if shader is None:
+            raise ValueError("add_cpu_external_rigid requires a shader")
+
+        obj_id = int(sim_view.obj_id)
+        env_ids = tuple(int(env_id) for env_id in sim_view.env_ids)
+        if obj_id in self.visual_batches:
+            raise ValueError(f"visual batch already registered for obj={obj_id}")
+        if obj_id in self.cpu_external_visual_batches:
+            raise ValueError(
+                f"CPU external visual batch already registered for obj={obj_id}"
+            )
+        if obj_id in self.gpu_visual_batches:
+            raise ValueError(f"GPU visual batch already registered for obj={obj_id}")
+        data = self.world.load_mjcf(mjcf_path, scale=scale, order=order)
+        rigid_bridge = RigidVisualBridge(
+            self.app,
+            self.scene,
+            sim_view.first.rigid,
+            data,
+            prim_base_path,
+            add_shapes=False,
+            color=color,
+        )
+        if len(rigid_bridge.body_prims) != 1:
+            raise NotImplementedError(
+                "CPU external rigid visual batches currently require one MJCF shape"
+            )
+        spec = rigid_bridge.specs[0]
+        prim = rigid_bridge.body_prims[0]
+        handle = self.app.add_renderable(
+            shader, prim, _ke.TransformSource.ExternalBuffer
+        )
+        backend = RigidCPUExternalBackend(
+            self.app,
+            self.world,
+            obj_id,
+            env_ids,
+            prim,
+            handle,
+            spec.local_pos,
+            spec.local_rot,
+        )
+        batch = SimVisualBatch(obj_id, env_ids, backend=backend)
+        batch.set_color(color)
+        batch.sync()
+        self.cpu_external_visual_batches[obj_id] = batch
         self.visual_batches[obj_id] = batch
         return batch
 
@@ -709,6 +1246,7 @@ class KangWorldVisualBridge:
         color=None,
         _debug_registration: bool = True,
     ) -> RigidVisualView:
+        self._require_valid()
         key = (int(env_id), int(obj_id))
         if key in self.rigid_records or key in self.records:
             raise ValueError(f"visual already registered for env={key[0]}, obj={key[1]}")
@@ -760,6 +1298,7 @@ class KangWorldVisualBridge:
         color=None,
     ) -> ArticulationVisualView:
         """Create a rendered skeleton that is not attached to a PhysX articulation."""
+        self._require_valid()
         key = (int(env_id), int(obj_id))
         if key in self.records:
             raise ValueError(f"visual already registered for env={key[0]}, obj={key[1]}")
@@ -797,8 +1336,11 @@ class KangWorldVisualBridge:
         return record
 
     def sync(self):
+        self._require_valid()
         self.physics_bridge.sync()
         self._sync_rigids()
+        for batch in self.cpu_external_visual_batches.values():
+            batch.sync()
         for batch in self.gpu_visual_batches.values():
             batch.sync()
 
@@ -807,9 +1349,11 @@ class KangWorldVisualBridge:
         env_id: int,
         obj_id: int,
     ) -> ArticulationVisualView | None:
+        self._require_valid()
         return self.records.get((int(env_id), int(obj_id)))
 
     def get_rigid_view(self, env_id: int, obj_id: int) -> RigidVisualView | None:
+        self._require_valid()
         return self.rigid_records.get((int(env_id), int(obj_id)))
 
     def get_visual_view(
@@ -817,10 +1361,12 @@ class KangWorldVisualBridge:
         env_id: int,
         obj_id: int,
     ) -> ArticulationVisualView | RigidVisualView | None:
+        self._require_valid()
         key = (int(env_id), int(obj_id))
         return self.records.get(key) or self.rigid_records.get(key)
 
     def get_visual_batch(self, obj_id: int) -> SimVisualBatch | None:
+        self._require_valid()
         return self.visual_batches.get(int(obj_id))
 
     def _sync_rigids(self):

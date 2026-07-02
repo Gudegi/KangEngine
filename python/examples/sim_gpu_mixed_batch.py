@@ -129,7 +129,7 @@ def create_simulation(num_envs: int, cuda_device: int):
             None,
             torch.zeros((num_envs, robots.num_dofs), dtype=torch.float32),
         )
-        configure_position_drives(robots, kp=0.0, kd=0.0)
+        configure_position_drives(robots, kp=100.0, kd=10.0)
 
         world.init_gpu_system(cuda_device_id=cuda_device)
         world.step(substeps=0, refresh=False, apply_commands=False)
@@ -184,10 +184,6 @@ def configure_position_drives(robots, kp: float, kd: float):
         record.articulation.set_kds([float(kd)] * robots.num_dofs)
 
 
-# TODO: Revisit PhysX GPU POS-drive control. CPU mjcf_dof_control.py can keep
-# moving with ControlMode.POS drive targets, but the Direct GPU target-position
-# path stalls after a few steps in this example. PD_EXPLICIT is the current
-# high-level GPU articulation control path.
 def update_random_position_pd_targets(
     robots,
     targets,
@@ -468,6 +464,8 @@ class MixedGpuBatchViewer(ke.App):
         imgui.end()
 
     def cleanup(self):
+        if hasattr(self, "visual"):
+            self.visual.release()
         if hasattr(self, "world"):
             self.world.release()
 
