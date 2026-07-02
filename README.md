@@ -137,14 +137,14 @@ This project is evolving quickly. While the main workflows are stable, some inte
 TODO:
 
 - WebGPU backend.
-- PhysX GPU contact/sensor reads and CUDA stream/context ownership hardening.
+- MJCF sensor grouping and full contact-wrench semantics.
 - PBR rendering.
 
 ## RL With MimicKit
 
 KangEngine can be used as a backend engine of [MimicKit](https://github.com/xbpeng/MimicKit) through KangEngine's Python package. Use the `backend_kangengine` branch of MimicKit and keep MimicKit in a separate Python environment.
 
-**Limitation**: KangEngine supports both MimicKit policy inference and RL training, but the most stable workflows still use the CPU PhysX path. Linux PhysX 5.8 rigid and articulation GPU state/apply paths are validated with Torch CUDA zero-copy views, and rigid/articulation GPU visuals can sync through CUDA/OpenGL ExternalBuffer paths; contact/sensor reads and CUDA stream/context ownership are still experimental.
+**Limitation**: KangEngine supports both MimicKit policy inference and RL training, but the most stable workflows still use the CPU PhysX path. Linux PhysX 5.8 rigid/articulation state and apply paths, CUDA/OpenGL visual sync, and normal contact impulse/force sensors are validated. Tangential friction and full contact-wrench sensors are not yet exposed.
 
 <table align="center">
   <tr>

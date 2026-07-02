@@ -8,7 +8,7 @@ This guide contains the detailed build setup for KangEngine. The root README kee
 - Ninja or a compatible build tool
 - A C++17 compiler
 - vcpkg
-- PhysX under `$HOME/Physics/PhysX`
+- PhysX under `$HOME/Physics/PhysX` (5.1 CPU compatibility or 5.8 GPU)
 - Python 3.12 for Python bindings
 
 ## vcpkg
@@ -92,10 +92,15 @@ Tested with Ubuntu 24.04.
 
 ### PhysX GPU On Linux
 
-If you build PhysX with GPU support, KangEngine links `PhysXGpu_64` on Linux. The shared library must be discoverable at runtime. The current CMake setup adds an rpath to:
+If you build PhysX with GPU support, KangEngine links `PhysXGpu_64` on Linux.
+The shared library must be discoverable at runtime. The normal CPU-compatible
+build defaults to `linux.clang`; CUDA make targets select the PhysX 5.8
+`linux.x86_64` output through `PHYSX_CUDA_BIN_PLATFORM`.
 
 ```bash
-~/Physics/PhysX/physx/bin/linux.clang/${PHYSX_BUILD_TYPE}
+make build_all
+make build_cuda
+make build_python_cuda
 ```
 
 PhysX GPU support is still experimental in KangEngine, especially when used from Python together with Torch CUDA.
@@ -281,8 +286,13 @@ Common make targets:
 make build
 make build_debug
 make build_python
+make build_all
+make build_cuda
+make build_python_cuda
 make build_usd
 make build_usd_python
+make validate_physx_gpu
+make validate_physx_gpu_cpp
 make run2
 ```
 
