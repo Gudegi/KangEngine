@@ -18,10 +18,14 @@ namespace KE {
 class PhysicsWorld;
 
 struct GpuPhysicsConfig {
+    static constexpr uint32_t DefaultMaxContactPairs = 65536;
+    static constexpr uint32_t DefaultMaxContactPoints = 262144;
+
     int cudaDeviceId = 0;
-    uint32_t maxContactPairs =
-        65536; // TODO: set dynamically based on environment size
-    uint32_t maxContactPoints = 262144;
+    // Fixed-capacity mirrors avoid allocation during simulation. Override these
+    // defaults for workloads whose contact density is known in advance.
+    uint32_t maxContactPairs = DefaultMaxContactPairs;
+    uint32_t maxContactPoints = DefaultMaxContactPoints;
 };
 
 struct PhysicsGpuStateViews {

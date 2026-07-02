@@ -11,6 +11,18 @@ namespace KE {
 namespace PhysicsGpuKernels {
 namespace {
 
+enum ContactSensorDescriptorField : uint32_t {
+    SensorBodyKind = 0,
+    SensorRowMapOffset,
+    SensorRowMapCount,
+    SensorBodyMapOffset,
+    SensorBodyMapCount,
+    SensorOutputOffset,
+    SensorEnvironmentCount,
+    SensorBodyCount,
+    SensorDescriptorSize,
+};
+
 void checkCUDA(cudaError_t result, const char* operation) {
     if (result != cudaSuccess)
         throw std::runtime_error(std::string(operation) + ": " +
@@ -303,17 +315,20 @@ __device__ int32_t contactSensorOutput(
     uint32_t outputCount) {
     const int32_t row = ref[1];
     const int32_t body = ref[2];
-    if (ref[0] != desc[0] || row < 0 || body < 0 || row >= desc[2] ||
-        body >= desc[4])
+    if (ref[0] != desc[SensorBodyKind] || row < 0 || body < 0 ||
+        row >= desc[SensorRowMapCount] || body >= desc[SensorBodyMapCount])
         return -1;
 
-    const int32_t environment = rowToEnvironment[desc[1] + row];
-    const int32_t bodySlot = bodyToSlot[desc[3] + body];
-    if (environment < 0 || bodySlot < 0 || environment >= desc[6] ||
-        bodySlot >= desc[7])
+    const int32_t environment =
+        rowToEnvironment[desc[SensorRowMapOffset] + row];
+    const int32_t bodySlot = bodyToSlot[desc[SensorBodyMapOffset] + body];
+    if (environment < 0 || bodySlot < 0 ||
+        environment >= desc[SensorEnvironmentCount] ||
+        bodySlot >= desc[SensorBodyCount])
         return -1;
 
-    const int32_t output = desc[5] + environment * desc[7] + bodySlot;
+    const int32_t output = desc[SensorOutputOffset] +
+                           environment * desc[SensorBodyCount] + bodySlot;
     return output >= 0 && static_cast<uint32_t>(output) < outputCount
                ? output
                : -1;
@@ -334,7 +349,8 @@ __global__ void aggregateContactSensorsKernel(
         const int32_t* ref = pair + endpoint * 3;
         for (uint32_t sensorIndex = 0; sensorIndex < sensorCount;
              ++sensorIndex) {
-            const int32_t* desc = sensorDescriptors + sensorIndex * 8;
+            const int32_t* desc =
+                sensorDescriptors + sensorIndex * SensorDescriptorSize;
             const int32_t output = contactSensorOutput(
                 ref, desc, rowToEnvironment, bodyToSlot, outputCount);
             if (output >= 0)
@@ -366,7 +382,8 @@ __global__ void aggregateContactSensorImpulseKernel(
         const float sign = endpoint == 0 ? 1.0f : -1.0f;
         for (uint32_t sensorIndex = 0; sensorIndex < sensorCount;
              ++sensorIndex) {
-            const int32_t* desc = sensorDescriptors + sensorIndex * 8;
+            const int32_t* desc =
+                sensorDescriptors + sensorIndex * SensorDescriptorSize;
             const int32_t output = contactSensorOutput(
                 ref, desc, rowToEnvironment, bodyToSlot, outputCount);
             if (output < 0)
@@ -805,7 +822,7 @@ void aggregateContactSensorsCUDA(
     if (contactPairBodyRefs.shape[1] != 6 || contactPairCount.shape[0] < 1 ||
         contactPoints.shape[1] != 10 || contactPointCount.shape[0] < 1 ||
         contactPointPairIndices.shape[0] != contactPoints.shape[0] ||
-        sensorDescriptors.shape[1] != 8)
+        sensorDescriptors.shape[1] != SensorDescriptorSize)
         throw std::runtime_error("contact sensor input shape mismatch");
     if (contactCount.shape != inContact.shape || contactCount.shape[0] <= 0)
         throw std::runtime_error("contact sensor output shape mismatch");

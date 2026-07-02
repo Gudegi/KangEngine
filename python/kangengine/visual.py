@@ -152,20 +152,12 @@ class _VisualLifetime:
             raise RuntimeError(f"{type(self).__name__} has been released")
 
 
-class _SceneBatchBackend:
+class _SceneBatchBackend(_VisualLifetime):
     """Per-env scene/PhysicsBridge visual records behind a visual batch."""
 
     def __init__(self, records):
         self.records = tuple(records)
         self._released = False
-
-    @property
-    def is_valid(self) -> bool:
-        return not self._released
-
-    def _require_valid(self):
-        if self._released:
-            raise RuntimeError(f"{type(self).__name__} has been released")
 
     @property
     def num_bodies(self) -> int:
@@ -745,10 +737,6 @@ class RigidGPUExternalBackend(_VisualLifetime):
         self.world = None
         self._mark_released()
         return self
-
-
-GpuArticulationVisualBatch = ArticulationGPUExternalBackend
-GpuRigidVisualBatch = RigidGPUExternalBackend
 
 
 class RigidVisualBridge:

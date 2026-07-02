@@ -332,12 +332,6 @@ class CPUStateBackend:
         self._registered_env_ids: dict[int, set[int]] = {}
         self._complete_obj_ids: set[int] = set()
 
-    def configure_source(self, *, canonical_source: str, snapshot: bool):
-        self.canonical_source = str(canonical_source)
-        self.is_snapshot = bool(snapshot)
-        self.stale = bool(snapshot)
-        return self
-
     def set_strict_snapshot_reads(self, enabled: bool = True):
         """Raise on stale GPU snapshot reads when debugging policy data flow."""
         self.strict_snapshot_reads = bool(enabled)
@@ -539,8 +533,6 @@ class CPUStateBackend:
 
     def get_obj_body_masses(self, obj_id: int):
         return self.record(0, obj_id).cache.body_masses.clone()
-
-
     def calc_obj_mass(self, env_id: int, obj_id: int) -> float:
         obj = self.record(env_id, obj_id).articulation
         if hasattr(obj, "calc_mass"):
@@ -817,12 +809,6 @@ class KangWorldState:
         if self.canonical_source != "gpu":
             raise RuntimeError("world.state.gpu is only available for GPU simulation")
         return self.backend
-
-    def configure_source(self, *, canonical_source: str, snapshot: bool):
-        self.canonical_source = str(canonical_source)
-        self.is_snapshot = bool(snapshot)
-        self.stale = bool(snapshot)
-        return self
 
     def set_strict_snapshot_reads(self, enabled: bool = True):
         """Raise on stale GPU snapshot reads when debugging policy data flow."""

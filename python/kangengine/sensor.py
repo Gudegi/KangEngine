@@ -5,6 +5,34 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
+@dataclass(frozen=True, slots=True)
+class _ContactSensorDescriptor:
+    body_kind: int
+    row_map_offset: int
+    row_map_count: int
+    body_map_offset: int
+    body_map_count: int
+    output_offset: int
+    environment_count: int
+    body_count: int
+
+    def packed(self):
+        return (
+            self.body_kind,
+            self.row_map_offset,
+            self.row_map_count,
+            self.body_map_offset,
+            self.body_map_count,
+            self.output_offset,
+            self.environment_count,
+            self.body_count,
+        )
+
+    @property
+    def output_end(self):
+        return self.output_offset + self.environment_count * self.body_count
+
+
 @dataclass(slots=True)
 class ContactSensorData:
     """Per-environment, per-body contact state on the simulation device."""
@@ -69,12 +97,8 @@ class ContactSensor:
         """Average normal force over the last simulation step."""
         return self.data.net_force
 
-    def refresh(self, *, fetch: bool = True) -> ContactSensorData:
+    def refresh(self) -> ContactSensorData:
         """Refresh the world sensor batch and return this sensor's CUDA data."""
-        if not fetch:
-            raise RuntimeError(
-                "ContactSensor.refresh(fetch=False) is reserved for world batching"
-            )
         self.world.refresh_sensors()
         return self.data
 
@@ -142,7 +166,7 @@ class ForceSensor(ContactSensor):
         return self.net_impulse
 
 
-class ContactSensorBatch:
+class _ContactSensorBatch:
     """World-owned packed storage and one-pass CUDA contact aggregation."""
 
     def __init__(self, world):
@@ -189,7 +213,7 @@ class ContactSensorBatch:
         from .utils import to_gpu_array_view
 
         if not sensors:
-            raise RuntimeError("ContactSensorBatch requires at least one sensor")
+            raise RuntimeError("contact sensor batch requires at least one sensor")
         if not hasattr(_ke, "aggregate_contact_sensors_cuda"):
             raise RuntimeError("KangEngine was built without CUDA contact aggregation")
 
@@ -209,23 +233,25 @@ class ContactSensorBatch:
                 body_map[body] = slot
 
             descriptors.append(
-                [
-                    sensor._kind,
-                    len(row_maps),
-                    len(row_map),
-                    len(body_maps),
-                    len(body_map),
-                    output_offset,
-                    len(rows),
-                    len(sensor.body_ids),
-                ]
+                _ContactSensorDescriptor(
+                    body_kind=sensor._kind,
+                    row_map_offset=len(row_maps),
+                    row_map_count=len(row_map),
+                    body_map_offset=len(body_maps),
+                    body_map_count=len(body_map),
+                    output_offset=output_offset,
+                    environment_count=len(rows),
+                    body_count=len(sensor.body_ids),
+                )
             )
             row_maps.extend(row_map)
             body_maps.extend(body_map)
             output_offset += len(rows) * len(sensor.body_ids)
 
         descriptor_tensor = torch.tensor(
-            descriptors, dtype=torch.int32, device=device
+            [descriptor.packed() for descriptor in descriptors],
+            dtype=torch.int32,
+            device=device,
         )
         row_map_tensor = torch.tensor(row_maps, dtype=torch.int32, device=device)
         body_map_tensor = torch.tensor(
@@ -238,8 +264,8 @@ class ContactSensorBatch:
         )
 
         for sensor, descriptor in zip(sensors, descriptors):
-            begin = descriptor[5]
-            end = begin + descriptor[6] * descriptor[7]
+            begin = descriptor.output_offset
+            end = descriptor.output_end
             sensor._bind_outputs(
                 contact_count[begin:end],
                 in_contact[begin:end],

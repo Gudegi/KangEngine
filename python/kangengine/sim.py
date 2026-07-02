@@ -944,7 +944,7 @@ class KangSimWorld:
     def _add_contact_sensor(
         self, sensor_type, target, body_ids, *, name: str, suffix: str
     ):
-        from .sensor import ContactSensorBatch
+        from .sensor import _ContactSensorBatch
 
         if not name:
             target_name = target.name or f"object_{target.obj_id}"
@@ -955,7 +955,7 @@ class KangSimWorld:
         sensor = sensor_type(self, target, body_ids, name=name)
         self.sensors[name] = sensor
         if self._contact_sensor_batch is None:
-            self._contact_sensor_batch = ContactSensorBatch(self)
+            self._contact_sensor_batch = _ContactSensorBatch(self)
         self._contact_sensor_batch.mark_dirty()
         return sensor
 
@@ -973,7 +973,7 @@ class KangSimWorld:
             self._contact_sensor_batch.refresh(contact_sensors)
         for sensor in self.sensors.values():
             if not sensor.requires_contact_data:
-                sensor.refresh(fetch=False)
+                sensor.refresh()
         return {name: sensor.data for name, sensor in self.sensors.items()}
 
     def add_articulation(
