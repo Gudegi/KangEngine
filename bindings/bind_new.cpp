@@ -27,7 +27,9 @@ using namespace KE;
 // Forward declarations for submodule bindings
 void bind_scene(py::module& m);
 void bind_animation(py::module& m);
+void bind_sim(py::module& m);
 void bind_physics(py::module& m);
+void bind_physics_gpu(py::module& m);
 
 // Trampoline class for App - allows Python to override virtual methods
 class PyApp : public App {
@@ -340,6 +342,9 @@ void bind_keys(py::module& m) {
 PYBIND11_MODULE(_kangengine, m) {
     m.doc() = "KangEngine Python bindings";
 
+    // External render descriptors below depend on GpuArrayView registration.
+    bind_sim(m);
+
     // Enums first — submodule bindings may use them as default arguments
     py::enum_<UpAxis>(m, "UpAxis")
         .value("X", UpAxis::X)
@@ -356,6 +361,27 @@ PYBIND11_MODULE(_kangengine, m) {
     py::enum_<TransformSource>(m, "TransformSource")
         .value("SceneGraph", TransformSource::SceneGraph)
         .value("ExternalBuffer", TransformSource::ExternalBuffer);
+
+    py::enum_<ExternalBufferFormat>(m, "ExternalBufferFormat")
+        .value("MAT4", ExternalBufferFormat::Mat4)
+        .value("POSITION_ROTATION", ExternalBufferFormat::PositionRotation)
+        .value("POSITION_ROTATION_SCALE",
+               ExternalBufferFormat::PositionRotationScale)
+        .value("CUSTOM", ExternalBufferFormat::Custom);
+
+    py::enum_<ExternalSyncPolicy>(m, "ExternalSyncPolicy")
+        .value("NONE", ExternalSyncPolicy::None)
+        .value("VERSIONED", ExternalSyncPolicy::Versioned)
+        .value("FENCE", ExternalSyncPolicy::Fence)
+        .value("EVENT", ExternalSyncPolicy::Event);
+
+    py::class_<ExternalBufferDesc>(m, "ExternalBufferDesc")
+        .def(py::init<>())
+        .def_readwrite("view", &ExternalBufferDesc::view)
+        .def_readwrite("format", &ExternalBufferDesc::format)
+        .def_readwrite("count", &ExternalBufferDesc::count)
+        .def_readwrite("stride_bytes", &ExternalBufferDesc::strideBytes)
+        .def_readwrite("sync_policy", &ExternalBufferDesc::syncPolicy);
 
     py::enum_<InteractionMode>(m, "InteractionMode")
         .value("Inspect", InteractionMode::Inspect)
@@ -763,6 +789,20 @@ PYBIND11_MODULE(_kangengine, m) {
             },
             py::arg("handle"), py::arg("colors"),
             "Set per-instance colors for a renderable.")
+        .def("set_renderable_external_buffer",
+             &Renderer::setRenderableExternalBuffer, py::arg("handle"),
+             py::arg("descriptor"),
+             "Attach an external CPU/GPU transform buffer to a renderable.")
+        .def("map_renderable_cuda_transform_buffers",
+             &Renderer::mapRenderableCudaTransformBuffers,
+             py::arg("handles"), py::arg("count"), py::arg("device_id"),
+             py::arg("stream_handle") = 0,
+             "Map multiple renderable transform VBOs for direct CUDA writes.")
+        .def("unmap_renderable_cuda_transform_buffers",
+             &Renderer::unmapRenderableCudaTransformBuffers,
+             py::arg("handles"), py::arg("device_id"),
+             py::arg("stream_handle") = 0,
+             "Unmap transform VBOs after direct CUDA writes.")
         .def("set_renderable_double_sided", &Renderer::setRenderableDoubleSided,
              py::arg("handle"), py::arg("double_sided") = true,
              "Enable or disable double-sided rendering for a renderable.")
@@ -1177,6 +1217,7 @@ py::class_<glm::vec3>(m, "vec3")
     // Physics bindings after GLM types — reset_root uses glm::vec3/quat
     // defaults
     bind_physics(m);
+    bind_physics_gpu(m);
 
     // GLM helper functions
     m.def(

@@ -248,9 +248,9 @@ class H1PhysicsApp : public App {
         ImGui::Text("Joint targets (rad):");
         ImGui::BeginChild("joints", ImVec2(0, 400), true);
         for (int i = 0; i < static_cast<int>(targets.size()); i++) {
-            std::string label =
-                i < static_cast<int>(dofNames.size()) ? dofNames[i]
-                                                      : "dof_" + std::to_string(i);
+            std::string label = i < static_cast<int>(dofNames.size())
+                                    ? dofNames[i]
+                                    : "dof_" + std::to_string(i);
             float lo = -3.14f;
             float hi = 3.14f;
             if (i < static_cast<int>(dofLimits.size())) {

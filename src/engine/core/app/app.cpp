@@ -173,11 +173,14 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     }
     _camera.init(cameraPos, cameraTarget, _upAxis);
     _camera.updateProjMatrix(_width, _height);
+    _fpsWindowStart = glfwGetTime();
+    _fpsWindowFrames = 0;
+    _measuredRenderFPS = 0.0f;
     _panelManager.init(this->getWindow());
     _panelManager.loadFont(KE::getAssetPath("fonts/godoFont/GodoM.ttf"), true);
     _panelManager.addPanel(std::make_unique<MenuBarPanel>(this));
     _panelManager.addPanel(std::make_unique<ScenePanel>(this));
-    _panelManager.addPanel(std::make_unique<PerformancePanel>());
+    _panelManager.addPanel(std::make_unique<PerformancePanel>(this));
     _panelManager.addPanel(std::make_unique<RendererDebugPanel>(this));
 
     _graphicsDevice->setDepthTest(true);
@@ -250,6 +253,12 @@ void App::renderSceneToFramebuffer(Camera& camera, Backend::Framebuffer* target,
 }
 
 void App::renderFrameOnce() {
+    auto smoothMetric = [](float& metric, double valueSeconds) {
+        const float valueMs = static_cast<float>(valueSeconds * 1000.0);
+        metric = metric <= 0.0f ? valueMs : metric * 0.9f + valueMs * 0.1f;
+    };
+
+    const double frameStart = glfwGetTime();
     GLFWwindow* window = _window.getGlfwWindow();
     if (window == nullptr || glfwWindowShouldClose(window))
         return;
@@ -267,7 +276,9 @@ void App::renderFrameOnce() {
         _panelManager.preRender();
     }
 
+    const double updateStart = glfwGetTime();
     this->preRender();
+    const double updateEnd = glfwGetTime();
     if (_rasterizer) {
         getRenderer().syncSceneLights(getScene());
         _rasterizer->updateFrameData(_viewMatrix, _projectionMatrix);
@@ -291,6 +302,8 @@ void App::renderFrameOnce() {
         }
         _rasterizer->renderShadowMap(_camera, _upAxis, _width, _height);
     }
+
+    const double renderStart = glfwGetTime();
 
     // Scene pass: render into FBO (MSAA if enabled)
     _framebuffer->bind();
@@ -340,10 +353,32 @@ void App::renderFrameOnce() {
         _panelManager.postRender();
     }
     this->postRender();
+    const double renderEnd = glfwGetTime();
+
     glfwSwapBuffers(window);
     glfwPollEvents();
+    const double frameEnd = glfwGetTime();
     ++_frameIndex;
+
+    smoothMetric(_updateCPUTimeMs, updateEnd - updateStart);
+    smoothMetric(_renderCPUTimeMs, renderEnd - renderStart);
+    smoothMetric(_presentCPUTimeMs, frameEnd - renderEnd);
+    smoothMetric(_frameCPUTimeMs, frameEnd - frameStart);
+
+    ++_fpsWindowFrames;
+    const double fpsNow = glfwGetTime();
+    const double fpsElapsed = fpsNow - _fpsWindowStart;
+    if (fpsElapsed >= 1.0) {
+        _measuredRenderFPS =
+            static_cast<float>(_fpsWindowFrames / fpsElapsed);
+        _fpsWindowFrames = 0;
+        _fpsWindowStart = fpsNow;
+    }
 }
+
+void App::setVSync(bool enabled) { _window.setVSync(enabled); }
+
+bool App::getVSync() const { return _window.getVSync(); }
 
 void App::setRenderHz(float renderHz) {
     _renderHz = (renderHz > 0.0f) ? renderHz : 0.0f;
@@ -758,6 +793,11 @@ void App::updateRenderableTransforms(RenderableHandle handle,
     }
 
     getRenderer().updateRenderableTransforms(handle, transformVec, colorPtr);
+}
+
+void App::setRenderableExternalBuffer(RenderableHandle handle,
+                                      const ExternalBufferDesc& desc) {
+    getRenderer().setRenderableExternalBuffer(handle, desc);
 }
 
 void App::setRenderableColors(RenderableHandle handle,

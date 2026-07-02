@@ -1,5 +1,6 @@
 #include "kangEngine.hpp"
 #include "physics/physics.hpp"
+#include "physics/physx_compat.hpp"
 #include <memory>
 #include <vector>
 
@@ -140,6 +141,7 @@ static PhysicsConfig makeScissorConfig() {
     PhysicsConfig cfg;
     cfg.filterShader = scissorFilter;
     cfg.solverType = PxSolverType::eTGS;
+    cfg.enableGPU = false;
     return cfg;
 }
 
@@ -253,9 +255,10 @@ class ScissorLiftApp : public App {
         gDriveJoint->setJointType(PxArticulationJointType::ePRISMATIC);
         gDriveJoint->setMotion(PxArticulationAxis::eZ,
                                PxArticulationMotion::eLIMITED);
-        gDriveJoint->setLimit(PxArticulationAxis::eZ, -1.4f, 0.2f);
-        gDriveJoint->setDrive(PxArticulationAxis::eZ, 100000.f, 0.f,
-                              PX_MAX_F32);
+        PhysXCompat::setArticulationLimit(*gDriveJoint, PxArticulationAxis::eZ,
+                                          -1.4f, 0.2f);
+        PhysXCompat::setArticulationDrive(*gDriveJoint, PxArticulationAxis::eZ,
+                                          100000.f, 0.f, PX_MAX_F32);
         gDriveJoint->setParentPose(PxTransform(PxVec3(0.f, 0.25f, 0.9f)));
         gDriveJoint->setChildPose(PxTransform(PxVec3(0.f, -0.05f, 0.f)));
 
@@ -292,7 +295,8 @@ class ScissorLiftApp : public App {
                     PxTransform(PxVec3(0.f, 0.f, -1.f), rightRot));
                 joint->setMotion(PxArticulationAxis::eTWIST,
                                  PxArticulationMotion::eLIMITED);
-                joint->setLimit(PxArticulationAxis::eTWIST, -PxPi, angle);
+                PhysXCompat::setArticulationLimit(
+                    *joint, PxArticulationAxis::eTWIST, -PxPi, angle);
                 leftParentRot = leftRot;
 
                 PxArticulationLink* rightLink = gArticulation->createLink(
@@ -316,7 +320,8 @@ class ScissorLiftApp : public App {
                     PxTransform(PxVec3(0.f, 0.f, 1.f), leftRot));
                 joint->setMotion(PxArticulationAxis::eTWIST,
                                  PxArticulationMotion::eLIMITED);
-                joint->setLimit(PxArticulationAxis::eTWIST, -angle, PxPi);
+                PhysXCompat::setArticulationLimit(
+                    *joint, PxArticulationAxis::eTWIST, -angle, PxPi);
                 rightParentRot = rightRot;
 
                 // D6 joint connecting the two crossing arms at their pivot

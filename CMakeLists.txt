@@ -34,6 +34,7 @@ set(BIND_DIR "${CMAKE_SOURCE_DIR}/bindings")
 option(IS_PYTHON_LIB "Build Python bindings" OFF) # Use -DIS_PYTHON_LIB=ON to enable
 option(USE_USD "Enable USD support" OFF) # Use -DUSE_USD=ON to enable
 option(USE_PHYSX "Enable Physx support" ON) # Use -DUSE_PHYSX=ON to enable
+option(USE_CUDA_INTEROP "Enable CUDA/graphics buffer interop when explicitly configured" OFF)
 
 
 ##### Link pre-compiled libs #####
@@ -72,7 +73,7 @@ if(USE_USD)
 endif()
 
 if(USE_PHYSX)
-    set(physx_DIR "$ENV{HOME}/Physics/PhysX/physx") # User config path
+    set(physx_DIR "$ENV{HOME}/Physics/PhysX/physx" CACHE PATH "PhysX SDK physx directory")
     if(NOT EXISTS "${physx_DIR}")
         message(FATAL_ERROR "physx_DIR path '${physx_DIR}' does not exist. Please check your Physx build path.")
     endif()
@@ -96,17 +97,24 @@ if(USE_PHYSX)
 
     target_include_directories(pre_compiled_ext INTERFACE ${physx_DIR}/include)
     if(APPLE)
-        target_link_directories(pre_compiled_ext INTERFACE "${physx_DIR}/bin/mac.x86_64/${PHYSX_BUILD_TYPE}") # TODO: actually it need to be not x86 but arm. fix build setting
+        # Assume PhysX 5.1.2
+        set(PHYSX_BIN_PLATFORM "mac.x86_64" CACHE STRING "PhysX binary platform directory")
+        target_link_directories(pre_compiled_ext INTERFACE "${physx_DIR}/bin/${PHYSX_BIN_PLATFORM}/${PHYSX_BUILD_TYPE}") # TODO: actually it need to be not x86 but arm. fix build setting
     elseif(UNIX)
-        target_link_directories(pre_compiled_ext INTERFACE "${physx_DIR}/bin/linux.clang/${PHYSX_BUILD_TYPE}") # This is the path where PhysX libraries are installed
+        # Assume PhysX 5.8
+        set(PHYSX_BIN_PLATFORM "linux.clang" CACHE STRING "PhysX binary platform directory")
+        target_link_directories(pre_compiled_ext INTERFACE "${physx_DIR}/bin/${PHYSX_BIN_PLATFORM}/${PHYSX_BUILD_TYPE}") # This is the path where PhysX libraries are installed
     else()
         message(FATAL_ERROR "Not support OS setting for PhysX")
     endif()
+    message(STATUS "PhysX include dir: ${physx_DIR}/include")
+    message(STATUS "PhysX lib dir: ${physx_DIR}/bin/${PHYSX_BIN_PLATFORM}/${PHYSX_BUILD_TYPE}")
 
     if(APPLE)
         target_link_libraries(pre_compiled_ext INTERFACE
             PhysXExtensions_static_64
             PhysX_static_64
+            PhysXCooking_static_64
             PhysXPvdSDK_static_64
             PhysXCommon_static_64
             PhysXFoundation_static_64
@@ -118,6 +126,7 @@ if(USE_PHYSX)
             -Wl,--start-group
             PhysXExtensions_static_64
             PhysX_static_64
+            PhysXCooking_static_64
             PhysXPvdSDK_static_64
             PhysXCommon_static_64
             PhysXFoundation_static_64
@@ -127,7 +136,7 @@ if(USE_PHYSX)
             dl
         )
         target_link_options(pre_compiled_ext INTERFACE
-            "-Wl,-rpath,${physx_DIR}/bin/linux.clang/${PHYSX_BUILD_TYPE}"
+            "-Wl,-rpath,${physx_DIR}/bin/${PHYSX_BIN_PLATFORM}/${PHYSX_BUILD_TYPE}"
         )
     endif()
 endif()
@@ -150,6 +159,20 @@ find_package(Eigen3 CONFIG REQUIRED)
 find_package(tinyxml2 CONFIG REQUIRED)
 find_package(unofficial-openfbx CONFIG REQUIRED)
 find_package(mikktspace CONFIG REQUIRED)
+set(KANGENGINE_HAS_CUDA OFF)
+if(UNIX AND NOT APPLE AND USE_CUDA_INTEROP)
+    find_package(CUDAToolkit QUIET)
+    if(CUDAToolkit_FOUND AND TARGET CUDA::cudart)
+        set(KANGENGINE_HAS_CUDA ON)
+        enable_language(CUDA)
+        if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+            # 89 : 40xx graphics card
+            set(CMAKE_CUDA_ARCHITECTURES 89 CACHE STRING "CUDA architectures for KangEngine CUDA kernels")
+        endif()
+    else()
+        message(FATAL_ERROR "USE_CUDA_INTEROP=ON requires an explicitly configured CUDA Toolkit")
+    endif()
+endif()
 if(IS_PYTHON_LIB)
     # Prefer system Python over vcpkg's Python
     set(Python_FIND_STRATEGY LOCATION)
@@ -182,6 +205,18 @@ target_link_libraries(engine_core PUBLIC
     mikktspace::mikktspace
 )
 target_link_libraries(engine_core PUBLIC pre_compiled_ext)
+if(KANGENGINE_HAS_CUDA)
+    target_sources(engine_core PRIVATE
+        ${SRC_DIR}/sim/gpu_transform_kernels.cu
+        ${SRC_DIR}/physics/physics_gpu_system_kernels.cu
+    )
+    target_compile_definitions(engine_core PUBLIC
+        KANGENGINE_USE_CUDA
+        KANGENGINE_USE_CUDA_GL_INTEROP
+    )
+    target_link_libraries(engine_core PUBLIC CUDA::cudart)
+    message(STATUS "CUDA/OpenGL external buffer interop enabled")
+endif()
 ###### core libs END ######
 
 # Executable for KangEngine
@@ -196,14 +231,24 @@ target_link_libraries(engine_core PUBLIC pre_compiled_ext)
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_articulation.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_jointmonkey.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_ragdoll.cpp")
-#file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_box_instancing.cpp")
+if(KANGENGINE_HAS_CUDA)
+    set(MAIN_FILE "${MAIN_DIR}/physics/physx_gpu_box_instancing.cpp")
+else()
+    set(MAIN_FILE "${MAIN_DIR}/physics/physx_box_instancing.cpp")
+endif()
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_instancing.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/view_fbx_character.cpp")
+#file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_mimickit_assets.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/view_bvh_character.cpp")
-file(GLOB MAIN_FILE "${MAIN_DIR}/debug_camera_frustum.cpp")
+#file(GLOB MAIN_FILE "${MAIN_DIR}/debug_camera_frustum.cpp")
 
 add_executable(${PROJECT_NAME} ${MAIN_FILE})
 target_link_libraries(${PROJECT_NAME} PRIVATE engine_core)
+
+if(KANGENGINE_HAS_CUDA)
+    add_executable(physx_gpu_step_smoke examples/physics/physx_gpu_step_smoke.cpp)
+    target_link_libraries(physx_gpu_step_smoke PRIVATE engine_core)
+endif()
 
 # Define asset path macro for C++ executable
 target_compile_definitions(${PROJECT_NAME} PRIVATE
@@ -230,7 +275,9 @@ if(IS_PYTHON_LIB)
         "${BIND_DIR}/bind_new.cpp"
         "${BIND_DIR}/bind_scene.cpp"
         "${BIND_DIR}/bind_animation.cpp"
+        "${BIND_DIR}/bind_sim.cpp"
         "${BIND_DIR}/bind_physics.cpp"
+        "${BIND_DIR}/bind_physics_gpu.cpp"
     )
     message(STATUS "PY_SOURCE: ${PYBIND_SOURCE_FILES}")
     

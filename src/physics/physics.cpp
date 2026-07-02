@@ -3,16 +3,21 @@
 #include "PxSceneDesc.h"
 #include "animation/character_description.hpp"
 #include "articulation.hpp"
-#include "foundation/Px.h"
+#include "physics/physx_compat.hpp"
 #ifndef __APPLE__
 #include "gpu/PxGpu.h"
+#endif
+#ifdef KANGENGINE_USE_CUDA
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <dlfcn.h>
 #endif
 #include <Eigen/Geometry>
 #include <algorithm>
 #include <cmath>
+#include <stdexcept>
 #include <unordered_map>
 #include <vector>
-
 namespace KE {
 
 namespace {
@@ -64,14 +69,39 @@ void setRigidCollisionFilterData(PxRigidActor* actor, PxU32 collisionGroup) {
     }
 }
 
+#ifdef KANGENGINE_USE_CUDA
+void checkCudaRuntime(cudaError_t result, const char* operation) {
+    if (result != cudaSuccess)
+        throw std::runtime_error(std::string(operation) + ": " +
+                                 cudaGetErrorString(result));
+}
+
+CUcontext getCurrentCudaDriverContext() {
+    using CuCtxGetCurrentFn = CUresult (*)(CUcontext*);
+    void* libcuda = dlopen("libcuda.so", RTLD_NOW | RTLD_GLOBAL);
+    if (!libcuda)
+        throw std::runtime_error("failed to dlopen libcuda.so");
+    auto* cuCtxGetCurrent =
+        reinterpret_cast<CuCtxGetCurrentFn>(dlsym(libcuda, "cuCtxGetCurrent"));
+    if (!cuCtxGetCurrent)
+        throw std::runtime_error("failed to find cuCtxGetCurrent");
+
+    CUcontext context = nullptr;
+    if (cuCtxGetCurrent(&context) != CUDA_SUCCESS || !context)
+        throw std::runtime_error("failed to get current CUDA context");
+    return context;
+}
+#endif
+
 } // namespace
 
-static PxFilterFlags
-contactReportFilterShader(PxFilterObjectAttributes attributes0,
-                          PxFilterData filterData0,
-                          PxFilterObjectAttributes attributes1,
-                          PxFilterData filterData1, PxPairFlags& pairFlags,
-                          const void* constantBlock, PxU32 constantBlockSize) {
+static PxFilterFlags kangFilterShader(PxFilterObjectAttributes attributes0,
+                                      PxFilterData filterData0,
+                                      PxFilterObjectAttributes attributes1,
+                                      PxFilterData filterData1,
+                                      PxPairFlags& pairFlags,
+                                      const void* constantBlock,
+                                      PxU32 constantBlockSize) {
     PxFilterFlags flags = PxDefaultSimulationFilterShader(
         attributes0, filterData0, attributes1, filterData1, pairFlags,
         constantBlock, constantBlockSize);
@@ -80,6 +110,21 @@ contactReportFilterShader(PxFilterObjectAttributes attributes0,
         filterData0.word2 != filterData1.word2) {
         return PxFilterFlag::eSUPPRESS;
     }
+
+    return flags;
+}
+
+static PxFilterFlags
+contactReportFilterShader(PxFilterObjectAttributes attributes0,
+                          PxFilterData filterData0,
+                          PxFilterObjectAttributes attributes1,
+                          PxFilterData filterData1, PxPairFlags& pairFlags,
+                          const void* constantBlock, PxU32 constantBlockSize) {
+    PxFilterFlags flags =
+        kangFilterShader(attributes0, filterData0, attributes1, filterData1,
+                         pairFlags, constantBlock, constantBlockSize);
+    if (flags & PxFilterFlag::eSUPPRESS)
+        return flags;
 
     pairFlags |= PxPairFlag::eNOTIFY_TOUCH_FOUND |
                  PxPairFlag::eNOTIFY_TOUCH_PERSISTS |
@@ -164,6 +209,8 @@ PhysicsWorld::PhysicsWorld(PhysicsConfig config) {
     _dispatcher = PxDefaultCpuDispatcherCreate(4);
     sceneDesc.cpuDispatcher = _dispatcher;
     sceneDesc.filterShader = config.filterShader;
+    if (config.filterShader == PxDefaultSimulationFilterShader)
+        sceneDesc.filterShader = kangFilterShader;
     if (config.enableContactReports) {
         _contactCallback = std::make_unique<ContactReportCallback>(_contacts);
         sceneDesc.simulationEventCallback = _contactCallback.get();
@@ -177,6 +224,14 @@ PhysicsWorld::PhysicsWorld(PhysicsConfig config) {
             "PhysX GPU is not available on Apple builds; using CPU PhysX.\n");
 #else
         PxCudaContextManagerDesc cudaContextManagerDesc;
+#ifdef KANGENGINE_USE_CUDA
+        checkCudaRuntime(cudaSetDevice(0), "cudaSetDevice");
+        // Force the CUDA runtime context to exist, then give
+        // that exact driver context to PhysX instead of letting PhysX make one.
+        checkCudaRuntime(cudaFree(nullptr), "cudaFree(0)");
+        CUcontext cudaContext = getCurrentCudaDriverContext();
+        cudaContextManagerDesc.ctx = &cudaContext;
+#endif
         _cudaContextManager = PxCreateCudaContextManager(
             *_foundation, cudaContextManagerDesc, PxGetProfilerCallback());
         if (_cudaContextManager && !_cudaContextManager->contextIsValid()) {
@@ -186,9 +241,25 @@ PhysicsWorld::PhysicsWorld(PhysicsConfig config) {
         if (_cudaContextManager) {
             sceneDesc.cudaContextManager = _cudaContextManager;
             sceneDesc.flags |= PxSceneFlag::eENABLE_GPU_DYNAMICS;
+            sceneDesc.flags |= PxSceneFlag::eENABLE_PCM;
+            sceneDesc.gpuDynamicsConfig.tempBufferCapacity =
+                config.gpuDynamics.tempBufferCapacity;
+            sceneDesc.gpuDynamicsConfig.maxRigidContactCount =
+                config.gpuDynamics.maxRigidContactCount;
+            sceneDesc.gpuDynamicsConfig.maxRigidPatchCount =
+                config.gpuDynamics.maxRigidPatchCount;
+            sceneDesc.gpuDynamicsConfig.heapCapacity =
+                config.gpuDynamics.heapCapacity;
+            sceneDesc.gpuDynamicsConfig.foundLostPairsCapacity =
+                config.gpuDynamics.foundLostPairsCapacity;
+            sceneDesc.gpuDynamicsConfig.collisionStackSize =
+                config.gpuDynamics.collisionStackSize;
+#ifdef KANGENGINE_HAS_PHYSX_DIRECT_GPU_API
+            sceneDesc.flags |= PxSceneFlag::eENABLE_DIRECT_GPU_API;
+#endif
             sceneDesc.broadPhaseType = PxBroadPhaseType::eGPU;
-            // sceneDesc.gpuDynamicsConfig;
-            fmt::print("PhysX GPU is enabled.\n");
+            fmt::print("PhysX GPU is enabled (broadphase: gpu, compute: {}).\n",
+                       sceneDesc.gpuComputeVersion);
         } else {
             fmt::print(
                 "Failed to initialize PhysX CUDA context; using CPU PhysX.\n");

@@ -24,6 +24,7 @@ class RenderablePrimView:
         self._app = app
         self.prim = prim
         self._handles = tuple(int(handle) for handle in handles)
+        self._external_buffers = {}
 
     @property
     def path(self) -> str:
@@ -46,6 +47,34 @@ class RenderablePrimView:
     def set_texture(self, texture, role_or_slot=_ke.TextureRole.BaseColor):
         for handle in self._handles:
             self._app.set_renderable_texture(handle, texture, role_or_slot)
+        return self
+
+    def set_transform_buffer(
+        self,
+        transforms,
+        *,
+        sim_device=None,
+        sync_policy=None,
+    ):
+        """Use a float32 column-major ``[N, 4, 4]`` transform buffer."""
+        from .utils.sim_buffer import to_external_transform_desc
+
+        descriptor, buffer = to_external_transform_desc(
+            transforms,
+            sim_device=sim_device,
+            dtype="float32",
+            name=f"{self.path}:transforms",
+            sync_policy=(
+                _ke.ExternalSyncPolicy.NONE
+                if sync_policy is None
+                else sync_policy
+            ),
+        )
+
+        renderer = self._app.get_renderer()
+        for handle in self._handles:
+            renderer.set_renderable_external_buffer(handle, descriptor)
+            self._external_buffers[handle] = (buffer, descriptor)
         return self
 
     def remove(self):
@@ -229,7 +258,7 @@ class App(NativeApp):
         return camera
 
     def set_render_hz(self, hz: float):
-        self.set_render_hz(float(hz))
+        return super().set_render_hz(float(hz))
     
     #################################################################
 

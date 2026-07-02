@@ -15,6 +15,7 @@ class Window
     int _width, _height;               // framebuffer pixels
     int _logicalWidth, _logicalHeight; // screen/logical pixels
     GLFWwindow* _window;
+    bool _vsync = true;
     void initGlfw();
     void initGlad();
 
@@ -23,6 +24,8 @@ class Window
     ~Window();
     void init(int width, int height, bool headless = false);
     GLFWwindow* getGlfwWindow() { return _window; }
+    void setVSync(bool enabled);
+    bool getVSync() const { return _vsync; }
     int getLogicalWidth() const { return _logicalWidth; }
     int getLogicalHeight() const { return _logicalHeight; }
 };

@@ -67,7 +67,13 @@ void Window::initGlfw() {
     }
     glfwMakeContextCurrent(_window);
     // glfwSetWindowUserPointer(_window, this);
-    glfwSwapInterval(1);
+    setVSync(true);
+}
+
+void Window::setVSync(bool enabled) {
+    _vsync = enabled;
+    if (_window)
+        glfwSwapInterval(enabled ? 1 : 0);
 }
 
 void Window::initGlad() {

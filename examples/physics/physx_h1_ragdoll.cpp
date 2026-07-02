@@ -16,7 +16,6 @@
 ///
 
 #include "kangEngine.hpp"
-#include "foundation/Px.h"
 #include "physics/force_drag_controller.hpp"
 #include <glm/glm.hpp>
 #include <glm/geometric.hpp>
@@ -340,8 +339,7 @@ class H1RagdollApp : public App {
 
         PxArticulationCache* cache = artic.raw()->createCache();
         artic.raw()->copyInternalStateToCache(
-            *cache, PxArticulationCacheFlag::eJOINT_SOLVER_FORCES |
-                        PxArticulationCacheFlag::eFORCE |
+            *cache, PxArticulationCacheFlag::eFORCE |
                         PxArticulationCacheFlag::ePOSITION |
                         PxArticulationCacheFlag::eVELOCITY);
 

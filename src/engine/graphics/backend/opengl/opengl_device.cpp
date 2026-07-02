@@ -91,7 +91,13 @@ OpenGLBuffer::OpenGLBuffer(BufferType type, size_t size, const void* data)
     glBindBuffer(_target, 0);
 }
 
-OpenGLBuffer::~OpenGLBuffer() { glDeleteBuffers(1, &_buffer); }
+OpenGLBuffer::~OpenGLBuffer() {
+#ifdef KANGENGINE_USE_CUDA_GL_INTEROP
+    if (_cudaResource)
+        cudaGraphicsUnregisterResource(_cudaResource);
+#endif
+    glDeleteBuffers(1, &_buffer);
+}
 
 void OpenGLBuffer::bind() { glBindBuffer(_target, _buffer); }
 
@@ -107,6 +113,181 @@ void OpenGLBuffer::setData(const void* data, size_t size, size_t offset) {
     glBufferSubData(_target, offset, size, data);
     glBindBuffer(_target, 0);
 }
+
+#ifdef KANGENGINE_USE_CUDA_GL_INTEROP
+namespace {
+
+void checkCudaInterop(cudaError_t result, const char* operation) {
+    if (result != cudaSuccess)
+        throw std::runtime_error(std::string(operation) + ": " +
+                                 cudaGetErrorString(result));
+}
+
+} // namespace
+
+cudaGraphicsResource* OpenGLBuffer::cudaResource() {
+    if (!_cudaResource) {
+        checkCudaInterop(
+            cudaGraphicsGLRegisterBuffer(&_cudaResource, _buffer,
+                                         cudaGraphicsRegisterFlagsWriteDiscard),
+            "cudaGraphicsGLRegisterBuffer");
+    }
+    return _cudaResource;
+}
+
+bool OpenGLBuffer::setExternalData(const Sim::GpuArrayView& view,
+                                   size_t count, size_t elementSize,
+                                   size_t sourceStrideBytes) {
+    if (!view.isCuda())
+        return false;
+    if (!view.data)
+        throw std::runtime_error("CUDA external buffer has a null pointer");
+    if (count * elementSize > _size)
+        throw std::runtime_error(
+            "CUDA external data exceeds the OpenGL buffer capacity");
+
+    int previousDevice = 0;
+    checkCudaInterop(cudaGetDevice(&previousDevice), "cudaGetDevice");
+    if (view.deviceId >= 0 && view.deviceId != previousDevice)
+        checkCudaInterop(cudaSetDevice(view.deviceId), "cudaSetDevice");
+
+    cudaResource();
+
+    auto stream = reinterpret_cast<cudaStream_t>(view.streamHandle);
+    if (view.readyEventHandle != 0) {
+        auto event = reinterpret_cast<cudaEvent_t>(view.readyEventHandle);
+        checkCudaInterop(cudaStreamWaitEvent(stream, event, 0),
+                         "cudaStreamWaitEvent");
+    }
+
+    checkCudaInterop(cudaGraphicsMapResources(1, &_cudaResource, stream),
+                     "cudaGraphicsMapResources");
+
+    void* destination = nullptr;
+    size_t mappedSize = 0;
+    cudaError_t mappedResult = cudaGraphicsResourceGetMappedPointer(
+        &destination, &mappedSize, _cudaResource);
+    if (mappedResult != cudaSuccess) {
+        cudaGraphicsUnmapResources(1, &_cudaResource, stream);
+        checkCudaInterop(mappedResult,
+                         "cudaGraphicsResourceGetMappedPointer");
+    }
+    if (count * elementSize > mappedSize) {
+        cudaGraphicsUnmapResources(1, &_cudaResource, stream);
+        throw std::runtime_error(
+            "Mapped OpenGL buffer is smaller than the CUDA source data");
+    }
+
+    const size_t sourcePitch =
+        sourceStrideBytes == 0 ? elementSize : sourceStrideBytes;
+    cudaError_t copyResult = cudaMemcpy2DAsync(
+        destination, elementSize, view.data, sourcePitch, elementSize, count,
+        cudaMemcpyDeviceToDevice, stream);
+    if (copyResult != cudaSuccess) {
+        cudaGraphicsUnmapResources(1, &_cudaResource, stream);
+        checkCudaInterop(copyResult, "cudaMemcpy2DAsync");
+    }
+
+    checkCudaInterop(cudaGraphicsUnmapResources(1, &_cudaResource, stream),
+                     "cudaGraphicsUnmapResources");
+    if (view.deviceId >= 0 && view.deviceId != previousDevice)
+        checkCudaInterop(cudaSetDevice(previousDevice), "cudaSetDevice");
+    return true;
+}
+
+bool OpenGLDevice::mapCudaBuffers(
+    const std::vector<Buffer*>& buffers,
+    std::vector<Sim::GpuArrayView>& views, size_t count, size_t elementSize,
+    int deviceId, uint64_t streamHandle) {
+    views.clear();
+    if (buffers.empty())
+        return true;
+
+    int previousDevice = 0;
+    checkCudaInterop(cudaGetDevice(&previousDevice), "cudaGetDevice");
+    if (deviceId >= 0 && deviceId != previousDevice)
+        checkCudaInterop(cudaSetDevice(deviceId), "cudaSetDevice");
+
+    std::vector<cudaGraphicsResource*> resources;
+    resources.reserve(buffers.size());
+    for (auto* buffer : buffers) {
+        auto* glBuffer = dynamic_cast<OpenGLBuffer*>(buffer);
+        if (!glBuffer || count * elementSize > glBuffer->size()) {
+            if (deviceId >= 0 && deviceId != previousDevice)
+                cudaSetDevice(previousDevice);
+            return false;
+        }
+        resources.push_back(glBuffer->cudaResource());
+    }
+
+    auto stream = reinterpret_cast<cudaStream_t>(streamHandle);
+    checkCudaInterop(cudaGraphicsMapResources(
+                         static_cast<int>(resources.size()), resources.data(),
+                         stream),
+                     "cudaGraphicsMapResources(batch)");
+    try {
+        views.reserve(resources.size());
+        for (auto* resource : resources) {
+            void* pointer = nullptr;
+            size_t mappedSize = 0;
+            checkCudaInterop(
+                cudaGraphicsResourceGetMappedPointer(&pointer, &mappedSize,
+                                                     resource),
+                "cudaGraphicsResourceGetMappedPointer(batch)");
+            if (count * elementSize > mappedSize)
+                throw std::runtime_error(
+                    "mapped OpenGL transform buffer is too small");
+            Sim::GpuArrayView view;
+            view.data = pointer;
+            view.memoryType = Sim::SimMemoryType::OpenGLBuffer;
+            view.dtype = Sim::SimDType::Float32;
+            view.lifetime = Sim::SimLifetimePolicy::Borrowed;
+            view.deviceId = deviceId;
+            view.shape = {static_cast<int64_t>(count), 4, 4};
+            view.strides = {16, 4, 1};
+            view.streamHandle = streamHandle;
+            views.push_back(std::move(view));
+        }
+    } catch (...) {
+        cudaGraphicsUnmapResources(static_cast<int>(resources.size()),
+                                   resources.data(), stream);
+        if (deviceId >= 0 && deviceId != previousDevice)
+            cudaSetDevice(previousDevice);
+        throw;
+    }
+
+    if (deviceId >= 0 && deviceId != previousDevice)
+        checkCudaInterop(cudaSetDevice(previousDevice), "cudaSetDevice");
+    return true;
+}
+
+void OpenGLDevice::unmapCudaBuffers(const std::vector<Buffer*>& buffers,
+                                    int deviceId, uint64_t streamHandle) {
+    if (buffers.empty())
+        return;
+    int previousDevice = 0;
+    checkCudaInterop(cudaGetDevice(&previousDevice), "cudaGetDevice");
+    if (deviceId >= 0 && deviceId != previousDevice)
+        checkCudaInterop(cudaSetDevice(deviceId), "cudaSetDevice");
+
+    std::vector<cudaGraphicsResource*> resources;
+    resources.reserve(buffers.size());
+    for (auto* buffer : buffers) {
+        auto* glBuffer = dynamic_cast<OpenGLBuffer*>(buffer);
+        if (!glBuffer)
+            throw std::runtime_error(
+                "CUDA transform unmap requires OpenGL buffers");
+        resources.push_back(glBuffer->cudaResource());
+    }
+    auto stream = reinterpret_cast<cudaStream_t>(streamHandle);
+    checkCudaInterop(cudaGraphicsUnmapResources(
+                         static_cast<int>(resources.size()), resources.data(),
+                         stream),
+                     "cudaGraphicsUnmapResources(batch)");
+    if (deviceId >= 0 && deviceId != previousDevice)
+        checkCudaInterop(cudaSetDevice(previousDevice), "cudaSetDevice");
+}
+#endif
 
 // OpenGLShader Implementation
 OpenGLShader::OpenGLShader(const ShaderDesc& desc) : _name(desc.name) {

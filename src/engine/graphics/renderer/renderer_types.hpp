@@ -2,10 +2,12 @@
 #define _RENDERER_TYPES_HPP_
 
 #include <cstdint>
+#include <utility>
 
 #include <glm/vec3.hpp>
 
 #include "geometry/bounds.hpp"
+#include "sim/gpu_array_view.hpp"
 
 namespace KE {
 
@@ -21,6 +23,49 @@ enum class TransformSource {
     SceneGraph,     // Prim/scene graph owns transforms.
     ExternalBuffer, // Caller owns per-instance transform arrays.
 };
+
+enum class ExternalBufferFormat {
+    Mat4, // float32 column-major matrices, one per instance
+    PositionRotation,
+    PositionRotationScale,
+    Custom,
+};
+
+enum class ExternalSyncPolicy {
+    None,
+    Versioned,
+    Fence,
+    Event,
+};
+
+// External transform source attached to a renderable. The descriptor is a view:
+// memory ownership and synchronization are provided by GpuArrayView metadata.
+struct ExternalBufferDesc {
+    Sim::GpuArrayView view;
+    ExternalBufferFormat format = ExternalBufferFormat::Mat4;
+    int count = 0;       // 0 derives the count from view.shape[0].
+    int strideBytes = 0; // 0 derives the stride from view metadata.
+    ExternalSyncPolicy syncPolicy = ExternalSyncPolicy::None;
+};
+
+// Wraps a CPU/CUDA Mat4 view as a renderer-owned external transform source.
+inline ExternalBufferDesc makeExternalMat4BufferDesc(
+    Sim::GpuArrayView view, int count = 0,
+    ExternalSyncPolicy syncPolicy = ExternalSyncPolicy::Versioned) {
+    view.dtype = Sim::SimDType::Float32;
+    if (count > 0 && view.shape.empty())
+        view.shape = {count, 4, 4};
+    if (view.strides.empty())
+        view.strides = {16, 4, 1};
+
+    ExternalBufferDesc desc;
+    desc.view = std::move(view);
+    desc.format = ExternalBufferFormat::Mat4;
+    desc.count = count;
+    desc.strideBytes = 0;
+    desc.syncPolicy = syncPolicy;
+    return desc;
+}
 
 namespace RendererTextureSlot {
 

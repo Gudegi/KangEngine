@@ -64,6 +64,7 @@ class MeshInstancer {
     int _allocatedInstances = 0;
     int _visibleCount = 0;
     bool _hasTransparent = false;
+    bool _colorsDirty = false;
     bool _useExternalTransforms = false;
     bool _doubleSided = false;
     bool _castsShadow = true;
@@ -82,6 +83,12 @@ class MeshInstancer {
     std::vector<glm::mat4> _boneMatrices;
     std::vector<Scene::Prim*> _instancePrims;
     std::vector<VertexBufferBinding> _vertexBufferBindings;
+    ExternalBufferDesc _externalBufferDesc;
+    bool _hasExternalBufferDesc = false;
+    bool _externalBufferLoaded = false;
+    bool _usesGpuExternalTransforms = false;
+    bool _hasDirectCudaTransforms = false;
+    uint64_t _externalBufferVersion = 0;
 
     std::vector<Scene::Prim*> _prims;
 
@@ -102,6 +109,9 @@ class MeshInstancer {
     // Upload the currently drawable instance transform/color buffer to GPU.
     void _uploadInstanceData(const std::vector<glm::mat4>& transforms,
                              const std::vector<glm::vec4>& colors);
+    // Copy a CPU external view into the backend instance buffer. GPU views are
+    // rejected until the active graphics backend provides explicit interop.
+    void _consumeExternalBuffer();
     void _uploadOverrideTransform(const glm::mat4& transform);
     void _updateTransparency();
 
@@ -134,6 +144,13 @@ class MeshInstancer {
     // colors == nullptr: skip color upload (use previously set colors).
     void updateFromTransforms(const std::vector<glm::mat4>& transforms,
                               const std::vector<glm::vec4>* colors = nullptr);
+    void setExternalBuffer(const ExternalBufferDesc& desc);
+    void prepareDirectCudaTransforms(int count);
+    Backend::Buffer* transformBuffer() { return _transformVBO.get(); }
+    bool hasExternalBuffer() const { return _hasExternalBufferDesc; }
+    const ExternalBufferDesc& externalBuffer() const {
+        return _externalBufferDesc;
+    }
 
     // One-time color upload. Call once in setup instead of passing colors every
     // frame.

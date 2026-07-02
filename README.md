@@ -23,7 +23,7 @@ KangEngine is built for quick iteration around character motion, robot assets, a
 ## Requirements
 
 - **OS:** macOS on Apple Silicon (Tahoe tested) or Linux (Ubuntu 24.04 tested)
-- **Build:** C++17, CMake, vcpkg, PhysX 5.1
+- **Build:** C++17, CMake, vcpkg, PhysX 5.1/5.8
 - **Python:** 3.12 for bindings and examples
 - **Graphics & GPU:** OpenGL 4.1+ compatible GPU (NVIDIA GPU required only for experimental PhysX GPU/CUDA workflows)
 
@@ -80,6 +80,8 @@ See [Build Guide](docs/BUILD.md) for platform setup, PhysX, USD, and Python bind
 | Assets | `python/examples/view_fbx_mesh.py` | FBX static mesh import and scene manipulation |
 | Assets | `python/examples/view_usd_scene.py` | USD scene traversal and material loading |
 | Physics | `python/examples/sim_world_minimal.py` | Minimal `KangSimWorld` simulation and viewer sync |
+| Physics | `python/examples/sim_world_multi_env.py` | Batched multi-env simulation with tensor state reads |
+| Physics | `python/examples/sim_gpu_root_state_batch.py` | Headless PhysX GPU batched rigid root-state apply/readback |
 | Physics | `python/examples/physx_ragdoll.py` | Free-base articulated ragdoll simulation |
 | Physics | `python/examples/mjcf_dof_control.py` | MJCF loading and DOF control |
 | Tracking | `python/examples/physx_h1_motion_tracking.py` | H1 PhysX articulation tracking a reference motion |
@@ -126,6 +128,8 @@ See [Examples](docs/EXAMPLES.md) for a longer list.
 - Motion editor modules for trajectories, contacts, targets, and tracking overlays.
 - MimicKit-compatible backend adapter.
 
+See [Simulation API](docs/SIMULATION_API.md) for the recommended `KangSimWorld` workflow and how it relates to lower-level PhysX wrappers.
+
 ## Development Notes
 
 This project is evolving quickly. While the main workflows are stable, some internal and high-level APIs are under active development and subject to change.
@@ -133,14 +137,14 @@ This project is evolving quickly. While the main workflows are stable, some inte
 TODO:
 
 - WebGPU backend.
-- GPU accelerated simulation.
+- MJCF sensor grouping and full contact-wrench semantics.
 - PBR rendering.
 
 ## RL With MimicKit
 
 KangEngine can be used as a backend engine of [MimicKit](https://github.com/xbpeng/MimicKit) through KangEngine's Python package. Use the `backend_kangengine` branch of MimicKit and keep MimicKit in a separate Python environment.
 
-**Limitation**: KangEngine supports both MimicKit policy inference and RL training, but the current PhysX backend is still CPU-oriented for most stable workflows. PhysX GPU support is being explored, but CUDA context compatibility with Torch is still an active design item.
+**Limitation**: KangEngine supports both MimicKit policy inference and RL training, but the most stable workflows still use the CPU PhysX path. Linux PhysX 5.8 rigid/articulation state and apply paths, CUDA/OpenGL visual sync, and normal contact impulse/force sensors are validated. Tangential friction and full contact-wrench sensors are not yet exposed.
 
 <table align="center">
   <tr>

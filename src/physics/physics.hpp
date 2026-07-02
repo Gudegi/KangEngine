@@ -8,6 +8,7 @@
 #include "PxPhysicsAPI.h"
 #include <fmt/base.h>
 #include "utils/types.hpp"
+#include <cstdint>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <memory>
@@ -23,6 +24,15 @@ namespace Animation {
 struct CharacterData;
 }
 
+struct PhysicsGpuDynamicsConfig {
+    uint64_t tempBufferCapacity = 64ull * 1024 * 1024;
+    uint32_t maxRigidContactCount = 4u * 1024 * 1024;
+    uint32_t maxRigidPatchCount = 512u * 1024;
+    uint32_t heapCapacity = 256u * 1024 * 1024;
+    uint32_t foundLostPairsCapacity = 4u * 1024 * 1024;
+    uint32_t collisionStackSize = 256u * 1024 * 1024;
+};
+
 struct PhysicsConfig {
     UpAxis upAxis = UpAxis::Y;
     float dt = 1.0f / 60.0f;
@@ -32,11 +42,8 @@ struct PhysicsConfig {
     bool enableContactReports = true;
     // PxSolverType::Enum solverType = PxSolverType::ePGS;
     PxSolverType::Enum solverType = PxSolverType::eTGS;
-#ifdef __APPLE__
+    PhysicsGpuDynamicsConfig gpuDynamics;
     bool enableGPU = false;
-#else
-    bool enableGPU = true;
-#endif
 
     static PhysicsConfig yUp() { return {}; }
 
@@ -143,6 +150,14 @@ class PhysicsWorld {
     PxPhysics* getPhysics() { return _physics; }
     PxMaterial* getMaterial() { return _material; }
     PxScene* getScene() { return _scene; }
+    const PxScene* getScene() const { return _scene; }
+    PxCudaContextManager* getCudaContextManager() {
+        return _cudaContextManager;
+    }
+    const PxCudaContextManager* getCudaContextManager() const {
+        return _cudaContextManager;
+    }
+    bool isGpuEnabled() const { return _cudaContextManager != nullptr; }
 };
 
 // PhysX > GLM conversion

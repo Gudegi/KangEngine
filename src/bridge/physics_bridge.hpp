@@ -85,6 +85,7 @@ class PhysicsBridge {
         SimModel model;
         SimState state;
         SimVisualBatch visualBatch;
+        uint64_t transformVersion = 0;
     };
 
     struct ColVisual {

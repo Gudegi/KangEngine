@@ -138,6 +138,30 @@ void Renderer::updateRenderableTransforms(
         _rasterizer->updateRenderableTransforms(handle, transforms, colors);
 }
 
+void Renderer::setRenderableExternalBuffer(RenderableHandle handle,
+                                           const ExternalBufferDesc& desc) {
+    if (_rasterizer)
+        _rasterizer->setRenderableExternalBuffer(handle, desc);
+}
+
+std::vector<Sim::GpuArrayView> Renderer::mapRenderableCudaTransformBuffers(
+    const std::vector<RenderableHandle>& handles, int count, int deviceId,
+    uint64_t streamHandle) {
+    if (!_rasterizer)
+        throw std::runtime_error("renderer is not initialized");
+    return _rasterizer->mapRenderableCudaTransformBuffers(
+        handles, count, deviceId, streamHandle);
+}
+
+void Renderer::unmapRenderableCudaTransformBuffers(
+    const std::vector<RenderableHandle>& handles, int deviceId,
+    uint64_t streamHandle) {
+    if (!_rasterizer)
+        throw std::runtime_error("renderer is not initialized");
+    _rasterizer->unmapRenderableCudaTransformBuffers(handles, deviceId,
+                                                     streamHandle);
+}
+
 bool Renderer::getRenderableInstanceTransform(RenderableHandle handle,
                                               int instanceIndex,
                                               glm::mat4& outTransform) const {

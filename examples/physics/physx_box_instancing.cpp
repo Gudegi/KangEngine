@@ -1,5 +1,4 @@
 // #include "bridge/physics_bridge.hpp"
-#include "foundation/Px.h"
 #include "kangEngine.hpp"
 #include "physics/physics.hpp"
 #include "physics/sim_model.hpp"
@@ -13,6 +12,16 @@
 using namespace KE;
 using namespace physx;
 
+namespace {
+
+PhysicsConfig makeBoxInstancingPhysicsConfig() {
+    PhysicsConfig config = PhysicsConfig::zUp();
+    config.enableGPU = false;
+    return config;
+}
+
+} // namespace
+
 // ---------------------------------------------------------------------------
 // App
 // ---------------------------------------------------------------------------
@@ -21,8 +30,7 @@ class BoxInstancingApp : public App {
   public:
     std::unique_ptr<Backend::Shader> commonShader;
     std::unique_ptr<Backend::Shader> groundShader;
-
-    PhysicsWorld physics{PhysicsConfig::zUp()};
+    PhysicsWorld physics{makeBoxInstancingPhysicsConfig()};
 
     static constexpr int NUM_BOXES = 10000;
     static constexpr float BOX_HALF = 0.15f; // 30cm box
@@ -40,6 +48,7 @@ class BoxInstancingApp : public App {
     SimState _simState;
     SimVisualBatch _simVisualBatch;
     std::vector<glm::vec4> _colors;
+    uint64_t _transformVersion = 0;
 
     bool paused = false;
     bool spaceWasDown = false;
@@ -179,8 +188,9 @@ class BoxInstancingApp : public App {
                                            pxToGlm(pose.q));
             }
             _simVisualBatch.prepareFromState(_simState);
-            updateRenderableTransforms(_simVisualBatch.renderable(0),
-                                       _simVisualBatch.transforms(0));
+            ExternalBufferDesc desc = _simVisualBatch.externalTransformDesc(
+                0, ++_transformVersion, "box_world_transforms");
+            setRenderableExternalBuffer(_simVisualBatch.renderable(0), desc);
         }
         checkError();
     }

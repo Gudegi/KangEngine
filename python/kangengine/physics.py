@@ -5,6 +5,7 @@ from ._core import _ke
 from ._public import set_public_module
 
 _NAMES = [
+    "PhysicsGpuDynamicsConfig",
     "PhysicsConfig",
     "ContactPoint",
     "RigidDynamic",
@@ -12,6 +13,16 @@ _NAMES = [
     "ArticulationConfig",
     "Articulation",
     "PhysicsBridge",
+    "SimMemoryType",
+    "SimDType",
+    "SimLifetimePolicy",
+    "GpuArrayView",
+    "SimModel",
+    "SimState",
+    "SimVisualBatch",
+    "GpuPhysicsConfig",
+    "PhysicsGpuStateViews",
+    "PhysicsGpuSystem",
 ]
 
 __all__ = []

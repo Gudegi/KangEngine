@@ -2,6 +2,7 @@
 
 import os as _os
 from pathlib import Path as _Path
+from typing import TYPE_CHECKING as _TYPE_CHECKING
 
 _assets_dir = _Path(__file__).resolve().parent / "assets"
 if _assets_dir.exists():
@@ -55,6 +56,9 @@ _LAZY_IMPORTS = {
     "SimRigid": (".sim", "SimRigid"),
     "SimRigidView": (".sim", "SimRigidView"),
     "KangSimWorld": (".sim", "KangSimWorld"),
+    "ContactSensor": (".sensor", "ContactSensor"),
+    "ContactSensorData": (".sensor", "ContactSensorData"),
+    "ForceSensor": (".sensor", "ForceSensor"),
     "KangEngineEngine": (".mimickit_engine", "KangEngineEngine"),
     "build_mimickit_engine": (".mimickit_engine", "build_engine"),
     "install_mimickit_engine_builder": (
@@ -62,6 +66,23 @@ _LAZY_IMPORTS = {
         "install_mimickit_engine_builder",
     ),
 }
+
+if _TYPE_CHECKING:
+    from .sim import (
+        ControlMode,
+        KangSimWorld,
+        SimArticulation,
+        SimArticulationView,
+        SimDevice,
+        SimRigid,
+        SimRigidView,
+    )
+    from .sensor import ContactSensor, ContactSensorData, ForceSensor
+    from .mimickit_engine import (
+        KangEngineEngine,
+        build_engine as build_mimickit_engine,
+        install_mimickit_engine_builder,
+    )
 
 
 def __getattr__(name):
@@ -85,6 +106,9 @@ Texture = _set_public_module(_ke.Texture, __name__)
 Camera = _set_public_module(_ke.Camera, __name__)
 UpAxis = _set_public_module(_ke.UpAxis, __name__)
 TransformSource = _set_public_module(_ke.TransformSource, __name__)
+ExternalBufferFormat = _set_public_module(_ke.ExternalBufferFormat, __name__)
+ExternalSyncPolicy = _set_public_module(_ke.ExternalSyncPolicy, __name__)
+ExternalBufferDesc = _set_public_module(_ke.ExternalBufferDesc, __name__)
 InteractionMode = _set_public_module(_ke.InteractionMode, __name__)
 ToneMapMode = _set_public_module(_ke.ToneMapMode, __name__)
 TextureRole = _set_public_module(_ke.TextureRole, __name__)
@@ -160,6 +184,9 @@ __all__ = [
     "SimRigid",
     "SimRigidView",
     "KangSimWorld",
+    "ContactSensor",
+    "ContactSensorData",
+    "ForceSensor",
     "KangWorldVisualBridge",
     "ArticulationVisualView",
     "RigidVisualView",
@@ -174,6 +201,9 @@ __all__ = [
     "Camera",
     "UpAxis",
     "TransformSource",
+    "ExternalBufferFormat",
+    "ExternalSyncPolicy",
+    "ExternalBufferDesc",
     "InteractionMode",
     "ToneMapMode",
     "TextureRole",
@@ -217,11 +247,19 @@ __all__ = [
 ]
 
 _OPTIONAL_EXPORTS = [
+    "PhysicsGpuDynamicsConfig",
     "PhysicsConfig",
     "PhysicsWorld",
     "ArticulationConfig",
     "Articulation",
     "PhysicsBridge",
+    "SimMemoryType",
+    "SimDType",
+    "SimLifetimePolicy",
+    "GpuArrayView",
+    "GpuPhysicsConfig",
+    "PhysicsGpuStateViews",
+    "PhysicsGpuSystem",
 ]
 
 for _name in _OPTIONAL_EXPORTS:
