@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import kangengine as ke
+import torch
 
 
 def main():
@@ -46,8 +47,6 @@ def main():
         world.init_gpu_system(cuda_device_id=0)
         world.step(refresh=False)
 
-        import torch
-
         torch.cuda.synchronize(0)
         if sensor.contact_count.device.type != "cuda":
             raise AssertionError("ContactSensor output was copied off CUDA")
@@ -81,9 +80,87 @@ def main():
         if not torch.allclose(force_sensor.force, expected_force):
             raise AssertionError("ForceSensor did not convert impulse using sim_dt")
 
+        rotations = torch.zeros((2, 4), dtype=torch.float32, device="cuda:0")
+        rotations[:, 3] = 1.0
+        zeros3 = torch.zeros((2, 3), dtype=torch.float32, device="cuda:0")
+        separated_left = torch.tensor(
+            [[0.0, 3.0, 1.0], [5.0, 3.0, 1.0]],
+            dtype=torch.float32,
+            device="cuda:0",
+        )
+        separated_right = torch.tensor(
+            [[2.0, 3.0, 1.0], [7.0, 3.0, 1.0]],
+            dtype=torch.float32,
+            device="cuda:0",
+        )
+        tracked.set_root_state(
+            None,
+            separated_left,
+            rotations,
+            linear_velocity=zeros3,
+            angular_velocity=zeros3,
+        )
+        other.set_root_state(
+            None,
+            separated_right,
+            rotations,
+            linear_velocity=zeros3,
+            angular_velocity=zeros3,
+        )
+        world.step(substeps=0, refresh=False, apply_commands=False)
+        torch.cuda.synchronize(0)
+        if torch.count_nonzero(sensor.contact_count).item() != 0:
+            raise AssertionError("GPU reset left stale contact counts")
+        if torch.count_nonzero(sensor.net_impulse).item() != 0:
+            raise AssertionError("GPU reset left stale contact impulses")
+
+        impact_left = torch.tensor(
+            [[0.0, 0.0, 1.0], [5.0, 0.0, 1.0]],
+            dtype=torch.float32,
+            device="cuda:0",
+        )
+        impact_right = torch.tensor(
+            [[0.20, 0.0, 1.0], [5.20, 0.0, 1.0]],
+            dtype=torch.float32,
+            device="cuda:0",
+        )
+        left_velocity = torch.zeros_like(impact_left)
+        right_velocity = torch.zeros_like(impact_right)
+        left_velocity[:, 0] = 0.5
+        right_velocity[:, 0] = -0.5
+        tracked.set_root_state(
+            None,
+            impact_left,
+            rotations,
+            linear_velocity=left_velocity,
+            angular_velocity=zeros3,
+        )
+        other.set_root_state(
+            None,
+            impact_right,
+            rotations,
+            linear_velocity=right_velocity,
+            angular_velocity=zeros3,
+        )
+        world.step(substeps=0, refresh=False, apply_commands=False)
+        torch.cuda.synchronize(0)
+        if torch.count_nonzero(sensor.contact_count).item() != 0:
+            raise AssertionError("GPU impact reset-only frame reported stale contacts")
+        world.step(refresh=False)
+        torch.cuda.synchronize(0)
+        reset_counts = sensor.contact_count.detach().cpu().tolist()
+        reset_impulse = sensor.net_impulse[:, 0]
+        if min(row[0] for row in reset_counts) <= 0:
+            raise AssertionError(
+                f"Direct GPU reset impact did not report contacts: {reset_counts}"
+            )
+        if float(torch.linalg.vector_norm(reset_impulse, dim=1).max()) <= 0.0:
+            raise AssertionError("Direct GPU reset impact did not report impulse")
+
         print(
             "PASS: ContactSensor packed GPU aggregation "
-            f"counts={result}, impulse={impulse.detach().cpu().tolist()}"
+            f"counts={result}, impulse={impulse.detach().cpu().tolist()}, "
+            f"reset_counts={reset_counts}"
         )
     finally:
         world.release()

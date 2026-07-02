@@ -95,12 +95,13 @@ CUcontext getCurrentCudaDriverContext() {
 
 } // namespace
 
-static PxFilterFlags
-contactReportFilterShader(PxFilterObjectAttributes attributes0,
-                          PxFilterData filterData0,
-                          PxFilterObjectAttributes attributes1,
-                          PxFilterData filterData1, PxPairFlags& pairFlags,
-                          const void* constantBlock, PxU32 constantBlockSize) {
+static PxFilterFlags kangFilterShader(PxFilterObjectAttributes attributes0,
+                                      PxFilterData filterData0,
+                                      PxFilterObjectAttributes attributes1,
+                                      PxFilterData filterData1,
+                                      PxPairFlags& pairFlags,
+                                      const void* constantBlock,
+                                      PxU32 constantBlockSize) {
     PxFilterFlags flags = PxDefaultSimulationFilterShader(
         attributes0, filterData0, attributes1, filterData1, pairFlags,
         constantBlock, constantBlockSize);
@@ -109,6 +110,21 @@ contactReportFilterShader(PxFilterObjectAttributes attributes0,
         filterData0.word2 != filterData1.word2) {
         return PxFilterFlag::eSUPPRESS;
     }
+
+    return flags;
+}
+
+static PxFilterFlags
+contactReportFilterShader(PxFilterObjectAttributes attributes0,
+                          PxFilterData filterData0,
+                          PxFilterObjectAttributes attributes1,
+                          PxFilterData filterData1, PxPairFlags& pairFlags,
+                          const void* constantBlock, PxU32 constantBlockSize) {
+    PxFilterFlags flags =
+        kangFilterShader(attributes0, filterData0, attributes1, filterData1,
+                         pairFlags, constantBlock, constantBlockSize);
+    if (flags & PxFilterFlag::eSUPPRESS)
+        return flags;
 
     pairFlags |= PxPairFlag::eNOTIFY_TOUCH_FOUND |
                  PxPairFlag::eNOTIFY_TOUCH_PERSISTS |
@@ -193,6 +209,8 @@ PhysicsWorld::PhysicsWorld(PhysicsConfig config) {
     _dispatcher = PxDefaultCpuDispatcherCreate(4);
     sceneDesc.cpuDispatcher = _dispatcher;
     sceneDesc.filterShader = config.filterShader;
+    if (config.filterShader == PxDefaultSimulationFilterShader)
+        sceneDesc.filterShader = kangFilterShader;
     if (config.enableContactReports) {
         _contactCallback = std::make_unique<ContactReportCallback>(_contacts);
         sceneDesc.simulationEventCallback = _contactCallback.get();

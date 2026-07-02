@@ -160,6 +160,7 @@ class PhysicsGpuSystem {
     void fetchArticulationTargetJointVelocities();
     void fetchArticulationLinkIncomingJointForce();
     void fetchContactPairs();
+    void clearContactData();
 
     void applyRigidData(const Sim::GpuArrayView* indices = nullptr);
     void applyRigidForce(const Sim::GpuArrayView* indices = nullptr);

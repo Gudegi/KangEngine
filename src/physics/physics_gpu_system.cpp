@@ -1031,6 +1031,50 @@ void PhysicsGpuSystem::fetchContactPairs() {
 #endif
 }
 
+void PhysicsGpuSystem::clearContactData() {
+    checkInitialized();
+#ifdef KANGENGINE_USE_CUDA
+    checkCuda(cudaSetDevice(_config.cudaDeviceId), "cudaSetDevice");
+    auto stream = reinterpret_cast<cudaStream_t>(_streamHandle);
+    if (_contactPairCountBuffer) {
+        checkCuda(cudaMemsetAsync(_contactPairCountBuffer, 0, sizeof(PxU32),
+                                  stream),
+                  "cudaMemsetAsync(clear contact pair count)");
+    }
+    if (_contactPointCountBuffer) {
+        checkCuda(cudaMemsetAsync(_contactPointCountBuffer, 0, sizeof(PxU32),
+                                  stream),
+                  "cudaMemsetAsync(clear contact point count)");
+    }
+    if (_contactPairBodyRefBuffer && _config.maxContactPairs > 0) {
+        checkCuda(cudaMemsetAsync(_contactPairBodyRefBuffer, 0xFF,
+                                  sizeof(int32_t) *
+                                      static_cast<size_t>(
+                                          _config.maxContactPairs) *
+                                      6,
+                                  stream),
+                  "cudaMemsetAsync(clear contact pair body refs)");
+    }
+    if (_contactPointPairIndexBuffer && _config.maxContactPoints > 0) {
+        checkCuda(cudaMemsetAsync(_contactPointPairIndexBuffer, 0xFF,
+                                  sizeof(PxU32) *
+                                      static_cast<size_t>(
+                                          _config.maxContactPoints),
+                                  stream),
+                  "cudaMemsetAsync(clear contact point pair indices)");
+    }
+    checkCuda(cudaEventRecord(reinterpret_cast<cudaEvent_t>(_readyEvent),
+                              stream),
+              "cudaEventRecord(clear contact data ready)");
+    ++_views.contactPairCount.version;
+    ++_views.contactPairBodyRefs.version;
+    ++_views.contactPointCount.version;
+    ++_views.contactPointPairIndices.version;
+#else
+    notImplemented("clearContactData");
+#endif
+}
+
 void PhysicsGpuSystem::applyRigidData(const Sim::GpuArrayView* indices) {
     checkInitialized();
 #ifdef KANGENGINE_USE_CUDA

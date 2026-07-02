@@ -976,6 +976,22 @@ class KangSimWorld:
                 sensor.refresh()
         return {name: sensor.data for name, sensor in self.sensors.items()}
 
+    def clear_sensor_outputs(self):
+        if not self.sensors:
+            return {}
+        contact_sensors = tuple(
+            sensor
+            for sensor in self.sensors.values()
+            if sensor.requires_contact_data
+        )
+        if contact_sensors:
+            if self._contact_sensor_batch is None:
+                from .sensor import _ContactSensorBatch
+
+                self._contact_sensor_batch = _ContactSensorBatch(self)
+            self._contact_sensor_batch.clear_outputs(contact_sensors)
+        return {name: sensor.data for name, sensor in self.sensors.items()}
+
     def add_articulation(
         self,
         data,
@@ -1493,7 +1509,7 @@ class KangSimWorld:
 
     def apply_resets(self):
         if not self._pending_reset_keys:
-            return
+            return False
         pending_keys = list(self._pending_reset_keys)
         self._pending_reset_keys.clear()
         gpu_rigid_root_resets: list[tuple[tuple[int, int], RootStateReset]] = []
@@ -1557,6 +1573,14 @@ class KangSimWorld:
             self._clear_gpu_articulation_commands_after_reset(
                 gpu_articulation_reset_keys
             )
+        if (
+            gpu_rigid_root_resets
+            or gpu_articulation_root_resets
+            or gpu_articulation_dof_resets
+        ):
+            self._clear_gpu_contact_data_after_reset()
+            return True
+        return False
 
     def _apply_gpu_rigid_root_resets(
         self, resets: list[tuple[tuple[int, int], RootStateReset]]
@@ -1708,6 +1732,11 @@ class KangSimWorld:
         )
         gpu_system.clear_articulation_commands(index_view)
 
+    def _clear_gpu_contact_data_after_reset(self):
+        clear = getattr(self.gpu_system, "clear_contact_data", None)
+        if clear is not None:
+            clear()
+
     def set_body_force(
         self,
         env_id: EnvIdLike,
@@ -1807,20 +1836,35 @@ class KangSimWorld:
     def step(self, substeps: int = 1, refresh: bool = True, apply_commands: bool = True):
         """Advance simulation and return ``world.state``.
 
+        Args:
+            substeps: Number of PhysX simulation steps to run. ``0`` applies
+                queued resets/commands and sensor cleanup without advancing
+                time; this is useful for Direct GPU reset-only frames.
+            refresh: When ``True``, refresh ``world.state`` before returning.
+                GPU simulation users can set this to ``False`` and read
+                canonical CUDA views directly to avoid CPU readback.
+            apply_commands: When ``True``, flush queued root state/control
+                commands before stepping. Set to ``False`` for reset-only
+                frames that should not re-apply user commands.
+
         For GPU simulation this returns a CPU/Torch snapshot. Use GPU view
         helpers for the latest canonical CUDA state when avoiding readback.
         """
-        self.apply_resets()
+        reset_applied = self.apply_resets()
         if apply_commands:
             self.apply_commands()
-        for _ in range(int(substeps)):
+        substep_count = int(substeps)
+        for _ in range(substep_count):
             self.apply_body_forces()
             self.physics.step()
             self.sim_time += self.sim_dt
         self.clear_body_forces()
         if self._uses_gpu_sim:
             self.state.mark_stale()
-        self.refresh_sensors()
+        if reset_applied and substep_count == 0:
+            self.clear_sensor_outputs()
+        else:
+            self.refresh_sensors()
         if refresh:
             self.state.refresh()
         return self.state

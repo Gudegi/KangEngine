@@ -56,6 +56,21 @@ void bind_physics(py::module& m) {
                     "Create configuration for a Z-up world.")
         .def_readwrite("dt", &PhysicsConfig::dt,
                        "Simulation timestep in seconds.")
+        .def_property(
+            "static_friction",
+            [](const PhysicsConfig& c) { return c.friction[0]; },
+            [](PhysicsConfig& c, float value) { c.friction[0] = value; },
+            "Default material static friction.")
+        .def_property(
+            "dynamic_friction",
+            [](const PhysicsConfig& c) { return c.friction[1]; },
+            [](PhysicsConfig& c, float value) { c.friction[1] = value; },
+            "Default material dynamic friction.")
+        .def_property(
+            "restitution",
+            [](const PhysicsConfig& c) { return c.friction[2]; },
+            [](PhysicsConfig& c, float value) { c.friction[2] = value; },
+            "Default material restitution.")
         .def_readwrite("enable_gpu", &PhysicsConfig::enableGPU,
                        "Enable PhysX GPU features when available.")
         .def_readwrite("gpu_dynamics", &PhysicsConfig::gpuDynamics,

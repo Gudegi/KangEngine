@@ -173,6 +173,7 @@ void bind_physics_gpu(py::module& m) {
         .def("fetch_articulation_link_incoming_joint_force",
              &PhysicsGpuSystem::fetchArticulationLinkIncomingJointForce)
         .def("fetch_contact_pairs", &PhysicsGpuSystem::fetchContactPairs)
+        .def("clear_contact_data", &PhysicsGpuSystem::clearContactData)
         .def("apply_rigid_data", &PhysicsGpuSystem::applyRigidData,
              py::arg("indices") = nullptr)
         .def("apply_rigid_force", &PhysicsGpuSystem::applyRigidForce,

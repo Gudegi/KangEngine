@@ -199,6 +199,13 @@ class _ContactSensorBatch:
             *self._native_views,
         )
 
+    def clear_outputs(self, sensors) -> None:
+        if self._dirty:
+            self._prepare(tuple(sensors))
+        self._storage[3].zero_()
+        self._storage[4].zero_()
+        self._storage[5].zero_()
+
     def release(self):
         self.world = None
         self._torch = None
