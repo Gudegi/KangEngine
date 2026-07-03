@@ -80,6 +80,8 @@ enum class ColorType : size_t {
     PASTEL_CREAM,
     PASTEL_SKY,
 
+    DARK_GREEN,
+
     COUNT
 };
 
@@ -202,6 +204,8 @@ class ColorLibrary {
             {{{1.0f, 0.992f, 0.878f, 1.0f}}},
             // PASTEL_SKY
             {{{0.686f, 0.867f, 1.0f, 1.0f}}},
+            // DARK_GREEN
+            {{0.196f, 0.333f, 0.275f, 1.0f}},
         }};
 
     static constexpr const char* names[static_cast<size_t>(
@@ -218,7 +222,8 @@ class ColorLibrary {
         "Pastel Red", "Pastel Orange", "Pastel Yellow", "Pastel Green",
         "Pastel Mint", "Pastel Cyan", "Pastel Blue", "Pastel Purple",
         "Pastel Pink", "Pastel Rose", "Pastel Peach", "Pastel Lavender",
-        "Pastel Lilac", "Pastel Coral", "Pastel Cream", "Pastel Sky"};
+        "Pastel Lilac", "Pastel Coral", "Pastel Cream", "Pastel Sky",
+        "DARK_GREEN"};
 
   public:
     // usage: KE::ColorLibrary::get(KE::ColorType::PASTEL_PINK)

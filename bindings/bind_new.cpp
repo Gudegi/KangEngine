@@ -539,7 +539,8 @@ PYBIND11_MODULE(_kangengine, m) {
         .value("PASTEL_LILAC", ColorType::PASTEL_LILAC)
         .value("PASTEL_CORAL", ColorType::PASTEL_CORAL)
         .value("PASTEL_CREAM", ColorType::PASTEL_CREAM)
-        .value("PASTEL_SKY", ColorType::PASTEL_SKY);
+        .value("PASTEL_SKY", ColorType::PASTEL_SKY)
+        .value("DARK_GREEN", ColorType::DARK_GREEN);
 
     py::class_<ColorLibrary>(m, "ColorLibrary")
         .def_static("get", &ColorLibrary::get, py::arg("type"));
@@ -802,14 +803,13 @@ PYBIND11_MODULE(_kangengine, m) {
              py::arg("descriptor"),
              "Attach an external CPU/GPU transform buffer to a renderable.")
         .def("map_renderable_cuda_transform_buffers",
-             &Renderer::mapRenderableCudaTransformBuffers,
-             py::arg("handles"), py::arg("count"), py::arg("device_id"),
+             &Renderer::mapRenderableCudaTransformBuffers, py::arg("handles"),
+             py::arg("count"), py::arg("device_id"),
              py::arg("stream_handle") = 0,
              "Map multiple renderable transform VBOs for direct CUDA writes.")
         .def("unmap_renderable_cuda_transform_buffers",
-             &Renderer::unmapRenderableCudaTransformBuffers,
-             py::arg("handles"), py::arg("device_id"),
-             py::arg("stream_handle") = 0,
+             &Renderer::unmapRenderableCudaTransformBuffers, py::arg("handles"),
+             py::arg("device_id"), py::arg("stream_handle") = 0,
              "Unmap transform VBOs after direct CUDA writes.")
         .def("set_renderable_double_sided", &Renderer::setRenderableDoubleSided,
              py::arg("handle"), py::arg("double_sided") = true,

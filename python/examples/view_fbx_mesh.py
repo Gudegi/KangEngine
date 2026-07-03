@@ -56,8 +56,8 @@ class FBXMeshViewer(ke.App):
 
         self.ground_shader.use()
         self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
-        #self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.62, 0.82, 0.68, 1.0))
-        self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.1960, 0.3333, 0.2745, 1.0))
+        dark_green = ke.preset_rgba(ke.ColorType.DARK_GREEN)
+        self.ground_shader.set_vec4("checkerColor2", ke.vec4(*dark_green))
 
         self._configure_lighting()
         self._configure_camera()

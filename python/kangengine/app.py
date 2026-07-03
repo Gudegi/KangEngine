@@ -211,7 +211,7 @@ class App(NativeApp):
         if color1 is None:
             color1 = _ke.vec4(1.0, 1.0, 1.0, 1.0)
         if color2 is None:
-            preset = _ke.ColorLibrary.get(_ke.ColorType.PASTEL_GREEN)
+            preset = _ke.ColorLibrary.get(_ke.ColorType.DARK_GREEN)
             color2 = _ke.vec4(preset.r, preset.g, preset.b, preset.a)
         shader.use()
         shader.set_vec4("checkerColor1", color1)
