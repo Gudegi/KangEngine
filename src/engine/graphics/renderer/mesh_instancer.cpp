@@ -279,13 +279,40 @@ void MeshInstancer::_uploadOverrideTransform(const glm::mat4& transform) {
 }
 
 void MeshInstancer::_updateTransparency() {
-    _hasTransparent = false;
+    _hasTransparent = _alphaMode == AlphaMode::Blend;
+    if (_alphaMode == AlphaMode::Mask)
+        return;
+
+    // Preserve legacy color-alpha behavior for renderables that have not opted
+    // into an explicit Mask or Blend mode.
     for (const auto& color : _colors) {
         if (color.a < 1.0f) {
             _hasTransparent = true;
             break;
         }
     }
+}
+
+void MeshInstancer::bindAlphaState(Backend::Shader* shader) const {
+    if (!shader)
+        return;
+
+    shader->setInt("uAlphaMode", static_cast<int>(_alphaMode));
+    shader->setFloat("uAlphaCutoff", _alphaCutoff);
+    shader->setInt("uTexture", RendererTextureSlot::BaseColor);
+
+    if (_alphaMode != AlphaMode::Mask)
+        return;
+
+    Backend::Texture* texture = _material ? _material->alphaTexture() : nullptr;
+    for (const auto& [candidate, slot] : _textures) {
+        if (slot == RendererTextureSlot::BaseColor) {
+            texture = candidate;
+            break;
+        }
+    }
+    if (texture)
+        texture->bind(RendererTextureSlot::BaseColor);
 }
 
 void MeshInstancer::setColors(const std::vector<glm::vec4>& colors) {
@@ -395,8 +422,7 @@ void MeshInstancer::_consumeExternalBuffer() {
     if (view.shape.size() == 2 && view.shape[1] != 16)
         throw std::runtime_error(
             "External Mat4 buffer shape must be [N, 16] or [N, 4, 4]");
-    if (view.shape.size() == 3 &&
-        (view.shape[1] != 4 || view.shape[2] != 4))
+    if (view.shape.size() == 3 && (view.shape[1] != 4 || view.shape[2] != 4))
         throw std::runtime_error(
             "External Mat4 buffer shape must be [N, 16] or [N, 4, 4]");
     if (view.shape.size() > 3)
@@ -447,9 +473,9 @@ void MeshInstancer::_consumeExternalBuffer() {
         if (_colors.size() != static_cast<size_t>(count))
             _colors.assign(static_cast<size_t>(count), glm::vec4(1.0f));
         _colorVBO->setData(_colors.data(), sizeof(glm::vec4) * count);
-        if (!_transformVBO->setExternalData(
-                view, static_cast<size_t>(count), sizeof(glm::mat4),
-                static_cast<size_t>(strideBytes)))
+        if (!_transformVBO->setExternalData(view, static_cast<size_t>(count),
+                                            sizeof(glm::mat4),
+                                            static_cast<size_t>(strideBytes)))
             throw std::runtime_error(
                 "The active graphics backend cannot consume this external "
                 "GPU buffer");

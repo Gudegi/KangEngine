@@ -11,6 +11,7 @@
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
+#include <algorithm>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -68,6 +69,8 @@ class MeshInstancer {
     bool _useExternalTransforms = false;
     bool _doubleSided = false;
     bool _castsShadow = true;
+    AlphaMode _alphaMode = AlphaMode::Opaque;
+    float _alphaCutoff = 0.5f;
     bool _hasSkinning = false;
     bool _hasTangents = false;
     TransformSource _transformSource{};
@@ -185,6 +188,13 @@ class MeshInstancer {
     bool isDoubleSided() const { return _doubleSided; }
     void setCastsShadow(bool v) { _castsShadow = v; }
     bool castsShadow() const { return _castsShadow; }
+    void setAlphaMode(AlphaMode mode, float cutoff = 0.5f) {
+        _alphaMode = mode;
+        _alphaCutoff = std::clamp(cutoff, 0.0f, 1.0f);
+        _updateTransparency();
+    }
+    AlphaMode alphaMode() const { return _alphaMode; }
+    float alphaCutoff() const { return _alphaCutoff; }
     bool hasSkinning() const { return _hasSkinning; }
     const Geometry::AABB& localBounds() const { return _localBounds; }
     const Geometry::Sphere& localSphere() const { return _localSphere; }
@@ -218,8 +228,13 @@ class MeshInstancer {
             _shader->setInt("uTexture", RendererTextureSlot::Diffuse);
             _shader->setInt("normalMap", RendererTextureSlot::Normal);
             _shader->setInt("useNormalMap", hasNormalMap ? 1 : 0);
+            bindAlphaState(_shader);
         }
     }
+
+    // Bind the alpha state and base-color texture to an arbitrary pass shader
+    // (notably shadow and selection-mask passes).
+    void bindAlphaState(Backend::Shader* shader) const;
 
     Backend::Shader* shader() const { return _shader; }
     Material* material() const { return _material; }

@@ -310,6 +310,8 @@ class App {
                                   bool doubleSided = true);
     void setRenderableCastsShadow(RenderableHandle handle,
                                   bool castsShadow = true);
+    void setRenderableAlphaMode(RenderableHandle handle, AlphaMode mode,
+                                float cutoff = 0.5f);
     void setRenderableTexture(RenderableHandle handle, Backend::Texture* tex,
                               TextureRole role);
     void setRenderableTexture(RenderableHandle handle, Backend::Texture* tex,

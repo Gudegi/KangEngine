@@ -194,6 +194,12 @@ void Renderer::setRenderableCastsShadow(RenderableHandle handle,
         _rasterizer->setRenderableCastsShadow(handle, castsShadow);
 }
 
+void Renderer::setRenderableAlphaMode(RenderableHandle handle, AlphaMode mode,
+                                      float cutoff) {
+    if (_rasterizer)
+        _rasterizer->setRenderableAlphaMode(handle, mode, cutoff);
+}
+
 void Renderer::setRenderableTexture(RenderableHandle handle,
                                     Backend::Texture* tex, TextureRole role) {
     setRenderableTexture(handle, tex, textureRoleSlot(role));

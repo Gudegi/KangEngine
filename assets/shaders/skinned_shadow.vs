@@ -1,5 +1,6 @@
 #version 410 core
 layout(location = 0) in vec3 aPos;
+layout(location = 2) in vec2 aTexCoord;
 layout(location = 3) in vec4 aInstanceTransform0;
 layout(location = 4) in vec4 aInstanceTransform1;
 layout(location = 5) in vec4 aInstanceTransform2;
@@ -18,8 +19,11 @@ layout(std140) uniform shadowUBO {
     vec4 shadowInfo; // x: PCF samples, y: cascade count, z: use CSM
 };
 
+out vec2 TexCoord;
+
 void main() {
     mat4 model = mat4(aInstanceTransform0, aInstanceTransform1, aInstanceTransform2, aInstanceTransform3);
     gl_Position = lightSpaceMatrices[0] * model *
         skinMatrix(aBoneIndices, aBoneWeights) * vec4(aPos, 1.0);
+    TexCoord = aTexCoord;
 }

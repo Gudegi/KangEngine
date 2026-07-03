@@ -54,6 +54,8 @@ uniform int useRoughnessMap;
 uniform int useAoMap;
 uniform int useOrmMap;
 uniform int useEmissiveMap;
+uniform int uAlphaMode;
+uniform float uAlphaCutoff;
 
 uniform sampler2D shadowMap0;
 uniform sampler2D shadowMap1;
@@ -129,6 +131,8 @@ void main() {
     vec4 baseColor = uBaseColorFactor * vColor;
     if(useBaseColorMap != 0)
         baseColor *= texture(uBaseColorMap, TexCoord);
+    if(uAlphaMode == 1 && baseColor.a < uAlphaCutoff)
+        discard;
 
     float metallic = clamp(uMetallicFactor, 0.0, 1.0);
     float roughness = clamp(uRoughnessFactor, 0.04, 1.0);

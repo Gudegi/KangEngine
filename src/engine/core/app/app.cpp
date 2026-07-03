@@ -850,6 +850,11 @@ void App::setRenderableCastsShadow(RenderableHandle handle, bool castsShadow) {
     getRenderer().setRenderableCastsShadow(handle, castsShadow);
 }
 
+void App::setRenderableAlphaMode(RenderableHandle handle, AlphaMode mode,
+                                 float cutoff) {
+    getRenderer().setRenderableAlphaMode(handle, mode, cutoff);
+}
+
 void App::setRenderableTexture(RenderableHandle handle, Backend::Texture* tex,
                                TextureRole role) {
     getRenderer().setRenderableTexture(handle, tex, role);

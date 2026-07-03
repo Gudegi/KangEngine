@@ -27,6 +27,10 @@ uniform sampler2D uTexture;
 uniform sampler2D normalMap;
 uniform int useNormalMap;
 uniform int normalDebugMode;
+// 0=opaque, 1=mask, 2=blend. Mask stays in the opaque pass and discards
+// texels so cutout surfaces retain correct depth ordering.
+uniform int uAlphaMode;
+uniform float uAlphaCutoff;
 uniform sampler2D shadowMap0;
 uniform sampler2D shadowMap1;
 uniform sampler2D shadowMap2;
@@ -37,6 +41,8 @@ uniform int debugCsmCascadeTint;
 
 void main() {
     vec4 texColor = texture(uTexture, TexCoord) * vColor;
+    if(uAlphaMode == 1 && texColor.a < uAlphaCutoff)
+        discard;
     vec3 vertexNormal = normalize(Normal);
     vec3 N = vertexNormal;
     vec3 T = normalize(Tangent - dot(Tangent, N) * N);

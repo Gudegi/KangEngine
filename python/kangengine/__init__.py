@@ -112,6 +112,7 @@ ExternalBufferDesc = _set_public_module(_ke.ExternalBufferDesc, __name__)
 InteractionMode = _set_public_module(_ke.InteractionMode, __name__)
 ToneMapMode = _set_public_module(_ke.ToneMapMode, __name__)
 TextureRole = _set_public_module(_ke.TextureRole, __name__)
+AlphaMode = _set_public_module(_ke.AlphaMode, __name__)
 RayPickResult = _set_public_module(_ke.RayPickResult, __name__)
 DirectionalLight = _set_public_module(_ke.DirectionalLight, __name__)
 PointLight = _set_public_module(_ke.PointLight, __name__)
@@ -207,6 +208,7 @@ __all__ = [
     "InteractionMode",
     "ToneMapMode",
     "TextureRole",
+    "AlphaMode",
     "RayPickResult",
     "DirectionalLight",
     "PointLight",

@@ -412,6 +412,14 @@ PYBIND11_MODULE(_kangengine, m) {
                TextureRole::OcclusionRoughnessMetallic)
         .export_values();
 
+    py::enum_<AlphaMode>(
+        m, "AlphaMode",
+        "How a renderable handles fragment alpha in scene and depth passes.")
+        .value("Opaque", AlphaMode::Opaque)
+        .value("Mask", AlphaMode::Mask)
+        .value("Blend", AlphaMode::Blend)
+        .export_values();
+
     py::enum_<PBRMaterialType>(m, "PBRMaterialType",
                                "Built-in physically based material presets.")
         .value("GRAY_CARD", PBRMaterialType::GRAY_CARD)
@@ -809,6 +817,9 @@ PYBIND11_MODULE(_kangengine, m) {
         .def("set_renderable_casts_shadow", &Renderer::setRenderableCastsShadow,
              py::arg("handle"), py::arg("casts_shadow") = true,
              "Enable or disable shadow casting for a renderable.")
+        .def("set_renderable_alpha_mode", &Renderer::setRenderableAlphaMode,
+             py::arg("handle"), py::arg("mode"), py::arg("cutoff") = 0.5f,
+             "Select opaque, alpha-mask, or alpha-blend rendering.")
         .def(
             "set_renderable_texture",
             [](Renderer& self, uint32_t handle, Backend::Texture* texture,
@@ -1445,6 +1456,13 @@ py::class_<glm::vec3>(m, "vec3")
             },
             py::arg("handle"), py::arg("casts_shadow") = true,
             "Enable or disable shadow casting for a renderable.")
+        .def(
+            "set_renderable_alpha_mode",
+            [](App* self, uint32_t handle, AlphaMode mode, float cutoff) {
+                self->setRenderableAlphaMode(handle, mode, cutoff);
+            },
+            py::arg("handle"), py::arg("mode"), py::arg("cutoff") = 0.5f,
+            "Select opaque, alpha-mask, or alpha-blend rendering.")
         .def(
             "set_renderable_texture",
             [](App* self, uint32_t handle, Backend::Texture* texture,

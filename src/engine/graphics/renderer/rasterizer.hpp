@@ -256,6 +256,10 @@ class Rasterizer : public RenderPipeline {
                                   bool doubleSided = true);
     void setRenderableCastsShadow(RenderableHandle handle,
                                   bool castsShadow = true);
+    // Mask performs alpha cutoff in opaque/depth passes; Blend selects the
+    // transparent pass. Cutoff is ignored by Opaque and Blend.
+    void setRenderableAlphaMode(RenderableHandle handle, AlphaMode mode,
+                                float cutoff = 0.5f);
     void setRenderableTexture(RenderableHandle handle, Backend::Texture* tex,
                               TextureRole role);
     void setRenderableTexture(RenderableHandle handle, Backend::Texture* tex,

@@ -20,6 +20,8 @@ class Material {
     virtual void bind() = 0;
     virtual void unbind() = 0;
     virtual bool hasNormalMap() const { return false; }
+    // Texture sampled by depth-only passes when AlphaMode::Mask is active.
+    virtual Backend::Texture* alphaTexture() const { return nullptr; }
     virtual Backend::Shader* getShader() const { return _shader; }
     virtual void setShader(Backend::Shader* shader) { _shader = shader; }
 };
@@ -47,6 +49,7 @@ class PhongMaterial : public Material {
     }
 
     bool hasNormalMap() const override { return normalMap != nullptr; }
+    Backend::Texture* alphaTexture() const override { return diffuseMap; }
 
     void bind() override {
         _shader->use();
@@ -108,6 +111,7 @@ class PBRMaterial : public Material {
     Backend::Texture* emissiveTexture = nullptr;
 
     bool hasNormalMap() const override { return normalTexture != nullptr; }
+    Backend::Texture* alphaTexture() const override { return baseColorTexture; }
 
     void bind() override {
         _shader->use();

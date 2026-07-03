@@ -24,6 +24,15 @@ enum class TransformSource {
     ExternalBuffer, // Caller owns per-instance transform arrays.
 };
 
+// Controls how fragment alpha affects rasterization. Mask keeps normal opaque
+// depth behavior and rejects fragments below a cutoff; Blend uses the
+// transparent pass. Opaque remains the default for backwards compatibility.
+enum class AlphaMode {
+    Opaque,
+    Mask,
+    Blend,
+};
+
 enum class ExternalBufferFormat {
     Mat4, // float32 column-major matrices, one per instance
     PositionRotation,

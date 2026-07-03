@@ -308,6 +308,13 @@ void Rasterizer::setRenderableCastsShadow(RenderableHandle handle,
     _handleTable[handle]->setCastsShadow(castsShadow);
 }
 
+void Rasterizer::setRenderableAlphaMode(RenderableHandle handle,
+                                        AlphaMode mode, float cutoff) {
+    if (handle >= _handleTable.size())
+        return;
+    _handleTable[handle]->setAlphaMode(mode, cutoff);
+}
+
 void Rasterizer::setRenderableTexture(RenderableHandle handle,
                                       Backend::Texture* tex, TextureRole role) {
     setRenderableTexture(handle, tex, textureRoleSlot(role));
@@ -722,6 +729,7 @@ void Rasterizer::renderSelectionMaskPass(const RayPickResult& selection,
     _graphicsDevice->setStencilTest(false);
 
     maskShader->use();
+    inst->bindAlphaState(maskShader);
     inst->uploadSkinningMatrices(maskShader);
     if (inst->isDoubleSided())
         _graphicsDevice->setCullFace(false);
@@ -1014,9 +1022,11 @@ void Rasterizer::drawShadowCasters() {
         // before scene-pass frustum culling compacts the visible buffer.
         if (inst.hasSkinning() && _skinnedShadowShader) {
             _skinnedShadowShader->use();
+            inst.bindAlphaState(_skinnedShadowShader.get());
             inst.uploadSkinningMatrices(_skinnedShadowShader.get());
         } else {
             _shadowShader->use();
+            inst.bindAlphaState(_shadowShader.get());
         }
         if (inst.isDoubleSided())
             _graphicsDevice->setCullFace(false);

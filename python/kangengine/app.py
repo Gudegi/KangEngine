@@ -44,6 +44,12 @@ class RenderablePrimView:
             self._app.set_renderable_casts_shadow(handle, bool(enabled))
         return self
 
+    def set_alpha_mode(self, mode, cutoff: float = 0.5):
+        """Choose opaque, cutout-mask, or blended alpha rendering."""
+        for handle in self._handles:
+            self._app.set_renderable_alpha_mode(handle, mode, float(cutoff))
+        return self
+
     def set_texture(self, texture, role_or_slot=_ke.TextureRole.BaseColor):
         for handle in self._handles:
             self._app.set_renderable_texture(handle, texture, role_or_slot)

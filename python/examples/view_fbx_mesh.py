@@ -56,7 +56,8 @@ class FBXMeshViewer(ke.App):
 
         self.ground_shader.use()
         self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
-        self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.62, 0.82, 0.68, 1.0))
+        #self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.62, 0.82, 0.68, 1.0))
+        self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.1960, 0.3333, 0.2745, 1.0))
 
         self._configure_lighting()
         self._configure_camera()
@@ -73,18 +74,32 @@ class FBXMeshViewer(ke.App):
         textured_count = 0
         normal_mapped_count = 0
         for idx, mesh in enumerate(self.meshes):
-            prim_path = f"{FBX_ROOT_PATH}/{_safe_prim_name(mesh.name, f'mesh_{idx}')}"
-            diffuse_texture = self._load_texture(_material_texture_path(mesh, "diffuse"))
-            normal_texture = self._load_texture(_material_texture_path(mesh, "normal"))
-            shader = self.mesh_texture_shader if diffuse_texture is not None else self.mesh_shader
+            prim_path = (
+                f"{FBX_ROOT_PATH}/{_safe_prim_name(mesh.name, f'mesh_{idx}')}"
+            )
+            diffuse_path = _material_texture_path(mesh, "diffuse")
+            diffuse_texture = self._load_texture(diffuse_path)
+            normal_texture = self._load_texture(
+                _material_texture_path(mesh, "normal")
+            )
+            shader = (
+                self.mesh_texture_shader
+                if diffuse_texture is not None
+                else self.mesh_shader
+            )
             view = self.scene.add_mesh(
                 prim_path,
                 mesh.mesh_data,
                 shader,
-                color=_mesh_color(idx),
+                color=_mesh_material_color(mesh, _mesh_color(idx)),
             )
             if diffuse_texture is not None:
                 view.set_texture(diffuse_texture, 0)
+                if Path(diffuse_path).suffix.lower() in {".png", ".tga"}:
+                    # FBX does not reliably describe alpha semantics. Atlas
+                    # textures in these formats commonly use binary cutouts;
+                    # Mask keeps depth writes and clips their empty texels.
+                    view.set_alpha_mode(ke.AlphaMode.Mask, 0.5)
                 textured_count += 1
             if diffuse_texture is not None and normal_texture is not None:
                 view.set_texture(normal_texture, 5)
@@ -169,6 +184,16 @@ def _mesh_color(index: int):
         ke.vec4(0.76, 0.70, 0.60, 1.0),
     ]
     return palette[index % len(palette)]
+
+
+def _mesh_material_color(mesh, fallback):
+    material = _primary_material(mesh)
+    if material is None or material.diffuse_color is None:
+        return fallback
+    color = material.diffuse_color
+    return ke.vec4(
+        float(color[0]), float(color[1]), float(color[2]), float(color[3])
+    )
 
 
 def _primary_material(mesh):
