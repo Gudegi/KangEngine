@@ -8,13 +8,16 @@
 
 namespace KE {
 
-bool GizmoController::manipulateTransform(Camera& camera,
-                                          glm::mat4& transform) const {
+bool GizmoController::isUsing() const { return ImGuizmo::IsUsing(); }
+
+bool GizmoController::manipulateTransform(Camera& camera, glm::mat4& transform,
+                                          float x, float y, float width,
+                                          float height,
+                                          ImDrawList* drawList) const {
     ImGuizmo::SetOrthographic(false);
-    ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImGuizmo::SetDrawlist(ImGui::GetForegroundDrawList(viewport));
-    ImGuizmo::SetRect(viewport->Pos.x, viewport->Pos.y, viewport->Size.x,
-                      viewport->Size.y);
+    if (drawList)
+        ImGuizmo::SetDrawlist(drawList);
+    ImGuizmo::SetRect(x, y, width, height);
 
     const glm::mat4 view = camera.getViewMatrix();
     const glm::mat4 proj = camera.getProjMatrix();

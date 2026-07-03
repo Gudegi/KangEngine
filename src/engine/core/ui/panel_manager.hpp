@@ -15,6 +15,12 @@
 
 namespace KE {
 
+enum class UILayoutMode {
+    Viewer,  // Full-window scene view + docked panels
+    Editor,  // Scene view in an interactive viewport panel.
+    Overlay, // Full-window scene view + floating panels
+};
+
 class PanelManager {
 
     ///
@@ -23,11 +29,15 @@ class PanelManager {
 
   public:
     static constexpr const char* PANEL_SCENE = "Scene";
+    static constexpr const char* PANEL_RENDERER_DEBUG = "Renderer Debug";
+    static constexpr const char* PANEL_PERFORMANCE = "Performance";
+    static constexpr const char* PANEL_INSPECTOR = "Inspector";
+    static constexpr const char* PANEL_VIEWPORT = "Viewport";
 
   private:
     float _fontSize = 12.0f;
+    UILayoutMode _layoutMode = UILayoutMode::Viewer;
     bool _layoutInitialized = false;
-    ImVec2 _lastViewportSize = {0, 0};
 
     ///
     /// @brief list contains the each panels.
@@ -52,9 +62,12 @@ class PanelManager {
     float getDPIScale(GLFWwindow* window);
 
     ///
-    /// @brief Build the initial dock layout. Re-runs on viewport resize.
+    /// @brief Build the initial dock layout.
     ///
     void initLayout(ImGuiID dockspace_id);
+
+    Panel* findPanel(const char* name);
+    const Panel* findPanel(const char* name) const;
 
   public:
     ///
@@ -80,6 +93,11 @@ class PanelManager {
     ///
     // void addPanel(Panel* panel);
     void addPanel(std::unique_ptr<Panel> panel);
+    UILayoutMode getLayoutMode() const { return _layoutMode; }
+    void setLayoutMode(UILayoutMode mode);
+    bool isPanelOpen(const char* name) const;
+    void setPanelOpen(const char* name, bool open);
+    void resetLayout();
 
     ///
     /// @brief prepare new frames. This should be called on top of main render
@@ -109,6 +127,7 @@ class PanelManager {
     bool loadFont(const std::string& fontPath, float fontSize,
                   bool loadKorean = true);
     bool loadFont(const std::string& fontPath, bool loadKorean = true);
+    bool mergeIconFont(const std::string& fontPath);
 };
 
 } // namespace KE

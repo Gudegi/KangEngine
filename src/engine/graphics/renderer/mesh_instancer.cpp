@@ -594,6 +594,22 @@ bool MeshInstancer::findRayIntersection(const Geometry::Ray& ray,
     return hit;
 }
 
+bool MeshInstancer::findPrimInstance(Scene::Prim* prim, int& outInstanceIndex,
+                                     Geometry::AABB* outBounds) const {
+    outInstanceIndex = -1;
+    if (!prim)
+        return false;
+    for (size_t i = 0; i < _instancePrims.size(); ++i) {
+        if (_instancePrims[i] != prim)
+            continue;
+        outInstanceIndex = static_cast<int>(i);
+        if (outBounds && i < _worldBounds.size())
+            *outBounds = _worldBounds[i];
+        return true;
+    }
+    return false;
+}
+
 bool MeshInstancer::getInstanceTransform(int instanceIndex,
                                          glm::mat4& outTransform) const {
     if (instanceIndex < 0 ||

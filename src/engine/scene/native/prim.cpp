@@ -134,12 +134,16 @@ std::vector<Prim*> Prim::getChildren() const {
     return result;
 }
 
-void Prim::setMeshData(std::shared_ptr<MeshData> data) { _meshData = data; }
+void Prim::setMeshData(std::shared_ptr<MeshData> data) {
+    _meshData = std::move(data);
+    _resolvedMeshDataCache.reset();
+}
 
 std::shared_ptr<MeshData> Prim::getMeshData() const { return _meshData; }
 
 void Prim::setMeshSourcePath(const std::string& path) {
     _meshSourcePath = path;
+    _resolvedMeshDataCache.reset();
 }
 
 const std::string& Prim::getMeshSourcePath() const { return _meshSourcePath; }
@@ -151,6 +155,9 @@ std::shared_ptr<MeshData> Prim::resolveMeshData() const {
     if (_type != PrimType::MeshInstance || _meshSourcePath.empty())
         return nullptr;
 
+    if (auto cached = _resolvedMeshDataCache.lock())
+        return cached;
+
     const Prim* root = this;
     while (root->_parent)
         root = root->_parent;
@@ -159,7 +166,9 @@ std::shared_ptr<MeshData> Prim::resolveMeshData() const {
     if (!source || source == this)
         return nullptr;
 
-    return source->resolveMeshData();
+    auto resolved = source->resolveMeshData();
+    _resolvedMeshDataCache = resolved;
+    return resolved;
 }
 
 void Prim::setLightType(LightType type) {

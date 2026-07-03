@@ -59,6 +59,7 @@ class Prim {
     // 데이터 (타입에 따라 다름)
     std::shared_ptr<MeshData> _meshData;
     std::string _meshSourcePath;
+    mutable std::weak_ptr<MeshData> _resolvedMeshDataCache;
     std::unordered_map<Token, AttributeValue, Token::Hash> _Attributes;
 
     bool _renderable = false; // true for prim types that can submit geometry
@@ -198,6 +199,8 @@ class Prim {
     bool hasAttribute(const std::string& name) const {
         return hasAttribute(Token(name));
     }
+
+    const auto& getAttributes() const { return _Attributes; }
 
     bool isRenderable() const { return _renderable; }
     bool isVisible() const { return _visible; }

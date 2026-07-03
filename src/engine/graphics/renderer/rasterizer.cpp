@@ -1,4 +1,5 @@
 #include "rasterizer.hpp"
+#include <stdexcept>
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/graphics/material/material.hpp"
 #include "engine/scene/native/prim.hpp"
@@ -97,6 +98,44 @@ Rasterizer::Rasterizer(Backend::GraphicsDevice* graphicsDevice) {
 
 // Prim-based (instanced)
 
+void Rasterizer::registerPrimSource(Scene::Prim* prim, TransformSource source) {
+    if (!prim)
+        return;
+    PrimSourceRegistrations& registrations = _primSourceRegistrations[prim];
+    const bool sourceConflict = source == TransformSource::ExternalBuffer
+                                    ? registrations.sceneGraph > 0
+                                    : registrations.external > 0;
+    if (sourceConflict) {
+        const char* existingSource =
+            registrations.external > 0 ? "ExternalBuffer" : "SceneGraph";
+        const char* requestedSource = source == TransformSource::ExternalBuffer
+                                          ? "ExternalBuffer"
+                                          : "SceneGraph";
+        throw std::runtime_error(
+            "Prim '" + prim->getPath() + "' is already registered with " +
+            existingSource + "; cannot also register it with " +
+            requestedSource);
+    }
+    if (source == TransformSource::ExternalBuffer)
+        ++registrations.external;
+    else
+        ++registrations.sceneGraph;
+}
+
+void Rasterizer::unregisterPrimSource(Scene::Prim* prim,
+                                      TransformSource source) {
+    auto it = _primSourceRegistrations.find(prim);
+    if (it == _primSourceRegistrations.end())
+        return;
+    uint32_t& count = source == TransformSource::ExternalBuffer
+                          ? it->second.external
+                          : it->second.sceneGraph;
+    if (count > 0)
+        --count;
+    if (it->second.external == 0 && it->second.sceneGraph == 0)
+        _primSourceRegistrations.erase(it);
+}
+
 RenderableHandle Rasterizer::addRenderable(Backend::Shader* shader,
                                            Scene::Prim* prim,
                                            TransformSource transformSource) {
@@ -111,6 +150,7 @@ RenderableHandle Rasterizer::addRenderable(Backend::Shader* shader,
         newIt->second.init(_graphicsDevice, shader, *meshData, transformSource);
         it = newIt;
     }
+    registerPrimSource(prim, transformSource);
     it->second.addPrim(prim);
 
     auto hIt = _handleMap.find(key);
@@ -140,6 +180,7 @@ Rasterizer::addSkinnedRenderable(Backend::Shader* shader, Scene::Prim* prim,
                            transformSource);
         it = newIt;
     }
+    registerPrimSource(prim, transformSource);
     it->second.addPrim(prim);
 
     auto hIt = _handleMap.find(key);
@@ -169,6 +210,7 @@ RenderableHandle Rasterizer::addRenderable(Material* material,
                            material);
         it = newIt;
     }
+    registerPrimSource(prim, transformSource);
     it->second.addPrim(prim);
 
     auto hIt = _handleMap.find(key);
@@ -182,8 +224,9 @@ RenderableHandle Rasterizer::addRenderable(Material* material,
 }
 
 void Rasterizer::removePrim(RenderableHandle handle, Scene::Prim* prim) {
-    if (handle >= _handleTable.size())
+    if (handle >= _handleTable.size() || !_handleTable[handle])
         return;
+    unregisterPrimSource(prim, _handleTable[handle]->transformSource());
     _handleTable[handle]->removePrim(prim);
 }
 
@@ -192,6 +235,7 @@ void Rasterizer::removePrim(Scene::Prim* prim) {
         return;
     for (auto& [key, instancer] : _instancers)
         instancer.removePrim(prim);
+    _primSourceRegistrations.erase(prim);
 }
 
 void Rasterizer::updateRenderableTransforms(
@@ -209,8 +253,7 @@ void Rasterizer::setRenderableExternalBuffer(RenderableHandle handle,
     _handleTable[handle]->setExternalBuffer(desc);
 }
 
-std::vector<Sim::GpuArrayView>
-Rasterizer::mapRenderableCudaTransformBuffers(
+std::vector<Sim::GpuArrayView> Rasterizer::mapRenderableCudaTransformBuffers(
     const std::vector<RenderableHandle>& handles, int count, int deviceId,
     uint64_t streamHandle) {
     std::vector<Backend::Buffer*> buffers;
@@ -307,6 +350,40 @@ RayPickResult Rasterizer::rayPick(const Geometry::Ray& ray) const {
         best.bounds = bounds;
     }
     return best;
+}
+
+bool Rasterizer::buildPrimSelection(Scene::Prim* prim,
+                                    RayPickResult& outSelection) const {
+    outSelection = RayPickResult{};
+    for (size_t handle = 0; handle < _handleTable.size(); ++handle) {
+        const MeshInstancer* inst = _handleTable[handle];
+        if (!inst || inst->transformSource() != TransformSource::SceneGraph)
+            continue;
+
+        int instanceIndex = -1;
+        Geometry::AABB bounds;
+        if (!inst->findPrimInstance(prim, instanceIndex, &bounds))
+            continue;
+
+        outSelection.hit = true;
+        outSelection.handle = static_cast<RenderableHandle>(handle);
+        outSelection.instanceIndex = instanceIndex;
+        outSelection.transformSource = TransformSource::SceneGraph;
+        outSelection.prim = prim;
+        outSelection.bounds = bounds;
+        return true;
+    }
+    return false;
+}
+
+bool Rasterizer::getPrimTransformSource(const Scene::Prim* prim,
+                                        TransformSource& outSource) const {
+    const auto it = _primSourceRegistrations.find(prim);
+    if (it == _primSourceRegistrations.end())
+        return false;
+    outSource = it->second.external > 0 ? TransformSource::ExternalBuffer
+                                        : TransformSource::SceneGraph;
+    return true;
 }
 
 bool Rasterizer::getRenderableInstanceTransform(RenderableHandle handle,

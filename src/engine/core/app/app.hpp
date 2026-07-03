@@ -41,7 +41,11 @@ namespace Animation {
 class SkeletonMotion;
 }
 
+class ViewportPanel;
+
 class App {
+    friend class ViewportPanel;
+
   private:
     class GLFWCallbackWrapper { // https://stackoverflow.com/a/41089765
       private:
@@ -95,11 +99,17 @@ class App {
     Renderer _renderer;
     InteractionController _interaction;
     GizmoController _gizmo;
+    ViewportPanel* _editorViewportPanel = nullptr;
 
     Scene::Prim* defaultDirectionalLightPrim();
     void registerCallbacks();
     bool writeScreenshotFrame();
     void renderSelectionGizmo();
+    void renderSelectionGizmo(Camera& camera, const ImVec2& rectMin,
+                              const ImVec2& rectSize, ImDrawList* drawList);
+    bool isEditorViewportInputActive() const;
+    bool shouldBlockMouseInput() const;
+    glm::vec2 getMouseNDC() const;
     bool getPickTransform(const RayPickResult& result,
                           glm::mat4& outTransform) const;
     bool setPickTransform(const RayPickResult& result,
@@ -142,6 +152,7 @@ class App {
     Backend::GraphicsDevice* getGraphicsDevice() {
         return getRenderer().device();
     }
+    Backend::Texture* getPresentedTexture();
     Rasterizer* getRasterizer() { return getRenderer().rasterizer(); }
     const Rasterizer* getRasterizer() const {
         return getRenderer().rasterizer();
@@ -153,7 +164,19 @@ class App {
     void setInteractionMode(InteractionMode mode) {
         _interaction.setMode(mode);
     }
+    void selectPrim(Scene::Prim* prim);
+    bool isPrimSelected(const Scene::Prim* prim) const {
+        return prim && _interaction.selection().prim == prim;
+    }
+    bool getPrimTransformSource(const Scene::Prim* prim,
+                                TransformSource& outSource) const {
+        return _rasterizer &&
+               _rasterizer->getPrimTransformSource(prim, outSource);
+    }
     bool hasSelection() const { return _interaction.hasSelection(); }
+    const RayPickResult& getSelection() const {
+        return _interaction.selection();
+    }
     void clearSelection() { _interaction.clearSelection(); }
     void renderSceneToFramebuffer(Camera& camera, Backend::Framebuffer* target,
                                   int width, int height, bool clear = true);

@@ -22,6 +22,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -71,6 +72,15 @@ class Rasterizer : public RenderPipeline {
 
     std::map<InstancerKey, RenderableHandle> _handleMap;
     std::vector<MeshInstancer*> _handleTable;
+    struct PrimSourceRegistrations {
+        // To specify which track is in the Scene panel
+        uint32_t sceneGraph = 0;
+        uint32_t external = 0;
+    };
+    std::unordered_map<const Scene::Prim*, PrimSourceRegistrations>
+        _primSourceRegistrations;
+    void registerPrimSource(Scene::Prim* prim, TransformSource source);
+    void unregisterPrimSource(Scene::Prim* prim, TransformSource source);
     DebugRenderer _debugRenderer;
 
     std::unique_ptr<Backend::Buffer> _cameraUBO;
@@ -294,6 +304,10 @@ class Rasterizer : public RenderPipeline {
 
     void updateFrameData(const glm::mat4& view, const glm::mat4& proj);
     void render(const glm::mat4& view, const glm::mat4& proj) override;
+    bool buildPrimSelection(Scene::Prim* prim,
+                            RayPickResult& outSelection) const;
+    bool getPrimTransformSource(const Scene::Prim* prim,
+                                TransformSource& outSource) const;
     void renderSelectionMaskPass(const RayPickResult& selection,
                                  Backend::Framebuffer* target, int width,
                                  int height);
