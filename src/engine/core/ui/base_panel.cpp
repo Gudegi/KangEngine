@@ -1,4 +1,6 @@
 #include "base_panel.hpp"
+#define IMVIEWGUIZMO_IMPLEMENTATION
+#include "ImViewGuizmo.h"
 #include "imgui.h"
 #include "engine/core/app/app.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
@@ -16,6 +18,21 @@
 
 namespace KE {
 namespace {
+
+glm::vec3 toViewGuizmoSpace(const glm::vec3& value, UpAxis upAxis) {
+    // ImViewGuizmo is right-handed, Y-up and -Z-forward. Keep Y-up scenes as
+    // they are. The cyclic permutation for Z-up preserves handedness and maps
+    // all three positive scene axes to positive gizmo axes.
+    if (upAxis == UpAxis::Z)
+        return {value.y, value.z, value.x};
+    return value;
+}
+
+glm::vec3 fromViewGuizmoSpace(const glm::vec3& value, UpAxis upAxis) {
+    if (upAxis == UpAxis::Z)
+        return {value.z, value.x, value.y};
+    return value;
+}
 
 const char* primTypeLabel(Scene::PrimType type) {
     switch (type) {
@@ -624,9 +641,10 @@ void MenuBarPanel::buildPanel() {
     }
 }
 
-ViewportPanel::ViewportPanel(App* app, std::string name,
+ViewportPanel::ViewportPanel(App* app, Camera* camera, std::string name,
                              std::string cameraLabel)
-    : Panel(std::move(name)), _app(app), _cameraLabel(std::move(cameraLabel)) {
+    : Panel(std::move(name)), _app(app), _camera(camera),
+      _cameraLabel(std::move(cameraLabel)) {
     setOpen(false);
 }
 
@@ -639,6 +657,7 @@ void ViewportPanel::setCameraLabel(std::string cameraLabel) {
 void ViewportPanel::buildPanel() {
     _hovered = false;
     _focused = false;
+    _viewGuizmoCapturesMouse = false;
     if (!ImGui::Begin(name().c_str(), openPtr())) {
         ImGui::End();
         return;
@@ -741,14 +760,90 @@ void ViewportPanel::buildPanel() {
                 ImGui::TextDisabled("%s", _cameraLabel.c_str());
             }
         }
+
+        constexpr float viewGuizmoScale = 0.5f;
+        ImViewGuizmo::Style& guizmoStyle = ImViewGuizmo::GetStyle();
+        guizmoStyle.scale = viewGuizmoScale;
+
+        // Rotate() names this argument `position`, but the implementation uses
+        // it as the gizmo center. Include the axis-handle radius in the bounds.
+        const float guizmoExtent =
+            (128.0f + guizmoStyle.circleRadius) * guizmoStyle.scale;
+        const float guizmoMargin = style.ItemSpacing.x;
+        if (_camera &&
+            _imageSize.x >= 2.0f * (guizmoExtent + guizmoMargin) &&
+            _imageSize.y >= 2.0f * (guizmoExtent + guizmoMargin)) {
+            const ImVec2 imageMax(_imageMin.x + _imageSize.x,
+                                  _imageMin.y + _imageSize.y);
+            const ImVec2 guizmoCenter(imageMax.x - guizmoExtent - guizmoMargin,
+                                      _imageMin.y + guizmoExtent +
+                                          guizmoMargin);
+
+            Camera& camera = *_camera;
+            const UpAxis upAxis = camera.getUpAxis();
+            if (upAxis == UpAxis::Z) {
+                // Gizmo X/Y/Z correspond to scene Y/Z/X after the cyclic
+                // conversion above. Remap labels and conventional axis colors
+                // so the widget still describes scene-space axes.
+                guizmoStyle.axisLabels[0] = "Y";
+                guizmoStyle.axisLabels[1] = "-Y";
+                guizmoStyle.axisLabels[2] = "Z";
+                guizmoStyle.axisLabels[3] = "-Z";
+                guizmoStyle.axisLabels[4] = "X";
+                guizmoStyle.axisLabels[5] = "-X";
+                guizmoStyle.axisColors[0] = IM_COL32(140, 206, 40, 255);
+                guizmoStyle.axisColors[1] = IM_COL32(49, 155, 249, 255);
+                guizmoStyle.axisColors[2] = IM_COL32(233, 62, 85, 255);
+            } else {
+                guizmoStyle.axisLabels[0] = "X";
+                guizmoStyle.axisLabels[1] = "-X";
+                guizmoStyle.axisLabels[2] = "Y";
+                guizmoStyle.axisLabels[3] = "-Y";
+                guizmoStyle.axisLabels[4] = "Z";
+                guizmoStyle.axisLabels[5] = "-Z";
+                guizmoStyle.axisColors[0] = IM_COL32(233, 62, 85, 255);
+                guizmoStyle.axisColors[1] = IM_COL32(140, 206, 40, 255);
+                guizmoStyle.axisColors[2] = IM_COL32(49, 155, 249, 255);
+            }
+            glm::vec3 cameraPosition =
+                toViewGuizmoSpace(camera.getCameraPos(), upAxis);
+            const glm::vec3 pivot =
+                toViewGuizmoSpace(camera.getTargetPos(), upAxis);
+            const glm::vec3 lookDirection = pivot - cameraPosition;
+
+            if (glm::length2(lookDirection) > 1.0e-8f) {
+                const glm::vec3 cameraUp =
+                    toViewGuizmoSpace(camera.getCameraUpDir(), upAxis);
+                glm::quat cameraRotation = glm::quatLookAt(
+                    glm::normalize(lookDirection), glm::normalize(cameraUp));
+
+                ImViewGuizmo::BeginFrame();
+                ImGui::GetWindowDrawList()->PushClipRect(_imageMin, imageMax,
+                                                         true);
+                const bool cameraModified = ImViewGuizmo::Rotate(
+                    cameraPosition, cameraRotation, pivot, guizmoCenter);
+                ImGui::GetWindowDrawList()->PopClipRect();
+
+                _viewGuizmoCapturesMouse =
+                    ImViewGuizmo::IsUsing() || ImViewGuizmo::IsOver();
+                if (cameraModified) {
+                    // This Camera is target-based, so keeping the target fixed
+                    // and applying the new orbit position is sufficient. Its
+                    // view matrix, pole and azimuth are refreshed by the
+                    // setter.
+                    camera.setCameraPos(
+                        fromViewGuizmoSpace(cameraPosition, upAxis));
+                }
+            }
+        }
     }
 
     const ImVec2 imageMax(_imageMin.x + _imageSize.x,
                           _imageMin.y + _imageSize.y);
     _hovered = ImGui::IsWindowHovered() &&
                ImGui::IsMouseHoveringRect(_imageMin, imageMax);
-    if (_app)
-        _app->renderSelectionGizmo(_imageMin, _imageSize,
+    if (_app && _camera)
+        _app->renderSelectionGizmo(*_camera, _imageMin, _imageSize,
                                    ImGui::GetWindowDrawList());
     ImGui::End();
 }

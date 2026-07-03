@@ -105,8 +105,8 @@ class App {
     void registerCallbacks();
     bool writeScreenshotFrame();
     void renderSelectionGizmo();
-    void renderSelectionGizmo(const ImVec2& rectMin, const ImVec2& rectSize,
-                              ImDrawList* drawList);
+    void renderSelectionGizmo(Camera& camera, const ImVec2& rectMin,
+                              const ImVec2& rectSize, ImDrawList* drawList);
     bool isEditorViewportInputActive() const;
     bool shouldBlockMouseInput() const;
     glm::vec2 getMouseNDC() const;

@@ -181,7 +181,7 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     _panelManager.mergeIconFont(
         KE::getAssetPath("fonts/IconFont/fa-solid-900.ttf"));
     _panelManager.addPanel(std::make_unique<MenuBarPanel>(this));
-    auto viewportPanel = std::make_unique<ViewportPanel>(this);
+    auto viewportPanel = std::make_unique<ViewportPanel>(this, &_camera);
     _editorViewportPanel = viewportPanel.get();
     _panelManager.addPanel(std::move(viewportPanel));
     _panelManager.addPanel(std::make_unique<ScenePanel>(this));
@@ -1266,6 +1266,10 @@ bool App::isEditorViewportInputActive() const {
 }
 
 bool App::shouldBlockMouseInput() const {
+    if (_editorViewportPanel &&
+        _editorViewportPanel->viewGuizmoCapturesMouse()) {
+        return true;
+    }
     return ImGui::GetIO().WantCaptureMouse && !isEditorViewportInputActive();
 }
 
@@ -1370,19 +1374,22 @@ bool App::setPickTransform(const RayPickResult& result,
 
 void App::renderSelectionGizmo() {
     ImGuiViewport* mainViewport = ImGui::GetMainViewport();
-    renderSelectionGizmo(mainViewport->Pos, mainViewport->Size, nullptr);
+    renderSelectionGizmo(_camera, mainViewport->Pos, mainViewport->Size,
+                         nullptr);
 }
 
-void App::renderSelectionGizmo(const ImVec2& rectMin, const ImVec2& rectSize,
-                               ImDrawList* drawList) {
-    if (_hideUI || !_interaction.hasEditableSelection())
+void App::renderSelectionGizmo(Camera& camera, const ImVec2& rectMin,
+                               const ImVec2& rectSize, ImDrawList* drawList) {
+    if (_hideUI || !_interaction.hasEditableSelection() ||
+        (_editorViewportPanel &&
+         _editorViewportPanel->viewGuizmoCapturesMouse()))
         return;
 
     glm::mat4 transform(1.0f);
     if (!getPickTransform(_interaction.selection(), transform))
         return;
 
-    if (_gizmo.manipulateTransform(_camera, transform, rectMin.x, rectMin.y,
+    if (_gizmo.manipulateTransform(camera, transform, rectMin.x, rectMin.y,
                                    rectSize.x, rectSize.y, drawList)) {
         setPickTransform(_interaction.selection(), transform);
     }
