@@ -28,6 +28,7 @@ set(VCPKG_BUILD_TYPE release)
 set(ASSETS_DIR "${CMAKE_SOURCE_DIR}/assets")
 set(ASSETS_SIMLINK_DIR "${CMAKE_BINARY_DIR}/../assets")
 set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
+set(THIRDPARTY_DIR "${CMAKE_SOURCE_DIR}/third_party")
 set(MAIN_DIR "${CMAKE_SOURCE_DIR}/examples")
 set(BIND_DIR "${CMAKE_SOURCE_DIR}/bindings")
 
@@ -189,6 +190,9 @@ set_target_properties(engine_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(engine_core PUBLIC
     ${SRC_DIR}
     ${Stb_INCLUDE_DIR}
+)
+target_include_directories(engine_core SYSTEM PRIVATE
+    ${THIRDPARTY_DIR}/IconFontCppHeaders
 )
 target_link_libraries(engine_core PUBLIC
     build_configs

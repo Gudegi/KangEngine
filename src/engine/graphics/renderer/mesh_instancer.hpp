@@ -170,6 +170,8 @@ class MeshInstancer {
                              float& outDistance,
                              Geometry::AABB* outBounds = nullptr,
                              Scene::Prim** outPrim = nullptr) const;
+    bool findPrimInstance(Scene::Prim* prim, int& outInstanceIndex,
+                          Geometry::AABB* outBounds = nullptr) const;
     bool getInstanceTransform(int instanceIndex, glm::mat4& outTransform) const;
     bool setInstanceTransform(int instanceIndex, const glm::mat4& transform);
     TransformSource transformSource() const { return _transformSource; }

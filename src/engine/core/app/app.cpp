@@ -178,10 +178,16 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     _measuredRenderFPS = 0.0f;
     _panelManager.init(this->getWindow());
     _panelManager.loadFont(KE::getAssetPath("fonts/godoFont/GodoM.ttf"), true);
+    _panelManager.mergeIconFont(
+        KE::getAssetPath("fonts/IconFont/fa-solid-900.ttf"));
     _panelManager.addPanel(std::make_unique<MenuBarPanel>(this));
+    auto viewportPanel = std::make_unique<ViewportPanel>(this);
+    _editorViewportPanel = viewportPanel.get();
+    _panelManager.addPanel(std::move(viewportPanel));
     _panelManager.addPanel(std::make_unique<ScenePanel>(this));
     _panelManager.addPanel(std::make_unique<PerformancePanel>(this));
     _panelManager.addPanel(std::make_unique<RendererDebugPanel>(this));
+    _panelManager.addPanel(std::make_unique<InspectorPanel>(this));
 
     _graphicsDevice->setDepthTest(true);
     _graphicsDevice->setStencilTest(false);
@@ -319,7 +325,9 @@ void App::renderFrameOnce() {
     if (_postProcessor && _selectionOutlineProcessor &&
         _selectionOutlineProcessor->config().enabled &&
         _selectionMaskFramebuffer && _rasterizer &&
-        _interaction.hasSelection()) {
+        _interaction.hasSelection() &&
+        _interaction.selection().handle != InvalidHandle &&
+        _interaction.selection().instanceIndex >= 0) {
         _rasterizer->renderSelectionMaskPass(_interaction.selection(),
                                              _selectionMaskFramebuffer.get(),
                                              _width, _height);
@@ -329,16 +337,26 @@ void App::renderFrameOnce() {
         finalSource = _selectionOutlineProcessor->getResult();
     }
 
+    const bool editorViewportMode =
+        !_hideUI && _panelManager.getLayoutMode() == UILayoutMode::Editor;
+
     if (_postProcessor) {
         const RendererSettings& settings = getRenderer().settings();
         _postProcessor->process(finalSource, settings.gamma,
                                 settings.toneMapMode, settings.toneMapExposure,
                                 settings.bloom);
-        _postProcessor->blitToScreen(_width, _height);
         _lastPresentedFramebuffer = _postProcessor->getOutputFramebuffer();
+        if (!editorViewportMode)
+            _postProcessor->blitToScreen(_width, _height);
     } else {
-        _framebuffer->blitToScreen(_width, _height);
         _lastPresentedFramebuffer = _framebuffer.get();
+        if (!editorViewportMode)
+            _framebuffer->blitToScreen(_width, _height);
+    }
+
+    if (editorViewportMode) {
+        _graphicsDevice->setViewport(0, 0, _width, _height);
+        _graphicsDevice->clear(0.1f, 0.1f, 0.13f, 1.0f);
     }
 
     if (_screenshotRequested) {
@@ -349,7 +367,8 @@ void App::renderFrameOnce() {
     // default framebuffer
     if (!_hideUI) {
         _panelManager.render();
-        renderSelectionGizmo();
+        if (_panelManager.getLayoutMode() != UILayoutMode::Editor)
+            renderSelectionGizmo();
         _panelManager.postRender();
     }
     this->postRender();
@@ -369,8 +388,7 @@ void App::renderFrameOnce() {
     const double fpsNow = glfwGetTime();
     const double fpsElapsed = fpsNow - _fpsWindowStart;
     if (fpsElapsed >= 1.0) {
-        _measuredRenderFPS =
-            static_cast<float>(_fpsWindowFrames / fpsElapsed);
+        _measuredRenderFPS = static_cast<float>(_fpsWindowFrames / fpsElapsed);
         _fpsWindowFrames = 0;
         _fpsWindowStart = fpsNow;
     }
@@ -433,6 +451,12 @@ bool App::writeScreenshotFrame() {
 }
 
 float App::getDeltaTime() const { return _renderVariable->deltaTime; }
+
+Backend::Texture* App::getPresentedTexture() {
+    return _lastPresentedFramebuffer
+               ? _lastPresentedFramebuffer->getColorTexture()
+               : nullptr;
+}
 
 void App::setCameraMoveSpeed(float speed) {
     _cameraMoveSpeed = std::max(0.0f, speed);
@@ -970,7 +994,7 @@ void App::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
 }
 
 void App::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
-    if (ImGui::GetIO().WantCaptureMouse)
+    if (shouldBlockMouseInput())
         return;
 
     /*
@@ -1015,7 +1039,7 @@ void App::mouseButtonCallback(GLFWwindow* window, int button, int action,
             (mods & GLFW_MOD_SHIFT) != 0 ||
             glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
             glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
-        if (!ImGui::GetIO().WantCaptureMouse && shiftPressed) {
+        if (!shouldBlockMouseInput() && shiftPressed) {
             _mousePickRequested = true;
             _io->isPickMode = true;
         }
@@ -1065,8 +1089,8 @@ void App::processInput() {
         _io->isPickMode = false;
     }
 
-    // Prevent manipulations while ImGui using the mouse.
-    if (ImGui::GetIO().WantCaptureMouse) {
+    // Let ImGui own mouse input except over the editor viewport image.
+    if (shouldBlockMouseInput()) {
         return;
     }
     float cameraSpeed =
@@ -1089,6 +1113,9 @@ void App::processInput() {
         }
     }
     _io->isEscKeyPressed = escPressed;
+
+    if (_gizmo.isUsing())
+        return;
 
     // look at specifc target or // look at forward direction
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
@@ -1220,6 +1247,46 @@ void App::processInput() {
     }
 }
 
+bool App::isEditorViewportInputActive() const {
+    if (_hideUI || _panelManager.getLayoutMode() != UILayoutMode::Editor ||
+        !_editorViewportPanel || !_editorViewportPanel->isOpen()) {
+        return false;
+    }
+
+    const ImVec2 imageMin = _editorViewportPanel->imageMin();
+    const ImVec2 imageSize = _editorViewportPanel->imageSize();
+    const double imageMaxX = imageMin.x + imageSize.x;
+    const double imageMaxY = imageMin.y + imageSize.y;
+    const bool popupOpen = ImGui::IsPopupOpen(
+        nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);
+    return !popupOpen && _editorViewportPanel->isHovered() &&
+           imageSize.x > 0.0f && imageSize.y > 0.0f &&
+           _io->mouseX >= imageMin.x && _io->mouseX < imageMaxX &&
+           _io->mouseY >= imageMin.y && _io->mouseY < imageMaxY;
+}
+
+bool App::shouldBlockMouseInput() const {
+    return ImGui::GetIO().WantCaptureMouse && !isEditorViewportInputActive();
+}
+
+glm::vec2 App::getMouseNDC() const {
+    // Fit to editor viewport panel
+    if (_panelManager.getLayoutMode() == UILayoutMode::Editor &&
+        _editorViewportPanel && _editorViewportPanel->isOpen()) {
+        const ImVec2 imageMin = _editorViewportPanel->imageMin();
+        const ImVec2 imageSize = _editorViewportPanel->imageSize();
+        if (imageSize.x > 0.0f && imageSize.y > 0.0f) {
+            const float x = static_cast<float>(_io->mouseX) - imageMin.x;
+            const float y = static_cast<float>(_io->mouseY) - imageMin.y;
+            return glm::vec2((x / imageSize.x) * 2.0f - 1.0f,
+                             1.0f - (y / imageSize.y) * 2.0f);
+        }
+    }
+    return glm::vec2(
+        (static_cast<float>(_io->mouseX) / _logicalWidth) * 2.0f - 1.0f,
+        1.0f - (static_cast<float>(_io->mouseY) / _logicalHeight) * 2.0f);
+}
+
 glm::vec2 App::getScreenToNDC(float scrX, float scrY) {
     // screen[0, 1] space to NDC[-1, 1] in xy-plane
     float x = (scrX / _logicalWidth) * 2.0f - 1.0f;
@@ -1228,7 +1295,7 @@ glm::vec2 App::getScreenToNDC(float scrX, float scrY) {
 }
 
 Geometry::Ray App::getMouseRay() {
-    glm::vec2 ndc = getScreenToNDC(_io->mouseX, _io->mouseY);
+    glm::vec2 ndc = getMouseNDC();
     glm::mat4 invProj = glm::inverse(_camera.getProjMatrix());
     glm::mat4 invView = glm::inverse(_camera.getViewMatrix());
     // ndc to cam space
@@ -1250,6 +1317,23 @@ RayPickResult App::rayPick(const Geometry::Ray& ray) const {
 }
 
 RayPickResult App::pickMouse() { return rayPick(getMouseRay()); }
+
+void App::selectPrim(Scene::Prim* prim) {
+    if (!prim) {
+        _interaction.clearSelection();
+        return;
+    }
+
+    RayPickResult selection;
+    if (!_rasterizer || !_rasterizer->buildPrimSelection(prim, selection)) {
+        selection.hit = true;
+        selection.transformSource = TransformSource::SceneGraph;
+        selection.prim = prim;
+    }
+    _interaction.setLastPick(selection);
+    _interaction.select(selection);
+    onRayPicked(selection);
+}
 
 bool App::getPickTransform(const RayPickResult& result,
                            glm::mat4& outTransform) const {
@@ -1285,6 +1369,12 @@ bool App::setPickTransform(const RayPickResult& result,
 }
 
 void App::renderSelectionGizmo() {
+    ImGuiViewport* mainViewport = ImGui::GetMainViewport();
+    renderSelectionGizmo(mainViewport->Pos, mainViewport->Size, nullptr);
+}
+
+void App::renderSelectionGizmo(const ImVec2& rectMin, const ImVec2& rectSize,
+                               ImDrawList* drawList) {
     if (_hideUI || !_interaction.hasEditableSelection())
         return;
 
@@ -1292,7 +1382,8 @@ void App::renderSelectionGizmo() {
     if (!getPickTransform(_interaction.selection(), transform))
         return;
 
-    if (_gizmo.manipulateTransform(_camera, transform)) {
+    if (_gizmo.manipulateTransform(_camera, transform, rectMin.x, rectMin.y,
+                                   rectSize.x, rectSize.y, drawList)) {
         setPickTransform(_interaction.selection(), transform);
     }
 }

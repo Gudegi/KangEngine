@@ -32,6 +32,7 @@ void main() {
     float neighbor = 0.0;
 
     int radius = int(clamp(ceil(uOutlineRadius), 1.0, 8.0));
+    // TODO : Too heavy, use separable pass(ping-phong FBO)
     for (int y = -radius; y <= radius; ++y) {
         for (int x = -radius; x <= radius; ++x) {
             vec2 offset = vec2(float(x), float(y)) * uTexelSize;

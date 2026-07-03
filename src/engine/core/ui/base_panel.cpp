@@ -1,9 +1,18 @@
 #include "base_panel.hpp"
 #include "imgui.h"
 #include "engine/core/app/app.hpp"
+#include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
+#include "engine/scene/native/xform_token.hpp"
+#include <IconsFontAwesome7.h>
+#include <algorithm>
+#include <cfloat>
 #include <cstdio>
 #include <cstdint>
+#include <glm/gtx/matrix_decompose.hpp>
+#include <glm/gtx/quaternion.hpp>
+#include <type_traits>
+#include <vector>
 
 namespace KE {
 namespace {
@@ -26,14 +35,92 @@ const char* primTypeLabel(Scene::PrimType type) {
     return "Unknown";
 }
 
+bool drawAttributeValue(const std::string& name,
+                        Scene::AttributeValue& attribute, bool editable) {
+    bool changed = false;
+    if (!editable)
+        ImGui::BeginDisabled();
+
+    std::visit(
+        [&](auto& value) {
+            using T = std::decay_t<decltype(value)>;
+            if constexpr (std::is_same_v<T, bool>) {
+                changed = ImGui::Checkbox("##Value", &value);
+            } else if constexpr (std::is_same_v<T, int>) {
+                ImGui::SetNextItemWidth(-FLT_MIN);
+                changed = ImGui::DragInt("##Value", &value, 1.0f);
+            } else if constexpr (std::is_same_v<T, float>) {
+                ImGui::SetNextItemWidth(-FLT_MIN);
+                changed = ImGui::DragFloat("##Value", &value, 0.01f);
+            } else if constexpr (std::is_same_v<T, std::string>) {
+                ImGui::TextWrapped("%s", value.c_str());
+            } else if constexpr (std::is_same_v<T, glm::vec3>) {
+                ImGui::SetNextItemWidth(-FLT_MIN);
+                if (name.find("color") != std::string::npos)
+                    changed = ImGui::ColorEdit3("##Value", &value.x);
+                else
+                    changed = ImGui::DragFloat3("##Value", &value.x, 0.01f);
+            } else if constexpr (std::is_same_v<T, glm::vec4>) {
+                ImGui::SetNextItemWidth(-FLT_MIN);
+                if (name.find("color") != std::string::npos)
+                    changed = ImGui::ColorEdit4("##Value", &value.x);
+                else
+                    changed = ImGui::DragFloat4("##Value", &value.x, 0.01f);
+            } else if constexpr (std::is_same_v<T, glm::quat>) {
+                float components[4] = {value.x, value.y, value.z, value.w};
+                ImGui::SetNextItemWidth(-FLT_MIN);
+                if (ImGui::DragFloat4("##Value", components, 0.01f)) {
+                    const glm::quat candidate(components[3], components[0],
+                                              components[1], components[2]);
+                    if (glm::length(candidate) > 1e-6f) {
+                        value = glm::normalize(candidate);
+                        changed = true;
+                    }
+                }
+            } else if constexpr (std::is_same_v<T, glm::mat4>) {
+                for (int row = 0; row < 4; ++row) {
+                    ImGui::Text("%.3f  %.3f  %.3f  %.3f", value[0][row],
+                                value[1][row], value[2][row], value[3][row]);
+                }
+            } else if constexpr (std::is_same_v<T, std::vector<std::string>>) {
+                if (value.empty())
+                    ImGui::TextDisabled("(empty)");
+                for (const std::string& item : value)
+                    ImGui::TextUnformatted(item.c_str());
+            }
+        },
+        attribute);
+
+    if (!editable)
+        ImGui::EndDisabled();
+    return changed;
+}
+
+bool decomposeTransform(const glm::mat4& matrix, glm::vec3& translation,
+                        glm::vec3& rotationDegrees, glm::vec3& scale) {
+    glm::quat rotation;
+    glm::vec3 skew;
+    glm::vec4 perspective;
+    if (!glm::decompose(matrix, scale, rotation, translation, skew,
+                        perspective)) {
+        return false;
+    }
+    rotationDegrees = glm::degrees(glm::eulerAngles(glm::normalize(rotation)));
+    return true;
+}
+
 } // namespace
 
-PerformancePanel::PerformancePanel(App* app) : Panel("Performance"), _app(app) {}
+PerformancePanel::PerformancePanel(App* app)
+    : Panel("Performance"), _app(app) {}
 
 PerformancePanel::~PerformancePanel() {}
 
 void PerformancePanel::buildPanel() {
-    ImGui::Begin(name().c_str());
+    if (!ImGui::Begin(name().c_str(), openPtr())) {
+        ImGui::End();
+        return;
+    }
     ImGui::Text("Performance");
     ImGui::Separator();
     if (_app) {
@@ -61,57 +148,68 @@ void RendererDebugPanel::buildPanel() {
     if (!_app)
         return;
 
-    ImGui::Begin(name().c_str());
-
-    ImGui::SeparatorText("Controls");
-    ImGui::Checkbox("Wireframe", &_app->_renderWireframe);
-    const char* interactionLabels[] = {"Inspect", "Edit", "Force"};
-    int interactionMode = static_cast<int>(_app->getInteractionMode());
-    if (ImGui::Combo("Interaction Mode", &interactionMode, interactionLabels,
-                     3)) {
-        _app->setInteractionMode(static_cast<InteractionMode>(interactionMode));
+    if (!ImGui::Begin(name().c_str(), openPtr())) {
+        ImGui::End();
+        return;
     }
-    ImGui::DragFloat("Camera Move Speed", &_app->_cameraMoveSpeed, 0.2f, 0.0f,
-                     500.0f, "%.2f");
 
-    ImGui::SeparatorText("Post Processing");
+    constexpr ImGuiTreeNodeFlags defaultOpen = ImGuiTreeNodeFlags_DefaultOpen;
     RendererSettings& rendererSettings = _app->getRenderer().settings();
-    ImGui::SliderFloat("GammaCorrection", &rendererSettings.gamma, 0.f, 5.f);
-    const char* toneMapLabels[] = {"None", "Reinhard Simple", "Exponential",
-                                   "ACES Narkowicz", "ACES Hill"};
-    int toneMapMode = static_cast<int>(rendererSettings.toneMapMode);
-    if (ImGui::Combo("Tone Mapping", &toneMapMode, toneMapLabels, 5)) {
-        rendererSettings.toneMapMode = static_cast<ToneMapMode>(toneMapMode);
-    }
-    if (rendererSettings.toneMapMode != ToneMapMode::None) {
-        ImGui::SliderFloat("Exposure(Tone mapping)",
-                           &rendererSettings.toneMapExposure, 0.f, 5.f);
-    }
-    ImGui::Checkbox("Bloom", &rendererSettings.bloom.enabled);
-    if (rendererSettings.bloom.enabled) {
-        ImGui::SliderFloat("Bloom Threshold", &rendererSettings.bloom.threshold,
-                           0.0f, 10.0f);
-        ImGui::SliderFloat("Bloom Intensity", &rendererSettings.bloom.intensity,
-                           0.0f, 2.0f);
-        ImGui::SliderInt("Bloom Iterations", &rendererSettings.bloom.iterations,
-                         0, 16);
-        ImGui::SliderInt("Bloom Downsample", &rendererSettings.bloom.downsample,
-                         1, 8);
+
+    if (ImGui::CollapsingHeader("Controls", defaultOpen)) {
+        ImGui::Checkbox("Wireframe", &_app->_renderWireframe);
+        const char* interactionLabels[] = {"Inspect", "Edit", "Force"};
+        int interactionMode = static_cast<int>(_app->getInteractionMode());
+        if (ImGui::Combo("Interaction Mode", &interactionMode,
+                         interactionLabels, 3)) {
+            _app->setInteractionMode(
+                static_cast<InteractionMode>(interactionMode));
+        }
+        ImGui::DragFloat("Camera Move Speed", &_app->_cameraMoveSpeed, 0.2f,
+                         0.0f, 500.0f, "%.2f");
     }
 
-    ImGui::SeparatorText("Selection");
-    if (SelectionOutlineProcessor* outline =
-            _app->getRenderer().selectionOutline()) {
-        SelectionOutlineConfig& config = outline->config();
-        ImGui::Checkbox("Selection Outline", &config.enabled);
-        float outlineColor[4] = {config.color.r, config.color.g, config.color.b,
-                                 config.color.a};
-        if (ImGui::ColorEdit4("Selection Outline Color", outlineColor)) {
-            config.color = glm::vec4(outlineColor[0], outlineColor[1],
-                                     outlineColor[2], outlineColor[3]);
+    if (ImGui::CollapsingHeader("Post Processing", defaultOpen)) {
+        ImGui::SliderFloat("Gamma Correction", &rendererSettings.gamma, 0.f,
+                           5.f);
+        const char* toneMapLabels[] = {"None", "Reinhard Simple", "Exponential",
+                                       "ACES Narkowicz", "ACES Hill"};
+        int toneMapMode = static_cast<int>(rendererSettings.toneMapMode);
+        if (ImGui::Combo("Tone Mapping", &toneMapMode, toneMapLabels, 5)) {
+            rendererSettings.toneMapMode =
+                static_cast<ToneMapMode>(toneMapMode);
         }
-        ImGui::SliderFloat("Selection Outline Radius", &config.radius, 1.0f,
-                           8.0f, "%.1f px");
+        if (rendererSettings.toneMapMode != ToneMapMode::None) {
+            ImGui::SliderFloat("Tone Map Exposure",
+                               &rendererSettings.toneMapExposure, 0.f, 5.f);
+        }
+        ImGui::Checkbox("Bloom", &rendererSettings.bloom.enabled);
+        if (rendererSettings.bloom.enabled) {
+            ImGui::SliderFloat("Bloom Threshold",
+                               &rendererSettings.bloom.threshold, 0.0f, 10.0f);
+            ImGui::SliderFloat("Bloom Intensity",
+                               &rendererSettings.bloom.intensity, 0.0f, 2.0f);
+            ImGui::SliderInt("Bloom Iterations",
+                             &rendererSettings.bloom.iterations, 0, 16);
+            ImGui::SliderInt("Bloom Downsample",
+                             &rendererSettings.bloom.downsample, 1, 8);
+        }
+    }
+
+    if (ImGui::CollapsingHeader("Selection")) {
+        if (SelectionOutlineProcessor* outline =
+                _app->getRenderer().selectionOutline()) {
+            SelectionOutlineConfig& config = outline->config();
+            ImGui::Checkbox("Selection Outline", &config.enabled);
+            float outlineColor[4] = {config.color.r, config.color.g,
+                                     config.color.b, config.color.a};
+            if (ImGui::ColorEdit4("Selection Outline Color", outlineColor)) {
+                config.color = glm::vec4(outlineColor[0], outlineColor[1],
+                                         outlineColor[2], outlineColor[3]);
+            }
+            ImGui::SliderFloat("Selection Outline Radius", &config.radius, 1.0f,
+                               8.0f, "%.1f px");
+        }
     }
 
     Rasterizer* rasterizer = _app->getRenderer().rasterizer();
@@ -125,109 +223,268 @@ void RendererDebugPanel::buildPanel() {
     float color[3] = {light.color.r, light.color.g, light.color.b};
     glm::vec3 ambient = light.ambient;
 
-    ImGui::SeparatorText("Lighting");
-    if (ImGui::DragFloat3("Sun Direction (toward light)", &direction.x,
-                          0.02f)) {
-        _app->setLightDirection(direction);
-    }
-    if (ImGui::ColorEdit3("Light Color", color)) {
-        _app->setLightColor(glm::vec3(color[0], color[1], color[2]));
-    }
-    if (ImGui::SliderFloat("Light Intensity", &light.intensity, 0.0f, 2.0f)) {
-        _app->setLightIntensity(light.intensity);
-    }
-    if (ImGui::ColorEdit3("Ambient", &ambient.x)) {
-        _app->setLightAmbient(ambient);
+    if (ImGui::CollapsingHeader("Lighting", defaultOpen)) {
+        if (ImGui::DragFloat3("Sun Direction (toward light)", &direction.x,
+                              0.02f)) {
+            _app->setLightDirection(direction);
+        }
+        if (ImGui::ColorEdit3("Light Color", color)) {
+            _app->setLightColor(glm::vec3(color[0], color[1], color[2]));
+        }
+        if (ImGui::SliderFloat("Light Intensity", &light.intensity, 0.0f,
+                               2.0f)) {
+            _app->setLightIntensity(light.intensity);
+        }
+        if (ImGui::ColorEdit3("Ambient", &ambient.x)) {
+            _app->setLightAmbient(ambient);
+        }
     }
 
-    ImGui::SeparatorText("Shadows");
     float distance = rasterizer->getShadowDistance();
-    if (ImGui::SliderFloat("Shadow Distance (Set 0 to disable shadow)",
-                           &distance, 0.0f, 300.0f)) {
-        rasterizer->setShadowDistance(distance);
-    }
     int pcfSamples = rasterizer->getShadowPcfSamples();
-    if (ImGui::SliderInt("Shadow PCF Samples", &pcfSamples, 1, 16)) {
-        rasterizer->setShadowPcfSamples(pcfSamples);
-    }
     bool useCsm = rasterizer->getUseCsm();
-    if (ImGui::Checkbox("Use CSM", &useCsm)) {
-        rasterizer->setUseCsm(useCsm);
-    }
-    if (useCsm) {
-        int cascadeCount = rasterizer->getCascadeCount();
-        if (ImGui::SliderInt("CSM Cascade Count", &cascadeCount, 1,
-                             Rasterizer::MaxShadowCascades)) {
-            rasterizer->setCascadeCount(cascadeCount);
+    if (ImGui::CollapsingHeader("Shadows")) {
+        if (ImGui::SliderFloat("Shadow Distance (0 disables shadow)", &distance,
+                               0.0f, 300.0f)) {
+            rasterizer->setShadowDistance(distance);
         }
-        float cascadeLambda = rasterizer->getCascadeLambda();
-        if (ImGui::SliderFloat("CSM Cascade Lambda", &cascadeLambda, 0.0f,
-                               1.0f)) {
-            rasterizer->setCascadeLambda(cascadeLambda);
+        if (ImGui::SliderInt("Shadow PCF Samples", &pcfSamples, 1, 16)) {
+            rasterizer->setShadowPcfSamples(pcfSamples);
         }
-        bool useTightShadowFit = rasterizer->getUseTightShadowFit();
-        if (ImGui::Checkbox("Tight Shadow Fit", &useTightShadowFit)) {
-            rasterizer->setUseTightShadowFit(useTightShadowFit);
+        if (ImGui::Checkbox("Use CSM", &useCsm)) {
+            rasterizer->setUseCsm(useCsm);
         }
-        bool debugCascadeTint = rasterizer->getDebugCsmCascadeTint();
-        if (ImGui::Checkbox("Debug CSM Cascade Tint", &debugCascadeTint)) {
-            rasterizer->setDebugCsmCascadeTint(debugCascadeTint);
-        }
-    }
-
-    ImGui::SeparatorText("Diagnostics");
-    bool frustumCulling = rasterizer->isFrustumCullingEnabled();
-    if (ImGui::Checkbox("Frustum Culling", &frustumCulling)) {
-        rasterizer->setFrustumCullingEnabled(frustumCulling);
-    }
-    bool debugRenderAABB = rasterizer->getDebugRenderAABB();
-    if (ImGui::Checkbox("Show Render AABB", &debugRenderAABB)) {
-        rasterizer->setDebugRenderAABB(debugRenderAABB);
-    }
-    if (frustumCulling) {
-        // Batch = one instancer/draw group. Instance = one transform inside
-        // that batch, culled by its world AABB.
-        ImGui::Text("Culled Batches %d / %d",
-                    rasterizer->getCullingCulledBatches(),
-                    rasterizer->getCullingTotalBatches());
-        ImGui::Text("Culled Instances %d / %d",
-                    rasterizer->getCullingCulledInstances(),
-                    rasterizer->getCullingTotalInstances());
-    }
-
-    if (useCsm) {
-        const int cascadeCount = rasterizer->getCascadeCount();
-        ImGui::Text("CSM Shadow Maps");
-        if (ImGui::BeginTable("CSMShadowMapPreview", 2)) {
-            for (int i = 0; i < cascadeCount; ++i) {
-                auto* cascadeFbo = rasterizer->getCascadeShadowFbo(i);
-                if (!cascadeFbo)
-                    continue;
-                auto* depthTex = cascadeFbo->getDepthTexture();
-                if (!depthTex)
-                    continue;
-                ImGui::TableNextColumn();
-                ImGui::Text("Cascade %d %dx%d", i, depthTex->getWidth(),
-                            depthTex->getHeight());
-                ImGui::Image(
-                    (ImTextureID)(uintptr_t)depthTex->getNativeHandle(),
-                    ImVec2(128, 128), ImVec2(0, 1), ImVec2(1, 0));
+        if (useCsm) {
+            int cascadeCount = rasterizer->getCascadeCount();
+            if (ImGui::SliderInt("CSM Cascade Count", &cascadeCount, 1,
+                                 Rasterizer::MaxShadowCascades)) {
+                rasterizer->setCascadeCount(cascadeCount);
             }
-            ImGui::EndTable();
+            float cascadeLambda = rasterizer->getCascadeLambda();
+            if (ImGui::SliderFloat("CSM Cascade Lambda", &cascadeLambda, 0.0f,
+                                   1.0f)) {
+                rasterizer->setCascadeLambda(cascadeLambda);
+            }
+            bool useTightShadowFit = rasterizer->getUseTightShadowFit();
+            if (ImGui::Checkbox("Tight Shadow Fit", &useTightShadowFit)) {
+                rasterizer->setUseTightShadowFit(useTightShadowFit);
+            }
+            bool debugCascadeTint = rasterizer->getDebugCsmCascadeTint();
+            if (ImGui::Checkbox("Debug CSM Cascade Tint", &debugCascadeTint)) {
+                rasterizer->setDebugCsmCascadeTint(debugCascadeTint);
+            }
         }
+    }
+
+    if (ImGui::CollapsingHeader("Diagnostics")) {
+        bool frustumCulling = rasterizer->isFrustumCullingEnabled();
+        if (ImGui::Checkbox("Frustum Culling", &frustumCulling)) {
+            rasterizer->setFrustumCullingEnabled(frustumCulling);
+        }
+        bool debugRenderAABB = rasterizer->getDebugRenderAABB();
+        if (ImGui::Checkbox("Show Render AABB", &debugRenderAABB)) {
+            rasterizer->setDebugRenderAABB(debugRenderAABB);
+        }
+        if (frustumCulling) {
+            // Batch = one instancer/draw group. Instance = one transform inside
+            // that batch, culled by its world AABB.
+            ImGui::Text("Culled Batches %d / %d",
+                        rasterizer->getCullingCulledBatches(),
+                        rasterizer->getCullingTotalBatches());
+            ImGui::Text("Culled Instances %d / %d",
+                        rasterizer->getCullingCulledInstances(),
+                        rasterizer->getCullingTotalInstances());
+        }
+    }
+
+    if (ImGui::CollapsingHeader("Shadow Map Preview")) {
+        if (useCsm) {
+            const int cascadeCount = rasterizer->getCascadeCount();
+            ImGui::Text("CSM Shadow Maps");
+            if (ImGui::BeginTable("CSMShadowMapPreview", 2)) {
+                for (int i = 0; i < cascadeCount; ++i) {
+                    auto* cascadeFbo = rasterizer->getCascadeShadowFbo(i);
+                    if (!cascadeFbo)
+                        continue;
+                    auto* depthTex = cascadeFbo->getDepthTexture();
+                    if (!depthTex)
+                        continue;
+                    ImGui::TableNextColumn();
+                    ImGui::Text("Cascade %d %dx%d", i, depthTex->getWidth(),
+                                depthTex->getHeight());
+                    ImGui::Image(
+                        (ImTextureID)(uintptr_t)depthTex->getNativeHandle(),
+                        ImVec2(128, 128), ImVec2(0, 1), ImVec2(1, 0));
+                }
+                ImGui::EndTable();
+            }
+        } else {
+            auto* shadowFbo = rasterizer->getShadowFbo();
+            if (shadowFbo) {
+                auto* depthTex = shadowFbo->getDepthTexture();
+                if (depthTex) {
+                    ImGui::Text("Shadow Map %dx%d", depthTex->getWidth(),
+                                depthTex->getHeight());
+                    ImGui::Image(
+                        (ImTextureID)(uintptr_t)depthTex->getNativeHandle(),
+                        ImVec2(128, 128), ImVec2(0, 1), ImVec2(1, 0));
+                }
+            }
+        }
+    }
+    ImGui::End();
+}
+
+InspectorPanel::InspectorPanel(App* app) : Panel("Inspector"), _app(app) {}
+
+InspectorPanel::~InspectorPanel() {}
+
+void InspectorPanel::buildPanel() {
+    if (!ImGui::Begin(name().c_str(), openPtr())) {
+        ImGui::End();
+        return;
+    }
+
+    if (!_app || !_app->hasSelection()) {
+        ImGui::TextDisabled("No selection");
+        ImGui::End();
+        return;
+    }
+
+    const RayPickResult& selection = _app->getSelection();
+    Scene::Prim* prim = selection.prim;
+    if (!prim) {
+        ImGui::SeparatorText("Selection");
+        ImGui::TextColored(ImVec4(0.48f, 0.72f, 0.94f, 1.0f),
+                           ICON_FA_LOCK "  ExternalBuffer");
+        ImGui::Text("Handle: %u", static_cast<unsigned>(selection.handle));
+        ImGui::Text("Instance: %d", selection.instanceIndex);
+        ImGui::End();
+        return;
+    }
+
+    TransformSource source = selection.transformSource;
+    _app->getPrimTransformSource(prim, source);
+    const bool external = source == TransformSource::ExternalBuffer;
+
+    ImGui::SeparatorText("Prim");
+    if (ImGui::BeginTable("PrimSummary", 2,
+                          ImGuiTableFlags_SizingStretchProp)) {
+        const auto property = [](const char* label) {
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::TextDisabled("%s", label);
+            ImGui::TableSetColumnIndex(1);
+        };
+
+        property("Name");
+        ImGui::TextUnformatted(prim->getName().c_str());
+        property("Path");
+        ImGui::TextWrapped("%s", prim->getPath().c_str());
+        property("Type");
+        ImGui::TextUnformatted(primTypeLabel(prim->getType()));
+        property("Source");
+        if (external) {
+            ImGui::TextColored(ImVec4(0.48f, 0.72f, 0.94f, 1.0f),
+                               ICON_FA_LOCK "  ExternalBuffer");
+        } else {
+            ImGui::TextUnformatted("SceneGraph");
+        }
+        property("Parent");
+        ImGui::TextUnformatted(
+            prim->getParent() ? prim->getParent()->getPath().c_str() : "None");
+        property("Renderable");
+        ImGui::TextUnformatted(prim->isRenderable() ? "Yes" : "No");
+        ImGui::EndTable();
+    }
+
+    ImGui::SeparatorText("State");
+    if (external)
+        ImGui::BeginDisabled();
+    bool active = prim->isActive();
+    if (ImGui::Checkbox("Active", &active))
+        prim->setActive(active);
+    bool visible = prim->isVisible();
+    if (ImGui::Checkbox("Visible", &visible))
+        prim->setVisible(visible);
+
+    const char* policyLabels[] = {"Inherit", "Self", "Parent", "Root",
+                                  "Disabled"};
+    int policy = static_cast<int>(prim->getManipulationPolicy());
+    if (ImGui::Combo("Manipulation", &policy, policyLabels,
+                     static_cast<int>(std::size(policyLabels)))) {
+        prim->setManipulationPolicy(
+            static_cast<Scene::ManipulationPolicy>(policy));
+    }
+    if (external)
+        ImGui::EndDisabled();
+
+    ImGui::SeparatorText("World Transform");
+    if (external) {
+        ImGui::TextColored(ImVec4(0.48f, 0.72f, 0.94f, 1.0f),
+                           ICON_FA_LOCK "  Owned by ExternalBuffer");
     } else {
-        auto* shadowFbo = rasterizer->getShadowFbo();
-        if (shadowFbo) {
-            auto* depthTex = shadowFbo->getDepthTexture();
-            if (depthTex) {
-                ImGui::Text("Shadow Map %dx%d", depthTex->getWidth(),
-                            depthTex->getHeight());
-                ImGui::Image(
-                    (ImTextureID)(uintptr_t)depthTex->getNativeHandle(),
-                    ImVec2(128, 128), ImVec2(0, 1), ImVec2(1, 0));
-            }
+        glm::vec3 translation(0.0f);
+        glm::vec3 rotationDegrees(0.0f);
+        glm::vec3 scale(1.0f);
+        if (decomposeTransform(prim->computeWorldMatrix(), translation,
+                               rotationDegrees, scale)) {
+            ImGui::BeginDisabled();
+            ImGui::DragFloat3("Position", &translation.x, 0.01f);
+            ImGui::DragFloat3("Rotation(deg)", &rotationDegrees.x, 0.1f, 0.0f,
+                              0.0f, "%.2f");
+            ImGui::DragFloat3("Scale", &scale.x, 0.01f);
+            ImGui::EndDisabled();
+        } else {
+            ImGui::TextDisabled("Transform decomposition unavailable");
         }
     }
+
+    if (const std::shared_ptr<Scene::MeshData> mesh = prim->resolveMeshData()) {
+        ImGui::SeparatorText("Mesh");
+        if (!prim->getMeshSourcePath().empty())
+            ImGui::TextWrapped("Source: %s", prim->getMeshSourcePath().c_str());
+        ImGui::Text("Vertices: %zu", mesh->vertices.size());
+        ImGui::Text("Indices: %zu", mesh->indices.size());
+        ImGui::Text("Triangles: %zu", mesh->indices.size() / 3);
+    }
+
+    ImGui::SeparatorText("Attributes");
+    std::vector<std::pair<Scene::Token, Scene::AttributeValue>> attributes;
+    attributes.reserve(prim->getAttributes().size());
+    for (const auto& [token, value] : prim->getAttributes())
+        attributes.emplace_back(token, value);
+    std::sort(attributes.begin(), attributes.end(),
+              [](const auto& lhs, const auto& rhs) {
+                  return lhs.first.str() < rhs.first.str();
+              });
+
+    if (attributes.empty()) {
+        ImGui::TextDisabled("No attributes");
+    } else if (ImGui::BeginTable("PrimAttributes", 2,
+                                 ImGuiTableFlags_BordersInnerH |
+                                     ImGuiTableFlags_Resizable |
+                                     ImGuiTableFlags_SizingStretchProp)) {
+        ImGui::TableSetupColumn("Property", ImGuiTableColumnFlags_WidthStretch,
+                                0.42f);
+        ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch,
+                                0.58f);
+        ImGui::TableHeadersRow();
+        for (auto& [token, value] : attributes) {
+            ImGui::PushID(static_cast<int>(token.id()));
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::TextWrapped("%s", token.str().c_str());
+            ImGui::TableSetColumnIndex(1);
+            const bool editable =
+                !external && !Scene::XformTokens::isXformAttribute(token);
+            if (drawAttributeValue(token.str(), value, editable))
+                prim->setAttribute(token, value);
+            ImGui::PopID();
+        }
+        ImGui::EndTable();
+    }
+
     ImGui::End();
 }
 
@@ -255,6 +512,61 @@ void MenuBarPanel::buildPanel() {
         if (ImGui::BeginMenu("Settings")) {
             ImGui::EndMenu();
         }
+        if (ImGui::BeginMenu("View")) {
+            if (_app) {
+                PanelManager& panels = _app->_panelManager;
+                UILayoutMode layoutMode = panels.getLayoutMode();
+                if (ImGui::BeginMenu("Layout Mode")) {
+                    if (ImGui::MenuItem("Viewer", nullptr,
+                                        layoutMode == UILayoutMode::Viewer)) {
+                        panels.setLayoutMode(UILayoutMode::Viewer);
+                    }
+                    if (ImGui::MenuItem("Editor", nullptr,
+                                        layoutMode == UILayoutMode::Editor)) {
+                        panels.setLayoutMode(UILayoutMode::Editor);
+                    }
+                    if (ImGui::MenuItem("Overlay", nullptr,
+                                        layoutMode == UILayoutMode::Overlay)) {
+                        panels.setLayoutMode(UILayoutMode::Overlay);
+                    }
+                    ImGui::EndMenu();
+                }
+
+                ImGui::Separator();
+
+                bool sceneOpen = panels.isPanelOpen(PanelManager::PANEL_SCENE);
+                bool rendererDebugOpen =
+                    panels.isPanelOpen(PanelManager::PANEL_RENDERER_DEBUG);
+                bool performanceOpen =
+                    panels.isPanelOpen(PanelManager::PANEL_PERFORMANCE);
+                bool inspectorOpen =
+                    panels.isPanelOpen(PanelManager::PANEL_INSPECTOR);
+                bool viewportOpen =
+                    panels.isPanelOpen(PanelManager::PANEL_VIEWPORT);
+
+                if (layoutMode == UILayoutMode::Editor &&
+                    ImGui::MenuItem("Viewport", nullptr, viewportOpen))
+                    panels.setPanelOpen(PanelManager::PANEL_VIEWPORT,
+                                        !viewportOpen);
+                if (ImGui::MenuItem("Scene", nullptr, sceneOpen))
+                    panels.setPanelOpen(PanelManager::PANEL_SCENE, !sceneOpen);
+                if (ImGui::MenuItem("Renderer Debug", nullptr,
+                                    rendererDebugOpen))
+                    panels.setPanelOpen(PanelManager::PANEL_RENDERER_DEBUG,
+                                        !rendererDebugOpen);
+                if (ImGui::MenuItem("Performance", nullptr, performanceOpen))
+                    panels.setPanelOpen(PanelManager::PANEL_PERFORMANCE,
+                                        !performanceOpen);
+                if (ImGui::MenuItem("Inspector", nullptr, inspectorOpen))
+                    panels.setPanelOpen(PanelManager::PANEL_INSPECTOR,
+                                        !inspectorOpen);
+
+                ImGui::Separator();
+                if (ImGui::MenuItem("Reset Dock Layout"))
+                    panels.resetLayout();
+            }
+            ImGui::EndMenu();
+        }
         /*
         if (ImGui::Button("Play")) {}
         ImGui::SameLine();
@@ -264,11 +576,45 @@ void MenuBarPanel::buildPanel() {
         char fpsText[32];
         std::snprintf(fpsText, sizeof(fpsText), "FPS: %d",
                       int(ImGui::GetIO().Framerate));
-        float textWidth = ImGui::CalcTextSize(fpsText).x;
-        float rightPadding = ImGui::GetStyle().FramePadding.x;
-        float cursorX = ImGui::GetWindowWidth() - textWidth - rightPadding;
+        const ImGuiStyle& style = ImGui::GetStyle();
+        const float textWidth = ImGui::CalcTextSize(fpsText).x;
+        const float rightPadding = style.FramePadding.x;
+        const float buttonWidth = ImGui::GetFrameHeight();
+        const float buttonSpacing = style.ItemSpacing.x;
+        const float fpsSpacing = style.ItemSpacing.x * 2.0f;
+        const float controlsWidth =
+            buttonWidth * 3.0f + buttonSpacing * 2.0f + fpsSpacing + textWidth;
+        const float cursorX =
+            ImGui::GetWindowWidth() - controlsWidth - rightPadding;
         if (cursorX > ImGui::GetCursorPosX()) {
             ImGui::SetCursorPosX(cursorX);
+        }
+
+        if (_app) {
+            PanelManager& panels = _app->_panelManager;
+            auto layoutButton = [&](const char* label, const char* tooltip,
+                                    UILayoutMode mode) {
+                const bool selected = panels.getLayoutMode() == mode;
+                const ImGuiCol buttonColor =
+                    selected ? ImGuiCol_HeaderHovered : ImGuiCol_MenuBarBg;
+                ImGui::PushStyleColor(ImGuiCol_Button,
+                                      ImGui::GetStyleColorVec4(buttonColor));
+                if (ImGui::Button(label, ImVec2(buttonWidth, 0.0f)))
+                    panels.setLayoutMode(mode);
+                ImGui::PopStyleColor();
+                if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+                    ImGui::SetTooltip("%s", tooltip);
+            };
+
+            layoutButton(ICON_FA_EYE "##ViewerLayout", "Viewer Mode",
+                         UILayoutMode::Viewer);
+            ImGui::SameLine(0.0f, buttonSpacing);
+            layoutButton(ICON_FA_PEN_TO_SQUARE "##EditorLayout", "Editor Mode",
+                         UILayoutMode::Editor);
+            ImGui::SameLine(0.0f, buttonSpacing);
+            layoutButton(ICON_FA_LAYER_GROUP "##OverlayLayout", "Overlay Mode",
+                         UILayoutMode::Overlay);
+            ImGui::SameLine(0.0f, fpsSpacing);
         }
         ImGui::TextDisabled("%s", fpsText);
         ImGui::Spacing();
@@ -278,21 +624,149 @@ void MenuBarPanel::buildPanel() {
     }
 }
 
+ViewportPanel::ViewportPanel(App* app, std::string name,
+                             std::string cameraLabel)
+    : Panel(std::move(name)), _app(app), _cameraLabel(std::move(cameraLabel)) {
+    setOpen(false);
+}
+
+ViewportPanel::~ViewportPanel() {}
+
+void ViewportPanel::setCameraLabel(std::string cameraLabel) {
+    _cameraLabel = std::move(cameraLabel);
+}
+
+void ViewportPanel::buildPanel() {
+    _hovered = false;
+    _focused = false;
+    if (!ImGui::Begin(name().c_str(), openPtr())) {
+        ImGui::End();
+        return;
+    }
+
+    _contentMin = ImGui::GetCursorScreenPos();
+    _contentSize = ImGui::GetContentRegionAvail();
+    _focused = ImGui::IsWindowFocused();
+
+    const ImVec2 max(_contentMin.x + _contentSize.x,
+                     _contentMin.y + _contentSize.y);
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    drawList->AddRectFilled(_contentMin, max,
+                            ImGui::GetColorU32(ImGuiCol_WindowBg));
+    drawList->AddRect(_contentMin, max, ImGui::GetColorU32(ImGuiCol_Border));
+
+    Backend::Texture* texture = _app ? _app->getPresentedTexture() : nullptr;
+    _imageMin = _contentMin;
+    _imageSize = _contentSize;
+    if (texture && texture->getWidth() > 0 && texture->getHeight() > 0 &&
+        _contentSize.x > 1.0f && _contentSize.y > 1.0f) {
+        const float textureAspect = static_cast<float>(texture->getWidth()) /
+                                    static_cast<float>(texture->getHeight());
+        const float panelAspect = _contentSize.x / _contentSize.y;
+        if (panelAspect > textureAspect) {
+            _imageSize.y = _contentSize.y;
+            _imageSize.x = _imageSize.y * textureAspect;
+            _imageMin.x += (_contentSize.x - _imageSize.x) * 0.5f;
+        } else {
+            _imageSize.x = _contentSize.x;
+            _imageSize.y = _imageSize.x / textureAspect;
+            _imageMin.y += (_contentSize.y - _imageSize.y) * 0.5f;
+        }
+
+        ImGui::SetCursorScreenPos(_imageMin);
+        ImGui::Image((ImTextureID)(uintptr_t)texture->getNativeHandle(),
+                     _imageSize, ImVec2(0, 1), ImVec2(1, 0));
+    }
+
+    ImGui::SetCursorScreenPos(_contentMin);
+    const ImVec2 buttonSize(std::max(_contentSize.x, 1.0f),
+                            std::max(_contentSize.y, 1.0f));
+    ImGui::Dummy(buttonSize);
+
+    if (_app) {
+        const ImGuiStyle& style = ImGui::GetStyle();
+        constexpr int toolboxSlots = 5;
+        const float margin = style.ItemSpacing.x;
+        const float toolButtonSize =
+            ImGui::GetFrameHeight() + style.FramePadding.x * 2.0f;
+        const ImVec2 toolboxSize(toolButtonSize + style.WindowPadding.x * 2.0f,
+                                 toolButtonSize * toolboxSlots +
+                                     style.ItemSpacing.y * (toolboxSlots - 1) +
+                                     style.WindowPadding.y * 2.0f);
+        const ImVec2 toolboxPos(_imageMin.x + margin, _imageMin.y + margin);
+        const bool toolboxFits =
+            toolboxSize.x + margin * 2.0f <= _imageSize.x &&
+            toolboxSize.y + margin * 2.0f <= _imageSize.y;
+
+        if (toolboxFits) {
+            ImGui::SetCursorScreenPos(toolboxPos);
+            ImGui::PushStyleColor(ImGuiCol_ChildBg,
+                                  ImGui::GetStyleColorVec4(ImGuiCol_WindowBg));
+            if (ImGui::BeginChild("ViewportToolbox", toolboxSize,
+                                  ImGuiChildFlags_Borders,
+                                  ImGuiWindowFlags_NoScrollbar |
+                                      ImGuiWindowFlags_NoScrollWithMouse)) {
+                auto modeButton = [&](const char* label, const char* tooltip,
+                                      InteractionMode mode) {
+                    const bool selected = _app->getInteractionMode() == mode;
+                    const ImGuiCol buttonColor =
+                        selected ? ImGuiCol_HeaderHovered : ImGuiCol_ChildBg;
+                    ImGui::PushStyleColor(
+                        ImGuiCol_Button, ImGui::GetStyleColorVec4(buttonColor));
+                    if (ImGui::Button(label,
+                                      ImVec2(toolButtonSize, toolButtonSize))) {
+                        _app->setInteractionMode(mode);
+                    }
+                    ImGui::PopStyleColor();
+                    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+                        ImGui::SetTooltip("%s", tooltip);
+                };
+
+                modeButton(ICON_FA_ARROW_POINTER "##InspectMode", "Inspect",
+                           InteractionMode::Inspect);
+                modeButton(ICON_FA_UP_DOWN_LEFT_RIGHT "##EditMode",
+                           "Edit Transform", InteractionMode::Edit);
+                modeButton(ICON_FA_HAND_FIST "##ForceMode", "Apply Force",
+                           InteractionMode::Force);
+            }
+            ImGui::EndChild();
+            ImGui::PopStyleColor();
+
+            const float labelX =
+                toolboxPos.x + toolboxSize.x + style.ItemSpacing.x;
+            if (labelX + ImGui::CalcTextSize(_cameraLabel.c_str()).x + margin <=
+                _imageMin.x + _imageSize.x) {
+                ImGui::SetCursorScreenPos(
+                    ImVec2(labelX, toolboxPos.y + style.FramePadding.y));
+                ImGui::TextDisabled("%s", _cameraLabel.c_str());
+            }
+        }
+    }
+
+    const ImVec2 imageMax(_imageMin.x + _imageSize.x,
+                          _imageMin.y + _imageSize.y);
+    _hovered = ImGui::IsWindowHovered() &&
+               ImGui::IsMouseHoveringRect(_imageMin, imageMax);
+    if (_app)
+        _app->renderSelectionGizmo(_imageMin, _imageSize,
+                                   ImGui::GetWindowDrawList());
+    ImGui::End();
+}
+
 ScenePanel::ScenePanel(App* app) : Panel("Scene"), _app(app) {}
 
 ScenePanel::~ScenePanel() {}
 
 void ScenePanel::buildPanel() {
-    ImGui::Begin(name().c_str());
+    if (!ImGui::Begin(name().c_str(), openPtr())) {
+        ImGui::End();
+        return;
+    }
     if (auto* root = _app->getScene()->getRootPrim()) {
         auto drawPrimTree = [&](auto& self, Scene::Prim* prim) -> void {
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);
             ImGui::PushID(prim);
-            // bool active = prim->isActive();
-            // if (ImGui::Checkbox("##active", &active))
-            //     prim->setActive(active);
-            // ImGui::SameLine();
             bool visible = prim->isVisible();
             if (ImGui::Checkbox("##Visible", &visible))
                 prim->setVisible(visible);
@@ -300,33 +774,52 @@ void ScenePanel::buildPanel() {
 
             const bool activeInHierarchy = prim->isActiveInHierarchy();
             const bool visibleInHierarchy = prim->isVisibleInHierarchy();
-            if (!activeInHierarchy || !visibleInHierarchy)
-                ImGui::PushStyleColor(
-                    ImGuiCol_Text,
-                    ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+            const bool disabled = !activeInHierarchy || !visibleInHierarchy;
+            TransformSource transformSource = TransformSource::SceneGraph;
+            const bool external =
+                _app->getPrimTransformSource(prim, transformSource) &&
+                transformSource == TransformSource::ExternalBuffer;
+            const bool customTextColor = disabled || external;
+            if (customTextColor) {
+                const ImVec4 textColor =
+                    disabled ? ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled)
+                             : ImVec4(0.48f, 0.72f, 0.94f, 1.0f);
+                ImGui::PushStyleColor(ImGuiCol_Text, textColor);
+            }
 
             const auto& children = prim->getChildren();
-            if (children.empty()) {
-                ImGui::Text("%s", prim->getName().c_str());
-                ImGui::TableSetColumnIndex(1);
-                ImGui::TextDisabled("%s", primTypeLabel(prim->getType()));
-            } else if (ImGui::TreeNode(prim->getName().c_str())) {
-                ImGui::TableSetColumnIndex(1);
-                ImGui::TextDisabled("%s", primTypeLabel(prim->getType()));
-                if (!activeInHierarchy || !visibleInHierarchy)
-                    ImGui::PopStyleColor();
+            ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow |
+                                       ImGuiTreeNodeFlags_OpenOnDoubleClick |
+                                       ImGuiTreeNodeFlags_SpanAvailWidth;
+            if (_app->isPrimSelected(prim))
+                flags |= ImGuiTreeNodeFlags_Selected;
+            if (children.empty())
+                flags |= ImGuiTreeNodeFlags_Leaf |
+                         ImGuiTreeNodeFlags_NoTreePushOnOpen;
+
+            const bool open =
+                external
+                    ? ImGui::TreeNodeEx("##Prim", flags, ICON_FA_LOCK "  %s",
+                                        prim->getName().c_str())
+                    : ImGui::TreeNodeEx("##Prim", flags, "%s",
+                                        prim->getName().c_str());
+            if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
+                _app->selectPrim(prim);
+            if (external &&
+                ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
+                ImGui::SetTooltip("External Buffer (read-only transform)");
+            }
+
+            ImGui::TableSetColumnIndex(1);
+            ImGui::TextDisabled("%s", primTypeLabel(prim->getType()));
+
+            if (customTextColor)
+                ImGui::PopStyleColor();
+
+            if (open && !children.empty()) {
                 for (auto* child : children)
                     self(self, child);
                 ImGui::TreePop();
-                ImGui::PopID();
-                return;
-            }
-
-            if (!activeInHierarchy || !visibleInHierarchy)
-                ImGui::PopStyleColor();
-            if (!children.empty()) {
-                ImGui::TableSetColumnIndex(1);
-                ImGui::TextDisabled("%s", primTypeLabel(prim->getType()));
             }
             ImGui::PopID();
         };
@@ -334,7 +827,7 @@ void ScenePanel::buildPanel() {
                               ImGuiTableFlags_Resizable |
                                   ImGuiTableFlags_RowBg |
                                   ImGuiTableFlags_BordersInnerV)) {
-            ImGui::TableSetupColumn("Visible",
+            ImGui::TableSetupColumn("Scene",
                                     ImGuiTableColumnFlags_WidthStretch);
             ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed,
                                     96.0f);

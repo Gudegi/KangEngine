@@ -1,4 +1,6 @@
 #include "panel_manager.hpp"
+#include <IconsFontAwesome7.h>
+#include <ImGuizmo.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <imgui_internal.h>
@@ -97,32 +99,84 @@ bool PanelManager::loadFont(const std::string& fontPath, float fontSize,
     return true;
 }
 
+bool PanelManager::mergeIconFont(const std::string& fontPath) {
+    ImGuiIO& io = ImGui::GetIO();
+    const float iconFontSize = _fontSize * 2.0f / 3.0f;
+    ImFontConfig config;
+    config.MergeMode = true;
+    config.PixelSnapH = true;
+    config.GlyphMinAdvanceX = iconFontSize;
+    static const ImWchar iconRanges[] = {ICON_MIN_FA, ICON_MAX_16_FA, 0};
+
+    ImFont* font = io.Fonts->AddFontFromFileTTF(fontPath.c_str(), iconFontSize,
+                                                &config, iconRanges);
+    if (!font) {
+        std::cerr << "Failed to load icon font: " << fontPath << std::endl;
+        return false;
+    }
+
+    io.Fonts->Build();
+    return true;
+}
+
 // void PanelManager::addPanel(Panel* panel)
 void PanelManager::addPanel(std::unique_ptr<Panel> panel) {
     _panels.push_back(std::move(panel));
 }
 
+void PanelManager::setLayoutMode(UILayoutMode mode) {
+    if (_layoutMode == mode)
+        return;
+    _layoutMode = mode;
+    setPanelOpen(PANEL_VIEWPORT, _layoutMode == UILayoutMode::Editor);
+    resetLayout();
+}
+
+Panel* PanelManager::findPanel(const char* name) {
+    for (auto& panel : _panels) {
+        if (panel->name() == name)
+            return panel.get();
+    }
+    return nullptr;
+}
+
+const Panel* PanelManager::findPanel(const char* name) const {
+    for (const auto& panel : _panels) {
+        if (panel->name() == name)
+            return panel.get();
+    }
+    return nullptr;
+}
+
+bool PanelManager::isPanelOpen(const char* name) const {
+    const Panel* panel = findPanel(name);
+    return panel ? panel->isOpen() : false;
+}
+
+void PanelManager::setPanelOpen(const char* name, bool open) {
+    if (Panel* panel = findPanel(name))
+        panel->setOpen(open);
+}
+
+void PanelManager::resetLayout() { _layoutInitialized = false; }
+
 void PanelManager::preRender() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    /*
-    // Docking panel
+    ImGuizmo::BeginFrame();
+
     ImGuiIO& io = ImGui::GetIO();
     if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable) {
         ImGuiID dockspace_id = ImGui::GetID("MainDockSpace");
         ImGui::DockSpaceOverViewport(dockspace_id, ImGui::GetMainViewport(),
                                      ImGuiDockNodeFlags_PassthruCentralNode);
 
-        ImVec2 viewportSize = ImGui::GetMainViewport()->Size;
-        if (!_layoutInitialized || viewportSize.x != _lastViewportSize.x ||
-            viewportSize.y != _lastViewportSize.y) {
+        if (!_layoutInitialized) {
             initLayout(dockspace_id);
             _layoutInitialized = true;
-            _lastViewportSize = viewportSize;
         }
     }
-    */
 }
 
 void PanelManager::initLayout(ImGuiID dockspace_id) {
@@ -131,14 +185,24 @@ void PanelManager::initLayout(ImGuiID dockspace_id) {
     ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->Size);
 
     ImGuiID dock_main_id = dockspace_id;
+
+    if (_layoutMode == UILayoutMode::Overlay) {
+        ImGui::DockBuilderFinish(dockspace_id);
+        return;
+    }
+
     ImGuiID dock_id_right = ImGui::DockBuilderSplitNode(
-        dock_main_id, ImGuiDir_Right, 0.15f, nullptr, &dock_main_id);
+        dock_main_id, ImGuiDir_Right, 0.24f, nullptr, &dock_main_id);
+    ImGuiID dock_id_scene = dock_id_right;
+    ImGuiID dock_id_debug = ImGui::DockBuilderSplitNode(
+        dock_id_scene, ImGuiDir_Down, 0.58f, nullptr, &dock_id_scene);
 
-    ImGuiID dock_id_right_top;
-    ImGui::DockBuilderSplitNode(dock_id_right, ImGuiDir_Up, 0.25f,
-                                &dock_id_right_top, nullptr);
-
-    ImGui::DockBuilderDockWindow(PANEL_SCENE, dock_id_right_top);
+    ImGui::DockBuilderDockWindow(PANEL_SCENE, dock_id_scene);
+    ImGui::DockBuilderDockWindow(PANEL_RENDERER_DEBUG, dock_id_debug);
+    ImGui::DockBuilderDockWindow(PANEL_PERFORMANCE, dock_id_debug);
+    ImGui::DockBuilderDockWindow(PANEL_INSPECTOR, dock_id_debug);
+    if (_layoutMode == UILayoutMode::Editor)
+        ImGui::DockBuilderDockWindow(PANEL_VIEWPORT, dock_main_id);
     ImGui::DockBuilderFinish(dockspace_id);
 }
 
@@ -149,6 +213,11 @@ void PanelManager::render() {
     }
 
     for (auto& panel : _panels) {
+        if (!panel->isOpen())
+            continue;
+        if (panel->name() == PANEL_VIEWPORT &&
+            _layoutMode != UILayoutMode::Editor)
+            continue;
         panel->buildPanel();
     }
 }

@@ -9,6 +9,8 @@
 #include "geometry/ray.hpp"
 #include "engine/graphics/renderer/renderer_types.hpp"
 
+struct ImDrawList;
+
 namespace KE {
 
 class Camera;
@@ -134,7 +136,10 @@ class InteractionController {
 
 class GizmoController {
   public:
-    bool manipulateTransform(Camera& camera, glm::mat4& transform) const;
+    bool isUsing() const;
+    bool manipulateTransform(Camera& camera, glm::mat4& transform,
+                             float x, float y, float width,
+                             float height, ImDrawList* drawList = nullptr) const;
 };
 
 } // namespace KE
