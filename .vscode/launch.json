@@ -1,0 +1,33 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug (lldb)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/debug/KangEngine",
+            "args": [],
+            //"cwd": "${workspaceFolder}/build/debug",
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "build_debug"
+        },
+        {
+            "name": "Release (lldb)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/release/KangEngine",
+            "args": [],
+            //"cwd": "${workspaceFolder}/build/release"
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "RelWithDebInfo (lldb)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/relWithDebInfo/KangEngine",
+            "args": [],
+            //"cwd": "${workspaceFolder}/build/relWithDebInfo"
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

@@ -1,7 +1,5 @@
 {
-    "cmake.configureSettings": {
-        "CMAKE_TOOLCHAIN_FILE": "${HOME}/vcpkg/scripts/buildsystems/vcpkg.cmake"
-    },
+    "python.defaultInterpreterPath": "${workspaceFolder}/python/.venv/bin/python",
     "files.associations": {
         "functional": "cpp",
         "stdexcept": "cpp",
@@ -85,7 +83,6 @@
         "stack": "cpp"
     },
     //"C_Cpp.errorSquiggles": "disabled"
-
     // clang-format settings
     // Leave path empty to auto-detect from PATH, or specify per-OS:
     // macOS (Homebrew Intel): /usr/local/bin/clang-format
@@ -95,8 +92,8 @@
     "C_Cpp.clang_format_path": "clang-format",
     "C_Cpp.clang_format_style": "file",
     "clangd.arguments": [
-    "--background-index",
-    "--compile-commands-dir=build/release"
+        "--background-index",
+        "--compile-commands-dir=build/release"
     ],
     "editor.formatOnSave": true,
     "[cpp]": {

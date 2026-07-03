@@ -48,6 +48,14 @@ _deps
 CMakeUserPresets.json
 build
 .*
+
+# Shared VS Code project configuration. Keep other local .vscode files ignored.
+!.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
 imgui.ini
 
 *.usda
