@@ -281,7 +281,7 @@ class SO101DofControlApp(MjcfDofControlApp):
         )
         self.target_ball_prim.set_display_color_alpha(ke.vec4(0.95, 0.18, 0.12, 1.0))
         self._sync_target_ball_prim()
-        self.add_renderable(self.robot_shader, self.target_ball_prim)
+        self.scene.add_renderable(self.target_ball_prim, self.robot_shader)
 
     def _sync_target_ball_prim(self):
         if self.target_ball_prim is None:

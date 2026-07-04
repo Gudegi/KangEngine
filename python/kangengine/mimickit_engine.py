@@ -261,7 +261,7 @@ class _KangEngineViewer(App):
 
         ground = self.get_scene().define_prim("/ground", _ke.scene.PrimType.Mesh)
         ground.set_mesh_data(_ke.scene.Prim.create_plane_data(100.0, _ke.UpAxis.Z))
-        self.add_renderable(self.ground_shader, ground)
+        self.scene.add_renderable(ground, self.ground_shader)
         self.visual_bridge = KangWorldVisualBridge(self, self.world)
         self._setup_done = True
 
@@ -321,28 +321,25 @@ class _KangEngineViewer(App):
         self.setup_viewer()
         radius = max(0.0025, float(line_width) * 0.0025)
         path = f"/debug/mimickit_lines_{int(slot)}"
-        handle = self._debug_line_handles.get(int(slot))
-        if handle is None:
-            handle = _ke.scene.DebugDraw.log_lines(
-                self,
-                self.robot_shader,
+        view = self._debug_line_handles.get(int(slot))
+        if view is None:
+            view = self.scene.log_lines(
                 path,
+                self.robot_shader,
                 starts,
                 ends,
                 colors,
                 radius,
                 8,
             )
-            if handle == 0xFFFFFFFF:
-                return
-            self._debug_line_handles[int(slot)] = handle
+            self._debug_line_handles[int(slot)] = view
         else:
-            _ke.scene.DebugDraw.update_lines(self, handle, starts, ends, colors)
+            view.update_lines(starts, ends, colors)
 
     def clear_unused_debug_lines(self, active_slots):
-        for slot, handle in self._debug_line_handles.items():
+        for slot, view in self._debug_line_handles.items():
             if slot >= active_slots:
-                _ke.scene.DebugDraw.update_lines(self, handle, [], [], [])
+                view.update_lines([], [], [])
 
     def render(self):
         pass

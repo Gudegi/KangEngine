@@ -34,6 +34,7 @@
 #include "engine/graphics/renderer/selection_outline_processor.hpp"
 #include "engine/graphics/renderer/light.hpp"
 #include "engine/scene/scene_backend.hpp"
+#include "engine/scene/component/scene_render_system.hpp"
 #include "engine/scene/native/prim.hpp"
 namespace KE {
 
@@ -97,6 +98,7 @@ class App {
     std::unique_ptr<PostProcessor> _postProcessor;
     std::unique_ptr<SelectionOutlineProcessor> _selectionOutlineProcessor;
     Renderer _renderer;
+    Scene::SceneRenderSystem _sceneRenderSystem;
     InteractionController _interaction;
     GizmoController _gizmo;
     ViewportPanel* _editorViewportPanel = nullptr;
@@ -142,6 +144,12 @@ class App {
     Camera& getCamera() { return _camera; }
     Renderer& getRenderer() { return _renderer; }
     const Renderer& getRenderer() const { return _renderer; }
+    Scene::SceneRenderSystem& getSceneRenderSystem() {
+        return _sceneRenderSystem;
+    }
+    const Scene::SceneRenderSystem& getSceneRenderSystem() const {
+        return _sceneRenderSystem;
+    }
     void setLight(const DirectionalLight& light) {
         getRenderer().setLight(light);
     }

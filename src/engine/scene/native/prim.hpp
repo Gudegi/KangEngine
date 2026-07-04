@@ -23,6 +23,8 @@ namespace KE {
 
 namespace Scene {
 
+class RenderComponent;
+
 using AttributeValue =
     std::variant<bool, int, float, std::string, glm::vec3, glm::vec4, glm::mat4,
                  glm::quat, std::vector<std::string>>;
@@ -61,6 +63,7 @@ class Prim {
     std::string _meshSourcePath;
     mutable std::weak_ptr<MeshData> _resolvedMeshDataCache;
     std::unordered_map<Token, AttributeValue, Token::Hash> _Attributes;
+    std::shared_ptr<RenderComponent> _renderComponent;
 
     bool _renderable = false; // true for prim types that can submit geometry
     bool _visible = true; // runtime show/hide toggle(just render visibility)
@@ -78,11 +81,11 @@ class Prim {
 
   public:
     Prim(const std::string& name, PrimType type, Prim* parent = nullptr);
-    ~Prim() = default;
+    ~Prim();
 
-    // 이동만 허용 (unique_ptr 멤버 때문에 복사 불가)
-    Prim(Prim&&) = default;
-    Prim& operator=(Prim&&) = default;
+    // Prim addresses are stable scene identities used by children and systems.
+    Prim(Prim&&) = delete;
+    Prim& operator=(Prim&&) = delete;
     Prim(const Prim&) = delete;
     Prim& operator=(const Prim&) = delete;
 
@@ -105,6 +108,11 @@ class Prim {
     void setMeshSourcePath(const std::string& path);
     const std::string& getMeshSourcePath() const;
     std::shared_ptr<MeshData> resolveMeshData() const;
+
+    std::shared_ptr<RenderComponent> addRenderComponent();
+    std::shared_ptr<RenderComponent> getRenderComponent() const;
+    bool hasRenderComponent() const { return _renderComponent != nullptr; }
+    bool removeRenderComponent();
 
     static MeshData createCubeData(float scale);
     static MeshData createSquareData(float scale); // Deprecated.
@@ -204,7 +212,7 @@ class Prim {
 
     bool isRenderable() const { return _renderable; }
     bool isVisible() const { return _visible; }
-    void setVisible(bool v) { _visible = v; }
+    void setVisible(bool visible);
     bool isActive() const { return _active; }
     bool isActiveInHierarchy() const;
     bool isVisibleInHierarchy() const;

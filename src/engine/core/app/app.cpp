@@ -3,6 +3,7 @@
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
 #include "engine/graphics/renderer/post_processor.hpp"
+#include "engine/scene/component/render_component.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/prim_path.hpp"
 #include "engine/scene/scene_backend.hpp"
@@ -200,6 +201,7 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     _renderer.bind(_graphicsDevice.get(), _rasterizer.get(),
                    _postProcessor.get(), _selectionOutlineProcessor.get());
     _renderer.setViewportSize(_width, _height);
+    _sceneRenderSystem.bind(&_renderer);
 
     DirectionalLight defaultLight;
     defaultLight.direction = (_upAxis == UpAxis::Z)
@@ -484,30 +486,42 @@ void App::checkError() { _graphicsDevice->checkError(); }
 
 RenderableHandle App::addRenderable(Backend::Shader* shader, Scene::Prim* prim,
                                     TransformSource transformSource) {
-    return _rasterizer
-               ? _rasterizer->addRenderable(shader, prim, transformSource)
-               : InvalidHandle;
+    if (!prim)
+        return InvalidHandle;
+    auto component =
+        _sceneRenderSystem.addRenderable(*prim, shader, transformSource);
+    return component ? _sceneRenderSystem.handle(*component) : InvalidHandle;
 }
 
 RenderableHandle
 App::addSkinnedRenderable(Backend::Shader* shader, Scene::Prim* prim,
                           const Scene::SkinnedMeshData& skinnedMesh,
                           TransformSource transformSource) {
-    return _rasterizer ? _rasterizer->addSkinnedRenderable(
-                             shader, prim, skinnedMesh, transformSource)
-                       : InvalidHandle;
+    if (!prim)
+        return InvalidHandle;
+    auto component = _sceneRenderSystem.addSkinnedRenderable(
+        *prim, shader, skinnedMesh, transformSource);
+    return component ? _sceneRenderSystem.handle(*component) : InvalidHandle;
 }
 
 RenderableHandle App::addRenderable(Material* material, Scene::Prim* prim,
                                     TransformSource transformSource) {
-    return _rasterizer
-               ? _rasterizer->addRenderable(material, prim, transformSource)
-               : InvalidHandle;
+    if (!prim)
+        return InvalidHandle;
+    auto component =
+        _sceneRenderSystem.addRenderable(*prim, material, transformSource);
+    return component ? _sceneRenderSystem.handle(*component) : InvalidHandle;
 }
 
 void App::removePrim(RenderableHandle handle, Scene::Prim* prim) {
-    if (_rasterizer)
-        _rasterizer->removePrim(handle, prim);
+    if (!prim)
+        return;
+    auto component = prim->getRenderComponent();
+    if (component && _sceneRenderSystem.handle(*component) == handle) {
+        prim->removeRenderComponent();
+        return;
+    }
+    getRenderer().removePrim(handle, prim);
 }
 
 bool App::removePrim(Scene::Prim* prim) {
@@ -530,10 +544,9 @@ bool App::removePrim(const std::string& path) {
             subtree.push_back(child);
     });
 
-    if (_rasterizer) {
-        for (Scene::Prim* child : subtree)
-            _rasterizer->removePrim(child);
-    }
+    _sceneRenderSystem.detachSubtree(*prim);
+    for (Scene::Prim* child : subtree)
+        getRenderer().removePrim(child);
 
     clearSelection();
     return _scene->removePrim(path);

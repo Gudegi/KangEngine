@@ -85,7 +85,7 @@ class MyApp : public App {
         robot = Bridge::SkeletonBridge::fromMJCF(mjcfPath, getScene());
         for (auto* prim : robot.bodyPrims()) {
             if (prim)
-                addRenderable(meshShader.get(), prim);
+                getSceneRenderSystem().addRenderable(*prim, meshShader.get());
         }
 
         checkError();

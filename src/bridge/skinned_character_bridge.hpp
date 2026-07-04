@@ -20,27 +20,33 @@ namespace Backend {
 class Shader;
 class Texture;
 } // namespace Backend
+namespace Scene {
+class RenderComponent;
+}
 
 namespace Bridge {
 
 // Adapter for imported skinned character assets and skeleton motion playback.
 //
-// Asset/FBXLoader owns import and conversion. This bridge owns the scene prims,
-// mesh handles, and per-frame bone matrix upload for animation playback.
-// Long term, this should split into SkeletonState calculation and
-// SkinningRenderer-style upload plumbing. Keep it as a convenience adapter
-// while the runtime/render state boundary is still settling.
+// Asset/FBXLoader owns import and conversion. This bridge owns scene bindings
+// and uses RenderComponent registration for per-frame skinning uploads.
+// Long term, this should split into SkeletonState calculation and upload
+// plumbing. Keep it as a convenience adapter while the runtime/render state
+// boundary is still settling.
 class SkinnedCharacterBridge {
   public:
     struct MeshBinding {
         std::string name;
         Scene::Prim* prim = nullptr;
-        RenderableHandle handle = InvalidHandle;
         std::vector<std::string> boneNames;
         std::vector<int> boneNodeIndices;
         std::vector<glm::mat4> inverseBindMatrices;
         std::vector<glm::mat4> boneMatrices;
         glm::vec4 baseColor = glm::vec4(1.0f);
+
+      private:
+        friend class SkinnedCharacterBridge;
+        std::shared_ptr<Scene::RenderComponent> component;
     };
 
     static SkinnedCharacterBridge

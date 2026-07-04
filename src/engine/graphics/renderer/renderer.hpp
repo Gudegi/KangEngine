@@ -12,16 +12,20 @@
 namespace KE {
 
 class Camera;
+class Material;
 class Rasterizer;
 class SelectionOutlineProcessor;
 
 namespace Scene {
+class Prim;
 class SceneBackend;
+struct SkinnedMeshData;
 } // namespace Scene
 
 namespace Backend {
 class Framebuffer;
 class GraphicsDevice;
+class Shader;
 class Texture;
 } // namespace Backend
 
@@ -67,6 +71,19 @@ class Renderer {
     Backend::Framebuffer* shadowFbo();
     void renderSceneToFramebuffer(Camera& camera, Backend::Framebuffer* target,
                                   int width, int height, bool clear = true);
+
+    RenderableHandle addRenderable(
+        Backend::Shader* shader, Scene::Prim* prim,
+        TransformSource transformSource = TransformSource::SceneGraph);
+    RenderableHandle addSkinnedRenderable(
+        Backend::Shader* shader, Scene::Prim* prim,
+        const Scene::SkinnedMeshData& skinnedMesh,
+        TransformSource transformSource = TransformSource::SceneGraph);
+    RenderableHandle addRenderable(
+        Material* material, Scene::Prim* prim,
+        TransformSource transformSource = TransformSource::SceneGraph);
+    void removePrim(RenderableHandle handle, Scene::Prim* prim);
+    void removePrim(Scene::Prim* prim);
 
     // RenderableHandle identifies a renderable batch/instancer. Most controls
     // apply to the whole batch; APIs with instanceIndex can target one

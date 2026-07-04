@@ -442,6 +442,8 @@ PYBIND11_MODULE(_kangengine, m) {
         .def_readonly("handle", &RayPickResult::handle)
         .def_readonly("instance_index", &RayPickResult::instanceIndex)
         .def_readonly("transform_source", &RayPickResult::transformSource)
+        .def_readonly("prim", &RayPickResult::prim,
+                      py::return_value_policy::reference)
         .def_readonly("distance", &RayPickResult::distance)
         .def_readonly("position", &RayPickResult::position);
 
@@ -1361,6 +1363,14 @@ py::class_<glm::vec3>(m, "vec3")
              "Return true when a scene object is selected.")
         .def("clear_selection", &App::clearSelection,
              "Clear the current scene selection.")
+        .def(
+            "ray_pick",
+            [](const App& self, const glm::vec3& origin,
+               const glm::vec3& direction) {
+                return self.rayPick(Geometry::Ray(origin, direction));
+            },
+            py::arg("origin"), py::arg("direction"),
+            "Pick the closest renderable intersected by a world-space ray.")
         .def("get_graphics_device", &App::getGraphicsDevice,
              py::return_value_policy::reference,
              "Return the application's graphics device.")
@@ -1369,6 +1379,11 @@ py::class_<glm::vec3>(m, "vec3")
             py::return_value_policy::reference,
             "Return the application's renderer.")
         .def(
+            "get_scene_render_system",
+            [](App& self) { return &self.getSceneRenderSystem(); },
+            py::return_value_policy::reference_internal,
+            "Return the scene-to-renderer component registry.")
+        .def(
             "add_renderable",
             [](App* self, Backend::Shader* shader, Scene::Prim* prim,
                TransformSource transformSource) {
@@ -1376,7 +1391,9 @@ py::class_<glm::vec3>(m, "vec3")
             },
             py::arg("shader"), py::arg("prim"),
             py::arg("transform_source") = TransformSource::SceneGraph,
-            "Create a renderable for a scene prim using a shader.")
+            "Compatibility/low-level path: create a renderable for a scene "
+            "prim using a shader and return its internal renderer handle. "
+            "Prefer app.scene.add_renderable(...) for authored scene objects.")
         .def(
             "add_skinned_renderable",
             [](App* self, Backend::Shader* shader, Scene::Prim* prim,
@@ -1389,7 +1406,9 @@ py::class_<glm::vec3>(m, "vec3")
             },
             py::arg("shader"), py::arg("prim"), py::arg("skinned_mesh_data"),
             py::arg("transform_source") = TransformSource::SceneGraph,
-            "Create a skinned renderable for a scene prim.")
+            "Compatibility/low-level path: create a skinned renderable and "
+            "return its internal renderer handle. Prefer higher-level "
+            "character bridges for authored scene use.")
         .def(
             "add_renderable",
             [](App* self, Material* material, Scene::Prim* prim,
@@ -1398,7 +1417,9 @@ py::class_<glm::vec3>(m, "vec3")
             },
             py::arg("material"), py::arg("prim"),
             py::arg("transform_source") = TransformSource::SceneGraph,
-            "Create a renderable for a scene prim using a material.")
+            "Compatibility/low-level path: create a renderable for a scene "
+            "prim using a material and return its internal renderer handle. "
+            "Prefer app.scene.add_renderable(...) for authored scene objects.")
         .def(
             "remove_prim",
             [](App* self, const std::string& path) {
@@ -1433,7 +1454,9 @@ py::class_<glm::vec3>(m, "vec3")
             },
             py::arg("handle"), py::arg("transforms"),
             py::arg("colors") = py::none(),
-            "Replace instance transforms, optionally with per-instance colors.")
+            "Low-level handle path: replace instance transforms, optionally "
+            "with per-instance colors. Prefer RenderablePrimView or "
+            "SimVisualBatch helpers when available.")
         .def(
             "set_renderable_colors",
             [](App* self, uint32_t handle, const FloatArray& colors) {
@@ -1441,28 +1464,31 @@ py::class_<glm::vec3>(m, "vec3")
                 self->setRenderableColors(handle, c.data, c.count);
             },
             py::arg("handle"), py::arg("colors"),
-            "Set per-instance colors for a renderable.")
+            "Low-level handle path: set per-instance colors for a renderable.")
         .def(
             "set_renderable_double_sided",
             [](App* self, uint32_t handle, bool doubleSided) {
                 self->setRenderableDoubleSided(handle, doubleSided);
             },
             py::arg("handle"), py::arg("double_sided") = true,
-            "Enable or disable double-sided rendering for a renderable.")
+            "Low-level handle path: enable or disable double-sided rendering. "
+            "Prefer RenderablePrimView.set_double_sided() for scene objects.")
         .def(
             "set_renderable_casts_shadow",
             [](App* self, uint32_t handle, bool castsShadow) {
                 self->setRenderableCastsShadow(handle, castsShadow);
             },
             py::arg("handle"), py::arg("casts_shadow") = true,
-            "Enable or disable shadow casting for a renderable.")
+            "Low-level handle path: enable or disable shadow casting. Prefer "
+            "RenderablePrimView.set_casts_shadow() for scene objects.")
         .def(
             "set_renderable_alpha_mode",
             [](App* self, uint32_t handle, AlphaMode mode, float cutoff) {
                 self->setRenderableAlphaMode(handle, mode, cutoff);
             },
             py::arg("handle"), py::arg("mode"), py::arg("cutoff") = 0.5f,
-            "Select opaque, alpha-mask, or alpha-blend rendering.")
+            "Low-level handle path: select opaque, alpha-mask, or alpha-blend "
+            "rendering. Prefer RenderablePrimView.set_alpha_mode().")
         .def(
             "set_renderable_texture",
             [](App* self, uint32_t handle, Backend::Texture* texture,
@@ -1470,13 +1496,14 @@ py::class_<glm::vec3>(m, "vec3")
                 self->setRenderableTexture(handle, texture, role);
             },
             py::arg("handle"), py::arg("texture"), py::arg("role"),
-            "Attach a texture to a renderable using a material texture role.")
+            "Low-level handle path: attach a texture using a material texture "
+            "role. Prefer RenderablePrimView.set_texture().")
         .def(
             "set_renderable_texture",
             [](App* self, uint32_t handle, Backend::Texture* texture,
                int slot) { self->setRenderableTexture(handle, texture, slot); },
             py::arg("handle"), py::arg("texture"), py::arg("slot") = 0,
-            "Attach a texture to a renderable using a raw texture slot.")
+            "Low-level handle path: attach a texture using a raw texture slot.")
         .def(
             "update_renderable_geometry",
             [](App* self, uint32_t handle, const FloatArray& positions,
@@ -1499,7 +1526,8 @@ py::class_<glm::vec3>(m, "vec3")
             },
             py::arg("handle"), py::arg("positions"),
             py::arg("normals") = py::none(),
-            "Update dynamic vertex positions and optional normals.")
+            "Low-level handle path: update dynamic vertex positions and "
+            "optional normals.")
         .def(
             "update_renderable_skinning_matrices",
             [](App* self, uint32_t handle, const FloatArray& matrices) {
@@ -1507,7 +1535,8 @@ py::class_<glm::vec3>(m, "vec3")
                 self->updateRenderableSkinningMatrices(handle, m.data, m.count);
             },
             py::arg("handle"), py::arg("bone_matrices"),
-            "Update bone matrices for a skinned renderable.")
+            "Low-level handle path: update bone matrices for a skinned "
+            "renderable.")
         .def(
             "log_debug_lines",
             [](App* self, const std::string& path, const FloatArray& starts,

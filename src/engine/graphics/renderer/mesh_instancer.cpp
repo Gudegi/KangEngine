@@ -145,6 +145,23 @@ void MeshInstancer::addPrim(Scene::Prim* prim) { _prims.push_back(prim); }
 
 void MeshInstancer::removePrim(Scene::Prim* prim) {
     _prims.erase(std::remove(_prims.begin(), _prims.end(), prim), _prims.end());
+    if (!_prims.empty() ||
+        (!_hasExternalBufferDesc && !_hasDirectCudaTransforms))
+        return;
+
+    _externalBufferDesc = ExternalBufferDesc{};
+    _hasExternalBufferDesc = false;
+    _externalBufferLoaded = false;
+    _externalBufferVersion = 0;
+    _hasDirectCudaTransforms = false;
+    _usesGpuExternalTransforms = false;
+    _useExternalTransforms = false;
+    _transforms.clear();
+    _colors.clear();
+    _instancePrims.clear();
+    _worldBounds.clear();
+    _combinedWorldBounds = Geometry::AABB::empty();
+    _visibleCount = 0;
 }
 
 void MeshInstancer::_setupInstanceAttribs(Backend::VertexArray* vao,

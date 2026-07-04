@@ -131,6 +131,40 @@ void Renderer::renderSceneToFramebuffer(Camera& camera,
         _device->setViewport(0, 0, _viewportWidth, _viewportHeight);
 }
 
+RenderableHandle Renderer::addRenderable(Backend::Shader* shader,
+                                         Scene::Prim* prim,
+                                         TransformSource transformSource) {
+    return _rasterizer
+               ? _rasterizer->addRenderable(shader, prim, transformSource)
+               : InvalidHandle;
+}
+
+RenderableHandle Renderer::addSkinnedRenderable(
+    Backend::Shader* shader, Scene::Prim* prim,
+    const Scene::SkinnedMeshData& skinnedMesh,
+    TransformSource transformSource) {
+    return _rasterizer ? _rasterizer->addSkinnedRenderable(
+                             shader, prim, skinnedMesh, transformSource)
+                       : InvalidHandle;
+}
+
+RenderableHandle Renderer::addRenderable(Material* material, Scene::Prim* prim,
+                                         TransformSource transformSource) {
+    return _rasterizer
+               ? _rasterizer->addRenderable(material, prim, transformSource)
+               : InvalidHandle;
+}
+
+void Renderer::removePrim(RenderableHandle handle, Scene::Prim* prim) {
+    if (_rasterizer)
+        _rasterizer->removePrim(handle, prim);
+}
+
+void Renderer::removePrim(Scene::Prim* prim) {
+    if (_rasterizer)
+        _rasterizer->removePrim(prim);
+}
+
 void Renderer::updateRenderableTransforms(
     RenderableHandle handle, const std::vector<glm::mat4>& transforms,
     const std::vector<glm::vec4>* colors) {

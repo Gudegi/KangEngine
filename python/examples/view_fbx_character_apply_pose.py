@@ -216,10 +216,9 @@ class FbxCharacterApplyPoseViewer(ke.App):
         self.skeleton_colors = torch.tensor(colors, dtype=torch.float32)
 
         if self.line_handle is None:
-            self.line_handle = scene.DebugDraw.log_lines(
-                self,
-                self.skeleton_shader,
+            self.line_handle = self.scene.log_lines(
                 "/debug/fbx_apply_pose_skeleton",
+                self.skeleton_shader,
                 starts_t,
                 ends_t,
                 colors_t,
@@ -227,13 +226,7 @@ class FbxCharacterApplyPoseViewer(ke.App):
                 8,
             )
         else:
-            scene.DebugDraw.update_lines(
-                self,
-                self.line_handle,
-                starts_t,
-                ends_t,
-                colors_t,
-            )
+            self.line_handle.update_lines(starts_t, ends_t, colors_t)
 
     def _apply_visibility(self):
         self.character.set_visible(self.show_mesh)
@@ -241,9 +234,7 @@ class FbxCharacterApplyPoseViewer(ke.App):
             return
         colors = self.skeleton_colors.clone()
         colors[:, 3] = 1.0 if self.show_skeleton else 0.0
-        scene.DebugDraw.update_lines(
-            self,
-            self.line_handle,
+        self.line_handle.update_lines(
             self.skeleton_starts,
             self.skeleton_ends,
             colors,

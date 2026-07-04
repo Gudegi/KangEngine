@@ -995,7 +995,7 @@ class KangWorldVisualBridge:
             shape_shader = collision_shader if collision_shader is not None else shader
             if add_shapes and shape_shader is not None:
                 for prim in collision_prims:
-                    self.app.add_renderable(shape_shader, prim)
+                    self.app.scene.add_renderable(prim, shape_shader)
 
         record = ArticulationVisualView(
             key[0],
@@ -1301,7 +1301,7 @@ class KangWorldVisualBridge:
         _apply_prim_color(body_prims, color)
         if add_shapes and shader is not None:
             for prim in body_prims:
-                self.app.add_renderable(shader, prim)
+                self.app.scene.add_renderable(prim, shader)
         _debug_instancing(
             kind="visual-scenegraph",
             env_id=key[0],

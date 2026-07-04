@@ -63,7 +63,7 @@ class ControlDemo(ke.App):
 
         ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
         ground.set_mesh_data(scene.Prim.create_plane_data(100.0, ke.UpAxis.Z))
-        self.add_renderable(self.ground_shader, ground)
+        self.scene.add_renderable(ground, self.ground_shader)
 
         self.robot_xml = asset_path("characters", "kw", "kw5.xml")
         self.ball_xml = asset_path("objects", "ball.xml")
@@ -151,9 +151,7 @@ class ControlDemo(ke.App):
 
     def preRender(self):
         if self.force_arrow_visible and self.force_time_left <= 0.0:
-            ke.scene.DebugDraw.update_arrows(
-                self,
-                self.force_arrow_handle,
+            self.force_arrow_handle.update_arrows(
                 self.empty_vec3,
                 self.empty_vec3,
                 self.empty_vec4,
@@ -201,10 +199,9 @@ class ControlDemo(ke.App):
         ends = end.reshape(1, 3)
 
         if self.force_arrow_handle is None:
-            self.force_arrow_handle = ke.scene.DebugDraw.log_arrows(
-                self,
-                self.rigid_shader,
+            self.force_arrow_handle = self.scene.log_arrows(
                 "/debug/force_arrow",
+                self.rigid_shader,
                 starts,
                 ends,
                 self.arrow_color,
@@ -212,9 +209,7 @@ class ControlDemo(ke.App):
                 12,
             )
         else:
-            ke.scene.DebugDraw.update_arrows(
-                self, self.force_arrow_handle, starts, ends, self.arrow_color
-            )
+            self.force_arrow_handle.update_arrows(starts, ends, self.arrow_color)
         self.force_arrow_visible = True
 
     def render(self):

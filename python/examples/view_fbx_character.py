@@ -95,7 +95,7 @@ class FbxCharacterViewer(ke.App):
 
         ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
         ground.set_mesh_data(scene.Prim.create_plane_data(20.0, self.up_axis))
-        self.add_renderable(self.ground_shader, ground)
+        self.scene.add_renderable(ground, self.ground_shader)
 
         camera = self.get_camera()
         camera.set_camera_pos(ke.vec3(0.0, 1.45, 3.2))
@@ -409,10 +409,9 @@ class FbxCharacterViewer(ke.App):
         self.skeleton_colors = torch.tensor(colors, dtype=torch.float32)
 
         if self.line_handle is None:
-            self.line_handle = scene.DebugDraw.log_lines(
-                self,
-                self.skeleton_shader,
+            self.line_handle = self.scene.log_lines(
                 "/debug/fbx_character_skeleton",
+                self.skeleton_shader,
                 starts_t,
                 ends_t,
                 colors_t,
@@ -420,13 +419,7 @@ class FbxCharacterViewer(ke.App):
                 8,
             )
         else:
-            scene.DebugDraw.update_lines(
-                self,
-                self.line_handle,
-                starts_t,
-                ends_t,
-                colors_t,
-            )
+            self.line_handle.update_lines(starts_t, ends_t, colors_t)
 
     def _apply_visibility(self):
         mesh_alpha = 1.0 if self.show_mesh else 0.0
@@ -452,9 +445,7 @@ class FbxCharacterViewer(ke.App):
 
         colors = self.skeleton_colors.clone()
         colors[:, 3] = 1.0 if self.show_skeleton else 0.0
-        scene.DebugDraw.update_lines(
-            self,
-            self.line_handle,
+        self.line_handle.update_lines(
             self.skeleton_starts,
             self.skeleton_ends,
             colors,

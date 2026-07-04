@@ -1,5 +1,7 @@
 #include "engine/scene/debug_draw.hpp"
 #include "engine/core/app/app.hpp"
+#include "engine/scene/component/render_component.hpp"
+#include "engine/scene/component/scene_render_system.hpp"
 #include "engine/scene/native/prim.hpp"
 #include <Eigen/Geometry>
 #include <algorithm>
@@ -260,28 +262,40 @@ RenderableHandle DebugDraw::logLines(App* app, Backend::Shader* shader,
                                      const std::vector<glm::vec3>& ends,
                                      const std::vector<glm::vec4>& colors,
                                      float radius, int segments) {
+    auto component =
+        logLineComponent(app, shader, path, starts, ends, colors, radius,
+                         segments);
+    return component ? app->getSceneRenderSystem().handle(*component)
+                     : InvalidHandle;
+}
+
+std::shared_ptr<RenderComponent> DebugDraw::logLineComponent(
+    App* app, Backend::Shader* shader, const std::string& path,
+    const std::vector<glm::vec3>& starts, const std::vector<glm::vec3>& ends,
+    const std::vector<glm::vec4>& colors, float radius, int segments) {
     if (!app || !shader || !app->getScene())
-        return InvalidHandle;
+        return nullptr;
 
     validateLineInputs("DebugDraw::logLines", starts, ends, colors);
 
     auto [transforms, instanceColors] =
         buildTransforms(starts, ends, colors, makeLineTransform);
     if (transforms.empty())
-        return InvalidHandle;
+        return nullptr;
 
     const float safeRadius = std::max(radius, 1e-5f);
     auto* prim = app->getScene()->definePrim(path, PrimType::Mesh);
     prim->setMeshData(std::make_shared<MeshData>(
         Prim::createCapsuleData(safeRadius, 1.0f, UpAxis::Y, segments)));
 
-    RenderableHandle handle = app->addRenderable(shader, prim);
-    if (handle == InvalidHandle)
-        return InvalidHandle;
+    auto component = app->getSceneRenderSystem().addRenderable(*prim, shader);
+    if (!component)
+        return nullptr;
 
-    app->updateRenderableTransforms(handle, transforms, &instanceColors);
-    app->setRenderableCastsShadow(handle, false);
-    return handle;
+    app->getSceneRenderSystem().updateInstances(*component, transforms,
+                                                &instanceColors);
+    component->setCastsShadow(false);
+    return component;
 }
 
 RenderableHandle DebugDraw::logLines(App* app, Backend::Shader* shader,
@@ -327,6 +341,19 @@ void DebugDraw::updateLines(App* app, RenderableHandle handle,
     app->updateRenderableTransforms(handle, transforms, &instanceColors);
 }
 
+void DebugDraw::updateLines(App* app, RenderComponent& component,
+                            const std::vector<glm::vec3>& starts,
+                            const std::vector<glm::vec3>& ends,
+                            const std::vector<glm::vec4>& colors) {
+    if (!app)
+        return;
+    validateLineInputs("DebugDraw::updateLines", starts, ends, colors);
+    auto [transforms, instanceColors] =
+        buildTransforms(starts, ends, colors, makeLineTransform);
+    app->getSceneRenderSystem().updateInstances(component, transforms,
+                                                &instanceColors);
+}
+
 void DebugDraw::updateLines(App* app, RenderableHandle handle,
                             const float* starts, const float* ends,
                             const float* colors, size_t count,
@@ -346,28 +373,40 @@ RenderableHandle DebugDraw::logArrows(App* app, Backend::Shader* shader,
                                       const std::vector<glm::vec3>& ends,
                                       const std::vector<glm::vec4>& colors,
                                       float radius, int segments) {
+    auto component =
+        logArrowComponent(app, shader, path, starts, ends, colors, radius,
+                          segments);
+    return component ? app->getSceneRenderSystem().handle(*component)
+                     : InvalidHandle;
+}
+
+std::shared_ptr<RenderComponent> DebugDraw::logArrowComponent(
+    App* app, Backend::Shader* shader, const std::string& path,
+    const std::vector<glm::vec3>& starts, const std::vector<glm::vec3>& ends,
+    const std::vector<glm::vec4>& colors, float radius, int segments) {
     if (!app || !shader || !app->getScene())
-        return InvalidHandle;
+        return nullptr;
 
     validateLineInputs("DebugDraw::logArrows", starts, ends, colors);
 
     auto [transforms, instanceColors] =
         buildTransforms(starts, ends, colors, makeArrowTransform);
     if (transforms.empty())
-        return InvalidHandle;
+        return nullptr;
 
     const float safeRadius = std::max(radius, 1e-5f);
     auto* prim = app->getScene()->definePrim(path, PrimType::Mesh);
     prim->setMeshData(std::make_shared<MeshData>(Prim::createArrowData(
         safeRadius, 0.78f, UpAxis::Y, safeRadius * 2.4f, 0.22f, segments)));
 
-    RenderableHandle handle = app->addRenderable(shader, prim);
-    if (handle == InvalidHandle)
-        return InvalidHandle;
+    auto component = app->getSceneRenderSystem().addRenderable(*prim, shader);
+    if (!component)
+        return nullptr;
 
-    app->updateRenderableTransforms(handle, transforms, &instanceColors);
-    app->setRenderableCastsShadow(handle, false);
-    return handle;
+    app->getSceneRenderSystem().updateInstances(*component, transforms,
+                                                &instanceColors);
+    component->setCastsShadow(false);
+    return component;
 }
 
 RenderableHandle DebugDraw::logArrows(App* app, Backend::Shader* shader,
@@ -411,6 +450,19 @@ void DebugDraw::updateArrows(App* app, RenderableHandle handle,
     auto [transforms, instanceColors] =
         buildTransforms(starts, ends, colors, makeArrowTransform);
     app->updateRenderableTransforms(handle, transforms, &instanceColors);
+}
+
+void DebugDraw::updateArrows(App* app, RenderComponent& component,
+                             const std::vector<glm::vec3>& starts,
+                             const std::vector<glm::vec3>& ends,
+                             const std::vector<glm::vec4>& colors) {
+    if (!app)
+        return;
+    validateLineInputs("DebugDraw::updateArrows", starts, ends, colors);
+    auto [transforms, instanceColors] =
+        buildTransforms(starts, ends, colors, makeArrowTransform);
+    app->getSceneRenderSystem().updateInstances(component, transforms,
+                                                &instanceColors);
 }
 
 void DebugDraw::updateArrows(App* app, RenderableHandle handle,

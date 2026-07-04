@@ -96,7 +96,7 @@ class FbxMotionViewer(ke.App):
 
         ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
         ground.set_mesh_data(scene.Prim.create_plane_data(20.0, self.up_axis))
-        self.add_renderable(self.ground_shader, ground)
+        self.scene.add_renderable(ground, self.ground_shader)
 
         camera = self.get_camera()
         camera.set_camera_pos(ke.vec3(0.0, 1.6, 3.8))
@@ -144,10 +144,9 @@ class FbxMotionViewer(ke.App):
         colors_t = torch.tensor(colors, dtype=torch.float32)
 
         if self.line_handle is None:
-            self.line_handle = scene.DebugDraw.log_lines(
-                self,
-                self.skeleton_shader,
+            self.line_handle = self.scene.log_lines(
                 "/debug/fbx_skeleton",
+                self.skeleton_shader,
                 starts_t,
                 ends_t,
                 colors_t,
@@ -155,13 +154,7 @@ class FbxMotionViewer(ke.App):
                 8,
             )
         else:
-            scene.DebugDraw.update_lines(
-                self,
-                self.line_handle,
-                starts_t,
-                ends_t,
-                colors_t,
-            )
+            self.line_handle.update_lines(starts_t, ends_t, colors_t)
 
     def preRender(self):
         if self.was_key_pressed(keys.SPACE):

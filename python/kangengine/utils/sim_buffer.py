@@ -245,6 +245,7 @@ def to_gpu_array_view(
     view.stream_handle = int(buffer.stream_handle)
     view.ready_event_handle = int(buffer.ready_event_handle)
     view.name = name
+    view.set_owner(buffer.owner if buffer.owner is not None else buffer.data)
     return view
 
 
@@ -291,4 +292,3 @@ def to_external_transform_desc(
         else sync_policy
     )
     return desc, buffer
-

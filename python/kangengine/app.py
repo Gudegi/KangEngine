@@ -20,39 +20,38 @@ NativeApp = _ke.App
 class RenderablePrimView:
     """User-facing view for one scene prim and its renderer resources."""
 
-    def __init__(self, app: "App", prim, handles):
+    def __init__(self, app: "App", prim, component):
         self._app = app
         self.prim = prim
-        self._handles = tuple(int(handle) for handle in handles)
-        self._external_buffers = {}
+        self.component = component
+
+    @property
+    def _render_system(self):
+        return self._app.get_scene_render_system()
 
     @property
     def path(self) -> str:
         return self.prim.get_path()
 
     def set_visible(self, visible: bool):
-        self.prim.set_visible(bool(visible))
+        self.component.visible = bool(visible)
         return self
 
     def set_double_sided(self, enabled: bool = True):
-        for handle in self._handles:
-            self._app.set_renderable_double_sided(handle, bool(enabled))
+        self._render_system.set_double_sided(self.component, bool(enabled))
         return self
 
     def set_casts_shadow(self, enabled: bool = True):
-        for handle in self._handles:
-            self._app.set_renderable_casts_shadow(handle, bool(enabled))
+        self._render_system.set_casts_shadow(self.component, bool(enabled))
         return self
 
     def set_alpha_mode(self, mode, cutoff: float = 0.5):
         """Choose opaque, cutout-mask, or blended alpha rendering."""
-        for handle in self._handles:
-            self._app.set_renderable_alpha_mode(handle, mode, float(cutoff))
+        self._render_system.set_alpha_mode(self.component, mode, float(cutoff))
         return self
 
     def set_texture(self, texture, role_or_slot=_ke.TextureRole.BaseColor):
-        for handle in self._handles:
-            self._app.set_renderable_texture(handle, texture, role_or_slot)
+        self._render_system.set_texture(self.component, texture, role_or_slot)
         return self
 
     def set_transform_buffer(
@@ -62,10 +61,10 @@ class RenderablePrimView:
         sim_device=None,
         sync_policy=None,
     ):
-        """Use a float32 column-major ``[N, 4, 4]`` transform buffer."""
+        """Set the ``[N, 4, 4]`` buffer of an ExternalBuffer renderable."""
         from .utils.sim_buffer import to_external_transform_desc
 
-        descriptor, buffer = to_external_transform_desc(
+        descriptor, _ = to_external_transform_desc(
             transforms,
             sim_device=sim_device,
             dtype="float32",
@@ -77,14 +76,52 @@ class RenderablePrimView:
             ),
         )
 
-        renderer = self._app.get_renderer()
-        for handle in self._handles:
-            renderer.set_renderable_external_buffer(handle, descriptor)
-            self._external_buffers[handle] = (buffer, descriptor)
+        self._render_system.set_external_buffer(self.component, descriptor)
+        return self
+
+    def update_geometry(self, positions, normals=None):
+        """Update dynamic vertex positions and optional normals."""
+        self._render_system.update_geometry(self.component, positions, normals)
+        return self
+
+    def update_skinning(self, bone_matrices):
+        """Update skinned bone matrices for this renderable."""
+        self._render_system.update_skinning(self.component, bone_matrices)
         return self
 
     def remove(self):
         return self._app.remove_prim(self.prim)
+
+
+class DebugPrimitiveView(RenderablePrimView):
+    """Component-backed instanced debug primitive view."""
+
+    def update_instances(self, transforms, colors=None):
+        """Update raw instance transforms and optional colors."""
+        self._render_system.update_instances(self.component, transforms, colors)
+        return self
+
+    def update_lines(self, starts, ends, colors=None):
+        """Update this view as instanced debug lines."""
+        scene.DebugDraw.update_component_lines(
+            self._app,
+            self.component,
+            starts,
+            ends,
+            colors,
+        )
+        return self
+
+    def update_arrows(self, starts, ends, colors=None):
+        """Update this view as instanced debug arrows."""
+        scene.DebugDraw.update_component_arrows(
+            self._app,
+            self.component,
+            starts,
+            ends,
+            colors,
+        )
+        return self
 
 
 class SceneContext:
@@ -117,10 +154,19 @@ class SceneContext:
         material_or_shader,
         transform_source=None,
     ):
+        """Register a scene prim as renderable through RenderComponent.
+
+        This is the preferred public path for authored scene objects. It
+        returns a RenderablePrimView facade instead of exposing the native
+        renderer handle.
+        """
         if transform_source is None:
             transform_source = _ke.TransformSource.SceneGraph
-        handle = self._app.add_renderable(material_or_shader, prim, transform_source)
-        return RenderablePrimView(self._app, prim, [handle])
+        self._app.add_renderable(material_or_shader, prim, transform_source)
+        component = prim.get_render_component()
+        if component is None:
+            raise RuntimeError(f"failed to register renderable prim: {prim.get_path()}")
+        return RenderablePrimView(self._app, prim, component)
 
     def add_mesh(
         self,
@@ -145,6 +191,54 @@ class SceneContext:
             scene.Prim.create_plane_data(float(scale), self._app.up_axis),
             shader,
         )
+
+    def log_lines(
+        self,
+        path: str,
+        shader,
+        starts,
+        ends,
+        colors=None,
+        radius: float = 0.005,
+        segments: int = 8,
+    ):
+        component = scene.DebugDraw.log_component_lines(
+            self._app,
+            shader,
+            path,
+            starts,
+            ends,
+            colors,
+            float(radius),
+            int(segments),
+        )
+        if component is None or component.owner is None:
+            raise RuntimeError(f"failed to register debug line prim: {path}")
+        return DebugPrimitiveView(self._app, component.owner, component)
+
+    def log_arrows(
+        self,
+        path: str,
+        shader,
+        starts,
+        ends,
+        colors=None,
+        radius: float = 0.02,
+        segments: int = 12,
+    ):
+        component = scene.DebugDraw.log_component_arrows(
+            self._app,
+            shader,
+            path,
+            starts,
+            ends,
+            colors,
+            float(radius),
+            int(segments),
+        )
+        if component is None or component.owner is None:
+            raise RuntimeError(f"failed to register debug arrow prim: {path}")
+        return DebugPrimitiveView(self._app, component.owner, component)
 
     def remove_prim(self, path_or_prim):
         return self._app.remove_prim(path_or_prim)

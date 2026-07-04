@@ -12,6 +12,8 @@
 #include "engine/core/app/app.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/scene/debug_draw.hpp"
+#include "engine/scene/component/render_component.hpp"
+#include "engine/scene/component/scene_render_system.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/native/token.hpp"
 #include "py_array_view.hpp"
@@ -73,6 +75,162 @@ void bind_scene(py::module& m) {
         .value("Spot", KE::Scene::LightType::Spot)
         .export_values();
 
+    py::class_<KE::Scene::RenderComponent,
+               std::shared_ptr<KE::Scene::RenderComponent>>(
+        scene, "RenderComponent",
+        "Renderer-independent visual state attached to one scene prim. "
+        "Renderer handles are owned by SceneRenderSystem, not by this object.")
+        .def_property_readonly("attached",
+                               &KE::Scene::RenderComponent::isAttached,
+                               "Return whether this component is attached.")
+        .def_property_readonly(
+            "owner", &KE::Scene::RenderComponent::owner,
+            py::return_value_policy::reference,
+            "Return the owning prim, or None after detach.")
+        .def_property("visible", &KE::Scene::RenderComponent::isVisible,
+                      &KE::Scene::RenderComponent::setVisible,
+                      "Get or set local render visibility. Registered "
+                      "components sync this change to the renderer.")
+        .def_property("double_sided",
+                      &KE::Scene::RenderComponent::isDoubleSided,
+                      &KE::Scene::RenderComponent::setDoubleSided,
+                      "Get or set double-sided rendering. Registered "
+                      "components sync this change to the renderer.")
+        .def_property("casts_shadow",
+                      &KE::Scene::RenderComponent::castsShadow,
+                      &KE::Scene::RenderComponent::setCastsShadow,
+                      "Get or set shadow casting. Registered components sync "
+                      "this change to the renderer.")
+        .def_property_readonly("alpha_mode",
+                               &KE::Scene::RenderComponent::alphaMode,
+                               "Return the alpha rendering mode.")
+        .def_property_readonly("alpha_cutoff",
+                               &KE::Scene::RenderComponent::alphaCutoff,
+                               "Return the alpha-mask cutoff.")
+        .def_property("transform_source",
+                      &KE::Scene::RenderComponent::transformSource,
+                      &KE::Scene::RenderComponent::setTransformSource,
+                      "Get or set the transform data source.")
+        .def_property_readonly("mesh_data",
+                               &KE::Scene::RenderComponent::resolveMeshData,
+                               "Resolve mesh data from the owning prim.")
+        .def_property_readonly("version",
+                               &KE::Scene::RenderComponent::version,
+                               "Return the visual state version.")
+        .def("__repr__", [](const KE::Scene::RenderComponent& c) {
+            const KE::Scene::Prim* owner = c.owner();
+            const std::string path = owner ? owner->getPath() : "<detached>";
+            return "<RenderComponent path='" + path + "' version=" +
+                   std::to_string(c.version()) + ">";
+        });
+
+    py::class_<KE::Scene::SceneRenderSystem>(
+        scene, "SceneRenderSystem",
+        "Registry connecting scene RenderComponents to renderer resources. "
+        "This hides raw renderable handles for normal scene use.")
+        .def_property_readonly(
+            "registration_count",
+            &KE::Scene::SceneRenderSystem::registrationCount,
+            "Return the number of registered render components.")
+        .def("is_registered", &KE::Scene::SceneRenderSystem::isRegistered,
+             py::arg("component"),
+             "Return whether a render component owns renderer resources.")
+        .def("shares_batch", &KE::Scene::SceneRenderSystem::sharesBatch,
+             py::arg("first"), py::arg("second"),
+             "Return whether two components share one renderer batch without "
+             "exposing the raw handle.")
+        .def("set_double_sided",
+             &KE::Scene::SceneRenderSystem::setDoubleSided,
+             py::arg("component"), py::arg("enabled") = true,
+             "Set double-sided rendering through component registration.")
+        .def("set_casts_shadow",
+             &KE::Scene::SceneRenderSystem::setCastsShadow,
+             py::arg("component"), py::arg("enabled") = true,
+             "Set shadow casting through component registration.")
+        .def("set_alpha_mode", &KE::Scene::SceneRenderSystem::setAlphaMode,
+             py::arg("component"), py::arg("mode"),
+             py::arg("cutoff") = 0.5f,
+             "Set alpha rendering through component registration.")
+        .def(
+            "set_texture",
+            [](KE::Scene::SceneRenderSystem& self,
+               KE::Scene::RenderComponent& component,
+               KE::Backend::Texture* texture, KE::TextureRole role) {
+                self.setTexture(component, texture, role);
+            },
+            py::arg("component"), py::arg("texture"), py::arg("role"),
+            "Set a texture by material role through component registration.")
+        .def(
+            "set_texture",
+            [](KE::Scene::SceneRenderSystem& self,
+               KE::Scene::RenderComponent& component,
+               KE::Backend::Texture* texture, int slot) {
+                self.setTexture(component, texture, slot);
+            },
+            py::arg("component"), py::arg("texture"), py::arg("slot") = 0,
+            "Set a texture by raw renderer slot through component "
+            "registration.")
+        .def("set_external_buffer",
+             &KE::Scene::SceneRenderSystem::setExternalBuffer,
+             py::arg("component"), py::arg("descriptor"),
+             "Attach an external transform buffer through registration.")
+        .def(
+            "update_instances",
+            [](KE::Scene::SceneRenderSystem& self,
+               KE::Scene::RenderComponent& component,
+               const FloatArray& transforms, py::object colors) {
+                auto transformVec = mat4Array(transforms, "transforms");
+                std::vector<glm::vec4> colorVec;
+                const std::vector<glm::vec4>* colorPtr = nullptr;
+                if (!colors.is_none()) {
+                    auto colorArray = colors.cast<FloatArray>();
+                    colorVec = vec4Array(colorArray, "colors");
+                    if (!colorVec.empty() && colorVec.size() != 1 &&
+                        colorVec.size() != transformVec.size()) {
+                        throw py::value_error(
+                            "colors must be empty, length 1, or match "
+                            "transforms length");
+                    }
+                    colorPtr = &colorVec;
+                }
+                self.updateInstances(component, transformVec, colorPtr);
+            },
+            py::arg("component"), py::arg("transforms"),
+            py::arg("colors") = py::none(),
+            "Update instanced transforms and optional colors through "
+            "component registration.")
+        .def(
+            "update_geometry",
+            [](KE::Scene::SceneRenderSystem& self,
+               KE::Scene::RenderComponent& component,
+               const FloatArray& positions, py::object normals) {
+                auto positionVec = vec3Array(positions, "positions");
+                std::vector<glm::vec3> normalVec;
+                if (!normals.is_none()) {
+                    auto normalArray = normals.cast<FloatArray>();
+                    normalVec = vec3Array(normalArray, "normals");
+                    if (normalVec.size() != positionVec.size()) {
+                        throw py::value_error(
+                            "normals must match positions length");
+                    }
+                }
+                self.updateGeometry(component, positionVec, normalVec);
+            },
+            py::arg("component"), py::arg("positions"),
+            py::arg("normals") = py::none(),
+            "Update dynamic vertex positions and optional normals through "
+            "component registration.")
+        .def(
+            "update_skinning",
+            [](KE::Scene::SceneRenderSystem& self,
+               KE::Scene::RenderComponent& component,
+               const FloatArray& boneMatrices) {
+                self.updateSkinning(component,
+                                    mat4Array(boneMatrices, "bone_matrices"));
+            },
+            py::arg("component"), py::arg("bone_matrices"),
+            "Update skinned bone matrices through component registration.");
+
     // Prim class
     py::class_<KE::Scene::Prim>(
         scene, "Prim",
@@ -102,6 +260,15 @@ void bind_scene(py::module& m) {
              "Find a descendant prim by absolute path.")
         .def("get_children", &KE::Scene::Prim::getChildren,
              "Return direct child prims.")
+        // Components
+        .def("add_render_component", &KE::Scene::Prim::addRenderComponent,
+             "Attach and return this prim's render component.")
+        .def("get_render_component", &KE::Scene::Prim::getRenderComponent,
+             "Return this prim's render component, or None.")
+        .def("has_render_component", &KE::Scene::Prim::hasRenderComponent,
+             "Return whether this prim has a render component.")
+        .def("remove_render_component", &KE::Scene::Prim::removeRenderComponent,
+             "Detach this prim's render component.")
         // Mesh data
         .def("set_mesh_data", &KE::Scene::Prim::setMeshData,
              py::arg("mesh_data"), "Attach mesh data to this prim.")
@@ -402,6 +569,59 @@ void bind_scene(py::module& m) {
             py::arg("radius") = 0.005f, py::arg("segments") = 8,
             "Create instanced debug line geometry.")
         .def_static(
+            "log_component_lines",
+            [](KE::App* app, KE::Backend::Shader* shader,
+               const std::string& path, const FloatArray& starts,
+               const FloatArray& ends, py::object colors, float radius,
+               int segments) {
+                auto s = vec3Array(starts, "starts");
+                auto e = vec3Array(ends, "ends");
+                std::vector<glm::vec4> c;
+                if (!colors.is_none())
+                    c = vec4Array(colors.cast<FloatArray>(), "colors");
+                if (s.size() != e.size()) {
+                    throw py::value_error(
+                        "starts and ends must have the same length");
+                }
+                if (!c.empty() && c.size() != 1 && c.size() != s.size()) {
+                    throw py::value_error(
+                        "colors must be empty, length 1, or match starts "
+                        "length");
+                }
+                return KE::Scene::DebugDraw::logLineComponent(
+                    app, shader, path, s, e, c, radius, segments);
+            },
+            py::arg("app"), py::arg("shader"), py::arg("path"),
+            py::arg("starts"), py::arg("ends"),
+            py::arg("colors") = py::none(), py::arg("radius") = 0.005f,
+            py::arg("segments") = 8,
+            "Create instanced debug line geometry and return its "
+            "RenderComponent.")
+        .def_static(
+            "update_component_lines",
+            [](KE::App* app, KE::Scene::RenderComponent& component,
+               const FloatArray& starts, const FloatArray& ends,
+               py::object colors) {
+                auto s = vec3Array(starts, "starts");
+                auto e = vec3Array(ends, "ends");
+                std::vector<glm::vec4> c;
+                if (!colors.is_none())
+                    c = vec4Array(colors.cast<FloatArray>(), "colors");
+                if (s.size() != e.size()) {
+                    throw py::value_error(
+                        "starts and ends must have the same length");
+                }
+                if (!c.empty() && c.size() != 1 && c.size() != s.size()) {
+                    throw py::value_error(
+                        "colors must be empty, length 1, or match starts "
+                        "length");
+                }
+                KE::Scene::DebugDraw::updateLines(app, component, s, e, c);
+            },
+            py::arg("app"), py::arg("component"), py::arg("starts"),
+            py::arg("ends"), py::arg("colors") = py::none(),
+            "Update component-backed debug line geometry.")
+        .def_static(
             "update_lines",
             [](KE::App* app, uint32_t handle, const FloatArray& starts,
                const FloatArray& ends, const FloatArray& colors) {
@@ -465,6 +685,59 @@ void bind_scene(py::module& m) {
             py::arg("starts"), py::arg("ends"), py::arg("colors"),
             py::arg("radius") = 0.02f, py::arg("segments") = 12,
             "Create instanced debug arrow geometry.")
+        .def_static(
+            "log_component_arrows",
+            [](KE::App* app, KE::Backend::Shader* shader,
+               const std::string& path, const FloatArray& starts,
+               const FloatArray& ends, py::object colors, float radius,
+               int segments) {
+                auto s = vec3Array(starts, "starts");
+                auto e = vec3Array(ends, "ends");
+                std::vector<glm::vec4> c;
+                if (!colors.is_none())
+                    c = vec4Array(colors.cast<FloatArray>(), "colors");
+                if (s.size() != e.size()) {
+                    throw py::value_error(
+                        "starts and ends must have the same length");
+                }
+                if (!c.empty() && c.size() != 1 && c.size() != s.size()) {
+                    throw py::value_error(
+                        "colors must be empty, length 1, or match starts "
+                        "length");
+                }
+                return KE::Scene::DebugDraw::logArrowComponent(
+                    app, shader, path, s, e, c, radius, segments);
+            },
+            py::arg("app"), py::arg("shader"), py::arg("path"),
+            py::arg("starts"), py::arg("ends"),
+            py::arg("colors") = py::none(), py::arg("radius") = 0.02f,
+            py::arg("segments") = 12,
+            "Create instanced debug arrow geometry and return its "
+            "RenderComponent.")
+        .def_static(
+            "update_component_arrows",
+            [](KE::App* app, KE::Scene::RenderComponent& component,
+               const FloatArray& starts, const FloatArray& ends,
+               py::object colors) {
+                auto s = vec3Array(starts, "starts");
+                auto e = vec3Array(ends, "ends");
+                std::vector<glm::vec4> c;
+                if (!colors.is_none())
+                    c = vec4Array(colors.cast<FloatArray>(), "colors");
+                if (s.size() != e.size()) {
+                    throw py::value_error(
+                        "starts and ends must have the same length");
+                }
+                if (!c.empty() && c.size() != 1 && c.size() != s.size()) {
+                    throw py::value_error(
+                        "colors must be empty, length 1, or match starts "
+                        "length");
+                }
+                KE::Scene::DebugDraw::updateArrows(app, component, s, e, c);
+            },
+            py::arg("app"), py::arg("component"), py::arg("starts"),
+            py::arg("ends"), py::arg("colors") = py::none(),
+            "Update component-backed debug arrow geometry.")
         .def_static(
             "update_arrows",
             [](KE::App* app, uint32_t handle, const FloatArray& starts,
@@ -608,9 +881,8 @@ void bind_scene(py::module& m) {
              "Return a prim at a scene path, or None if it does not exist.")
         .def("remove_prim", &KE::Scene::SceneBackend::removePrim,
              py::arg("path"),
-             "Remove a prim subtree from this scene backend. This does not "
-             "detach renderer resources by itself; prefer App scene helpers "
-             "for user-facing workflows.")
+             "Remove a prim subtree. Components registered by an App detach "
+             "their renderer resources during destruction.")
         .def("get_root_prim", &KE::Scene::SceneBackend::getRootPrim,
              py::return_value_policy::reference, "Return the scene root prim.");
 

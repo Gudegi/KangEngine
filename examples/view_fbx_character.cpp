@@ -14,7 +14,6 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 using namespace KE;
@@ -68,7 +67,6 @@ class FbxCharacterCppApp : public App {
     std::vector<glm::vec3> lineStarts;
     std::vector<glm::vec3> lineEnds;
     std::vector<glm::vec4> lineColors;
-    std::unordered_map<RenderableHandle, std::string> pickNames;
 
     bool animate = true;
     bool showMesh = true;
@@ -120,19 +118,12 @@ class FbxCharacterCppApp : public App {
         ground.shader = groundShader.get();
         ground.path = "/ground";
         ground.meshData = Scene::Prim::createPlaneData(20.0f, _upAxis);
-        const MeshPrimResult groundResult = addMeshPrim(std::move(ground));
-        if (groundResult.handle != InvalidHandle)
-            pickNames[groundResult.handle] = "/ground";
+        addMeshPrim(std::move(ground));
 
         character = SkinnedCharacterBridge::fromFBX(
             this, skinnedShader.get(), fbxPath, "/fbx_character", clipIndex,
             fps, importScale);
         Scene::Prim::defineManipulationGroup(getScene(), "/fbx_character");
-        for (const auto& mesh : character.meshes()) {
-            if (mesh.handle != InvalidHandle)
-                pickNames[mesh.handle] =
-                    mesh.name.empty() ? "<unnamed mesh>" : mesh.name;
-        }
         character.setCastsShadow(castShadows);
         updateSkeletonLines(character.motion().sample(0.0f, true));
         const std::string motionName =
@@ -276,32 +267,14 @@ class FbxCharacterCppApp : public App {
             return;
         }
 
-        const auto it = pickNames.find(r.handle);
-        const std::string name =
-            (it != pickNames.end()) ? it->second : "<unknown mesh>";
-        std::cout << "Ray pick: mesh=" << name << " handle=" << r.handle
+        const std::string path = r.prim ? r.prim->getPath() : "<batch>";
+        std::cout << "Ray pick: prim=" << path
                   << " instance=" << r.instanceIndex << " position=("
                   << r.position.x << ", " << r.position.y << ", "
                   << r.position.z << ") distance=" << r.distance << "\n";
         logDebugPoints("/debug/pick_point", {r.position},
                        {glm::vec4(1, 0, 0, 1)}, 10.f);
     }
-    /*
-    void onRayPicked(const RayPickResult& r) override {
-        if (!r.hit) {
-            std::cout << "Ray pick: no hit\n";
-            return;
-        }
-
-        const auto it = pickNames.find(r.handle);
-        const std::string name =
-            (it != pickNames.end()) ? it->second : "<unknown mesh>";
-        std::cout << "Ray pick: mesh=" << name << " handle=" << r.handle
-                  << " instance=" << r.instanceIndex << " position=("
-                  << r.position.x << ", " << r.position.y << ", "
-                  << r.position.z << ") distance=" << r.distance << "\n";
-    }
-    */
 };
 
 int main(int argc, char** argv) {

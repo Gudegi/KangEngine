@@ -407,9 +407,7 @@ class MjcfDofControlApp(ke.App):
     def _clear_contact_force_arrows(self):
         if self.contact_force_handle is None:
             return
-        ke.scene.DebugDraw.update_arrows(
-            self,
-            self.contact_force_handle,
+        self.contact_force_handle.update_arrows(
             self.empty_vec3,
             self.empty_vec3,
             self.empty_vec4,
@@ -453,10 +451,9 @@ class MjcfDofControlApp(ke.App):
         colors = np.repeat(self.contact_force_color, starts.shape[0], axis=0)
 
         if self.contact_force_handle is None:
-            self.contact_force_handle = ke.scene.DebugDraw.log_arrows(
-                self,
-                self.robot_shader,
+            self.contact_force_handle = self.scene.log_arrows(
                 "/debug/contact_forces",
+                self.robot_shader,
                 starts,
                 ends,
                 colors,
@@ -464,13 +461,7 @@ class MjcfDofControlApp(ke.App):
                 12,
             )
         else:
-            ke.scene.DebugDraw.update_arrows(
-                self,
-                self.contact_force_handle,
-                starts,
-                ends,
-                colors,
-            )
+            self.contact_force_handle.update_arrows(starts, ends, colors)
 
     @staticmethod
     def _vec3_to_np(value) -> np.ndarray:

@@ -3,6 +3,7 @@
 ///
 
 #include "prim.hpp"
+#include "engine/scene/component/render_component.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "utils/types.hpp"
 #include <Eigen/Geometry>
@@ -16,6 +17,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <sstream>
 #include <algorithm>
+#include <stdexcept>
 #include "xform_token.hpp"
 
 namespace KE {
@@ -53,6 +55,11 @@ Prim::Prim(const std::string& name, PrimType type, Prim* parent)
     } else {
         _path = parent->getPath() + "/" + name;
     }
+}
+
+Prim::~Prim() {
+    if (_renderComponent)
+        _renderComponent->detach();
 }
 
 Prim* Prim::addChild(const std::string& name, PrimType type) {
@@ -137,13 +144,19 @@ std::vector<Prim*> Prim::getChildren() const {
 void Prim::setMeshData(std::shared_ptr<MeshData> data) {
     _meshData = std::move(data);
     _resolvedMeshDataCache.reset();
+    if (_renderComponent)
+        _renderComponent->markChanged();
 }
 
 std::shared_ptr<MeshData> Prim::getMeshData() const { return _meshData; }
 
 void Prim::setMeshSourcePath(const std::string& path) {
+    if (_meshSourcePath == path)
+        return;
     _meshSourcePath = path;
     _resolvedMeshDataCache.reset();
+    if (_renderComponent)
+        _renderComponent->markChanged();
 }
 
 const std::string& Prim::getMeshSourcePath() const { return _meshSourcePath; }
@@ -169,6 +182,27 @@ std::shared_ptr<MeshData> Prim::resolveMeshData() const {
     auto resolved = source->resolveMeshData();
     _resolvedMeshDataCache = resolved;
     return resolved;
+}
+
+std::shared_ptr<RenderComponent> Prim::addRenderComponent() {
+    if (_renderComponent)
+        throw std::runtime_error("Prim '" + _path +
+                                 "' already has a RenderComponent");
+    _renderComponent = std::shared_ptr<RenderComponent>(
+        new RenderComponent(this));
+    return _renderComponent;
+}
+
+std::shared_ptr<RenderComponent> Prim::getRenderComponent() const {
+    return _renderComponent;
+}
+
+bool Prim::removeRenderComponent() {
+    if (!_renderComponent)
+        return false;
+    _renderComponent->detach();
+    _renderComponent.reset();
+    return true;
 }
 
 void Prim::setLightType(LightType type) {
@@ -277,6 +311,14 @@ bool Prim::isVisibleInHierarchy() const {
             return false;
     }
     return true;
+}
+
+void Prim::setVisible(bool visible) {
+    if (_visible == visible)
+        return;
+    _visible = visible;
+    if (_renderComponent)
+        _renderComponent->markChanged();
 }
 
 void Prim::setActive(bool a) { _active = a; }
