@@ -1,5 +1,4 @@
 #include "physics_bridge.hpp"
-#include "engine/core/app/app.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "physics/articulation.hpp"
@@ -7,7 +6,6 @@
 #include "skeleton_bridge.hpp"
 
 #include <Eigen/Geometry>
-#include <cassert>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -22,50 +20,11 @@ void PhysicsBridge::add(const Articulation& artic,
         _primVisuals.push_back({artic.link(i), skelBridge.bodyPrim(i)});
 }
 
-void PhysicsBridge::addInstanced(std::vector<Articulation*> artics,
-                                 std::vector<RenderableHandle> handles) {
-    InstancedGroup group;
-    group.handles = std::move(handles);
-    group.model.setBodyRenderables(group.handles);
-    group.visualBatch.setModel(&group.model);
-    group.artics.reserve(artics.size());
-    for (auto* artic : artics)
-        group.artics.push_back(artic);
-    _instancedGroups.push_back(std::move(group));
-}
-
-void PhysicsBridge::addInstanced(const Articulation& artic,
-                                 const std::vector<RenderableHandle>& handles) {
-    for (auto& group : _instancedGroups) {
-        if (group.handles == handles) {
-            group.artics.push_back(&artic);
-            return;
-        }
-    }
-
-    _instancedGroups.push_back(
-        {std::vector<const Articulation*>{&artic},
-         handles,
-         SimModel{},
-         SimState{},
-         SimVisualBatch{}});
-    _instancedGroups.back().model.setBodyRenderables(handles);
-    _instancedGroups.back().visualBatch.setModel(&_instancedGroups.back().model);
-}
-
 void PhysicsBridge::sync() {
     // Prim-based: PhysX pose -> Prim xform attributes
     for (auto& v : _primVisuals) {
         physx::PxTransform pose = v.link->getGlobalPose();
         v.prim->setWorldMatrix(pxToMat4(pose));
-    }
-
-    // Handle-based instanced: collect N transforms per body, expose as external buffers
-    assert((_instancedGroups.empty() || _app) &&
-           "App* required for instanced sync — pass it to PhysicsBridge ctor");
-    for (auto& grp : _instancedGroups) {
-        fillSimStateFromPhysX(grp);
-        uploadSimVisualBatch(grp);
     }
 
     // Collision visuals: link pose * local offset
@@ -77,34 +36,6 @@ void PhysicsBridge::sync() {
         const glm::quat worldRot = linkRot * cv.localQuat;
         cv.prim->setWorldMatrix(glm::translate(glm::mat4(1.0f), worldPos) *
                                 glm::mat4_cast(worldRot));
-    }
-}
-
-void PhysicsBridge::fillSimStateFromPhysX(InstancedGroup& group) {
-    const int numBodies = group.model.bodyCount();
-    const int numRobots = static_cast<int>(group.artics.size());
-    group.state.resize(numRobots, numBodies);
-
-    for (int bodyId = 0; bodyId < numBodies; ++bodyId) {
-        for (int envId = 0; envId < numRobots; ++envId) {
-            physx::PxTransform pose =
-                group.artics[static_cast<size_t>(envId)]->link(bodyId)
-                    ->getGlobalPose();
-            group.state.setBodyTransform(envId, bodyId, pxToGlm(pose.p),
-                                         pxToGlm(pose.q));
-        }
-    }
-}
-
-void PhysicsBridge::uploadSimVisualBatch(InstancedGroup& group) {
-    group.visualBatch.prepareFromState(group.state);
-    ++group.transformVersion;
-    for (int shapeId = 0; shapeId < group.visualBatch.renderableCount();
-         ++shapeId) {
-        auto desc = group.visualBatch.externalTransformDesc(
-            shapeId, group.transformVersion, "physics_bridge_transforms");
-        _app->setRenderableExternalBuffer(group.visualBatch.renderable(shapeId),
-                                          desc);
     }
 }
 

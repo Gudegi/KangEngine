@@ -380,21 +380,6 @@ class App {
     glm::quat axisQuat(float w, float x, float y, float z, UpAxis from,
                        UpAxis to) const;
 
-    // Primitive Creation Helpers
-    RenderableHandle addCube(const std::string& path, float size = 1.0f,
-                             glm::vec3 pos = glm::vec3(0.0f),
-                             glm::quat ori = glm::quat(1, 0, 0, 0),
-                             glm::vec4 color = glm::vec4(1.0f),
-                             Backend::Shader* shader = nullptr);
-    RenderableHandle addSphere(const std::string& path, float radius = 1.0f,
-                               glm::vec3 pos = glm::vec3(0.0f),
-                               glm::vec4 color = glm::vec4(1.0f),
-                               Backend::Shader* shader = nullptr);
-    RenderableHandle addPlane(const std::string& path, float size = 10.0f,
-                              glm::vec3 pos = glm::vec3(0.0f),
-                              glm::vec4 color = glm::vec4(1.0f),
-                              Backend::Shader* shader = nullptr);
-
     // Debug Drawing Helpers
     void drawLine(const std::string& path, glm::vec3 start, glm::vec3 end,
                   glm::vec4 color = glm::vec4(1.0f), float thickness = 0.02f,

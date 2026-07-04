@@ -16,7 +16,6 @@ class Prim;
 } // namespace Scene
 
 using RenderableHandle = uint32_t;
-using MeshHandle = RenderableHandle; // Deprecated: use RenderableHandle.
 static constexpr RenderableHandle InvalidHandle = ~0u;
 
 enum class TransformSource {

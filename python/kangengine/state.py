@@ -942,6 +942,3 @@ class KangWorldState:
         self.snapshot = None
         self.backend = None
         return self
-
-
-KangStateCache = KangWorldState

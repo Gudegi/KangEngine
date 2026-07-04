@@ -534,41 +534,6 @@ void bind_scene(py::module& m) {
         scene, "DebugDraw",
         "Helpers for creating debug lines, arrows, and coordinate axes.")
         .def_static(
-            "log_lines",
-            [](KE::App* app, KE::Backend::Shader* shader,
-               const std::string& path, const FloatArray& starts,
-               const FloatArray& ends, const FloatArray& colors, float radius,
-               int segments) {
-                auto s = vec3ArrayView(starts, "starts");
-                auto e = vec3ArrayView(ends, "ends");
-                auto c = vec4ArrayView(colors, "colors");
-                if (s.count != e.count) {
-                    throw py::value_error(
-                        "starts and ends must have the same length");
-                }
-                return KE::Scene::DebugDraw::logLines(
-                    app, shader, path, s.data, e.data, c.data, s.count, c.count,
-                    radius, segments);
-            },
-            py::arg("app"), py::arg("shader"), py::arg("path"),
-            py::arg("starts"), py::arg("ends"), py::arg("colors"),
-            py::arg("radius") = 0.005f, py::arg("segments") = 8,
-            "Create instanced debug line geometry from numpy arrays.")
-        .def_static(
-            "log_lines",
-            [](KE::App* app, KE::Backend::Shader* shader,
-               const std::string& path, const std::vector<glm::vec3>& starts,
-               const std::vector<glm::vec3>& ends,
-               const std::vector<glm::vec4>& colors, float radius,
-               int segments) {
-                return KE::Scene::DebugDraw::logLines(
-                    app, shader, path, starts, ends, colors, radius, segments);
-            },
-            py::arg("app"), py::arg("shader"), py::arg("path"),
-            py::arg("starts"), py::arg("ends"), py::arg("colors"),
-            py::arg("radius") = 0.005f, py::arg("segments") = 8,
-            "Create instanced debug line geometry.")
-        .def_static(
             "log_component_lines",
             [](KE::App* app, KE::Backend::Shader* shader,
                const std::string& path, const FloatArray& starts,
@@ -622,70 +587,6 @@ void bind_scene(py::module& m) {
             py::arg("ends"), py::arg("colors") = py::none(),
             "Update component-backed debug line geometry.")
         .def_static(
-            "update_lines",
-            [](KE::App* app, uint32_t handle, const FloatArray& starts,
-               const FloatArray& ends, const FloatArray& colors) {
-                auto s = vec3ArrayView(starts, "starts");
-                auto e = vec3ArrayView(ends, "ends");
-                auto c = vec4ArrayView(colors, "colors");
-                if (s.count != e.count) {
-                    throw py::value_error(
-                        "starts and ends must have the same length");
-                }
-                KE::Scene::DebugDraw::updateLines(app, handle, s.data, e.data,
-                                                  c.data, s.count, c.count);
-            },
-            py::arg("app"), py::arg("handle"), py::arg("starts"),
-            py::arg("ends"), py::arg("colors"),
-            "Update existing debug line geometry from numpy arrays.")
-        .def_static(
-            "update_lines",
-            [](KE::App* app, uint32_t handle,
-               const std::vector<glm::vec3>& starts,
-               const std::vector<glm::vec3>& ends,
-               const std::vector<glm::vec4>& colors) {
-                KE::Scene::DebugDraw::updateLines(app, handle, starts, ends,
-                                                  colors);
-            },
-            py::arg("app"), py::arg("handle"), py::arg("starts"),
-            py::arg("ends"), py::arg("colors"),
-            "Update existing debug line geometry.")
-        .def_static(
-            "log_arrows",
-            [](KE::App* app, KE::Backend::Shader* shader,
-               const std::string& path, const FloatArray& starts,
-               const FloatArray& ends, const FloatArray& colors, float radius,
-               int segments) {
-                auto s = vec3ArrayView(starts, "starts");
-                auto e = vec3ArrayView(ends, "ends");
-                auto c = vec4ArrayView(colors, "colors");
-                if (s.count != e.count) {
-                    throw py::value_error(
-                        "starts and ends must have the same length");
-                }
-                return KE::Scene::DebugDraw::logArrows(
-                    app, shader, path, s.data, e.data, c.data, s.count, c.count,
-                    radius, segments);
-            },
-            py::arg("app"), py::arg("shader"), py::arg("path"),
-            py::arg("starts"), py::arg("ends"), py::arg("colors"),
-            py::arg("radius") = 0.02f, py::arg("segments") = 12,
-            "Create instanced debug arrow geometry from numpy arrays.")
-        .def_static(
-            "log_arrows",
-            [](KE::App* app, KE::Backend::Shader* shader,
-               const std::string& path, const std::vector<glm::vec3>& starts,
-               const std::vector<glm::vec3>& ends,
-               const std::vector<glm::vec4>& colors, float radius,
-               int segments) {
-                return KE::Scene::DebugDraw::logArrows(
-                    app, shader, path, starts, ends, colors, radius, segments);
-            },
-            py::arg("app"), py::arg("shader"), py::arg("path"),
-            py::arg("starts"), py::arg("ends"), py::arg("colors"),
-            py::arg("radius") = 0.02f, py::arg("segments") = 12,
-            "Create instanced debug arrow geometry.")
-        .def_static(
             "log_component_arrows",
             [](KE::App* app, KE::Backend::Shader* shader,
                const std::string& path, const FloatArray& starts,
@@ -738,35 +639,6 @@ void bind_scene(py::module& m) {
             py::arg("app"), py::arg("component"), py::arg("starts"),
             py::arg("ends"), py::arg("colors") = py::none(),
             "Update component-backed debug arrow geometry.")
-        .def_static(
-            "update_arrows",
-            [](KE::App* app, uint32_t handle, const FloatArray& starts,
-               const FloatArray& ends, const FloatArray& colors) {
-                auto s = vec3ArrayView(starts, "starts");
-                auto e = vec3ArrayView(ends, "ends");
-                auto c = vec4ArrayView(colors, "colors");
-                if (s.count != e.count) {
-                    throw py::value_error(
-                        "starts and ends must have the same length");
-                }
-                KE::Scene::DebugDraw::updateArrows(app, handle, s.data, e.data,
-                                                   c.data, s.count, c.count);
-            },
-            py::arg("app"), py::arg("handle"), py::arg("starts"),
-            py::arg("ends"), py::arg("colors"),
-            "Update existing debug arrow geometry from numpy arrays.")
-        .def_static(
-            "update_arrows",
-            [](KE::App* app, uint32_t handle,
-               const std::vector<glm::vec3>& starts,
-               const std::vector<glm::vec3>& ends,
-               const std::vector<glm::vec4>& colors) {
-                KE::Scene::DebugDraw::updateArrows(app, handle, starts, ends,
-                                                   colors);
-            },
-            py::arg("app"), py::arg("handle"), py::arg("starts"),
-            py::arg("ends"), py::arg("colors"),
-            "Update existing debug arrow geometry.")
         .def_static(
             "log_coordinate_axes",
             [](KE::App* app, KE::Backend::Shader* shader,

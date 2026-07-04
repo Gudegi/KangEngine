@@ -707,17 +707,10 @@ void bind_physics(py::module& m) {
     py::class_<PhysicsBridge>(
         m, "PhysicsBridge",
         "Syncs PhysX articulation state into KangEngine scene/render visuals.")
-        .def(py::init<App*>(), py::arg("app") = nullptr,
-             "Create a physics bridge for an optional application.")
+        .def(py::init<>(), "Create a scene-graph physics bridge.")
         .def("add", &PhysicsBridge::add, py::arg("artic"),
              py::arg("skel_bridge"),
              "Connect an articulation to a SkeletonBridge.")
-        .def("add_instanced",
-             static_cast<void (PhysicsBridge::*)(
-                 const Articulation&, const std::vector<RenderableHandle>&)>(
-                 &PhysicsBridge::addInstanced),
-             py::arg("artic"), py::arg("handles"),
-             "Connect an articulation to existing instanced render handles.")
         .def("sync", &PhysicsBridge::sync,
              "Copy latest physics transforms into connected visuals.")
         .def("set_collision_visible", &PhysicsBridge::setCollisionVisible,

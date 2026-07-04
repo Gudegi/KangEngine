@@ -694,44 +694,6 @@ glm::quat App::axisQuat(glm::quat ori, UpAxis from, UpAxis to) const {
     return zUpOri;
 }
 
-RenderableHandle App::addCube(const std::string& path, float size,
-                              glm::vec3 pos, glm::quat ori, glm::vec4 color,
-                              Backend::Shader* shader) {
-    MeshPrimDesc desc;
-    desc.shader = shader;
-    desc.path = path;
-    desc.meshData = Scene::Prim::createSquareData(size);
-    desc.position = pos;
-    desc.orientation = ori;
-    desc.color = color;
-    return addMeshPrim(std::move(desc)).handle;
-}
-
-RenderableHandle App::addSphere(const std::string& path, float radius,
-                                glm::vec3 pos, glm::vec4 color,
-                                Backend::Shader* shader) {
-    MeshPrimDesc desc;
-    desc.shader = shader;
-    desc.path = path;
-    desc.meshData = Scene::Prim::createSphereData(radius, 32, 16);
-    desc.position = pos;
-    desc.color = color;
-    return addMeshPrim(std::move(desc)).handle;
-}
-
-RenderableHandle App::addPlane(const std::string& path, float size,
-                               glm::vec3 pos, glm::vec4 color,
-                               Backend::Shader* shader) {
-    MeshPrimDesc desc;
-    desc.shader = shader;
-    desc.path = path;
-    desc.meshData = Scene::Prim::createPlaneData(size, _upAxis);
-    desc.position = pos;
-    desc.color = color;
-    desc.doubleSided = true;
-    return addMeshPrim(std::move(desc)).handle;
-}
-
 void App::drawLine(const std::string& path, glm::vec3 start, glm::vec3 end,
                    glm::vec4 color, float thickness, Backend::Shader* shader) {
     Scene::DebugDraw::logLines(this, shader, path, {start}, {end}, {color},
