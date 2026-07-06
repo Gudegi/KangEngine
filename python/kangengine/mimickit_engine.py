@@ -87,30 +87,31 @@ class KangEngineObject:
     fix_root: bool
     start_pos: np.ndarray
     start_rot: np.ndarray
+    color: object | None = None
 
 
 @dataclass(slots=True)
 class _BodyVelocityOverrideBuffers:
     num_bodies: np.ndarray
     visual_mask: np.ndarray
-    vel_values: np.ndarray
+    vel_values: torch.Tensor
     vel_masks: np.ndarray
-    ang_vel_values: np.ndarray
+    ang_vel_values: torch.Tensor
     ang_vel_masks: np.ndarray
 
 
 @dataclass(slots=True)
 class _PendingStateBuffers:
-    root_pos: np.ndarray
-    root_rot: np.ndarray
-    root_vel: np.ndarray
-    root_ang_vel: np.ndarray
+    root_pos: torch.Tensor
+    root_rot: torch.Tensor
+    root_vel: torch.Tensor
+    root_ang_vel: torch.Tensor
     root_pos_mask: np.ndarray
     root_rot_mask: np.ndarray
     root_vel_mask: np.ndarray
     root_ang_vel_mask: np.ndarray
-    dof_pos: np.ndarray
-    dof_vel: np.ndarray
+    dof_pos: torch.Tensor
+    dof_vel: torch.Tensor
     dof_pos_mask: np.ndarray
     dof_vel_mask: np.ndarray
     dof_widths: np.ndarray
@@ -256,7 +257,7 @@ class _KangEngineViewer(App):
         self.ground_shader.set_vec4("checkerColor1", _ke.vec4(1.0, 1.0, 1.0, 1.0))
         self.ground_shader.set_vec4(
             "checkerColor2",
-            _ke.vec4(*preset_rgba(_ke.ColorType.PASTEL_GREEN)),
+            _ke.vec4(*preset_rgba(_ke.ColorType.DARK_GREEN)),
         )
 
         ground = self.get_scene().define_prim("/ground", _ke.scene.PrimType.Mesh)
@@ -265,9 +266,9 @@ class _KangEngineViewer(App):
         self.visual_bridge = KangWorldVisualBridge(self, self.world)
         self._setup_done = True
 
-    def add_articulation(self, env_id, obj_id, asset_file, order, color=None):
+    def add_articulation_scene_graph(self, env_id, obj_id, asset_file, order, color=None):
         self.setup_viewer()
-        self.visual_bridge.add_articulation(
+        self.visual_bridge.add_articulation_scene_graph(
             env_id,
             obj_id,
             asset_file,
@@ -277,9 +278,9 @@ class _KangEngineViewer(App):
             color=color,
         )
 
-    def add_visual_articulation(self, env_id, obj_id, asset_file, order, color=None):
+    def add_articulation_skin(self, env_id, obj_id, asset_file, order, color=None):
         self.setup_viewer()
-        self.visual_bridge.add_visual_articulation(
+        self.visual_bridge.add_articulation_skin(
             env_id,
             obj_id,
             asset_file,
@@ -289,7 +290,7 @@ class _KangEngineViewer(App):
             color=color,
         )
 
-    def add_rigid(
+    def add_rigid_scene_graph(
         self,
         env_id,
         obj_id,
@@ -300,7 +301,7 @@ class _KangEngineViewer(App):
         color=None,
     ):
         self.setup_viewer()
-        self.visual_bridge.add_rigid(
+        self.visual_bridge.add_rigid_scene_graph(
             env_id,
             obj_id,
             asset_file,
@@ -370,12 +371,31 @@ class KangEngineEngine(_BaseEngine):
         self._env_offsets[:, 0] = (
             np.arange(self._num_envs, dtype=np.float32) * self._env_spacing
         )
+        self._env_offsets_torch = torch.as_tensor(
+            self._env_offsets,
+            dtype=torch.float32,
+            device=self._device,
+        )
 
+        sim_device = self._config.get("sim_device")
+        if sim_device is None:
+            sim_device = str(self._device) if self._device.type == "cuda" else "cpu"
+
+        physics_config = _ke.PhysicsConfig.z_up()
+        found_lost_pairs_capacity = self._config.get(
+            "found_lost_pairs_capacity",
+            self._config.get("gpu_found_lost_pairs_capacity", None),
+        )
+        if found_lost_pairs_capacity is not None:
+            physics_config.gpu_dynamics.found_lost_pairs_capacity = int(
+                found_lost_pairs_capacity
+            )
         self._world = KangSimWorld(
             num_envs=self._num_envs,
+            physics_config=physics_config,
             sim_dt=self._sim_timestep,
             add_ground=bool(self._config.get("add_ground", True)),
-            sim_device=self._config.get("sim_device", "cpu"),
+            sim_device=sim_device,
             device=self._device,
         )
         self._created_envs: list[int] = []
@@ -415,6 +435,7 @@ class KangEngineEngine(_BaseEngine):
         self._debug_visual_pose_stats = {}
         self._sim_color_override = self._color_override("sim_color")
         self._ref_color_override = self._color_override("ref_color")
+        self._auto_init_gpu_system = self._world.sim_device.type == "cuda"
 
     def get_name(self):
         return "kangengine"
@@ -516,25 +537,12 @@ class KangEngineEngine(_BaseEngine):
             self._world.set_root_state(
                 env_id, obj_id, self._world_pos(env_id, start_pos), start_rot
             )
+        viewer_color = self._viewer_color(is_visual, color)
+        obj.color = viewer_color
         if self._viewer is not None:
-            viewer_color = self._viewer_color(is_visual, color)
             if is_visual:
-                self._viewer.add_visual_articulation(
+                self._viewer.add_articulation_skin(
                     env_id, obj_id, asset_file, mjcf_order, color=viewer_color
-                )
-            elif is_articulated:
-                self._viewer.add_articulation(
-                    env_id, obj_id, asset_file, mjcf_order, color=viewer_color
-                )
-            else:
-                self._viewer.add_rigid(
-                    env_id,
-                    obj_id,
-                    asset_file,
-                    prim_base_path=f"/env_{env_id}/rigid_obj_{obj_id}",
-                    order=mjcf_order,
-                    shader=self._viewer.robot_shader,
-                    color=viewer_color,
                 )
         if is_visual:
             self.set_root_pos(env_id, obj_id, start_pos)
@@ -553,10 +561,48 @@ class KangEngineEngine(_BaseEngine):
                     self._world_pos(obj.env_id, obj.start_pos),
                     obj.start_rot,
                 )
+        self._init_gpu_system_if_needed()
         self._world.step(substeps=0, apply_commands=False)
+        self._register_sim_visual_batches()
         self._init_body_velocity_override_buffers()
         self._init_state_pending_buffers()
         self._initialized = True
+
+    def _init_gpu_system_if_needed(self):
+        if not self._auto_init_gpu_system:
+            return
+        if getattr(self._world, "_gpu_system", None) is not None:
+            return
+        self._world.init_gpu_system()
+
+    def _register_sim_visual_batches(self):
+        if self._viewer is None:
+            return
+        self._viewer.setup_viewer(headless=self._headless)
+        objs_per_env = self.get_objs_per_env()
+        mjcf_order = self._config.get("mjcf_order", "DFS")
+        for obj_id in range(objs_per_env):
+            first = self._objects[0][obj_id]
+            if first.is_visual:
+                continue
+            if self._viewer.visual_bridge.get_visual_batch(obj_id) is not None:
+                continue
+            self._validate_visual_batch_slot(obj_id)
+            obj_type_name = str(getattr(first.obj_type, "name", first.obj_type)).lower()
+            if obj_type_name == "articulated":
+                sim_handle = self._world.get_articulation_batch(obj_id=obj_id)
+            elif obj_type_name == "rigid":
+                sim_handle = self._world.get_rigid_batch(obj_id=obj_id)
+            else:
+                continue
+            self._viewer.visual_bridge.add(
+                sim_handle,
+                first.asset_file,
+                prim_base_path=f"/sim_obj_{obj_id}",
+                order=mjcf_order,
+                shader=self._viewer.robot_shader,
+                color=self._visual_batch_color(obj_id),
+            )
 
     def set_cmd(self, obj_id, cmd):
         if self._kang_control_mode == ControlMode.NONE:
@@ -571,7 +617,12 @@ class KangEngineEngine(_BaseEngine):
         )
 
     def step(self):
-        self._world.step(substeps=self._sim_steps)
+        self._world.step(
+            substeps=self._sim_steps,
+            refresh=not self._use_gpu_logical_state(),
+        )
+        if self._use_gpu_logical_state():
+            self._world.state.gpu.refresh_frame_cache()
         self._clear_state_pending_overrides()
         self._clear_dynamic_body_velocity_overrides()
         self._clear_dynamic_visual_body_overrides()
@@ -680,49 +731,64 @@ class KangEngineEngine(_BaseEngine):
     def get_root_pos(self, obj_id):
         if self._is_visual_obj(obj_id):
             return self._out(self._visual_root_batch(self._visual_root_pos, obj_id, 3))
-        return self._out(self._local_pos_batch(self._world.state.get_root_pos(obj_id)))
+        values = self._pending_root_batch(
+            obj_id, "pos", self._state_root_pos(obj_id)
+        )
+        return self._out(self._local_pos_batch(values))
 
     def get_root_rot(self, obj_id):
         if self._is_visual_obj(obj_id):
             return self._out(self._visual_root_batch(self._visual_root_rot, obj_id, 4))
-        return self._out(self._world.state.get_root_rot(obj_id))
+        return self._out(
+            self._pending_root_batch(obj_id, "rot", self._state_root_rot(obj_id))
+        )
 
     def get_root_vel(self, obj_id):
         if self._is_visual_obj(obj_id):
             return self._out(np.zeros((self._num_envs, 3), dtype=np.float32))
-        return self._out(self._world.state.get_root_vel(obj_id))
+        return self._out(
+            self._pending_root_batch(obj_id, "vel", self._state_root_vel(obj_id))
+        )
 
     def get_root_ang_vel(self, obj_id):
         if self._is_visual_obj(obj_id):
             return self._out(np.zeros((self._num_envs, 3), dtype=np.float32))
-        return self._out(self._world.state.get_root_ang_vel(obj_id))
+        return self._out(
+            self._pending_root_batch(
+                obj_id, "ang_vel", self._state_root_ang_vel(obj_id)
+            )
+        )
 
     def get_dof_pos(self, obj_id):
-        return self._out(self._world.state.get_dof_pos(obj_id))
+        return self._out(
+            self._pending_dof_batch(obj_id, "pos", self._state_dof_pos(obj_id))
+        )
 
     def get_dof_vel(self, obj_id):
-        return self._out(self._world.state.get_dof_vel(obj_id))
+        return self._out(
+            self._pending_dof_batch(obj_id, "vel", self._state_dof_vel(obj_id))
+        )
 
     def get_dof_forces(self, obj_id):
-        return self._out(self._world.state.get_dof_forces(obj_id))
+        return self._out(self._state_dof_forces(obj_id))
 
     def get_body_pos(self, obj_id):
         if self._is_visual_obj(obj_id):
             value = self._visual_body_pose_batch(self._visual_body_pos, obj_id, 3)
             return self._out(self._local_pos_batch(value))
-        return self._out(self._local_pos_batch(self._world.state.get_body_pos(obj_id)))
+        return self._out(self._local_pos_batch(self._state_body_pos(obj_id)))
 
     def get_body_rot(self, obj_id):
         if self._is_visual_obj(obj_id):
             return self._out(self._visual_body_pose_batch(self._visual_body_rot, obj_id, 4))
-        return self._out(self._world.state.get_body_rot(obj_id))
+        return self._out(self._state_body_rot(obj_id))
 
     def get_body_vel(self, obj_id):
         if self._is_visual_obj(obj_id):
             return self._out(
                 self._body_velocity_override_batch("vel", obj_id)
             )
-        values = self._world.state.get_body_vel(obj_id)
+        values = self._state_body_vel(obj_id)
         return self._out(
             self._body_velocity_override_batch("vel", obj_id, values)
         )
@@ -732,7 +798,7 @@ class KangEngineEngine(_BaseEngine):
             return self._out(
                 self._body_velocity_override_batch("ang_vel", obj_id)
             )
-        values = self._world.state.get_body_ang_vel(obj_id)
+        values = self._state_body_ang_vel(obj_id)
         return self._out(
             self._body_velocity_override_batch("ang_vel", obj_id, values)
         )
@@ -975,6 +1041,46 @@ class KangEngineEngine(_BaseEngine):
         if len(counts) != 1:
             raise RuntimeError("all envs must contain the same number of objects")
 
+    def _validate_visual_batch_slot(self, obj_id: int):
+        first = self._objects[0][int(obj_id)]
+        first_type = str(getattr(first.obj_type, "name", first.obj_type)).lower()
+        for env_id, env_objs in enumerate(self._objects):
+            obj = env_objs[int(obj_id)]
+            obj_type = str(getattr(obj.obj_type, "name", obj.obj_type)).lower()
+            if obj.is_visual != first.is_visual:
+                raise RuntimeError(
+                    f"object obj={obj_id} mixes visual and simulated registrations"
+                )
+            if obj_type != first_type:
+                raise RuntimeError(
+                    f"object obj={obj_id} mixes object types: env 0 has "
+                    f"{first_type!r}, env {env_id} has {obj_type!r}"
+                )
+            if obj.asset_file != first.asset_file:
+                raise RuntimeError(
+                    f"object obj={obj_id} mixes assets: env 0 has "
+                    f"{first.asset_file!r}, env {env_id} has {obj.asset_file!r}"
+                )
+
+    def _visual_batch_color(self, obj_id: int):
+        colors = [obj[int(obj_id)].color for obj in self._objects]
+        if all(color is None for color in colors):
+            return None
+        rows = []
+        for color in colors:
+            if color is None:
+                rows.append(np.asarray([0.15, 0.15, 0.15, 1.0], dtype=np.float32))
+                continue
+            arr = np.asarray(color, dtype=np.float32).reshape(-1)
+            if arr.size == 1:
+                arr = np.repeat(arr, 3)
+            if arr.size == 3:
+                arr = np.concatenate([arr, np.ones(1, dtype=np.float32)])
+            if arr.size < 4:
+                raise ValueError(f"color must have 1, 3, or 4 values; got {arr.size}")
+            rows.append(np.clip(arr[:4], 0.0, 1.0).astype(np.float32, copy=False))
+        return np.stack(rows, axis=0)
+
     def _apply_drive_config(self, env_id, obj_id):
         record = self._world.state.record(env_id, obj_id)
         cache = record.cache
@@ -1033,7 +1139,10 @@ class KangEngineEngine(_BaseEngine):
             if pending_mask is not None and pending_mask[eid, oid]:
                 value = pending_values[eid, oid]
                 if component == "pos":
-                    return self._local_pos(eid, value)
+                    offset = self._env_offsets_torch[eid].to(
+                        device=value.device, dtype=value.dtype
+                    )
+                    return value - offset
                 return value
 
         state_getters = {
@@ -1050,12 +1159,17 @@ class KangEngineEngine(_BaseEngine):
             mask = pending_mask[:, oid]
             if not bool(np.any(mask)):
                 return values
-            values_np = self._as_numpy(values).copy()
+            out = self._to_tensor(values).clone()
+            tensor_mask = torch.as_tensor(mask, dtype=torch.bool, device=out.device)
+            pending = pending_values[:, oid].to(device=out.device, dtype=out.dtype)
             if component == "pos":
-                values_np[mask] = pending_values[:, oid][mask] - self._env_offsets[mask]
+                offsets = self._env_offsets_torch.to(
+                    device=out.device, dtype=out.dtype
+                )
+                out[tensor_mask] = pending[tensor_mask] - offsets[tensor_mask]
             else:
-                values_np[mask] = pending_values[:, oid][mask]
-            return self._out(values_np)
+                out[tensor_mask] = pending[tensor_mask]
+            return self._out(out)
         return values[int(env_id)]
 
     def _dof_component(
@@ -1077,10 +1191,109 @@ class KangEngineEngine(_BaseEngine):
             mask = pending_mask[:, oid]
             if not bool(np.any(mask)):
                 return values
-            values_np = self._as_numpy(values).copy()
-            values_np[mask] = pending_values[:, oid, :width][mask]
-            return self._out(values_np)
+            out = self._to_tensor(values).clone()
+            tensor_mask = torch.as_tensor(mask, dtype=torch.bool, device=out.device)
+            pending = pending_values[:, oid, :width].to(device=out.device, dtype=out.dtype)
+            out[tensor_mask] = pending[tensor_mask]
+            return self._out(out)
         return values[int(env_id)]
+
+    def _use_gpu_logical_state(self) -> bool:
+        return getattr(self._world.state, "canonical_source", "cpu") == "gpu"
+
+    def _state_root_pos(self, obj_id: int):
+        if self._use_gpu_logical_state():
+            return self._world.state.gpu.get_root_pos(obj_id, fetch=False)
+        return self._world.state.get_root_pos(obj_id)
+
+    def _state_root_rot(self, obj_id: int):
+        if self._use_gpu_logical_state():
+            return self._world.state.gpu.get_root_rot(obj_id, fetch=False)
+        return self._world.state.get_root_rot(obj_id)
+
+    def _state_root_vel(self, obj_id: int):
+        if self._use_gpu_logical_state():
+            return self._world.state.gpu.get_root_vel(obj_id, fetch=False)
+        return self._world.state.get_root_vel(obj_id)
+
+    def _state_root_ang_vel(self, obj_id: int):
+        if self._use_gpu_logical_state():
+            return self._world.state.gpu.get_root_ang_vel(obj_id, fetch=False)
+        return self._world.state.get_root_ang_vel(obj_id)
+
+    def _state_body_pos(self, obj_id: int):
+        if self._use_gpu_logical_state():
+            return self._world.state.gpu.get_body_pos(obj_id, fetch=False)
+        return self._world.state.get_body_pos(obj_id)
+
+    def _state_body_rot(self, obj_id: int):
+        if self._use_gpu_logical_state():
+            return self._world.state.gpu.get_body_rot(obj_id, fetch=False)
+        return self._world.state.get_body_rot(obj_id)
+
+    def _state_body_vel(self, obj_id: int):
+        if self._use_gpu_logical_state():
+            return self._world.state.gpu.get_body_vel(obj_id, fetch=False)
+        return self._world.state.get_body_vel(obj_id)
+
+    def _state_body_ang_vel(self, obj_id: int):
+        if self._use_gpu_logical_state():
+            return self._world.state.gpu.get_body_ang_vel(obj_id, fetch=False)
+        return self._world.state.get_body_ang_vel(obj_id)
+
+    def _state_dof_pos(self, obj_id: int):
+        if self._use_gpu_logical_state():
+            return self._world.state.gpu.get_dof_pos(obj_id, fetch=False)
+        return self._world.state.get_dof_pos(obj_id)
+
+    def _state_dof_vel(self, obj_id: int):
+        if self._use_gpu_logical_state():
+            return self._world.state.gpu.get_dof_vel(obj_id, fetch=False)
+        return self._world.state.get_dof_vel(obj_id)
+
+    def _state_dof_forces(self, obj_id: int):
+        if self._use_gpu_logical_state():
+            return self._world.state.gpu.get_dof_forces(obj_id, fetch=False)
+        return self._world.state.get_dof_forces(obj_id)
+
+    def _pending_root_batch(
+        self,
+        obj_id: int,
+        component: RootComponent,
+        values: ArrayLike,
+    ) -> ArrayLike:
+        pending_values, pending_mask = self._root_pending_storage(component)
+        if pending_mask is None:
+            return values
+        oid = int(obj_id)
+        mask = pending_mask[:, oid]
+        if not bool(np.any(mask)):
+            return values
+        out = self._to_tensor(values).clone()
+        tensor_mask = torch.as_tensor(mask, dtype=torch.bool, device=out.device)
+        pending = pending_values[:, oid].to(device=out.device, dtype=out.dtype)
+        out[tensor_mask] = pending[tensor_mask]
+        return out
+
+    def _pending_dof_batch(
+        self,
+        obj_id: int,
+        component: DofComponent,
+        values: ArrayLike,
+    ) -> ArrayLike:
+        pending_values, pending_mask = self._dof_pending_storage(component)
+        if pending_mask is None:
+            return values
+        oid = int(obj_id)
+        width = self.get_obj_num_dofs(obj_id)
+        mask = pending_mask[:, oid]
+        if not bool(np.any(mask)):
+            return values
+        out = self._to_tensor(values).clone()
+        tensor_mask = torch.as_tensor(mask, dtype=torch.bool, device=out.device)
+        pending = pending_values[:, oid, :width].to(device=out.device, dtype=out.dtype)
+        out[tensor_mask] = pending[tensor_mask]
+        return out
 
     def _set_root_state(
         self,
@@ -1092,38 +1305,26 @@ class KangEngineEngine(_BaseEngine):
         root_ang_vel: ArrayLike | None = None,
     ) -> None:
         env_ids = self._env_ids(env_id)
-        for local_id, eid in enumerate(env_ids):
-            pos = self._world_pos(
-                eid,
-                self._select_flat_value(root_pos, eid, 3, local_id, len(env_ids)),
-            )
-            rot = self._select_flat_value(root_rot, eid, 4, local_id, len(env_ids))
-            vel = (
-                None
-                if root_vel is None
-                else self._select_flat_value(root_vel, eid, 3, local_id, len(env_ids))
-            )
-            ang_vel = (
-                None
-                if root_ang_vel is None
-                else self._select_flat_value(
-                    root_ang_vel, eid, 3, local_id, len(env_ids)
-                )
-            )
-            self._world.set_root_state(
-                eid,
-                obj_id,
-                pos,
-                rot,
-                vel,
-                ang_vel,
-            )
-            self._set_root_pending_value(eid, obj_id, "pos", pos)
-            self._set_root_pending_value(eid, obj_id, "rot", rot)
-            if vel is not None:
-                self._set_root_pending_value(eid, obj_id, "vel", vel)
-            if ang_vel is not None:
-                self._set_root_pending_value(eid, obj_id, "ang_vel", ang_vel)
+        pos = self._world_pos_batch_for_env_ids(root_pos, env_ids)
+        rot = self._select_flat_batch_value(root_rot, env_ids, 4)
+        vel = (
+            None
+            if root_vel is None
+            else self._select_flat_batch_value(root_vel, env_ids, 3)
+        )
+        ang_vel = (
+            None
+            if root_ang_vel is None
+            else self._select_flat_batch_value(root_ang_vel, env_ids, 3)
+        )
+        self._world.set_root_state(env_ids, obj_id, pos, rot, vel, ang_vel)
+
+        self._set_root_pending_batch(env_ids, obj_id, "pos", pos, 3)
+        self._set_root_pending_batch(env_ids, obj_id, "rot", rot, 4)
+        if vel is not None:
+            self._set_root_pending_batch(env_ids, obj_id, "vel", vel, 3)
+        if ang_vel is not None:
+            self._set_root_pending_batch(env_ids, obj_id, "ang_vel", ang_vel, 3)
 
     def _set_dof_state(
         self,
@@ -1134,24 +1335,17 @@ class KangEngineEngine(_BaseEngine):
     ) -> None:
         width = self.get_obj_num_dofs(obj_id)
         env_ids = self._env_ids(env_id)
-        for local_id, eid in enumerate(env_ids):
-            pos = self._select_flat_value(dof_pos, eid, width, local_id, len(env_ids))
-            vel = (
-                None
-                if dof_vel is None
-                else self._select_flat_value(
-                    dof_vel, eid, width, local_id, len(env_ids)
-                )
-            )
-            self._world.set_dof_state(
-                eid,
-                obj_id,
-                pos,
-                vel,
-            )
-            self._set_dof_pending_value(eid, obj_id, "pos", pos, width)
-            if vel is not None:
-                self._set_dof_pending_value(eid, obj_id, "vel", vel, width)
+        pos = self._select_flat_batch_value(dof_pos, env_ids, width)
+        vel = (
+            None
+            if dof_vel is None
+            else self._select_flat_batch_value(dof_vel, env_ids, width)
+        )
+        self._world.set_dof_state(env_ids, obj_id, pos, vel)
+
+        self._set_dof_pending_batch(env_ids, obj_id, "pos", pos, width)
+        if vel is not None:
+            self._set_dof_pending_batch(env_ids, obj_id, "vel", vel, width)
 
     def _set_visual_body_override(
         self,
@@ -1188,16 +1382,11 @@ class KangEngineEngine(_BaseEngine):
         num_bodies = self.get_obj_num_bodies(obj_id)
         values, mask = self._body_velocity_override_storage(kind)
         env_ids = self._env_ids(env_id)
-        for local_id, eid in enumerate(env_ids):
-            selected = self._select_body_vector_value(
-                value, eid, num_bodies, 3, local_id, len(env_ids)
-            )
-            values[int(eid), obj_id, :num_bodies] = np.asarray(
-                selected, dtype=np.float32
-            ).reshape(
-                num_bodies, 3
-            )
-            mask[int(eid), obj_id] = True
+        env_tensor = torch.as_tensor(env_ids, dtype=torch.long, device=values.device)
+        selected = self._select_body_vector_batch(value, env_ids, num_bodies, 3)
+        selected = selected.to(device=values.device, dtype=values.dtype)
+        values[env_tensor, obj_id, :num_bodies] = selected
+        mask[np.asarray(env_ids, dtype=np.int64), obj_id] = True
 
     def _init_body_velocity_override_buffers(self):
         objs_per_env = self.get_objs_per_env()
@@ -1220,15 +1409,15 @@ class KangEngineEngine(_BaseEngine):
         self._body_velocity_overrides = _BodyVelocityOverrideBuffers(
             num_bodies=body_counts,
             visual_mask=visual_mask,
-            vel_values=np.zeros(shape, dtype=np.float32),
+            vel_values=torch.zeros(shape, dtype=torch.float32, device=self._device),
             vel_masks=np.zeros(mask_shape, dtype=bool),
-            ang_vel_values=np.zeros(shape, dtype=np.float32),
+            ang_vel_values=torch.zeros(shape, dtype=torch.float32, device=self._device),
             ang_vel_masks=np.zeros(mask_shape, dtype=bool),
         )
 
     def _body_velocity_override_storage(
         self, kind: BodyVelocityKind
-    ) -> tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[torch.Tensor, np.ndarray]:
         buffers = self._require_body_velocity_overrides()
         if kind == "vel":
             return buffers.vel_values, buffers.vel_masks
@@ -1253,13 +1442,23 @@ class KangEngineEngine(_BaseEngine):
         mask = masks[:, obj_id]
         if not bool(np.any(mask)):
             if base is None:
-                return np.zeros((self._num_envs, num_bodies, 3), dtype=np.float32)
+                return torch.zeros(
+                    (self._num_envs, num_bodies, 3),
+                    dtype=torch.float32,
+                    device=self._device,
+                )
             return base
         if base is None:
-            out = np.zeros((self._num_envs, num_bodies, 3), dtype=np.float32)
+            out = torch.zeros(
+                (self._num_envs, num_bodies, 3),
+                dtype=torch.float32,
+                device=self._device,
+            )
         else:
-            out = self._as_numpy(base).copy()
-        out[mask] = values[mask, obj_id, :num_bodies]
+            out = self._to_tensor(base).clone()
+        tensor_mask = torch.as_tensor(mask, dtype=torch.bool, device=out.device)
+        pending = values[:, obj_id, :num_bodies].to(device=out.device, dtype=out.dtype)
+        out[tensor_mask] = pending[tensor_mask]
         return out
 
     def _init_state_pending_buffers(self):
@@ -1279,16 +1478,16 @@ class KangEngineEngine(_BaseEngine):
         root_mask_shape = (self._num_envs, objs_per_env)
         dof_shape = (self._num_envs, objs_per_env, max_dofs)
         self._pending_state = _PendingStateBuffers(
-            root_pos=np.zeros(root_shape3, dtype=np.float32),
-            root_rot=np.zeros(root_shape4, dtype=np.float32),
-            root_vel=np.zeros(root_shape3, dtype=np.float32),
-            root_ang_vel=np.zeros(root_shape3, dtype=np.float32),
+            root_pos=torch.zeros(root_shape3, dtype=torch.float32, device=self._device),
+            root_rot=torch.zeros(root_shape4, dtype=torch.float32, device=self._device),
+            root_vel=torch.zeros(root_shape3, dtype=torch.float32, device=self._device),
+            root_ang_vel=torch.zeros(root_shape3, dtype=torch.float32, device=self._device),
             root_pos_mask=np.zeros(root_mask_shape, dtype=bool),
             root_rot_mask=np.zeros(root_mask_shape, dtype=bool),
             root_vel_mask=np.zeros(root_mask_shape, dtype=bool),
             root_ang_vel_mask=np.zeros(root_mask_shape, dtype=bool),
-            dof_pos=np.zeros(dof_shape, dtype=np.float32),
-            dof_vel=np.zeros(dof_shape, dtype=np.float32),
+            dof_pos=torch.zeros(dof_shape, dtype=torch.float32, device=self._device),
+            dof_vel=torch.zeros(dof_shape, dtype=torch.float32, device=self._device),
             dof_pos_mask=np.zeros(root_mask_shape, dtype=bool),
             dof_vel_mask=np.zeros(root_mask_shape, dtype=bool),
             dof_widths=dof_widths,
@@ -1296,7 +1495,7 @@ class KangEngineEngine(_BaseEngine):
 
     def _root_pending_storage(
         self, component: RootComponent
-    ) -> tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[torch.Tensor, np.ndarray]:
         buffers = self._require_pending_state()
         if component == "pos":
             return buffers.root_pos, buffers.root_pos_mask
@@ -1310,7 +1509,7 @@ class KangEngineEngine(_BaseEngine):
 
     def _dof_pending_storage(
         self, component: DofComponent
-    ) -> tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[torch.Tensor, np.ndarray]:
         buffers = self._require_pending_state()
         if component == "pos":
             return buffers.dof_pos, buffers.dof_pos_mask
@@ -1330,8 +1529,23 @@ class KangEngineEngine(_BaseEngine):
         self, env_id: int, obj_id: int, component: RootComponent, value: ArrayLike
     ) -> None:
         values, mask = self._root_pending_storage(component)
-        values[int(env_id), int(obj_id)] = self._as_numpy(value)
+        values[int(env_id), int(obj_id)] = self._to_tensor(value, device=values.device)
         mask[int(env_id), int(obj_id)] = True
+
+    def _set_root_pending_batch(
+        self,
+        env_ids: list[int],
+        obj_id: int,
+        component: RootComponent,
+        value: ArrayLike,
+        width: int,
+    ) -> None:
+        values, mask = self._root_pending_storage(component)
+        env_index = np.asarray(env_ids, dtype=np.int64)
+        env_tensor = torch.as_tensor(env_index, dtype=torch.long, device=values.device)
+        selected = self._to_tensor(value, device=values.device).reshape(len(env_ids), width)
+        values[env_tensor, int(obj_id)] = selected
+        mask[env_index, int(obj_id)] = True
 
     def _set_dof_pending_value(
         self,
@@ -1344,8 +1558,23 @@ class KangEngineEngine(_BaseEngine):
         values, mask = self._dof_pending_storage(component)
         eid = int(env_id)
         oid = int(obj_id)
-        values[eid, oid, :width] = self._as_numpy(value).reshape(width)
+        values[eid, oid, :width] = self._to_tensor(value, device=values.device).reshape(width)
         mask[eid, oid] = True
+
+    def _set_dof_pending_batch(
+        self,
+        env_ids: list[int],
+        obj_id: int,
+        component: DofComponent,
+        value: ArrayLike,
+        width: int,
+    ) -> None:
+        values, mask = self._dof_pending_storage(component)
+        env_index = np.asarray(env_ids, dtype=np.int64)
+        env_tensor = torch.as_tensor(env_index, dtype=torch.long, device=values.device)
+        selected = self._to_tensor(value, device=values.device).reshape(len(env_ids), width)
+        values[env_tensor, int(obj_id), :width] = selected
+        mask[env_index, int(obj_id)] = True
 
     def _clear_state_pending_overrides(self) -> None:
         buffers = self._pending_state
@@ -1445,7 +1674,7 @@ class KangEngineEngine(_BaseEngine):
             return
         keys = set(self._visual_body_pos) | set(self._visual_body_rot)
         for env_id, obj_id in keys:
-            self._viewer.visual_bridge.set_body_transforms(
+            self._viewer.visual_bridge.set_body_transforms_scene_graph(
                 env_id,
                 obj_id,
                 self._visual_body_pos.get((env_id, obj_id)),
@@ -1463,7 +1692,7 @@ class KangEngineEngine(_BaseEngine):
         for env_id, oid in keys:
             if (env_id, oid) in self._visual_body_pos or (env_id, oid) in self._visual_body_rot:
                 continue
-            self._viewer.visual_bridge.set_root_transform(
+            self._viewer.visual_bridge.set_root_transform_scene_graph(
                 env_id,
                 oid,
                 self._visual_root_pos.get((env_id, oid)),
@@ -1525,6 +1754,128 @@ class KangEngineEngine(_BaseEngine):
     def _is_visual_obj(self, obj_id):
         obj_id = int(obj_id)
         return bool(self._objects and self._objects[0][obj_id].is_visual)
+
+    def _select_flat_batch_value(
+        self,
+        value: ArrayLike,
+        env_ids: list[int],
+        width: int,
+    ) -> ArrayLike:
+        env_count = len(env_ids)
+        if torch.is_tensor(value):
+            arr = value
+            if arr.ndim == 0:
+                return torch.full(
+                    (env_count, width),
+                    float(arr.item()),
+                    dtype=torch.float32,
+                    device=arr.device,
+                )
+            if arr.ndim == 1:
+                if arr.shape[0] == width:
+                    if env_count == 1:
+                        return arr.reshape(width).contiguous()
+                    return arr.reshape(1, width).expand(env_count, width).contiguous()
+                if width == 1:
+                    if arr.shape[0] == self._num_envs:
+                        return arr[env_ids].reshape(env_count, 1).contiguous()
+                    if arr.shape[0] == env_count:
+                        return arr.reshape(env_count, 1).contiguous()
+            if arr.ndim >= 2:
+                if arr.shape[0] == self._num_envs:
+                    return arr[env_ids].reshape(env_count, width).contiguous()
+                if arr.shape[0] == env_count:
+                    return arr.reshape(env_count, width).contiguous()
+            if arr.numel() == width:
+                if env_count == 1:
+                    return arr.reshape(width).contiguous()
+                return arr.reshape(1, width).expand(env_count, width).contiguous()
+            if arr.numel() == env_count * width:
+                return arr.reshape(env_count, width).contiguous()
+            raise ValueError(
+                f"Cannot select tensor with shape {list(arr.shape)} as "
+                f"{env_count} values of width {width}"
+            )
+
+        arr = self._as_numpy(value)
+        if arr.ndim == 0:
+            return np.full((env_count, width), float(arr), dtype=np.float32)
+        if arr.ndim == 1:
+            if arr.shape[0] == width:
+                if env_count == 1:
+                    return np.asarray(arr, dtype=np.float32).reshape(width)
+                return np.repeat(arr.reshape(1, width), env_count, axis=0).astype(
+                    np.float32,
+                    copy=False,
+                )
+            if width == 1:
+                if arr.shape[0] == self._num_envs:
+                    return np.asarray(arr[env_ids], dtype=np.float32).reshape(
+                        env_count, 1
+                    )
+                if arr.shape[0] == env_count:
+                    return np.asarray(arr, dtype=np.float32).reshape(env_count, 1)
+        if arr.ndim >= 2:
+            if arr.shape[0] == self._num_envs:
+                return np.asarray(arr[env_ids], dtype=np.float32).reshape(
+                    env_count, width
+                )
+            if arr.shape[0] == env_count:
+                return np.asarray(arr, dtype=np.float32).reshape(env_count, width)
+        try:
+            flat = np.asarray(arr, dtype=np.float32)
+            if flat.size == width:
+                if env_count == 1:
+                    return flat.reshape(width)
+                return np.repeat(flat.reshape(1, width), env_count, axis=0)
+            return flat.reshape(env_count, width)
+        except ValueError as exc:
+            raise ValueError(
+                f"Cannot select value with shape {arr.shape} as "
+                f"{env_count} values of width {width}"
+            ) from exc
+
+    def _world_pos_batch_for_env_ids(
+        self,
+        value: ArrayLike,
+        env_ids: list[int],
+    ) -> ArrayLike:
+        positions = self._select_flat_batch_value(value, env_ids, 3)
+        if torch.is_tensor(positions):
+            env_tensor = torch.as_tensor(env_ids, dtype=torch.long, device=positions.device)
+            offsets = self._env_offsets_torch.to(
+                device=positions.device, dtype=positions.dtype
+            )[env_tensor]
+            if positions.ndim == 1:
+                if len(env_ids) == 1:
+                    return (positions + offsets[0]).contiguous()
+                positions = positions.reshape(1, 3).expand(len(env_ids), 3)
+            return (positions + offsets).contiguous()
+        offsets_np = self._env_offsets[np.asarray(env_ids, dtype=np.int64)]
+        offsets = np.asarray(offsets_np, dtype=np.float32)
+        if np.asarray(positions).ndim == 1:
+            if len(env_ids) == 1:
+                return np.asarray(positions, dtype=np.float32) + offsets[0]
+            positions = np.repeat(
+                np.asarray(positions, dtype=np.float32).reshape(1, 3),
+                len(env_ids),
+                axis=0,
+            )
+        return np.asarray(positions, dtype=np.float32) + offsets
+
+    def _flat_batch_to_numpy(
+        self,
+        value: ArrayLike,
+        env_count: int,
+        width: int,
+    ) -> np.ndarray:
+        arr = self._as_numpy(value)
+        if arr.ndim == 1:
+            return np.repeat(arr.reshape(1, width), env_count, axis=0).astype(
+                np.float32,
+                copy=False,
+            )
+        return np.asarray(arr, dtype=np.float32).reshape(env_count, width)
 
     def _select_flat_value(
         self,
@@ -1624,6 +1975,68 @@ class KangEngineEngine(_BaseEngine):
                 )
         return np.asarray(arr, dtype=np.float32).reshape(num_bodies, width)
 
+    def _select_body_vector_batch(
+        self,
+        value: ArrayLike,
+        env_ids: list[int],
+        num_bodies: int,
+        width: int,
+    ) -> torch.Tensor:
+        env_count = len(env_ids)
+        if torch.is_tensor(value):
+            arr = value.to(dtype=torch.float32)
+            if arr.ndim == 0:
+                return torch.full(
+                    (env_count, num_bodies, width),
+                    float(arr.item()),
+                    dtype=torch.float32,
+                    device=arr.device,
+                )
+            if arr.ndim == 1:
+                if arr.shape[0] == width:
+                    return (
+                        arr.reshape(1, 1, width)
+                        .expand(env_count, num_bodies, width)
+                        .contiguous()
+                    )
+                if arr.numel() == num_bodies * width:
+                    return (
+                        arr.reshape(1, num_bodies, width)
+                        .expand(env_count, num_bodies, width)
+                        .contiguous()
+                    )
+            if arr.ndim == 2:
+                if tuple(arr.shape) == (num_bodies, width):
+                    return arr.reshape(1, num_bodies, width).expand(
+                        env_count, num_bodies, width
+                    ).contiguous()
+                if tuple(arr.shape) == (self._num_envs, width):
+                    return arr[env_ids].reshape(env_count, 1, width).expand(
+                        env_count, num_bodies, width
+                    ).contiguous()
+                if tuple(arr.shape) == (env_count, width):
+                    return arr.reshape(env_count, 1, width).expand(
+                        env_count, num_bodies, width
+                    ).contiguous()
+            if arr.ndim >= 3:
+                if arr.shape[0] == self._num_envs:
+                    return arr[env_ids].reshape(env_count, num_bodies, width).contiguous()
+                if arr.shape[0] == env_count:
+                    return arr.reshape(env_count, num_bodies, width).contiguous()
+            return arr.reshape(env_count, num_bodies, width).contiguous()
+
+        selected = [
+            self._select_body_vector_value(
+                value, eid, num_bodies, width, local_id, env_count
+            )
+            for local_id, eid in enumerate(env_ids)
+        ]
+        return torch.as_tensor(
+            np.stack(selected, axis=0),
+            dtype=torch.float32,
+            device=self._device,
+        )
+
     def _env_offset(self, env_id):
         return self._env_offsets[int(env_id)]
 
@@ -1632,6 +2045,15 @@ class KangEngineEngine(_BaseEngine):
         return arr + self._env_offset(env_id)
 
     def _world_pos_batch(self, values: ArrayLike) -> np.ndarray:
+        if torch.is_tensor(values):
+            arr = values.clone()
+            if arr.ndim >= 2 and arr.shape[0] == self._num_envs:
+                view_shape = (self._num_envs,) + (1,) * (arr.ndim - 2) + (3,)
+                offsets = self._env_offsets_torch.to(
+                    device=arr.device, dtype=arr.dtype
+                ).reshape(view_shape)
+                arr = arr + offsets
+            return arr
         arr = self._as_numpy(values).copy()
         if arr.ndim >= 2 and arr.shape[0] == self._num_envs:
             view_shape = (self._num_envs,) + (1,) * (arr.ndim - 2) + (3,)
@@ -1643,6 +2065,15 @@ class KangEngineEngine(_BaseEngine):
         return arr - self._env_offset(env_id)
 
     def _local_pos_batch(self, values: ArrayLike) -> np.ndarray:
+        if torch.is_tensor(values):
+            arr = values.clone()
+            if arr.ndim >= 2 and arr.shape[0] == self._num_envs:
+                view_shape = (self._num_envs,) + (1,) * (arr.ndim - 2) + (3,)
+                offsets = self._env_offsets_torch.to(
+                    device=arr.device, dtype=arr.dtype
+                ).reshape(view_shape)
+                arr = arr - offsets
+            return arr
         arr = self._as_numpy(values).copy()
         if arr.ndim >= 2 and arr.shape[0] == self._num_envs:
             view_shape = (self._num_envs,) + (1,) * (arr.ndim - 2) + (3,)
@@ -1657,6 +2088,9 @@ class KangEngineEngine(_BaseEngine):
 
     def _as_numpy(self, value: ArrayLike) -> np.ndarray:
         return as_cpu_numpy(value)
+
+    def _to_tensor(self, value: ArrayLike, *, device=None) -> torch.Tensor:
+        return as_tensor(value, device=self._device if device is None else device)
 
     def _out(self, value: ArrayLike) -> ArrayLike:
         return as_tensor(value, device=self._device)

@@ -77,7 +77,7 @@ class MultiEnvSimWorldApp(ke.App):
                 density=60.0,
             )
 
-        self.ball = self.world.get_rigid_view(obj_id=0)
+        self.ball = self.world.get_rigid_batch(obj_id=0)
         self.ball_visual_batch = self.visual.add(
             self.ball,
             self.ball_xml,

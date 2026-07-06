@@ -108,8 +108,8 @@ class GpuContactSensorDemo:
                 density=200.0,
             )
 
-        self.left = self.world.get_rigid_view(obj_id=LEFT_OBJ_ID)
-        self.right = self.world.get_rigid_view(obj_id=RIGHT_OBJ_ID)
+        self.left = self.world.get_rigid_batch(obj_id=LEFT_OBJ_ID)
+        self.right = self.world.get_rigid_batch(obj_id=RIGHT_OBJ_ID)
         self.left_contact = self.left.add_contact_sensor(
             body_ids=[0], name="left_contact"
         )
@@ -232,14 +232,14 @@ class GpuContactSensorViewer(ke.App):
         self.visual = ke.KangWorldVisualBridge(self, self.demo.world)
         rigid_xml = contact_asset(self.args)
         group_colors = env_group_colors(self.args.num_envs)
-        self.visual.add_gpu_rigid(
+        self.visual.add(
             self.demo.left,
             rigid_xml,
             prim_base_path="/gpu_contact/left",
             shader=self.shaders.common,
             color=group_colors,
         )
-        self.visual.add_gpu_rigid(
+        self.visual.add(
             self.demo.right,
             rigid_xml,
             prim_base_path="/gpu_contact/right",

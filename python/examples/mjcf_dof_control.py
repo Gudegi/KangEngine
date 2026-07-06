@@ -148,7 +148,7 @@ class MjcfDofControlApp(ke.App):
             config=config,
         ).articulation
 
-        self.articulation_visual_view = self.visual.add_articulation(
+        self.articulation_visual_view = self.visual.add_articulation_scene_graph(
             0,
             self.obj_id,
             self.mjcf_path,

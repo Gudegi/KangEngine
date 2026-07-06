@@ -41,10 +41,10 @@ from .utils import (
     preset_rgba,
 )
 from .visual import (
-    ArticulationVisualView,
     KangWorldVisualBridge,
-    RigidVisualView,
-    SimVisualBatch,
+    VisualArticulationSceneGraph,
+    VisualBatch,
+    VisualRigidSceneGraph,
 )
 # TODO: Keep Torch-heavy modules lazy until CUDA context interop is explicit.
 # This avoids accidental Torch CUDA initialization before PhysX GPU setup.
@@ -52,9 +52,9 @@ _LAZY_IMPORTS = {
     "ControlMode": (".sim", "ControlMode"),
     "SimDevice": (".sim", "SimDevice"),
     "SimArticulation": (".sim", "SimArticulation"),
-    "SimArticulationView": (".sim", "SimArticulationView"),
+    "SimArticulationBatch": (".sim", "SimArticulationBatch"),
     "SimRigid": (".sim", "SimRigid"),
-    "SimRigidView": (".sim", "SimRigidView"),
+    "SimRigidBatch": (".sim", "SimRigidBatch"),
     "KangSimWorld": (".sim", "KangSimWorld"),
     "ContactSensor": (".sensor", "ContactSensor"),
     "ContactSensorData": (".sensor", "ContactSensorData"),
@@ -72,10 +72,10 @@ if _TYPE_CHECKING:
         ControlMode,
         KangSimWorld,
         SimArticulation,
-        SimArticulationView,
+        SimArticulationBatch,
         SimDevice,
         SimRigid,
-        SimRigidView,
+        SimRigidBatch,
     )
     from .sensor import ContactSensor, ContactSensorData, ForceSensor
     from .mimickit_engine import (
@@ -181,17 +181,17 @@ __all__ = [
     "ControlMode",
     "SimDevice",
     "SimArticulation",
-    "SimArticulationView",
+    "SimArticulationBatch",
     "SimRigid",
-    "SimRigidView",
+    "SimRigidBatch",
     "KangSimWorld",
     "ContactSensor",
     "ContactSensorData",
     "ForceSensor",
     "KangWorldVisualBridge",
-    "ArticulationVisualView",
-    "RigidVisualView",
-    "SimVisualBatch",
+    "VisualArticulationSceneGraph",
+    "VisualRigidSceneGraph",
+    "VisualBatch",
     "KangEngineEngine",
     "build_mimickit_engine",
     "install_mimickit_engine_builder",

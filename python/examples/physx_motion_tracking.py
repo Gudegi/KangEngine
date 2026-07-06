@@ -81,7 +81,7 @@ class KwMotionTrackingApp(ke.App):
         self.num_dofs = self.articulation.num_dofs()
 
         self.visual_bridge = ke.KangWorldVisualBridge(self, self.sim_world)
-        self.visual_bridge.add_articulation(
+        self.visual_bridge.add_articulation_scene_graph(
             0,
             0,
             self.char_file,

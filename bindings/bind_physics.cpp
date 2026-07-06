@@ -474,6 +474,8 @@ void bind_physics(py::module& m) {
              "Return measured/applied DOF forces.")
         .def("get_dof_names", &Articulation::getDofNames,
              "Return DOF names.")
+        .def("get_dof_gpu_indices", &Articulation::getDofGpuIndices,
+             "Return logical DOF -> PhysX low-level GPU DOF indices.")
         .def("get_dof_limits",
              [](const Articulation& self) {
                  return floatArrayFromVec2Vector(self.getDofLimits());

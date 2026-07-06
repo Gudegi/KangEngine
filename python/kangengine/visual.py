@@ -11,15 +11,19 @@ from dataclasses import dataclass
 import hashlib
 import os
 import re
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 from ._core import _ke
 from .rigid import expand_rigid_body_state, rigid_shape_specs
 
+if TYPE_CHECKING:
+    from .sim import SimArticulation, SimArticulationBatch, SimRigid, SimRigidBatch
+
 
 @dataclass(slots=True)
-class ArticulationVisualView:
+class VisualArticulationSceneGraph:
     """Viewer-side visual wrapper for one articulation.
 
     This does not own simulation state. It keeps the scene prims and hidden
@@ -77,7 +81,7 @@ class ArticulationVisualView:
 
 
 @dataclass(slots=True)
-class RigidVisualView:
+class VisualRigidSceneGraph:
     """Viewer-side visual wrapper for one rigid object.
 
     This does not own simulation state. It keeps the scene prims used to draw
@@ -255,7 +259,16 @@ class RigidCPUExternalBackend(_VisualLifetime):
 class ArticulationCPUExternalBackend(_VisualLifetime):
     """CPU articulation link poses -> native SimVisualBatch -> ExternalBuffer."""
 
-    def __init__(self, app, world, obj_id, env_ids, body_prims, body_handles):
+    def __init__(
+        self,
+        app,
+        world,
+        obj_id,
+        env_ids,
+        body_prims,
+        body_handles,
+        collision_prims=(),
+    ):
         from . import physics
 
         self._released = False
@@ -265,6 +278,7 @@ class ArticulationCPUExternalBackend(_VisualLifetime):
         self.env_ids = tuple(int(env_id) for env_id in env_ids)
         self.body_prims = tuple(body_prims)
         self.body_handles = tuple(int(handle) for handle in body_handles)
+        self.collision_prims = tuple(collision_prims)
         self.num_bodies = len(self.body_handles)
         self.num_envs = len(self.env_ids)
         self._version = 0
@@ -319,6 +333,12 @@ class ArticulationCPUExternalBackend(_VisualLifetime):
             prim.set_visible(bool(visible))
         return self
 
+    def set_collision_visible(self, visible: bool):
+        self._require_valid()
+        for prim in self.collision_prims:
+            prim.set_visible(bool(visible))
+        return self
+
     def set_color(self, color):
         self._require_valid()
         colors = _batch_colors(color, self.env_ids)
@@ -342,14 +362,15 @@ class ArticulationCPUExternalBackend(_VisualLifetime):
         self._model = None
         self.body_prims = ()
         self.body_handles = ()
+        self.collision_prims = ()
         self.app = None
         self.world = None
         self._mark_released()
         return self
 
 
-class SimVisualBatch:
-    """Public visual batch handle returned when one sim view spans many envs.
+class VisualBatch:
+    """Public visual batch handle returned by KangWorldVisualBridge.add(...).
 
     The handle owns no simulation state. It delegates visual operations to a
     CPU or GPU ExternalBuffer backend.
@@ -388,6 +409,11 @@ class SimVisualBatch:
         self._require_valid()
         return self._backend.body_handles
 
+    @property
+    def collision_visuals(self):
+        self._require_valid()
+        return tuple(getattr(self._backend, "collision_prims", ()))
+
     def __len__(self) -> int:
         self._require_valid()
         return len(self._backend)
@@ -424,7 +450,7 @@ class SimVisualBatch:
 
     def _require_valid(self):
         if self._released:
-            raise RuntimeError("SimVisualBatch has been released")
+            raise RuntimeError("VisualBatch has been released")
 
     def release(self):
         if self._released:
@@ -439,7 +465,16 @@ class SimVisualBatch:
 class ArticulationGPUExternalBackend(_VisualLifetime):
     """CUDA articulation link poses consumed as renderer instance buffers."""
 
-    def __init__(self, app, world, obj_id, env_ids, body_prims, body_handles):
+    def __init__(
+        self,
+        app,
+        world,
+        obj_id,
+        env_ids,
+        body_prims,
+        body_handles,
+        collision_prims=(),
+    ):
         import torch
 
         from .utils import to_gpu_array_view
@@ -451,6 +486,7 @@ class ArticulationGPUExternalBackend(_VisualLifetime):
         self.env_ids = tuple(int(env_id) for env_id in env_ids)
         self.body_prims = tuple(body_prims)
         self.body_handles = tuple(int(handle) for handle in body_handles)
+        self.collision_prims = tuple(collision_prims)
         self.num_bodies = len(self.body_handles)
         self.num_envs = len(self.env_ids)
         self._rows = world.articulation_gpu_index_view(
@@ -523,6 +559,12 @@ class ArticulationGPUExternalBackend(_VisualLifetime):
             prim.set_visible(bool(visible))
         return self
 
+    def set_collision_visible(self, visible: bool):
+        self._require_valid()
+        for prim in self.collision_prims:
+            prim.set_visible(bool(visible))
+        return self
+
     def set_color(self, color):
         self._require_valid()
         colors = _batch_colors(color, self.env_ids)
@@ -546,6 +588,7 @@ class ArticulationGPUExternalBackend(_VisualLifetime):
         self._link_indices_tensor = None
         self.body_prims = ()
         self.body_handles = ()
+        self.collision_prims = ()
         self.app = None
         self.world = None
         self._mark_released()
@@ -715,11 +758,15 @@ class KangWorldVisualBridge:
         self.world = world
         self.scene = app.get_scene()
         self.physics_bridge = _ke.PhysicsBridge()
-        self.records: dict[tuple[int, int], ArticulationVisualView] = {}
-        self.rigid_records: dict[tuple[int, int], RigidVisualView] = {}
-        self.visual_batches: dict[int, SimVisualBatch] = {}
-        self.cpu_external_visual_batches: dict[int, SimVisualBatch] = {}
-        self.gpu_visual_batches: dict[int, SimVisualBatch] = {}
+        self.visual_articulation_scene_graphs: dict[
+            tuple[int, int], VisualArticulationSceneGraph
+        ] = {}
+        self.visual_rigid_scene_graphs: dict[
+            tuple[int, int], VisualRigidSceneGraph
+        ] = {}
+        self.visual_batches: dict[int, VisualBatch] = {}
+        self.cpu_visual_batches: dict[int, VisualBatch] = {}
+        self.gpu_visual_batches: dict[int, VisualBatch] = {}
         self._skeleton_assets = {}
         self._released = False
 
@@ -736,7 +783,7 @@ class KangWorldVisualBridge:
             return self
         batches = (
             list(self.visual_batches.values())
-            + list(self.cpu_external_visual_batches.values())
+            + list(self.cpu_visual_batches.values())
             + list(self.gpu_visual_batches.values())
         )
         seen = set()
@@ -748,10 +795,10 @@ class KangWorldVisualBridge:
             if hasattr(batch, "release"):
                 batch.release()
         self.gpu_visual_batches.clear()
-        self.cpu_external_visual_batches.clear()
+        self.cpu_visual_batches.clear()
         self.visual_batches.clear()
-        self.records.clear()
-        self.rigid_records.clear()
+        self.visual_articulation_scene_graphs.clear()
+        self.visual_rigid_scene_graphs.clear()
         self._skeleton_assets.clear()
         self._released = True
         return self
@@ -760,22 +807,33 @@ class KangWorldVisualBridge:
 
     def add(
         self,
-        sim_view,
+        sim_handle: SimRigid | SimArticulation | SimRigidBatch | SimArticulationBatch,
         mjcf_path: str,
         prim_base_path: str | None = None,
         **kwargs,
     ):
-        """Create one CPU or GPU ExternalBuffer visual batch.
+        """Create one CPU or GPU ExternalBuffer VisualBatch.
 
-        Per-environment SceneGraph visuals remain available through the
-        explicit ``add_articulation`` and ``add_rigid`` compatibility methods.
+        ``sim_handle`` may be a single ``SimRigid`` / ``SimArticulation`` or a
+        ``SimRigidBatch`` / ``SimArticulationBatch``. Single objects are treated
+        as a one-env visual batch. Per-environment SceneGraph visuals remain
+        available through the explicit ``add_articulation_scene_graph`` and
+        ``add_rigid_scene_graph`` methods.
         """
         self._require_valid()
-        obj_id = int(sim_view.obj_id)
-        env_ids = tuple(int(eid) for eid in sim_view.env_ids)
-        name = _safe_prim_name(getattr(sim_view, "name", "") or f"obj_{obj_id}")
+        obj_id = int(sim_handle.obj_id)
+        env_ids = tuple(int(eid) for eid in sim_handle.env_ids)
+        name = _safe_prim_name(getattr(sim_handle, "name", "") or f"obj_{obj_id}")
         base_path = prim_base_path or f"/{name}"
-        unexpected = set(kwargs) - {"scale", "order", "shader", "color"}
+        unexpected = set(kwargs) - {
+            "scale",
+            "order",
+            "shader",
+            "color",
+            "collision_base_path",
+            "collision_shader",
+            "show_collision",
+        }
         if unexpected:
             names = ", ".join(sorted(unexpected))
             raise TypeError(f"visual.add() received unsupported options: {names}")
@@ -783,24 +841,24 @@ class KangWorldVisualBridge:
 
         if all((eid, obj_id) in self.world.articulations for eid in env_ids):
             add_batch = (
-                self.add_gpu_articulation
+                self._add_gpu_articulation
                 if use_gpu
-                else self.add_cpu_external_articulation
+                else self._add_cpu_external_articulation
             )
         elif all((eid, obj_id) in self.world.rigids for eid in env_ids):
-            add_batch = self.add_gpu_rigid if use_gpu else self.add_cpu_external_rigid
+            add_batch = self._add_gpu_rigid if use_gpu else self._add_cpu_external_rigid
         else:
             raise KeyError(
-                f"simulation view obj_id={obj_id} does not match registered objects"
+                f"simulation handle obj_id={obj_id} does not match registered objects"
             )
         return add_batch(
-            sim_view,
+            sim_handle,
             mjcf_path,
             prim_base_path=base_path,
             **kwargs,
         )
 
-    def add_articulation(
+    def add_articulation_scene_graph(
         self,
         env_id: int,
         obj_id: int,
@@ -815,10 +873,16 @@ class KangWorldVisualBridge:
         show_collision: bool = False,
         color=None,
         _debug_registration: bool = True,
-    ) -> ArticulationVisualView:
+    ) -> VisualArticulationSceneGraph:
+        """Register one articulation through the small-scene SceneGraph path.
+
+        Prefer ``add(sim_handle, ...)`` for normal simulation viewers. This path
+        is kept for editor/debug tools, collision visual inspection, and
+        MimicKit-style per-body SceneGraph control.
+        """
         self._require_valid()
         key = (int(env_id), int(obj_id))
-        if key in self.records:
+        if key in self.visual_articulation_scene_graphs:
             raise ValueError(f"visual already registered for env={key[0]}, obj={key[1]}")
 
         articulation = self.world.articulation(key[0], key[1])
@@ -863,7 +927,7 @@ class KangWorldVisualBridge:
                 for prim in collision_prims:
                     self.app.scene.add_renderable(prim, shape_shader)
 
-        record = ArticulationVisualView(
+        record = VisualArticulationSceneGraph(
             key[0],
             key[1],
             skeleton_bridge,
@@ -871,10 +935,10 @@ class KangWorldVisualBridge:
             collision_prims,
             body_handles,
         )
-        self.records[key] = record
+        self.visual_articulation_scene_graphs[key] = record
         return record
 
-    def add_gpu_articulation(
+    def _add_gpu_articulation(
         self,
         sim_view,
         mjcf_path: str,
@@ -883,11 +947,14 @@ class KangWorldVisualBridge:
         order: str = "DFS",
         shader=None,
         color=None,
-    ) -> SimVisualBatch:
+        collision_base_path: str | None = None,
+        collision_shader=None,
+        show_collision: bool = False,
+    ) -> VisualBatch:
         """Create one renderable per link backed by CUDA instance transforms."""
         self._require_valid()
         if shader is None:
-            raise ValueError("add_gpu_articulation requires a shader")
+            raise ValueError("_add_gpu_articulation requires a shader")
         if not hasattr(_ke, "articulation_link_state_to_mat4_cuda"):
             raise RuntimeError("KangEngine was built without CUDA transform kernels")
 
@@ -913,17 +980,29 @@ class KangWorldVisualBridge:
             )
             for prim in body_prims
         ]
-        backend = ArticulationGPUExternalBackend(
-            self.app, self.world, obj_id, env_ids, body_prims, body_handles
+        collision_prims = self._add_articulation_collision_visuals(
+            sim_view.articulation,
+            collision_base_path,
+            collision_shader if collision_shader is not None else shader,
+            show_collision,
         )
-        batch = SimVisualBatch(obj_id, env_ids, backend=backend)
+        backend = ArticulationGPUExternalBackend(
+            self.app,
+            self.world,
+            obj_id,
+            env_ids,
+            body_prims,
+            body_handles,
+            collision_prims,
+        )
+        batch = VisualBatch(obj_id, env_ids, backend=backend)
         batch.set_color(color)
         batch.sync()
         self.gpu_visual_batches[obj_id] = batch
         self.visual_batches[obj_id] = batch
         return batch
 
-    def add_cpu_external_articulation(
+    def _add_cpu_external_articulation(
         self,
         sim_view,
         mjcf_path: str,
@@ -932,19 +1011,22 @@ class KangWorldVisualBridge:
         order: str = "DFS",
         shader=None,
         color=None,
-    ) -> SimVisualBatch:
+        collision_base_path: str | None = None,
+        collision_shader=None,
+        show_collision: bool = False,
+    ) -> VisualBatch:
         """Create one renderable per link backed by CPU ExternalBuffer."""
         self._require_valid()
         if shader is None:
-            raise ValueError("add_cpu_external_articulation requires a shader")
+            raise ValueError("_add_cpu_external_articulation requires a shader")
 
         obj_id = int(sim_view.obj_id)
         env_ids = tuple(int(env_id) for env_id in sim_view.env_ids)
         if obj_id in self.visual_batches:
             raise ValueError(f"visual batch already registered for obj={obj_id}")
-        if obj_id in self.cpu_external_visual_batches:
+        if obj_id in self.cpu_visual_batches:
             raise ValueError(
-                f"CPU external visual batch already registered for obj={obj_id}"
+                f"CPU visual batch already registered for obj={obj_id}"
             )
         if obj_id in self.gpu_visual_batches:
             raise ValueError(f"GPU visual batch already registered for obj={obj_id}")
@@ -966,17 +1048,29 @@ class KangWorldVisualBridge:
             )
             for prim in body_prims
         ]
-        backend = ArticulationCPUExternalBackend(
-            self.app, self.world, obj_id, env_ids, body_prims, body_handles
+        collision_prims = self._add_articulation_collision_visuals(
+            sim_view.articulation,
+            collision_base_path,
+            collision_shader if collision_shader is not None else shader,
+            show_collision,
         )
-        batch = SimVisualBatch(obj_id, env_ids, backend=backend)
+        backend = ArticulationCPUExternalBackend(
+            self.app,
+            self.world,
+            obj_id,
+            env_ids,
+            body_prims,
+            body_handles,
+            collision_prims,
+        )
+        batch = VisualBatch(obj_id, env_ids, backend=backend)
         batch.set_color(color)
         batch.sync()
-        self.cpu_external_visual_batches[obj_id] = batch
+        self.cpu_visual_batches[obj_id] = batch
         self.visual_batches[obj_id] = batch
         return batch
 
-    def add_gpu_rigid(
+    def _add_gpu_rigid(
         self,
         sim_view,
         mjcf_path: str,
@@ -985,11 +1079,11 @@ class KangWorldVisualBridge:
         order: str = "DFS",
         shader=None,
         color=None,
-    ) -> SimVisualBatch:
+    ) -> VisualBatch:
         """Create a single-shape rigid batch backed by CUDA transforms."""
         self._require_valid()
         if shader is None:
-            raise ValueError("add_gpu_rigid requires a shader")
+            raise ValueError("_add_gpu_rigid requires a shader")
         if not hasattr(_ke, "indexed_rigid_state_to_mat4_cuda"):
             raise RuntimeError("KangEngine was built without CUDA transform kernels")
 
@@ -1001,7 +1095,7 @@ class KangWorldVisualBridge:
         rigid_bridge = RigidVisualBridge(
             self.app,
             self.scene,
-            sim_view.first.rigid,
+            sim_view.rigid,
             data,
             prim_base_path,
             add_shapes=False,
@@ -1018,14 +1112,14 @@ class KangWorldVisualBridge:
         backend = RigidGPUExternalBackend(
             self.app, self.world, obj_id, env_ids, prim, handle
         )
-        batch = SimVisualBatch(obj_id, env_ids, backend=backend)
+        batch = VisualBatch(obj_id, env_ids, backend=backend)
         batch.set_color(color)
         batch.sync()
         self.gpu_visual_batches[obj_id] = batch
         self.visual_batches[obj_id] = batch
         return batch
 
-    def add_cpu_external_rigid(
+    def _add_cpu_external_rigid(
         self,
         sim_view,
         mjcf_path: str,
@@ -1034,19 +1128,19 @@ class KangWorldVisualBridge:
         order: str = "DFS",
         shader=None,
         color=None,
-    ) -> SimVisualBatch:
+    ) -> VisualBatch:
         """Create a rigid shape batch backed by CPU ExternalBuffer."""
         self._require_valid()
         if shader is None:
-            raise ValueError("add_cpu_external_rigid requires a shader")
+            raise ValueError("_add_cpu_external_rigid requires a shader")
 
         obj_id = int(sim_view.obj_id)
         env_ids = tuple(int(env_id) for env_id in sim_view.env_ids)
         if obj_id in self.visual_batches:
             raise ValueError(f"visual batch already registered for obj={obj_id}")
-        if obj_id in self.cpu_external_visual_batches:
+        if obj_id in self.cpu_visual_batches:
             raise ValueError(
-                f"CPU external visual batch already registered for obj={obj_id}"
+                f"CPU visual batch already registered for obj={obj_id}"
             )
         if obj_id in self.gpu_visual_batches:
             raise ValueError(f"GPU visual batch already registered for obj={obj_id}")
@@ -1054,7 +1148,7 @@ class KangWorldVisualBridge:
         rigid_bridge = RigidVisualBridge(
             self.app,
             self.scene,
-            sim_view.first.rigid,
+            sim_view.rigid,
             data,
             prim_base_path,
             add_shapes=False,
@@ -1077,14 +1171,14 @@ class KangWorldVisualBridge:
             rigid_bridge.local_pos,
             rigid_bridge.local_rot,
         )
-        batch = SimVisualBatch(obj_id, env_ids, backend=backend)
+        batch = VisualBatch(obj_id, env_ids, backend=backend)
         batch.set_color(color)
         batch.sync()
-        self.cpu_external_visual_batches[obj_id] = batch
+        self.cpu_visual_batches[obj_id] = batch
         self.visual_batches[obj_id] = batch
         return batch
 
-    def add_rigid(
+    def add_rigid_scene_graph(
         self,
         env_id: int,
         obj_id: int,
@@ -1096,10 +1190,19 @@ class KangWorldVisualBridge:
         add_shapes: bool = True,
         color=None,
         _debug_registration: bool = True,
-    ) -> RigidVisualView:
+    ) -> VisualRigidSceneGraph:
+        """Register one rigid object through the small-scene SceneGraph path.
+
+        Prefer ``add(sim_handle, ...)`` for normal simulation viewers. This path
+        remains for editor/debug tools and adapter code that needs direct prim
+        access.
+        """
         self._require_valid()
         key = (int(env_id), int(obj_id))
-        if key in self.rigid_records or key in self.records:
+        if (
+            key in self.visual_rigid_scene_graphs
+            or key in self.visual_articulation_scene_graphs
+        ):
             raise ValueError(f"visual already registered for env={key[0]}, obj={key[1]}")
 
         rigid = self.world.rigid(key[0], key[1])
@@ -1115,7 +1218,7 @@ class KangWorldVisualBridge:
             color=color,
         )
 
-        record = RigidVisualView(
+        record = VisualRigidSceneGraph(
             key[0],
             key[1],
             rigid,
@@ -1123,7 +1226,7 @@ class KangWorldVisualBridge:
             list(rigid_bridge.body_prims),
             list(rigid_bridge.body_handles),
         )
-        self.rigid_records[key] = record
+        self.visual_rigid_scene_graphs[key] = record
         if _debug_registration:
             _debug_instancing(
                 kind="rigid",
@@ -1135,7 +1238,7 @@ class KangWorldVisualBridge:
             )
         return record
 
-    def add_visual_articulation(
+    def add_articulation_skin(
         self,
         env_id: int,
         obj_id: int,
@@ -1146,11 +1249,11 @@ class KangWorldVisualBridge:
         shader=None,
         add_shapes: bool = True,
         color=None,
-    ) -> ArticulationVisualView:
-        """Create a rendered skeleton that is not attached to a PhysX articulation."""
+    ) -> VisualArticulationSceneGraph:
+        """Create an adapter/debug articulation skin without PhysX ownership."""
         self._require_valid()
         key = (int(env_id), int(obj_id))
-        if key in self.records:
+        if key in self.visual_articulation_scene_graphs:
             raise ValueError(f"visual already registered for env={key[0]}, obj={key[1]}")
 
         asset, mesh_asset_base_path = self._skeleton_asset(mjcf_path, scale, order)
@@ -1173,7 +1276,7 @@ class KangWorldVisualBridge:
             mesh_asset_base_path=mesh_asset_base_path,
         )
 
-        record = ArticulationVisualView(
+        record = VisualArticulationSceneGraph(
             key[0],
             key[1],
             skeleton_bridge,
@@ -1181,54 +1284,62 @@ class KangWorldVisualBridge:
             [],
             [],
         )
-        self.records[key] = record
+        self.visual_articulation_scene_graphs[key] = record
         return record
 
     def sync(self):
         self._require_valid()
         self.physics_bridge.sync()
         self._sync_rigids()
-        for batch in self.cpu_external_visual_batches.values():
+        for batch in self.cpu_visual_batches.values():
             batch.sync()
         for batch in self.gpu_visual_batches.values():
             batch.sync()
 
-    def get_articulation_view(
+    def get_visual_articulation_scene_graph(
         self,
         env_id: int,
         obj_id: int,
-    ) -> ArticulationVisualView | None:
+    ) -> VisualArticulationSceneGraph | None:
         self._require_valid()
-        return self.records.get((int(env_id), int(obj_id)))
+        return self.visual_articulation_scene_graphs.get(
+            (int(env_id), int(obj_id))
+        )
 
-    def get_rigid_view(self, env_id: int, obj_id: int) -> RigidVisualView | None:
+    def get_visual_rigid_scene_graph(
+        self, env_id: int, obj_id: int
+    ) -> VisualRigidSceneGraph | None:
         self._require_valid()
-        return self.rigid_records.get((int(env_id), int(obj_id)))
+        return self.visual_rigid_scene_graphs.get((int(env_id), int(obj_id)))
 
-    def get_visual_view(
+    def get_visual_scene_graph(
         self,
         env_id: int,
         obj_id: int,
-    ) -> ArticulationVisualView | RigidVisualView | None:
+    ) -> VisualArticulationSceneGraph | VisualRigidSceneGraph | None:
         self._require_valid()
         key = (int(env_id), int(obj_id))
-        return self.records.get(key) or self.rigid_records.get(key)
+        return self.visual_articulation_scene_graphs.get(
+            key
+        ) or self.visual_rigid_scene_graphs.get(key)
 
-    def get_visual_batch(self, obj_id: int) -> SimVisualBatch | None:
+    def get_visual_batch(self, obj_id: int) -> VisualBatch | None:
         self._require_valid()
         return self.visual_batches.get(int(obj_id))
 
     def _sync_rigids(self):
-        for record in self.rigid_records.values():
+        for record in self.visual_rigid_scene_graphs.values():
             record.rigid_bridge.sync()
 
-    def set_body_transforms(self, env_id: int, obj_id: int, body_pos=None, body_rot=None):
+    def set_body_transforms_scene_graph(
+        self, env_id: int, obj_id: int, body_pos=None, body_rot=None
+    ):
         """Override rendered body prim transforms with world-space FK poses.
 
         This is used by MimicKit view_motion, where the environment computes the
         reference pose itself and expects the engine viewer to draw that pose.
         """
-        record = self.get_articulation_view(env_id, obj_id)
+        record = self.get_visual_articulation_scene_graph(env_id, obj_id)
         if record is None:
             return
 
@@ -1246,7 +1357,9 @@ class KangWorldVisualBridge:
                     _ke.quat(float(rot[3]), float(rot[0]), float(rot[1]), float(rot[2])),
                 )
 
-    def set_root_transform(self, env_id: int, obj_id: int, root_pos=None, root_rot=None):
+    def set_root_transform_scene_graph(
+        self, env_id: int, obj_id: int, root_pos=None, root_rot=None
+    ):
         """Apply a root-only fallback pose to a visual articulation.
 
         MimicKit visual/reference objects are not backed by PhysX, but some envs
@@ -1254,7 +1367,7 @@ class KangWorldVisualBridge:
         SkeletonBridge keeps a zero-pose FK model that can at least move the
         whole rendered character with that root pose.
         """
-        record = self.get_articulation_view(env_id, obj_id)
+        record = self.get_visual_articulation_scene_graph(env_id, obj_id)
         if record is None:
             return
 
@@ -1276,15 +1389,20 @@ class KangWorldVisualBridge:
 
     def set_collision_visible(self, visible: bool):
         self.physics_bridge.set_collision_visible(bool(visible))
+        for batch in self.visual_batches.values():
+            batch.set_collision_visible(bool(visible))
 
-    def body_id_from_render_handle(self, env_id: int, obj_id: int, handle) -> int | None:
-        record = self.get_articulation_view(env_id, obj_id)
+    def body_id_from_render_handle_scene_graph(
+        self, env_id: int, obj_id: int, handle
+    ) -> int | None:
+        """Map a renderer pick handle back to a body id for legacy pick tools."""
+        record = self.get_visual_articulation_scene_graph(env_id, obj_id)
         if record is None:
             return None
         return record.body_id_from_render_handle(handle)
 
-    def set_articulation_color(self, env_id: int, obj_id: int, color):
-        record = self.get_articulation_view(env_id, obj_id)
+    def set_articulation_color_scene_graph(self, env_id: int, obj_id: int, color):
+        record = self.get_visual_articulation_scene_graph(env_id, obj_id)
         if record is None:
             return
         record.set_color(color)
@@ -1302,6 +1420,28 @@ class KangWorldVisualBridge:
         record = (asset, mesh_asset_base_path)
         self._skeleton_assets[key] = record
         return record
+
+    def _add_articulation_collision_visuals(
+        self,
+        articulation,
+        collision_base_path: str | None,
+        shader,
+        visible: bool,
+    ):
+        if collision_base_path is None:
+            return ()
+        collision_prims = tuple(
+            self.physics_bridge.add_collision_visuals(
+                articulation,
+                self.scene,
+                collision_base_path,
+                bool(visible),
+            )
+        )
+        if shader is not None:
+            for prim in collision_prims:
+                self.app.scene.add_renderable(prim, shader)
+        return collision_prims
 
 
 def _normalize_color(color):

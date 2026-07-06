@@ -37,10 +37,10 @@ def main():
                         [0.0, 0.0, 0.0],
                     )
 
-        tracked = world.get_rigid_view([0, 1], obj_id=0)
+        tracked = world.get_rigid_batch([0, 1], obj_id=0)
         sensor = tracked.add_contact_sensor(body_ids=[0], name="ball_contact")
         force_sensor = tracked.add_force_sensor(body_ids=[0], name="ball_force")
-        other = world.get_rigid_view([0, 1], obj_id=1)
+        other = world.get_rigid_batch([0, 1], obj_id=1)
         other_sensor = other.add_contact_sensor(
             body_ids=[0], name="other_ball_contact"
         )

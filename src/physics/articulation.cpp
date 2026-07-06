@@ -6,6 +6,7 @@
 #include <extensions/PxRigidBodyExt.h>
 #include <algorithm>
 #include <limits>
+#include <numeric>
 #include <stdexcept>
 #include <utility>
 
@@ -397,6 +398,32 @@ std::vector<std::string> Articulation::getDofNames() const {
     for (const auto& dof : _dofs)
         out.push_back(dof.name);
     return out;
+}
+
+std::vector<int> Articulation::getDofGpuIndices() const {
+    // PhysX Direct GPU API stores articulation DOFs in low-level link index
+    // order, then in PxArticulationAxis enum order within each inbound joint.
+    // KangEngine exposes DOFs in logical/skeleton order, so return a scatter
+    // map: logical DOF index -> PhysX GPU buffer column.
+    std::vector<int> order(_dofs.size());
+    std::iota(order.begin(), order.end(), 0);
+    std::sort(order.begin(), order.end(), [this](int a, int b) {
+        const auto& da = _dofs[static_cast<size_t>(a)];
+        const auto& db = _dofs[static_cast<size_t>(b)];
+        const PxU32 la =
+            _links[static_cast<size_t>(da.linkIndex)]->getLinkIndex();
+        const PxU32 lb =
+            _links[static_cast<size_t>(db.linkIndex)]->getLinkIndex();
+        if (la != lb)
+            return la < lb;
+        return static_cast<int>(da.axis) < static_cast<int>(db.axis);
+    });
+
+    std::vector<int> result(_dofs.size(), -1);
+    for (size_t gpuIndex = 0; gpuIndex < order.size(); ++gpuIndex)
+        result[static_cast<size_t>(order[gpuIndex])] =
+            static_cast<int>(gpuIndex);
+    return result;
 }
 
 std::vector<std::array<float, 2>> Articulation::getDofLimits() const {

@@ -139,6 +139,7 @@ class Articulation {
     std::vector<float> getDofVelocities() const;
     std::vector<float> getDofForces() const;
     std::vector<std::string> getDofNames() const;
+    std::vector<int> getDofGpuIndices() const;
     std::vector<std::array<float, 2>> getDofLimits() const;
     std::vector<float> getDofEffortLimits() const;
     std::vector<float> getLinkMasses() const;

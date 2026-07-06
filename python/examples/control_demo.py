@@ -89,7 +89,7 @@ class ControlDemo(ke.App):
             density=1000.0,  # approx 7kg
         ).rigid
 
-        self.visual.add_articulation(
+        self.visual.add_articulation_scene_graph(
             0,
             0,
             self.robot_xml,
@@ -98,7 +98,7 @@ class ControlDemo(ke.App):
             shader=self.robot_shader,
             color=torch.tensor([0.25, 0.42, 0.95, 1.0], dtype=torch.float32),
         )
-        self.visual.add_rigid(
+        self.visual.add_rigid_scene_graph(
             0,
             1,
             self.ball_xml,
