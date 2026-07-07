@@ -1658,6 +1658,15 @@ py::class_<glm::vec3>(m, "vec3")
             py::arg("key"), "Return true while a keyboard key is pressed.")
         .def("get_camera", &App::getCamera, py::return_value_policy::reference,
              "Return the application camera.")
+        .def("set_active_scene_camera", &App::setActiveSceneCamera,
+             py::arg("prim"),
+             "Use a Camera Prim's CameraComponent as the viewport render camera.")
+        .def("clear_active_scene_camera", &App::clearActiveSceneCamera,
+             "Return viewport rendering to the editor navigation camera.")
+        .def("has_active_scene_camera", &App::hasActiveSceneCamera,
+             "Return whether a scene Camera Prim is active.")
+        .def("active_scene_camera_path", &App::activeSceneCameraPath,
+             "Return the active scene Camera Prim path, or an empty string.")
         .def("get_view_matrix", &App::getViewMatrix,
              "Return the current camera view matrix.")
         .def("get_projection_matrix", &App::getProjectionMatrix,

@@ -84,7 +84,9 @@ class App {
     UpAxis _upAxis;
 
     Window _window;
-    Camera _camera;
+    Camera _camera;      // editor viewport navigation camera
+    Camera _sceneCamera; // active CameraComponent mirror for
+                         // viewer/overlay/hidden UI paths
     PanelManager _panelManager;
     UIScale _uiScale;
 
@@ -92,6 +94,10 @@ class App {
     std::unique_ptr<Backend::GraphicsDevice> _graphicsDevice;
     std::unique_ptr<Backend::Framebuffer> _framebuffer;
     std::unique_ptr<Backend::Framebuffer> _selectionMaskFramebuffer;
+    std::unique_ptr<Backend::Framebuffer> _sceneCameraPreviewFramebuffer;
+    std::unique_ptr<PostProcessor> _sceneCameraPreviewPostProcessor;
+    int _sceneCameraPreviewPostWidth = 0;
+    int _sceneCameraPreviewPostHeight = 0;
     Backend::Framebuffer* _lastPresentedFramebuffer = nullptr;
     std::unique_ptr<Scene::SceneBackend> _scene = nullptr;
     std::unique_ptr<Rasterizer> _rasterizer;
@@ -102,14 +108,18 @@ class App {
     InteractionController _interaction;
     GizmoController _gizmo;
     ViewportPanel* _editorViewportPanel = nullptr;
+    std::string _activeSceneCameraPath;
 
     Scene::Prim* defaultDirectionalLightPrim();
+    Scene::Prim* activeSceneCameraPrim() const;
+    bool syncActiveSceneCameraView();
     void registerCallbacks();
     bool writeScreenshotFrame();
     void renderSelectionGizmo();
     void renderSelectionGizmo(Camera& camera, const ImVec2& rectMin,
                               const ImVec2& rectSize, ImDrawList* drawList);
     void renderSelectedLightOverlay();
+    void renderSelectedCameraOverlay();
     bool isEditorViewportInputActive() const;
     bool shouldBlockMouseInput() const;
     glm::vec2 getMouseNDC() const;
@@ -174,6 +184,14 @@ class App {
         _interaction.setMode(mode);
     }
     void selectPrim(Scene::Prim* prim);
+    bool setActiveSceneCamera(Scene::Prim* prim);
+    void clearActiveSceneCamera();
+    bool hasActiveSceneCamera() const {
+        return !_activeSceneCameraPath.empty();
+    }
+    const std::string& activeSceneCameraPath() const {
+        return _activeSceneCameraPath;
+    }
     bool isPrimSelected(const Scene::Prim* prim) const {
         return prim && _interaction.selection().prim == prim;
     }
@@ -189,6 +207,10 @@ class App {
     void clearSelection() { _interaction.clearSelection(); }
     void renderSceneToFramebuffer(Camera& camera, Backend::Framebuffer* target,
                                   int width, int height, bool clear = true);
+    Backend::Texture* renderActiveSceneCameraPreview(int width, int height,
+                                                     float aspectOverride = 0.0f);
+    bool writeActiveSceneCameraPreviewPNG(int width, int height,
+                                          float aspectOverride = 0.0f);
 
     //////
     void start();

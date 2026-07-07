@@ -253,4 +253,21 @@ inline std::vector<glm::mat4> mat4Array(const FloatArray& array,
     return result;
 }
 
+inline std::vector<glm::mat4> mat4RowMajorArray(const FloatArray& array,
+                                                const char* name) {
+    Mat4ArrayView view = mat4ArrayView(array, name);
+    std::vector<glm::mat4> result;
+    result.reserve(view.count);
+    for (size_t i = 0; i < view.count; ++i) {
+        const float* p = view.data + i * 16;
+        glm::mat4 m(1.0f);
+        for (int row = 0; row < 4; ++row) {
+            for (int col = 0; col < 4; ++col)
+                m[col][row] = p[row * 4 + col];
+        }
+        result.push_back(m);
+    }
+    return result;
+}
+
 #endif

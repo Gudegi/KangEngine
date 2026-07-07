@@ -5,6 +5,7 @@
 #include "prim.hpp"
 #include "engine/scene/component/render_component.hpp"
 #include "engine/scene/component/light_component.hpp"
+#include "engine/scene/component/camera_component.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "utils/types.hpp"
 #include <Eigen/Geometry>
@@ -63,6 +64,8 @@ Prim::~Prim() {
         _renderComponent->detach();
     if (_lightComponent)
         _lightComponent->detach();
+    if (_cameraComponent)
+        _cameraComponent->detach();
 }
 
 Prim* Prim::addChild(const std::string& name, PrimType type) {
@@ -228,6 +231,30 @@ bool Prim::removeLightComponent() {
         return false;
     _lightComponent->detach();
     _lightComponent.reset();
+    return true;
+}
+
+std::shared_ptr<CameraComponent> Prim::addCameraComponent() {
+    if (_type != PrimType::Camera)
+        throw std::runtime_error("Prim '" + _path +
+                                 "' must be PrimType::Camera to add a CameraComponent");
+    if (_cameraComponent)
+        throw std::runtime_error("Prim '" + _path +
+                                 "' already has a CameraComponent");
+    _cameraComponent =
+        std::shared_ptr<CameraComponent>(new CameraComponent(this));
+    return _cameraComponent;
+}
+
+std::shared_ptr<CameraComponent> Prim::getCameraComponent() const {
+    return _cameraComponent;
+}
+
+bool Prim::removeCameraComponent() {
+    if (!_cameraComponent)
+        return false;
+    _cameraComponent->detach();
+    _cameraComponent.reset();
     return true;
 }
 

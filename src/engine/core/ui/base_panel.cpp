@@ -5,6 +5,7 @@
 #include "engine/core/app/app.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
+#include "engine/scene/component/camera_component.hpp"
 #include "engine/scene/component/light_component.hpp"
 #include "engine/scene/native/xform_token.hpp"
 #include <IconsFontAwesome7.h>
@@ -63,6 +64,100 @@ const char* lightTypeLabel(Scene::LightType type) {
         return "Spot";
     }
     return "Unknown";
+}
+
+const char* cameraProjectionTypeLabel(Scene::CameraProjectionType type) {
+    switch (type) {
+    case Scene::CameraProjectionType::Perspective:
+        return "Perspective";
+    case Scene::CameraProjectionType::Orthographic:
+        return "Orthographic";
+    }
+    return "Unknown";
+}
+
+std::vector<Scene::Prim*> collectCameraPrims(Scene::SceneBackend* scene) {
+    std::vector<Scene::Prim*> cameras;
+    if (!scene || !scene->getRootPrim())
+        return cameras;
+    scene->getRootPrim()->traverse([&](Scene::Prim* prim) {
+        if (prim && prim->getType() == Scene::PrimType::Camera &&
+            prim->hasCameraComponent()) {
+            cameras.push_back(prim);
+        }
+    });
+    std::sort(cameras.begin(), cameras.end(),
+              [](const Scene::Prim* lhs, const Scene::Prim* rhs) {
+                  return lhs->getPath() < rhs->getPath();
+              });
+    return cameras;
+}
+
+std::string cameraDisplayName(const Scene::Prim* prim) {
+    if (!prim)
+        return "None";
+    return std::string(ICON_FA_CAMERA " ") + prim->getPath();
+}
+
+const char* cameraAspectPresetLabel(int preset) {
+    switch (preset) {
+    case 0:
+        return "Free";
+    case 1:
+        return "16:9";
+    case 2:
+        return "4:3";
+    case 3:
+        return "1:1";
+    case 4:
+        return "Custom";
+    }
+    return "Free";
+}
+
+float cameraAspectPresetValue(int preset, float customAspect) {
+    switch (preset) {
+    case 1:
+        return 16.0f / 9.0f;
+    case 2:
+        return 4.0f / 3.0f;
+    case 3:
+        return 1.0f;
+    case 4:
+        return std::max(0.01f, customAspect);
+    default:
+        return 0.0f;
+    }
+}
+
+const char* cameraCapturePresetLabel(int preset) {
+    switch (preset) {
+    case 0:
+        return "Panel";
+    case 1:
+        return "FHD";
+    case 2:
+        return "4K";
+    case 3:
+        return "Custom";
+    }
+    return "FHD";
+}
+
+ImVec2 cameraCapturePresetSize(int preset, int customWidth, int customHeight,
+                               const ImVec2& panelSize) {
+    switch (preset) {
+    case 0:
+        return panelSize;
+    case 1:
+        return {1920.0f, 1080.0f};
+    case 2:
+        return {3840.0f, 2160.0f};
+    case 3:
+        return {static_cast<float>(std::max(1, customWidth)),
+                static_cast<float>(std::max(1, customHeight))};
+    }
+    return {1920.0f, 1080.0f};
 }
 
 std::string nextScenePath(Scene::SceneBackend* scene, const std::string& base) {
@@ -151,6 +246,27 @@ Scene::Prim* addLightPrim(App* app, Scene::LightType type) {
     }
     }
 
+    app->selectPrim(prim);
+    return prim;
+}
+
+bool setCameraWorldOrientation(Scene::Prim& prim, const glm::vec3& forward,
+                               const glm::vec3& up);
+
+Scene::Prim* addCameraPrim(App* app) {
+    if (!app || !app->getScene())
+        return nullptr;
+
+    Scene::Prim* prim = app->getScene()->definePrim(
+        nextScenePath(app->getScene(), "/cameras/camera"),
+        Scene::PrimType::Camera);
+    if (!prim)
+        return nullptr;
+
+    prim->addTranslateOp(app->getCamera().getCameraPos());
+    setCameraWorldOrientation(*prim, app->getCamera().getCameraLookDir(),
+                              app->getCamera().getCameraUpDir());
+    prim->addCameraComponent();
     app->selectPrim(prim);
     return prim;
 }
@@ -259,6 +375,101 @@ bool drawLightComponentEditor(Scene::Prim& prim, bool editable) {
     return changed;
 }
 
+bool drawCameraComponentEditor(App* app, Scene::Prim& prim, bool editable) {
+    if (prim.getType() != Scene::PrimType::Camera)
+        return false;
+
+    if (!prim.hasCameraComponent())
+        prim.addCameraComponent();
+
+    auto component = prim.getCameraComponent();
+    if (!component || !component->isAttached())
+        return false;
+
+    bool changed = false;
+    ImGui::PushID("CameraComponent");
+    if (!editable)
+        ImGui::BeginDisabled();
+
+    ImGui::TextDisabled("Source");
+    ImGui::SameLine();
+    ImGui::TextUnformatted("CameraComponent");
+    ImGui::TextDisabled("Type");
+    ImGui::SameLine();
+    ImGui::TextUnformatted(
+        cameraProjectionTypeLabel(component->projectionType()));
+    ImGui::TextDisabled("Version");
+    ImGui::SameLine();
+    ImGui::Text("%llu", static_cast<unsigned long long>(component->version()));
+    if (app) {
+        const bool active = app->activeSceneCameraPath() == prim.getPath();
+        ImGui::TextDisabled("Scene View");
+        ImGui::SameLine();
+        ImGui::TextUnformatted(active ? "Camera View / Viewer Source"
+                                      : "Editor View");
+        if (!active) {
+            if (ImGui::Button("Use as Scene Camera"))
+                app->setActiveSceneCamera(&prim);
+        } else {
+            if (ImGui::Button("Clear Scene Camera"))
+                app->clearActiveSceneCamera();
+        }
+    }
+
+    const char* projectionLabels[] = {"Perspective", "Orthographic"};
+    int projection = static_cast<int>(component->projectionType());
+    float fov = component->verticalFovDegrees();
+    float orthoSize = component->orthographicSize();
+    float nearPlane = component->nearPlane();
+    float farPlane = component->farPlane();
+
+    bool projectionChanged = false;
+    projectionChanged |=
+        ImGui::Combo("Projection", &projection, projectionLabels,
+                     static_cast<int>(std::size(projectionLabels)));
+    if (projection == static_cast<int>(Scene::CameraProjectionType::Perspective)) {
+        projectionChanged |=
+            ImGui::SliderFloat("Vertical FOV", &fov, 1.0f, 179.0f, "%.1f deg");
+    } else {
+        projectionChanged |=
+            ImGui::DragFloat("Orthographic Size", &orthoSize, 0.05f, 0.001f,
+                             FLT_MAX, "%.3f");
+    }
+    projectionChanged |=
+        ImGui::DragFloat("Near Plane", &nearPlane, 0.01f, 0.001f, FLT_MAX);
+    projectionChanged |=
+        ImGui::DragFloat("Far Plane", &farPlane, 0.1f, 0.001f, FLT_MAX);
+
+    if (projectionChanged) {
+        if (projection ==
+            static_cast<int>(Scene::CameraProjectionType::Orthographic)) {
+            component->setOrthographic(orthoSize, nearPlane, farPlane);
+        } else {
+            component->setPerspective(fov, nearPlane, farPlane);
+        }
+        changed = true;
+    }
+
+    glm::vec3 position = component->position();
+    glm::vec3 forward = component->forward();
+    glm::vec3 up = component->up();
+    if (ImGui::DragFloat3("Position", &position.x, 0.01f)) {
+        prim.setWorldTranslation(position);
+        changed = true;
+    }
+    if (ImGui::DragFloat3("Forward", &forward.x, 0.01f)) {
+        changed |= setCameraWorldOrientation(prim, forward, up);
+    }
+    if (ImGui::DragFloat3("Up", &up.x, 0.01f)) {
+        changed |= setCameraWorldOrientation(prim, forward, up);
+    }
+
+    if (!editable)
+        ImGui::EndDisabled();
+    ImGui::PopID();
+    return changed;
+}
+
 bool drawAttributeValue(const std::string& name,
                         Scene::AttributeValue& attribute, bool editable) {
     bool changed = false;
@@ -330,6 +541,22 @@ bool decomposeTransform(const glm::mat4& matrix, glm::vec3& translation,
         return false;
     }
     rotationDegrees = glm::degrees(glm::eulerAngles(glm::normalize(rotation)));
+    return true;
+}
+
+bool setCameraWorldOrientation(Scene::Prim& prim, const glm::vec3& forward,
+                               const glm::vec3& up) {
+    if (glm::length2(forward) < 1.0e-8f || glm::length2(up) < 1.0e-8f)
+        return false;
+
+    const glm::vec3 safeForward = glm::normalize(forward);
+    const glm::vec3 right = glm::cross(safeForward, glm::normalize(up));
+    if (glm::length2(right) < 1.0e-8f)
+        return false;
+
+    const glm::vec3 safeUp =
+        glm::normalize(glm::cross(glm::normalize(right), safeForward));
+    prim.setWorldRotation(glm::quatLookAt(safeForward, safeUp));
     return true;
 }
 
@@ -678,6 +905,11 @@ void InspectorPanel::buildPanel() {
         drawLightComponentEditor(*prim, !external);
     }
 
+    if (prim->getType() == Scene::PrimType::Camera) {
+        ImGui::SeparatorText("Camera");
+        drawCameraComponentEditor(_app, *prim, !external);
+    }
+
     ImGui::SeparatorText("Attributes");
     std::vector<std::pair<Scene::Token, Scene::AttributeValue>> attributes;
     attributes.reserve(prim->getAttributes().size());
@@ -739,6 +971,8 @@ void MenuBarPanel::buildPanel() {
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Add")) {
+            if (ImGui::MenuItem("Camera"))
+                addCameraPrim(_app);
             if (ImGui::BeginMenu("Light")) {
                 if (ImGui::MenuItem("Directional"))
                     addLightPrim(_app, Scene::LightType::Directional);
@@ -784,11 +1018,17 @@ void MenuBarPanel::buildPanel() {
                     panels.isPanelOpen(PanelManager::PANEL_INSPECTOR);
                 bool viewportOpen =
                     panels.isPanelOpen(PanelManager::PANEL_VIEWPORT);
+                bool cameraViewOpen =
+                    panels.isPanelOpen(PanelManager::PANEL_CAMERA_VIEW);
 
                 if (layoutMode == UILayoutMode::Editor &&
                     ImGui::MenuItem("Viewport", nullptr, viewportOpen))
                     panels.setPanelOpen(PanelManager::PANEL_VIEWPORT,
                                         !viewportOpen);
+                if (layoutMode == UILayoutMode::Editor &&
+                    ImGui::MenuItem("Camera View", nullptr, cameraViewOpen))
+                    panels.setPanelOpen(PanelManager::PANEL_CAMERA_VIEW,
+                                        !cameraViewOpen);
                 if (ImGui::MenuItem("Scene", nullptr, sceneOpen))
                     panels.setPanelOpen(PanelManager::PANEL_SCENE, !sceneOpen);
                 if (ImGui::MenuItem("Renderer Debug", nullptr,
@@ -1068,6 +1308,180 @@ void ViewportPanel::buildPanel() {
     if (_app && _camera)
         _app->renderSelectionGizmo(*_camera, _imageMin, _imageSize,
                                    ImGui::GetWindowDrawList());
+    ImGui::End();
+}
+
+CameraViewPanel::CameraViewPanel(App* app, std::string name)
+    : Panel(std::move(name)), _app(app) {
+    setOpen(false);
+}
+
+CameraViewPanel::~CameraViewPanel() {}
+
+void CameraViewPanel::buildPanel() {
+    if (!ImGui::Begin(name().c_str(), openPtr())) {
+        ImGui::End();
+        return;
+    }
+
+    if (!_app || !_app->getScene()) {
+        ImGui::TextDisabled("No scene");
+        ImGui::End();
+        return;
+    }
+
+    std::vector<Scene::Prim*> cameras = collectCameraPrims(_app->getScene());
+    Scene::Prim* activeCamera = nullptr;
+    for (Scene::Prim* camera : cameras) {
+        if (camera && camera->getPath() == _app->activeSceneCameraPath()) {
+            activeCamera = camera;
+            break;
+        }
+    }
+
+    const std::string currentLabel =
+        activeCamera ? cameraDisplayName(activeCamera) : "No active scene camera";
+    ImGui::SetNextItemWidth(std::min(360.0f, ImGui::GetContentRegionAvail().x));
+    if (ImGui::BeginCombo("Camera", currentLabel.c_str())) {
+        for (Scene::Prim* camera : cameras) {
+            const bool selected = camera == activeCamera;
+            const std::string label = cameraDisplayName(camera);
+            if (ImGui::Selectable(label.c_str(), selected)) {
+                _app->setActiveSceneCamera(camera);
+                activeCamera = camera;
+            }
+            if (selected)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+
+    if (cameras.empty()) {
+        ImGui::TextDisabled("No CameraComponent in scene");
+        ImGui::End();
+        return;
+    }
+
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(120.0f);
+    if (ImGui::BeginCombo("Aspect", cameraAspectPresetLabel(_aspectPreset))) {
+        for (int preset = 0; preset <= 4; ++preset) {
+            const bool selected = preset == _aspectPreset;
+            if (ImGui::Selectable(cameraAspectPresetLabel(preset), selected))
+                _aspectPreset = preset;
+            if (selected)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+    if (_aspectPreset == 4) {
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(100.0f);
+        ImGui::DragFloat("Custom", &_customAspect, 0.01f, 0.01f, 100.0f,
+                         "%.2f");
+    }
+
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(115.0f);
+    if (ImGui::BeginCombo("Capture",
+                          cameraCapturePresetLabel(_capturePreset))) {
+        for (int preset = 0; preset <= 3; ++preset) {
+            const bool selected = preset == _capturePreset;
+            if (ImGui::Selectable(cameraCapturePresetLabel(preset), selected))
+                _capturePreset = preset;
+            if (selected)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+    if (_capturePreset == 3) {
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(90.0f);
+        ImGui::InputInt("W", &_customCaptureWidth, 0, 0);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(90.0f);
+        ImGui::InputInt("H", &_customCaptureHeight, 0, 0);
+        _customCaptureWidth = std::max(1, _customCaptureWidth);
+        _customCaptureHeight = std::max(1, _customCaptureHeight);
+    }
+
+    ImGui::SameLine();
+    const bool screenshotRequested =
+        ImGui::Button(ICON_FA_CAMERA "##CameraViewScreenshot");
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Save Camera View screenshot");
+
+    if (!activeCamera) {
+        ImGui::TextDisabled("Select a camera to preview");
+        ImGui::End();
+        return;
+    }
+
+    const ImVec2 contentMin = ImGui::GetCursorScreenPos();
+    const ImVec2 contentSize = ImGui::GetContentRegionAvail();
+    ImVec2 imageMin = contentMin;
+    ImVec2 imageSize = contentSize;
+    const float aspectOverride =
+        cameraAspectPresetValue(_aspectPreset, _customAspect);
+    if (aspectOverride > 0.0f && contentSize.x > 1.0f &&
+        contentSize.y > 1.0f) {
+        const float availableAspect = contentSize.x / contentSize.y;
+        if (availableAspect > aspectOverride) {
+            imageSize.y = contentSize.y;
+            imageSize.x = contentSize.y * aspectOverride;
+            imageMin.x += (contentSize.x - imageSize.x) * 0.5f;
+        } else {
+            imageSize.x = contentSize.x;
+            imageSize.y = contentSize.x / aspectOverride;
+            imageMin.y += (contentSize.y - imageSize.y) * 0.5f;
+        }
+    }
+
+    const int width = std::max(1, static_cast<int>(imageSize.x));
+    const int height = std::max(1, static_cast<int>(imageSize.y));
+    Backend::Texture* texture =
+        _app->renderActiveSceneCameraPreview(width, height, aspectOverride);
+    if (!texture || texture->getWidth() <= 0 || texture->getHeight() <= 0) {
+        ImGui::TextDisabled("Camera preview unavailable");
+        ImGui::End();
+        return;
+    }
+    if (screenshotRequested) {
+        const ImVec2 captureSize = cameraCapturePresetSize(
+            _capturePreset, _customCaptureWidth, _customCaptureHeight,
+            imageSize);
+        const int captureWidth =
+            std::max(1, static_cast<int>(captureSize.x));
+        const int captureHeight =
+            std::max(1, static_cast<int>(captureSize.y));
+        const float captureAspect =
+            aspectOverride > 0.0f
+                ? aspectOverride
+                : static_cast<float>(captureWidth) /
+                      static_cast<float>(captureHeight);
+        const bool saved = _app->writeActiveSceneCameraPreviewPNG(
+            captureWidth, captureHeight, captureAspect);
+        _lastSaveStatus =
+            saved ? "Saved Camera View screenshot" : "Failed to save screenshot";
+    }
+
+    _imageMin = imageMin;
+    _imageSize = imageSize;
+    ImGui::SetCursorScreenPos(_imageMin);
+    ImGui::Image((ImTextureID)(uintptr_t)texture->getNativeHandle(),
+                 _imageSize, ImVec2(0, 1), ImVec2(1, 0));
+
+    ImGui::SetCursorScreenPos(ImVec2(_imageMin.x + ImGui::GetStyle().ItemSpacing.x,
+                                     _imageMin.y + ImGui::GetStyle().ItemSpacing.y));
+    ImGui::TextDisabled("%s", activeCamera->getPath().c_str());
+    if (!_lastSaveStatus.empty()) {
+        ImGui::SetCursorScreenPos(ImVec2(
+            _imageMin.x + ImGui::GetStyle().ItemSpacing.x,
+            _imageMin.y + ImGui::GetStyle().ItemSpacing.y +
+                ImGui::GetTextLineHeightWithSpacing()));
+        ImGui::TextDisabled("%s", _lastSaveStatus.c_str());
+    }
+
     ImGui::End();
 }
 

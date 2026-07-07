@@ -25,6 +25,7 @@ namespace Scene {
 
 class RenderComponent;
 class LightComponent;
+class CameraComponent;
 
 using AttributeValue =
     std::variant<bool, int, float, std::string, glm::vec3, glm::vec4, glm::mat4,
@@ -66,6 +67,7 @@ class Prim {
     std::unordered_map<Token, AttributeValue, Token::Hash> _Attributes;
     std::shared_ptr<RenderComponent> _renderComponent;
     std::shared_ptr<LightComponent> _lightComponent;
+    std::shared_ptr<CameraComponent> _cameraComponent;
 
     bool _renderable = false; // true for prim types that can submit geometry
     bool _visible = true; // runtime show/hide toggle(just render visibility)
@@ -120,6 +122,11 @@ class Prim {
     std::shared_ptr<LightComponent> getLightComponent() const;
     bool hasLightComponent() const { return _lightComponent != nullptr; }
     bool removeLightComponent();
+
+    std::shared_ptr<CameraComponent> addCameraComponent();
+    std::shared_ptr<CameraComponent> getCameraComponent() const;
+    bool hasCameraComponent() const { return _cameraComponent != nullptr; }
+    bool removeCameraComponent();
 
     static MeshData createCubeData(float scale);
     static MeshData createSquareData(float scale); // Deprecated.

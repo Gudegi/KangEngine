@@ -37,8 +37,7 @@ class OpenGLBuffer : public Buffer {
     void setData(const void* data, size_t size, size_t offset = 0) override;
 #ifdef KANGENGINE_USE_CUDA_GL_INTEROP
     bool setExternalData(const Sim::GpuArrayView& view, size_t count,
-                         size_t elementSize,
-                         size_t sourceStrideBytes) override;
+                         size_t elementSize, size_t sourceStrideBytes) override;
     cudaGraphicsResource* cudaResource();
 #endif
     BufferType getType() const override { return _type; }
@@ -116,6 +115,10 @@ class OpenGLTexture : public Texture {
                         GLfloat filterMaxParam = GL_LINEAR) const;
     int getWidth() const override { return _width; }
     int getHeight() const override { return _height; }
+    void setSize(int w, int h) {
+        _width = w;
+        _height = h;
+    }
     GLuint getHandle() const { return _textureID; }
     uintptr_t getNativeHandle() const override {
         return static_cast<uintptr_t>(_textureID);
@@ -244,9 +247,8 @@ class OpenGLDevice : public GraphicsDevice {
                  const std::string& fragmentSource) override;
     std::unique_ptr<Texture> createTexture(const std::string path,
                                            bool flip = false) override;
-    std::unique_ptr<Texture>
-    createTexture(const std::string path, bool flip,
-                  const SamplerDesc& sampler) override;
+    std::unique_ptr<Texture> createTexture(const std::string path, bool flip,
+                                           const SamplerDesc& sampler) override;
     std::unique_ptr<Texture>
     createTexture(const std::string path, bool flip = false,
                   float warpParam = GL_REPEAT,

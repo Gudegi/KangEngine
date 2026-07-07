@@ -129,6 +129,7 @@ namespace DebugGeometry {
 
 void appendLine(std::vector<glm::vec3>& starts, std::vector<glm::vec3>& ends,
                 const glm::vec3& start, const glm::vec3& end);
+// Light
 void appendDirectionArrowWire(std::vector<glm::vec3>& starts,
                               std::vector<glm::vec3>& ends,
                               const glm::vec3& origin,
@@ -140,6 +141,21 @@ void appendConeWire(std::vector<glm::vec3>& starts,
                     std::vector<glm::vec3>& ends, const glm::vec3& apex,
                     const glm::vec3& direction, float range,
                     float outerConeAngle, int segments = 64);
+// Camera
+void appendCameraGlyphWire(std::vector<glm::vec3>& starts,
+                           std::vector<glm::vec3>& ends,
+                           const glm::vec3& position, const glm::vec3& forward,
+                           const glm::vec3& up, float size);
+void appendPerspectiveFrustumWire(std::vector<glm::vec3>& starts,
+                                  std::vector<glm::vec3>& ends,
+                                  const glm::vec3& position,
+                                  const glm::vec3& forward, const glm::vec3& up,
+                                  float verticalFovRadians, float aspect,
+                                  float nearPlane, float farPlane);
+void appendOrthographicFrustumWire(
+    std::vector<glm::vec3>& starts, std::vector<glm::vec3>& ends,
+    const glm::vec3& position, const glm::vec3& forward, const glm::vec3& up,
+    float verticalSize, float aspect, float nearPlane, float farPlane);
 
 } // namespace DebugGeometry
 

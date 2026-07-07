@@ -3,6 +3,7 @@
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
 #include "engine/graphics/renderer/post_processor.hpp"
+#include "engine/scene/component/camera_component.hpp"
 #include "engine/scene/component/light_component.hpp"
 #include "engine/scene/component/render_component.hpp"
 #include "engine/scene/native/prim.hpp"
@@ -38,8 +39,10 @@
 namespace KE {
 namespace {
 
-
-constexpr const char* SelectedLightOverlayPath = "/__editor__/selected_light_overlay";
+constexpr const char* SelectedLightOverlayPath =
+    "/__editor__/selected_light_overlay";
+constexpr const char* SelectedCameraOverlayPath =
+    "/__editor__/selected_camera_overlay";
 
 std::string defaultMotionScenePath(const std::string& path,
                                    const Animation::SkeletonMotion& motion) {
@@ -179,6 +182,8 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     }
     _camera.init(cameraPos, cameraTarget, _upAxis);
     _camera.updateProjMatrix(_width, _height);
+    _sceneCamera.init(cameraPos, cameraTarget, _upAxis);
+    _sceneCamera.updateProjMatrix(_width, _height);
     _fpsWindowStart = glfwGetTime();
     _fpsWindowFrames = 0;
     _measuredRenderFPS = 0.0f;
@@ -190,6 +195,9 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     auto viewportPanel = std::make_unique<ViewportPanel>(this, &_camera);
     _editorViewportPanel = viewportPanel.get();
     _panelManager.addPanel(std::move(viewportPanel));
+    auto cameraViewPanel = std::make_unique<CameraViewPanel>(this);
+    cameraViewPanel->setOpen(false);
+    _panelManager.addPanel(std::move(cameraViewPanel));
     _panelManager.addPanel(std::make_unique<ScenePanel>(this));
     _panelManager.addPanel(std::make_unique<PerformancePanel>(this));
     _panelManager.addPanel(std::make_unique<RendererDebugPanel>(this));
@@ -201,6 +209,11 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     _rasterizer = std::make_unique<Rasterizer>(_graphicsDevice.get());
     _postProcessor = std::make_unique<PostProcessor>();
     _postProcessor->init(_graphicsDevice.get(), _width, _height);
+    _sceneCameraPreviewPostProcessor = std::make_unique<PostProcessor>();
+    _sceneCameraPreviewPostProcessor->init(_graphicsDevice.get(), _width,
+                                           _height);
+    _sceneCameraPreviewPostWidth = _width;
+    _sceneCameraPreviewPostHeight = _height;
     _selectionOutlineProcessor = std::make_unique<SelectionOutlineProcessor>();
     _selectionOutlineProcessor->init(_graphicsDevice.get(), _width, _height);
     _renderer.bind(_graphicsDevice.get(), _rasterizer.get(),
@@ -265,6 +278,123 @@ void App::renderSceneToFramebuffer(Camera& camera, Backend::Framebuffer* target,
                                            clear);
 }
 
+Backend::Texture* App::renderActiveSceneCameraPreview(int width, int height,
+                                                      float aspectOverride) {
+    if (!_graphicsDevice || !_rasterizer || width <= 1 || height <= 1)
+        return nullptr;
+
+    Scene::Prim* prim = activeSceneCameraPrim();
+    if (!prim || !prim->hasCameraComponent())
+        return nullptr;
+    auto component = prim->getCameraComponent();
+    if (!component || !component->isAttached())
+        return nullptr;
+
+    if (!_sceneCameraPreviewFramebuffer) {
+        Backend::FramebufferDesc desc;
+        desc.width = width;
+        desc.height = height;
+        desc.stencil = true;
+        desc.colorFormat = Backend::FramebufferColorFormat::RGBA16F;
+        _sceneCameraPreviewFramebuffer =
+            _graphicsDevice->createFramebuffer(desc);
+    } else if (Backend::Texture* color =
+                   _sceneCameraPreviewFramebuffer->getColorTexture()) {
+        if (color->getWidth() != width || color->getHeight() != height)
+            _sceneCameraPreviewFramebuffer->resize(width, height);
+    }
+
+    const float aspect = aspectOverride > 0.0f ? aspectOverride
+                                               : static_cast<float>(width) /
+                                                     static_cast<float>(height);
+    const glm::mat4 view = component->viewMatrix();
+    const glm::mat4 proj = component->projectionMatrix(aspect);
+
+    getRenderer().syncSceneLights(getScene());
+    _rasterizer->updateFrameData(view, proj);
+    _sceneCameraPreviewFramebuffer->bind();
+    _graphicsDevice->setViewport(0, 0, width, height);
+    _graphicsDevice->clear(0.2f, 0.3f, 0.3f, 1.0f);
+    _rasterizer->render(view, proj);
+    _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
+    _sceneCameraPreviewFramebuffer->resolve();
+    _sceneCameraPreviewFramebuffer->unbind();
+
+    _graphicsDevice->setViewport(0, 0, _width, _height);
+    if (_sceneCameraPreviewPostProcessor) {
+        if (_sceneCameraPreviewPostWidth != width ||
+            _sceneCameraPreviewPostHeight != height) {
+            _sceneCameraPreviewPostProcessor->resize(width, height);
+            _sceneCameraPreviewPostWidth = width;
+            _sceneCameraPreviewPostHeight = height;
+        }
+        const RendererSettings& settings = getRenderer().settings();
+        _sceneCameraPreviewPostProcessor->process(
+            _sceneCameraPreviewFramebuffer->getColorTexture(), settings.gamma,
+            settings.toneMapMode, settings.toneMapExposure, settings.bloom);
+        _graphicsDevice->setViewport(0, 0, _width, _height);
+        return _sceneCameraPreviewPostProcessor->getResult();
+    }
+
+    return _sceneCameraPreviewFramebuffer->getColorTexture();
+}
+
+bool App::writeActiveSceneCameraPreviewPNG(int width, int height,
+                                           float aspectOverride) {
+    Backend::Texture* rendered =
+        renderActiveSceneCameraPreview(width, height, aspectOverride);
+    if (!rendered || rendered->getWidth() <= 0 || rendered->getHeight() <= 0)
+        return false;
+
+    Backend::Framebuffer* source = nullptr;
+    if (_sceneCameraPreviewPostProcessor)
+        source = _sceneCameraPreviewPostProcessor->getOutputFramebuffer();
+    if (!source && _sceneCameraPreviewFramebuffer)
+        source = _sceneCameraPreviewFramebuffer.get();
+    if (!source)
+        return false;
+
+    Backend::Texture* color = source->getColorTexture();
+    if (!color || color->getWidth() <= 0 || color->getHeight() <= 0)
+        return false;
+
+    namespace fs = std::filesystem;
+    fs::path outDir = fs::path(".") / "tmp" / "camera_view";
+    std::error_code ec;
+    fs::create_directories(outDir, ec);
+    if (ec) {
+        fmt::print("Failed to create camera screenshot directory {}: {}\n",
+                   outDir.string(), ec.message());
+        return false;
+    }
+
+    const auto now = std::chrono::system_clock::now();
+    const auto nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                           now.time_since_epoch()) %
+                       1000;
+    const std::time_t nowTime = std::chrono::system_clock::to_time_t(now);
+    std::tm localTime{};
+    localtime_r(&nowTime, &localTime);
+
+    std::ostringstream name;
+    name << "camera_view_" << _frameIndex << "_"
+         << std::put_time(&localTime, "%Y%m%d_%H%M%S") << "_" << std::setw(3)
+         << std::setfill('0') << nowMs.count() << ".png";
+    const fs::path outPath = outDir / name.str();
+
+    std::vector<uint8_t> pixels = source->readColorPixels(true);
+    if (pixels.empty())
+        return false;
+    const bool ok = stbi_write_png(outPath.string().c_str(), color->getWidth(),
+                                   color->getHeight(), 3, pixels.data(),
+                                   color->getWidth() * 3) != 0;
+    if (ok)
+        fmt::print("Saved camera screenshot: {}\n", outPath.string());
+    else
+        fmt::print("Failed to save camera screenshot: {}\n", outPath.string());
+    return ok;
+}
+
 void App::renderFrameOnce() {
     auto smoothMetric = [](float& metric, double valueSeconds) {
         const float valueMs = static_cast<float>(valueSeconds * 1000.0);
@@ -281,8 +411,22 @@ void App::renderFrameOnce() {
     _renderVariable->lastFrameTime = currentFrame;
 
     processInput();
-    _viewMatrix = _camera.getViewMatrix();
-    _projectionMatrix = _camera.getProjMatrix();
+    const bool useSceneCameraForMainView =
+        (_hideUI || _panelManager.getLayoutMode() != UILayoutMode::Editor) &&
+        syncActiveSceneCameraView();
+    if (useSceneCameraForMainView) {
+        if (auto* prim = activeSceneCameraPrim()) {
+            auto component = prim->getCameraComponent();
+            const float aspect = _height > 0 ? static_cast<float>(_width) /
+                                                   static_cast<float>(_height)
+                                             : 1.0f;
+            _viewMatrix = component->viewMatrix();
+            _projectionMatrix = component->projectionMatrix(aspect);
+        }
+    } else {
+        _viewMatrix = _camera.getViewMatrix();
+        _projectionMatrix = _camera.getProjMatrix();
+    }
 
     // ImGui::NewFrame() must come before any ImGui widget calls
     if (!_hideUI) {
@@ -292,6 +436,7 @@ void App::renderFrameOnce() {
     const double updateStart = glfwGetTime();
     this->preRender();
     renderSelectedLightOverlay();
+    renderSelectedCameraOverlay();
     const double updateEnd = glfwGetTime();
     if (_rasterizer) {
         getRenderer().syncSceneLights(getScene());
@@ -299,7 +444,10 @@ void App::renderFrameOnce() {
         if (_mousePickRequested) {
             const RayPickResult pick = pickMouse();
             _mousePickRequested = false;
-            if (_interaction.handlePick(pick, _camera.getCameraLookDir())) {
+            const glm::vec3 pickLookDir = useSceneCameraForMainView
+                                              ? _sceneCamera.getCameraLookDir()
+                                              : _camera.getCameraLookDir();
+            if (_interaction.handlePick(pick, pickLookDir)) {
                 onForceDragBegin(_interaction.forceDragPick(),
                                  _interaction.forceDragPlanePoint());
             }
@@ -314,7 +462,9 @@ void App::renderFrameOnce() {
             _interaction.handleHoverPick(pickMouse());
             onRayPickHover(_interaction.lastPick());
         }
-        _rasterizer->renderShadowMap(_camera, _upAxis, _width, _height);
+        Camera& shadowCamera =
+            useSceneCameraForMainView ? _sceneCamera : _camera;
+        _rasterizer->renderShadowMap(shadowCamera, _upAxis, _width, _height);
     }
 
     const double renderStart = glfwGetTime();
@@ -488,6 +638,38 @@ Scene::Prim* App::defaultDirectionalLightPrim() {
                               Scene::PrimType::Light);
 }
 
+Scene::Prim* App::activeSceneCameraPrim() const {
+    if (!_scene || _activeSceneCameraPath.empty())
+        return nullptr;
+    return _scene->getPrimAtPath(_activeSceneCameraPath);
+}
+
+bool App::syncActiveSceneCameraView() {
+    Scene::Prim* prim = activeSceneCameraPrim();
+    if (!prim || prim->getType() != Scene::PrimType::Camera ||
+        !prim->hasCameraComponent()) {
+        if (!_activeSceneCameraPath.empty())
+            _activeSceneCameraPath.clear();
+        return false;
+    }
+
+    auto component = prim->getCameraComponent();
+    if (!component || !component->isAttached()) {
+        _activeSceneCameraPath.clear();
+        return false;
+    }
+
+    const glm::vec3 position = component->position();
+    const glm::vec3 forward = component->forward();
+    _sceneCamera.setCameraPos(position);
+    _sceneCamera.setTargetPos(position + forward);
+    _sceneCamera.setFoV(component->verticalFovDegrees());
+    _sceneCamera.setNearPlane(component->nearPlane());
+    _sceneCamera.setFarPlane(component->farPlane());
+    _sceneCamera.updateProjMatrix(_width, _height);
+    return true;
+}
+
 void App::checkError() { _graphicsDevice->checkError(); }
 
 RenderableHandle App::addRenderable(Backend::Shader* shader, Scene::Prim* prim,
@@ -553,6 +735,13 @@ bool App::removePrim(const std::string& path) {
     _sceneRenderSystem.detachSubtree(*prim);
     for (Scene::Prim* child : subtree)
         getRenderer().removePrim(child);
+
+    for (Scene::Prim* child : subtree) {
+        if (child && child->getPath() == _activeSceneCameraPath) {
+            _activeSceneCameraPath.clear();
+            break;
+        }
+    }
 
     clearSelection();
     return _scene->removePrim(path);
@@ -968,12 +1157,18 @@ void App::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
     _uiScale.update(window);
     _graphicsDevice->setViewport(0, 0, _width, _height);
     _camera.updateProjMatrix(_width, _height);
+    _sceneCamera.updateProjMatrix(_width, _height);
     if (_framebuffer)
         _framebuffer->resize(_width, _height);
     if (_selectionMaskFramebuffer)
         _selectionMaskFramebuffer->resize(_width, _height);
     if (_postProcessor)
         _postProcessor->resize(_width, _height);
+    if (_sceneCameraPreviewPostProcessor) {
+        _sceneCameraPreviewPostProcessor->resize(_width, _height);
+        _sceneCameraPreviewPostWidth = _width;
+        _sceneCameraPreviewPostHeight = _height;
+    }
     if (_selectionOutlineProcessor)
         _selectionOutlineProcessor->resize(_width, _height);
     _renderer.setViewportSize(_width, _height);
@@ -1286,8 +1481,8 @@ glm::vec2 App::getScreenToNDC(float scrX, float scrY) {
 
 Geometry::Ray App::getMouseRay() {
     glm::vec2 ndc = getMouseNDC();
-    glm::mat4 invProj = glm::inverse(_camera.getProjMatrix());
-    glm::mat4 invView = glm::inverse(_camera.getViewMatrix());
+    glm::mat4 invProj = glm::inverse(_projectionMatrix);
+    glm::mat4 invView = glm::inverse(_viewMatrix);
     // ndc to cam space
     glm::vec4 clipNear = glm::vec4(ndc.x, ndc.y, -1.0f, 1.0f);
     glm::vec4 clipFar = glm::vec4(ndc.x, ndc.y, 1.0f, 1.0f);
@@ -1298,8 +1493,7 @@ Geometry::Ray App::getMouseRay() {
     // cam to world
     glm::vec3 worldNear = glm::vec3(invView * camNear);
     glm::vec3 worldFar = glm::vec3(invView * camFar);
-    return Geometry::Ray(_camera.getCameraPos(),
-                         glm::normalize(worldFar - worldNear));
+    return Geometry::Ray(worldNear, glm::normalize(worldFar - worldNear));
 }
 
 RayPickResult App::rayPick(const Geometry::Ray& ray) const {
@@ -1307,6 +1501,20 @@ RayPickResult App::rayPick(const Geometry::Ray& ray) const {
 }
 
 RayPickResult App::pickMouse() { return rayPick(getMouseRay()); }
+
+bool App::setActiveSceneCamera(Scene::Prim* prim) {
+    if (!prim || prim->getType() != Scene::PrimType::Camera)
+        return false;
+    if (!prim->hasCameraComponent())
+        prim->addCameraComponent();
+    if (!prim->getCameraComponent())
+        return false;
+    _activeSceneCameraPath = prim->getPath();
+    syncActiveSceneCameraView();
+    return true;
+}
+
+void App::clearActiveSceneCamera() { _activeSceneCameraPath.clear(); }
 
 void App::selectPrim(Scene::Prim* prim) {
     if (!prim) {
@@ -1358,7 +1566,6 @@ bool App::setPickTransform(const RayPickResult& result,
     return false;
 }
 
-
 void App::renderSelectedLightOverlay() {
     if (_hideUI || !_interaction.hasSelection()) {
         clearDebugLines(SelectedLightOverlayPath);
@@ -1366,7 +1573,8 @@ void App::renderSelectedLightOverlay() {
     }
 
     const RayPickResult& selection = _interaction.selection();
-    Scene::Prim* prim = selection.prim ? selection.prim->resolveManipulationTarget() : nullptr;
+    Scene::Prim* prim =
+        selection.prim ? selection.prim->resolveManipulationTarget() : nullptr;
     if (!prim || prim->getType() != Scene::PrimType::Light ||
         !prim->hasLightComponent()) {
         clearDebugLines(SelectedLightOverlayPath);
@@ -1387,21 +1595,21 @@ void App::renderSelectedLightOverlay() {
     case Scene::LightType::Directional: {
         const Scene::DirectionalLight light = component->directionalLight();
         const glm::vec3 origin = glm::vec3(prim->computeWorldMatrix()[3]);
-        Scene::DebugGeometry::appendDirectionArrowWire(
-            starts, ends, origin, light.direction, 2.0f);
+        Scene::DebugGeometry::appendDirectionArrowWire(starts, ends, origin,
+                                                       light.direction, 2.0f);
         break;
     }
     case Scene::LightType::Point: {
         const Scene::PointLight light = component->pointLight();
         Scene::DebugGeometry::appendSphereWire(starts, ends, light.position,
-                                                light.range);
+                                               light.range);
         break;
     }
     case Scene::LightType::Spot: {
         const Scene::SpotLight light = component->spotLight();
-        Scene::DebugGeometry::appendConeWire(
-            starts, ends, light.position, light.direction, light.range,
-            light.outerConeAngle);
+        Scene::DebugGeometry::appendConeWire(starts, ends, light.position,
+                                             light.direction, light.range,
+                                             light.outerConeAngle);
         break;
     }
     }
@@ -1411,6 +1619,75 @@ void App::renderSelectedLightOverlay() {
         return;
     }
     logDebugLines(SelectedLightOverlayPath, starts, ends, {color}, 1.5f, false);
+}
+
+void App::renderSelectedCameraOverlay() {
+    if (_hideUI || !_scene) {
+        clearDebugLines(SelectedCameraOverlayPath);
+        return;
+    }
+
+    Scene::Prim* selectedPrim = nullptr;
+    if (_interaction.hasSelection()) {
+        const RayPickResult& selection = _interaction.selection();
+        selectedPrim = selection.prim
+                           ? selection.prim->resolveManipulationTarget()
+                           : nullptr;
+    }
+
+    const float aspect =
+        _height > 0 ? static_cast<float>(_width) / static_cast<float>(_height)
+                    : 1.0f;
+    std::vector<glm::vec3> starts;
+    std::vector<glm::vec3> ends;
+    std::vector<glm::vec4> colors;
+
+    _scene->getRootPrim()->traverse([&](Scene::Prim* prim) {
+        if (!prim || prim->getType() != Scene::PrimType::Camera ||
+            !prim->hasCameraComponent() || !prim->isActiveInHierarchy() ||
+            !prim->isVisibleInHierarchy())
+            return;
+
+        auto component = prim->getCameraComponent();
+        if (!component || !component->isAttached())
+            return;
+
+        const bool selected = prim == selectedPrim;
+        const bool active = prim->getPath() == _activeSceneCameraPath;
+        const glm::vec4 color = selected ? glm::vec4(0.34f, 0.74f, 1.0f, 1.0f)
+                                : active ? glm::vec4(0.42f, 0.96f, 0.74f, 1.0f)
+                                         : glm::vec4(0.54f, 0.62f, 0.72f, 1.0f);
+
+        const size_t before = starts.size();
+        Scene::DebugGeometry::appendCameraGlyphWire(
+            starts, ends, component->position(), component->forward(),
+            component->up(), selected || active ? 0.42f : 0.32f);
+
+        if (selected) {
+            if (component->projectionType() ==
+                Scene::CameraProjectionType::Orthographic) {
+                Scene::DebugGeometry::appendOrthographicFrustumWire(
+                    starts, ends, component->position(), component->forward(),
+                    component->up(), component->orthographicSize(), aspect,
+                    component->nearPlane(), component->farPlane());
+            } else {
+                Scene::DebugGeometry::appendPerspectiveFrustumWire(
+                    starts, ends, component->position(), component->forward(),
+                    component->up(),
+                    glm::radians(component->verticalFovDegrees()), aspect,
+                    component->nearPlane(), component->farPlane());
+            }
+        }
+
+        colors.insert(colors.end(), starts.size() - before, color);
+    });
+
+    if (starts.empty()) {
+        clearDebugLines(SelectedCameraOverlayPath);
+        return;
+    }
+
+    logDebugLines(SelectedCameraOverlayPath, starts, ends, colors, 1.5f, false);
 }
 
 void App::renderSelectionGizmo() {

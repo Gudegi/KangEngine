@@ -14,6 +14,7 @@
 #include "engine/scene/debug_draw.hpp"
 #include "engine/scene/component/render_component.hpp"
 #include "engine/scene/component/light_component.hpp"
+#include "engine/scene/component/camera_component.hpp"
 #include "engine/scene/component/scene_render_system.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/native/token.hpp"
@@ -74,6 +75,13 @@ void bind_scene(py::module& m) {
         .value("Directional", KE::Scene::LightType::Directional)
         .value("Point", KE::Scene::LightType::Point)
         .value("Spot", KE::Scene::LightType::Spot)
+        .export_values();
+
+    py::enum_<KE::Scene::CameraProjectionType>(
+        scene, "CameraProjectionType",
+        "Projection mode used by scene CameraComponent.")
+        .value("Perspective", KE::Scene::CameraProjectionType::Perspective)
+        .value("Orthographic", KE::Scene::CameraProjectionType::Orthographic)
         .export_values();
 
     py::class_<KE::Scene::RenderComponent,
@@ -153,6 +161,59 @@ void bind_scene(py::module& m) {
             const KE::Scene::Prim* owner = c.owner();
             const std::string path = owner ? owner->getPath() : "<detached>";
             return "<LightComponent path='" + path +
+                   "' version=" + std::to_string(c.version()) + ">";
+        });
+
+    py::class_<KE::Scene::CameraComponent,
+               std::shared_ptr<KE::Scene::CameraComponent>>(
+        scene, "CameraComponent",
+        "Renderer-independent authored camera state attached to one Camera "
+        "prim.")
+        .def_property_readonly("attached",
+                               &KE::Scene::CameraComponent::isAttached,
+                               "Return whether this component is attached.")
+        .def_property_readonly("owner", &KE::Scene::CameraComponent::owner,
+                               py::return_value_policy::reference,
+                               "Return the owning prim, or None after detach.")
+        .def_property_readonly("projection_type",
+                               &KE::Scene::CameraComponent::projectionType,
+                               "Return the camera projection mode.")
+        .def_property_readonly("version", &KE::Scene::CameraComponent::version,
+                               "Return the camera state version.")
+        .def("set_perspective", &KE::Scene::CameraComponent::setPerspective,
+             py::arg("vertical_fov_degrees"), py::arg("near_plane"),
+             py::arg("far_plane"), "Set perspective projection settings.")
+        .def("set_orthographic", &KE::Scene::CameraComponent::setOrthographic,
+             py::arg("vertical_size"), py::arg("near_plane"),
+             py::arg("far_plane"), "Set orthographic projection settings.")
+        .def("vertical_fov_degrees",
+             &KE::Scene::CameraComponent::verticalFovDegrees,
+             "Return perspective vertical field of view in degrees.")
+        .def("orthographic_size", &KE::Scene::CameraComponent::orthographicSize,
+             "Return orthographic vertical size.")
+        .def("near_plane", &KE::Scene::CameraComponent::nearPlane,
+             "Return near clipping distance.")
+        .def("far_plane", &KE::Scene::CameraComponent::farPlane,
+             "Return far clipping distance.")
+        .def("position", &KE::Scene::CameraComponent::position,
+             "Return world-space camera position from the owning Prim "
+             "transform.")
+        .def("forward", &KE::Scene::CameraComponent::forward,
+             "Return world-space camera forward direction.")
+        .def("up", &KE::Scene::CameraComponent::up,
+             "Return world-space camera up direction.")
+        .def("view_matrix", &KE::Scene::CameraComponent::viewMatrix,
+             "Return view matrix from the owning Prim transform.")
+        .def("projection_matrix", &KE::Scene::CameraComponent::projectionMatrix,
+             py::arg("aspect"), "Return projection matrix for an aspect ratio.")
+        .def("view_projection_matrix",
+             &KE::Scene::CameraComponent::viewProjectionMatrix,
+             py::arg("aspect"),
+             "Return projection * view matrix for an aspect ratio.")
+        .def("__repr__", [](const KE::Scene::CameraComponent& c) {
+            const KE::Scene::Prim* owner = c.owner();
+            const std::string path = owner ? owner->getPath() : "<detached>";
+            return "<CameraComponent path='" + path +
                    "' version=" + std::to_string(c.version()) + ">";
         });
 
@@ -306,6 +367,14 @@ void bind_scene(py::module& m) {
              "Return whether this prim has a light component.")
         .def("remove_light_component", &KE::Scene::Prim::removeLightComponent,
              "Detach this prim's light component.")
+        .def("add_camera_component", &KE::Scene::Prim::addCameraComponent,
+             "Attach and return this Camera prim's camera component.")
+        .def("get_camera_component", &KE::Scene::Prim::getCameraComponent,
+             "Return this prim's camera component, or None.")
+        .def("has_camera_component", &KE::Scene::Prim::hasCameraComponent,
+             "Return whether this prim has a camera component.")
+        .def("remove_camera_component", &KE::Scene::Prim::removeCameraComponent,
+             "Detach this prim's camera component.")
         // Mesh data
         .def("set_mesh_data", &KE::Scene::Prim::setMeshData,
              py::arg("mesh_data"), "Attach mesh data to this prim.")

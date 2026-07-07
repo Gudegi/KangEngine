@@ -129,6 +129,7 @@ void PanelManager::setLayoutMode(UILayoutMode mode) {
         return;
     _layoutMode = mode;
     setPanelOpen(PANEL_VIEWPORT, _layoutMode == UILayoutMode::Editor);
+    setPanelOpen(PANEL_CAMERA_VIEW, false);
     resetLayout();
 }
 
@@ -154,8 +155,15 @@ bool PanelManager::isPanelOpen(const char* name) const {
 }
 
 void PanelManager::setPanelOpen(const char* name, bool open) {
-    if (Panel* panel = findPanel(name))
+    if (Panel* panel = findPanel(name)) {
+        const bool changed = panel->isOpen() != open;
         panel->setOpen(open);
+        if (changed && _layoutMode == UILayoutMode::Editor &&
+            (panel->name() == PANEL_CAMERA_VIEW ||
+             panel->name() == PANEL_VIEWPORT)) {
+            resetLayout();
+        }
+    }
 }
 
 void PanelManager::resetLayout() { _layoutInitialized = false; }
@@ -201,8 +209,17 @@ void PanelManager::initLayout(ImGuiID dockspace_id) {
     ImGui::DockBuilderDockWindow(PANEL_RENDERER_DEBUG, dock_id_debug);
     ImGui::DockBuilderDockWindow(PANEL_PERFORMANCE, dock_id_debug);
     ImGui::DockBuilderDockWindow(PANEL_INSPECTOR, dock_id_debug);
-    if (_layoutMode == UILayoutMode::Editor)
-        ImGui::DockBuilderDockWindow(PANEL_VIEWPORT, dock_main_id);
+    if (_layoutMode == UILayoutMode::Editor) {
+        if (isPanelOpen(PANEL_CAMERA_VIEW)) {
+            ImGuiID dock_id_camera_view = ImGui::DockBuilderSplitNode(
+                dock_main_id, ImGuiDir_Down, 0.32f, nullptr, &dock_main_id);
+            ImGui::DockBuilderDockWindow(PANEL_VIEWPORT, dock_main_id);
+            ImGui::DockBuilderDockWindow(PANEL_CAMERA_VIEW,
+                                         dock_id_camera_view);
+        } else {
+            ImGui::DockBuilderDockWindow(PANEL_VIEWPORT, dock_main_id);
+        }
+    }
     ImGui::DockBuilderFinish(dockspace_id);
 }
 
@@ -216,6 +233,9 @@ void PanelManager::render() {
         if (!panel->isOpen())
             continue;
         if (panel->name() == PANEL_VIEWPORT &&
+            _layoutMode != UILayoutMode::Editor)
+            continue;
+        if (panel->name() == PANEL_CAMERA_VIEW &&
             _layoutMode != UILayoutMode::Editor)
             continue;
         panel->buildPanel();

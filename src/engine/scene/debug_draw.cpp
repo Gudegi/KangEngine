@@ -522,6 +522,28 @@ void basisFromDirection(const glm::vec3& direction, glm::vec3& right,
         safeNormalized(glm::cross(forward, right), glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
+void basisFromForwardUp(const glm::vec3& forwardInput, const glm::vec3& upInput,
+                        glm::vec3& forward, glm::vec3& right, glm::vec3& up) {
+    forward = safeNormalized(forwardInput, glm::vec3(0.0f, 0.0f, -1.0f));
+    const glm::vec3 safeUp =
+        safeNormalized(upInput, glm::vec3(0.0f, 1.0f, 0.0f));
+    right = safeNormalized(glm::cross(forward, safeUp),
+                           glm::vec3(1.0f, 0.0f, 0.0f));
+    up =
+        safeNormalized(glm::cross(right, forward), glm::vec3(0.0f, 1.0f, 0.0f));
+}
+
+void appendFrustumEdges(std::vector<glm::vec3>& starts,
+                        std::vector<glm::vec3>& ends,
+                        const glm::vec3 corners[8]) {
+    constexpr int edges[][2] = {
+        {0, 1}, {1, 3}, {3, 2}, {2, 0}, {4, 5}, {5, 7},
+        {7, 6}, {6, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7},
+    };
+    for (const auto& edge : edges)
+        appendLine(starts, ends, corners[edge[0]], corners[edge[1]]);
+}
+
 void appendCircle(std::vector<glm::vec3>& starts, std::vector<glm::vec3>& ends,
                   const glm::vec3& center, const glm::vec3& axisA,
                   const glm::vec3& axisB, float radius, int segments) {
@@ -609,6 +631,104 @@ void appendConeWire(std::vector<glm::vec3>& starts,
         appendLine(starts, ends, apex, rim);
     }
     appendLine(starts, ends, apex, center);
+}
+
+void appendCameraGlyphWire(std::vector<glm::vec3>& starts,
+                           std::vector<glm::vec3>& ends,
+                           const glm::vec3& position,
+                           const glm::vec3& forwardInput,
+                           const glm::vec3& upInput, float size) {
+    const float safeSize = std::max(0.001f, size);
+
+    glm::vec3 forward, right, up;
+    basisFromForwardUp(forwardInput, upInput, forward, right, up);
+
+    const float halfWidth = safeSize * 0.36f;
+    const float halfHeight = safeSize * 0.24f;
+    const glm::vec3 center = position - forward * safeSize * 0.12f;
+    const glm::vec3 corners[4] = {
+        center - right * halfWidth - up * halfHeight,
+        center - right * halfWidth + up * halfHeight,
+        center + right * halfWidth + up * halfHeight,
+        center + right * halfWidth - up * halfHeight,
+    };
+
+    appendLine(starts, ends, corners[0], corners[1]);
+    appendLine(starts, ends, corners[1], corners[2]);
+    appendLine(starts, ends, corners[2], corners[3]);
+    appendLine(starts, ends, corners[3], corners[0]);
+    appendLine(starts, ends, position, position + forward * safeSize * 0.72f);
+    appendLine(starts, ends, corners[1], corners[1] + up * safeSize * 0.28f);
+    appendLine(starts, ends, corners[2], corners[2] + up * safeSize * 0.28f);
+    appendLine(starts, ends, corners[1] + up * safeSize * 0.28f,
+               corners[2] + up * safeSize * 0.28f);
+}
+
+void appendPerspectiveFrustumWire(std::vector<glm::vec3>& starts,
+                                  std::vector<glm::vec3>& ends,
+                                  const glm::vec3& position,
+                                  const glm::vec3& forwardInput,
+                                  const glm::vec3& upInput,
+                                  float verticalFovRadians, float aspect,
+                                  float nearPlane, float farPlane) {
+    const float safeNear = std::max(0.001f, nearPlane);
+    const float safeFar = std::max(safeNear + 0.001f, farPlane);
+    const float safeAspect = std::max(0.001f, aspect);
+    const float halfFov = glm::clamp(verticalFovRadians, glm::radians(1.0f),
+                                     glm::radians(179.0f)) *
+                          0.5f;
+
+    glm::vec3 forward, right, up;
+    basisFromForwardUp(forwardInput, upInput, forward, right, up);
+
+    const float nearHalfHeight = std::tan(halfFov) * safeNear;
+    const float nearHalfWidth = nearHalfHeight * safeAspect;
+    const float farHalfHeight = std::tan(halfFov) * safeFar;
+    const float farHalfWidth = farHalfHeight * safeAspect;
+    const glm::vec3 nearCenter = position + forward * safeNear;
+    const glm::vec3 farCenter = position + forward * safeFar;
+
+    const glm::vec3 corners[8] = {
+        nearCenter - right * nearHalfWidth - up * nearHalfHeight,
+        nearCenter - right * nearHalfWidth + up * nearHalfHeight,
+        nearCenter + right * nearHalfWidth - up * nearHalfHeight,
+        nearCenter + right * nearHalfWidth + up * nearHalfHeight,
+        farCenter - right * farHalfWidth - up * farHalfHeight,
+        farCenter - right * farHalfWidth + up * farHalfHeight,
+        farCenter + right * farHalfWidth - up * farHalfHeight,
+        farCenter + right * farHalfWidth + up * farHalfHeight,
+    };
+    appendFrustumEdges(starts, ends, corners);
+}
+
+void appendOrthographicFrustumWire(std::vector<glm::vec3>& starts,
+                                   std::vector<glm::vec3>& ends,
+                                   const glm::vec3& position,
+                                   const glm::vec3& forwardInput,
+                                   const glm::vec3& upInput, float verticalSize,
+                                   float aspect, float nearPlane,
+                                   float farPlane) {
+    const float safeNear = std::max(0.001f, nearPlane);
+    const float safeFar = std::max(safeNear + 0.001f, farPlane);
+    const float halfHeight = std::max(0.001f, verticalSize) * 0.5f;
+    const float halfWidth = halfHeight * std::max(0.001f, aspect);
+
+    glm::vec3 forward, right, up;
+    basisFromForwardUp(forwardInput, upInput, forward, right, up);
+
+    const glm::vec3 nearCenter = position + forward * safeNear;
+    const glm::vec3 farCenter = position + forward * safeFar;
+    const glm::vec3 corners[8] = {
+        nearCenter - right * halfWidth - up * halfHeight,
+        nearCenter - right * halfWidth + up * halfHeight,
+        nearCenter + right * halfWidth - up * halfHeight,
+        nearCenter + right * halfWidth + up * halfHeight,
+        farCenter - right * halfWidth - up * halfHeight,
+        farCenter - right * halfWidth + up * halfHeight,
+        farCenter + right * halfWidth - up * halfHeight,
+        farCenter + right * halfWidth + up * halfHeight,
+    };
+    appendFrustumEdges(starts, ends, corners);
 }
 
 } // namespace DebugGeometry
