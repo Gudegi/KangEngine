@@ -162,7 +162,7 @@ class SceneContext:
         """
         if transform_source is None:
             transform_source = _ke.TransformSource.SceneGraph
-        self._app.add_renderable(material_or_shader, prim, transform_source)
+        self._app._add_renderable(material_or_shader, prim, transform_source)
         component = prim.get_render_component()
         if component is None:
             raise RuntimeError(f"failed to register renderable prim: {prim.get_path()}")
@@ -336,11 +336,57 @@ class App(NativeApp):
     #################################################################
 
     ############# Helpers ###########################################
+    def _add_renderable(self, material_or_shader, prim, transform_source=None):
+        """Low-level renderer handle path used by internal bridges."""
+        if transform_source is None:
+            transform_source = _ke.TransformSource.SceneGraph
+        return super().add_renderable(material_or_shader, prim, transform_source)
+
+    def _add_skinned_renderable(
+        self,
+        shader,
+        prim,
+        skinned_mesh_data,
+        transform_source=None,
+    ):
+        """Low-level skinned renderer handle path used by internal bridges."""
+        if transform_source is None:
+            transform_source = _ke.TransformSource.SceneGraph
+        return super().add_skinned_renderable(
+            shader,
+            prim,
+            skinned_mesh_data,
+            transform_source,
+        )
+
     def add_ground(self, path: str = "/ground", scale: float = 20.0, shader=None):
         return self.scene.add_ground(path, scale, shader)
 
     def add_mesh(self, path: str, mesh_data, shader, color=None):
         return self.scene.add_mesh(path, mesh_data, shader, color=color)
+
+    def add_skinned_mesh(
+        self,
+        prim,
+        shader,
+        skinned_mesh_data,
+        transform_source=None,
+    ):
+        """Register a skinned mesh prim and return a RenderablePrimView."""
+        if transform_source is None:
+            transform_source = _ke.TransformSource.SceneGraph
+        self._add_skinned_renderable(
+            shader,
+            prim,
+            skinned_mesh_data,
+            transform_source,
+        )
+        component = prim.get_render_component()
+        if component is None:
+            raise RuntimeError(
+                f"failed to register skinned renderable prim: {prim.get_path()}"
+            )
+        return RenderablePrimView(self, prim, component)
 
     def as_vec3(self, value):
         if isinstance(value, _ke.vec3):

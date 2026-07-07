@@ -60,7 +60,7 @@ class MjcfDofControlApp(ke.App):
         self.show_collision = False
         self.show_contact_forces = False
         self.contact_force_scale = float(self.default_contact_force_scale)
-        self.contact_force_handle = None
+        self.contact_force_view = None
         self.contact_force_color = np.array([[1.0, 0.25, 0.05, 1.0]], dtype=np.float32)
         self.empty_vec3 = np.empty((0, 3), dtype=np.float32)
         self.empty_vec4 = np.empty((0, 4), dtype=np.float32)
@@ -254,22 +254,16 @@ class MjcfDofControlApp(ke.App):
         self.check_error()
 
     def onForceDragBegin(self, result, target):
-        if (
-            not self.drag_force_enabled
-            or not result.hit
-            or result.transform_source != ke.TransformSource.ExternalBuffer
-        ):
+        if not self.drag_force_enabled or not result.hit:
             self._clear_drag_force()
             return
 
-        body_id = self.articulation_visual_view.body_id_from_render_handle(
-            result.handle
-        )
-        if body_id is None:
+        pick = self.articulation_visual_view.pick_body(result)
+        if pick is None:
             self._clear_drag_force()
             return
 
-        self._drag_force_body_id = int(body_id)
+        self._drag_force_body_id = int(pick.body_id)
         body_state = self._drag_body_state(self._drag_force_body_id)
         if body_state is None:
             return
@@ -405,9 +399,9 @@ class MjcfDofControlApp(ke.App):
         self._drag_force_target = None
 
     def _clear_contact_force_arrows(self):
-        if self.contact_force_handle is None:
+        if self.contact_force_view is None:
             return
-        self.contact_force_handle.update_arrows(
+        self.contact_force_view.update_arrows(
             self.empty_vec3,
             self.empty_vec3,
             self.empty_vec4,
@@ -450,8 +444,8 @@ class MjcfDofControlApp(ke.App):
         ends = np.asarray(ends, dtype=np.float32)
         colors = np.repeat(self.contact_force_color, starts.shape[0], axis=0)
 
-        if self.contact_force_handle is None:
-            self.contact_force_handle = self.scene.log_arrows(
+        if self.contact_force_view is None:
+            self.contact_force_view = self.scene.log_arrows(
                 "/debug/contact_forces",
                 self.robot_shader,
                 starts,
@@ -461,7 +455,7 @@ class MjcfDofControlApp(ke.App):
                 12,
             )
         else:
-            self.contact_force_handle.update_arrows(starts, ends, colors)
+            self.contact_force_view.update_arrows(starts, ends, colors)
 
     @staticmethod
     def _vec3_to_np(value) -> np.ndarray:

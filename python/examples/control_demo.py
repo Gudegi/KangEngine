@@ -33,7 +33,7 @@ class ControlDemo(ke.App):
         self.empty_vec3 = torch.empty((0, 3), dtype=torch.float32)
         self.empty_vec4 = torch.empty((0, 4), dtype=torch.float32)
         self.force_arrow_scale = 0.05
-        self.force_arrow_handle = None
+        self.force_arrow_view = None
         self.force_arrow_visible = False
 
         device = self.get_renderer().device()
@@ -151,7 +151,7 @@ class ControlDemo(ke.App):
 
     def preRender(self):
         if self.force_arrow_visible and self.force_time_left <= 0.0:
-            self.force_arrow_handle.update_arrows(
+            self.force_arrow_view.update_arrows(
                 self.empty_vec3,
                 self.empty_vec3,
                 self.empty_vec4,
@@ -198,8 +198,8 @@ class ControlDemo(ke.App):
         starts = start.reshape(1, 3)
         ends = end.reshape(1, 3)
 
-        if self.force_arrow_handle is None:
-            self.force_arrow_handle = self.scene.log_arrows(
+        if self.force_arrow_view is None:
+            self.force_arrow_view = self.scene.log_arrows(
                 "/debug/force_arrow",
                 self.rigid_shader,
                 starts,
@@ -209,7 +209,7 @@ class ControlDemo(ke.App):
                 12,
             )
         else:
-            self.force_arrow_handle.update_arrows(starts, ends, self.arrow_color)
+            self.force_arrow_view.update_arrows(starts, ends, self.arrow_color)
         self.force_arrow_visible = True
 
     def render(self):

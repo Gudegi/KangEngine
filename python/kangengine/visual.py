@@ -23,6 +23,16 @@ if TYPE_CHECKING:
 
 
 @dataclass(slots=True)
+class VisualBodyPick:
+    """High-level body pick result resolved from a renderer selection."""
+
+    env_id: int | None
+    obj_id: int
+    body_id: int
+    visual: object
+
+
+@dataclass(slots=True)
 class VisualArticulationSceneGraph:
     """Viewer-side visual wrapper for one articulation.
 
@@ -61,6 +71,14 @@ class VisualArticulationSceneGraph:
             if int(body_handle) == handle:
                 return body_id
         return None
+
+    def pick_body(self, selection) -> VisualBodyPick | None:
+        if selection is None or not getattr(selection, "hit", False):
+            return None
+        body_id = self.body_id_from_render_handle(getattr(selection, "handle", -1))
+        if body_id is None:
+            return None
+        return VisualBodyPick(self.env_id, self.obj_id, int(body_id), self)
 
     def set_color(self, color):
         rgba_vec = _normalize_color(color)
@@ -114,6 +132,14 @@ class VisualRigidSceneGraph:
             if int(body_handle) == handle:
                 return body_id
         return None
+
+    def pick_body(self, selection) -> VisualBodyPick | None:
+        if selection is None or not getattr(selection, "hit", False):
+            return None
+        body_id = self.body_id_from_render_handle(getattr(selection, "handle", -1))
+        if body_id is None:
+            return None
+        return VisualBodyPick(self.env_id, self.obj_id, int(body_id), self)
 
     def set_color(self, color):
         rgba = _normalize_color(color)
@@ -428,6 +454,21 @@ class VisualBatch:
         self._require_valid()
         return self._backend.body_id_from_render_handle(handle)
 
+    def pick_body(self, selection) -> VisualBodyPick | None:
+        self._require_valid()
+        if selection is None or not getattr(selection, "hit", False):
+            return None
+        body_id = self.body_id_from_render_handle(getattr(selection, "handle", -1))
+        if body_id is None:
+            return None
+        instance_index = int(getattr(selection, "instance_index", -1))
+        env_id = None
+        if 0 <= instance_index < len(self.env_ids):
+            env_id = self.env_ids[instance_index]
+        elif len(self.env_ids) == 1:
+            env_id = self.env_ids[0]
+        return VisualBodyPick(env_id, self.obj_id, int(body_id), self)
+
     def set_visible(self, visible: bool):
         self._require_valid()
         self._backend.set_visible(visible)
@@ -703,7 +744,7 @@ class RigidVisualBridge:
             prim = self._define_shape_prim(prim_base_path, idx, spec)
             _apply_prim_color([prim], color)
             if add_shapes and shader is not None:
-                self.body_handles.append(app.add_renderable(shader, prim))
+                self.body_handles.append(app._add_renderable(shader, prim))
             self.body_prims.append(prim)
 
     def sync(self):
@@ -898,9 +939,7 @@ class KangWorldVisualBridge:
         body_handles = []
         if add_shapes and shader is not None:
             for prim in body_prims:
-                body_handles.append(
-                    self.app.add_renderable(shader, prim)
-                )
+                body_handles.append(self.app._add_renderable(shader, prim))
         self.physics_bridge.add(articulation, skeleton_bridge)
         if _debug_registration:
             _debug_instancing(
@@ -975,7 +1014,7 @@ class KangWorldVisualBridge:
                 "GPU articulation visual body count does not match PhysX links"
             )
         body_handles = [
-            self.app.add_renderable(
+            self.app._add_renderable(
                 shader, prim, _ke.TransformSource.ExternalBuffer
             )
             for prim in body_prims
@@ -1043,7 +1082,7 @@ class KangWorldVisualBridge:
                 "CPU external articulation body count does not match PhysX links"
             )
         body_handles = [
-            self.app.add_renderable(
+            self.app._add_renderable(
                 shader, prim, _ke.TransformSource.ExternalBuffer
             )
             for prim in body_prims
@@ -1106,7 +1145,7 @@ class KangWorldVisualBridge:
                 "GPU rigid visual batches currently require one MJCF shape"
             )
         prim = rigid_bridge.body_prims[0]
-        handle = self.app.add_renderable(
+        handle = self.app._add_renderable(
             shader, prim, _ke.TransformSource.ExternalBuffer
         )
         backend = RigidGPUExternalBackend(
@@ -1156,7 +1195,7 @@ class KangWorldVisualBridge:
         )
         body_prims = list(rigid_bridge.body_prims)
         body_handles = [
-            self.app.add_renderable(
+            self.app._add_renderable(
                 shader, prim, _ke.TransformSource.ExternalBuffer
             )
             for prim in body_prims
@@ -1327,6 +1366,26 @@ class KangWorldVisualBridge:
         self._require_valid()
         return self.visual_batches.get(int(obj_id))
 
+    def pick_body(self, selection) -> VisualBodyPick | None:
+        """Resolve a renderer selection to visual env/object/body metadata."""
+        self._require_valid()
+        if selection is None or not getattr(selection, "hit", False):
+            return None
+
+        for batch in self.visual_batches.values():
+            hit = batch.pick_body(selection)
+            if hit is not None:
+                return hit
+        for record in self.visual_articulation_scene_graphs.values():
+            hit = record.pick_body(selection)
+            if hit is not None:
+                return hit
+        for record in self.visual_rigid_scene_graphs.values():
+            hit = record.pick_body(selection)
+            if hit is not None:
+                return hit
+        return None
+
     def _sync_rigids(self):
         for record in self.visual_rigid_scene_graphs.values():
             record.rigid_bridge.sync()
@@ -1395,7 +1454,7 @@ class KangWorldVisualBridge:
     def body_id_from_render_handle_scene_graph(
         self, env_id: int, obj_id: int, handle
     ) -> int | None:
-        """Map a renderer pick handle back to a body id for legacy pick tools."""
+        """Low-level scene-graph handle lookup; prefer pick_body(selection)."""
         record = self.get_visual_articulation_scene_graph(env_id, obj_id)
         if record is None:
             return None

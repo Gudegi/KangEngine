@@ -40,7 +40,7 @@ class FbxMotionViewer(ke.App):
         self.line_radius = line_radius
 
     def setup(self):
-        self.line_handle = None
+        self.line_view = None
 
         self.motion = asset.FBXLoader.load_motion(
             self.fbx_file,
@@ -143,8 +143,8 @@ class FbxMotionViewer(ke.App):
         ends_t = torch.tensor(ends, dtype=torch.float32)
         colors_t = torch.tensor(colors, dtype=torch.float32)
 
-        if self.line_handle is None:
-            self.line_handle = self.scene.log_lines(
+        if self.line_view is None:
+            self.line_view = self.scene.log_lines(
                 "/debug/fbx_skeleton",
                 self.skeleton_shader,
                 starts_t,
@@ -154,7 +154,7 @@ class FbxMotionViewer(ke.App):
                 8,
             )
         else:
-            self.line_handle.update_lines(starts_t, ends_t, colors_t)
+            self.line_view.update_lines(starts_t, ends_t, colors_t)
 
     def preRender(self):
         if self.was_key_pressed(keys.SPACE):

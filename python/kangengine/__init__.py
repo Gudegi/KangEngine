@@ -43,6 +43,7 @@ from .utils import (
 from .visual import (
     KangWorldVisualBridge,
     VisualArticulationSceneGraph,
+    VisualBodyPick,
     VisualBatch,
     VisualRigidSceneGraph,
 )
@@ -192,6 +193,7 @@ __all__ = [
     "VisualArticulationSceneGraph",
     "VisualRigidSceneGraph",
     "VisualBatch",
+    "VisualBodyPick",
     "KangEngineEngine",
     "build_mimickit_engine",
     "install_mimickit_engine_builder",

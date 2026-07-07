@@ -233,7 +233,7 @@ class _KangEngineViewer(App):
         self.robot_shader = None
         self.ground_shader = None
         self._setup_done = False
-        self._debug_line_handles = {}
+        self._debug_line_views = {}
 
     def setup_viewer(self, width=1920, height=1080, headless=None):
         if self._setup_done:
@@ -322,7 +322,7 @@ class _KangEngineViewer(App):
         self.setup_viewer()
         radius = max(0.0025, float(line_width) * 0.0025)
         path = f"/debug/mimickit_lines_{int(slot)}"
-        view = self._debug_line_handles.get(int(slot))
+        view = self._debug_line_views.get(int(slot))
         if view is None:
             view = self.scene.log_lines(
                 path,
@@ -333,12 +333,12 @@ class _KangEngineViewer(App):
                 radius,
                 8,
             )
-            self._debug_line_handles[int(slot)] = view
+            self._debug_line_views[int(slot)] = view
         else:
             view.update_lines(starts, ends, colors)
 
     def clear_unused_debug_lines(self, active_slots):
-        for slot, view in self._debug_line_handles.items():
+        for slot, view in self._debug_line_views.items():
             if slot >= active_slots:
                 view.update_lines([], [], [])
 
