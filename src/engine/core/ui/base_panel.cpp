@@ -5,6 +5,7 @@
 #include "engine/core/app/app.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
+#include "engine/scene/component/light_component.hpp"
 #include "engine/scene/native/xform_token.hpp"
 #include <IconsFontAwesome7.h>
 #include <algorithm>
@@ -50,6 +51,212 @@ const char* primTypeLabel(Scene::PrimType type) {
         return "Light";
     }
     return "Unknown";
+}
+
+const char* lightTypeLabel(Scene::LightType type) {
+    switch (type) {
+    case Scene::LightType::Directional:
+        return "Directional";
+    case Scene::LightType::Point:
+        return "Point";
+    case Scene::LightType::Spot:
+        return "Spot";
+    }
+    return "Unknown";
+}
+
+std::string nextScenePath(Scene::SceneBackend* scene, const std::string& base) {
+    if (!scene)
+        return base;
+    if (!scene->getPrimAtPath(base))
+        return base;
+    for (int index = 1; index < 10000; ++index) {
+        const std::string candidate = base + "_" + std::to_string(index);
+        if (!scene->getPrimAtPath(candidate))
+            return candidate;
+    }
+    return base + "_many";
+}
+
+bool isEngineOwnedPrim(const Scene::Prim* prim) {
+    return prim && prim->getPath() == "/lights/default_directional";
+}
+
+bool subtreeHasEngineOwnedPrim(Scene::Prim* prim) {
+    if (!prim)
+        return false;
+    bool found = false;
+    prim->traverse([&](Scene::Prim* child) {
+        if (isEngineOwnedPrim(child))
+            found = true;
+    });
+    return found;
+}
+
+bool subtreeHasExternalPrim(App* app, Scene::Prim* prim) {
+    if (!app || !prim)
+        return false;
+    bool found = false;
+    prim->traverse([&](Scene::Prim* child) {
+        TransformSource source = TransformSource::SceneGraph;
+        if (app->getPrimTransformSource(child, source) &&
+            source == TransformSource::ExternalBuffer) {
+            found = true;
+        }
+    });
+    return found;
+}
+
+Scene::Prim* addLightPrim(App* app, Scene::LightType type) {
+    if (!app || !app->getScene())
+        return nullptr;
+
+    const char* baseName = "light";
+    switch (type) {
+    case Scene::LightType::Directional:
+        baseName = "directional";
+        break;
+    case Scene::LightType::Point:
+        baseName = "point";
+        break;
+    case Scene::LightType::Spot:
+        baseName = "spot";
+        break;
+    }
+
+    Scene::Prim* prim = app->getScene()->definePrim(
+        nextScenePath(app->getScene(), std::string("/lights/") + baseName),
+        Scene::PrimType::Light);
+    if (!prim)
+        return nullptr;
+
+    switch (type) {
+    case Scene::LightType::Directional: {
+        Scene::DirectionalLight light = app->getLight();
+        prim->setDirectionalLight(light);
+        break;
+    }
+    case Scene::LightType::Point: {
+        Scene::PointLight light;
+        light.position = glm::vec3(0.0f, 2.0f, 2.0f);
+        prim->setPointLight(light);
+        break;
+    }
+    case Scene::LightType::Spot: {
+        Scene::SpotLight light;
+        light.position = glm::vec3(0.0f, 2.0f, 2.0f);
+        light.direction = glm::normalize(glm::vec3(0.0f, -1.0f, -1.0f));
+        prim->setSpotLight(light);
+        break;
+    }
+    }
+
+    app->selectPrim(prim);
+    return prim;
+}
+
+bool drawLightComponentEditor(Scene::Prim& prim, bool editable) {
+    if (prim.getType() != Scene::PrimType::Light)
+        return false;
+
+    if (!prim.hasLightComponent())
+        prim.addLightComponent();
+
+    auto component = prim.getLightComponent();
+    if (!component || !component->isAttached())
+        return false;
+
+    bool changed = false;
+    ImGui::PushID("LightComponent");
+    if (!editable)
+        ImGui::BeginDisabled();
+
+    ImGui::TextDisabled("Type");
+    ImGui::SameLine();
+    ImGui::TextUnformatted(lightTypeLabel(component->type()));
+
+    ImGui::TextDisabled("Source");
+    ImGui::SameLine();
+    ImGui::TextUnformatted("LightComponent");
+    ImGui::TextDisabled("Version");
+    ImGui::SameLine();
+    ImGui::Text("%llu", static_cast<unsigned long long>(component->version()));
+
+    switch (component->type()) {
+    case Scene::LightType::Directional: {
+        Scene::DirectionalLight light = component->directionalLight();
+        glm::vec3 direction = light.direction;
+        glm::vec3 ambient = light.ambient;
+        float color[3] = {light.color.r, light.color.g, light.color.b};
+        bool lightChanged = false;
+        lightChanged |= ImGui::DragFloat3("Direction", &direction.x, 0.02f);
+        lightChanged |= ImGui::ColorEdit3("Color", color);
+        lightChanged |=
+            ImGui::SliderFloat("Intensity", &light.intensity, 0.0f, 5.0f);
+        lightChanged |= ImGui::ColorEdit3("Ambient", &ambient.x);
+        if (lightChanged) {
+            if (glm::length(direction) > 1e-4f)
+                light.direction = glm::normalize(direction);
+            light.color = glm::vec3(color[0], color[1], color[2]);
+            light.ambient = ambient;
+            prim.setDirectionalLight(light);
+            changed = true;
+        }
+        break;
+    }
+    case Scene::LightType::Point: {
+        Scene::PointLight light = component->pointLight();
+        float color[3] = {light.color.r, light.color.g, light.color.b};
+        bool lightChanged = false;
+        lightChanged |= ImGui::DragFloat3("Position", &light.position.x, 0.01f);
+        lightChanged |= ImGui::ColorEdit3("Color", color);
+        lightChanged |=
+            ImGui::SliderFloat("Intensity", &light.intensity, 0.0f, 10.0f);
+        lightChanged |=
+            ImGui::DragFloat("Range", &light.range, 0.05f, 0.0f, FLT_MAX);
+        if (lightChanged) {
+            light.color = glm::vec3(color[0], color[1], color[2]);
+            prim.setPointLight(light);
+            changed = true;
+        }
+        break;
+    }
+    case Scene::LightType::Spot: {
+        Scene::SpotLight light = component->spotLight();
+        glm::vec3 direction = light.direction;
+        float color[3] = {light.color.r, light.color.g, light.color.b};
+        float innerDegrees = glm::degrees(light.innerConeAngle);
+        float outerDegrees = glm::degrees(light.outerConeAngle);
+        bool lightChanged = false;
+        lightChanged |= ImGui::DragFloat3("Position", &light.position.x, 0.01f);
+        lightChanged |= ImGui::DragFloat3("Direction", &direction.x, 0.02f);
+        lightChanged |= ImGui::ColorEdit3("Color", color);
+        lightChanged |=
+            ImGui::SliderFloat("Intensity", &light.intensity, 0.0f, 10.0f);
+        lightChanged |=
+            ImGui::DragFloat("Range", &light.range, 0.05f, 0.0f, FLT_MAX);
+        lightChanged |= ImGui::SliderFloat("Inner Cone", &innerDegrees, 0.0f,
+                                           179.0f, "%.1f deg");
+        lightChanged |= ImGui::SliderFloat("Outer Cone", &outerDegrees, 0.0f,
+                                           179.0f, "%.1f deg");
+        if (lightChanged) {
+            if (glm::length(direction) > 1e-4f)
+                light.direction = glm::normalize(direction);
+            light.color = glm::vec3(color[0], color[1], color[2]);
+            light.innerConeAngle = glm::radians(std::max(0.0f, innerDegrees));
+            light.outerConeAngle =
+                glm::radians(std::max(innerDegrees, outerDegrees));
+            prim.setSpotLight(light);
+            changed = true;
+        }
+        break;
+    }
+    }
+
+    if (!editable)
+        ImGui::EndDisabled();
+    ImGui::PopID();
+    return changed;
 }
 
 bool drawAttributeValue(const std::string& name,
@@ -466,6 +673,11 @@ void InspectorPanel::buildPanel() {
         ImGui::Text("Triangles: %zu", mesh->indices.size() / 3);
     }
 
+    if (prim->getType() == Scene::PrimType::Light) {
+        ImGui::SeparatorText("Light");
+        drawLightComponentEditor(*prim, !external);
+    }
+
     ImGui::SeparatorText("Attributes");
     std::vector<std::pair<Scene::Token, Scene::AttributeValue>> attributes;
     attributes.reserve(prim->getAttributes().size());
@@ -523,6 +735,18 @@ void MenuBarPanel::buildPanel() {
             if (ImGui::MenuItem("Exit")) {
                 if (_app)
                     _app->requestClose();
+            }
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Add")) {
+            if (ImGui::BeginMenu("Light")) {
+                if (ImGui::MenuItem("Directional"))
+                    addLightPrim(_app, Scene::LightType::Directional);
+                if (ImGui::MenuItem("Point"))
+                    addLightPrim(_app, Scene::LightType::Point);
+                if (ImGui::MenuItem("Spot"))
+                    addLightPrim(_app, Scene::LightType::Spot);
+                ImGui::EndMenu();
             }
             ImGui::EndMenu();
         }
@@ -770,8 +994,7 @@ void ViewportPanel::buildPanel() {
         const float guizmoExtent =
             (128.0f + guizmoStyle.circleRadius) * guizmoStyle.scale;
         const float guizmoMargin = style.ItemSpacing.x;
-        if (_camera &&
-            _imageSize.x >= 2.0f * (guizmoExtent + guizmoMargin) &&
+        if (_camera && _imageSize.x >= 2.0f * (guizmoExtent + guizmoMargin) &&
             _imageSize.y >= 2.0f * (guizmoExtent + guizmoMargin)) {
             const ImVec2 imageMax(_imageMin.x + _imageSize.x,
                                   _imageMin.y + _imageSize.y);
@@ -900,6 +1123,34 @@ void ScenePanel::buildPanel() {
                                         prim->getName().c_str());
             if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
                 _app->selectPrim(prim);
+            if (ImGui::BeginPopupContextItem("PrimContextMenu")) {
+                const bool rootPrim = prim->getPath() == "/";
+                const bool engineOwned = isEngineOwnedPrim(prim);
+                const bool subtreeHasEngineOwned =
+                    subtreeHasEngineOwnedPrim(prim);
+                const bool subtreeHasExternal =
+                    subtreeHasExternalPrim(_app, prim);
+                const bool canDelete = !rootPrim && !engineOwned &&
+                                       !subtreeHasEngineOwned &&
+                                       !subtreeHasExternal;
+                if (!canDelete)
+                    ImGui::BeginDisabled();
+                if (ImGui::MenuItem("Delete...")) {
+                    _pendingDeletePath = prim->getPath();
+                    _deletePopupRequested = true;
+                }
+                if (!canDelete)
+                    ImGui::EndDisabled();
+                if (rootPrim)
+                    ImGui::TextDisabled("Root prim cannot be deleted.");
+                else if (engineOwned || subtreeHasEngineOwned)
+                    ImGui::TextDisabled(
+                        "Subtree contains engine-owned default light.");
+                else if (subtreeHasExternal)
+                    ImGui::TextDisabled(
+                        "Subtree contains ExternalBuffer prims.");
+                ImGui::EndPopup();
+            }
             if (external &&
                 ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
                 ImGui::SetTooltip("External Buffer (read-only transform)");
@@ -931,6 +1182,33 @@ void ScenePanel::buildPanel() {
                 drawPrimTree(drawPrimTree, child);
             ImGui::EndTable();
         }
+    }
+
+    if (_deletePopupRequested) {
+        ImGui::OpenPopup("Delete Prim");
+        _deletePopupRequested = false;
+    }
+    if (ImGui::BeginPopupModal("Delete Prim", nullptr,
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::TextUnformatted("Delete this prim and all children?");
+        ImGui::Spacing();
+        ImGui::TextWrapped("%s", _pendingDeletePath.c_str());
+        ImGui::Spacing();
+        if (ImGui::Button("Cancel")) {
+            _pendingDeletePath.clear();
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_Button,
+                              ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+        if (ImGui::Button("Delete")) {
+            if (_app && !_pendingDeletePath.empty())
+                _app->removePrim(_pendingDeletePath);
+            _pendingDeletePath.clear();
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::PopStyleColor();
+        ImGui::EndPopup();
     }
     ImGui::End();
 }

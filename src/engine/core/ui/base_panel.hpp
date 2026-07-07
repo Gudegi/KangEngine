@@ -89,6 +89,8 @@ class ViewportPanel : public Panel {
 class ScenePanel : public Panel {
   private:
     App* _app;
+    std::string _pendingDeletePath;
+    bool _deletePopupRequested = false;
 
   public:
     ScenePanel(App* app);

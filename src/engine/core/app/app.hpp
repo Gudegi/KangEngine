@@ -109,6 +109,7 @@ class App {
     void renderSelectionGizmo();
     void renderSelectionGizmo(Camera& camera, const ImVec2& rectMin,
                               const ImVec2& rectSize, ImDrawList* drawList);
+    void renderSelectedLightOverlay();
     bool isEditorViewportInputActive() const;
     bool shouldBlockMouseInput() const;
     glm::vec2 getMouseNDC() const;

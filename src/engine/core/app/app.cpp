@@ -3,6 +3,7 @@
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
 #include "engine/graphics/renderer/post_processor.hpp"
+#include "engine/scene/component/light_component.hpp"
 #include "engine/scene/component/render_component.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/prim_path.hpp"
@@ -24,6 +25,7 @@
 #include <fmt/base.h>
 #include <glm/fwd.hpp>
 #include <glm/geometric.hpp>
+#include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iomanip>
 #include <memory>
@@ -35,6 +37,9 @@
 
 namespace KE {
 namespace {
+
+
+constexpr const char* SelectedLightOverlayPath = "/__editor__/selected_light_overlay";
 
 std::string defaultMotionScenePath(const std::string& path,
                                    const Animation::SkeletonMotion& motion) {
@@ -286,6 +291,7 @@ void App::renderFrameOnce() {
 
     const double updateStart = glfwGetTime();
     this->preRender();
+    renderSelectedLightOverlay();
     const double updateEnd = glfwGetTime();
     if (_rasterizer) {
         getRenderer().syncSceneLights(getScene());
@@ -1350,6 +1356,61 @@ bool App::setPickTransform(const RayPickResult& result,
     // ExternalBuffer transforms are simulation-owned; do not overwrite them
     // from the render gizmo.
     return false;
+}
+
+
+void App::renderSelectedLightOverlay() {
+    if (_hideUI || !_interaction.hasSelection()) {
+        clearDebugLines(SelectedLightOverlayPath);
+        return;
+    }
+
+    const RayPickResult& selection = _interaction.selection();
+    Scene::Prim* prim = selection.prim ? selection.prim->resolveManipulationTarget() : nullptr;
+    if (!prim || prim->getType() != Scene::PrimType::Light ||
+        !prim->hasLightComponent()) {
+        clearDebugLines(SelectedLightOverlayPath);
+        return;
+    }
+
+    auto component = prim->getLightComponent();
+    if (!component || !component->isAttached()) {
+        clearDebugLines(SelectedLightOverlayPath);
+        return;
+    }
+
+    std::vector<glm::vec3> starts;
+    std::vector<glm::vec3> ends;
+    glm::vec4 color(1.0f, 0.83f, 0.22f, 1.0f);
+
+    switch (component->type()) {
+    case Scene::LightType::Directional: {
+        const Scene::DirectionalLight light = component->directionalLight();
+        const glm::vec3 origin = glm::vec3(prim->computeWorldMatrix()[3]);
+        Scene::DebugGeometry::appendDirectionArrowWire(
+            starts, ends, origin, light.direction, 2.0f);
+        break;
+    }
+    case Scene::LightType::Point: {
+        const Scene::PointLight light = component->pointLight();
+        Scene::DebugGeometry::appendSphereWire(starts, ends, light.position,
+                                                light.range);
+        break;
+    }
+    case Scene::LightType::Spot: {
+        const Scene::SpotLight light = component->spotLight();
+        Scene::DebugGeometry::appendConeWire(
+            starts, ends, light.position, light.direction, light.range,
+            light.outerConeAngle);
+        break;
+    }
+    }
+
+    if (starts.empty()) {
+        clearDebugLines(SelectedLightOverlayPath);
+        return;
+    }
+    logDebugLines(SelectedLightOverlayPath, starts, ends, {color}, 1.5f, false);
 }
 
 void App::renderSelectionGizmo() {

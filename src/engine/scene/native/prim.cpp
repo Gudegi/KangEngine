@@ -4,6 +4,7 @@
 
 #include "prim.hpp"
 #include "engine/scene/component/render_component.hpp"
+#include "engine/scene/component/light_component.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "utils/types.hpp"
 #include <Eigen/Geometry>
@@ -60,6 +61,8 @@ Prim::Prim(const std::string& name, PrimType type, Prim* parent)
 Prim::~Prim() {
     if (_renderComponent)
         _renderComponent->detach();
+    if (_lightComponent)
+        _lightComponent->detach();
 }
 
 Prim* Prim::addChild(const std::string& name, PrimType type) {
@@ -205,11 +208,32 @@ bool Prim::removeRenderComponent() {
     return true;
 }
 
-void Prim::setLightType(LightType type) {
-    setAttribute("light:type", static_cast<int>(type));
+std::shared_ptr<LightComponent> Prim::addLightComponent() {
+    if (_type != PrimType::Light)
+        throw std::runtime_error("Prim '" + _path +
+                                 "' must be PrimType::Light to add a LightComponent");
+    if (_lightComponent)
+        throw std::runtime_error("Prim '" + _path +
+                                 "' already has a LightComponent");
+    _lightComponent = std::shared_ptr<LightComponent>(new LightComponent(this));
+    return _lightComponent;
+}
+
+std::shared_ptr<LightComponent> Prim::getLightComponent() const {
+    return _lightComponent;
+}
+
+bool Prim::removeLightComponent() {
+    if (!_lightComponent)
+        return false;
+    _lightComponent->detach();
+    _lightComponent.reset();
+    return true;
 }
 
 LightType Prim::getLightType(LightType defaultType) const {
+    if (_lightComponent)
+        return _lightComponent->type();
     if (!hasAttribute("light:type"))
         return defaultType;
     const int value = getAttribute<int>("light:type");
@@ -220,7 +244,11 @@ LightType Prim::getLightType(LightType defaultType) const {
 }
 
 void Prim::setDirectionalLight(const DirectionalLight& light) {
-    setLightType(LightType::Directional);
+    if (!_lightComponent)
+        addLightComponent();
+    _lightComponent->setDirectionalLight(light);
+
+    setAttribute("light:type", static_cast<int>(LightType::Directional));
     setAttribute("light:direction",
                  safeDirection(light.direction, glm::vec3(0.0f, 0.0f, -1.0f)));
     setAttribute("light:color", light.color);
@@ -229,6 +257,9 @@ void Prim::setDirectionalLight(const DirectionalLight& light) {
 }
 
 DirectionalLight Prim::getDirectionalLight() {
+    if (_lightComponent)
+        return _lightComponent->directionalLight();
+
     DirectionalLight light;
     const glm::vec3 localDirection =
         getAttribute<glm::vec3>("light:direction", light.direction);
@@ -243,14 +274,20 @@ DirectionalLight Prim::getDirectionalLight() {
 }
 
 void Prim::setPointLight(const PointLight& light) {
-    setLightType(LightType::Point);
-    setLocalTranslation(light.position);
+    if (!_lightComponent)
+        addLightComponent();
+    _lightComponent->setPointLight(light);
+
+    setAttribute("light:type", static_cast<int>(LightType::Point));
     setAttribute("light:color", light.color);
     setAttribute("light:intensity", std::max(0.0f, light.intensity));
     setAttribute("light:range", std::max(0.0f, light.range));
 }
 
 PointLight Prim::getPointLight() {
+    if (_lightComponent)
+        return _lightComponent->pointLight();
+
     PointLight light;
     const glm::mat4 world = computeWorldMatrix();
     light.position = glm::vec3(world[3]);
@@ -263,8 +300,11 @@ PointLight Prim::getPointLight() {
 }
 
 void Prim::setSpotLight(const SpotLight& light) {
-    setLightType(LightType::Spot);
-    setLocalTranslation(light.position);
+    if (!_lightComponent)
+        addLightComponent();
+    _lightComponent->setSpotLight(light);
+
+    setAttribute("light:type", static_cast<int>(LightType::Spot));
     setAttribute("light:direction",
                  safeDirection(light.direction, glm::vec3(0.0f, 0.0f, -1.0f)));
     setAttribute("light:color", light.color);
@@ -276,6 +316,9 @@ void Prim::setSpotLight(const SpotLight& light) {
 }
 
 SpotLight Prim::getSpotLight() {
+    if (_lightComponent)
+        return _lightComponent->spotLight();
+
     SpotLight light;
     const glm::mat4 world = computeWorldMatrix();
     const glm::vec3 localDirection =

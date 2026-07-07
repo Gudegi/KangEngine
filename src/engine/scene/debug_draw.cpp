@@ -262,9 +262,8 @@ RenderableHandle DebugDraw::logLines(App* app, Backend::Shader* shader,
                                      const std::vector<glm::vec3>& ends,
                                      const std::vector<glm::vec4>& colors,
                                      float radius, int segments) {
-    auto component =
-        logLineComponent(app, shader, path, starts, ends, colors, radius,
-                         segments);
+    auto component = logLineComponent(app, shader, path, starts, ends, colors,
+                                      radius, segments);
     return component ? app->getSceneRenderSystem().handle(*component)
                      : InvalidHandle;
 }
@@ -373,9 +372,8 @@ RenderableHandle DebugDraw::logArrows(App* app, Backend::Shader* shader,
                                       const std::vector<glm::vec3>& ends,
                                       const std::vector<glm::vec4>& colors,
                                       float radius, int segments) {
-    auto component =
-        logArrowComponent(app, shader, path, starts, ends, colors, radius,
-                          segments);
+    auto component = logArrowComponent(app, shader, path, starts, ends, colors,
+                                       radius, segments);
     return component ? app->getSceneRenderSystem().handle(*component)
                      : InvalidHandle;
 }
@@ -501,6 +499,119 @@ RenderableHandle DebugDraw::logCoordinateAxes(App* app, Backend::Shader* shader,
 
     return logLines(app, shader, path, starts, ends, colors, radius, segments);
 }
+
+namespace DebugGeometry {
+namespace {
+
+glm::vec3 safeNormalized(const glm::vec3& value, const glm::vec3& fallback) {
+    if (glm::dot(value, value) < 1.0e-8f)
+        return glm::normalize(fallback);
+    return glm::normalize(value);
+}
+
+void basisFromDirection(const glm::vec3& direction, glm::vec3& right,
+                        glm::vec3& up) {
+    const glm::vec3 forward =
+        safeNormalized(direction, glm::vec3(0.0f, 0.0f, -1.0f));
+    const glm::vec3 helper = std::abs(forward.y) < 0.92f
+                                 ? glm::vec3(0.0f, 1.0f, 0.0f)
+                                 : glm::vec3(1.0f, 0.0f, 0.0f);
+    right = safeNormalized(glm::cross(helper, forward),
+                           glm::vec3(1.0f, 0.0f, 0.0f));
+    up =
+        safeNormalized(glm::cross(forward, right), glm::vec3(0.0f, 1.0f, 0.0f));
+}
+
+void appendCircle(std::vector<glm::vec3>& starts, std::vector<glm::vec3>& ends,
+                  const glm::vec3& center, const glm::vec3& axisA,
+                  const glm::vec3& axisB, float radius, int segments) {
+    const float safeRadius = std::max(0.0f, radius);
+    if (safeRadius <= 1.0e-5f || segments < 3)
+        return;
+    for (int i = 0; i < segments; ++i) {
+        const float a0 = glm::two_pi<float>() * static_cast<float>(i) /
+                         static_cast<float>(segments);
+        const float a1 = glm::two_pi<float>() * static_cast<float>(i + 1) /
+                         static_cast<float>(segments);
+        const glm::vec3 p0 =
+            center + (std::cos(a0) * axisA + std::sin(a0) * axisB) * safeRadius;
+        const glm::vec3 p1 =
+            center + (std::cos(a1) * axisA + std::sin(a1) * axisB) * safeRadius;
+        appendLine(starts, ends, p0, p1);
+    }
+}
+
+} // namespace
+
+void appendLine(std::vector<glm::vec3>& starts, std::vector<glm::vec3>& ends,
+                const glm::vec3& start, const glm::vec3& end) {
+    starts.push_back(start);
+    ends.push_back(end);
+}
+
+void appendDirectionArrowWire(std::vector<glm::vec3>& starts,
+                              std::vector<glm::vec3>& ends,
+                              const glm::vec3& origin,
+                              const glm::vec3& direction, float length) {
+    const float safeLength = std::max(0.0f, length);
+    if (safeLength <= 1.0e-5f)
+        return;
+
+    const glm::vec3 forward =
+        safeNormalized(direction, glm::vec3(0.0f, 0.0f, -1.0f));
+    const glm::vec3 tip = origin + forward * safeLength;
+    appendLine(starts, ends, origin, tip);
+
+    glm::vec3 right, up;
+    basisFromDirection(forward, right, up);
+    const float headLength = safeLength * 0.18f;
+    const float headRadius = safeLength * 0.08f;
+    appendLine(starts, ends, tip,
+               tip - forward * headLength + right * headRadius);
+    appendLine(starts, ends, tip,
+               tip - forward * headLength - right * headRadius);
+    appendLine(starts, ends, tip, tip - forward * headLength + up * headRadius);
+    appendLine(starts, ends, tip, tip - forward * headLength - up * headRadius);
+}
+
+void appendSphereWire(std::vector<glm::vec3>& starts,
+                      std::vector<glm::vec3>& ends, const glm::vec3& center,
+                      float radius, int segments) {
+    appendCircle(starts, ends, center, glm::vec3(1.0f, 0.0f, 0.0f),
+                 glm::vec3(0.0f, 1.0f, 0.0f), radius, segments);
+    appendCircle(starts, ends, center, glm::vec3(1.0f, 0.0f, 0.0f),
+                 glm::vec3(0.0f, 0.0f, 1.0f), radius, segments);
+    appendCircle(starts, ends, center, glm::vec3(0.0f, 1.0f, 0.0f),
+                 glm::vec3(0.0f, 0.0f, 1.0f), radius, segments);
+}
+
+void appendConeWire(std::vector<glm::vec3>& starts,
+                    std::vector<glm::vec3>& ends, const glm::vec3& apex,
+                    const glm::vec3& direction, float range,
+                    float outerConeAngle, int segments) {
+    const float safeRange = std::max(0.0f, range);
+    if (safeRange <= 1.0e-5f)
+        return;
+
+    const glm::vec3 forward =
+        safeNormalized(direction, glm::vec3(0.0f, 0.0f, -1.0f));
+    glm::vec3 right, up;
+    basisFromDirection(forward, right, up);
+    const glm::vec3 center = apex + forward * safeRange;
+    const float coneRadius =
+        std::tan(std::max(0.0f, outerConeAngle)) * safeRange;
+    appendCircle(starts, ends, center, right, up, coneRadius, segments);
+
+    for (int i = 0; i < 4; ++i) {
+        const float a = glm::half_pi<float>() * static_cast<float>(i);
+        const glm::vec3 rim =
+            center + (std::cos(a) * right + std::sin(a) * up) * coneRadius;
+        appendLine(starts, ends, apex, rim);
+    }
+    appendLine(starts, ends, apex, center);
+}
+
+} // namespace DebugGeometry
 
 } // namespace Scene
 } // namespace KE

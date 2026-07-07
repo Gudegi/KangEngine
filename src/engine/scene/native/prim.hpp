@@ -24,6 +24,7 @@ namespace KE {
 namespace Scene {
 
 class RenderComponent;
+class LightComponent;
 
 using AttributeValue =
     std::variant<bool, int, float, std::string, glm::vec3, glm::vec4, glm::mat4,
@@ -64,6 +65,7 @@ class Prim {
     mutable std::weak_ptr<MeshData> _resolvedMeshDataCache;
     std::unordered_map<Token, AttributeValue, Token::Hash> _Attributes;
     std::shared_ptr<RenderComponent> _renderComponent;
+    std::shared_ptr<LightComponent> _lightComponent;
 
     bool _renderable = false; // true for prim types that can submit geometry
     bool _visible = true; // runtime show/hide toggle(just render visibility)
@@ -113,6 +115,11 @@ class Prim {
     std::shared_ptr<RenderComponent> getRenderComponent() const;
     bool hasRenderComponent() const { return _renderComponent != nullptr; }
     bool removeRenderComponent();
+
+    std::shared_ptr<LightComponent> addLightComponent();
+    std::shared_ptr<LightComponent> getLightComponent() const;
+    bool hasLightComponent() const { return _lightComponent != nullptr; }
+    bool removeLightComponent();
 
     static MeshData createCubeData(float scale);
     static MeshData createSquareData(float scale); // Deprecated.
@@ -253,7 +260,6 @@ class Prim {
         return std::nullopt;
     }
 
-    void setLightType(LightType type);
     LightType getLightType(LightType defaultType = LightType::Point) const;
     void setDirectionalLight(const DirectionalLight& light);
     DirectionalLight getDirectionalLight();

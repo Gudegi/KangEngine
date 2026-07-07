@@ -13,6 +13,7 @@
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/scene/debug_draw.hpp"
 #include "engine/scene/component/render_component.hpp"
+#include "engine/scene/component/light_component.hpp"
 #include "engine/scene/component/scene_render_system.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/native/token.hpp"
@@ -83,10 +84,9 @@ void bind_scene(py::module& m) {
         .def_property_readonly("attached",
                                &KE::Scene::RenderComponent::isAttached,
                                "Return whether this component is attached.")
-        .def_property_readonly(
-            "owner", &KE::Scene::RenderComponent::owner,
-            py::return_value_policy::reference,
-            "Return the owning prim, or None after detach.")
+        .def_property_readonly("owner", &KE::Scene::RenderComponent::owner,
+                               py::return_value_policy::reference,
+                               "Return the owning prim, or None after detach.")
         .def_property("visible", &KE::Scene::RenderComponent::isVisible,
                       &KE::Scene::RenderComponent::setVisible,
                       "Get or set local render visibility. Registered "
@@ -96,8 +96,7 @@ void bind_scene(py::module& m) {
                       &KE::Scene::RenderComponent::setDoubleSided,
                       "Get or set double-sided rendering. Registered "
                       "components sync this change to the renderer.")
-        .def_property("casts_shadow",
-                      &KE::Scene::RenderComponent::castsShadow,
+        .def_property("casts_shadow", &KE::Scene::RenderComponent::castsShadow,
                       &KE::Scene::RenderComponent::setCastsShadow,
                       "Get or set shadow casting. Registered components sync "
                       "this change to the renderer.")
@@ -114,14 +113,47 @@ void bind_scene(py::module& m) {
         .def_property_readonly("mesh_data",
                                &KE::Scene::RenderComponent::resolveMeshData,
                                "Resolve mesh data from the owning prim.")
-        .def_property_readonly("version",
-                               &KE::Scene::RenderComponent::version,
+        .def_property_readonly("version", &KE::Scene::RenderComponent::version,
                                "Return the visual state version.")
         .def("__repr__", [](const KE::Scene::RenderComponent& c) {
             const KE::Scene::Prim* owner = c.owner();
             const std::string path = owner ? owner->getPath() : "<detached>";
-            return "<RenderComponent path='" + path + "' version=" +
-                   std::to_string(c.version()) + ">";
+            return "<RenderComponent path='" + path +
+                   "' version=" + std::to_string(c.version()) + ">";
+        });
+
+    py::class_<KE::Scene::LightComponent,
+               std::shared_ptr<KE::Scene::LightComponent>>(
+        scene, "LightComponent",
+        "Renderer-independent light state attached to one Light prim.")
+        .def_property_readonly("attached",
+                               &KE::Scene::LightComponent::isAttached,
+                               "Return whether this component is attached.")
+        .def_property_readonly("owner", &KE::Scene::LightComponent::owner,
+                               py::return_value_policy::reference,
+                               "Return the owning prim, or None after detach.")
+        .def_property_readonly("type", &KE::Scene::LightComponent::type,
+                               "Return the immutable light subtype.")
+        .def_property_readonly("version", &KE::Scene::LightComponent::version,
+                               "Return the light state version.")
+        .def("set_directional_light",
+             &KE::Scene::LightComponent::setDirectionalLight, py::arg("light"),
+             "Set this component from directional light data.")
+        .def("directional_light", &KE::Scene::LightComponent::directionalLight,
+             "Return directional light data in world space.")
+        .def("set_point_light", &KE::Scene::LightComponent::setPointLight,
+             py::arg("light"), "Set this component from point light data.")
+        .def("point_light", &KE::Scene::LightComponent::pointLight,
+             "Return point light data in world space.")
+        .def("set_spot_light", &KE::Scene::LightComponent::setSpotLight,
+             py::arg("light"), "Set this component from spot light data.")
+        .def("spot_light", &KE::Scene::LightComponent::spotLight,
+             "Return spot light data in world space.")
+        .def("__repr__", [](const KE::Scene::LightComponent& c) {
+            const KE::Scene::Prim* owner = c.owner();
+            const std::string path = owner ? owner->getPath() : "<detached>";
+            return "<LightComponent path='" + path +
+                   "' version=" + std::to_string(c.version()) + ">";
         });
 
     py::class_<KE::Scene::SceneRenderSystem>(
@@ -139,17 +171,14 @@ void bind_scene(py::module& m) {
              py::arg("first"), py::arg("second"),
              "Return whether two components share one renderer batch without "
              "exposing the raw handle.")
-        .def("set_double_sided",
-             &KE::Scene::SceneRenderSystem::setDoubleSided,
+        .def("set_double_sided", &KE::Scene::SceneRenderSystem::setDoubleSided,
              py::arg("component"), py::arg("enabled") = true,
              "Set double-sided rendering through component registration.")
-        .def("set_casts_shadow",
-             &KE::Scene::SceneRenderSystem::setCastsShadow,
+        .def("set_casts_shadow", &KE::Scene::SceneRenderSystem::setCastsShadow,
              py::arg("component"), py::arg("enabled") = true,
              "Set shadow casting through component registration.")
         .def("set_alpha_mode", &KE::Scene::SceneRenderSystem::setAlphaMode,
-             py::arg("component"), py::arg("mode"),
-             py::arg("cutoff") = 0.5f,
+             py::arg("component"), py::arg("mode"), py::arg("cutoff") = 0.5f,
              "Set alpha rendering through component registration.")
         .def(
             "set_texture",
@@ -164,9 +193,8 @@ void bind_scene(py::module& m) {
             "set_texture",
             [](KE::Scene::SceneRenderSystem& self,
                KE::Scene::RenderComponent& component,
-               KE::Backend::Texture* texture, int slot) {
-                self.setTexture(component, texture, slot);
-            },
+               KE::Backend::Texture* texture,
+               int slot) { self.setTexture(component, texture, slot); },
             py::arg("component"), py::arg("texture"), py::arg("slot") = 0,
             "Set a texture by raw renderer slot through component "
             "registration.")
@@ -225,8 +253,9 @@ void bind_scene(py::module& m) {
             [](KE::Scene::SceneRenderSystem& self,
                KE::Scene::RenderComponent& component,
                const FloatArray& boneMatrices) {
-                self.updateSkinning(component,
-                                    mat4Array(boneMatrices, "bone_matrices"));
+                self.updateSkinning(
+                    component,
+                    mat4RowMajorArray(boneMatrices, "bone_matrices"));
             },
             py::arg("component"), py::arg("bone_matrices"),
             "Update skinned bone matrices through component registration.");
@@ -269,6 +298,14 @@ void bind_scene(py::module& m) {
              "Return whether this prim has a render component.")
         .def("remove_render_component", &KE::Scene::Prim::removeRenderComponent,
              "Detach this prim's render component.")
+        .def("add_light_component", &KE::Scene::Prim::addLightComponent,
+             "Attach and return this Light prim's light component.")
+        .def("get_light_component", &KE::Scene::Prim::getLightComponent,
+             "Return this prim's light component, or None.")
+        .def("has_light_component", &KE::Scene::Prim::hasLightComponent,
+             "Return whether this prim has a light component.")
+        .def("remove_light_component", &KE::Scene::Prim::removeLightComponent,
+             "Detach this prim's light component.")
         // Mesh data
         .def("set_mesh_data", &KE::Scene::Prim::setMeshData,
              py::arg("mesh_data"), "Attach mesh data to this prim.")
@@ -372,8 +409,6 @@ void bind_scene(py::module& m) {
         .def("get_display_color_alpha", &KE::Scene::Prim::getDisplayColorAlpha,
              "Return RGBA display color metadata if present.")
         // Light data
-        .def("set_light_type", &KE::Scene::Prim::setLightType, py::arg("type"),
-             "Set the light subtype for a Light prim.")
         .def("get_light_type", &KE::Scene::Prim::getLightType,
              py::arg("default_type") = KE::Scene::LightType::Point,
              "Return the light subtype for a Light prim.")
@@ -557,9 +592,8 @@ void bind_scene(py::module& m) {
                     app, shader, path, s, e, c, radius, segments);
             },
             py::arg("app"), py::arg("shader"), py::arg("path"),
-            py::arg("starts"), py::arg("ends"),
-            py::arg("colors") = py::none(), py::arg("radius") = 0.005f,
-            py::arg("segments") = 8,
+            py::arg("starts"), py::arg("ends"), py::arg("colors") = py::none(),
+            py::arg("radius") = 0.005f, py::arg("segments") = 8,
             "Create instanced debug line geometry and return its "
             "RenderComponent.")
         .def_static(
@@ -610,9 +644,8 @@ void bind_scene(py::module& m) {
                     app, shader, path, s, e, c, radius, segments);
             },
             py::arg("app"), py::arg("shader"), py::arg("path"),
-            py::arg("starts"), py::arg("ends"),
-            py::arg("colors") = py::none(), py::arg("radius") = 0.02f,
-            py::arg("segments") = 12,
+            py::arg("starts"), py::arg("ends"), py::arg("colors") = py::none(),
+            py::arg("radius") = 0.02f, py::arg("segments") = 12,
             "Create instanced debug arrow geometry and return its "
             "RenderComponent.")
         .def_static(

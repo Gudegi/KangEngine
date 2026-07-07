@@ -769,6 +769,9 @@ PYBIND11_MODULE(_kangengine, m) {
         .def("spot_lights", &Renderer::spotLights,
              py::return_value_policy::reference_internal,
              "Return stored spot lights.")
+        .def("sync_scene_lights", &Renderer::syncSceneLights, py::arg("scene"),
+             "Sync renderer lights from /lights scene prims. Intended for "
+             "diagnostics and tests.")
         .def(
             "update_renderable_transforms",
             [](Renderer& self, uint32_t handle, const FloatArray& transforms,
@@ -859,7 +862,7 @@ PYBIND11_MODULE(_kangengine, m) {
             "update_renderable_skinning_matrices",
             [](Renderer& self, uint32_t handle, const FloatArray& matrices) {
                 self.updateRenderableSkinningMatrices(
-                    handle, mat4Array(matrices, "bone_matrices"));
+                    handle, mat4RowMajorArray(matrices, "bone_matrices"));
             },
             py::arg("handle"), py::arg("bone_matrices"),
             "Update bone matrices for a skinned renderable.");
