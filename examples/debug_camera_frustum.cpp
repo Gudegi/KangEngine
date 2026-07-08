@@ -268,6 +268,7 @@ class CameraFrustumDebugApp : public App {
             getRenderer().device()->createShaderFromFile(commonVS, commonFS);
         groundShader =
             getRenderer().device()->createShaderFromFile(commonVS, checkerFS);
+        getRenderer().setBackgroundShader(groundShader.get());
 
         for (Backend::Shader* s : {shader.get(), groundShader.get()}) {
             s->use();

@@ -289,6 +289,8 @@ class App(NativeApp):
             self.package_asset_path("shaders", fragment_shader),
         )
         self._bind_common_ubos(shader)
+        if str(fragment_shader).endswith("checkerboard.fs"):
+            self.set_background_shader(shader)
         return shader
 
     def set_texture_uniform(self, shader, unit: int = 0, name: str = "uTexture"):

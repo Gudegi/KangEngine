@@ -427,13 +427,13 @@ bool drawCameraComponentEditor(App* app, Scene::Prim& prim, bool editable) {
     projectionChanged |=
         ImGui::Combo("Projection", &projection, projectionLabels,
                      static_cast<int>(std::size(projectionLabels)));
-    if (projection == static_cast<int>(Scene::CameraProjectionType::Perspective)) {
+    if (projection ==
+        static_cast<int>(Scene::CameraProjectionType::Perspective)) {
         projectionChanged |=
             ImGui::SliderFloat("Vertical FOV", &fov, 1.0f, 179.0f, "%.1f deg");
     } else {
-        projectionChanged |=
-            ImGui::DragFloat("Orthographic Size", &orthoSize, 0.05f, 0.001f,
-                             FLT_MAX, "%.3f");
+        projectionChanged |= ImGui::DragFloat("Orthographic Size", &orthoSize,
+                                              0.05f, 0.001f, FLT_MAX, "%.3f");
     }
     projectionChanged |=
         ImGui::DragFloat("Near Plane", &nearPlane, 0.01f, 0.001f, FLT_MAX);
@@ -609,6 +609,17 @@ void RendererDebugPanel::buildPanel() {
 
     if (ImGui::CollapsingHeader("Controls", defaultOpen)) {
         ImGui::Checkbox("Wireframe", &_app->_renderWireframe);
+        ImGui::SeparatorText("Background");
+        ImGui::Checkbox("Show Grid", &rendererSettings.background.showGrid);
+        ImGui::ColorEdit4("Grid Color",
+                          &rendererSettings.background.gridColor.x);
+        ImGui::ColorEdit4("Background Color",
+                          &rendererSettings.background.backgroundColor.x);
+        ImGui::ColorEdit4("Checker A",
+                          &rendererSettings.background.checkerColor1.x);
+        ImGui::ColorEdit4("Checker B",
+                          &rendererSettings.background.checkerColor2.x);
+        ImGui::SeparatorText("Interaction");
         const char* interactionLabels[] = {"Inspect", "Edit", "Force"};
         int interactionMode = static_cast<int>(_app->getInteractionMode());
         if (ImGui::Combo("Interaction Mode", &interactionMode,
@@ -1339,8 +1350,9 @@ void CameraViewPanel::buildPanel() {
         }
     }
 
-    const std::string currentLabel =
-        activeCamera ? cameraDisplayName(activeCamera) : "No active scene camera";
+    const std::string currentLabel = activeCamera
+                                         ? cameraDisplayName(activeCamera)
+                                         : "No active scene camera";
     ImGui::SetNextItemWidth(std::min(360.0f, ImGui::GetContentRegionAvail().x));
     if (ImGui::BeginCombo("Camera", currentLabel.c_str())) {
         for (Scene::Prim* camera : cameras) {
@@ -1423,8 +1435,7 @@ void CameraViewPanel::buildPanel() {
     ImVec2 imageSize = contentSize;
     const float aspectOverride =
         cameraAspectPresetValue(_aspectPreset, _customAspect);
-    if (aspectOverride > 0.0f && contentSize.x > 1.0f &&
-        contentSize.y > 1.0f) {
+    if (aspectOverride > 0.0f && contentSize.x > 1.0f && contentSize.y > 1.0f) {
         const float availableAspect = contentSize.x / contentSize.y;
         if (availableAspect > aspectOverride) {
             imageSize.y = contentSize.y;
@@ -1447,38 +1458,36 @@ void CameraViewPanel::buildPanel() {
         return;
     }
     if (screenshotRequested) {
-        const ImVec2 captureSize = cameraCapturePresetSize(
-            _capturePreset, _customCaptureWidth, _customCaptureHeight,
-            imageSize);
-        const int captureWidth =
-            std::max(1, static_cast<int>(captureSize.x));
-        const int captureHeight =
-            std::max(1, static_cast<int>(captureSize.y));
-        const float captureAspect =
-            aspectOverride > 0.0f
-                ? aspectOverride
-                : static_cast<float>(captureWidth) /
-                      static_cast<float>(captureHeight);
+        const ImVec2 captureSize =
+            cameraCapturePresetSize(_capturePreset, _customCaptureWidth,
+                                    _customCaptureHeight, imageSize);
+        const int captureWidth = std::max(1, static_cast<int>(captureSize.x));
+        const int captureHeight = std::max(1, static_cast<int>(captureSize.y));
+        const float captureAspect = aspectOverride > 0.0f
+                                        ? aspectOverride
+                                        : static_cast<float>(captureWidth) /
+                                              static_cast<float>(captureHeight);
         const bool saved = _app->writeActiveSceneCameraPreviewPNG(
             captureWidth, captureHeight, captureAspect);
-        _lastSaveStatus =
-            saved ? "Saved Camera View screenshot" : "Failed to save screenshot";
+        _lastSaveStatus = saved ? "Saved Camera View screenshot"
+                                : "Failed to save screenshot";
     }
 
     _imageMin = imageMin;
     _imageSize = imageSize;
     ImGui::SetCursorScreenPos(_imageMin);
-    ImGui::Image((ImTextureID)(uintptr_t)texture->getNativeHandle(),
-                 _imageSize, ImVec2(0, 1), ImVec2(1, 0));
+    ImGui::Image((ImTextureID)(uintptr_t)texture->getNativeHandle(), _imageSize,
+                 ImVec2(0, 1), ImVec2(1, 0));
 
-    ImGui::SetCursorScreenPos(ImVec2(_imageMin.x + ImGui::GetStyle().ItemSpacing.x,
-                                     _imageMin.y + ImGui::GetStyle().ItemSpacing.y));
+    ImGui::SetCursorScreenPos(
+        ImVec2(_imageMin.x + ImGui::GetStyle().ItemSpacing.x,
+               _imageMin.y + ImGui::GetStyle().ItemSpacing.y));
     ImGui::TextDisabled("%s", activeCamera->getPath().c_str());
     if (!_lastSaveStatus.empty()) {
-        ImGui::SetCursorScreenPos(ImVec2(
-            _imageMin.x + ImGui::GetStyle().ItemSpacing.x,
-            _imageMin.y + ImGui::GetStyle().ItemSpacing.y +
-                ImGui::GetTextLineHeightWithSpacing()));
+        ImGui::SetCursorScreenPos(
+            ImVec2(_imageMin.x + ImGui::GetStyle().ItemSpacing.x,
+                   _imageMin.y + ImGui::GetStyle().ItemSpacing.y +
+                       ImGui::GetTextLineHeightWithSpacing()));
         ImGui::TextDisabled("%s", _lastSaveStatus.c_str());
     }
 

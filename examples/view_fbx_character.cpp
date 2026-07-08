@@ -99,6 +99,7 @@ class FbxCharacterCppApp : public App {
                                                                   commonFSPath);
         groundShader = getRenderer().device()->createShaderFromFile(
             commonVSPath, checkerFSPath);
+        getRenderer().setBackgroundShader(groundShader.get());
 
         for (auto* shader :
              {skinnedShader.get(), lineShader.get(), groundShader.get()}) {

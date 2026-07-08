@@ -41,6 +41,7 @@ class PrimShowcaseApp : public App {
             commonVSPath, commonFSPath);
         groundShader = getRenderer().device()->createShaderFromFile(
             commonVSPath, groundFSPath);
+        getRenderer().setBackgroundShader(groundShader.get());
 
         phongShader->setUniformBlockBinding("cameraUBO", 0);
         phongShader->setUniformBlockBinding("lightUBO", 1);

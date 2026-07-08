@@ -67,6 +67,7 @@ class H1InstancingApp : public App {
             commonVSPath, commonFSPath);
         groundShader = getRenderer().device()->createShaderFromFile(
             commonVSPath, groundFSPath);
+        getRenderer().setBackgroundShader(groundShader.get());
 
         commonShader->use();
         commonShader->setUniformBlockBinding("cameraUBO", 0);

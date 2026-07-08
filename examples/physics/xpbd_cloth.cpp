@@ -68,6 +68,7 @@ class PBDClothApp : public App {
 
         groundShader = getRenderer().device()->createShaderFromFile(
             commonVSPath, groundFSPath);
+        getRenderer().setBackgroundShader(groundShader.get());
         groundShader->use();
         groundShader->setUniformBlockBinding("cameraUBO", 0);
         groundShader->setUniformBlockBinding("lightUBO", 1);

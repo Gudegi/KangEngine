@@ -309,12 +309,15 @@ Backend::Texture* App::renderActiveSceneCameraPreview(int width, int height,
                                                      static_cast<float>(height);
     const glm::mat4 view = component->viewMatrix();
     const glm::mat4 proj = component->projectionMatrix(aspect);
+    const RendererSettings& settings = getRenderer().settings();
 
     getRenderer().syncSceneLights(getScene());
+    getRenderer().applyBackgroundSettings();
     _rasterizer->updateFrameData(view, proj);
     _sceneCameraPreviewFramebuffer->bind();
     _graphicsDevice->setViewport(0, 0, width, height);
-    _graphicsDevice->clear(0.2f, 0.3f, 0.3f, 1.0f);
+    const glm::vec4& color = settings.background.backgroundColor;
+    _graphicsDevice->clear(color.r, color.g, color.b, color.a);
     _rasterizer->render(view, proj);
     _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
     _sceneCameraPreviewFramebuffer->resolve();
@@ -328,7 +331,6 @@ Backend::Texture* App::renderActiveSceneCameraPreview(int width, int height,
             _sceneCameraPreviewPostWidth = width;
             _sceneCameraPreviewPostHeight = height;
         }
-        const RendererSettings& settings = getRenderer().settings();
         _sceneCameraPreviewPostProcessor->process(
             _sceneCameraPreviewFramebuffer->getColorTexture(), settings.gamma,
             settings.toneMapMode, settings.toneMapExposure, settings.bloom);
@@ -466,12 +468,14 @@ void App::renderFrameOnce() {
             useSceneCameraForMainView ? _sceneCamera : _camera;
         _rasterizer->renderShadowMap(shadowCamera, _upAxis, _width, _height);
     }
-
+    const RendererSettings& settings = getRenderer().settings();
     const double renderStart = glfwGetTime();
 
     // Scene pass: render into FBO (MSAA if enabled)
     _framebuffer->bind();
-    _graphicsDevice->clear(0.2f, 0.3f, 0.3f, 1.0f);
+    const glm::vec4& color = settings.background.backgroundColor;
+    _graphicsDevice->clear(color.r, color.g, color.b, color.a);
+
     coreRender(); // records ImGui widgets, no GL ImGui draw yet
     this->render();
     _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
@@ -499,7 +503,6 @@ void App::renderFrameOnce() {
         !_hideUI && _panelManager.getLayoutMode() == UILayoutMode::Editor;
 
     if (_postProcessor) {
-        const RendererSettings& settings = getRenderer().settings();
         _postProcessor->process(finalSource, settings.gamma,
                                 settings.toneMapMode, settings.toneMapExposure,
                                 settings.bloom);
@@ -627,8 +630,10 @@ void App::coreRender() {
         _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
     }
 
-    if (_rasterizer)
+    if (_rasterizer) {
+        getRenderer().applyBackgroundSettings();
         _rasterizer->render(_viewMatrix, _projectionMatrix);
+    }
 }
 
 Scene::Prim* App::defaultDirectionalLightPrim() {

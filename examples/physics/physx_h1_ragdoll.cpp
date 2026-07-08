@@ -74,6 +74,7 @@ class H1RagdollApp : public App {
             commonVSPath, commonFSPath);
         groundShader = getRenderer().device()->createShaderFromFile(
             commonVSPath, groundFSPath);
+        getRenderer().setBackgroundShader(groundShader.get());
 
         groundShader->use();
         groundShader->setUniformBlockBinding("cameraUBO", 0);

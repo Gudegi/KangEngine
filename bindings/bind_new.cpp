@@ -1648,6 +1648,14 @@ py::class_<glm::vec3>(m, "vec3")
             py::arg("enabled"), py::arg("threshold") = 1.0f,
             py::arg("intensity") = 0.08f, py::arg("iterations") = 6,
             py::arg("downsample") = 2, "Configure bloom post processing.")
+        .def(
+            "set_background_shader",
+            [](App& self, Backend::Shader* shader) {
+                self.getRenderer().setBackgroundShader(shader);
+            },
+            py::arg("shader"),
+            "Register the checker/grid background shader controlled by "
+            "renderer background settings.")
         .def("check_error", &App::checkError,
              "Check and report backend graphics errors.")
         .def(

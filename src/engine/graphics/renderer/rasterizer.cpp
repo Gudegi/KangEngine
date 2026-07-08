@@ -308,8 +308,8 @@ void Rasterizer::setRenderableCastsShadow(RenderableHandle handle,
     _handleTable[handle]->setCastsShadow(castsShadow);
 }
 
-void Rasterizer::setRenderableAlphaMode(RenderableHandle handle,
-                                        AlphaMode mode, float cutoff) {
+void Rasterizer::setRenderableAlphaMode(RenderableHandle handle, AlphaMode mode,
+                                        float cutoff) {
     if (handle >= _handleTable.size())
         return;
     _handleTable[handle]->setAlphaMode(mode, cutoff);

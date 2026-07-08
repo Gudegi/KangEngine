@@ -34,6 +34,7 @@ struct RendererSettings {
     ToneMapMode toneMapMode = ToneMapMode::None;
     float toneMapExposure = 1.0f;
     BloomConfig bloom;
+    BackgroundSettings background;
 };
 
 // Facade for render-system access. App owns the concrete resources; Renderer
@@ -60,6 +61,9 @@ class Renderer {
     }
     RendererSettings& settings() { return _settings; }
     const RendererSettings& settings() const { return _settings; }
+    void setBackgroundShader(Backend::Shader* shader);
+    Backend::Shader* backgroundShader() const { return _backgroundShader; }
+    void applyBackgroundSettings();
 
     void setLight(const DirectionalLight& light);
     const DirectionalLight& light() const;
@@ -129,6 +133,7 @@ class Renderer {
     Rasterizer* _rasterizer = nullptr;
     PostProcessor* _postProcessor = nullptr;
     SelectionOutlineProcessor* _selectionOutlineProcessor = nullptr;
+    Backend::Shader* _backgroundShader = nullptr;
     RendererSettings _settings;
     int _viewportWidth = 0;
     int _viewportHeight = 0;
