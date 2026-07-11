@@ -706,6 +706,17 @@ RenderableHandle App::addRenderable(Material* material, Scene::Prim* prim,
     return component ? _sceneRenderSystem.handle(*component) : InvalidHandle;
 }
 
+RenderableHandle
+App::addSkinnedRenderable(Material* material, Scene::Prim* prim,
+                          const Scene::SkinnedMeshData& skinnedMesh,
+                          TransformSource transformSource) {
+    if (!prim)
+        return InvalidHandle;
+    auto component = _sceneRenderSystem.addSkinnedRenderable(
+        *prim, material, skinnedMesh, transformSource);
+    return component ? _sceneRenderSystem.handle(*component) : InvalidHandle;
+}
+
 void App::removePrim(RenderableHandle handle, Scene::Prim* prim) {
     if (!prim)
         return;

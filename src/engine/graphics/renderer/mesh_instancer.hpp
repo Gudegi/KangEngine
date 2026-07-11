@@ -228,6 +228,10 @@ class MeshInstancer {
             _shader->setInt("uTexture", RendererTextureSlot::Diffuse);
             _shader->setInt("normalMap", RendererTextureSlot::Normal);
             _shader->setInt("useNormalMap", hasNormalMap ? 1 : 0);
+            if (!_material) {
+                _shader->setInt("useDiffuseMap", 0);
+                _shader->setInt("useSpecularMap", 0);
+            }
             bindAlphaState(_shader);
         }
     }

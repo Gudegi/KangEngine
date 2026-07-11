@@ -77,14 +77,11 @@ class Renderer {
                                   int width, int height, bool clear = true);
 
     RenderableHandle addRenderable(
-        Backend::Shader* shader, Scene::Prim* prim,
+        Material* material, Scene::Prim* prim,
         TransformSource transformSource = TransformSource::SceneGraph);
     RenderableHandle addSkinnedRenderable(
-        Backend::Shader* shader, Scene::Prim* prim,
-        const Scene::SkinnedMeshData& skinnedMesh,
-        TransformSource transformSource = TransformSource::SceneGraph);
-    RenderableHandle addRenderable(
         Material* material, Scene::Prim* prim,
+        const Scene::SkinnedMeshData& skinnedMesh,
         TransformSource transformSource = TransformSource::SceneGraph);
     void removePrim(RenderableHandle handle, Scene::Prim* prim);
     void removePrim(Scene::Prim* prim);

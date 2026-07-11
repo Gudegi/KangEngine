@@ -1,4 +1,7 @@
 #version 410 core
+// VertexColorMaterial / legacy simple-lit path.
+// This shader intentionally uses only per-instance vColor, not Material
+// uniforms. Use phong.fs for PhongMaterial and pbr_forward.fs for PBRMaterial.
 out vec4 FragColor;
 in vec3 Normal;
 in vec3 FragPos;

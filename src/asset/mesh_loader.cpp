@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <cstring>
 #include <fstream>
+#include <stdexcept>
 #include <sstream>
 #include <unordered_map>
 
@@ -282,10 +283,10 @@ Scene::MeshData loadObj(std::string path,
     }
 
     if (!reader.ParseFromFile(path, config)) {
-        if (!reader.Error().empty()) {
-            std::cerr << "TinyObjReader: " << reader.Error();
-        }
-        exit(1);
+        const std::string error =
+            reader.Error().empty() ? "unknown OBJ parse error" : reader.Error();
+        throw std::runtime_error("TinyObjReader failed to load '" + path +
+                                 "': " + error);
     }
 
     if (!reader.Warning().empty()) {

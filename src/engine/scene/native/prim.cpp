@@ -6,6 +6,7 @@
 #include "engine/scene/component/render_component.hpp"
 #include "engine/scene/component/light_component.hpp"
 #include "engine/scene/component/camera_component.hpp"
+#include "engine/scene/component/material_binding_component.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "utils/types.hpp"
 #include <Eigen/Geometry>
@@ -66,6 +67,8 @@ Prim::~Prim() {
         _lightComponent->detach();
     if (_cameraComponent)
         _cameraComponent->detach();
+    if (_materialBindingComponent)
+        _materialBindingComponent->detach();
 }
 
 Prim* Prim::addChild(const std::string& name, PrimType type) {
@@ -194,8 +197,8 @@ std::shared_ptr<RenderComponent> Prim::addRenderComponent() {
     if (_renderComponent)
         throw std::runtime_error("Prim '" + _path +
                                  "' already has a RenderComponent");
-    _renderComponent = std::shared_ptr<RenderComponent>(
-        new RenderComponent(this));
+    _renderComponent =
+        std::shared_ptr<RenderComponent>(new RenderComponent(this));
     return _renderComponent;
 }
 
@@ -211,10 +214,44 @@ bool Prim::removeRenderComponent() {
     return true;
 }
 
+std::shared_ptr<MaterialBindingComponent> Prim::addMaterialBindingComponent() {
+    if (_materialBindingComponent)
+        throw std::runtime_error("Prim '" + _path +
+                                 "' already has a MaterialBindingComponent");
+    _materialBindingComponent = std::shared_ptr<MaterialBindingComponent>(
+        new MaterialBindingComponent(this));
+    return _materialBindingComponent;
+}
+
+std::shared_ptr<MaterialBindingComponent>
+Prim::getMaterialBindingComponent() const {
+    return _materialBindingComponent;
+}
+
+bool Prim::removeMaterialBindingComponent() {
+    if (!_materialBindingComponent)
+        return false;
+    _materialBindingComponent->detach();
+    _materialBindingComponent.reset();
+    return true;
+}
+
+void Prim::setMaterial(Material* material) {
+    if (!_materialBindingComponent)
+        addMaterialBindingComponent();
+    _materialBindingComponent->setMaterial(material);
+}
+
+Material* Prim::getMaterial() const {
+    return _materialBindingComponent ? _materialBindingComponent->material()
+                                     : nullptr;
+}
+
 std::shared_ptr<LightComponent> Prim::addLightComponent() {
     if (_type != PrimType::Light)
-        throw std::runtime_error("Prim '" + _path +
-                                 "' must be PrimType::Light to add a LightComponent");
+        throw std::runtime_error(
+            "Prim '" + _path +
+            "' must be PrimType::Light to add a LightComponent");
     if (_lightComponent)
         throw std::runtime_error("Prim '" + _path +
                                  "' already has a LightComponent");
@@ -236,8 +273,9 @@ bool Prim::removeLightComponent() {
 
 std::shared_ptr<CameraComponent> Prim::addCameraComponent() {
     if (_type != PrimType::Camera)
-        throw std::runtime_error("Prim '" + _path +
-                                 "' must be PrimType::Camera to add a CameraComponent");
+        throw std::runtime_error(
+            "Prim '" + _path +
+            "' must be PrimType::Camera to add a CameraComponent");
     if (_cameraComponent)
         throw std::runtime_error("Prim '" + _path +
                                  "' already has a CameraComponent");

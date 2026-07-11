@@ -277,6 +277,10 @@ class App {
     RenderableHandle addRenderable(
         Material* material, Scene::Prim* prim,
         TransformSource transformSource = TransformSource::SceneGraph);
+    RenderableHandle addSkinnedRenderable(
+        Material* material, Scene::Prim* prim,
+        const Scene::SkinnedMeshData& skinnedMesh,
+        TransformSource transformSource = TransformSource::SceneGraph);
     void removePrim(RenderableHandle handle, Scene::Prim* prim);
     bool removePrim(Scene::Prim* prim);
     bool removePrim(const std::string& path);

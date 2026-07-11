@@ -123,6 +123,7 @@ ColorType = _set_public_module(_ke.ColorType, __name__)
 Color = _set_public_module(_ke.Color, __name__)
 Material = _set_public_module(_ke.Material, __name__)
 PhongMaterial = _set_public_module(_ke.PhongMaterial, __name__)
+PhongMaterialType = _set_public_module(_ke.PhongMaterialType, __name__)
 PBRMaterial = _set_public_module(_ke.PBRMaterial, __name__)
 PBRMaterialType = _set_public_module(_ke.PBRMaterialType, __name__)
 Renderer = _set_public_module(_ke.Renderer, __name__)
@@ -240,6 +241,7 @@ __all__ = [
     "Color",
     "Material",
     "PhongMaterial",
+    "PhongMaterialType",
     "PBRMaterial",
     "PBRMaterialType",
     "Renderer",

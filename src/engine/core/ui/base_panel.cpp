@@ -4,9 +4,11 @@
 #include "imgui.h"
 #include "engine/core/app/app.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
+#include "engine/graphics/material/material.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
 #include "engine/scene/component/camera_component.hpp"
 #include "engine/scene/component/light_component.hpp"
+#include "engine/scene/component/material_binding_component.hpp"
 #include "engine/scene/native/xform_token.hpp"
 #include <IconsFontAwesome7.h>
 #include <algorithm>
@@ -470,6 +472,101 @@ bool drawCameraComponentEditor(App* app, Scene::Prim& prim, bool editable) {
     return changed;
 }
 
+const char* materialTypeLabel(const Material* material) {
+    if (!material)
+        return "None";
+    if (dynamic_cast<const PBRMaterial*>(material))
+        return "PBRMaterial";
+    if (dynamic_cast<const PhongMaterial*>(material))
+        return "PhongMaterial";
+    if (dynamic_cast<const VertexColorMaterial*>(material))
+        return "VertexColorMaterial";
+    return "Material";
+}
+
+void drawTextureStatus(const char* label, const Backend::Texture* texture) {
+    ImGui::TextDisabled("%s", label);
+    ImGui::SameLine();
+    if (texture)
+        ImGui::TextColored(ImVec4(0.45f, 0.82f, 0.52f, 1.0f), "Bound");
+    else
+        ImGui::TextDisabled("None");
+}
+
+void drawSharedMaterialHint() {
+    ImGui::TextWrapped(
+        "Editing this material changes every Prim that shares the same "
+        "Material*.");
+}
+
+void drawMaterialInspector(Scene::Prim& prim) {
+    auto binding = prim.getMaterialBindingComponent();
+    Material* material = prim.getMaterial();
+
+    ImGui::SeparatorText("Material");
+    if (!binding || !binding->isAttached()) {
+        ImGui::TextDisabled("No MaterialBindingComponent");
+        return;
+    }
+
+    ImGui::TextDisabled("Source");
+    ImGui::SameLine();
+    ImGui::TextUnformatted("MaterialBindingComponent");
+    ImGui::TextDisabled("Version");
+    ImGui::SameLine();
+    ImGui::Text("%llu", static_cast<unsigned long long>(binding->version()));
+    ImGui::TextDisabled("Type");
+    ImGui::SameLine();
+    ImGui::TextUnformatted(materialTypeLabel(material));
+    ImGui::TextDisabled("Material*");
+    ImGui::SameLine();
+    ImGui::Text("%p", static_cast<void*>(material));
+
+    if (!material) {
+        ImGui::TextDisabled("No material bound");
+        return;
+    }
+
+    Backend::Shader* shader = material->getShader();
+    ImGui::TextDisabled("Shader*");
+    ImGui::SameLine();
+    ImGui::Text("%p", static_cast<void*>(shader));
+    drawSharedMaterialHint();
+
+    if (auto* phong = dynamic_cast<PhongMaterial*>(material)) {
+        ImGui::SeparatorText("Phong Parameters");
+        ImGui::ColorEdit3("Ambient", &phong->ambient.x);
+        ImGui::ColorEdit3("Diffuse", &phong->diffuse.x);
+        ImGui::ColorEdit3("Specular", &phong->specular.x);
+        ImGui::DragFloat("Shininess", &phong->shininess, 0.25f, 1.0f,
+                         512.0f);
+        drawTextureStatus("Diffuse Map", phong->diffuseMap);
+        drawTextureStatus("Specular Map", phong->specularMap);
+        drawTextureStatus("Normal Map", phong->normalMap);
+    } else if (auto* pbr = dynamic_cast<PBRMaterial*>(material)) {
+        ImGui::SeparatorText("PBR Parameters");
+        ImGui::ColorEdit4("Base Color", &pbr->baseColor.x);
+        ImGui::SliderFloat("Metallic", &pbr->metallic, 0.0f, 1.0f);
+        ImGui::SliderFloat("Roughness", &pbr->roughness, 0.02f, 1.0f);
+        ImGui::ColorEdit3("Emissive Color", &pbr->emissiveColor.x);
+        ImGui::DragFloat("Emissive Strength", &pbr->emissiveStrength, 0.05f,
+                         0.0f, 100.0f);
+        drawTextureStatus("Base Color Map", pbr->baseColorTexture);
+        drawTextureStatus("Normal Map", pbr->normalTexture);
+        drawTextureStatus("MetallicRoughness Map",
+                          pbr->metallicRoughnessTexture);
+        drawTextureStatus("Metallic Map", pbr->metallicTexture);
+        drawTextureStatus("Roughness Map", pbr->roughnessTexture);
+        drawTextureStatus("AO Map", pbr->aoTexture);
+        drawTextureStatus("ORM Map", pbr->ormTexture);
+        drawTextureStatus("Emissive Map", pbr->emissiveTexture);
+    } else if (dynamic_cast<VertexColorMaterial*>(material)) {
+        ImGui::TextWrapped(
+            "Compatibility wrapper for legacy shader-only renderables. "
+            "Surface color comes from per-instance display/base color.");
+    }
+}
+
 bool drawAttributeValue(const std::string& name,
                         Scene::AttributeValue& attribute, bool editable) {
     bool changed = false;
@@ -910,6 +1007,9 @@ void InspectorPanel::buildPanel() {
         ImGui::Text("Indices: %zu", mesh->indices.size());
         ImGui::Text("Triangles: %zu", mesh->indices.size() / 3);
     }
+
+    if (prim->hasMaterialBindingComponent())
+        drawMaterialInspector(*prim);
 
     if (prim->getType() == Scene::PrimType::Light) {
         ImGui::SeparatorText("Light");

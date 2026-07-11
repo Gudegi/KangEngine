@@ -21,11 +21,14 @@
 
 namespace KE {
 
+class Material;
+
 namespace Scene {
 
 class RenderComponent;
 class LightComponent;
 class CameraComponent;
+class MaterialBindingComponent;
 
 using AttributeValue =
     std::variant<bool, int, float, std::string, glm::vec3, glm::vec4, glm::mat4,
@@ -68,6 +71,7 @@ class Prim {
     std::shared_ptr<RenderComponent> _renderComponent;
     std::shared_ptr<LightComponent> _lightComponent;
     std::shared_ptr<CameraComponent> _cameraComponent;
+    std::shared_ptr<MaterialBindingComponent> _materialBindingComponent;
 
     bool _renderable = false; // true for prim types that can submit geometry
     bool _visible = true; // runtime show/hide toggle(just render visibility)
@@ -117,6 +121,16 @@ class Prim {
     std::shared_ptr<RenderComponent> getRenderComponent() const;
     bool hasRenderComponent() const { return _renderComponent != nullptr; }
     bool removeRenderComponent();
+
+    std::shared_ptr<MaterialBindingComponent> addMaterialBindingComponent();
+    std::shared_ptr<MaterialBindingComponent>
+    getMaterialBindingComponent() const;
+    bool hasMaterialBindingComponent() const {
+        return _materialBindingComponent != nullptr;
+    }
+    bool removeMaterialBindingComponent();
+    void setMaterial(Material* material);
+    Material* getMaterial() const;
 
     std::shared_ptr<LightComponent> addLightComponent();
     std::shared_ptr<LightComponent> getLightComponent() const;

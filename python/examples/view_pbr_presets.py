@@ -25,8 +25,6 @@ PRESETS = [
 class PBRPresetViewer(ke.App):
     def setup(self):
         self.shaders = self.create_standard_shaders()
-        self.pbr_shader = self.create_asset_shader("common.vs", "pbr_forward.fs")
-        self.materials = []
 
         self.add_ground(shader=self.shaders.ground, scale=12.0)
         self._build_preset_grid()
@@ -43,11 +41,7 @@ class PBRPresetViewer(ke.App):
         self.check_error()
 
     def _make_material(self, preset):
-        material = ke.PBRMaterial()
-        material.set_shader(self.pbr_shader)
-        material.load_from_preset(preset)
-        self.materials.append(material)
-        return material
+        return self.create_pbr_material(preset)
 
     def _add_sphere(self, path, position, material):
         view = self.scene.add_mesh(

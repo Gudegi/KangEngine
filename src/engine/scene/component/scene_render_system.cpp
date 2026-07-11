@@ -1,5 +1,6 @@
 #include "scene_render_system.hpp"
 
+#include "engine/graphics/material/material.hpp"
 #include "engine/graphics/renderer/renderer.hpp"
 #include "engine/scene/component/render_component.hpp"
 #include "engine/scene/native/prim.hpp"
@@ -40,11 +41,13 @@ SceneRenderSystem::addRenderable(Prim& prim, Backend::Shader* shader,
         component = prim.addRenderComponent();
     try {
         component->setTransformSource(source);
-        if (registerRenderable(component, shader) == InvalidHandle) {
+        Material* material = vertexColorMaterialForShader(shader);
+        if (registerRenderable(component, material) == InvalidHandle) {
             if (created)
                 prim.removeRenderComponent();
             return nullptr;
         }
+        prim.setMaterial(material);
     } catch (...) {
         if (created)
             prim.removeRenderComponent();
@@ -63,12 +66,39 @@ SceneRenderSystem::addSkinnedRenderable(Prim& prim, Backend::Shader* shader,
         component = prim.addRenderComponent();
     try {
         component->setTransformSource(source);
-        if (registerSkinnedRenderable(component, shader, skinnedMesh) ==
+        Material* material = vertexColorMaterialForShader(shader);
+        if (registerSkinnedRenderable(component, material, skinnedMesh) ==
             InvalidHandle) {
             if (created)
                 prim.removeRenderComponent();
             return nullptr;
         }
+        prim.setMaterial(material);
+    } catch (...) {
+        if (created)
+            prim.removeRenderComponent();
+        throw;
+    }
+    return component;
+}
+
+std::shared_ptr<RenderComponent>
+SceneRenderSystem::addSkinnedRenderable(Prim& prim, Material* material,
+                                        const SkinnedMeshData& skinnedMesh,
+                                        TransformSource source) {
+    auto component = prim.getRenderComponent();
+    const bool created = !component;
+    if (!component)
+        component = prim.addRenderComponent();
+    try {
+        component->setTransformSource(source);
+        if (registerSkinnedRenderable(component, material, skinnedMesh) ==
+            InvalidHandle) {
+            if (created)
+                prim.removeRenderComponent();
+            return nullptr;
+        }
+        prim.setMaterial(material);
     } catch (...) {
         if (created)
             prim.removeRenderComponent();
@@ -91,6 +121,7 @@ SceneRenderSystem::addRenderable(Prim& prim, Material* material,
                 prim.removeRenderComponent();
             return nullptr;
         }
+        prim.setMaterial(material);
     } catch (...) {
         if (created)
             prim.removeRenderComponent();
@@ -101,7 +132,7 @@ SceneRenderSystem::addRenderable(Prim& prim, Material* material,
 
 RenderableHandle SceneRenderSystem::finishRegistration(
     const std::shared_ptr<RenderComponent>& component,
-    RenderableHandle renderable) {
+    RenderableHandle renderable, const SkinnedMeshData* skinnedMesh) {
     if (renderable == InvalidHandle)
         return InvalidHandle;
 
@@ -109,6 +140,8 @@ RenderableHandle SceneRenderSystem::finishRegistration(
     registration.component = component;
     registration.prim = component->owner();
     registration.handle = renderable;
+    if (skinnedMesh)
+        registration.skinnedMesh = *skinnedMesh;
     _registrations.emplace(component.get(), registration);
     component->setRegistrationCallbacks(
         [this](RenderComponent& detached) { unregister(detached); },
@@ -117,23 +150,18 @@ RenderableHandle SceneRenderSystem::finishRegistration(
     return renderable;
 }
 
-RenderableHandle SceneRenderSystem::registerRenderable(
-    const std::shared_ptr<RenderComponent>& component,
-    Backend::Shader* shader) {
-    validateRegistration(component);
-    return finishRegistration(
-        component, _renderer->addRenderable(shader, component->owner(),
-                                            component->transformSource()));
-}
+Material*
+SceneRenderSystem::vertexColorMaterialForShader(Backend::Shader* shader) {
+    if (!shader)
+        return nullptr;
+    auto it = _vertexColorMaterialsByShader.find(shader);
+    if (it != _vertexColorMaterialsByShader.end())
+        return it->second.get();
 
-RenderableHandle SceneRenderSystem::registerSkinnedRenderable(
-    const std::shared_ptr<RenderComponent>& component, Backend::Shader* shader,
-    const SkinnedMeshData& skinnedMesh) {
-    validateRegistration(component);
-    return finishRegistration(
-        component,
-        _renderer->addSkinnedRenderable(shader, component->owner(), skinnedMesh,
-                                        component->transformSource()));
+    auto material = std::make_unique<VertexColorMaterial>(shader);
+    Material* raw = material.get();
+    _vertexColorMaterialsByShader.emplace(shader, std::move(material));
+    return raw;
 }
 
 RenderableHandle SceneRenderSystem::registerRenderable(
@@ -142,6 +170,18 @@ RenderableHandle SceneRenderSystem::registerRenderable(
     return finishRegistration(
         component, _renderer->addRenderable(material, component->owner(),
                                             component->transformSource()));
+}
+
+RenderableHandle SceneRenderSystem::registerSkinnedRenderable(
+    const std::shared_ptr<RenderComponent>& component, Material* material,
+    const SkinnedMeshData& skinnedMesh) {
+    validateRegistration(component);
+    return finishRegistration(
+        component,
+        _renderer->addSkinnedRenderable(material, component->owner(),
+                                        skinnedMesh,
+                                        component->transformSource()),
+        &skinnedMesh);
 }
 
 const SceneRenderSystem::Registration&
@@ -205,17 +245,83 @@ void SceneRenderSystem::setAlphaMode(RenderComponent& component, AlphaMode mode,
     component.setAlphaMode(mode, cutoff);
 }
 
+bool SceneRenderSystem::setMaterial(RenderComponent& component,
+                                    Material* material) {
+    const auto currentIt = _registrations.find(&component);
+    if (currentIt == _registrations.end())
+        throw std::runtime_error("RenderComponent is not registered");
+    if (!material || !material->getShader())
+        throw std::runtime_error("replacement material must have a shader");
+    if (component.transformSource() == TransformSource::ExternalBuffer) {
+        throw std::runtime_error(
+            "dynamic material replacement for ExternalBuffer renderables is "
+            "not implemented yet");
+    }
+
+    Registration oldRegistration = currentIt->second;
+    auto componentRef = oldRegistration.component.lock();
+    Prim* prim = oldRegistration.prim;
+    if (!componentRef || !prim)
+        throw std::runtime_error("registered RenderComponent is expired");
+
+    Material* oldMaterial = prim->getMaterial();
+    if (oldMaterial == material) {
+        prim->setMaterial(material);
+        return true;
+    }
+
+    unregister(component);
+    prim->setMaterial(material);
+
+    const bool wasSkinned = oldRegistration.skinnedMesh.has_value();
+    RenderableHandle replacement =
+        wasSkinned ? registerSkinnedRenderable(componentRef, material,
+                                               *oldRegistration.skinnedMesh)
+                   : registerRenderable(componentRef, material);
+    if (replacement != InvalidHandle) {
+        for (const auto& [texture, slot] : oldRegistration.textureBindings)
+            setTexture(*componentRef, texture, slot);
+        return true;
+    }
+
+    prim->setMaterial(oldMaterial);
+    RenderableHandle restored =
+        wasSkinned ? registerSkinnedRenderable(componentRef, oldMaterial,
+                                               *oldRegistration.skinnedMesh)
+                   : registerRenderable(componentRef, oldMaterial);
+    if (restored == InvalidHandle)
+        throw std::runtime_error(
+            "failed to restore previous material after replacement failure");
+    for (const auto& [texture, slot] : oldRegistration.textureBindings)
+        setTexture(*componentRef, texture, slot);
+    return false;
+}
+
 void SceneRenderSystem::setTexture(RenderComponent& component,
                                    Backend::Texture* texture,
                                    TextureRole role) {
-    const auto& registration = requireRegistration(component);
-    _renderer->setRenderableTexture(registration.handle, texture, role);
+    setTexture(component, texture, textureRoleSlot(role));
 }
 
 void SceneRenderSystem::setTexture(RenderComponent& component,
                                    Backend::Texture* texture, int slot) {
-    const auto& registration = requireRegistration(component);
-    _renderer->setRenderableTexture(registration.handle, texture, slot);
+    auto it = _registrations.find(&component);
+    if (it == _registrations.end())
+        throw std::runtime_error("RenderComponent is not registered");
+
+    auto& bindings = it->second.textureBindings;
+    bool found = false;
+    for (auto& [storedTexture, storedSlot] : bindings) {
+        if (storedSlot == slot) {
+            storedTexture = texture;
+            found = true;
+            break;
+        }
+    }
+    if (!found)
+        bindings.emplace_back(texture, slot);
+
+    _renderer->setRenderableTexture(it->second.handle, texture, slot);
 }
 
 void SceneRenderSystem::setExternalBuffer(RenderComponent& component,

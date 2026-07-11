@@ -7,8 +7,10 @@
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <glm/glm.hpp>
+#include <algorithm>
 #include <array>
 #include <cstring>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -16,6 +18,30 @@ namespace py = pybind11;
 
 using FloatArray =
     py::array_t<float, py::array::c_style | py::array::forcecast>;
+
+template <std::size_t N>
+inline std::optional<std::array<float, N>> fixedFloatArray(py::handle obj,
+                                                           const char* name) {
+    if (!py::isinstance<py::buffer>(obj))
+        return std::nullopt;
+
+    // NumPy defaults to float64, while KangEngine stores GLM values as float32.
+    // Force-casting through FloatArray avoids interpreting double bytes as
+    // float bytes, which can scramble compact values such as RGBA colors.
+    FloatArray array = FloatArray::ensure(obj);
+    if (!array)
+        return std::nullopt;
+
+    py::buffer_info info = array.request();
+    if (info.size != static_cast<py::ssize_t>(N))
+        throw py::value_error(std::string(name) + " expected exactly " +
+                              std::to_string(N) + " values");
+
+    const float* ptr = static_cast<const float*>(info.ptr);
+    std::array<float, N> values{};
+    std::copy_n(ptr, N, values.begin());
+    return values;
+}
 
 struct Vec3ArrayView {
     const float* data = nullptr;
@@ -64,7 +90,8 @@ inline std::vector<float> floatVectorArray(const FloatArray& array,
     return std::vector<float>(view.data, view.data + view.count);
 }
 
-inline py::array_t<float> floatArrayFromVector(const std::vector<float>& values) {
+inline py::array_t<float>
+floatArrayFromVector(const std::vector<float>& values) {
     py::array_t<float> array(static_cast<py::ssize_t>(values.size()));
     if (!values.empty()) {
         std::memcpy(array.mutable_data(), values.data(),

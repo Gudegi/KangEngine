@@ -6,6 +6,7 @@
 #include "../src/engine/graphics/backend/graphics_factory.hpp"
 #include "../src/engine/graphics/material/material.hpp"
 #include "../src/engine/graphics/material/colors.hpp"
+#include "engine/graphics/material/phongMaterials.hpp"
 #include "py_array_view.hpp"
 
 #include <pybind11/pybind11.h>
@@ -420,6 +421,34 @@ PYBIND11_MODULE(_kangengine, m) {
         .value("Blend", AlphaMode::Blend)
         .export_values();
 
+    py::enum_<PhongMaterialType>(m, "PhongMaterialType",
+                                 "Built-in blin-phong based material presets.")
+        .value("EMERALD", PhongMaterialType::EMERALD)
+        .value("JADE", PhongMaterialType::JADE)
+        .value("OBSIDIAN", PhongMaterialType::OBSIDIAN)
+        .value("PEARL", PhongMaterialType::PEARL)
+        .value("RUBY", PhongMaterialType::RUBY)
+        .value("TURQUOISE", PhongMaterialType::TURQUOISE)
+        .value("BRASS", PhongMaterialType::BRASS)
+        .value("BRONZE", PhongMaterialType::BRONZE)
+        .value("CHROME", PhongMaterialType::CHROME)
+        .value("COPPER", PhongMaterialType::COPPER)
+        .value("GOLD", PhongMaterialType::GOLD)
+        .value("SILVER", PhongMaterialType::SILVER)
+        .value("BLACK_PLASTIC", PhongMaterialType::BLACK_PLASTIC)
+        .value("CYAN_PLASTIC", PhongMaterialType::CYAN_PLASTIC)
+        .value("GREEN_PLASTIC", PhongMaterialType::GREEN_PLASTIC)
+        .value("RED_PLASTIC", PhongMaterialType::RED_PLASTIC)
+        .value("WHITE_PLASTIC", PhongMaterialType::WHITE_PLASTIC)
+        .value("YELLOW_PLASTIC", PhongMaterialType::YELLOW_PLASTIC)
+        .value("BLACK_RUBBER", PhongMaterialType::BLACK_RUBBER)
+        .value("CYAN_RUBBER", PhongMaterialType::CYAN_RUBBER)
+        .value("GREEN_RUBBER", PhongMaterialType::GREEN_RUBBER)
+        .value("RED_RUBBER", PhongMaterialType::RED_RUBBER)
+        .value("WHITE_RUBBER", PhongMaterialType::WHITE_RUBBER)
+        .value("YELLOW_RUBBER", PhongMaterialType::YELLOW_RUBBER)
+        .export_values();
+
     py::enum_<PBRMaterialType>(m, "PBRMaterialType",
                                "Built-in physically based material presets.")
         .value("GRAY_CARD", PBRMaterialType::GRAY_CARD)
@@ -548,8 +577,14 @@ PYBIND11_MODULE(_kangengine, m) {
         .def_static("get", &ColorLibrary::get, py::arg("type"));
 
     py::class_<Material>(m, "Material", "Base class for renderer materials.")
-        .def("set_shader", &Material::setShader, py::arg("shader"),
-             "Attach the shader used when this material is bound.")
+        .def("set_shader",
+             [](Material& self, Backend::Shader* shader) -> Material& {
+                 self.setShader(shader);
+                 return self;
+             },
+             py::arg("shader"), py::return_value_policy::reference_internal,
+             "Attach the shader used when this material is bound and return "
+             "this material.")
         .def("get_shader", &Material::getShader,
              py::return_value_policy::reference,
              "Return the shader currently attached to this material.");
@@ -559,6 +594,32 @@ PYBIND11_MODULE(_kangengine, m) {
         "Classic Blinn-Phong material with diffuse/specular factors and "
         "optional textures.")
         .def(py::init<>(), "Create a Phong material with default factors.")
+        .def(py::init<Backend::Shader*>(), py::arg("shader"),
+             "Create a Phong material attached to a shader.")
+        .def("load_from_preset",
+             [](PhongMaterial& self, PhongMaterialType type)
+                 -> PhongMaterial& {
+                 self.loadFromPreset(type);
+                 return self;
+             },
+             py::arg("type"), py::return_value_policy::reference_internal,
+             "Load material factors from a built-in Phong preset and return "
+             "this material.")
+        .def("set_ambient", &PhongMaterial::setAmbient, py::arg("ambient"),
+             py::return_value_policy::reference_internal)
+        .def("set_diffuse", &PhongMaterial::setDiffuse, py::arg("diffuse"),
+             py::return_value_policy::reference_internal)
+        .def("set_specular", &PhongMaterial::setSpecular, py::arg("specular"),
+             py::return_value_policy::reference_internal)
+        .def("set_shininess", &PhongMaterial::setShininess,
+             py::arg("shininess"),
+             py::return_value_policy::reference_internal)
+        .def("set_diffuse_map", &PhongMaterial::setDiffuseMap,
+             py::arg("texture"), py::return_value_policy::reference_internal)
+        .def("set_specular_map", &PhongMaterial::setSpecularMap,
+             py::arg("texture"), py::return_value_policy::reference_internal)
+        .def("set_normal_map", &PhongMaterial::setNormalMap,
+             py::arg("texture"), py::return_value_policy::reference_internal)
         .def_readwrite("ambient", &PhongMaterial::ambient,
                        "Ambient RGB factor.")
         .def_readwrite("diffuse", &PhongMaterial::diffuse,
@@ -569,6 +630,8 @@ PYBIND11_MODULE(_kangengine, m) {
                        "Specular highlight exponent.")
         .def_readwrite("diffuse_map", &PhongMaterial::diffuseMap,
                        "Optional diffuse texture.")
+        .def_readwrite("specular_map", &PhongMaterial::specularMap,
+                       "Optional specular texture.")
         .def_readwrite("normal_map", &PhongMaterial::normalMap,
                        "Optional tangent-space normal map.");
 
@@ -576,8 +639,47 @@ PYBIND11_MODULE(_kangengine, m) {
         m, "PBRMaterial",
         "Physically based material using metallic-roughness parameters.")
         .def(py::init<>(), "Create a PBR material with default factors.")
-        .def("load_from_preset", &PBRMaterial::loadFromPreset, py::arg("type"),
-             "Load material factors from a built-in PBR preset.")
+        .def(py::init<Backend::Shader*>(), py::arg("shader"),
+             "Create a PBR material attached to a shader.")
+        .def("load_from_preset",
+             [](PBRMaterial& self, PBRMaterialType type) -> PBRMaterial& {
+                 self.loadFromPreset(type);
+                 return self;
+             },
+             py::arg("type"), py::return_value_policy::reference_internal,
+             "Load material factors from a built-in PBR preset and return "
+             "this material.")
+        .def("set_base_color", &PBRMaterial::setBaseColor,
+             py::arg("base_color"),
+             py::return_value_policy::reference_internal)
+        .def("set_metallic", &PBRMaterial::setMetallic, py::arg("metallic"),
+             py::return_value_policy::reference_internal)
+        .def("set_roughness", &PBRMaterial::setRoughness,
+             py::arg("roughness"),
+             py::return_value_policy::reference_internal)
+        .def("set_emissive_color", &PBRMaterial::setEmissiveColor,
+             py::arg("emissive_color"),
+             py::return_value_policy::reference_internal)
+        .def("set_emissive_strength", &PBRMaterial::setEmissiveStrength,
+             py::arg("emissive_strength"),
+             py::return_value_policy::reference_internal)
+        .def("set_base_color_texture", &PBRMaterial::setBaseColorTexture,
+             py::arg("texture"), py::return_value_policy::reference_internal)
+        .def("set_normal_texture", &PBRMaterial::setNormalTexture,
+             py::arg("texture"), py::return_value_policy::reference_internal)
+        .def("set_metallic_roughness_texture",
+             &PBRMaterial::setMetallicRoughnessTexture, py::arg("texture"),
+             py::return_value_policy::reference_internal)
+        .def("set_metallic_texture", &PBRMaterial::setMetallicTexture,
+             py::arg("texture"), py::return_value_policy::reference_internal)
+        .def("set_roughness_texture", &PBRMaterial::setRoughnessTexture,
+             py::arg("texture"), py::return_value_policy::reference_internal)
+        .def("set_ao_texture", &PBRMaterial::setAoTexture, py::arg("texture"),
+             py::return_value_policy::reference_internal)
+        .def("set_orm_texture", &PBRMaterial::setOrmTexture,
+             py::arg("texture"), py::return_value_policy::reference_internal)
+        .def("set_emissive_texture", &PBRMaterial::setEmissiveTexture,
+             py::arg("texture"), py::return_value_policy::reference_internal)
         .def_readwrite("base_color", &PBRMaterial::baseColor,
                        "Base color factor as RGBA.")
         .def_readwrite("metallic", &PBRMaterial::metallic,
@@ -903,24 +1005,8 @@ py::class_<glm::vec3>(m, "vec3")
             if (py::isinstance<glm::vec2>(obj))
                 return obj.cast<glm::vec2>();
 
-            try {
-                if (py::isinstance<py::buffer>(obj)) {
-                    auto buf = obj.cast<py::buffer>().request();
-                    if (buf.size == 2) {
-                        auto read = [&](int i) -> float {
-                            const char* p = static_cast<const char*>(buf.ptr) +
-                                            i * buf.strides[0];
-                            if (buf.format ==
-                                py::format_descriptor<double>::format())
-                                return static_cast<float>(
-                                    *reinterpret_cast<const double*>(p));
-                            return *reinterpret_cast<const float*>(p);
-                        };
-                        return glm::vec2(read(0), read(1));
-                    }
-                }
-            } catch (...) {
-            }
+            if (auto values = fixedFloatArray<2>(obj, "vec2"))
+                return glm::vec2((*values)[0], (*values)[1]);
 
             if (py::hasattr(obj, "x") && py::hasattr(obj, "y"))
                 return glm::vec2(obj.attr("x").cast<float>(),
@@ -956,24 +1042,8 @@ py::class_<glm::vec3>(m, "vec3")
                 return obj.cast<glm::vec3>();
 
             // Buffer protocol: numpy (float32 or float64), PyGLM, etc.
-            try {
-                if (py::isinstance<py::buffer>(obj)) {
-                    auto buf = obj.cast<py::buffer>().request();
-                    if (buf.size == 3) {
-                        auto read = [&](int i) -> float {
-                            const char* p = static_cast<const char*>(buf.ptr) +
-                                            i * buf.strides[0];
-                            if (buf.format ==
-                                py::format_descriptor<double>::format())
-                                return static_cast<float>(
-                                    *reinterpret_cast<const double*>(p));
-                            return *reinterpret_cast<const float*>(p);
-                        };
-                        return glm::vec3(read(0), read(1), read(2));
-                    }
-                }
-            } catch (...) {
-            }
+            if (auto values = fixedFloatArray<3>(obj, "vec3"))
+                return glm::vec3((*values)[0], (*values)[1], (*values)[2]);
 
             // Attribute access (PyGLM objects, etc.)
             if (py::hasattr(obj, "x") && py::hasattr(obj, "y") &&
@@ -1014,16 +1084,9 @@ py::class_<glm::vec3>(m, "vec3")
         .def(py::init<float, float, float, float>())
         .def(py::init([](py::object obj) {
             // Buffer protocol
-            try {
-                if (py::isinstance<py::buffer>(obj)) {
-                    auto buf = obj.cast<py::buffer>().request();
-                    if (buf.size == 4) {
-                        float* ptr = static_cast<float*>(buf.ptr);
-                        return glm::vec4(ptr[0], ptr[1], ptr[2], ptr[3]);
-                    }
-                }
-            } catch (...) {
-            }
+            if (auto values = fixedFloatArray<4>(obj, "vec4"))
+                return glm::vec4((*values)[0], (*values)[1], (*values)[2],
+                                 (*values)[3]);
             // Attribute access
             if (py::hasattr(obj, "x") && py::hasattr(obj, "y") &&
                 py::hasattr(obj, "z") && py::hasattr(obj, "w")) {
@@ -1061,17 +1124,10 @@ py::class_<glm::vec3>(m, "vec3")
              py::arg("y"), py::arg("z"))
         .def(py::init([](py::object obj) {
             // Buffer protocol (GLM quat memory layout: x, y, z, w)
-            try {
-                if (py::isinstance<py::buffer>(obj)) {
-                    auto buf = obj.cast<py::buffer>().request();
-                    if (buf.size == 4) {
-                        float* ptr = static_cast<float*>(buf.ptr);
-                        // GLM stores as x,y,z,w but constructor is w,x,y,z
-                        return glm::quat(ptr[3], ptr[0], ptr[1], ptr[2]);
-                    }
-                }
-            } catch (...) {
-            }
+            if (auto values = fixedFloatArray<4>(obj, "quat"))
+                // GLM stores as x,y,z,w but constructor is w,x,y,z.
+                return glm::quat((*values)[3], (*values)[0], (*values)[1],
+                                 (*values)[2]);
             // Attribute access
             if (py::hasattr(obj, "w") && py::hasattr(obj, "x") &&
                 py::hasattr(obj, "y") && py::hasattr(obj, "z")) {
@@ -1112,15 +1168,9 @@ py::class_<glm::vec3>(m, "vec3")
             glm::mat3 m(1.0f);
 
             // A. Buffer Protocol (PyGLM, Numpy 등)
-            try {
-                if (py::isinstance<py::buffer>(obj)) {
-                    auto buf = obj.cast<py::buffer>().request();
-                    if (buf.size == 9) {
-                        std::memcpy(&m[0][0], buf.ptr, 9 * sizeof(float));
-                        return m;
-                    }
-                }
-            } catch (...) {
+            if (auto values = fixedFloatArray<9>(obj, "mat3")) {
+                std::copy(values->begin(), values->end(), &m[0][0]);
+                return m;
             }
 
             // B. Sequence (List, Tuple)
@@ -1169,16 +1219,9 @@ py::class_<glm::vec3>(m, "vec3")
             // 1. Buffer Protocol 시도 (PyGLM, Numpy 등)
             // obj.cast<py::object>()를 통해 handle을 object로 변환 후 buffer로
             // 접근합니다.
-            try {
-                if (py::isinstance<py::buffer>(obj)) {
-                    auto buf = obj.cast<py::buffer>().request();
-                    if (buf.size == 16) {
-                        std::memcpy(&m[0][0], buf.ptr, 16 * sizeof(float));
-                        return m;
-                    }
-                }
-            } catch (...) {
-                // 버퍼 요청 실패 시 다음으로 진행
+            if (auto values = fixedFloatArray<16>(obj, "mat4")) {
+                std::copy(values->begin(), values->end(), &m[0][0]);
+                return m;
             }
 
             // 2. Sequence 시도 (List, Tuple)
@@ -1412,6 +1455,20 @@ py::class_<glm::vec3>(m, "vec3")
             "Compatibility/low-level path: create a skinned renderable and "
             "return its internal renderer handle. Prefer higher-level "
             "character bridges for authored scene use.")
+        .def(
+            "add_skinned_renderable",
+            [](App* self, Material* material, Scene::Prim* prim,
+               std::shared_ptr<Scene::SkinnedMeshData> skinnedMesh,
+               TransformSource transformSource) {
+                if (!skinnedMesh)
+                    throw py::value_error("skinned_mesh_data is None");
+                return self->addSkinnedRenderable(material, prim, *skinnedMesh,
+                                                  transformSource);
+            },
+            py::arg("material"), py::arg("prim"), py::arg("skinned_mesh_data"),
+            py::arg("transform_source") = TransformSource::SceneGraph,
+            "Compatibility/low-level path: create a skinned renderable using "
+            "a material and return its internal renderer handle.")
         .def(
             "add_renderable",
             [](App* self, Material* material, Scene::Prim* prim,
@@ -1668,7 +1725,8 @@ py::class_<glm::vec3>(m, "vec3")
              "Return the application camera.")
         .def("set_active_scene_camera", &App::setActiveSceneCamera,
              py::arg("prim"),
-             "Use a Camera Prim's CameraComponent as the viewport render camera.")
+             "Use a Camera Prim's CameraComponent as the viewport render "
+             "camera.")
         .def("clear_active_scene_camera", &App::clearActiveSceneCamera,
              "Return viewport rendering to the editor navigation camera.")
         .def("has_active_scene_camera", &App::hasActiveSceneCamera,

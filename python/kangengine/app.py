@@ -50,8 +50,22 @@ class RenderablePrimView:
         self._render_system.set_alpha_mode(self.component, mode, float(cutoff))
         return self
 
+    def set_base_color(self, color):
+        """Set the per-instance base-color multiplier for this renderable."""
+        self.prim.set_display_color_alpha(color)
+        return self
+
+    def get_base_color(self):
+        """Return the per-instance base-color multiplier."""
+        return self.prim.get_display_color_alpha()
+
     def set_texture(self, texture, role_or_slot=_ke.TextureRole.BaseColor):
         self._render_system.set_texture(self.component, texture, role_or_slot)
+        return self
+
+    def set_material(self, material):
+        """Replace this renderable's material and move it to the right batch."""
+        self._render_system.set_material(self.component, material)
         return self
 
     def set_transform_buffer(
@@ -151,18 +165,20 @@ class SceneContext:
     def add_renderable(
         self,
         prim,
-        material_or_shader,
+        material,
         transform_source=None,
     ):
         """Register a scene prim as renderable through RenderComponent.
 
         This is the preferred public path for authored scene objects. It
         returns a RenderablePrimView facade instead of exposing the native
-        renderer handle.
+        renderer handle. Pass a Material for material-first rendering; raw
+        Shader objects are still accepted as a compatibility path and are
+        wrapped internally by the native SceneRenderSystem.
         """
         if transform_source is None:
             transform_source = _ke.TransformSource.SceneGraph
-        self._app._add_renderable(material_or_shader, prim, transform_source)
+        self._app._add_renderable(material, prim, transform_source)
         component = prim.get_render_component()
         if component is None:
             raise RuntimeError(f"failed to register renderable prim: {prim.get_path()}")
@@ -172,7 +188,7 @@ class SceneContext:
         self,
         path: str,
         mesh_data,
-        material_or_shader,
+        material,
         color=None,
         transform_source=None,
     ):
@@ -180,7 +196,7 @@ class SceneContext:
         prim.set_mesh_data(mesh_data)
         if color is not None:
             prim.set_display_color_alpha(color)
-        return self.add_renderable(prim, material_or_shader, transform_source)
+        return self.add_renderable(prim, material, transform_source)
 
     def add_ground(self, path: str = "/ground", scale: float = 20.0, shader=None):
         if shader is None:
@@ -265,6 +281,11 @@ class App(NativeApp):
         self.width = 1920
         self.height = 1080
         self.hide_ui = False
+        # Lazily populated after the native graphics device/context exists.
+        # Pure compute/headless apps can leave this as None.
+        self.shaders = None
+        self.materials = []
+        self.textures = []
         self.up_axis = _ke.UpAxis.Y
         self.graphics_backend_type = _ke.BackendType.OpenGL
         self.scene_backend_type = scene.BackendType.Native
@@ -284,7 +305,14 @@ class App(NativeApp):
         return shaders[0] if len(shaders) == 1 else shaders
 
     def create_asset_shader(self, vertex_shader: str, fragment_shader: str):
-        shader = self.get_renderer().device().create_shader_from_file(
+        renderer = self.get_renderer()
+        device = renderer.device() if renderer is not None else None
+        if device is None:
+            raise RuntimeError(
+                "shader creation requires an initialized graphics device; "
+                "call this after initialize(), usually from setup()."
+            )
+        shader = device.create_shader_from_file(
             self.package_asset_path("shaders", vertex_shader),
             self.package_asset_path("shaders", fragment_shader),
         )
@@ -314,15 +342,31 @@ class App(NativeApp):
         shader.set_vec4("checkerColor2", color2)
         return shader
 
-    def create_standard_shaders(self):
-        shaders = SimpleNamespace(
+    def create_standard_shaders(self, *, force: bool = False):
+        """Create or return the cached standard shader bundle.
+
+        This intentionally stays lazy: pure compute/headless apps do not pay for
+        shader creation, while offscreen render/headless apps can call this
+        after initialize() once a graphics context exists.
+        """
+        if self.shaders is not None and not force:
+            return self.shaders
+
+        self.shaders = SimpleNamespace(
             common=self.create_asset_shader("common.vs", "common.fs"),
             common_texture=self.create_asset_shader("common.vs", "commonTex.fs"),
+            phong=self.create_asset_shader("common.vs", "phong.fs"),
+            pbr=self.create_asset_shader("common.vs", "pbr_forward.fs"),
             common_debug=self.create_asset_shader("common.vs", "debug_checker.fs"),
             skinned=self.create_asset_shader("skinned_mesh.vs", "common.fs"),
             skinned_texture=self.create_asset_shader(
                 "skinned_mesh.vs",
                 "commonTex.fs",
+            ),
+            skinned_phong=self.create_asset_shader("skinned_mesh.vs", "phong.fs"),
+            skinned_pbr=self.create_asset_shader(
+                "skinned_mesh.vs",
+                "pbr_forward.fs",
             ),
             skinned_debug=self.create_asset_shader(
                 "skinned_mesh.vs",
@@ -330,14 +374,133 @@ class App(NativeApp):
             ),
             ground=self.create_asset_shader("common.vs", "checkerboard.fs"),
         )
-        self.set_texture_uniform(shaders.common_texture)
-        self.set_texture_uniform(shaders.skinned_texture)
-        self.configure_checker_shader(shaders.ground)
-        return shaders
+        self.set_texture_uniform(self.shaders.common_texture)
+        self.set_texture_uniform(self.shaders.skinned_texture)
+        self.configure_checker_shader(self.shaders.ground)
+        return self.shaders
 
     #################################################################
 
     ############# Helpers ###########################################
+    def _remember_material(self, material):
+        """Keep Python-created native materials alive for renderer users."""
+        self.materials.append(material)
+        return material
+
+    def _remember_textures(self, *textures):
+        """Keep Python-created native textures alive while materials use them."""
+        for texture in textures:
+            if texture is not None and texture not in self.textures:
+                self.textures.append(texture)
+
+    def create_phong_material(
+        self,
+        preset=None,
+        *,
+        shader=None,
+        ambient=None,
+        diffuse=None,
+        specular=None,
+        shininess=None,
+        diffuse_map=None,
+        specular_map=None,
+        normal_map=None,
+    ):
+        """Create and retain a Phong material instance.
+
+        Each call returns a distinct material, so two meshes can share the same
+        shader while carrying different colors/textures and batching keys.
+        """
+        if shader is None:
+            shader = self.create_standard_shaders().phong
+        material = _ke.PhongMaterial(shader)
+        if preset is not None:
+            material.load_from_preset(preset)
+        if ambient is not None:
+            material.ambient = ambient
+        if diffuse is not None:
+            material.diffuse = diffuse
+        if specular is not None:
+            material.specular = specular
+        if shininess is not None:
+            material.shininess = float(shininess)
+        if diffuse_map is not None:
+            material.diffuse_map = diffuse_map
+        if specular_map is not None:
+            material.specular_map = specular_map
+        if normal_map is not None:
+            material.normal_map = normal_map
+        self._remember_textures(diffuse_map, specular_map, normal_map)
+        return self._remember_material(material)
+
+    def create_pbr_material(
+        self,
+        preset=None,
+        *,
+        shader=None,
+        base_color=None,
+        metallic=None,
+        roughness=None,
+        emissive_color=None,
+        emissive_strength=None,
+        base_color_texture=None,
+        normal_texture=None,
+        metallic_roughness_texture=None,
+        metallic_texture=None,
+        roughness_texture=None,
+        ao_texture=None,
+        orm_texture=None,
+        emissive_texture=None,
+    ):
+        """Create and retain a PBR material instance.
+
+        Material identity is intentionally per instance: sharing one material
+        shares its parameters, while separate materials can use the same shader
+        with different factors/textures.
+        """
+        if shader is None:
+            shader = self.create_standard_shaders().pbr
+        material = _ke.PBRMaterial(shader)
+        if preset is not None:
+            material.load_from_preset(preset)
+        if base_color is not None:
+            material.base_color = base_color
+        if metallic is not None:
+            material.metallic = float(metallic)
+        if roughness is not None:
+            material.roughness = float(roughness)
+        if emissive_color is not None:
+            material.emissive_color = emissive_color
+        if emissive_strength is not None:
+            material.emissive_strength = float(emissive_strength)
+        if base_color_texture is not None:
+            material.base_color_texture = base_color_texture
+        if normal_texture is not None:
+            material.normal_texture = normal_texture
+        if metallic_roughness_texture is not None:
+            material.metallic_roughness_texture = metallic_roughness_texture
+        if metallic_texture is not None:
+            material.metallic_texture = metallic_texture
+        if roughness_texture is not None:
+            material.roughness_texture = roughness_texture
+        if ao_texture is not None:
+            material.ao_texture = ao_texture
+        if orm_texture is not None:
+            material.orm_texture = orm_texture
+        if emissive_texture is not None:
+            material.emissive_texture = emissive_texture
+        self._remember_textures(
+            base_color_texture,
+            normal_texture,
+            metallic_roughness_texture,
+            metallic_texture,
+            roughness_texture,
+            ao_texture,
+            orm_texture,
+            emissive_texture,
+        )
+        return self._remember_material(material)
+
     def _add_renderable(self, material_or_shader, prim, transform_source=None):
         """Low-level renderer handle path used by internal bridges."""
         if transform_source is None:
@@ -346,7 +509,7 @@ class App(NativeApp):
 
     def _add_skinned_renderable(
         self,
-        shader,
+        material_or_shader,
         prim,
         skinned_mesh_data,
         transform_source=None,
@@ -355,7 +518,7 @@ class App(NativeApp):
         if transform_source is None:
             transform_source = _ke.TransformSource.SceneGraph
         return super().add_skinned_renderable(
-            shader,
+            material_or_shader,
             prim,
             skinned_mesh_data,
             transform_source,
@@ -364,21 +527,28 @@ class App(NativeApp):
     def add_ground(self, path: str = "/ground", scale: float = 20.0, shader=None):
         return self.scene.add_ground(path, scale, shader)
 
-    def add_mesh(self, path: str, mesh_data, shader, color=None):
-        return self.scene.add_mesh(path, mesh_data, shader, color=color)
+    def add_mesh(self, path: str, mesh_data, material=None, color=None, *, shader=None):
+        if material is None:
+            material = shader
+        if material is None:
+            raise ValueError("add_mesh requires a material or compatibility shader")
+        return self.scene.add_mesh(path, mesh_data, material, color=color)
 
     def add_skinned_mesh(
         self,
         prim,
-        shader,
+        material,
         skinned_mesh_data,
         transform_source=None,
     ):
-        """Register a skinned mesh prim and return a RenderablePrimView."""
+        """Register a skinned mesh prim and return a RenderablePrimView.
+
+        Prefer a Material. Shader input remains accepted for compatibility.
+        """
         if transform_source is None:
             transform_source = _ke.TransformSource.SceneGraph
         self._add_skinned_renderable(
-            shader,
+            material,
             prim,
             skinned_mesh_data,
             transform_source,

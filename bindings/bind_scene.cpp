@@ -15,9 +15,11 @@
 #include "engine/scene/component/render_component.hpp"
 #include "engine/scene/component/light_component.hpp"
 #include "engine/scene/component/camera_component.hpp"
+#include "engine/scene/component/material_binding_component.hpp"
 #include "engine/scene/component/scene_render_system.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/native/token.hpp"
+#include "engine/graphics/material/material.hpp"
 #include "py_array_view.hpp"
 
 #ifdef KANGENGINE_USE_USD
@@ -127,6 +129,35 @@ void bind_scene(py::module& m) {
             const KE::Scene::Prim* owner = c.owner();
             const std::string path = owner ? owner->getPath() : "<detached>";
             return "<RenderComponent path='" + path +
+                   "' version=" + std::to_string(c.version()) + ">";
+        });
+
+    py::class_<KE::Scene::MaterialBindingComponent,
+               std::shared_ptr<KE::Scene::MaterialBindingComponent>>(
+        scene, "MaterialBindingComponent",
+        "Scene-level non-owning binding from one prim to a renderer material.")
+        .def_property_readonly("attached",
+                               &KE::Scene::MaterialBindingComponent::isAttached,
+                               "Return whether this component is attached.")
+        .def_property_readonly("owner",
+                               &KE::Scene::MaterialBindingComponent::owner,
+                               py::return_value_policy::reference,
+                               "Return the owning prim, or None after detach.")
+        .def_property(
+            "material", &KE::Scene::MaterialBindingComponent::material,
+            &KE::Scene::MaterialBindingComponent::setMaterial,
+            py::return_value_policy::reference,
+            "Get or set the bound material. The component does not own it.")
+        .def("clear_material",
+             &KE::Scene::MaterialBindingComponent::clearMaterial,
+             "Clear the material binding.")
+        .def_property_readonly("version",
+                               &KE::Scene::MaterialBindingComponent::version,
+                               "Return the material binding version.")
+        .def("__repr__", [](const KE::Scene::MaterialBindingComponent& c) {
+            const KE::Scene::Prim* owner = c.owner();
+            const std::string path = owner ? owner->getPath() : "<detached>";
+            return "<MaterialBindingComponent path='" + path +
                    "' version=" + std::to_string(c.version()) + ">";
         });
 
@@ -241,6 +272,11 @@ void bind_scene(py::module& m) {
         .def("set_alpha_mode", &KE::Scene::SceneRenderSystem::setAlphaMode,
              py::arg("component"), py::arg("mode"), py::arg("cutoff") = 0.5f,
              "Set alpha rendering through component registration.")
+        .def("set_material", &KE::Scene::SceneRenderSystem::setMaterial,
+             py::arg("component"), py::arg("material"),
+             "Replace a registered SceneGraph renderable's material and move "
+             "it to the matching renderer batch. ExternalBuffer renderables "
+             "reject dynamic material replacement.")
         .def(
             "set_texture",
             [](KE::Scene::SceneRenderSystem& self,
@@ -359,6 +395,18 @@ void bind_scene(py::module& m) {
              "Return whether this prim has a render component.")
         .def("remove_render_component", &KE::Scene::Prim::removeRenderComponent,
              "Detach this prim's render component.")
+        .def("add_material_binding_component",
+             &KE::Scene::Prim::addMaterialBindingComponent,
+             "Attach and return this prim's material binding component.")
+        .def("get_material_binding_component",
+             &KE::Scene::Prim::getMaterialBindingComponent,
+             "Return this prim's material binding component, or None.")
+        .def("has_material_binding_component",
+             &KE::Scene::Prim::hasMaterialBindingComponent,
+             "Return whether this prim has a material binding component.")
+        .def("remove_material_binding_component",
+             &KE::Scene::Prim::removeMaterialBindingComponent,
+             "Detach this prim's material binding component.")
         .def("add_light_component", &KE::Scene::Prim::addLightComponent,
              "Attach and return this Light prim's light component.")
         .def("get_light_component", &KE::Scene::Prim::getLightComponent,
@@ -477,6 +525,11 @@ void bind_scene(py::module& m) {
              py::arg("color"), "Set RGBA display color metadata.")
         .def("get_display_color_alpha", &KE::Scene::Prim::getDisplayColorAlpha,
              "Return RGBA display color metadata if present.")
+        .def("set_material", &KE::Scene::Prim::setMaterial, py::arg("material"),
+             "Bind a non-owned material to this prim at the scene level.")
+        .def("get_material", &KE::Scene::Prim::getMaterial,
+             py::return_value_policy::reference,
+             "Return the bound material, or None.")
         // Light data
         .def("get_light_type", &KE::Scene::Prim::getLightType,
              py::arg("default_type") = KE::Scene::LightType::Point,

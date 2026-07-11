@@ -12,6 +12,7 @@
 #include "animation/character_description.hpp"
 #include "asset/bvh_loader.hpp"
 #include "asset/fbx_loader.hpp"
+#include "asset/mesh_loader.hpp"
 #include "asset/mjcf_loader.hpp"
 #include "asset/usd_loader.hpp"
 #include "animation/skeleton_math.hpp"
@@ -277,11 +278,28 @@ std::vector<Eigen::Matrix4f> eigenMat4ArrayFromPy(const FloatArray& array,
 } // namespace
 
 void bind_animation(py::module& m) {
-    py::module anim =
-        m.def_submodule("animation",
-                        "Skeleton animation, skinning, and visualization APIs.");
+    py::module anim = m.def_submodule(
+        "animation", "Skeleton animation, skinning, and visualization APIs.");
     py::module asset =
         m.def_submodule("asset", "Asset importers and loader result types.");
+
+    asset.def(
+        "load_obj",
+        [](const std::string& path) {
+            return std::make_shared<KE::Scene::MeshData>(
+                KE::Asset::loadObj(path));
+        },
+        py::arg("path"),
+        "Load an OBJ file and return scene.MeshData. Materials are not "
+        "imported; use the returned mesh data with an App/Scene renderable.");
+
+    asset.def(
+        "load_stl",
+        [](const std::string& path) {
+            return std::make_shared<KE::Scene::MeshData>(
+                KE::Asset::loadStl(path));
+        },
+        py::arg("path"), "Load an STL file and return scene.MeshData.");
 
     anim.def(
         "cpu_skin",
@@ -323,7 +341,8 @@ void bind_animation(py::module& m) {
         py::arg("bone_indices"), py::arg("bone_weights"),
         py::arg("bone_node_indices"), py::arg("inverse_bind_matrices"),
         py::arg("current_global_matrices"),
-        "CPU-skin bind-space positions and normals with current bone matrices.");
+        "CPU-skin bind-space positions and normals with current bone "
+        "matrices.");
 
     anim.def(
         "compute_skinning_matrices",
@@ -368,9 +387,9 @@ void bind_animation(py::module& m) {
         .def_readonly("name", &Joint::name, "Joint name.")
         .def_readonly("lo_limit", &Joint::loLimit, "Lower joint limit.")
         .def_readonly("hi_limit", &Joint::hiLimit, "Upper joint limit.")
-        .def_property_readonly("axis",
-                               [](const Joint& j) { return toGlm(j.axis); },
-                               "Joint axis.");
+        .def_property_readonly(
+            "axis", [](const Joint& j) { return toGlm(j.axis); },
+            "Joint axis.");
 
     py::enum_<Site::Type>(anim, "SiteType", "MJCF site geometry type.")
         .value("Sphere", Site::Type::Sphere)
@@ -385,46 +404,51 @@ void bind_animation(py::module& m) {
         .def_readonly("name", &Site::name, "Site name.")
         .def_readonly("body_index", &Site::bodyIndex,
                       "Index of the body this site belongs to.")
-        .def_property_readonly("pos",
-                               [](const Site& s) { return toGlm(s.pos); },
-                               "Local site position.")
-        .def_property_readonly("quat",
-                               [](const Site& s) { return toGlm(s.quat); },
-                               "Local site orientation.")
-        .def_property_readonly("size",
-                               [](const Site& s) { return toGlm(s.size); },
-                               "Site size parameters.")
-        .def_property_readonly("rgba",
-                               [](const Site& s) {
-                                   return glm::vec4(s.rgba.x(), s.rgba.y(),
-                                                    s.rgba.z(), s.rgba.w());
-                               },
-                               "Site display color.")
+        .def_property_readonly(
+            "pos", [](const Site& s) { return toGlm(s.pos); },
+            "Local site position.")
+        .def_property_readonly(
+            "quat", [](const Site& s) { return toGlm(s.quat); },
+            "Local site orientation.")
+        .def_property_readonly(
+            "size", [](const Site& s) { return toGlm(s.size); },
+            "Site size parameters.")
+        .def_property_readonly(
+            "rgba",
+            [](const Site& s) {
+                return glm::vec4(s.rgba.x(), s.rgba.y(), s.rgba.z(),
+                                 s.rgba.w());
+            },
+            "Site display color.")
         .def_readonly("has_zaxis", &Site::hasZAxis,
                       "Whether this site has an explicit z-axis.")
-        .def_property_readonly("zaxis",
-                               [](const Site& s) { return toGlm(s.zaxis); },
-                               "Explicit site z-axis if present.");
+        .def_property_readonly(
+            "zaxis", [](const Site& s) { return toGlm(s.zaxis); },
+            "Explicit site z-axis if present.");
 
     // MeshInfo
     py::class_<MeshInfo>(anim, "MeshInfo",
                          "Visual mesh reference imported from an MJCF asset.")
         .def_readonly("body_name", &MeshInfo::bodyName, "Owning body name.")
         .def_readonly("mesh_file", &MeshInfo::meshFile, "Mesh file path.")
-        .def_readonly("body_index", &MeshInfo::bodyIndex,
-                      "Owning body index.")
-        .def_property_readonly("pos",
-                               [](const MeshInfo& m) { return toGlm(m.pos); },
-                               "Local mesh position.")
-        .def_property_readonly("quat",
-                               [](const MeshInfo& m) {
-                                   return glm::quat(m.quat.w(), m.quat.x(),
-                                                    m.quat.y(), m.quat.z());
-                               },
-                               "Local mesh orientation.")
-        .def_property_readonly("rgba", [](const MeshInfo& m) {
-            return glm::vec4(m.rgba.x(), m.rgba.y(), m.rgba.z(), m.rgba.w());
-        }, "Mesh display color.");
+        .def_readonly("body_index", &MeshInfo::bodyIndex, "Owning body index.")
+        .def_property_readonly(
+            "pos", [](const MeshInfo& m) { return toGlm(m.pos); },
+            "Local mesh position.")
+        .def_property_readonly(
+            "quat",
+            [](const MeshInfo& m) {
+                return glm::quat(m.quat.w(), m.quat.x(), m.quat.y(),
+                                 m.quat.z());
+            },
+            "Local mesh orientation.")
+        .def_property_readonly(
+            "rgba",
+            [](const MeshInfo& m) {
+                return glm::vec4(m.rgba.x(), m.rgba.y(), m.rgba.z(),
+                                 m.rgba.w());
+            },
+            "Mesh display color.");
 
     py::enum_<CollisionGeom::Type>(
         anim, "CollisionGeomType",
@@ -444,12 +468,12 @@ void bind_animation(py::module& m) {
         .def_property_readonly(
             "quat", [](const CollisionGeom& g) { return toGlm(g.quat); },
             "Local collision orientation.")
-        .def_property_readonly("size",
-                               [](const CollisionGeom& g) {
-                                   return std::vector<float>{
-                                       g.size[0], g.size[1], g.size[2]};
-                               },
-                               "Collision size parameters.")
+        .def_property_readonly(
+            "size",
+            [](const CollisionGeom& g) {
+                return std::vector<float>{g.size[0], g.size[1], g.size[2]};
+            },
+            "Collision size parameters.")
         .def_readonly("has_from_to", &CollisionGeom::hasFromTo,
                       "Whether capsule-style from/to endpoints are present.")
         .def_property_readonly(
@@ -466,32 +490,35 @@ void bind_animation(py::module& m) {
                       "Imported collision margin.");
 
     // CharacterData — aggregate returned by asset importers.
-    py::class_<CharacterData>(
-        anim, "CharacterData",
-        "Imported character description with skeleton, meshes, joints, and sites.")
+    py::class_<CharacterData>(anim, "CharacterData",
+                              "Imported character description with skeleton, "
+                              "meshes, joints, and sites.")
         .def_readonly("skeleton_tree", &CharacterData::skeletonTree,
                       "Imported skeleton hierarchy.")
         .def_readonly("mesh_infos", &CharacterData::meshInfos,
                       "Visual mesh references.")
         .def_readonly("mesh_dir", &CharacterData::meshDir,
                       "Directory used to resolve mesh files.")
-        .def_readonly("sites", &CharacterData::sites,
-                      "Imported site markers.")
+        .def_readonly("sites", &CharacterData::sites, "Imported site markers.")
         // joints: return dict[int, list[Joint]]
-        .def_property_readonly("joints",
-                               [](const CharacterData& d) {
-                                   py::dict result;
-                                   for (const auto& [idx, jvec] : d.joints)
-                                       result[py::int_(idx)] = jvec;
-                                   return result;
-                               },
-                               "Joint metadata keyed by body index.")
-        .def_property_readonly("collision_geoms", [](const CharacterData& d) {
-            py::dict result;
-            for (const auto& [idx, geoms] : d.collisionGeoms)
-                result[py::int_(idx)] = geoms;
-            return result;
-        }, "Collision geometry keyed by body index.");
+        .def_property_readonly(
+            "joints",
+            [](const CharacterData& d) {
+                py::dict result;
+                for (const auto& [idx, jvec] : d.joints)
+                    result[py::int_(idx)] = jvec;
+                return result;
+            },
+            "Joint metadata keyed by body index.")
+        .def_property_readonly(
+            "collision_geoms",
+            [](const CharacterData& d) {
+                py::dict result;
+                for (const auto& [idx, geoms] : d.collisionGeoms)
+                    result[py::int_(idx)] = geoms;
+                return result;
+            },
+            "Collision geometry keyed by body index.");
 
     py::class_<ImportDiagnostics>(
         asset, "ImportDiagnostics",
@@ -499,9 +526,8 @@ void bind_animation(py::module& m) {
         .def_readonly("warnings", &ImportDiagnostics::warnings,
                       "Human-readable importer warnings.");
 
-    py::class_<MJCFImportResult>(
-        asset, "MJCFImportResult",
-        "Parsed MJCF character plus diagnostics.")
+    py::class_<MJCFImportResult>(asset, "MJCFImportResult",
+                                 "Parsed MJCF character plus diagnostics.")
         .def_readonly("character", &MJCFImportResult::character,
                       "Imported character data.")
         .def_readonly("diagnostics", &MJCFImportResult::diagnostics,
@@ -516,9 +542,8 @@ void bind_animation(py::module& m) {
                     py::arg("scale") = 1.0f, py::arg("order") = "DFS",
                     "Load MJCF and return character data.");
 
-    py::class_<BVHImportResult>(
-        asset, "BVHImportResult",
-        "Parsed BVH skeleton motion plus diagnostics.")
+    py::class_<BVHImportResult>(asset, "BVHImportResult",
+                                "Parsed BVH skeleton motion plus diagnostics.")
         .def_readonly("motion", &BVHImportResult::motion,
                       "Imported skeleton motion.")
         .def_readonly("diagnostics", &BVHImportResult::diagnostics,
@@ -556,14 +581,14 @@ void bind_animation(py::module& m) {
     py::class_<FBXMaterialInfo>(asset, "FBXMaterialInfo",
                                 "Material metadata imported from an FBX file.")
         .def_readonly("name", &FBXMaterialInfo::name, "Material name.")
-        .def_property_readonly("diffuse_color",
-                               [](const FBXMaterialInfo& self) {
-                                   return py::make_tuple(self.diffuseColor[0],
-                                                         self.diffuseColor[1],
-                                                         self.diffuseColor[2],
-                                                         self.diffuseColor[3]);
-                               },
-                               "Diffuse color as RGBA.")
+        .def_property_readonly(
+            "diffuse_color",
+            [](const FBXMaterialInfo& self) {
+                return py::make_tuple(
+                    self.diffuseColor[0], self.diffuseColor[1],
+                    self.diffuseColor[2], self.diffuseColor[3]);
+            },
+            "Diffuse color as RGBA.")
         .def_readonly("diffuse_texture_path",
                       &FBXMaterialInfo::diffuseTexturePath,
                       "Resolved diffuse texture path.")
@@ -607,8 +632,7 @@ void bind_animation(py::module& m) {
                       "Material metadata assigned to this mesh.");
 
     py::class_<FBXStaticMeshInfo, std::shared_ptr<FBXStaticMeshInfo>>(
-        asset, "FBXMeshInfo",
-        "Static mesh payload imported from an FBX file.")
+        asset, "FBXMeshInfo", "Static mesh payload imported from an FBX file.")
         .def_property_readonly(
             "metadata",
             [](const FBXStaticMeshInfo& self) { return self.metadata; })
@@ -780,17 +804,18 @@ void bind_animation(py::module& m) {
         .def_readonly("motion", &FBXCharacterData::motion,
                       "Imported skeleton motion.")
         .def_property_readonly(
-            "skinned_meshes", [](const FBXCharacterData& self) {
+            "skinned_meshes",
+            [](const FBXCharacterData& self) {
                 py::list result;
                 for (const auto& mesh : self.skinnedMeshes) {
                     result.append(std::make_shared<FBXSkinnedMeshInfo>(mesh));
                 }
                 return result;
-            }, "Imported skinned meshes.");
+            },
+            "Imported skinned meshes.");
 
-    py::class_<FBXImportResult>(
-        asset, "FBXImportResult",
-        "Parsed FBX character, clips, and diagnostics.")
+    py::class_<FBXImportResult>(asset, "FBXImportResult",
+                                "Parsed FBX character, clips, and diagnostics.")
         .def_readonly("character", &FBXImportResult::character,
                       "Imported FBX character data.")
         .def_property_readonly(
@@ -836,10 +861,11 @@ void bind_animation(py::module& m) {
             },
             py::arg("fbx_path"), py::arg("scale") = 0.01f,
             "Load static meshes from an FBX file.")
-        .def_static("parse", &FBXLoader::parse, py::arg("fbx_path"),
-                    py::arg("clip_index") = -1, py::arg("fps") = -1.0f,
-                    py::arg("scale") = 0.01f,
-                    "Parse an FBX file and return character data plus diagnostics.")
+        .def_static(
+            "parse", &FBXLoader::parse, py::arg("fbx_path"),
+            py::arg("clip_index") = -1, py::arg("fps") = -1.0f,
+            py::arg("scale") = 0.01f,
+            "Parse an FBX file and return character data plus diagnostics.")
         .def_static("parse_with_bind", &FBXLoader::parseWithBind,
                     py::arg("motion_fbx_path"), py::arg("bind_fbx_path"),
                     py::arg("clip_index") = -1, py::arg("fps") = -1.0f,
@@ -876,8 +902,7 @@ void bind_animation(py::module& m) {
                  "Load FBX skin cluster diagnostics.");
 
     py::class_<USDMeshInfo, std::shared_ptr<USDMeshInfo>>(
-        asset, "USDMeshInfo",
-        "Mesh payload imported from a USD scene.")
+        asset, "USDMeshInfo", "Mesh payload imported from a USD scene.")
         .def_readonly("prim_path", &USDMeshInfo::primPath, "USD prim path.")
         .def_readonly("name", &USDMeshInfo::name, "Mesh name.")
         .def_readonly("material_path", &USDMeshInfo::materialPath,
@@ -899,24 +924,22 @@ void bind_animation(py::module& m) {
             return self.meshData.indices.size();
         });
 
-    py::class_<USDImportResult>(
-        asset, "USDImportResult",
-        "Parsed USD meshes plus diagnostics.")
-        .def_property_readonly("meshes",
-                               [](const USDImportResult& self) {
-                                   py::list result;
-                                   for (const auto& mesh : self.meshes) {
-                                       result.append(
-                                           std::make_shared<USDMeshInfo>(mesh));
-                                   }
-                                   return result;
-                               },
-                               "Meshes imported from the USD scene.")
+    py::class_<USDImportResult>(asset, "USDImportResult",
+                                "Parsed USD meshes plus diagnostics.")
+        .def_property_readonly(
+            "meshes",
+            [](const USDImportResult& self) {
+                py::list result;
+                for (const auto& mesh : self.meshes) {
+                    result.append(std::make_shared<USDMeshInfo>(mesh));
+                }
+                return result;
+            },
+            "Meshes imported from the USD scene.")
         .def_readonly("diagnostics", &USDImportResult::diagnostics,
                       "Importer diagnostics.");
 
-    py::class_<USDLoader>(asset, "USDLoader",
-                          "Loader for USD mesh scenes.")
+    py::class_<USDLoader>(asset, "USDLoader", "Loader for USD mesh scenes.")
         .def_static("parse", &USDLoader::parse, py::arg("usd_path"),
                     py::arg("scale") = 1.0f,
                     "Parse USD and return meshes plus diagnostics.")
@@ -943,18 +966,19 @@ void bind_animation(py::module& m) {
              "Return a joint name by index.")
         .def("parent_index", &SkeletonTree::parentIndex, py::arg("index"),
              "Return a joint's parent index, or -1 for the root.")
-        .def("local_translation",
-             [](const SkeletonTree& self, int i) {
-                 return toGlm(self.localTranslation(i));
-             },
-             py::arg("index"), "Return local bind translation for a joint.")
-        .def("local_rotation",
-             [](const SkeletonTree& self, int i) {
-                 return toGlm(self.localRotation(i));
-             },
-             py::arg("index"), "Return local bind rotation for a joint.")
-        .def("node_names", &SkeletonTree::nodeNames,
-             "Return all joint names.")
+        .def(
+            "local_translation",
+            [](const SkeletonTree& self, int i) {
+                return toGlm(self.localTranslation(i));
+            },
+            py::arg("index"), "Return local bind translation for a joint.")
+        .def(
+            "local_rotation",
+            [](const SkeletonTree& self, int i) {
+                return toGlm(self.localRotation(i));
+            },
+            py::arg("index"), "Return local bind rotation for a joint.")
+        .def("node_names", &SkeletonTree::nodeNames, "Return all joint names.")
         .def("parent_indices", &SkeletonTree::parentIndices,
              "Return parent index for each joint.")
         .def("print", &SkeletonTree::print,
@@ -967,38 +991,41 @@ void bind_animation(py::module& m) {
              "Return the number of sampled frames.")
         .def("num_joints", &SkeletonMotion::numJoints,
              "Return the number of joints.")
-        .def("fps", &SkeletonMotion::fps,
-             "Return the clip frame rate in Hz.")
+        .def("fps", &SkeletonMotion::fps, "Return the clip frame rate in Hz.")
         .def("duration", &SkeletonMotion::duration,
              "Return the clip duration in seconds.")
         .def("motion_name", &SkeletonMotion::motionName,
              "Return the motion/clip name.")
-        .def("node_names",
-             [](const SkeletonMotion& self) {
-                 return self.skeletonTree().nodeNames();
-             },
-             "Return skeleton joint names.")
-        .def("parent_indices",
-             [](const SkeletonMotion& self) {
-                 return self.skeletonTree().parentIndices();
-             },
-             "Return skeleton parent indices.")
+        .def(
+            "node_names",
+            [](const SkeletonMotion& self) {
+                return self.skeletonTree().nodeNames();
+            },
+            "Return skeleton joint names.")
+        .def(
+            "parent_indices",
+            [](const SkeletonMotion& self) {
+                return self.skeletonTree().parentIndices();
+            },
+            "Return skeleton parent indices.")
         .def("frame", &SkeletonMotion::frame, py::arg("frame_index"),
              "Return a SkeletonState for a frame.")
         .def("sample", &SkeletonMotion::sample, py::arg("time"),
              py::arg("loop") = true,
              "Sample a SkeletonState at time in seconds.")
-        .def("root_translation",
-             [](const SkeletonMotion& self, int frame) {
-                 return toGlm(self.rootTranslation(frame));
-             },
-             py::arg("frame"), "Return root translation for a frame.")
-        .def("local_rotation",
-             [](const SkeletonMotion& self, int frame, int joint) {
-                 return toGlm(self.localRotation(frame, joint));
-             },
-             py::arg("frame"), py::arg("joint"),
-             "Return local joint rotation for a frame.")
+        .def(
+            "root_translation",
+            [](const SkeletonMotion& self, int frame) {
+                return toGlm(self.rootTranslation(frame));
+            },
+            py::arg("frame"), "Return root translation for a frame.")
+        .def(
+            "local_rotation",
+            [](const SkeletonMotion& self, int frame, int joint) {
+                return toGlm(self.localRotation(frame, joint));
+            },
+            py::arg("frame"), py::arg("joint"),
+            "Return local joint rotation for a frame.")
         .def("root_translations_flat", &SkeletonMotion::rootTranslationsFlat,
              "Return root translations as a flat float array.")
         .def("local_rotations_wxyz_flat",
@@ -1011,14 +1038,15 @@ void bind_animation(py::module& m) {
         .def_property_readonly(
             "rotation", [](const Transform& t) { return toGlm(t.rotation); },
             "World or local rotation.")
-        .def_property_readonly("translation", [](const Transform& t) {
-            return toGlm(t.translation);
-        }, "World or local translation.");
+        .def_property_readonly(
+            "translation",
+            [](const Transform& t) { return toGlm(t.translation); },
+            "World or local translation.");
 
     // SkeletonState
-    py::class_<SkeletonState>(
-        anim, "SkeletonState",
-        "Pose state for a SkeletonTree, stored as root translation and rotations.")
+    py::class_<SkeletonState>(anim, "SkeletonState",
+                              "Pose state for a SkeletonTree, stored as root "
+                              "translation and rotations.")
         .def_static(
             "from_rotation_and_root_translation",
             [](std::shared_ptr<SkeletonTree> tree, const FloatArray& rotations,
@@ -1043,79 +1071,87 @@ void bind_animation(py::module& m) {
         .def("compute_global_transforms",
              &SkeletonState::computeGlobalTransforms,
              "Compute global FK transforms for all joints.")
-        .def("compute_global_matrices",
-             [](const SkeletonState& self) {
-                 const auto transforms = self.computeGlobalTransforms();
-                 py::array_t<float> array(
-                     {static_cast<py::ssize_t>(transforms.size()),
-                      py::ssize_t(4), py::ssize_t(4)});
-                 auto view = array.mutable_unchecked<3>();
-                 for (py::ssize_t i = 0;
-                      i < static_cast<py::ssize_t>(transforms.size()); ++i) {
-                     const auto& t = transforms[static_cast<size_t>(i)];
-                     const Eigen::Matrix3f r =
-                         t.rotation.normalized().toRotationMatrix();
-                     for (py::ssize_t row = 0; row < 4; ++row) {
-                         for (py::ssize_t col = 0; col < 4; ++col)
-                             view(i, row, col) = (row == col) ? 1.0f : 0.0f;
-                     }
-                     for (py::ssize_t row = 0; row < 3; ++row) {
-                         for (py::ssize_t col = 0; col < 3; ++col) {
-                             view(i, row, col) = r(static_cast<int>(row),
-                                                   static_cast<int>(col));
-                         }
-                     }
-                     view(i, 0, 3) = t.translation.x();
-                     view(i, 1, 3) = t.translation.y();
-                     view(i, 2, 3) = t.translation.z();
-                 }
-                 return array;
-             },
-             "Compute global FK matrices for all joints.")
-        .def("compute_global_positions",
-             [](const SkeletonState& self) {
-                 auto positions = self.computeGlobalPositions();
-                 std::vector<glm::vec3> result;
-                 result.reserve(positions.size());
-                 for (const auto& p : positions) {
-                     result.push_back(toGlm(p));
-                 }
-                 return result;
-             },
-             "Compute global joint positions.")
-        .def("rotation", [](const SkeletonState& self,
-                            int i) { return toGlm(self.rotation(i)); },
-             py::arg("index"), "Return a joint rotation.")
-        .def("set_rotation",
-             [](SkeletonState& self, int i, const FloatArray& q) {
-                 self.setRotation(i, eigenQuatXyzwFromArray(q, "rotation"));
-             },
-             py::arg("index"), py::arg("rotation"),
-             "Set a joint rotation from an XYZW array.")
-        .def("set_rotation",
-             [](SkeletonState& self, int i, const glm::quat& q) {
-                 self.setRotation(i, fromGlm(q));
-             },
-             py::arg("index"), py::arg("rotation"),
-             "Set a joint rotation from a quaternion.")
-        .def("root_translation",
-             [](const SkeletonState& self) {
-                 return toGlm(self.rootTranslation());
-             },
-             "Return the root translation.")
-        .def("set_root_translation",
-             [](SkeletonState& self, const FloatArray& t) {
-                 self.setRootTranslation(
-                     eigenVec3FromArray(t, "root_translation"));
-             },
-             py::arg("translation"),
-             "Set the root translation from an array.")
-        .def("set_root_translation",
-             [](SkeletonState& self, const glm::vec3& t) {
-                 self.setRootTranslation(fromGlm(t));
-             },
-             py::arg("translation"),
-             "Set the root translation from a vec3.")
+        .def(
+            "compute_global_matrices",
+            [](const SkeletonState& self) {
+                const auto transforms = self.computeGlobalTransforms();
+                py::array_t<float> array(
+                    {static_cast<py::ssize_t>(transforms.size()),
+                     py::ssize_t(4), py::ssize_t(4)});
+                auto view = array.mutable_unchecked<3>();
+                for (py::ssize_t i = 0;
+                     i < static_cast<py::ssize_t>(transforms.size()); ++i) {
+                    const auto& t = transforms[static_cast<size_t>(i)];
+                    const Eigen::Matrix3f r =
+                        t.rotation.normalized().toRotationMatrix();
+                    for (py::ssize_t row = 0; row < 4; ++row) {
+                        for (py::ssize_t col = 0; col < 4; ++col)
+                            view(i, row, col) = (row == col) ? 1.0f : 0.0f;
+                    }
+                    for (py::ssize_t row = 0; row < 3; ++row) {
+                        for (py::ssize_t col = 0; col < 3; ++col) {
+                            view(i, row, col) =
+                                r(static_cast<int>(row), static_cast<int>(col));
+                        }
+                    }
+                    view(i, 0, 3) = t.translation.x();
+                    view(i, 1, 3) = t.translation.y();
+                    view(i, 2, 3) = t.translation.z();
+                }
+                return array;
+            },
+            "Compute global FK matrices for all joints.")
+        .def(
+            "compute_global_positions",
+            [](const SkeletonState& self) {
+                auto positions = self.computeGlobalPositions();
+                std::vector<glm::vec3> result;
+                result.reserve(positions.size());
+                for (const auto& p : positions) {
+                    result.push_back(toGlm(p));
+                }
+                return result;
+            },
+            "Compute global joint positions.")
+        .def(
+            "rotation",
+            [](const SkeletonState& self, int i) {
+                return toGlm(self.rotation(i));
+            },
+            py::arg("index"), "Return a joint rotation.")
+        .def(
+            "set_rotation",
+            [](SkeletonState& self, int i, const FloatArray& q) {
+                self.setRotation(i, eigenQuatXyzwFromArray(q, "rotation"));
+            },
+            py::arg("index"), py::arg("rotation"),
+            "Set a joint rotation from an XYZW array.")
+        .def(
+            "set_rotation",
+            [](SkeletonState& self, int i, const glm::quat& q) {
+                self.setRotation(i, fromGlm(q));
+            },
+            py::arg("index"), py::arg("rotation"),
+            "Set a joint rotation from a quaternion.")
+        .def(
+            "root_translation",
+            [](const SkeletonState& self) {
+                return toGlm(self.rootTranslation());
+            },
+            "Return the root translation.")
+        .def(
+            "set_root_translation",
+            [](SkeletonState& self, const FloatArray& t) {
+                self.setRootTranslation(
+                    eigenVec3FromArray(t, "root_translation"));
+            },
+            py::arg("translation"), "Set the root translation from an array.")
+        .def(
+            "set_root_translation",
+            [](SkeletonState& self, const glm::vec3& t) {
+                self.setRootTranslation(fromGlm(t));
+            },
+            py::arg("translation"), "Set the root translation from a vec3.")
         .def("print_global_positions", &SkeletonState::printGlobalPositions,
              "Print global joint positions for debugging.");
 
@@ -1138,32 +1174,34 @@ void bind_animation(py::module& m) {
             "Create a skeleton bridge and scene prims from an MJCF file.")
         .def("apply_pose", &SkeletonBridge::applyPose,
              "Apply the bridge's current SkeletonState to scene prims.")
-        .def("set_joint_rotation",
-             [](SkeletonBridge& self, int idx, const FloatArray& q) {
-                 self.setJointRotation(idx,
-                                       eigenQuatXyzwFromArray(q, "rotation"));
-             },
-             py::arg("index"), py::arg("rotation"),
-             "Set a joint rotation from an XYZW array.")
-        .def("set_joint_rotation",
-             [](SkeletonBridge& self, int idx, const glm::quat& q) {
-                 self.setJointRotation(idx, fromGlm(q));
-             },
-             py::arg("index"), py::arg("rotation"),
-             "Set a joint rotation from a quaternion.")
-        .def("set_root_translation",
-             [](SkeletonBridge& self, const FloatArray& t) {
-                 self.setRootTranslation(
-                     eigenVec3FromArray(t, "root_translation"));
-             },
-             py::arg("translation"),
-             "Set the root translation from an array.")
-        .def("set_root_translation",
-             [](SkeletonBridge& self, const glm::vec3& t) {
-                 self.setRootTranslation(fromGlm(t));
-             },
-             py::arg("translation"),
-             "Set the root translation from a vec3.")
+        .def(
+            "set_joint_rotation",
+            [](SkeletonBridge& self, int idx, const FloatArray& q) {
+                self.setJointRotation(idx,
+                                      eigenQuatXyzwFromArray(q, "rotation"));
+            },
+            py::arg("index"), py::arg("rotation"),
+            "Set a joint rotation from an XYZW array.")
+        .def(
+            "set_joint_rotation",
+            [](SkeletonBridge& self, int idx, const glm::quat& q) {
+                self.setJointRotation(idx, fromGlm(q));
+            },
+            py::arg("index"), py::arg("rotation"),
+            "Set a joint rotation from a quaternion.")
+        .def(
+            "set_root_translation",
+            [](SkeletonBridge& self, const FloatArray& t) {
+                self.setRootTranslation(
+                    eigenVec3FromArray(t, "root_translation"));
+            },
+            py::arg("translation"), "Set the root translation from an array.")
+        .def(
+            "set_root_translation",
+            [](SkeletonBridge& self, const glm::vec3& t) {
+                self.setRootTranslation(fromGlm(t));
+            },
+            py::arg("translation"), "Set the root translation from a vec3.")
         .def("reset_to_zero_pose", &SkeletonBridge::resetToZeroPose,
              "Reset all joint rotations and root translation to zero pose.")
         .def(
@@ -1180,8 +1218,8 @@ void bind_animation(py::module& m) {
             },
             py::return_value_policy::reference_internal,
             "Return the mutable current skeleton state.")
-        .def("body_prim", &SkeletonBridge::bodyPrim,
-             py::arg("index"), py::return_value_policy::reference,
+        .def("body_prim", &SkeletonBridge::bodyPrim, py::arg("index"),
+             py::return_value_policy::reference,
              "Return the scene prim for a body index.")
         .def("body_prims", &SkeletonBridge::bodyPrims,
              py::return_value_policy::reference_internal,

@@ -1,4 +1,7 @@
 #version 410 core
+// PBRMaterial forward path.
+// uBaseColorFactor/textures provide shared material appearance, while vColor is
+// the per-instance multiplier so color overrides do not break instancing.
 out vec4 FragColor;
 in vec3 Normal;
 in vec3 FragPos;

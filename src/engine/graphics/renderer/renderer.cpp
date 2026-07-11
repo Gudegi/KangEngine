@@ -152,28 +152,20 @@ void Renderer::renderSceneToFramebuffer(Camera& camera,
         _device->setViewport(0, 0, _viewportWidth, _viewportHeight);
 }
 
-RenderableHandle Renderer::addRenderable(Backend::Shader* shader,
-                                         Scene::Prim* prim,
-                                         TransformSource transformSource) {
-    return _rasterizer
-               ? _rasterizer->addRenderable(shader, prim, transformSource)
-               : InvalidHandle;
-}
-
-RenderableHandle Renderer::addSkinnedRenderable(
-    Backend::Shader* shader, Scene::Prim* prim,
-    const Scene::SkinnedMeshData& skinnedMesh,
-    TransformSource transformSource) {
-    return _rasterizer ? _rasterizer->addSkinnedRenderable(
-                             shader, prim, skinnedMesh, transformSource)
-                       : InvalidHandle;
-}
-
 RenderableHandle Renderer::addRenderable(Material* material, Scene::Prim* prim,
                                          TransformSource transformSource) {
     return _rasterizer
                ? _rasterizer->addRenderable(material, prim, transformSource)
                : InvalidHandle;
+}
+
+RenderableHandle Renderer::addSkinnedRenderable(
+    Material* material, Scene::Prim* prim,
+    const Scene::SkinnedMeshData& skinnedMesh,
+    TransformSource transformSource) {
+    return _rasterizer ? _rasterizer->addSkinnedRenderable(
+                             material, prim, skinnedMesh, transformSource)
+                       : InvalidHandle;
 }
 
 void Renderer::removePrim(RenderableHandle handle, Scene::Prim* prim) {

@@ -32,11 +32,11 @@ namespace KE {
 // Two-source transform ownership
 //
 // Source A — SceneGraph-driven
-//   addRenderable(shader, prim) → instancer polls Prim attributes every frame
+//   addRenderable(material, prim) → instancer polls Prim attributes every frame
 //   Use for: static geometry, any object the scene graph owns
 //
 // Source B — ExternalBuffer-driven
-//   handle = addRenderable(shader, prim)       // register once at setup
+//   handle = addRenderable(material, prim)     // register once at setup
 //   setRenderableColors(handle, colors)        // upload colors once
 //   updateRenderableTransforms(handle, mats)   // upload transforms per frame
 //   Use for: PhysX rigid bodies, large instanced crowds, anything with
@@ -44,7 +44,8 @@ namespace KE {
 //
 // Sources are split at the Rasterizer key level, so scene-graph objects and
 // external simulation buffers can share shader/mesh/material without
-// interfering.
+// interfering. Legacy shader-only APIs are wrapped into VertexColorMaterial
+// before they reach this layer.
 // ---------------------------------------------------------------------------
 
 class Rasterizer : public RenderPipeline {
@@ -56,7 +57,7 @@ class Rasterizer : public RenderPipeline {
     struct InstancerKey {
         Backend::Shader* shader;
         const Scene::MeshData* mesh;
-        Material* material; // nullptr for shader-only path
+        Material* material;
         TransformSource transformSource;
         bool operator<(const InstancerKey& o) const {
             if (shader != o.shader)
@@ -223,14 +224,11 @@ class Rasterizer : public RenderPipeline {
     int getCullingCulledInstances() const { return _cullingCulledInstances; }
 
     RenderableHandle addRenderable(
-        Backend::Shader* shader, Scene::Prim* prim,
+        Material* material, Scene::Prim* prim,
         TransformSource transformSource = TransformSource::SceneGraph);
     RenderableHandle addSkinnedRenderable(
-        Backend::Shader* shader, Scene::Prim* prim,
-        const Scene::SkinnedMeshData& skinnedMesh,
-        TransformSource transformSource = TransformSource::SceneGraph);
-    RenderableHandle addRenderable(
         Material* material, Scene::Prim* prim,
+        const Scene::SkinnedMeshData& skinnedMesh,
         TransformSource transformSource = TransformSource::SceneGraph);
     void removePrim(RenderableHandle handle, Scene::Prim* prim);
     void removePrim(Scene::Prim* prim);

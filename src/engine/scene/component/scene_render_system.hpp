@@ -2,10 +2,12 @@
 #define _SCENE_RENDER_SYSTEM_HPP_
 
 #include "engine/graphics/renderer/renderer_types.hpp"
+#include "engine/scene/scene_backend.hpp"
 
 #include <cstddef>
 #include <glm/mat4x4.hpp>
 #include <memory>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -25,7 +27,6 @@ namespace Scene {
 class Prim;
 class RenderComponent;
 class DebugDraw;
-struct SkinnedMeshData;
 
 // Owns registration between scene RenderComponents and renderer batches.
 // RenderableHandle remains private to this system during normal scene use.
@@ -49,6 +50,10 @@ class SceneRenderSystem {
     std::shared_ptr<RenderComponent>
     addRenderable(Prim& prim, Material* material,
                   TransformSource source = TransformSource::SceneGraph);
+    std::shared_ptr<RenderComponent>
+    addSkinnedRenderable(Prim& prim, Material* material,
+                         const SkinnedMeshData& skinnedMesh,
+                         TransformSource source = TransformSource::SceneGraph);
 
     bool unregister(RenderComponent& component);
     void detachSubtree(Prim& root);
@@ -57,6 +62,7 @@ class SceneRenderSystem {
     void setCastsShadow(RenderComponent& component, bool castsShadow);
     void setAlphaMode(RenderComponent& component, AlphaMode mode,
                       float cutoff = 0.5f);
+    bool setMaterial(RenderComponent& component, Material* material);
     void setTexture(RenderComponent& component, Backend::Texture* texture,
                     TextureRole role);
     void setTexture(RenderComponent& component, Backend::Texture* texture,
@@ -85,31 +91,34 @@ class SceneRenderSystem {
         std::weak_ptr<RenderComponent> component;
         Prim* prim = nullptr;
         RenderableHandle handle = InvalidHandle;
+        std::optional<SkinnedMeshData> skinnedMesh;
+        std::vector<std::pair<Backend::Texture*, int>> textureBindings;
     };
 
     void validateRegistration(
         const std::shared_ptr<RenderComponent>& component) const;
     RenderableHandle
     registerRenderable(const std::shared_ptr<RenderComponent>& component,
-                       Backend::Shader* shader);
+                       Material* material);
     RenderableHandle
     registerSkinnedRenderable(const std::shared_ptr<RenderComponent>& component,
-                              Backend::Shader* shader,
+                              Material* material,
                               const SkinnedMeshData& skinnedMesh);
-    RenderableHandle
-    registerRenderable(const std::shared_ptr<RenderComponent>& component,
-                       Material* material);
+    Material* vertexColorMaterialForShader(Backend::Shader* shader);
     const Registration&
     requireRegistration(const RenderComponent& component) const;
     void syncState(RenderComponent& component);
     RenderableHandle
     finishRegistration(const std::shared_ptr<RenderComponent>& component,
-                       RenderableHandle handle);
+                       RenderableHandle handle,
+                       const SkinnedMeshData* skinnedMesh = nullptr);
     RenderableHandle handle(const RenderComponent& component) const;
     void clear();
 
     Renderer* _renderer = nullptr;
     std::unordered_map<const RenderComponent*, Registration> _registrations;
+    std::unordered_map<Backend::Shader*, std::unique_ptr<Material>>
+        _vertexColorMaterialsByShader;
 };
 
 } // namespace Scene

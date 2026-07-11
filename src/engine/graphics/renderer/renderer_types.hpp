@@ -101,6 +101,7 @@ constexpr int Emissive = 8;
 constexpr int Metallic = 9;
 constexpr int Roughness = 10;
 constexpr int OcclusionRoughnessMetallic = 11;
+constexpr int Specular = 12;
 
 } // namespace RendererTextureSlot
 
