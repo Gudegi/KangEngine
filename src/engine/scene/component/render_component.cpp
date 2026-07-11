@@ -8,17 +8,11 @@
 namespace KE {
 namespace Scene {
 
-RenderComponent::RenderComponent(Prim* owner) : _owner(owner) {
-    requireAttached();
-}
-
-void RenderComponent::requireAttached() const {
-    if (!_owner)
-        throw std::runtime_error("RenderComponent is detached from its Prim");
-}
+RenderComponent::RenderComponent(Prim* owner)
+    : ComponentBase(owner, "RenderComponent") {}
 
 void RenderComponent::markChanged() {
-    ++_version;
+    ComponentBase::markChanged();
     if (_changeCallback)
         _changeCallback(*this);
 }
@@ -29,8 +23,7 @@ void RenderComponent::detach() {
     auto callback = std::move(_detachCallback);
     if (callback)
         callback(*this);
-    _owner = nullptr;
-    markChanged();
+    detachBase();
 }
 
 void RenderComponent::setRegistrationCallbacks(

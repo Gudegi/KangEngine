@@ -19,22 +19,13 @@ glm::vec3 safeDirection(glm::vec3 direction, glm::vec3 fallback) {
 }
 } // namespace
 
-LightComponent::LightComponent(Prim* owner) : _owner(owner) {
-    requireAttached();
-}
-
-void LightComponent::requireAttached() const {
-    if (!_owner)
-        throw std::runtime_error("LightComponent is detached from its Prim");
-}
-
-void LightComponent::markChanged() { ++_version; }
+LightComponent::LightComponent(Prim* owner)
+    : ComponentBase(owner, "LightComponent") {}
 
 void LightComponent::detach() {
     if (!_owner)
         return;
-    _owner = nullptr;
-    markChanged();
+    detachBase();
 }
 
 LightType LightComponent::type() const {

@@ -26,6 +26,7 @@ class Material;
 namespace Scene {
 
 class RenderComponent;
+class TransformComponent;
 class LightComponent;
 class CameraComponent;
 class MaterialBindingComponent;
@@ -68,6 +69,7 @@ class Prim {
     std::string _meshSourcePath;
     mutable std::weak_ptr<MeshData> _resolvedMeshDataCache;
     std::unordered_map<Token, AttributeValue, Token::Hash> _Attributes;
+    std::shared_ptr<TransformComponent> _transformComponent;
     std::shared_ptr<RenderComponent> _renderComponent;
     std::shared_ptr<LightComponent> _lightComponent;
     std::shared_ptr<CameraComponent> _cameraComponent;
@@ -77,11 +79,6 @@ class Prim {
     bool _visible = true; // runtime show/hide toggle(just render visibility)
     bool _active = true;  // Scene traversal / update participation
     ManipulationPolicy _manipulationPolicy = ManipulationPolicy::Inherit;
-
-    bool _localDirty = true;
-    bool _worldDirty = true;
-    glm::mat4 _cachedLocalMat = glm::mat4(1.0f);
-    glm::mat4 _cachedWorldMat = glm::mat4(1.0f);
 
     void onAttributeChanged(const Token& name);
     void markLocalTransformDirty();
@@ -116,6 +113,11 @@ class Prim {
     void setMeshSourcePath(const std::string& path);
     const std::string& getMeshSourcePath() const;
     std::shared_ptr<MeshData> resolveMeshData() const;
+
+    std::shared_ptr<TransformComponent> getTransformComponent() const;
+    bool hasTransformComponent() const {
+        return _transformComponent != nullptr;
+    }
 
     std::shared_ptr<RenderComponent> addRenderComponent();
     std::shared_ptr<RenderComponent> getRenderComponent() const;

@@ -1,9 +1,9 @@
 #ifndef _SCENE_RENDER_COMPONENT_HPP_
 #define _SCENE_RENDER_COMPONENT_HPP_
 
+#include "engine/scene/component/component.hpp"
 #include "engine/graphics/renderer/renderer_types.hpp"
 
-#include <cstdint>
 #include <functional>
 #include <memory>
 
@@ -17,14 +17,8 @@ class SceneRenderSystem;
 // Renderer-independent visual state attached to one scene Prim.
 // Renderer registration and RenderableHandle ownership belong to
 // SceneRenderSystem, not to this component.
-class RenderComponent {
+class RenderComponent : public ComponentBase {
   public:
-    RenderComponent(const RenderComponent&) = delete;
-    RenderComponent& operator=(const RenderComponent&) = delete;
-
-    bool isAttached() const { return _owner != nullptr; }
-    Prim* owner() const { return _owner; }
-
     bool isVisible() const;
     void setVisible(bool visible);
 
@@ -42,8 +36,6 @@ class RenderComponent {
     void setTransformSource(TransformSource source);
 
     std::shared_ptr<MeshData> resolveMeshData() const;
-    uint64_t version() const { return _version; }
-
   private:
     friend class Prim;
     friend class SceneRenderSystem;
@@ -54,16 +46,13 @@ class RenderComponent {
         std::function<void(RenderComponent&)> detachCallback,
         std::function<void(RenderComponent&)> changeCallback);
     void clearRegistrationCallbacks();
-    void requireAttached() const;
     void markChanged();
 
-    Prim* _owner = nullptr;
     bool _doubleSided = false;
     bool _castsShadow = true;
     AlphaMode _alphaMode = AlphaMode::Opaque;
     float _alphaCutoff = 0.5f;
     TransformSource _transformSource = TransformSource::SceneGraph;
-    uint64_t _version = 1;
     bool _registered = false;
     std::function<void(RenderComponent&)> _detachCallback;
     std::function<void(RenderComponent&)> _changeCallback;

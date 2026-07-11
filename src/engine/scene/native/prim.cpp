@@ -3,6 +3,7 @@
 ///
 
 #include "prim.hpp"
+#include "engine/scene/component/transform_component.hpp"
 #include "engine/scene/component/render_component.hpp"
 #include "engine/scene/component/light_component.hpp"
 #include "engine/scene/component/camera_component.hpp"
@@ -27,14 +28,6 @@ namespace KE {
 namespace Scene {
 
 namespace {
-void decomposeTRS(const glm::mat4& matrix, glm::vec3& translation,
-                  glm::quat& rotation, glm::vec3& scale) {
-    glm::vec3 skew;
-    glm::vec4 perspective;
-    glm::decompose(matrix, scale, rotation, translation, skew, perspective);
-    rotation = glm::normalize(rotation);
-}
-
 bool isRenderableType(PrimType type) {
     return type == PrimType::Mesh || type == PrimType::MeshInstance;
 }
@@ -49,6 +42,8 @@ glm::vec3 safeDirection(glm::vec3 direction, glm::vec3 fallback) {
 Prim::Prim(const std::string& name, PrimType type, Prim* parent)
     : _name(name), _type(type), _parent(parent) {
     _renderable = isRenderableType(type);
+    _transformComponent =
+        std::shared_ptr<TransformComponent>(new TransformComponent(this));
 
     // Initialize prim path
     if (parent == nullptr) {
@@ -61,6 +56,8 @@ Prim::Prim(const std::string& name, PrimType type, Prim* parent)
 }
 
 Prim::~Prim() {
+    if (_transformComponent)
+        _transformComponent->detach();
     if (_renderComponent)
         _renderComponent->detach();
     if (_lightComponent)
@@ -191,6 +188,10 @@ std::shared_ptr<MeshData> Prim::resolveMeshData() const {
     auto resolved = source->resolveMeshData();
     _resolvedMeshDataCache = resolved;
     return resolved;
+}
+
+std::shared_ptr<TransformComponent> Prim::getTransformComponent() const {
+    return _transformComponent;
 }
 
 std::shared_ptr<RenderComponent> Prim::addRenderComponent() {
@@ -1183,146 +1184,54 @@ void Prim::onAttributeChanged(const Token& name) {
 }
 
 void Prim::markLocalTransformDirty() {
-    _localDirty = true;
-    markWorldTransformDirtyRecursive();
+    if (_transformComponent)
+        _transformComponent->markLocalTransformDirty();
 }
 
 void Prim::markWorldTransformDirtyRecursive() {
-    _worldDirty = true;
-    for (auto& child : _children)
-        child->markWorldTransformDirtyRecursive();
+    if (_transformComponent)
+        _transformComponent->markWorldTransformDirtyRecursive();
 }
 
 void Prim::setLocalTranslation(glm::vec3 trans) {
-    setAttribute(XformTokens::translate, trans);
-    setXformOpOrder(
-        {"xformOp:scale", "xformOp:rotateQuaternion", "xformOp:translate"});
+    _transformComponent->setLocalTranslation(trans);
 }
 
 void Prim::setLocalScale(glm::vec3 scale) {
-    setAttribute(XformTokens::scale, scale);
-    setXformOpOrder(
-        {"xformOp:scale", "xformOp:rotateQuaternion", "xformOp:translate"});
+    _transformComponent->setLocalScale(scale);
 }
 
 void Prim::setLocalRotation(glm::quat quat) {
-    setAttribute(XformTokens::rotateQuat, glm::normalize(quat));
-    setXformOpOrder(
-        {"xformOp:scale", "xformOp:rotateQuaternion", "xformOp:translate"});
+    _transformComponent->setLocalRotation(quat);
 }
 
 void Prim::setLocalMatrix(const glm::mat4& matrix) {
-    setAttribute(XformTokens::transform, matrix);
-    setXformOpOrder({"xformOp:transform"});
+    _transformComponent->setLocalMatrix(matrix);
 }
 
 void Prim::setWorldTranslation(glm::vec3 trans) {
-    const glm::mat4 parentWorld =
-        _parent ? _parent->computeWorldMatrix() : glm::mat4(1.0f);
-    const glm::vec3 local =
-        glm::vec3(glm::inverse(parentWorld) * glm::vec4(trans, 1.0f));
-    setLocalTranslation(local);
+    _transformComponent->setWorldTranslation(trans);
 }
 
 void Prim::setWorldRotation(glm::quat quat) {
-    const glm::mat4 parentWorld =
-        _parent ? _parent->computeWorldMatrix() : glm::mat4(1.0f);
-    glm::vec3 parentTranslation;
-    glm::quat parentRotation;
-    glm::vec3 parentScale;
-    decomposeTRS(parentWorld, parentTranslation, parentRotation, parentScale);
-    setLocalRotation(glm::inverse(parentRotation) * glm::normalize(quat));
+    _transformComponent->setWorldRotation(quat);
 }
 
 void Prim::setWorldMatrix(const glm::mat4& matrix) {
-    const glm::mat4 parentWorld =
-        _parent ? _parent->computeWorldMatrix() : glm::mat4(1.0f);
-    const glm::mat4 localMatrix = glm::inverse(parentWorld) * matrix;
-    setLocalMatrix(localMatrix);
+    _transformComponent->setWorldMatrix(matrix);
 }
 
 glm::mat4 Prim::computeLocalMatrix() {
-    if (_localDirty) {
-        glm::mat4 result(1.0f);
-
-        const std::vector<Token>* orderPtr = &XformTokens::defaultOpOrder;
-        std::vector<Token> customOrder;
-
-        if (hasAttribute(XformTokens::opOrder)) {
-            const auto& strOrder =
-                getAttribute<std::vector<std::string>>(XformTokens::opOrder);
-            customOrder.reserve(strOrder.size());
-            for (const auto& s : strOrder) {
-                customOrder.emplace_back(s);
-            }
-            orderPtr = &customOrder;
-        }
-
-        for (const auto& opToken : *orderPtr) {
-            if (!this->hasAttribute(opToken))
-                continue;
-
-            XformOpType type = XformTokens::getXformOpType(opToken);
-            glm::mat4 opMat(1.0f);
-
-            switch (type) {
-            case XformOpType::Translate: {
-                auto t = getAttribute<glm::vec3>(opToken);
-                opMat = glm::translate(glm::mat4(1.0f), t);
-                break;
-            }
-            case XformOpType::RotateQuat: {
-                auto q = getAttribute<glm::quat>(opToken);
-                opMat = glm::mat4_cast(q);
-                break;
-            }
-            case XformOpType::RotateXYZ: {
-                auto r = getAttribute<glm::vec3>(opToken);
-                glm::mat4 rot =
-                    glm::rotate(glm::mat4(1.0f), glm::radians(r.x), {1, 0, 0});
-                rot = glm::rotate(rot, glm::radians(r.y), {0, 1, 0});
-                rot = glm::rotate(rot, glm::radians(r.z), {0, 0, 1});
-                opMat = rot;
-                break;
-            }
-            case XformOpType::Scale: {
-                auto s = getAttribute<glm::vec3>(opToken);
-                opMat = glm::scale(glm::mat4(1.0f), s);
-                break;
-            }
-            case XformOpType::Matrix: {
-                opMat = getAttribute<glm::mat4>(opToken);
-                break;
-            }
-            default:
-                // TODO: Unknown Op 혹은 지원하지 않는 타입 처리
-                break;
-            }
-
-            // Apply operations in reverse order of the list
-            // (Pre-multiplication). If opOrder is {Scale, Rotate, Translate},
-            // this results in: Result = Translate * (Rotate * (Scale * I)) = T
-            // * R * S This produces the standard Local-to-Parent transform.
-            result = opMat * result; // T * R * S * vec right when using glm.
-            // result = result * opMat; // S * R * T * vec
-        }
-        _cachedLocalMat = result;
-        _localDirty = false;
-    }
-    return _cachedLocalMat;
+    return _transformComponent->computeLocalMatrix();
 }
 
 glm::mat4 Prim::computeWorldMatrix() {
-    if (_worldDirty) {
-        const glm::mat4 local = computeLocalMatrix();
-        _cachedWorldMat =
-            _parent ? _parent->computeWorldMatrix() * local : local;
-        _worldDirty = false;
-    }
-    return _cachedWorldMat;
+    return _transformComponent->computeWorldMatrix();
 }
 
-glm::mat4 Prim::computeModelMatrix() { return computeWorldMatrix(); }
+glm::mat4 Prim::computeModelMatrix() {
+    return _transformComponent->computeModelMatrix();
+}
 
 } // namespace Scene
 } // namespace KE

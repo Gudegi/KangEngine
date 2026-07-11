@@ -6,24 +6,13 @@ namespace KE {
 namespace Scene {
 
 MaterialBindingComponent::MaterialBindingComponent(Prim* owner)
-    : _owner(owner) {
-    requireAttached();
-}
-
-void MaterialBindingComponent::requireAttached() const {
-    if (!_owner)
-        throw std::runtime_error(
-            "MaterialBindingComponent is detached from its Prim");
-}
-
-void MaterialBindingComponent::markChanged() { ++_version; }
+    : ComponentBase(owner, "MaterialBindingComponent") {}
 
 void MaterialBindingComponent::detach() {
     if (!_owner)
         return;
-    _owner = nullptr;
     _material = nullptr;
-    markChanged();
+    detachBase();
 }
 
 Material* MaterialBindingComponent::material() const {

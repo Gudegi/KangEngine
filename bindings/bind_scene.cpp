@@ -12,6 +12,7 @@
 #include "engine/core/app/app.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/scene/debug_draw.hpp"
+#include "engine/scene/component/transform_component.hpp"
 #include "engine/scene/component/render_component.hpp"
 #include "engine/scene/component/light_component.hpp"
 #include "engine/scene/component/camera_component.hpp"
@@ -129,6 +130,53 @@ void bind_scene(py::module& m) {
             const KE::Scene::Prim* owner = c.owner();
             const std::string path = owner ? owner->getPath() : "<detached>";
             return "<RenderComponent path='" + path +
+                   "' version=" + std::to_string(c.version()) + ">";
+        });
+
+    py::class_<KE::Scene::TransformComponent,
+               std::shared_ptr<KE::Scene::TransformComponent>>(
+        scene, "TransformComponent",
+        "Local/world transform state attached to every scene prim.")
+        .def_property_readonly("attached",
+                               &KE::Scene::TransformComponent::isAttached,
+                               "Return whether this component is attached.")
+        .def_property_readonly("owner", &KE::Scene::TransformComponent::owner,
+                               py::return_value_policy::reference,
+                               "Return the owning prim, or None after detach.")
+        .def_property_readonly("version",
+                               &KE::Scene::TransformComponent::version,
+                               "Return the transform state version.")
+        .def("set_local_translation",
+             &KE::Scene::TransformComponent::setLocalTranslation,
+             py::arg("translation"), "Set local translation.")
+        .def("set_local_scale", &KE::Scene::TransformComponent::setLocalScale,
+             py::arg("scale"), "Set local scale.")
+        .def("set_local_rotation",
+             &KE::Scene::TransformComponent::setLocalRotation,
+             py::arg("rotation"), "Set local rotation.")
+        .def("set_local_matrix", &KE::Scene::TransformComponent::setLocalMatrix,
+             py::arg("matrix"), "Set the local transform matrix.")
+        .def("set_world_translation",
+             &KE::Scene::TransformComponent::setWorldTranslation,
+             py::arg("translation"), "Set world translation.")
+        .def("set_world_rotation",
+             &KE::Scene::TransformComponent::setWorldRotation,
+             py::arg("rotation"), "Set world rotation.")
+        .def("set_world_matrix", &KE::Scene::TransformComponent::setWorldMatrix,
+             py::arg("matrix"), "Set the world transform matrix.")
+        .def("compute_local_matrix",
+             &KE::Scene::TransformComponent::computeLocalMatrix,
+             "Return the cached/computed local matrix.")
+        .def("compute_world_matrix",
+             &KE::Scene::TransformComponent::computeWorldMatrix,
+             "Return the cached/computed world matrix.")
+        .def("compute_model_matrix",
+             &KE::Scene::TransformComponent::computeModelMatrix,
+             "Return the model matrix, currently equal to world matrix.")
+        .def("__repr__", [](const KE::Scene::TransformComponent& c) {
+            const KE::Scene::Prim* owner = c.owner();
+            const std::string path = owner ? owner->getPath() : "<detached>";
+            return "<TransformComponent path='" + path +
                    "' version=" + std::to_string(c.version()) + ">";
         });
 
@@ -395,6 +443,10 @@ void bind_scene(py::module& m) {
              "Return whether this prim has a render component.")
         .def("remove_render_component", &KE::Scene::Prim::removeRenderComponent,
              "Detach this prim's render component.")
+        .def("get_transform_component", &KE::Scene::Prim::getTransformComponent,
+             "Return this prim's mandatory transform component.")
+        .def("has_transform_component", &KE::Scene::Prim::hasTransformComponent,
+             "Return whether this prim has a transform component.")
         .def("add_material_binding_component",
              &KE::Scene::Prim::addMaterialBindingComponent,
              "Attach and return this prim's material binding component.")

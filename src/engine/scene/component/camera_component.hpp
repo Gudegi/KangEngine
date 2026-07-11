@@ -1,14 +1,13 @@
 #ifndef _SCENE_CAMERA_COMPONENT_HPP_
 #define _SCENE_CAMERA_COMPONENT_HPP_
 
-#include <cstdint>
+#include "engine/scene/component/component.hpp"
+
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 
 namespace KE {
 namespace Scene {
-
-class Prim;
 
 enum class CameraProjectionType {
     Perspective,
@@ -17,16 +16,9 @@ enum class CameraProjectionType {
 
 // Runtime authored camera state attached to a Camera prim. Prim owns
 // identity/path/transform; CameraComponent owns projection settings.
-class CameraComponent {
+class CameraComponent : public ComponentBase {
   public:
-    CameraComponent(const CameraComponent&) = delete;
-    CameraComponent& operator=(const CameraComponent&) = delete;
-
-    bool isAttached() const { return _owner != nullptr; }
-    Prim* owner() const { return _owner; }
-
     CameraProjectionType projectionType() const;
-    uint64_t version() const { return _version; }
 
     void setPerspective(float verticalFovDegrees, float nearPlane,
                         float farPlane);
@@ -49,16 +41,12 @@ class CameraComponent {
 
     explicit CameraComponent(Prim* owner);
     void detach();
-    void requireAttached() const;
-    void markChanged();
 
-    Prim* _owner = nullptr;
     CameraProjectionType _projectionType = CameraProjectionType::Perspective;
     float _verticalFovDegrees = 45.0f;
     float _orthographicSize = 5.0f;
     float _nearPlane = 0.1f;
     float _farPlane = 100.0f;
-    uint64_t _version = 1;
 };
 
 } // namespace Scene

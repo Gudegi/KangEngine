@@ -26,22 +26,13 @@ glm::vec3 safeDirection(glm::vec3 direction, glm::vec3 fallback) {
 
 } // namespace
 
-CameraComponent::CameraComponent(Prim* owner) : _owner(owner) {
-    requireAttached();
-}
-
-void CameraComponent::requireAttached() const {
-    if (!_owner)
-        throw std::runtime_error("CameraComponent is detached from its Prim");
-}
-
-void CameraComponent::markChanged() { ++_version; }
+CameraComponent::CameraComponent(Prim* owner)
+    : ComponentBase(owner, "CameraComponent") {}
 
 void CameraComponent::detach() {
     if (!_owner)
         return;
-    _owner = nullptr;
-    markChanged();
+    detachBase();
 }
 
 CameraProjectionType CameraComponent::projectionType() const {
