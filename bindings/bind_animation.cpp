@@ -283,6 +283,57 @@ void bind_animation(py::module& m) {
     py::module asset =
         m.def_submodule("asset", "Asset importers and loader result types.");
 
+    py::class_<ObjMaterialInfo>(
+        asset, "ObjMaterialInfo",
+        "Material metadata imported from an OBJ/MTL pair.")
+        .def_readonly("name", &ObjMaterialInfo::name)
+        .def_readonly("ambient_color", &ObjMaterialInfo::ambientColor)
+        .def_readonly("diffuse_color", &ObjMaterialInfo::diffuseColor)
+        .def_readonly("specular_color", &ObjMaterialInfo::specularColor)
+        .def_readonly("shininess", &ObjMaterialInfo::shininess)
+        .def_readonly("diffuse_texture_path",
+                      &ObjMaterialInfo::diffuseTexturePath)
+        .def_readonly("normal_texture_path",
+                      &ObjMaterialInfo::normalTexturePath)
+        .def_readonly("has_diffuse_texture",
+                      &ObjMaterialInfo::hasDiffuseTexture)
+        .def_readonly("has_normal_texture",
+                      &ObjMaterialInfo::hasNormalTexture);
+
+    py::class_<ObjMeshSubsetInfo>(
+        asset, "ObjMeshSubsetInfo",
+        "OBJ submesh containing faces that share one material.")
+        .def_readonly("name", &ObjMeshSubsetInfo::name)
+        .def_readonly("material_index", &ObjMeshSubsetInfo::materialIndex)
+        .def_property_readonly(
+            "mesh_data",
+            [](const ObjMeshSubsetInfo& self) {
+                return std::make_shared<KE::Scene::MeshData>(self.meshData);
+            },
+            "Static mesh payload for this material subset.");
+
+    py::class_<ObjMeshInfo>(
+        asset, "ObjMeshInfo",
+        "OBJ mesh payload plus material metadata imported from MTL.")
+        .def_property_readonly(
+            "mesh_data",
+            [](const ObjMeshInfo& self) {
+                return std::make_shared<KE::Scene::MeshData>(self.meshData);
+            },
+            "Static mesh payload.")
+        .def_readonly("materials", &ObjMeshInfo::materials)
+        .def_readonly("subsets", &ObjMeshInfo::subsets)
+        .def_readonly("primary_material_index",
+                      &ObjMeshInfo::primaryMaterialIndex)
+        .def_property_readonly("material_count",
+                               [](const ObjMeshInfo& self) {
+                                   return self.materials.size();
+                               })
+        .def_property_readonly("subset_count",
+                               [](const ObjMeshInfo& self) {
+                                   return self.subsets.size();
+                               });
+
     asset.def(
         "load_obj",
         [](const std::string& path) {
@@ -290,8 +341,14 @@ void bind_animation(py::module& m) {
                 KE::Asset::loadObj(path));
         },
         py::arg("path"),
-        "Load an OBJ file and return scene.MeshData. Materials are not "
-        "imported; use the returned mesh data with an App/Scene renderable.");
+        "Load an OBJ file and return scene.MeshData. MTL is parsed internally; "
+        "use load_obj_with_materials() when material metadata is needed.");
+
+    asset.def(
+        "load_obj_with_materials",
+        [](const std::string& path) { return KE::Asset::loadObjWithMaterials(path); },
+        py::arg("path"),
+        "Load an OBJ file and return mesh data plus MTL material metadata.");
 
     asset.def(
         "load_stl",

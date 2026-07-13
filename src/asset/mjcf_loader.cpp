@@ -61,7 +61,7 @@ Eigen::Quaternionf quatFromZAxis(const Eigen::Vector3f& zaxis) {
     if (zaxis.squaredNorm() < 1e-12f)
         return Eigen::Quaternionf::Identity();
     return Eigen::Quaternionf::FromTwoVectors(Eigen::Vector3f::UnitZ(),
-                                             zaxis.normalized());
+                                              zaxis.normalized());
 }
 
 std::string resolveMeshDir(const std::string& mjcfPath, const char* meshdir) {
@@ -142,6 +142,7 @@ struct DefaultGeomAttrs {
     std::vector<float> quat;
     std::vector<float> fromto;
     std::vector<float> friction;
+    std::vector<float> rgba;
     int condim = -1;
     float margin = -1.f;
     std::string parentClass;
@@ -178,6 +179,9 @@ void readGeomDefaults(tinyxml2::XMLElement* defElem, DefaultGeomAttrs& out) {
     auto fr = splitFloats(g->Attribute("friction"));
     if (!fr.empty())
         out.friction = fr;
+    auto rgba = splitFloats(g->Attribute("rgba"));
+    if (!rgba.empty())
+        out.rgba = rgba;
     g->QueryIntAttribute("condim", &out.condim);
     g->QueryFloatAttribute("margin", &out.margin);
 }
@@ -205,9 +209,10 @@ void readSiteDefaults(tinyxml2::XMLElement* defElem, DefaultSiteAttrs& out) {
         out.rgba = rgba;
 }
 
-void collectDefaults(tinyxml2::XMLElement* elem, const std::string& parentClass,
-                     std::unordered_map<std::string, DefaultGeomAttrs>& geomMap,
-                     std::unordered_map<std::string, DefaultSiteAttrs>& siteMap) {
+void collectDefaults(
+    tinyxml2::XMLElement* elem, const std::string& parentClass,
+    std::unordered_map<std::string, DefaultGeomAttrs>& geomMap,
+    std::unordered_map<std::string, DefaultSiteAttrs>& siteMap) {
     for (auto* def = elem->FirstChildElement("default"); def;
          def = def->NextSiblingElement("default")) {
         const char* cls = def->Attribute("class");
@@ -250,6 +255,8 @@ resolveClass(const std::string& cls,
             out.fromto = a.fromto;
         if (out.friction.empty() && !a.friction.empty())
             out.friction = a.friction;
+        if (out.rgba.empty() && !a.rgba.empty())
+            out.rgba = a.rgba;
         if (out.condim < 0 && a.condim >= 0)
             out.condim = a.condim;
         if (out.margin < 0.f && a.margin >= 0.f)
@@ -286,10 +293,10 @@ resolveSiteClass(const std::string& cls,
     return out;
 }
 
-bool parseSite(tinyxml2::XMLElement* siteElem,
-               const std::unordered_map<std::string, DefaultSiteAttrs>&
-                   defaultMap,
-               Site& out, const std::string& inheritedClass = "") {
+bool parseSite(
+    tinyxml2::XMLElement* siteElem,
+    const std::unordered_map<std::string, DefaultSiteAttrs>& defaultMap,
+    Site& out, const std::string& inheritedClass = "") {
     const char* siteName = siteElem->Attribute("name");
     if (!siteName || siteName[0] == '\0')
         return false;
@@ -545,12 +552,24 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
                     (isVisualMesh || geomType == "mesh")) {
                     auto it = meshNameToFile.find(meshName);
                     if (it != meshNameToFile.end()) {
+                        DefaultGeomAttrs defs;
+                        const char* clsAttr = geom->Attribute("class");
+                        std::string effectiveCls =
+                            clsAttr ? clsAttr : inheritedClass;
+                        if (!effectiveCls.empty())
+                            defs = resolveClass(effectiveCls, defaultMap);
                         Eigen::Vector3f meshPos =
                             parseVec3(geom->Attribute("pos")) * scale;
                         Eigen::Quaternionf meshQuat =
                             parseQuatWxyz(geom->Attribute("quat"));
+                        auto rgbaValues = splitFloats(geom->Attribute("rgba"));
+                        if (rgbaValues.empty())
+                            rgbaValues = defs.rgba;
                         Eigen::Vector4f rgba =
-                            parseVec4(geom->Attribute("rgba"));
+                            rgbaValues.size() >= 4
+                                ? Eigen::Vector4f(rgbaValues[0], rgbaValues[1],
+                                                  rgbaValues[2], rgbaValues[3])
+                                : Eigen::Vector4f(0.15f, 0.15f, 0.15f, 1.0f);
                         _data.meshInfos.push_back({bodyName, it->second, idx,
                                                    meshPos, meshQuat, rgba});
                     }

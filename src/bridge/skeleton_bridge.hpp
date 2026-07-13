@@ -9,6 +9,7 @@
 #define _SKELETON_BRIDGE_HPP_
 
 #include "animation/skeleton_fk.hpp"
+#include <Eigen/Geometry>
 #include <memory>
 #include <string>
 #include <vector>
@@ -92,6 +93,7 @@ class SkeletonBridgeAsset {
     Animation::CharacterData _data;
     float _scale = 1.0f;
     std::vector<std::shared_ptr<Scene::MeshData>> _bodyMeshes;
+    std::vector<Eigen::Vector4f> _bodyColors;
 };
 
 } // namespace Bridge

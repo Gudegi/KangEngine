@@ -185,6 +185,26 @@ buildBodyMeshes(const Animation::CharacterData& data) {
     return bodyMeshes;
 }
 
+static std::vector<Eigen::Vector4f>
+buildBodyColors(const Animation::CharacterData& data) {
+    int numBodies = data.skeletonTree ? data.skeletonTree->numJoints() : 0;
+    std::vector<Eigen::Vector4f> colors(
+        numBodies, Eigen::Vector4f(0.15f, 0.15f, 0.15f, 1.0f));
+    std::vector<bool> assigned(static_cast<size_t>(numBodies), false);
+
+    for (const auto& meshInfo : data.meshInfos) {
+        const int bodyIdx = meshInfo.bodyIndex;
+        if (bodyIdx < 0 || bodyIdx >= numBodies)
+            continue;
+        if (assigned[static_cast<size_t>(bodyIdx)])
+            continue;
+        colors[static_cast<size_t>(bodyIdx)] = meshInfo.rgba;
+        assigned[static_cast<size_t>(bodyIdx)] = true;
+    }
+
+    return colors;
+}
+
 SkeletonBridge SkeletonBridge::fromMJCF(const std::string& mjcfPath,
                                         Scene::SceneBackend* scene,
                                         const std::string& primBasePath,
@@ -216,6 +236,7 @@ SkeletonBridgeAsset::fromData(const Animation::CharacterData& data,
     asset._data = data;
     asset._scale = scale;
     asset._bodyMeshes = buildBodyMeshes(data);
+    asset._bodyColors = buildBodyColors(data);
     fmt::print("SkeletonBridgeAsset loaded: {} bodies, {} meshes\n",
                asset.numBodies(), data.meshInfos.size());
     return asset;
@@ -233,6 +254,11 @@ void SkeletonBridgeAsset::defineMeshAssets(
                               Scene::PrimType::Mesh);
         if (!assetPrim->getMeshData())
             assetPrim->setMeshData(_bodyMeshes[i]);
+        if (i < static_cast<int>(_bodyColors.size())) {
+            const auto& c = _bodyColors[static_cast<size_t>(i)];
+            assetPrim->setDisplayColorAlpha(
+                glm::vec4(c.x(), c.y(), c.z(), c.w()));
+        }
     }
 }
 
@@ -261,8 +287,12 @@ SkeletonBridgeAsset::instantiate(Scene::SceneBackend* scene,
                                        : Scene::PrimType::Mesh);
         if (useMeshInstances)
             prim->setMeshSourcePath(meshSourcePath);
-        prim->setAttribute("primvars:displaycolorAlpha",
-                           glm::vec4(0.15f, 0.15f, 0.15f, 1.0f));
+        glm::vec4 displayColor(0.15f, 0.15f, 0.15f, 1.0f);
+        if (i < static_cast<int>(_bodyColors.size())) {
+            const auto& c = _bodyColors[static_cast<size_t>(i)];
+            displayColor = glm::vec4(c.x(), c.y(), c.z(), c.w());
+        }
+        prim->setDisplayColorAlpha(displayColor);
         prim->setAttribute("xformOp:scale", glm::vec3(_scale));
         glm::vec3 pos =
             Animation::toGlm(globalTransforms[i].translation) * _scale;
