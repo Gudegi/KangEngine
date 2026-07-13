@@ -37,8 +37,9 @@ class TransformComponent : public ComponentBase {
     explicit TransformComponent(Prim* owner);
     void detach();
     void markLocalTransformDirty();
-    void markWorldTransformDirtyRecursive();
+    void markWorldTransformDirtyRecursive(bool countSelfVersion = true);
 
+    bool _suppressLocalDirtyVersion = false;
     bool _localDirty = true;
     bool _worldDirty = true;
     glm::mat4 _cachedLocalMat = glm::mat4(1.0f);

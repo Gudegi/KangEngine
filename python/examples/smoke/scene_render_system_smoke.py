@@ -19,10 +19,19 @@ def main():
         transform_source=ke.TransformSource.ExternalBuffer,
     )
     component = view.prim.get_render_component()
+    mesh_component = view.prim.get_mesh_component()
     render_system = app.get_scene_render_system()
 
     assert component is not None
     assert component.attached
+    assert mesh_component is not None
+    assert mesh_component.resource_handle != ke.scene.InvalidResourceHandle
+    resource_prim = app.resources.resource_prim(mesh_component.resource_handle)
+    assert resource_prim is not None
+    assert resource_prim.get_path().startswith("/.Resources/Meshes/")
+    assert resource_prim.get_resource_component() is not None
+    assert view.prim.get_mesh_data() is not None
+    assert view.prim.resolve_mesh_data() is not None
     assert "RenderComponent" in repr(component)
     assert "/group/mesh" in repr(component)
     assert render_system.registration_count == 1

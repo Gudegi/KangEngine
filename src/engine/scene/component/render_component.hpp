@@ -12,6 +12,7 @@ namespace Scene {
 
 struct MeshData;
 class Prim;
+class MeshComponent;
 class SceneRenderSystem;
 
 // Renderer-independent visual state attached to one scene Prim.
@@ -36,8 +37,10 @@ class RenderComponent : public ComponentBase {
     void setTransformSource(TransformSource source);
 
     std::shared_ptr<MeshData> resolveMeshData() const;
+
   private:
     friend class Prim;
+    friend class MeshComponent;
     friend class SceneRenderSystem;
 
     explicit RenderComponent(Prim* owner);

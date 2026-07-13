@@ -27,9 +27,11 @@ namespace Scene {
 
 class RenderComponent;
 class TransformComponent;
+class MeshComponent;
 class LightComponent;
 class CameraComponent;
 class MaterialBindingComponent;
+class ResourceComponent;
 
 using AttributeValue =
     std::variant<bool, int, float, std::string, glm::vec3, glm::vec4, glm::mat4,
@@ -42,7 +44,8 @@ enum class PrimType {
     Mesh,         // Mesh 데이터 owner
     MeshInstance, // Mesh geometry reference with its own scene identity
     Camera,       // Camera
-    Light         // Light
+    Light,        // Light
+    Resource      // Shared asset/resource entry, not renderable by itself
 };
 
 // ray pick같은 걸로 조작할 때 정책
@@ -65,15 +68,14 @@ class Prim {
     std::map<std::string, Prim*> _childrenMap;    // 빠른 탐색용
 
     // 데이터 (타입에 따라 다름)
-    std::shared_ptr<MeshData> _meshData;
-    std::string _meshSourcePath;
-    mutable std::weak_ptr<MeshData> _resolvedMeshDataCache;
     std::unordered_map<Token, AttributeValue, Token::Hash> _Attributes;
     std::shared_ptr<TransformComponent> _transformComponent;
+    std::shared_ptr<MeshComponent> _meshComponent;
     std::shared_ptr<RenderComponent> _renderComponent;
     std::shared_ptr<LightComponent> _lightComponent;
     std::shared_ptr<CameraComponent> _cameraComponent;
     std::shared_ptr<MaterialBindingComponent> _materialBindingComponent;
+    std::shared_ptr<ResourceComponent> _resourceComponent;
 
     bool _renderable = false; // true for prim types that can submit geometry
     bool _visible = true; // runtime show/hide toggle(just render visibility)
@@ -83,6 +85,8 @@ class Prim {
     void onAttributeChanged(const Token& name);
     void markLocalTransformDirty();
     void markWorldTransformDirtyRecursive();
+    TransformComponent& getTransformComponentOrThrow();
+    const TransformComponent& getTransformComponentOrThrow() const;
 
   public:
     Prim(const std::string& name, PrimType type, Prim* parent = nullptr);
@@ -113,6 +117,10 @@ class Prim {
     void setMeshSourcePath(const std::string& path);
     const std::string& getMeshSourcePath() const;
     std::shared_ptr<MeshData> resolveMeshData() const;
+    std::shared_ptr<MeshComponent> addMeshComponent();
+    std::shared_ptr<MeshComponent> getMeshComponent() const;
+    bool hasMeshComponent() const { return _meshComponent != nullptr; }
+    bool removeMeshComponent();
 
     std::shared_ptr<TransformComponent> getTransformComponent() const;
     bool hasTransformComponent() const {
@@ -143,6 +151,11 @@ class Prim {
     std::shared_ptr<CameraComponent> getCameraComponent() const;
     bool hasCameraComponent() const { return _cameraComponent != nullptr; }
     bool removeCameraComponent();
+
+    std::shared_ptr<ResourceComponent> addResourceComponent();
+    std::shared_ptr<ResourceComponent> getResourceComponent() const;
+    bool hasResourceComponent() const { return _resourceComponent != nullptr; }
+    bool removeResourceComponent();
 
     static MeshData createCubeData(float scale);
     static MeshData createSquareData(float scale); // Deprecated.

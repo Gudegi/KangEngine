@@ -4,10 +4,12 @@
 
 #include "prim.hpp"
 #include "engine/scene/component/transform_component.hpp"
+#include "engine/scene/component/mesh_component.hpp"
 #include "engine/scene/component/render_component.hpp"
 #include "engine/scene/component/light_component.hpp"
 #include "engine/scene/component/camera_component.hpp"
 #include "engine/scene/component/material_binding_component.hpp"
+#include "engine/scene/component/resource_component.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "utils/types.hpp"
 #include <Eigen/Geometry>
@@ -42,8 +44,10 @@ glm::vec3 safeDirection(glm::vec3 direction, glm::vec3 fallback) {
 Prim::Prim(const std::string& name, PrimType type, Prim* parent)
     : _name(name), _type(type), _parent(parent) {
     _renderable = isRenderableType(type);
-    _transformComponent =
-        std::shared_ptr<TransformComponent>(new TransformComponent(this));
+    if (_type != PrimType::Resource) {
+        _transformComponent =
+            std::shared_ptr<TransformComponent>(new TransformComponent(this));
+    }
 
     // Initialize prim path
     if (parent == nullptr) {
@@ -58,6 +62,8 @@ Prim::Prim(const std::string& name, PrimType type, Prim* parent)
 Prim::~Prim() {
     if (_transformComponent)
         _transformComponent->detach();
+    if (_meshComponent)
+        _meshComponent->detach();
     if (_renderComponent)
         _renderComponent->detach();
     if (_lightComponent)
@@ -66,6 +72,8 @@ Prim::~Prim() {
         _cameraComponent->detach();
     if (_materialBindingComponent)
         _materialBindingComponent->detach();
+    if (_resourceComponent)
+        _resourceComponent->detach();
 }
 
 Prim* Prim::addChild(const std::string& name, PrimType type) {
@@ -148,46 +156,56 @@ std::vector<Prim*> Prim::getChildren() const {
 }
 
 void Prim::setMeshData(std::shared_ptr<MeshData> data) {
-    _meshData = std::move(data);
-    _resolvedMeshDataCache.reset();
-    if (_renderComponent)
-        _renderComponent->markChanged();
+    if (!_meshComponent)
+        addMeshComponent();
+    _meshComponent->setMeshData(std::move(data));
 }
 
-std::shared_ptr<MeshData> Prim::getMeshData() const { return _meshData; }
+std::shared_ptr<MeshData> Prim::getMeshData() const {
+    return _meshComponent ? _meshComponent->meshData() : nullptr;
+}
 
 void Prim::setMeshSourcePath(const std::string& path) {
-    if (_meshSourcePath == path)
-        return;
-    _meshSourcePath = path;
-    _resolvedMeshDataCache.reset();
-    if (_renderComponent)
-        _renderComponent->markChanged();
+    if (!_meshComponent)
+        addMeshComponent();
+    _meshComponent->setMeshSourcePath(path);
 }
 
-const std::string& Prim::getMeshSourcePath() const { return _meshSourcePath; }
+const std::string& Prim::getMeshSourcePath() const {
+    static const std::string empty;
+    return _meshComponent ? _meshComponent->meshSourcePath() : empty;
+}
 
 std::shared_ptr<MeshData> Prim::resolveMeshData() const {
-    if (_meshData)
-        return _meshData;
+    return _meshComponent ? _meshComponent->resolveMeshData() : nullptr;
+}
 
-    if (_type != PrimType::MeshInstance || _meshSourcePath.empty())
-        return nullptr;
+std::shared_ptr<MeshComponent> Prim::addMeshComponent() {
+    if (_type != PrimType::Mesh && _type != PrimType::MeshInstance &&
+        _type != PrimType::Resource)
+        throw std::runtime_error(
+            "Prim '" + _path +
+            "' must be PrimType::Mesh, MeshInstance, or Resource to add a "
+            "MeshComponent");
+    if (_meshComponent)
+        throw std::runtime_error("Prim '" + _path +
+                                 "' already has a MeshComponent");
+    _meshComponent = std::shared_ptr<MeshComponent>(new MeshComponent(this));
+    return _meshComponent;
+}
 
-    if (auto cached = _resolvedMeshDataCache.lock())
-        return cached;
+std::shared_ptr<MeshComponent> Prim::getMeshComponent() const {
+    return _meshComponent;
+}
 
-    const Prim* root = this;
-    while (root->_parent)
-        root = root->_parent;
-
-    auto* source = const_cast<Prim*>(root)->getPrimAtPath(_meshSourcePath);
-    if (!source || source == this)
-        return nullptr;
-
-    auto resolved = source->resolveMeshData();
-    _resolvedMeshDataCache = resolved;
-    return resolved;
+bool Prim::removeMeshComponent() {
+    if (!_meshComponent)
+        return false;
+    _meshComponent->detach();
+    _meshComponent.reset();
+    if (_renderComponent)
+        _renderComponent->markChanged();
+    return true;
 }
 
 std::shared_ptr<TransformComponent> Prim::getTransformComponent() const {
@@ -294,6 +312,31 @@ bool Prim::removeCameraComponent() {
         return false;
     _cameraComponent->detach();
     _cameraComponent.reset();
+    return true;
+}
+
+std::shared_ptr<ResourceComponent> Prim::addResourceComponent() {
+    if (_type != PrimType::Resource)
+        throw std::runtime_error(
+            "Prim '" + _path +
+            "' must be PrimType::Resource to add a ResourceComponent");
+    if (_resourceComponent)
+        throw std::runtime_error("Prim '" + _path +
+                                 "' already has a ResourceComponent");
+    _resourceComponent =
+        std::shared_ptr<ResourceComponent>(new ResourceComponent(this));
+    return _resourceComponent;
+}
+
+std::shared_ptr<ResourceComponent> Prim::getResourceComponent() const {
+    return _resourceComponent;
+}
+
+bool Prim::removeResourceComponent() {
+    if (!_resourceComponent)
+        return false;
+    _resourceComponent->detach();
+    _resourceComponent.reset();
     return true;
 }
 
@@ -1193,44 +1236,60 @@ void Prim::markWorldTransformDirtyRecursive() {
         _transformComponent->markWorldTransformDirtyRecursive();
 }
 
+TransformComponent& Prim::getTransformComponentOrThrow() {
+    if (!_transformComponent) {
+        throw std::runtime_error("Prim '" + _path +
+                                 "' has no TransformComponent");
+    }
+    return *_transformComponent;
+}
+
+const TransformComponent& Prim::getTransformComponentOrThrow() const {
+    if (!_transformComponent) {
+        throw std::runtime_error("Prim '" + _path +
+                                 "' has no TransformComponent");
+    }
+    return *_transformComponent;
+}
+
 void Prim::setLocalTranslation(glm::vec3 trans) {
-    _transformComponent->setLocalTranslation(trans);
+    getTransformComponentOrThrow().setLocalTranslation(trans);
 }
 
 void Prim::setLocalScale(glm::vec3 scale) {
-    _transformComponent->setLocalScale(scale);
+    getTransformComponentOrThrow().setLocalScale(scale);
 }
 
 void Prim::setLocalRotation(glm::quat quat) {
-    _transformComponent->setLocalRotation(quat);
+    getTransformComponentOrThrow().setLocalRotation(quat);
 }
 
 void Prim::setLocalMatrix(const glm::mat4& matrix) {
-    _transformComponent->setLocalMatrix(matrix);
+    getTransformComponentOrThrow().setLocalMatrix(matrix);
 }
 
 void Prim::setWorldTranslation(glm::vec3 trans) {
-    _transformComponent->setWorldTranslation(trans);
+    getTransformComponentOrThrow().setWorldTranslation(trans);
 }
 
 void Prim::setWorldRotation(glm::quat quat) {
-    _transformComponent->setWorldRotation(quat);
+    getTransformComponentOrThrow().setWorldRotation(quat);
 }
 
 void Prim::setWorldMatrix(const glm::mat4& matrix) {
-    _transformComponent->setWorldMatrix(matrix);
+    getTransformComponentOrThrow().setWorldMatrix(matrix);
 }
 
 glm::mat4 Prim::computeLocalMatrix() {
-    return _transformComponent->computeLocalMatrix();
+    return getTransformComponentOrThrow().computeLocalMatrix();
 }
 
 glm::mat4 Prim::computeWorldMatrix() {
-    return _transformComponent->computeWorldMatrix();
+    return getTransformComponentOrThrow().computeWorldMatrix();
 }
 
 glm::mat4 Prim::computeModelMatrix() {
-    return _transformComponent->computeModelMatrix();
+    return getTransformComponentOrThrow().computeModelMatrix();
 }
 
 } // namespace Scene

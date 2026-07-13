@@ -17,6 +17,12 @@ scene = _ke.scene
 NativeApp = _ke.App
 
 
+def _safe_scene_segment(value, fallback: str = "item") -> str:
+    text = str(value or fallback)
+    safe = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in text)
+    return safe or fallback
+
+
 class RenderablePrimView:
     """User-facing view for one scene prim and its renderer resources."""
 
@@ -138,6 +144,21 @@ class DebugPrimitiveView(RenderablePrimView):
         return self
 
 
+class ObjImportView:
+    """Result returned by SceneContext.add_obj()."""
+
+    def __init__(self, root, views, info):
+        self.root = root
+        self.views = views
+        self.info = info
+
+    def __iter__(self):
+        return iter(self.views)
+
+    def __len__(self):
+        return len(self.views)
+
+
 class SceneContext:
     """Scene-facing facade connected to the owning App renderer.
 
@@ -191,12 +212,85 @@ class SceneContext:
         material,
         color=None,
         transform_source=None,
+        uri=None,
     ):
         prim = self.define_prim(path, scene.PrimType.Mesh)
-        prim.set_mesh_data(mesh_data)
+        mesh_handle = self._app._register_mesh_resource(
+            mesh_data,
+            display_name=Path(path).name or "Mesh",
+            uri=uri or f"scene://mesh{path}",
+        )
+        mesh_component = prim.get_mesh_component()
+        if mesh_component is None:
+            mesh_component = prim.add_mesh_component()
+        # Keep the render prim on the fast path by caching the shared mesh
+        # directly. The resource handle remains the editor/resource identity,
+        # but renderer registration no longer depends on traversing /.Resources.
+        mesh_component.mesh_data = mesh_data
+        mesh_component.resource_handle = mesh_handle
         if color is not None:
             prim.set_display_color_alpha(color)
         return self.add_renderable(prim, material, transform_source)
+
+    def add_obj(
+        self,
+        path: str,
+        obj_path,
+        *,
+        transform_source=None,
+        double_sided=False,
+    ):
+        """Load an OBJ/MTL file and add material-subset mesh prims.
+
+        Multi-material OBJ files become one Xform root with one renderable child
+        per material subset. Single-material OBJ files still use the same code
+        path, which keeps resource registration and material creation
+        consistent.
+        """
+        obj_path = Path(obj_path)
+        info = _ke.asset.load_obj_with_materials(str(obj_path))
+        root = self.define_prim(path, scene.PrimType.Xform)
+
+        subsets = list(info.subsets)
+        if not subsets:
+            subsets = [
+                SimpleNamespace(
+                    name=obj_path.stem,
+                    material_index=int(info.primary_material_index),
+                    mesh_data=info.mesh_data,
+                )
+            ]
+
+        views = []
+        used_child_names = set()
+        for index, subset in enumerate(subsets):
+            material = self._app._create_obj_subset_material(info, subset)
+            base_child_name = _safe_scene_segment(
+                subset.name if subset.name != "default" else f"subset_{index}",
+                f"subset_{index}",
+            )
+            child_name = base_child_name
+            suffix = 1
+            while child_name in used_child_names:
+                child_name = f"{base_child_name}_{suffix}"
+                suffix += 1
+            used_child_names.add(child_name)
+            child_path = f"{path.rstrip('/')}/{child_name}"
+            view = self.add_mesh(
+                child_path,
+                subset.mesh_data,
+                material,
+                color=self._app._obj_subset_display_color(info, subset),
+                transform_source=transform_source,
+                uri=f"{obj_path}#{subset.name or index}",
+            )
+            if double_sided:
+                view.set_double_sided(True)
+            if self._app._obj_subset_alpha(info, subset) < 1.0:
+                view.set_alpha_mode(_ke.AlphaMode.Blend)
+            views.append(view)
+
+        return ObjImportView(root, views, info)
 
     def add_ground(self, path: str = "/ground", scale: float = 20.0, shader=None):
         if shader is None:
@@ -291,6 +385,10 @@ class App(NativeApp):
         self.scene_backend_type = scene.BackendType.Native
         self.headless = False
         self.scene = SceneContext(self)
+        self.resources = scene.SceneResourceManager(self.get_scene())
+        self._resource_handles_by_object_id = {}
+        self._resource_counter = 0
+        self._textures_by_uri = {}
 
     def package_asset_path(self, *parts: str) -> str:
         return str(Path(_ke.__file__).resolve().parent / "assets" / Path(*parts))
@@ -319,6 +417,11 @@ class App(NativeApp):
         self._bind_common_ubos(shader)
         if str(fragment_shader).endswith("checkerboard.fs"):
             self.set_background_shader(shader)
+        self._register_shader_resource(
+            shader,
+            f"{vertex_shader}+{fragment_shader}",
+            f"asset://shaders/{vertex_shader}+{fragment_shader}",
+        )
         return shader
 
     def set_texture_uniform(self, shader, unit: int = 0, name: str = "uTexture"):
@@ -382,9 +485,75 @@ class App(NativeApp):
     #################################################################
 
     ############# Helpers ###########################################
+    def _remember_resource_handle(self, obj, handle):
+        if obj is not None:
+            # C++ resource entries for materials/textures/shaders are
+            # intentionally non-owning. Holding the Python wrapper here keeps
+            # those objects alive and prevents stale id() reuse from returning
+            # an unrelated handle.
+            self._resource_handles_by_object_id[id(obj)] = (obj, handle)
+        return handle
+
+    def _existing_resource_handle(self, obj):
+        if obj is None:
+            return None
+        record = self._resource_handles_by_object_id.get(id(obj))
+        if record is None:
+            return None
+        recorded_obj, handle = record
+        return handle if recorded_obj is obj else None
+
+    def _next_resource_name(self, obj, prefix: str):
+        self._resource_counter += 1
+        return f"{prefix}_{type(obj).__name__}_{self._resource_counter}"
+
+    def _register_shader_resource(self, shader, display_name, uri):
+        existing = self._existing_resource_handle(shader)
+        if existing is not None:
+            return existing
+        handle = self.resources.register_shader(str(display_name), shader, str(uri))
+        return self._remember_resource_handle(shader, handle)
+
+    def _register_material_resource(self, material):
+        existing = self._existing_resource_handle(material)
+        if existing is not None:
+            return existing
+        name = self._next_resource_name(material, "Material")
+        handle = self.resources.register_material(
+            name,
+            material,
+            f"python://resource/Material/{name}",
+        )
+        return self._remember_resource_handle(material, handle)
+
+    def _register_texture_resource(self, texture, display_name=None, uri=None):
+        existing = self._existing_resource_handle(texture)
+        if existing is not None:
+            return existing
+        name = str(display_name) if display_name else self._next_resource_name(texture, "Texture")
+        handle = self.resources.register_texture(
+            name,
+            texture,
+            str(uri) if uri is not None else f"python://resource/Texture/{name}",
+        )
+        return self._remember_resource_handle(texture, handle)
+
+    def _register_mesh_resource(self, mesh_data, display_name=None, uri=None):
+        existing = self._existing_resource_handle(mesh_data)
+        if existing is not None:
+            return existing
+        name = str(display_name) if display_name else self._next_resource_name(mesh_data, "Mesh")
+        handle = self.resources.register_mesh(
+            name,
+            mesh_data,
+            str(uri) if uri is not None else f"python://resource/Mesh/{name}",
+        )
+        return self._remember_resource_handle(mesh_data, handle)
+
     def _remember_material(self, material):
         """Keep Python-created native materials alive for renderer users."""
         self.materials.append(material)
+        self._register_material_resource(material)
         return material
 
     def _remember_textures(self, *textures):
@@ -392,6 +561,24 @@ class App(NativeApp):
         for texture in textures:
             if texture is not None and texture not in self.textures:
                 self.textures.append(texture)
+                self._register_texture_resource(texture)
+
+    def load_texture(self, path, *, flip: bool = True):
+        """Load and retain a GPU texture, cached by normalized path."""
+        texture_path = str(Path(path).expanduser().resolve())
+        cached = self._textures_by_uri.get(texture_path)
+        if cached is not None:
+            return cached
+        device = self.get_renderer().device()
+        texture = device.create_texture(texture_path, bool(flip))
+        self.textures.append(texture)
+        self._register_texture_resource(
+            texture,
+            display_name=Path(texture_path).name,
+            uri=texture_path,
+        )
+        self._textures_by_uri[texture_path] = texture
+        return texture
 
     def create_phong_material(
         self,
@@ -501,6 +688,67 @@ class App(NativeApp):
         )
         return self._remember_material(material)
 
+    def _obj_material_info(self, info, material_index):
+        if material_index is None or int(material_index) < 0:
+            return None
+        materials = list(info.materials)
+        index = int(material_index)
+        return materials[index] if index < len(materials) else None
+
+    def _obj_subset_alpha(self, info, subset):
+        material = self._obj_material_info(info, subset.material_index)
+        if material is None:
+            return 1.0
+        return float(material.diffuse_color[3])
+
+    def _obj_subset_display_color(self, info, subset):
+        material = self._obj_material_info(info, subset.material_index)
+        alpha = 1.0 if material is None else float(material.diffuse_color[3])
+        return _ke.vec4(1.0, 1.0, 1.0, alpha)
+
+    def _create_obj_subset_material(self, info, subset):
+        material_info = self._obj_material_info(info, subset.material_index)
+        if material_info is None:
+            return self.create_phong_material(
+                shader=self.create_standard_shaders().phong,
+                diffuse=_ke.vec3(1.0, 1.0, 1.0),
+                specular=_ke.vec3(0.05, 0.05, 0.05),
+                shininess=16.0,
+            )
+
+        diffuse_map = None
+        normal_map = None
+        if material_info.has_diffuse_texture:
+            diffuse_path = Path(material_info.diffuse_texture_path)
+            if diffuse_path.exists():
+                diffuse_map = self.load_texture(diffuse_path, flip=True)
+        if material_info.has_normal_texture:
+            normal_path = Path(material_info.normal_texture_path)
+            if normal_path.exists():
+                normal_map = self.load_texture(normal_path, flip=True)
+
+        return self.create_phong_material(
+            shader=self.create_standard_shaders().phong,
+            ambient=_ke.vec3(
+                float(material_info.ambient_color[0]),
+                float(material_info.ambient_color[1]),
+                float(material_info.ambient_color[2]),
+            ),
+            diffuse=_ke.vec3(
+                float(material_info.diffuse_color[0]),
+                float(material_info.diffuse_color[1]),
+                float(material_info.diffuse_color[2]),
+            ),
+            specular=_ke.vec3(
+                float(material_info.specular_color[0]),
+                float(material_info.specular_color[1]),
+                float(material_info.specular_color[2]),
+            ),
+            shininess=float(material_info.shininess),
+            diffuse_map=diffuse_map,
+            normal_map=normal_map,
+        )
+
     def _add_renderable(self, material_or_shader, prim, transform_source=None):
         """Low-level renderer handle path used by internal bridges."""
         if transform_source is None:
@@ -527,12 +775,24 @@ class App(NativeApp):
     def add_ground(self, path: str = "/ground", scale: float = 20.0, shader=None):
         return self.scene.add_ground(path, scale, shader)
 
-    def add_mesh(self, path: str, mesh_data, material=None, color=None, *, shader=None):
+    def add_mesh(
+        self,
+        path: str,
+        mesh_data,
+        material=None,
+        color=None,
+        *,
+        shader=None,
+        uri=None,
+    ):
         if material is None:
             material = shader
         if material is None:
             raise ValueError("add_mesh requires a material or compatibility shader")
-        return self.scene.add_mesh(path, mesh_data, material, color=color)
+        return self.scene.add_mesh(path, mesh_data, material, color=color, uri=uri)
+
+    def add_obj(self, path: str, obj_path, **kwargs):
+        return self.scene.add_obj(path, obj_path, **kwargs)
 
     def add_skinned_mesh(
         self,
@@ -624,7 +884,7 @@ class App(NativeApp):
         self.graphics_backend_type = graphics_backend_type
         self.scene_backend_type = scene_backend_type
 
-        return super().initialize(
+        result = super().initialize(
             self.initial_width,
             self.initial_height,
             self.hide_ui,
@@ -633,6 +893,10 @@ class App(NativeApp):
             self.scene_backend_type,
             self.headless,
         )
+        # Native initialize() recreates the SceneBackend. Keep the resource
+        # registry mirrored into the live scene used by ScenePanel/rendering.
+        self.resources.bind_scene(self.get_scene())
+        return result
 
     def is_key_down(self, key):
         return self.is_key_pressed(key)

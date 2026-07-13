@@ -9,6 +9,9 @@
 #include "engine/scene/component/camera_component.hpp"
 #include "engine/scene/component/light_component.hpp"
 #include "engine/scene/component/material_binding_component.hpp"
+#include "engine/scene/component/mesh_component.hpp"
+#include "engine/scene/component/resource_component.hpp"
+#include "engine/scene/component/transform_component.hpp"
 #include "engine/scene/native/xform_token.hpp"
 #include <IconsFontAwesome7.h>
 #include <algorithm>
@@ -52,6 +55,8 @@ const char* primTypeLabel(Scene::PrimType type) {
         return "Camera";
     case Scene::PrimType::Light:
         return "Light";
+    case Scene::PrimType::Resource:
+        return "Resource";
     }
     return "Unknown";
 }
@@ -177,6 +182,24 @@ std::string nextScenePath(Scene::SceneBackend* scene, const std::string& base) {
 
 bool isEngineOwnedPrim(const Scene::Prim* prim) {
     return prim && prim->getPath() == "/lights/default_directional";
+}
+
+bool isResourceNamespacePrim(const Scene::Prim* prim) {
+    if (!prim)
+        return false;
+    const std::string& path = prim->getPath();
+    return path == "/.Resources" || path.rfind("/.Resources/", 0) == 0;
+}
+
+bool subtreeHasResourceNamespacePrim(Scene::Prim* prim) {
+    if (!prim)
+        return false;
+    bool found = false;
+    prim->traverse([&](Scene::Prim* child) {
+        if (isResourceNamespacePrim(child))
+            found = true;
+    });
+    return found;
 }
 
 bool subtreeHasEngineOwnedPrim(Scene::Prim* prim) {
@@ -538,8 +561,7 @@ void drawMaterialInspector(Scene::Prim& prim) {
         ImGui::ColorEdit3("Ambient", &phong->ambient.x);
         ImGui::ColorEdit3("Diffuse", &phong->diffuse.x);
         ImGui::ColorEdit3("Specular", &phong->specular.x);
-        ImGui::DragFloat("Shininess", &phong->shininess, 0.25f, 1.0f,
-                         512.0f);
+        ImGui::DragFloat("Shininess", &phong->shininess, 0.25f, 1.0f, 512.0f);
         drawTextureStatus("Diffuse Map", phong->diffuseMap);
         drawTextureStatus("Specular Map", phong->specularMap);
         drawTextureStatus("Normal Map", phong->normalMap);
@@ -565,6 +587,39 @@ void drawMaterialInspector(Scene::Prim& prim) {
             "Compatibility wrapper for legacy shader-only renderables. "
             "Surface color comes from per-instance display/base color.");
     }
+}
+
+void drawResourceComponentEditor(Scene::Prim& prim) {
+    auto resource = prim.getResourceComponent();
+    if (!resource) {
+        ImGui::TextDisabled("No ResourceComponent");
+        return;
+    }
+    ImGui::BeginDisabled();
+    ImGui::Text("Component: attached=%s version=%llu",
+                resource->isAttached() ? "true" : "false",
+                static_cast<unsigned long long>(resource->version()));
+    ImGui::Text("Handle: %u", resource->handle());
+
+    const char* kindLabels[] = {"Unknown", "Mesh", "Material", "Texture",
+                                "Shader"};
+    int kind = static_cast<int>(resource->type());
+    if (ImGui::Combo("Kind", &kind, kindLabels,
+                     static_cast<int>(std::size(kindLabels)))) {
+        resource->setType(static_cast<Scene::ResourceType>(kind));
+    }
+
+    char displayName[256] = {};
+    std::snprintf(displayName, sizeof(displayName), "%s",
+                  resource->displayName().c_str());
+    if (ImGui::InputText("Display Name", displayName, sizeof(displayName)))
+        resource->setDisplayName(displayName);
+
+    char uri[512] = {};
+    std::snprintf(uri, sizeof(uri), "%s", resource->uri().c_str());
+    if (ImGui::InputText("URI", uri, sizeof(uri)))
+        resource->setUri(uri);
+    ImGui::EndDisabled();
 }
 
 bool drawAttributeValue(const std::string& name,
@@ -925,6 +980,7 @@ void InspectorPanel::buildPanel() {
     TransformSource source = selection.transformSource;
     _app->getPrimTransformSource(prim, source);
     const bool external = source == TransformSource::ExternalBuffer;
+    const bool resourceMirror = isResourceNamespacePrim(prim);
 
     ImGui::SeparatorText("Prim");
     if (ImGui::BeginTable("PrimSummary", 2,
@@ -958,7 +1014,7 @@ void InspectorPanel::buildPanel() {
     }
 
     ImGui::SeparatorText("State");
-    if (external)
+    if (external || resourceMirror)
         ImGui::BeginDisabled();
     bool active = prim->isActive();
     if (ImGui::Checkbox("Active", &active))
@@ -975,18 +1031,34 @@ void InspectorPanel::buildPanel() {
         prim->setManipulationPolicy(
             static_cast<Scene::ManipulationPolicy>(policy));
     }
-    if (external)
+    if (external || resourceMirror)
         ImGui::EndDisabled();
+    if (resourceMirror) {
+        ImGui::TextDisabled(
+            "Resource mirrors are managed by SceneResourceManager.");
+    }
 
-    ImGui::SeparatorText("World Transform");
+    ImGui::SeparatorText("Transform");
+    auto transform = prim->getTransformComponent();
+    if (transform) {
+        ImGui::Text("Component: attached=%s version=%llu",
+                    transform->isAttached() ? "true" : "false",
+                    static_cast<unsigned long long>(transform->version()));
+    } else {
+        ImGui::TextColored(ImVec4(0.95f, 0.45f, 0.35f, 1.0f),
+                           "Missing TransformComponent");
+    }
+
     if (external) {
         ImGui::TextColored(ImVec4(0.48f, 0.72f, 0.94f, 1.0f),
                            ICON_FA_LOCK "  Owned by ExternalBuffer");
+    } else if (!transform) {
+        ImGui::TextDisabled("No transform data");
     } else {
         glm::vec3 translation(0.0f);
         glm::vec3 rotationDegrees(0.0f);
         glm::vec3 scale(1.0f);
-        if (decomposeTransform(prim->computeWorldMatrix(), translation,
+        if (decomposeTransform(transform->computeWorldMatrix(), translation,
                                rotationDegrees, scale)) {
             ImGui::BeginDisabled();
             ImGui::DragFloat3("Position", &translation.x, 0.01f);
@@ -1001,8 +1073,21 @@ void InspectorPanel::buildPanel() {
 
     if (const std::shared_ptr<Scene::MeshData> mesh = prim->resolveMeshData()) {
         ImGui::SeparatorText("Mesh");
-        if (!prim->getMeshSourcePath().empty())
-            ImGui::TextWrapped("Source: %s", prim->getMeshSourcePath().c_str());
+        auto meshComponent = prim->getMeshComponent();
+        if (meshComponent) {
+            ImGui::Text(
+                "Component: attached=%s version=%llu",
+                meshComponent->isAttached() ? "true" : "false",
+                static_cast<unsigned long long>(meshComponent->version()));
+            if (meshComponent->resourceHandle() !=
+                Scene::InvalidResourceHandle) {
+                ImGui::Text("Resource Handle: %u",
+                            meshComponent->resourceHandle());
+            }
+            if (!meshComponent->meshSourcePath().empty())
+                ImGui::TextWrapped("Source: %s",
+                                   meshComponent->meshSourcePath().c_str());
+        }
         ImGui::Text("Vertices: %zu", mesh->vertices.size());
         ImGui::Text("Indices: %zu", mesh->indices.size());
         ImGui::Text("Triangles: %zu", mesh->indices.size() / 3);
@@ -1019,6 +1104,11 @@ void InspectorPanel::buildPanel() {
     if (prim->getType() == Scene::PrimType::Camera) {
         ImGui::SeparatorText("Camera");
         drawCameraComponentEditor(_app, *prim, !external);
+    }
+
+    if (prim->getType() == Scene::PrimType::Resource) {
+        ImGui::SeparatorText("Resource");
+        drawResourceComponentEditor(*prim);
     }
 
     ImGui::SeparatorText("Attributes");
@@ -1609,8 +1699,13 @@ void ScenePanel::buildPanel() {
             ImGui::TableSetColumnIndex(0);
             ImGui::PushID(prim);
             bool visible = prim->isVisible();
+            const bool resourceMirror = isResourceNamespacePrim(prim);
+            if (resourceMirror)
+                ImGui::BeginDisabled();
             if (ImGui::Checkbox("##Visible", &visible))
                 prim->setVisible(visible);
+            if (resourceMirror)
+                ImGui::EndDisabled();
             ImGui::SameLine();
 
             const bool activeInHierarchy = prim->isActiveInHierarchy();
@@ -1620,11 +1715,12 @@ void ScenePanel::buildPanel() {
             const bool external =
                 _app->getPrimTransformSource(prim, transformSource) &&
                 transformSource == TransformSource::ExternalBuffer;
-            const bool customTextColor = disabled || external;
+            const bool customTextColor = disabled || external || resourceMirror;
             if (customTextColor) {
                 const ImVec4 textColor =
-                    disabled ? ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled)
-                             : ImVec4(0.48f, 0.72f, 0.94f, 1.0f);
+                    (disabled || resourceMirror)
+                        ? ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled)
+                        : ImVec4(0.48f, 0.72f, 0.94f, 1.0f);
                 ImGui::PushStyleColor(ImGuiCol_Text, textColor);
             }
 
@@ -1651,11 +1747,15 @@ void ScenePanel::buildPanel() {
                 const bool engineOwned = isEngineOwnedPrim(prim);
                 const bool subtreeHasEngineOwned =
                     subtreeHasEngineOwnedPrim(prim);
+                const bool resourceNamespace = isResourceNamespacePrim(prim);
+                const bool subtreeHasResourceNamespace =
+                    subtreeHasResourceNamespacePrim(prim);
                 const bool subtreeHasExternal =
                     subtreeHasExternalPrim(_app, prim);
-                const bool canDelete = !rootPrim && !engineOwned &&
-                                       !subtreeHasEngineOwned &&
-                                       !subtreeHasExternal;
+                const bool canDelete =
+                    !rootPrim && !engineOwned && !subtreeHasEngineOwned &&
+                    !resourceNamespace && !subtreeHasResourceNamespace &&
+                    !subtreeHasExternal;
                 if (!canDelete)
                     ImGui::BeginDisabled();
                 if (ImGui::MenuItem("Delete...")) {
@@ -1669,6 +1769,9 @@ void ScenePanel::buildPanel() {
                 else if (engineOwned || subtreeHasEngineOwned)
                     ImGui::TextDisabled(
                         "Subtree contains engine-owned default light.");
+                else if (resourceNamespace || subtreeHasResourceNamespace)
+                    ImGui::TextDisabled("Resource mirrors are managed by "
+                                        "SceneResourceManager.");
                 else if (subtreeHasExternal)
                     ImGui::TextDisabled(
                         "Subtree contains ExternalBuffer prims.");

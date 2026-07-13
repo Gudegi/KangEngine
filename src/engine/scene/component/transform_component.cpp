@@ -33,14 +33,18 @@ void TransformComponent::detach() {
 void TransformComponent::markLocalTransformDirty() {
     requireAttached();
     _localDirty = true;
-    markChanged();
-    markWorldTransformDirtyRecursive();
+    if (!_suppressLocalDirtyVersion)
+        markChanged();
+    markWorldTransformDirtyRecursive(false);
 }
 
-void TransformComponent::markWorldTransformDirtyRecursive() {
+void TransformComponent::markWorldTransformDirtyRecursive(
+    bool countSelfVersion) {
     requireAttached();
+    const bool becameDirty = !_worldDirty;
     _worldDirty = true;
-    markChanged();
+    if (countSelfVersion && becameDirty)
+        markChanged();
     for (Prim* child : _owner->getChildren()) {
         if (auto transform = child->getTransformComponent())
             transform->markWorldTransformDirtyRecursive();
@@ -49,29 +53,65 @@ void TransformComponent::markWorldTransformDirtyRecursive() {
 
 void TransformComponent::setLocalTranslation(glm::vec3 translation) {
     requireAttached();
-    _owner->setAttribute(XformTokens::translate, translation);
-    _owner->setXformOpOrder(
-        {"xformOp:scale", "xformOp:rotateQuaternion", "xformOp:translate"});
+    _suppressLocalDirtyVersion = true;
+    try {
+        _owner->setAttribute(XformTokens::translate, translation);
+        _owner->setXformOpOrder(
+            {"xformOp:scale", "xformOp:rotateQuaternion",
+             "xformOp:translate"});
+    } catch (...) {
+        _suppressLocalDirtyVersion = false;
+        throw;
+    }
+    _suppressLocalDirtyVersion = false;
+    markChanged();
 }
 
 void TransformComponent::setLocalScale(glm::vec3 scale) {
     requireAttached();
-    _owner->setAttribute(XformTokens::scale, scale);
-    _owner->setXformOpOrder(
-        {"xformOp:scale", "xformOp:rotateQuaternion", "xformOp:translate"});
+    _suppressLocalDirtyVersion = true;
+    try {
+        _owner->setAttribute(XformTokens::scale, scale);
+        _owner->setXformOpOrder(
+            {"xformOp:scale", "xformOp:rotateQuaternion",
+             "xformOp:translate"});
+    } catch (...) {
+        _suppressLocalDirtyVersion = false;
+        throw;
+    }
+    _suppressLocalDirtyVersion = false;
+    markChanged();
 }
 
 void TransformComponent::setLocalRotation(glm::quat rotation) {
     requireAttached();
-    _owner->setAttribute(XformTokens::rotateQuat, glm::normalize(rotation));
-    _owner->setXformOpOrder(
-        {"xformOp:scale", "xformOp:rotateQuaternion", "xformOp:translate"});
+    _suppressLocalDirtyVersion = true;
+    try {
+        _owner->setAttribute(XformTokens::rotateQuat,
+                             glm::normalize(rotation));
+        _owner->setXformOpOrder(
+            {"xformOp:scale", "xformOp:rotateQuaternion",
+             "xformOp:translate"});
+    } catch (...) {
+        _suppressLocalDirtyVersion = false;
+        throw;
+    }
+    _suppressLocalDirtyVersion = false;
+    markChanged();
 }
 
 void TransformComponent::setLocalMatrix(const glm::mat4& matrix) {
     requireAttached();
-    _owner->setAttribute(XformTokens::transform, matrix);
-    _owner->setXformOpOrder({"xformOp:transform"});
+    _suppressLocalDirtyVersion = true;
+    try {
+        _owner->setAttribute(XformTokens::transform, matrix);
+        _owner->setXformOpOrder({"xformOp:transform"});
+    } catch (...) {
+        _suppressLocalDirtyVersion = false;
+        throw;
+    }
+    _suppressLocalDirtyVersion = false;
+    markChanged();
 }
 
 void TransformComponent::setWorldTranslation(glm::vec3 translation) {

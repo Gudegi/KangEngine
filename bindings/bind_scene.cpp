@@ -13,11 +13,14 @@
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/scene/debug_draw.hpp"
 #include "engine/scene/component/transform_component.hpp"
+#include "engine/scene/component/mesh_component.hpp"
 #include "engine/scene/component/render_component.hpp"
 #include "engine/scene/component/light_component.hpp"
 #include "engine/scene/component/camera_component.hpp"
 #include "engine/scene/component/material_binding_component.hpp"
+#include "engine/scene/component/resource_component.hpp"
 #include "engine/scene/component/scene_render_system.hpp"
+#include "engine/scene/scene_resource_manager.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/native/token.hpp"
 #include "engine/graphics/material/material.hpp"
@@ -60,7 +63,20 @@ void bind_scene(py::module& m) {
         .value("MeshInstance", KE::Scene::PrimType::MeshInstance)
         .value("Camera", KE::Scene::PrimType::Camera)
         .value("Light", KE::Scene::PrimType::Light)
+        .value("Resource", KE::Scene::PrimType::Resource)
         .export_values();
+
+    py::enum_<KE::Scene::ResourceType>(
+        scene, "ResourceType",
+        "Kind of shared resource represented by a ResourceComponent.")
+        .value("Unknown", KE::Scene::ResourceType::Unknown)
+        .value("Mesh", KE::Scene::ResourceType::Mesh)
+        .value("Material", KE::Scene::ResourceType::Material)
+        .value("Texture", KE::Scene::ResourceType::Texture)
+        .value("Shader", KE::Scene::ResourceType::Shader)
+        .export_values();
+    scene.attr("InvalidResourceHandle") =
+        py::int_(KE::Scene::InvalidResourceHandle);
 
     py::enum_<KE::Scene::ManipulationPolicy>(
         scene, "ManipulationPolicy",
@@ -180,6 +196,38 @@ void bind_scene(py::module& m) {
                    "' version=" + std::to_string(c.version()) + ">";
         });
 
+    py::class_<KE::Scene::MeshComponent,
+               std::shared_ptr<KE::Scene::MeshComponent>>(
+        scene, "MeshComponent",
+        "Geometry payload/reference attached to a renderable mesh prim.")
+        .def_property_readonly("attached",
+                               &KE::Scene::MeshComponent::isAttached,
+                               "Return whether this component is attached.")
+        .def_property_readonly("owner", &KE::Scene::MeshComponent::owner,
+                               py::return_value_policy::reference,
+                               "Return the owning prim, or None after detach.")
+        .def_property("mesh_data", &KE::Scene::MeshComponent::meshData,
+                      &KE::Scene::MeshComponent::setMeshData,
+                      "Get or set directly attached mesh data.")
+        .def_property("mesh_source_path",
+                      &KE::Scene::MeshComponent::meshSourcePath,
+                      &KE::Scene::MeshComponent::setMeshSourcePath,
+                      "Get or set the source path for MeshInstance prims.")
+        .def_property("resource_handle",
+                      &KE::Scene::MeshComponent::resourceHandle,
+                      &KE::Scene::MeshComponent::setResourceHandle,
+                      "Get or set the optional SceneResourceManager handle.")
+        .def("resolve_mesh_data", &KE::Scene::MeshComponent::resolveMeshData,
+             "Return direct mesh data or resolved source mesh data.")
+        .def_property_readonly("version", &KE::Scene::MeshComponent::version,
+                               "Return the mesh component version.")
+        .def("__repr__", [](const KE::Scene::MeshComponent& c) {
+            const KE::Scene::Prim* owner = c.owner();
+            const std::string path = owner ? owner->getPath() : "<detached>";
+            return "<MeshComponent path='" + path +
+                   "' version=" + std::to_string(c.version()) + ">";
+        });
+
     py::class_<KE::Scene::MaterialBindingComponent,
                std::shared_ptr<KE::Scene::MaterialBindingComponent>>(
         scene, "MaterialBindingComponent",
@@ -208,6 +256,82 @@ void bind_scene(py::module& m) {
             return "<MaterialBindingComponent path='" + path +
                    "' version=" + std::to_string(c.version()) + ">";
         });
+
+    py::class_<KE::Scene::ResourceComponent,
+               std::shared_ptr<KE::Scene::ResourceComponent>>(
+        scene, "ResourceComponent",
+        "Lightweight resource metadata attached to a Resource prim.")
+        .def_property_readonly("attached",
+                               &KE::Scene::ResourceComponent::isAttached,
+                               "Return whether this component is attached.")
+        .def_property_readonly("owner", &KE::Scene::ResourceComponent::owner,
+                               py::return_value_policy::reference,
+                               "Return the owning prim, or None after detach.")
+        .def_property("type", &KE::Scene::ResourceComponent::type,
+                      &KE::Scene::ResourceComponent::setType,
+                      "Get or set the resource type.")
+        .def_property("handle", &KE::Scene::ResourceComponent::handle,
+                      &KE::Scene::ResourceComponent::setHandle,
+                      "Get or set the SceneResourceManager handle.")
+        .def_property("uri", &KE::Scene::ResourceComponent::uri,
+                      &KE::Scene::ResourceComponent::setUri,
+                      "Get or set the resource URI/path.")
+        .def_property("display_name",
+                      &KE::Scene::ResourceComponent::displayName,
+                      &KE::Scene::ResourceComponent::setDisplayName,
+                      "Get or set a user-facing resource name.")
+        .def_property_readonly("version",
+                               &KE::Scene::ResourceComponent::version,
+                               "Return the resource metadata version.")
+        .def("__repr__", [](const KE::Scene::ResourceComponent& c) {
+            const KE::Scene::Prim* owner = c.owner();
+            const std::string path = owner ? owner->getPath() : "<detached>";
+            return "<ResourceComponent path='" + path +
+                   "' version=" + std::to_string(c.version()) + ">";
+        });
+
+    py::class_<KE::Scene::SceneResourceManager>(
+        scene, "SceneResourceManager",
+        "Scene resource manager mirrored into metadata-only /.Resources prims.")
+        .def(py::init<KE::Scene::SceneBackend*>(), py::arg("scene") = nullptr,
+             "Create a SceneResourceManager optionally bound to a scene "
+             "backend.")
+        .def("bind_scene", &KE::Scene::SceneResourceManager::bindScene,
+             py::arg("scene"), "Bind the scene used for Resource prim mirrors.")
+        .def("register_mesh", &KE::Scene::SceneResourceManager::registerMesh,
+             py::arg("name"), py::arg("mesh"), py::arg("uri") = "",
+             "Register mesh data and return a resource handle.")
+        .def("register_material",
+             &KE::Scene::SceneResourceManager::registerMaterial,
+             py::arg("name"), py::arg("material"), py::arg("uri") = "",
+             "Register a non-owned material and return a resource handle.")
+        .def("register_texture",
+             &KE::Scene::SceneResourceManager::registerTexture,
+             py::arg("name"), py::arg("texture"), py::arg("uri") = "",
+             "Register a non-owned texture and return a resource handle.")
+        .def("register_shader",
+             &KE::Scene::SceneResourceManager::registerShader,
+             py::arg("name"), py::arg("shader"), py::arg("uri") = "",
+             "Register a non-owned shader and return a resource handle.")
+        .def("mesh", &KE::Scene::SceneResourceManager::mesh,
+             py::arg("handle"),
+             "Return mesh data for a handle, or None.")
+        .def("material", &KE::Scene::SceneResourceManager::material,
+             py::arg("handle"), py::return_value_policy::reference,
+             "Return material for a handle, or None.")
+        .def("texture", &KE::Scene::SceneResourceManager::texture,
+             py::arg("handle"), py::return_value_policy::reference,
+             "Return texture for a handle, or None.")
+        .def("shader", &KE::Scene::SceneResourceManager::shader,
+             py::arg("handle"),
+             py::return_value_policy::reference,
+             "Return shader for a handle, or None.")
+        .def("resource_prim",
+             &KE::Scene::SceneResourceManager::resourcePrim,
+             py::arg("handle"), py::return_value_policy::reference,
+             "Return mirrored Resource prim for a handle, or None.")
+        .def("clear", &KE::Scene::SceneResourceManager::clear)
+        .def("__len__", &KE::Scene::SceneResourceManager::size);
 
     py::class_<KE::Scene::LightComponent,
                std::shared_ptr<KE::Scene::LightComponent>>(
@@ -447,6 +571,14 @@ void bind_scene(py::module& m) {
              "Return this prim's mandatory transform component.")
         .def("has_transform_component", &KE::Scene::Prim::hasTransformComponent,
              "Return whether this prim has a transform component.")
+        .def("add_mesh_component", &KE::Scene::Prim::addMeshComponent,
+             "Attach and return this Mesh/MeshInstance prim's mesh component.")
+        .def("get_mesh_component", &KE::Scene::Prim::getMeshComponent,
+             "Return this prim's mesh component, or None.")
+        .def("has_mesh_component", &KE::Scene::Prim::hasMeshComponent,
+             "Return whether this prim has a mesh component.")
+        .def("remove_mesh_component", &KE::Scene::Prim::removeMeshComponent,
+             "Detach this prim's mesh component.")
         .def("add_material_binding_component",
              &KE::Scene::Prim::addMaterialBindingComponent,
              "Attach and return this prim's material binding component.")
@@ -475,6 +607,15 @@ void bind_scene(py::module& m) {
              "Return whether this prim has a camera component.")
         .def("remove_camera_component", &KE::Scene::Prim::removeCameraComponent,
              "Detach this prim's camera component.")
+        .def("add_resource_component", &KE::Scene::Prim::addResourceComponent,
+             "Attach and return this Resource prim's resource component.")
+        .def("get_resource_component", &KE::Scene::Prim::getResourceComponent,
+             "Return this prim's resource component, or None.")
+        .def("has_resource_component", &KE::Scene::Prim::hasResourceComponent,
+             "Return whether this prim has a resource component.")
+        .def("remove_resource_component",
+             &KE::Scene::Prim::removeResourceComponent,
+             "Detach this prim's resource component.")
         // Mesh data
         .def("set_mesh_data", &KE::Scene::Prim::setMeshData,
              py::arg("mesh_data"), "Attach mesh data to this prim.")

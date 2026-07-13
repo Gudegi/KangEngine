@@ -73,9 +73,14 @@ class FBXMeshViewer(ke.App):
 
         textured_count = 0
         normal_mapped_count = 0
+        used_mesh_names = set()
         for idx, mesh in enumerate(self.meshes):
+            mesh_name = _unique_prim_name(
+                _safe_prim_name(mesh.name, f"mesh_{idx}"),
+                used_mesh_names,
+            )
             prim_path = (
-                f"{FBX_ROOT_PATH}/{_safe_prim_name(mesh.name, f'mesh_{idx}')}"
+                f"{FBX_ROOT_PATH}/{mesh_name}"
             )
             diffuse_path = _material_texture_path(mesh, "diffuse")
             diffuse_texture = self._load_texture(diffuse_path)
@@ -165,9 +170,8 @@ class FBXMeshViewer(ke.App):
         key = str(path.resolve())
         if key in self.texture_cache:
             return self.texture_cache[key]
-        texture = self.get_renderer().device().create_texture(str(path), True)
+        texture = self.load_texture(path, flip=True)
         self.texture_cache[key] = texture
-        self.textures.append(texture)
         return texture
 
 
@@ -175,6 +179,16 @@ def _safe_prim_name(name: str, fallback: str) -> str:
     clean = "".join(ch if ch.isalnum() or ch == "_" else "_" for ch in name)
     clean = clean.strip("_")
     return clean or fallback
+
+
+def _unique_prim_name(name: str, used_names: set[str]) -> str:
+    candidate = name
+    suffix = 1
+    while candidate in used_names:
+        candidate = f"{name}_{suffix}"
+        suffix += 1
+    used_names.add(candidate)
+    return candidate
 
 
 def _mesh_color(index: int):
