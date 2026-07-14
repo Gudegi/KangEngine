@@ -1430,6 +1430,12 @@ py::class_<glm::vec3>(m, "vec3")
             py::return_value_policy::reference_internal,
             "Return the scene-to-renderer component registry.")
         .def(
+            "get_scene_resource_manager",
+            [](App& self) { return &self.getSceneResourceManager(); },
+            py::return_value_policy::reference_internal,
+            "Return the scene-scoped resource manager used by Resource prim "
+            "mirrors.")
+        .def(
             "add_renderable",
             [](App* self, Backend::Shader* shader, Scene::Prim* prim,
                TransformSource transformSource) {

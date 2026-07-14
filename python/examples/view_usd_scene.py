@@ -10,10 +10,6 @@ import kangengine as ke
 from kangengine import asset, imgui, scene
 
 
-def package_asset_path(*parts: str) -> str:
-    return str(Path(ke.__file__).resolve().parent / "assets" / Path(*parts))
-
-
 SPONZA_USD = (
     Path(__file__).resolve().parents[2]
     / "assets"
@@ -23,17 +19,15 @@ SPONZA_USD = (
     / "NewSponza_Main_USD_Yup_003.usda"
 )
 
-NORMAL_DEBUG_MODES = [
-    "off",
-    "vertex normal",
-    "tangent",
-    "normal map",
-    "final normal",
-]
-
 
 class USDSceneViewer(ke.App):
-    def __init__(self, usd_file: Path, scale: float, show_ground: bool, double_sided: bool):
+    def __init__(
+        self,
+        usd_file: Path,
+        scale: float,
+        show_ground: bool,
+        double_sided: bool,
+    ):
         super().__init__()
         self.usd_file = str(usd_file)
         self.scale = scale
@@ -42,34 +36,11 @@ class USDSceneViewer(ke.App):
 
     def setup(self):
         self.mesh_views = []
-        self.textures = []
-        self.texture_cache = {}
         self.normal_maps_enabled = True
-        self.normal_debug_mode = 0
         self.normal_texture_bindings = []
         self.bounds_min = None
         self.bounds_max = None
-
-        device = self.get_renderer().device()
-        vs = package_asset_path("shaders", "common.vs")
-        fs = package_asset_path("shaders", "common.fs")
-        tex_fs = package_asset_path("shaders", "commonTex.fs")
-        checker_fs = package_asset_path("shaders", "checkerboard.fs")
-
-        self.mesh_shader = device.create_shader_from_file(vs, fs)
-        self.mesh_texture_shader = device.create_shader_from_file(vs, tex_fs)
-        self.ground_shader = device.create_shader_from_file(vs, checker_fs)
-
-        for shader in (self.mesh_shader, self.mesh_texture_shader, self.ground_shader):
-            shader.use()
-            shader.set_uniform_block_binding("cameraUBO", 0)
-            shader.set_uniform_block_binding("lightUBO", 1)
-            shader.set_uniform_block_binding("shadowUBO", 2)
-            shader.set_int("normalDebugMode", 0)
-
-        self.ground_shader.use()
-        self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
-        self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.62, 0.82, 0.68, 1.0))
+        self.shaders = self.create_standard_shaders()
 
         self._configure_lighting()
 
@@ -81,28 +52,35 @@ class USDSceneViewer(ke.App):
             self.scene.add_mesh(
                 "/ground",
                 scene.Prim.create_plane_data(50.0, ke.UpAxis.Y),
-                self.ground_shader,
+                self.shaders.ground,
             )
 
         textured_count = 0
         normal_mapped_count = 0
         for i, mesh in enumerate(self.result.meshes):
             prim_path = "/usd_meshes/" + _safe_prim_name(mesh.name, f"mesh_{i}")
-            diffuse_texture = self._load_texture(getattr(mesh, "diffuse_texture_path", ""))
-            normal_texture = self._load_texture(getattr(mesh, "normal_texture_path", ""))
-            shader = self.mesh_texture_shader if diffuse_texture is not None else self.mesh_shader
+            diffuse_texture = self._load_texture(
+                getattr(mesh, "diffuse_texture_path", "")
+            )
+            normal_texture = self._load_texture(
+                getattr(mesh, "normal_texture_path", "")
+            )
+            material = self._create_usd_material(
+                i,
+                diffuse_texture,
+                normal_texture,
+            )
             view = self.scene.add_mesh(
                 prim_path,
                 mesh.mesh_data,
-                shader,
-                color=_mesh_color(i),
+                material,
+                color=ke.vec4(1.0, 1.0, 1.0, 1.0),
+                uri=f"{self.usd_file}#{getattr(mesh, 'prim_path', prim_path)}",
             )
             if diffuse_texture is not None:
-                view.set_texture(diffuse_texture, 0)
                 textured_count += 1
-            if diffuse_texture is not None and normal_texture is not None:
-                view.set_texture(normal_texture, 5)
-                self.normal_texture_bindings.append((view, normal_texture))
+            if normal_texture is not None:
+                self.normal_texture_bindings.append((material, normal_texture))
                 normal_mapped_count += 1
             view.set_double_sided(self.double_sided)
             self.mesh_views.append(view)
@@ -128,9 +106,6 @@ class USDSceneViewer(ke.App):
         )
         if changed:
             self._apply_normal_map_toggle()
-        if imgui.button(f"debug: {_normal_debug_label(self.normal_debug_mode)}"):
-            self.normal_debug_mode = (self.normal_debug_mode + 1) % len(NORMAL_DEBUG_MODES)
-            self._apply_normal_debug_mode()
         imgui.text(f"warnings: {len(self.result.diagnostics.warnings)}")
         if self.bounds_min is not None and self.bounds_max is not None:
             size = self.bounds_max - self.bounds_min
@@ -177,33 +152,51 @@ class USDSceneViewer(ke.App):
         path = Path(texture_path)
         if not path.exists():
             return None
-        key = str(path.resolve())
-        if key in self.texture_cache:
-            return self.texture_cache[key]
-        texture = self.get_renderer().device().create_texture(str(path), True)
-        self.texture_cache[key] = texture
-        self.textures.append(texture)
-        return texture
+        return self.load_texture(path, flip=True)
+
+    def _create_usd_material(self, index: int, diffuse_texture, normal_texture):
+        """Create a material-backed surface for one imported USD mesh.
+
+        USDLoader currently exposes resolved diffuse/normal texture paths but
+        not full USD Preview Surface factors.  Use a neutral Phong material so
+        textured meshes show the texture directly, while untextured meshes get a
+        restrained stone palette.
+        """
+        color = _mesh_color(index)
+        has_diffuse = diffuse_texture is not None
+        diffuse = (
+            ke.vec3(1.0, 1.0, 1.0)
+            if has_diffuse
+            else ke.vec3(float(color.x), float(color.y), float(color.z))
+        )
+        ambient = (
+            ke.vec3(0.72, 0.72, 0.72)
+            if has_diffuse
+            else ke.vec3(
+                float(color.x) * 0.65,
+                float(color.y) * 0.65,
+                float(color.z) * 0.65,
+            )
+        )
+        return self.create_phong_material(
+            shader=self.shaders.phong,
+            ambient=ambient,
+            diffuse=diffuse,
+            specular=ke.vec3(0.08, 0.08, 0.08),
+            shininess=24.0,
+            diffuse_map=diffuse_texture,
+            normal_map=normal_texture if self.normal_maps_enabled else None,
+        )
 
     def _apply_normal_map_toggle(self):
-        for view, texture in self.normal_texture_bindings:
-            view.set_texture(texture if self.normal_maps_enabled else None, 5)
-
-    def _apply_normal_debug_mode(self):
-        self.mesh_texture_shader.use()
-        self.mesh_texture_shader.set_int("normalDebugMode", self.normal_debug_mode)
+        for material, texture in self.normal_texture_bindings:
+            material.normal_map = texture if self.normal_maps_enabled else None
 
 
 def _safe_prim_name(name: str, fallback: str) -> str:
     clean = "".join(ch if ch.isalnum() or ch == "_" else "_" for ch in name)
     clean = clean.strip("_")
     return clean or fallback
-
-
-def _normal_debug_label(mode: int) -> str:
-    if mode < 0 or mode >= len(NORMAL_DEBUG_MODES):
-        return NORMAL_DEBUG_MODES[0]
-    return NORMAL_DEBUG_MODES[mode]
 
 
 def _mesh_color(index: int):

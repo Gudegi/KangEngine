@@ -10,6 +10,7 @@
 #include "engine/scene/component/camera_component.hpp"
 #include "engine/scene/component/material_binding_component.hpp"
 #include "engine/scene/component/resource_component.hpp"
+#include "engine/scene/component/selection_component.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "utils/types.hpp"
 #include <Eigen/Geometry>
@@ -48,6 +49,20 @@ Prim::Prim(const std::string& name, PrimType type, Prim* parent)
         _transformComponent =
             std::shared_ptr<TransformComponent>(new TransformComponent(this));
     }
+    _selectionComponent =
+        std::shared_ptr<SelectionComponent>(new SelectionComponent(this));
+    if (_type == PrimType::Root) {
+        _selectionComponent->setPickable(false);
+        _selectionComponent->setSelectable(false);
+        _selectionComponent->setManipulatable(false);
+        _selectionComponent->setForceDraggable(false);
+        _selectionComponent->setInteractionKind(InteractionKind::Helper);
+    } else if (_type == PrimType::Resource) {
+        _selectionComponent->setPickable(false);
+        _selectionComponent->setManipulatable(false);
+        _selectionComponent->setForceDraggable(false);
+        _selectionComponent->setInteractionKind(InteractionKind::Resource);
+    }
 
     // Initialize prim path
     if (parent == nullptr) {
@@ -74,6 +89,8 @@ Prim::~Prim() {
         _materialBindingComponent->detach();
     if (_resourceComponent)
         _resourceComponent->detach();
+    if (_selectionComponent)
+        _selectionComponent->detach();
 }
 
 Prim* Prim::addChild(const std::string& name, PrimType type) {
@@ -337,6 +354,27 @@ bool Prim::removeResourceComponent() {
         return false;
     _resourceComponent->detach();
     _resourceComponent.reset();
+    return true;
+}
+
+std::shared_ptr<SelectionComponent> Prim::addSelectionComponent() {
+    if (_selectionComponent)
+        throw std::runtime_error("Prim '" + _path +
+                                 "' already has a SelectionComponent");
+    _selectionComponent =
+        std::shared_ptr<SelectionComponent>(new SelectionComponent(this));
+    return _selectionComponent;
+}
+
+std::shared_ptr<SelectionComponent> Prim::getSelectionComponent() const {
+    return _selectionComponent;
+}
+
+bool Prim::removeSelectionComponent() {
+    if (!_selectionComponent)
+        return false;
+    _selectionComponent->detach();
+    _selectionComponent.reset();
     return true;
 }
 

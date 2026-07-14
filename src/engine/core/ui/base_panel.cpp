@@ -11,6 +11,7 @@
 #include "engine/scene/component/material_binding_component.hpp"
 #include "engine/scene/component/mesh_component.hpp"
 #include "engine/scene/component/resource_component.hpp"
+#include "engine/scene/component/selection_component.hpp"
 #include "engine/scene/component/transform_component.hpp"
 #include "engine/scene/native/xform_token.hpp"
 #include <IconsFontAwesome7.h>
@@ -1038,6 +1039,48 @@ void InspectorPanel::buildPanel() {
             "Resource mirrors are managed by SceneResourceManager.");
     }
 
+    ImGui::SeparatorText("Selection");
+    auto selectionComponent = prim->getSelectionComponent();
+    if (selectionComponent) {
+        ImGui::Text("Component: attached=%s version=%llu",
+                    selectionComponent->isAttached() ? "true" : "false",
+                    static_cast<unsigned long long>(
+                        selectionComponent->version()));
+        if (ImGui::BeginTable("SelectionPolicy", 2,
+                              ImGuiTableFlags_SizingStretchProp)) {
+            const auto property = [](const char* label) {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::TextDisabled("%s", label);
+                ImGui::TableSetColumnIndex(1);
+            };
+            const auto yesNo = [](bool value) { return value ? "Yes" : "No"; };
+
+            property("Pickable");
+            ImGui::TextUnformatted(yesNo(selectionComponent->isPickable()));
+            property("Selectable");
+            ImGui::TextUnformatted(yesNo(selectionComponent->isSelectable()));
+            property("Manipulatable");
+            ImGui::TextUnformatted(
+                yesNo(selectionComponent->isManipulatable()));
+            property("Force Draggable");
+            ImGui::TextUnformatted(
+                yesNo(selectionComponent->isForceDraggable()));
+            property("Interaction Kind");
+            ImGui::TextUnformatted(Scene::interactionKindLabel(
+                selectionComponent->interactionKind()));
+            ImGui::EndTable();
+        }
+        ImGui::Text("Metadata: env=%d obj=%d body=%d",
+                    selectionComponent->envId(), selectionComponent->objId(),
+                    selectionComponent->bodyId());
+        if (!selectionComponent->userTag().empty())
+            ImGui::TextWrapped("Tag: %s",
+                               selectionComponent->userTag().c_str());
+    } else {
+        ImGui::TextDisabled("No SelectionComponent");
+    }
+
     ImGui::SeparatorText("Transform");
     auto transform = prim->getTransformComponent();
     if (transform) {
@@ -1715,10 +1758,24 @@ void ScenePanel::buildPanel() {
             const bool external =
                 _app->getPrimTransformSource(prim, transformSource) &&
                 transformSource == TransformSource::ExternalBuffer;
-            const bool customTextColor = disabled || external || resourceMirror;
+            bool unusedResource = false;
+            bool actualResourcePrim = false;
+            if (prim->getType() == Scene::PrimType::Resource) {
+                if (auto resource = prim->getResourceComponent()) {
+                    actualResourcePrim = true;
+                    const auto handle = resource->handle();
+                    unusedResource =
+                        handle != Scene::InvalidResourceHandle &&
+                        _app->getSceneResourceManager().usageCount(handle) == 0;
+                }
+            }
+            const bool resourceFolderMirror =
+                resourceMirror && !actualResourcePrim;
+            const bool customTextColor =
+                disabled || external || resourceFolderMirror || unusedResource;
             if (customTextColor) {
                 const ImVec4 textColor =
-                    (disabled || resourceMirror)
+                    (disabled || unusedResource || resourceFolderMirror)
                         ? ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled)
                         : ImVec4(0.48f, 0.72f, 0.94f, 1.0f);
                 ImGui::PushStyleColor(ImGuiCol_Text, textColor);
@@ -1780,6 +1837,10 @@ void ScenePanel::buildPanel() {
             if (external &&
                 ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
                 ImGui::SetTooltip("External Buffer (read-only transform)");
+            }
+            if (unusedResource &&
+                ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
+                ImGui::SetTooltip("Unused resource");
             }
 
             ImGui::TableSetColumnIndex(1);

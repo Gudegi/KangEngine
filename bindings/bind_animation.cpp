@@ -293,10 +293,14 @@ void bind_animation(py::module& m) {
         .def_readonly("shininess", &ObjMaterialInfo::shininess)
         .def_readonly("diffuse_texture_path",
                       &ObjMaterialInfo::diffuseTexturePath)
+        .def_readonly("specular_texture_path",
+                      &ObjMaterialInfo::specularTexturePath)
         .def_readonly("normal_texture_path",
                       &ObjMaterialInfo::normalTexturePath)
         .def_readonly("has_diffuse_texture",
                       &ObjMaterialInfo::hasDiffuseTexture)
+        .def_readonly("has_specular_texture",
+                      &ObjMaterialInfo::hasSpecularTexture)
         .def_readonly("has_normal_texture",
                       &ObjMaterialInfo::hasNormalTexture);
 

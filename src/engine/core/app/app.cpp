@@ -6,6 +6,7 @@
 #include "engine/scene/component/camera_component.hpp"
 #include "engine/scene/component/light_component.hpp"
 #include "engine/scene/component/render_component.hpp"
+#include "engine/scene/component/selection_component.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/prim_path.hpp"
 #include "engine/scene/scene_backend.hpp"
@@ -50,6 +51,52 @@ std::string defaultMotionScenePath(const std::string& path,
     if (name.empty())
         name = std::filesystem::path(path).stem().string();
     return "/" + Scene::PrimPath::safeToken(name, "motion");
+}
+
+bool isPickablePrim(const Scene::Prim* prim) {
+    if (!prim)
+        return true;
+    auto selection = prim->getSelectionComponent();
+    return !selection || selection->isPickable();
+}
+
+bool isSelectablePrim(const Scene::Prim* prim) {
+    if (!prim)
+        return true;
+    auto selection = prim->getSelectionComponent();
+    return !selection || selection->isSelectable();
+}
+
+bool isManipulatablePrim(const Scene::Prim* prim) {
+    if (!prim)
+        return false;
+    auto selection = prim->getSelectionComponent();
+    return !selection || selection->isManipulatable();
+}
+
+bool allowsForceDragPick(const RayPickResult& pick) {
+    if (!pick.hit)
+        return false;
+    // ExternalBuffer transforms are owned by simulation/data streams. They do
+    // not have one Prim per picked instance, so SelectionComponent policy cannot
+    // safely authorize force drag. Keep force drag limited to SceneGraph picks.
+    if (pick.transformSource != TransformSource::SceneGraph || !pick.prim)
+        return false;
+    auto selection = pick.prim->getSelectionComponent();
+    return !selection || selection->isForceDraggable();
+}
+
+RayPickResult selectablePick(const RayPickResult& pick) {
+    if (pick.hit && pick.prim && !isSelectablePrim(pick.prim))
+        return RayPickResult{};
+    return pick;
+}
+
+RayPickResult pickAllowedForMode(const RayPickResult& pick,
+                                 InteractionMode mode) {
+    if (mode == InteractionMode::Force && !allowsForceDragPick(pick))
+        return RayPickResult{};
+    return pick;
 }
 
 } // namespace
@@ -145,6 +192,7 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
         std::cerr << "Failed to create scene" << std::endl;
         return;
     }
+    _sceneResourceManager.bindScene(_scene.get());
 
     _window.init(_width, _height, headless);
     if (_window.getGlfwWindow() == nullptr) {
@@ -444,12 +492,14 @@ void App::renderFrameOnce() {
         getRenderer().syncSceneLights(getScene());
         _rasterizer->updateFrameData(_viewMatrix, _projectionMatrix);
         if (_mousePickRequested) {
-            const RayPickResult pick = pickMouse();
+            const RayPickResult pick = selectablePick(pickMouse());
             _mousePickRequested = false;
             const glm::vec3 pickLookDir = useSceneCameraForMainView
                                               ? _sceneCamera.getCameraLookDir()
                                               : _camera.getCameraLookDir();
-            if (_interaction.handlePick(pick, pickLookDir)) {
+            const RayPickResult interactionPick =
+                pickAllowedForMode(pick, _interaction.mode());
+            if (_interaction.handlePick(interactionPick, pickLookDir)) {
                 onForceDragBegin(_interaction.forceDragPick(),
                                  _interaction.forceDragPlanePoint());
             }
@@ -683,6 +733,7 @@ RenderableHandle App::addRenderable(Backend::Shader* shader, Scene::Prim* prim,
         return InvalidHandle;
     auto component =
         _sceneRenderSystem.addRenderable(*prim, shader, transformSource);
+    _sceneResourceManager.invalidateUsageCache();
     return component ? _sceneRenderSystem.handle(*component) : InvalidHandle;
 }
 
@@ -694,6 +745,7 @@ App::addSkinnedRenderable(Backend::Shader* shader, Scene::Prim* prim,
         return InvalidHandle;
     auto component = _sceneRenderSystem.addSkinnedRenderable(
         *prim, shader, skinnedMesh, transformSource);
+    _sceneResourceManager.invalidateUsageCache();
     return component ? _sceneRenderSystem.handle(*component) : InvalidHandle;
 }
 
@@ -703,6 +755,7 @@ RenderableHandle App::addRenderable(Material* material, Scene::Prim* prim,
         return InvalidHandle;
     auto component =
         _sceneRenderSystem.addRenderable(*prim, material, transformSource);
+    _sceneResourceManager.invalidateUsageCache();
     return component ? _sceneRenderSystem.handle(*component) : InvalidHandle;
 }
 
@@ -714,6 +767,7 @@ App::addSkinnedRenderable(Material* material, Scene::Prim* prim,
         return InvalidHandle;
     auto component = _sceneRenderSystem.addSkinnedRenderable(
         *prim, material, skinnedMesh, transformSource);
+    _sceneResourceManager.invalidateUsageCache();
     return component ? _sceneRenderSystem.handle(*component) : InvalidHandle;
 }
 
@@ -723,9 +777,11 @@ void App::removePrim(RenderableHandle handle, Scene::Prim* prim) {
     auto component = prim->getRenderComponent();
     if (component && _sceneRenderSystem.handle(*component) == handle) {
         prim->removeRenderComponent();
+        _sceneResourceManager.invalidateUsageCache();
         return;
     }
     getRenderer().removePrim(handle, prim);
+    _sceneResourceManager.invalidateUsageCache();
 }
 
 bool App::removePrim(Scene::Prim* prim) {
@@ -760,7 +816,10 @@ bool App::removePrim(const std::string& path) {
     }
 
     clearSelection();
-    return _scene->removePrim(path);
+    const bool removed = _scene->removePrim(path);
+    if (removed)
+        _sceneResourceManager.invalidateUsageCache();
+    return removed;
 }
 
 App::MeshPrimResult App::addMeshPrim(MeshPrimDesc desc) {
@@ -1044,11 +1103,13 @@ void App::setRenderableAlphaMode(RenderableHandle handle, AlphaMode mode,
 void App::setRenderableTexture(RenderableHandle handle, Backend::Texture* tex,
                                TextureRole role) {
     getRenderer().setRenderableTexture(handle, tex, role);
+    _sceneResourceManager.invalidateUsageCache();
 }
 
 void App::setRenderableTexture(RenderableHandle handle, Backend::Texture* tex,
                                int slot) {
     getRenderer().setRenderableTexture(handle, tex, slot);
+    _sceneResourceManager.invalidateUsageCache();
 }
 
 void App::updateRenderableGeometry(RenderableHandle handle,
@@ -1513,7 +1574,11 @@ Geometry::Ray App::getMouseRay() {
 }
 
 RayPickResult App::rayPick(const Geometry::Ray& ray) const {
-    return _rasterizer ? _rasterizer->rayPick(ray) : RayPickResult{};
+    RayPickResult result = _rasterizer ? _rasterizer->rayPick(ray)
+                                       : RayPickResult{};
+    if (result.hit && result.prim && !isPickablePrim(result.prim))
+        return RayPickResult{};
+    return result;
 }
 
 RayPickResult App::pickMouse() { return rayPick(getMouseRay()); }
@@ -1533,7 +1598,7 @@ bool App::setActiveSceneCamera(Scene::Prim* prim) {
 void App::clearActiveSceneCamera() { _activeSceneCameraPath.clear(); }
 
 void App::selectPrim(Scene::Prim* prim) {
-    if (!prim) {
+    if (!prim || !isSelectablePrim(prim)) {
         _interaction.clearSelection();
         return;
     }
@@ -1555,7 +1620,8 @@ bool App::getPickTransform(const RayPickResult& result,
         return false;
     if (result.transformSource == TransformSource::SceneGraph && result.prim) {
         Scene::Prim* target = result.prim->resolveManipulationTarget();
-        if (!target || !target->isActiveInHierarchy())
+        if (!target || !target->isActiveInHierarchy() ||
+            !isManipulatablePrim(result.prim) || !isManipulatablePrim(target))
             return false;
         outTransform = target->computeModelMatrix();
         return true;
@@ -1572,7 +1638,8 @@ bool App::setPickTransform(const RayPickResult& result,
         return false;
     if (result.transformSource == TransformSource::SceneGraph && result.prim) {
         Scene::Prim* target = result.prim->resolveManipulationTarget();
-        if (!target || !target->isActiveInHierarchy())
+        if (!target || !target->isActiveInHierarchy() ||
+            !isManipulatablePrim(result.prim) || !isManipulatablePrim(target))
             return false;
         target->setWorldMatrix(transform);
         return true;

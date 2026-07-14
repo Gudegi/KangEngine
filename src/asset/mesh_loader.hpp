@@ -21,8 +21,10 @@ struct ObjMaterialInfo {
     std::array<float, 4> specularColor = {0.0f, 0.0f, 0.0f, 1.0f};
     float shininess = 1.0f;
     std::string diffuseTexturePath;
+    std::string specularTexturePath;
     std::string normalTexturePath;
     bool hasDiffuseTexture = false;
+    bool hasSpecularTexture = false;
     bool hasNormalTexture = false;
 };
 

@@ -32,6 +32,7 @@ class LightComponent;
 class CameraComponent;
 class MaterialBindingComponent;
 class ResourceComponent;
+class SelectionComponent;
 
 using AttributeValue =
     std::variant<bool, int, float, std::string, glm::vec3, glm::vec4, glm::mat4,
@@ -76,6 +77,7 @@ class Prim {
     std::shared_ptr<CameraComponent> _cameraComponent;
     std::shared_ptr<MaterialBindingComponent> _materialBindingComponent;
     std::shared_ptr<ResourceComponent> _resourceComponent;
+    std::shared_ptr<SelectionComponent> _selectionComponent;
 
     bool _renderable = false; // true for prim types that can submit geometry
     bool _visible = true; // runtime show/hide toggle(just render visibility)
@@ -156,6 +158,13 @@ class Prim {
     std::shared_ptr<ResourceComponent> getResourceComponent() const;
     bool hasResourceComponent() const { return _resourceComponent != nullptr; }
     bool removeResourceComponent();
+
+    std::shared_ptr<SelectionComponent> addSelectionComponent();
+    std::shared_ptr<SelectionComponent> getSelectionComponent() const;
+    bool hasSelectionComponent() const {
+        return _selectionComponent != nullptr;
+    }
+    bool removeSelectionComponent();
 
     static MeshData createCubeData(float scale);
     static MeshData createSquareData(float scale); // Deprecated.

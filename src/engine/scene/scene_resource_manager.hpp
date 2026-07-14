@@ -73,6 +73,9 @@ class SceneResourceManager {
     Backend::Texture* texture(ResourceHandle handle) const;
     Backend::Shader* shader(ResourceHandle handle) const;
     Prim* resourcePrim(ResourceHandle handle) const;
+    std::size_t usageCount(ResourceHandle handle) const;
+    bool isUsed(ResourceHandle handle) const { return usageCount(handle) > 0; }
+    void invalidateUsageCache() const;
 
     std::size_t size() const { return _entries.size(); }
     void clear();
@@ -80,12 +83,15 @@ class SceneResourceManager {
   private:
     ResourceHandle registerEntry(Entry entry);
     Prim* ensureResourcePrim(const Entry& entry);
+    void rebuildUsageCache() const;
     static const char* folderForType(ResourceType type);
     static std::string safeSegment(const std::string& value);
 
     SceneBackend* _scene = nullptr;
     ResourceHandle _nextHandle = 1;
     std::unordered_map<ResourceHandle, Entry> _entries;
+    mutable bool _usageCacheDirty = true;
+    mutable std::unordered_map<ResourceHandle, std::size_t> _usageCache;
 };
 
 } // namespace Scene

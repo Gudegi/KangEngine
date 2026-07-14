@@ -1,9 +1,13 @@
 #include "scene_resource_manager.hpp"
 
+#include "engine/graphics/material/material.hpp"
+#include "engine/scene/component/material_binding_component.hpp"
+#include "engine/scene/component/mesh_component.hpp"
 #include "engine/scene/component/resource_component.hpp"
 #include "engine/scene/native/prim.hpp"
 
 #include <cctype>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -11,16 +15,53 @@ namespace KE {
 namespace Scene {
 namespace {
 constexpr const char* kResourceRootPath = "/.Resources";
+
+void collectMaterialTextures(const Material* material,
+                             std::vector<Backend::Texture*>& out) {
+    if (!material)
+        return;
+    if (const auto* phong = dynamic_cast<const PhongMaterial*>(material)) {
+        if (phong->diffuseMap)
+            out.push_back(phong->diffuseMap);
+        if (phong->specularMap)
+            out.push_back(phong->specularMap);
+        if (phong->normalMap)
+            out.push_back(phong->normalMap);
+        return;
+    }
+    if (const auto* pbr = dynamic_cast<const PBRMaterial*>(material)) {
+        if (pbr->baseColorTexture)
+            out.push_back(pbr->baseColorTexture);
+        if (pbr->normalTexture)
+            out.push_back(pbr->normalTexture);
+        if (pbr->metallicRoughnessTexture)
+            out.push_back(pbr->metallicRoughnessTexture);
+        if (pbr->metallicTexture)
+            out.push_back(pbr->metallicTexture);
+        if (pbr->roughnessTexture)
+            out.push_back(pbr->roughnessTexture);
+        if (pbr->aoTexture)
+            out.push_back(pbr->aoTexture);
+        if (pbr->ormTexture)
+            out.push_back(pbr->ormTexture);
+        if (pbr->emissiveTexture)
+            out.push_back(pbr->emissiveTexture);
+    }
 }
+} // namespace
 
 SceneResourceManager::SceneResourceManager(SceneBackend* scene)
     : _scene(scene) {}
 
-void SceneResourceManager::bindScene(SceneBackend* scene) { _scene = scene; }
+void SceneResourceManager::bindScene(SceneBackend* scene) {
+    _scene = scene;
+    invalidateUsageCache();
+}
 
-ResourceHandle SceneResourceManager::registerMesh(
-    const std::string& name, std::shared_ptr<MeshData> mesh,
-    const std::string& uri) {
+ResourceHandle
+SceneResourceManager::registerMesh(const std::string& name,
+                                   std::shared_ptr<MeshData> mesh,
+                                   const std::string& uri) {
     Entry entry;
     entry.type = ResourceType::Mesh;
     entry.name = name;
@@ -29,8 +70,9 @@ ResourceHandle SceneResourceManager::registerMesh(
     return registerEntry(std::move(entry));
 }
 
-ResourceHandle SceneResourceManager::registerMaterial(
-    const std::string& name, Material* material, const std::string& uri) {
+ResourceHandle SceneResourceManager::registerMaterial(const std::string& name,
+                                                      Material* material,
+                                                      const std::string& uri) {
     Entry entry;
     entry.type = ResourceType::Material;
     entry.name = name;
@@ -39,9 +81,9 @@ ResourceHandle SceneResourceManager::registerMaterial(
     return registerEntry(std::move(entry));
 }
 
-ResourceHandle SceneResourceManager::registerTexture(
-    const std::string& name, Backend::Texture* texture,
-    const std::string& uri) {
+ResourceHandle SceneResourceManager::registerTexture(const std::string& name,
+                                                     Backend::Texture* texture,
+                                                     const std::string& uri) {
     Entry entry;
     entry.type = ResourceType::Texture;
     entry.name = name;
@@ -50,8 +92,9 @@ ResourceHandle SceneResourceManager::registerTexture(
     return registerEntry(std::move(entry));
 }
 
-ResourceHandle SceneResourceManager::registerShader(
-    const std::string& name, Backend::Shader* shader, const std::string& uri) {
+ResourceHandle SceneResourceManager::registerShader(const std::string& name,
+                                                    Backend::Shader* shader,
+                                                    const std::string& uri) {
     Entry entry;
     entry.type = ResourceType::Shader;
     entry.name = name;
@@ -65,6 +108,7 @@ ResourceHandle SceneResourceManager::registerEntry(Entry entry) {
     entry.handle = handle;
     entry.prim = ensureResourcePrim(entry);
     _entries.emplace(handle, std::move(entry));
+    invalidateUsageCache();
     return handle;
 }
 
@@ -91,8 +135,7 @@ Material* SceneResourceManager::material(ResourceHandle handle) const {
     return e ? e->material : nullptr;
 }
 
-Backend::Texture*
-SceneResourceManager::texture(ResourceHandle handle) const {
+Backend::Texture* SceneResourceManager::texture(ResourceHandle handle) const {
     const Entry* e = entry(handle);
     return e ? e->texture : nullptr;
 }
@@ -105,6 +148,101 @@ Backend::Shader* SceneResourceManager::shader(ResourceHandle handle) const {
 Prim* SceneResourceManager::resourcePrim(ResourceHandle handle) const {
     const Entry* e = entry(handle);
     return e ? e->prim : nullptr;
+}
+
+std::size_t SceneResourceManager::usageCount(ResourceHandle handle) const {
+    if (_usageCacheDirty)
+        rebuildUsageCache();
+    const auto it = _usageCache.find(handle);
+    if (it == _usageCache.end())
+        return 0;
+    return it->second;
+}
+
+void SceneResourceManager::invalidateUsageCache() const {
+    _usageCacheDirty = true;
+}
+
+void SceneResourceManager::rebuildUsageCache() const {
+    _usageCache.clear();
+    _usageCache.reserve(_entries.size());
+
+    std::unordered_map<MeshData*, std::vector<ResourceHandle>> meshHandles;
+    std::unordered_map<Material*, std::vector<ResourceHandle>> materialHandles;
+    std::unordered_map<Backend::Texture*, std::vector<ResourceHandle>>
+        textureHandles;
+    std::unordered_map<Backend::Shader*, std::vector<ResourceHandle>>
+        shaderHandles;
+
+    for (const auto& [handle, e] : _entries) {
+        _usageCache[handle] = 0;
+        switch (e.type) {
+        case ResourceType::Mesh:
+            if (e.mesh)
+                meshHandles[e.mesh.get()].push_back(handle);
+            break;
+        case ResourceType::Material:
+            if (e.material)
+                materialHandles[e.material].push_back(handle);
+            break;
+        case ResourceType::Texture:
+            if (e.texture)
+                textureHandles[e.texture].push_back(handle);
+            break;
+        case ResourceType::Shader:
+            if (e.shader)
+                shaderHandles[e.shader].push_back(handle);
+            break;
+        case ResourceType::Unknown:
+            break;
+        }
+    }
+
+    if (!_scene || !_scene->getRootPrim()) {
+        _usageCacheDirty = false;
+        return;
+    }
+
+    const auto addHandles = [](std::unordered_set<ResourceHandle>& used,
+                               const auto& map, auto* key) {
+        if (!key)
+            return;
+        const auto it = map.find(key);
+        if (it == map.end())
+            return;
+        for (ResourceHandle handle : it->second)
+            used.insert(handle);
+    };
+
+    _scene->getRootPrim()->traverse([&](Prim* prim) {
+        if (!prim || prim->getType() == PrimType::Resource)
+            return;
+
+        std::unordered_set<ResourceHandle> usedByPrim;
+        if (auto mesh = prim->getMeshComponent()) {
+            const ResourceHandle directHandle = mesh->resourceHandle();
+            if (directHandle != InvalidResourceHandle &&
+                _usageCache.find(directHandle) != _usageCache.end())
+                usedByPrim.insert(directHandle);
+            if (auto meshData = mesh->meshData())
+                addHandles(usedByPrim, meshHandles, meshData.get());
+        }
+
+        Material* material = prim->getMaterial();
+        addHandles(usedByPrim, materialHandles, material);
+        if (material) {
+            addHandles(usedByPrim, shaderHandles, material->getShader());
+            std::vector<Backend::Texture*> textures;
+            collectMaterialTextures(material, textures);
+            for (Backend::Texture* texture : textures)
+                addHandles(usedByPrim, textureHandles, texture);
+        }
+
+        for (ResourceHandle used : usedByPrim)
+            ++_usageCache[used];
+    });
+
+    _usageCacheDirty = false;
 }
 
 void SceneResourceManager::clear() {
@@ -120,6 +258,8 @@ void SceneResourceManager::clear() {
             _scene->removePrim(path);
     }
     _entries.clear();
+    _usageCache.clear();
+    invalidateUsageCache();
     _nextHandle = 1;
 }
 
@@ -129,10 +269,9 @@ Prim* SceneResourceManager::ensureResourcePrim(const Entry& entry) {
 
     const std::string name =
         entry.name.empty() ? resourceTypeLabel(entry.type) : entry.name;
-    const std::string path = std::string(kResourceRootPath) + "/" +
-                             folderForType(entry.type) + "/" +
-                             safeSegment(name) + "_" +
-                             std::to_string(entry.handle);
+    const std::string path =
+        std::string(kResourceRootPath) + "/" + folderForType(entry.type) + "/" +
+        safeSegment(name) + "_" + std::to_string(entry.handle);
     Prim* prim = _scene->definePrim(path, PrimType::Resource);
     if (!prim)
         return nullptr;

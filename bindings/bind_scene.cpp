@@ -330,6 +330,18 @@ void bind_scene(py::module& m) {
              &KE::Scene::SceneResourceManager::resourcePrim,
              py::arg("handle"), py::return_value_policy::reference,
              "Return mirrored Resource prim for a handle, or None.")
+        .def("usage_count", &KE::Scene::SceneResourceManager::usageCount,
+             py::arg("handle"),
+             "Return how many scene prim bindings currently reference this "
+             "resource.")
+        .def("is_used", &KE::Scene::SceneResourceManager::isUsed,
+             py::arg("handle"),
+             "Return whether at least one scene prim binding references this "
+             "resource.")
+        .def("invalidate_usage_cache",
+             &KE::Scene::SceneResourceManager::invalidateUsageCache,
+             "Mark cached resource usage counts dirty after direct scene or "
+             "material mutation.")
         .def("clear", &KE::Scene::SceneResourceManager::clear)
         .def("__len__", &KE::Scene::SceneResourceManager::size);
 

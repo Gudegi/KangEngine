@@ -23,6 +23,19 @@ def _safe_scene_segment(value, fallback: str = "item") -> str:
     return safe or fallback
 
 
+def _texture_path_candidate(path) -> Path:
+    """Return an existing texture path, accepting OBJ/MTL Windows separators."""
+    candidate = Path(path).expanduser()
+    if candidate.exists():
+        return candidate
+    text = str(path)
+    if "\\" in text:
+        normalized = Path(text.replace("\\", "/")).expanduser()
+        if normalized.exists():
+            return normalized
+    return candidate
+
+
 class RenderablePrimView:
     """User-facing view for one scene prim and its renderer resources."""
 
@@ -385,7 +398,7 @@ class App(NativeApp):
         self.scene_backend_type = scene.BackendType.Native
         self.headless = False
         self.scene = SceneContext(self)
-        self.resources = scene.SceneResourceManager(self.get_scene())
+        self.resources = self.get_scene_resource_manager()
         self._resource_handles_by_object_id = {}
         self._resource_counter = 0
         self._textures_by_uri = {}
@@ -565,7 +578,7 @@ class App(NativeApp):
 
     def load_texture(self, path, *, flip: bool = True):
         """Load and retain a GPU texture, cached by normalized path."""
-        texture_path = str(Path(path).expanduser().resolve())
+        texture_path = str(_texture_path_candidate(path).resolve())
         cached = self._textures_by_uri.get(texture_path)
         if cached is not None:
             return cached
@@ -717,13 +730,20 @@ class App(NativeApp):
             )
 
         diffuse_map = None
+        specular_map = None
         normal_map = None
         if material_info.has_diffuse_texture:
-            diffuse_path = Path(material_info.diffuse_texture_path)
+            diffuse_path = _texture_path_candidate(material_info.diffuse_texture_path)
             if diffuse_path.exists():
                 diffuse_map = self.load_texture(diffuse_path, flip=True)
+        if material_info.has_specular_texture:
+            specular_path = _texture_path_candidate(
+                material_info.specular_texture_path
+            )
+            if specular_path.exists():
+                specular_map = self.load_texture(specular_path, flip=True)
         if material_info.has_normal_texture:
-            normal_path = Path(material_info.normal_texture_path)
+            normal_path = _texture_path_candidate(material_info.normal_texture_path)
             if normal_path.exists():
                 normal_map = self.load_texture(normal_path, flip=True)
 
@@ -746,6 +766,7 @@ class App(NativeApp):
             ),
             shininess=float(material_info.shininess),
             diffuse_map=diffuse_map,
+            specular_map=specular_map,
             normal_map=normal_map,
         )
 
