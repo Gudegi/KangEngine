@@ -25,6 +25,8 @@ void collectMaterialTextures(const Material* material,
             out.push_back(phong->diffuseMap);
         if (phong->specularMap)
             out.push_back(phong->specularMap);
+        if (phong->alphaMap)
+            out.push_back(phong->alphaMap);
         if (phong->normalMap)
             out.push_back(phong->normalMap);
         return;
@@ -159,6 +161,16 @@ std::size_t SceneResourceManager::usageCount(ResourceHandle handle) const {
     return it->second;
 }
 
+const std::vector<std::string>&
+SceneResourceManager::usagePaths(ResourceHandle handle) const {
+    if (_usageCacheDirty)
+        rebuildUsageCache();
+    const auto it = _usagePathCache.find(handle);
+    if (it == _usagePathCache.end())
+        return _emptyUsagePaths;
+    return it->second;
+}
+
 void SceneResourceManager::invalidateUsageCache() const {
     _usageCacheDirty = true;
 }
@@ -166,6 +178,9 @@ void SceneResourceManager::invalidateUsageCache() const {
 void SceneResourceManager::rebuildUsageCache() const {
     _usageCache.clear();
     _usageCache.reserve(_entries.size());
+    _usagePathCache.clear();
+    _usagePathCache.reserve(_entries.size());
+    _emptyUsagePaths.clear();
 
     std::unordered_map<MeshData*, std::vector<ResourceHandle>> meshHandles;
     std::unordered_map<Material*, std::vector<ResourceHandle>> materialHandles;
@@ -176,6 +191,7 @@ void SceneResourceManager::rebuildUsageCache() const {
 
     for (const auto& [handle, e] : _entries) {
         _usageCache[handle] = 0;
+        _usagePathCache[handle] = {};
         switch (e.type) {
         case ResourceType::Mesh:
             if (e.mesh)
@@ -238,8 +254,10 @@ void SceneResourceManager::rebuildUsageCache() const {
                 addHandles(usedByPrim, textureHandles, texture);
         }
 
-        for (ResourceHandle used : usedByPrim)
+        for (ResourceHandle used : usedByPrim) {
             ++_usageCache[used];
+            _usagePathCache[used].push_back(prim->getPath());
+        }
     });
 
     _usageCacheDirty = false;
@@ -259,6 +277,7 @@ void SceneResourceManager::clear() {
     }
     _entries.clear();
     _usageCache.clear();
+    _usagePathCache.clear();
     invalidateUsageCache();
     _nextHandle = 1;
 }
