@@ -310,15 +310,19 @@ void MeshInstancer::_updateTransparency() {
     }
 }
 
-void MeshInstancer::bindAlphaState(Backend::Shader* shader) const {
+void MeshInstancer::bindAlphaState(Backend::Shader* shader,
+                                   bool bindAlphaTextureForPass) const {
     if (!shader)
         return;
 
     shader->setInt("uAlphaMode", static_cast<int>(_alphaMode));
     shader->setFloat("uAlphaCutoff", _alphaCutoff);
+    shader->setInt("uAlphaTextureRedChannel",
+                   (_material && _material->alphaTextureUsesRedChannel()) ? 1
+                                                                          : 0);
     shader->setInt("uTexture", RendererTextureSlot::BaseColor);
 
-    if (_alphaMode != AlphaMode::Mask)
+    if (_alphaMode != AlphaMode::Mask || !bindAlphaTextureForPass)
         return;
 
     Backend::Texture* texture = _material ? _material->alphaTexture() : nullptr;

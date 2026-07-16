@@ -78,8 +78,9 @@ bool allowsForceDragPick(const RayPickResult& pick) {
     if (!pick.hit)
         return false;
     // ExternalBuffer transforms are owned by simulation/data streams. They do
-    // not have one Prim per picked instance, so SelectionComponent policy cannot
-    // safely authorize force drag. Keep force drag limited to SceneGraph picks.
+    // not have one Prim per picked instance, so SelectionComponent policy
+    // cannot safely authorize force drag. Keep force drag limited to SceneGraph
+    // picks.
     if (pick.transformSource != TransformSource::SceneGraph || !pick.prim)
         return false;
     auto selection = pick.prim->getSelectionComponent();
@@ -979,33 +980,41 @@ void App::drawArrow(const std::string& path, glm::vec3 start, glm::vec3 end,
 void App::setLightDirection(const glm::vec3& dir) {
     if (glm::length(dir) < 1e-4f)
         return;
-    DirectionalLight light = getLight();
+    Scene::Prim* lightPrim = defaultDirectionalLightPrim();
+    DirectionalLight light =
+        lightPrim ? lightPrim->getDirectionalLight() : getLight();
     light.direction = glm::normalize(dir);
-    if (Scene::Prim* lightPrim = defaultDirectionalLightPrim())
+    if (lightPrim)
         lightPrim->setDirectionalLight(light);
     else
         setLight(light);
 }
 void App::setLightColor(const glm::vec3& color) {
-    DirectionalLight light = getLight();
+    Scene::Prim* lightPrim = defaultDirectionalLightPrim();
+    DirectionalLight light =
+        lightPrim ? lightPrim->getDirectionalLight() : getLight();
     light.color = glm::clamp(color, glm::vec3(0.0f), glm::vec3(1.0f));
-    if (Scene::Prim* lightPrim = defaultDirectionalLightPrim())
+    if (lightPrim)
         lightPrim->setDirectionalLight(light);
     else
         setLight(light);
 }
 void App::setLightIntensity(float intensity) {
-    DirectionalLight light = getLight();
+    Scene::Prim* lightPrim = defaultDirectionalLightPrim();
+    DirectionalLight light =
+        lightPrim ? lightPrim->getDirectionalLight() : getLight();
     light.intensity = std::max(0.0f, intensity);
-    if (Scene::Prim* lightPrim = defaultDirectionalLightPrim())
+    if (lightPrim)
         lightPrim->setDirectionalLight(light);
     else
         setLight(light);
 }
 void App::setLightAmbient(const glm::vec3& ambient) {
-    DirectionalLight light = getLight();
+    Scene::Prim* lightPrim = defaultDirectionalLightPrim();
+    DirectionalLight light =
+        lightPrim ? lightPrim->getDirectionalLight() : getLight();
     light.ambient = glm::clamp(ambient, glm::vec3(0.0f), glm::vec3(1.0f));
-    if (Scene::Prim* lightPrim = defaultDirectionalLightPrim())
+    if (lightPrim)
         lightPrim->setDirectionalLight(light);
     else
         setLight(light);
@@ -1574,8 +1583,8 @@ Geometry::Ray App::getMouseRay() {
 }
 
 RayPickResult App::rayPick(const Geometry::Ray& ray) const {
-    RayPickResult result = _rasterizer ? _rasterizer->rayPick(ray)
-                                       : RayPickResult{};
+    RayPickResult result =
+        _rasterizer ? _rasterizer->rayPick(ray) : RayPickResult{};
     if (result.hit && result.prim && !isPickablePrim(result.prim))
         return RayPickResult{};
     return result;

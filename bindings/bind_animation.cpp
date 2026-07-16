@@ -12,6 +12,7 @@
 #include "animation/character_description.hpp"
 #include "asset/bvh_loader.hpp"
 #include "asset/fbx_loader.hpp"
+#include "asset/heightmap_loader.hpp"
 #include "asset/mesh_loader.hpp"
 #include "asset/mjcf_loader.hpp"
 #include "asset/usd_loader.hpp"
@@ -295,12 +296,16 @@ void bind_animation(py::module& m) {
                       &ObjMaterialInfo::diffuseTexturePath)
         .def_readonly("specular_texture_path",
                       &ObjMaterialInfo::specularTexturePath)
+        .def_readonly("alpha_texture_path",
+                      &ObjMaterialInfo::alphaTexturePath)
         .def_readonly("normal_texture_path",
                       &ObjMaterialInfo::normalTexturePath)
         .def_readonly("has_diffuse_texture",
                       &ObjMaterialInfo::hasDiffuseTexture)
         .def_readonly("has_specular_texture",
                       &ObjMaterialInfo::hasSpecularTexture)
+        .def_readonly("has_alpha_texture",
+                      &ObjMaterialInfo::hasAlphaTexture)
         .def_readonly("has_normal_texture",
                       &ObjMaterialInfo::hasNormalTexture);
 
@@ -361,6 +366,53 @@ void bind_animation(py::module& m) {
                 KE::Asset::loadStl(path));
         },
         py::arg("path"), "Load an STL file and return scene.MeshData.");
+
+    asset.def(
+        "load_heightmap_terrain",
+        [](const std::string& path, KE::UpAxis upAxis, float horizontalScale,
+           float heightScale, float heightOffset, int sampleStride) {
+            KE::Asset::HeightmapTerrainOptions options;
+            options.upAxis = upAxis;
+            options.horizontalScale = horizontalScale;
+            options.heightScale = heightScale;
+            options.heightOffset = heightOffset;
+            options.sampleStride = sampleStride;
+            return std::make_shared<KE::Scene::MeshData>(
+                KE::Asset::HeightmapLoader::loadHeightMapTerrain(path,
+                                                                 options));
+        },
+        py::arg("path"), py::arg("up_axis") = KE::UpAxis::Y,
+        py::arg("horizontal_scale") = 1.0f,
+        py::arg("height_scale") = 64.0f,
+        py::arg("height_offset") = -16.0f,
+        py::arg("sample_stride") = 1,
+        "Load a grayscale/RGB heightmap image and build a terrain MeshData.");
+
+    asset.def(
+        "height_field_to_mesh",
+        [](const FloatArray& heights, KE::UpAxis upAxis, float horizontalScale,
+           bool center) {
+            py::buffer_info info = heights.request();
+            if (info.ndim != 2)
+                throw py::value_error(
+                    "height_field_to_mesh expected shape [rows, cols]");
+            const int rows = static_cast<int>(info.shape[0]);
+            const int cols = static_cast<int>(info.shape[1]);
+            if (rows < 2 || cols < 2)
+                throw py::value_error(
+                    "height_field_to_mesh requires at least a 2x2 height field");
+
+            KE::Asset::HeightFieldMeshOptions options;
+            options.upAxis = upAxis;
+            options.horizontalScale = horizontalScale;
+            options.center = center;
+            return std::make_shared<KE::Scene::MeshData>(
+                KE::Asset::heightFieldToMesh(
+                    static_cast<const float*>(info.ptr), rows, cols, options));
+        },
+        py::arg("heights"), py::arg("up_axis") = KE::UpAxis::Y,
+        py::arg("horizontal_scale") = 1.0f, py::arg("center") = true,
+        "Convert a 2D float height field array [rows, cols] into scene.MeshData.");
 
     anim.def(
         "cpu_skin",

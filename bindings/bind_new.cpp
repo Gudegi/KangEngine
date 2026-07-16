@@ -13,6 +13,7 @@
 #include <pybind11/stl.h>
 #include <pybind11/functional.h>
 #include <pybind11/numpy.h>
+#include <pybind11/operators.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -618,6 +619,8 @@ PYBIND11_MODULE(_kangengine, m) {
              py::arg("texture"), py::return_value_policy::reference_internal)
         .def("set_specular_map", &PhongMaterial::setSpecularMap,
              py::arg("texture"), py::return_value_policy::reference_internal)
+        .def("set_alpha_map", &PhongMaterial::setAlphaMap,
+             py::arg("texture"), py::return_value_policy::reference_internal)
         .def("set_normal_map", &PhongMaterial::setNormalMap,
              py::arg("texture"), py::return_value_policy::reference_internal)
         .def_readwrite("ambient", &PhongMaterial::ambient,
@@ -632,6 +635,8 @@ PYBIND11_MODULE(_kangengine, m) {
                        "Optional diffuse texture.")
         .def_readwrite("specular_map", &PhongMaterial::specularMap,
                        "Optional specular texture.")
+        .def_readwrite("alpha_map", &PhongMaterial::alphaMap,
+                       "Optional alpha mask texture, such as OBJ map_d.")
         .def_readwrite("normal_map", &PhongMaterial::normalMap,
                        "Optional tangent-space normal map.");
 
@@ -1025,6 +1030,12 @@ py::class_<glm::vec3>(m, "vec3")
         })
         .def_readwrite("x", &glm::vec2::x)
         .def_readwrite("y", &glm::vec2::y)
+        .def(py::self + py::self)
+        .def(py::self - py::self)
+        .def(-py::self)
+        .def(py::self * float())
+        .def(float() * py::self)
+        .def(py::self / float())
         .def("__repr__", [](const glm::vec2& v) {
             std::ostringstream oss;
             oss << std::fixed << std::setprecision(2);
@@ -1069,6 +1080,12 @@ py::class_<glm::vec3>(m, "vec3")
         .def_readwrite("x", &glm::vec3::x)
         .def_readwrite("y", &glm::vec3::y)
         .def_readwrite("z", &glm::vec3::z)
+        .def(py::self + py::self)
+        .def(py::self - py::self)
+        .def(-py::self)
+        .def(py::self * float())
+        .def(float() * py::self)
+        .def(py::self / float())
         .def("__repr__", [](const glm::vec3& v) {
             std::ostringstream oss;
             // 소수점 한자리만 출력하게 설정하면 보기 편합니다.
@@ -1111,6 +1128,12 @@ py::class_<glm::vec3>(m, "vec3")
         .def_readwrite("y", &glm::vec4::y)
         .def_readwrite("z", &glm::vec4::z)
         .def_readwrite("w", &glm::vec4::w)
+        .def(py::self + py::self)
+        .def(py::self - py::self)
+        .def(-py::self)
+        .def(py::self * float())
+        .def(float() * py::self)
+        .def(py::self / float())
         .def("__repr__", [](const glm::vec4& v) {
             return "vec4(" + std::to_string(v.x) + ", " + std::to_string(v.y) +
                    ", " + std::to_string(v.z) + ", " + std::to_string(v.w) +

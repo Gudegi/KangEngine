@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace KE {
 
@@ -74,6 +75,7 @@ class SceneResourceManager {
     Backend::Shader* shader(ResourceHandle handle) const;
     Prim* resourcePrim(ResourceHandle handle) const;
     std::size_t usageCount(ResourceHandle handle) const;
+    const std::vector<std::string>& usagePaths(ResourceHandle handle) const;
     bool isUsed(ResourceHandle handle) const { return usageCount(handle) > 0; }
     void invalidateUsageCache() const;
 
@@ -92,6 +94,9 @@ class SceneResourceManager {
     std::unordered_map<ResourceHandle, Entry> _entries;
     mutable bool _usageCacheDirty = true;
     mutable std::unordered_map<ResourceHandle, std::size_t> _usageCache;
+    mutable std::unordered_map<ResourceHandle, std::vector<std::string>>
+        _usagePathCache;
+    mutable std::vector<std::string> _emptyUsagePaths;
 };
 
 } // namespace Scene

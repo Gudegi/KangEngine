@@ -565,6 +565,7 @@ void drawMaterialInspector(Scene::Prim& prim) {
         ImGui::DragFloat("Shininess", &phong->shininess, 0.25f, 1.0f, 512.0f);
         drawTextureStatus("Diffuse Map", phong->diffuseMap);
         drawTextureStatus("Specular Map", phong->specularMap);
+        drawTextureStatus("Alpha Map", phong->alphaMap);
         drawTextureStatus("Normal Map", phong->normalMap);
     } else if (auto* pbr = dynamic_cast<PBRMaterial*>(material)) {
         ImGui::SeparatorText("PBR Parameters");
@@ -590,7 +591,7 @@ void drawMaterialInspector(Scene::Prim& prim) {
     }
 }
 
-void drawResourceComponentEditor(Scene::Prim& prim) {
+void drawResourceComponentEditor(App* app, Scene::Prim& prim) {
     auto resource = prim.getResourceComponent();
     if (!resource) {
         ImGui::TextDisabled("No ResourceComponent");
@@ -621,6 +622,34 @@ void drawResourceComponentEditor(Scene::Prim& prim) {
     if (ImGui::InputText("URI", uri, sizeof(uri)))
         resource->setUri(uri);
     ImGui::EndDisabled();
+
+    ImGui::SeparatorText("Usage");
+    if (!app || resource->handle() == Scene::InvalidResourceHandle) {
+        ImGui::TextDisabled("No resource manager handle");
+        return;
+    }
+
+    const auto& manager = app->getSceneResourceManager();
+    const auto& paths = manager.usagePaths(resource->handle());
+    ImGui::Text("Usage count: %zu", paths.size());
+    if (paths.empty()) {
+        ImGui::TextDisabled("Unused");
+        return;
+    }
+
+    if (ImGui::BeginTable("ResourceUsagePaths", 1,
+                          ImGuiTableFlags_RowBg |
+                              ImGuiTableFlags_BordersInnerH |
+                              ImGuiTableFlags_SizingStretchProp)) {
+        ImGui::TableSetupColumn("Used By");
+        ImGui::TableHeadersRow();
+        for (const std::string& path : paths) {
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::TextUnformatted(path.c_str());
+        }
+        ImGui::EndTable();
+    }
 }
 
 bool drawAttributeValue(const std::string& name,
@@ -1151,7 +1180,7 @@ void InspectorPanel::buildPanel() {
 
     if (prim->getType() == Scene::PrimType::Resource) {
         ImGui::SeparatorText("Resource");
-        drawResourceComponentEditor(*prim);
+        drawResourceComponentEditor(_app, *prim);
     }
 
     ImGui::SeparatorText("Attributes");

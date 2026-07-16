@@ -50,6 +50,7 @@ class Camera {
     glm::mat4 getInvViewProjMatrix() { return _invViewProjMatrix; }
     void updateViewMatrix();
     void updateProjMatrix(const int scrWidth, const int scrHeight);
+    void syncOrbitAnglesFromView();
 
     void setCameraPos(glm::vec3 cameraPos);
     void setTargetPos(glm::vec3 targetPos);

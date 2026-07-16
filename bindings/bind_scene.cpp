@@ -334,6 +334,9 @@ void bind_scene(py::module& m) {
              py::arg("handle"),
              "Return how many scene prim bindings currently reference this "
              "resource.")
+        .def("usage_paths", &KE::Scene::SceneResourceManager::usagePaths,
+             py::arg("handle"),
+             "Return scene prim paths that currently reference this resource.")
         .def("is_used", &KE::Scene::SceneResourceManager::isUsed,
              py::arg("handle"),
              "Return whether at least one scene prim binding references this "

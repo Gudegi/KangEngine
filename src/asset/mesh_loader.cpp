@@ -57,11 +57,14 @@ makeObjMaterials(const std::string& objPath,
             resolveObjTexturePath(objPath, src.diffuse_texname);
         dst.specularTexturePath =
             resolveObjTexturePath(objPath, src.specular_texname);
+        dst.alphaTexturePath =
+            resolveObjTexturePath(objPath, src.alpha_texname);
         dst.normalTexturePath = resolveObjTexturePath(
             objPath,
             src.normal_texname.empty() ? src.bump_texname : src.normal_texname);
         dst.hasDiffuseTexture = !dst.diffuseTexturePath.empty();
         dst.hasSpecularTexture = !dst.specularTexturePath.empty();
+        dst.hasAlphaTexture = !dst.alphaTexturePath.empty();
         dst.hasNormalTexture = !dst.normalTexturePath.empty();
         materials.push_back(std::move(dst));
     }

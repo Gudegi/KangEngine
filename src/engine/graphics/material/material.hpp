@@ -22,6 +22,7 @@ class Material {
     virtual bool hasNormalMap() const { return false; }
     // Texture sampled by depth-only passes when AlphaMode::Mask is active.
     virtual Backend::Texture* alphaTexture() const { return nullptr; }
+    virtual bool alphaTextureUsesRedChannel() const { return false; }
     virtual Backend::Shader* getShader() const { return _shader; }
     virtual void setShader(Backend::Shader* shader) { _shader = shader; }
 };
@@ -60,6 +61,7 @@ class PhongMaterial : public Material {
     // Textures
     Backend::Texture* diffuseMap = nullptr;
     Backend::Texture* specularMap = nullptr;
+    Backend::Texture* alphaMap = nullptr;
     Backend::Texture* normalMap = nullptr;
 
     PhongMaterial* setAmbient(glm::vec3 v) {
@@ -86,13 +88,23 @@ class PhongMaterial : public Material {
         specularMap = texture;
         return this;
     }
+    PhongMaterial* setAlphaMap(Backend::Texture* texture) {
+        alphaMap = texture;
+        return this;
+    }
     PhongMaterial* setNormalMap(Backend::Texture* texture) {
         normalMap = texture;
         return this;
     }
 
     bool hasNormalMap() const override { return normalMap != nullptr; }
-    Backend::Texture* alphaTexture() const override { return diffuseMap; }
+    Backend::Texture* alphaTexture() const override {
+        return alphaMap ? alphaMap : diffuseMap;
+    }
+    bool alphaTextureUsesRedChannel() const override {
+        // for an alpha mask only texture(normally stored in red channel)
+        return alphaMap != nullptr;
+    }
 
     void bind() override {
         if (!_shader)
@@ -117,6 +129,11 @@ class PhongMaterial : public Material {
                             RendererTextureSlot::Specular);
         }
         _shader->setInt("useSpecularMap", specularMap ? 1 : 0);
+        if (alphaMap) {
+            alphaMap->bind(RendererTextureSlot::Alpha);
+            _shader->setInt("alphaMap", RendererTextureSlot::Alpha);
+        }
+        _shader->setInt("useAlphaMap", alphaMap ? 1 : 0);
         if (normalMap) {
             normalMap->bind(RendererTextureSlot::Normal);
             _shader->setInt("normalMap", RendererTextureSlot::Normal);

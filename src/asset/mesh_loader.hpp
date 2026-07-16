@@ -22,9 +22,11 @@ struct ObjMaterialInfo {
     float shininess = 1.0f;
     std::string diffuseTexturePath;
     std::string specularTexturePath;
+    std::string alphaTexturePath;
     std::string normalTexturePath;
     bool hasDiffuseTexture = false;
     bool hasSpecularTexture = false;
+    bool hasAlphaTexture = false;
     bool hasNormalTexture = false;
 };
 

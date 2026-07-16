@@ -299,7 +299,9 @@ class SceneContext:
             )
             if double_sided:
                 view.set_double_sided(True)
-            if self._app._obj_subset_alpha(info, subset) < 1.0:
+            if self._app._obj_subset_has_alpha_texture(info, subset):
+                view.set_alpha_mode(_ke.AlphaMode.Mask)
+            elif self._app._obj_subset_alpha(info, subset) < 1.0:
                 view.set_alpha_mode(_ke.AlphaMode.Blend)
             views.append(view)
 
@@ -604,6 +606,7 @@ class App(NativeApp):
         shininess=None,
         diffuse_map=None,
         specular_map=None,
+        alpha_map=None,
         normal_map=None,
     ):
         """Create and retain a Phong material instance.
@@ -628,9 +631,11 @@ class App(NativeApp):
             material.diffuse_map = diffuse_map
         if specular_map is not None:
             material.specular_map = specular_map
+        if alpha_map is not None:
+            material.alpha_map = alpha_map
         if normal_map is not None:
             material.normal_map = normal_map
-        self._remember_textures(diffuse_map, specular_map, normal_map)
+        self._remember_textures(diffuse_map, specular_map, alpha_map, normal_map)
         return self._remember_material(material)
 
     def create_pbr_material(
@@ -714,6 +719,10 @@ class App(NativeApp):
             return 1.0
         return float(material.diffuse_color[3])
 
+    def _obj_subset_has_alpha_texture(self, info, subset):
+        material = self._obj_material_info(info, subset.material_index)
+        return bool(material is not None and material.has_alpha_texture)
+
     def _obj_subset_display_color(self, info, subset):
         material = self._obj_material_info(info, subset.material_index)
         alpha = 1.0 if material is None else float(material.diffuse_color[3])
@@ -731,6 +740,7 @@ class App(NativeApp):
 
         diffuse_map = None
         specular_map = None
+        alpha_map = None
         normal_map = None
         if material_info.has_diffuse_texture:
             diffuse_path = _texture_path_candidate(material_info.diffuse_texture_path)
@@ -742,6 +752,10 @@ class App(NativeApp):
             )
             if specular_path.exists():
                 specular_map = self.load_texture(specular_path, flip=True)
+        if material_info.has_alpha_texture:
+            alpha_path = _texture_path_candidate(material_info.alpha_texture_path)
+            if alpha_path.exists():
+                alpha_map = self.load_texture(alpha_path, flip=True)
         if material_info.has_normal_texture:
             normal_path = _texture_path_candidate(material_info.normal_texture_path)
             if normal_path.exists():
@@ -767,6 +781,7 @@ class App(NativeApp):
             shininess=float(material_info.shininess),
             diffuse_map=diffuse_map,
             specular_map=specular_map,
+            alpha_map=alpha_map,
             normal_map=normal_map,
         )
 

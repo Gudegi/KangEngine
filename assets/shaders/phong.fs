@@ -40,9 +40,11 @@ uniform float uAlphaCutoff;
 uniform sampler2D uTexture;
 uniform sampler2D normalMap;
 uniform sampler2D specularMap;
+uniform sampler2D alphaMap;
 uniform int useDiffuseMap;
 uniform int useNormalMap;
 uniform int useSpecularMap;
+uniform int useAlphaMap;
 uniform sampler2D shadowMap0;
 uniform sampler2D shadowMap1;
 uniform sampler2D shadowMap2;
@@ -68,7 +70,10 @@ void main() {
     vec4 diffuseTexel = useDiffuseMap != 0
         ? texture(uTexture, TexCoord)
         : vec4(1.0);
-    float alpha = diffuseTexel.a * vColor.a;
+    float alphaTexel = useAlphaMap != 0
+        ? texture(alphaMap, TexCoord).r
+        : diffuseTexel.a;
+    float alpha = alphaTexel * vColor.a;
     if(uAlphaMode == 1 && alpha < uAlphaCutoff)
         discard;
 
