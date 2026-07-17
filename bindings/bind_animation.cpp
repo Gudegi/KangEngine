@@ -1337,6 +1337,13 @@ void bind_animation(py::module& m) {
         .def("body_prims", &SkeletonBridge::bodyPrims,
              py::return_value_policy::reference_internal,
              "Return all body scene prims.")
+        .def("render_prims", &SkeletonBridge::renderPrims,
+             py::return_value_policy::reference_internal,
+             "Return actual renderable mesh prims.")
+        .def("render_prim_body_indices",
+             &SkeletonBridge::renderPrimBodyIndices,
+             py::return_value_policy::reference_internal,
+             "Return body index for each render prim.")
         .def("num_bodies", &SkeletonBridge::numBodies,
              "Return the number of bridged bodies.");
 
@@ -1349,10 +1356,12 @@ void bind_animation(py::module& m) {
                     "Load reusable bridge asset data from an MJCF file.")
         .def("define_mesh_assets", &SkeletonBridgeAsset::defineMeshAssets,
              py::arg("scene"), py::arg("mesh_asset_base_path"),
+             py::arg("split_visual_geoms") = false,
              "Define shared mesh asset prims in a scene.")
         .def("instantiate", &SkeletonBridgeAsset::instantiate, py::arg("scene"),
              py::arg("prim_base_path") = "/robot",
              py::arg("mesh_asset_base_path") = "",
+             py::arg("split_visual_geoms") = false,
              "Instantiate this asset into a scene.")
         .def("num_bodies", &SkeletonBridgeAsset::numBodies,
              "Return the number of bodies in this asset.");

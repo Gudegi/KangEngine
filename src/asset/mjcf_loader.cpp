@@ -10,6 +10,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace KE {
 namespace Asset {
@@ -207,6 +208,22 @@ void readSiteDefaults(tinyxml2::XMLElement* defElem, DefaultSiteAttrs& out) {
     auto rgba = splitFloats(s->Attribute("rgba"));
     if (!rgba.empty())
         out.rgba = rgba;
+}
+
+bool geomHasZeroContact(tinyxml2::XMLElement* geom) {
+    int contype = 1;
+    int conaffinity = 1;
+    const bool hasContype =
+        geom->QueryIntAttribute("contype", &contype) == tinyxml2::XML_SUCCESS;
+    const bool hasConaffinity =
+        geom->QueryIntAttribute("conaffinity", &conaffinity) ==
+        tinyxml2::XML_SUCCESS;
+    return hasContype && hasConaffinity && contype == 0 && conaffinity == 0;
+}
+
+bool meshGeomIsVisualOnly(tinyxml2::XMLElement* geom,
+                          const std::string& effectiveClass) {
+    return effectiveClass == "visual" || geomHasZeroContact(geom);
 }
 
 void collectDefaults(
@@ -536,26 +553,44 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
         [&](tinyxml2::XMLElement* elem, int idx, const char* bodyName,
             const std::string& inheritedClass) {
             std::vector<GeomMassData> geomMasses;
+            std::unordered_set<std::string> visualOnlyMeshNames;
+
+            // Some MJCF assets provide two mesh geoms for the same body/mesh:
+            // one visual-only geom (e.g. contype=0 conaffinity=0 group=1) and
+            // one collidable mesh geom.  Keep the visual-only mesh as the
+            // render asset and avoid creating a duplicate visual_N prim for
+            // the collidable copy.
+            for (auto* geom = elem->FirstChildElement("geom"); geom;
+                 geom = geom->NextSiblingElement("geom")) {
+                const char* meshName = geom->Attribute("mesh");
+                if (!meshName)
+                    continue;
+                const char* cls = geom->Attribute("class");
+                std::string effectiveCls = cls ? cls : inheritedClass;
+                if (meshGeomIsVisualOnly(geom, effectiveCls))
+                    visualOnlyMeshNames.insert(meshName);
+            }
 
             for (auto* geom = elem->FirstChildElement("geom"); geom;
                  geom = geom->NextSiblingElement("geom")) {
                 const char* cls = geom->Attribute("class");
+                std::string effectiveCls = cls ? cls : inheritedClass;
                 const char* meshName = geom->Attribute("mesh");
                 auto geomType = geom->Attribute("type")
                                     ? std::string(geom->Attribute("type"))
                                     : std::string();
-                bool isCollisionMesh = cls && std::string(cls) == "collision";
-                bool isVisualMesh = cls && std::string(cls) == "visual";
+                bool isCollisionMesh = effectiveCls == "collision";
+                bool isVisualMesh = meshGeomIsVisualOnly(geom, effectiveCls);
+                bool hasVisualOnlyDuplicate =
+                    meshName && visualOnlyMeshNames.count(meshName) != 0;
 
                 // Visual mesh
                 if (meshName && !isCollisionMesh &&
-                    (isVisualMesh || geomType == "mesh")) {
+                    (isVisualMesh ||
+                     (geomType == "mesh" && !hasVisualOnlyDuplicate))) {
                     auto it = meshNameToFile.find(meshName);
                     if (it != meshNameToFile.end()) {
                         DefaultGeomAttrs defs;
-                        const char* clsAttr = geom->Attribute("class");
-                        std::string effectiveCls =
-                            clsAttr ? clsAttr : inheritedClass;
                         if (!effectiveCls.empty())
                             defs = resolveClass(effectiveCls, defaultMap);
                         Eigen::Vector3f meshPos =

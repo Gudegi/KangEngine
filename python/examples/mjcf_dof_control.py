@@ -17,7 +17,8 @@ def package_asset_path(*parts: str) -> str:
 
 
 def default_mjcf_path() -> Path:
-    return Path(package_asset_path("characters", "kw", "kw.xml"))
+    # return Path(package_asset_path("characters", "kw", "kw.xml"))
+    return Path(package_asset_path("external", "unitree_mujoco", "unitree_robots", "g1", "g1_23dof.xml"))
     # return Path(package_asset_path("external", "unitree_mujoco", "unitree_robots", "h2", "h2_mujoco.xml"))
 
 
@@ -29,7 +30,9 @@ class MjcfDofControlApp(ke.App):
     prim_base_path = "/mjcf"
     camera_pos = (3.8, -5.4, 1.2)
     camera_target = (0.0, 0.0, 0.45)
-    visual_color = (0.22, 0.48, 0.95, 1.0)
+    # None preserves per-geom MJCF rgba. Set an RGBA tuple to force a single
+    # override color for the whole articulation.
+    visual_color = None  # np.array([1,1,1, 1.0])
     ground_size = 10.0
     root_pos = (0.0, 0.0, 0.0)
     root_rot_xyzw = (0.0, 0.0, 0.0, 1.0)
@@ -157,7 +160,11 @@ class MjcfDofControlApp(ke.App):
             shader=self.robot_shader,
             collision_base_path=f"{self.prim_base_path}_collision",
             show_collision=self.show_collision,
-            color=np.array(self.visual_color, dtype=np.float32),
+            color=(
+                None
+                if self.visual_color is None
+                else np.array(self.visual_color, dtype=np.float32)
+            ),
         )
         self.visual_body_prims = self.articulation_visual_view.prims
         # self.collision_body_prims = self.articulation_visual_view.collision_visuals
@@ -482,6 +489,9 @@ class MjcfDofControlApp(ke.App):
         return cls._quat_rotate_xyzw(q, vector)
 
     def _set_visual_alpha(self, alpha: float):
+        if self.visual_color is None:
+            self.articulation_visual_view.set_alpha(alpha)
+            return
         color = np.array(self.visual_color, dtype=np.float32).reshape(-1)
         if color.size == 3:
             color = np.concatenate([color, np.ones(1, dtype=np.float32)])

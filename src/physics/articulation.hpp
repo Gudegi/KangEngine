@@ -67,6 +67,7 @@ class Articulation {
 
     PxArticulationReducedCoordinate* _artic = nullptr;
     std::vector<PxArticulationLink*> _links;
+    std::vector<std::string> _bodyNames;
     Animation::JointMap _joints; // body index -> joints (empty = fixed)
     Animation::CollisionGeomMap _colGeoms;
     std::vector<DofInfo> _dofs;
@@ -123,6 +124,8 @@ class Articulation {
     // Data accessors for PhysicsBridge
     const std::vector<PxArticulationLink*>& links() const { return _links; }
     const Animation::CollisionGeomMap& colGeoms() const { return _colGeoms; }
+    const std::vector<std::string>& bodyNames() const { return _bodyNames; }
+    const std::string& bodyName(int index) const { return _bodyNames[index]; }
 
     // State queries for Python/Model-State integration.
     // Flat arrays use xyz for vectors and xyzw for quaternions.

@@ -2,6 +2,7 @@
 #include "asset/mesh_loader.hpp"
 #include "asset/mjcf_loader.hpp"
 #include "animation/skeleton_math.hpp"
+#include "engine/scene/component/articulation_binding_component.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "utils/types.hpp"
@@ -138,28 +139,11 @@ static void appendMesh(Scene::MeshData& dst, Scene::MeshData&& part) {
                        part.indices.end());
 }
 
-static std::vector<std::shared_ptr<Scene::MeshData>>
-buildBodyMeshes(const Animation::CharacterData& data) {
-    int numBodies = data.skeletonTree ? data.skeletonTree->numJoints() : 0;
-    std::vector<std::shared_ptr<Scene::MeshData>> bodyMeshes(numBodies);
+static std::vector<SkeletonBridgeAsset::VisualGeomAsset>
+buildVisualGeomAssets(const Animation::CharacterData& data) {
+    std::vector<SkeletonBridgeAsset::VisualGeomAsset> visualGeomAssets;
+    visualGeomAssets.reserve(data.meshInfos.size());
 
-    std::unordered_set<int> stlBodies;
-    for (const auto& m : data.meshInfos)
-        stlBodies.insert(m.bodyIndex);
-
-    for (int i = 0; i < numBodies; i++) {
-        if (stlBodies.count(i) != 0)
-            continue;
-        auto it = data.collisionGeoms.find(i);
-        if (it == data.collisionGeoms.end() || it->second.empty())
-            continue;
-        auto colMesh = buildCollisionMesh(it->second);
-        if (!colMesh.vertices.empty())
-            bodyMeshes[i] =
-                std::make_shared<Scene::MeshData>(std::move(colMesh));
-    }
-
-    std::unordered_map<int, Scene::MeshData> visualMeshes;
     for (const auto& meshInfo : data.meshInfos) {
         std::string meshPath = (fs::path(data.meshDir) / meshInfo.meshFile)
                                    .lexically_normal()
@@ -168,41 +152,91 @@ buildBodyMeshes(const Animation::CharacterData& data) {
                    meshInfo.bodyName, meshPath);
         auto part = loadVisualMesh(meshPath);
         applyMeshInfoTransform(part, meshInfo);
-        auto it = visualMeshes.find(meshInfo.bodyIndex);
-        if (it == visualMeshes.end()) {
-            visualMeshes[meshInfo.bodyIndex] = std::move(part);
+
+        SkeletonBridgeAsset::VisualGeomAsset asset;
+        asset.bodyIndex = meshInfo.bodyIndex;
+        asset.mesh = std::make_shared<Scene::MeshData>(std::move(part));
+        asset.color = meshInfo.rgba;
+        visualGeomAssets.emplace_back(std::move(asset));
+    }
+
+    return visualGeomAssets;
+}
+
+static std::vector<std::shared_ptr<Scene::MeshData>> buildBodyMeshesFromVisuals(
+    int numBodies,
+    const std::vector<SkeletonBridgeAsset::VisualGeomAsset>& visualGeomAssets,
+    const Animation::CollisionGeomMap& collisionGeoms) {
+    std::vector<std::shared_ptr<Scene::MeshData>> bodyMeshes(numBodies);
+    std::vector<bool> hasVisual(static_cast<size_t>(numBodies), false);
+
+    std::unordered_map<int, Scene::MeshData> mergedBodyVisualMeshes;
+    for (const auto& visual : visualGeomAssets) {
+        const int bodyIdx = visual.bodyIndex;
+        if (bodyIdx < 0 || bodyIdx >= numBodies || !visual.mesh)
+            continue;
+        hasVisual[static_cast<size_t>(bodyIdx)] = true;
+        auto part = *visual.mesh;
+        auto it = mergedBodyVisualMeshes.find(bodyIdx);
+        if (it == mergedBodyVisualMeshes.end()) {
+            mergedBodyVisualMeshes[bodyIdx] = std::move(part);
         } else {
             appendMesh(it->second, std::move(part));
         }
     }
 
-    for (auto& [bodyIdx, mesh] : visualMeshes) {
+    for (auto& [bodyIdx, mesh] : mergedBodyVisualMeshes) {
         if (bodyIdx >= 0 && bodyIdx < static_cast<int>(bodyMeshes.size()))
             bodyMeshes[bodyIdx] =
                 std::make_shared<Scene::MeshData>(std::move(mesh));
     }
 
+    for (int i = 0; i < numBodies; i++) {
+        if (hasVisual[static_cast<size_t>(i)])
+            continue;
+        auto it = collisionGeoms.find(i);
+        if (it == collisionGeoms.end() || it->second.empty())
+            continue;
+        auto colMesh = buildCollisionMesh(it->second);
+        if (!colMesh.vertices.empty())
+            bodyMeshes[i] =
+                std::make_shared<Scene::MeshData>(std::move(colMesh));
+    }
+
     return bodyMeshes;
 }
 
-static std::vector<Eigen::Vector4f>
-buildBodyColors(const Animation::CharacterData& data) {
-    int numBodies = data.skeletonTree ? data.skeletonTree->numJoints() : 0;
+static std::vector<Eigen::Vector4f> buildBodyColorsFromVisuals(
+    int numBodies,
+    const std::vector<SkeletonBridgeAsset::VisualGeomAsset>& visualGeomAssets) {
     std::vector<Eigen::Vector4f> colors(
         numBodies, Eigen::Vector4f(0.15f, 0.15f, 0.15f, 1.0f));
     std::vector<bool> assigned(static_cast<size_t>(numBodies), false);
 
-    for (const auto& meshInfo : data.meshInfos) {
-        const int bodyIdx = meshInfo.bodyIndex;
+    for (const auto& visual : visualGeomAssets) {
+        const int bodyIdx = visual.bodyIndex;
         if (bodyIdx < 0 || bodyIdx >= numBodies)
             continue;
         if (assigned[static_cast<size_t>(bodyIdx)])
             continue;
-        colors[static_cast<size_t>(bodyIdx)] = meshInfo.rgba;
+        colors[static_cast<size_t>(bodyIdx)] = visual.color;
         assigned[static_cast<size_t>(bodyIdx)] = true;
     }
 
     return colors;
+}
+
+static std::vector<bool> buildBodyHasVisualMap(
+    int numBodies,
+    const std::vector<SkeletonBridgeAsset::VisualGeomAsset>& visualGeomAssets) {
+    std::vector<bool> hasVisual(static_cast<size_t>(numBodies), false);
+    for (const auto& visual : visualGeomAssets) {
+        if (visual.bodyIndex >= 0 && visual.bodyIndex < numBodies &&
+            visual.mesh) {
+            hasVisual[static_cast<size_t>(visual.bodyIndex)] = true;
+        }
+    }
+    return hasVisual;
 }
 
 SkeletonBridge SkeletonBridge::fromMJCF(const std::string& mjcfPath,
@@ -235,37 +269,76 @@ SkeletonBridgeAsset::fromData(const Animation::CharacterData& data,
     SkeletonBridgeAsset asset;
     asset._data = data;
     asset._scale = scale;
-    asset._bodyMeshes = buildBodyMeshes(data);
-    asset._bodyColors = buildBodyColors(data);
+    asset._visualGeomAssets = buildVisualGeomAssets(data);
     fmt::print("SkeletonBridgeAsset loaded: {} bodies, {} meshes\n",
                asset.numBodies(), data.meshInfos.size());
     return asset;
 }
 
-void SkeletonBridgeAsset::defineMeshAssets(
-    Scene::SceneBackend* scene, const std::string& meshAssetBasePath) const {
+void SkeletonBridgeAsset::defineMeshAssets(Scene::SceneBackend* scene,
+                                           const std::string& meshAssetBasePath,
+                                           bool splitVisualGeoms) const {
     if (!scene || meshAssetBasePath.empty())
         return;
-    for (int i = 0; i < static_cast<int>(_bodyMeshes.size()); i++) {
-        if (!_bodyMeshes[i])
+    const int bodies = numBodies();
+    auto bodyHasVisual = buildBodyHasVisualMap(bodies, _visualGeomAssets);
+
+    if (!splitVisualGeoms) {
+        auto bodyMeshes = buildBodyMeshesFromVisuals(bodies, _visualGeomAssets,
+                                                     _data.collisionGeoms);
+        auto bodyColors = buildBodyColorsFromVisuals(bodies, _visualGeomAssets);
+        for (int i = 0; i < static_cast<int>(bodyMeshes.size()); i++) {
+            if (!bodyMeshes[i])
+                continue;
+            auto* assetPrim = scene->definePrim(meshAssetBasePath + "/body_" +
+                                                    std::to_string(i),
+                                                Scene::PrimType::Mesh);
+            if (!assetPrim->getMeshData())
+                assetPrim->setMeshData(bodyMeshes[i]);
+            if (i < static_cast<int>(bodyColors.size())) {
+                const auto& c = bodyColors[static_cast<size_t>(i)];
+                assetPrim->setDisplayColorAlpha(
+                    glm::vec4(c.x(), c.y(), c.z(), c.w()));
+            }
+        }
+        return;
+    }
+
+    for (int i = 0; i < static_cast<int>(_visualGeomAssets.size()); i++) {
+        const auto& visual = _visualGeomAssets[static_cast<size_t>(i)];
+        if (!visual.mesh)
+            continue;
+        auto* assetPrim = scene->definePrim(meshAssetBasePath + "/visual_" +
+                                                std::to_string(i),
+                                            Scene::PrimType::Mesh);
+        if (!assetPrim->getMeshData())
+            assetPrim->setMeshData(visual.mesh);
+        const auto& c = visual.color;
+        assetPrim->setDisplayColorAlpha(glm::vec4(c.x(), c.y(), c.z(), c.w()));
+    }
+
+    auto bodyMeshes = buildBodyMeshesFromVisuals(bodies, _visualGeomAssets,
+                                                 _data.collisionGeoms);
+    auto bodyColors = buildBodyColorsFromVisuals(bodies, _visualGeomAssets);
+    for (int i = 0; i < static_cast<int>(bodyMeshes.size()); i++) {
+        if (!bodyMeshes[i] || bodyHasVisual[static_cast<size_t>(i)])
             continue;
         auto* assetPrim =
             scene->definePrim(meshAssetBasePath + "/body_" + std::to_string(i),
                               Scene::PrimType::Mesh);
         if (!assetPrim->getMeshData())
-            assetPrim->setMeshData(_bodyMeshes[i]);
-        if (i < static_cast<int>(_bodyColors.size())) {
-            const auto& c = _bodyColors[static_cast<size_t>(i)];
+            assetPrim->setMeshData(bodyMeshes[i]);
+        if (i < static_cast<int>(bodyColors.size())) {
+            const auto& c = bodyColors[static_cast<size_t>(i)];
             assetPrim->setDisplayColorAlpha(
                 glm::vec4(c.x(), c.y(), c.z(), c.w()));
         }
     }
 }
 
-SkeletonBridge
-SkeletonBridgeAsset::instantiate(Scene::SceneBackend* scene,
-                                 const std::string& primBasePath,
-                                 const std::string& meshAssetBasePath) const {
+SkeletonBridge SkeletonBridgeAsset::instantiate(
+    Scene::SceneBackend* scene, const std::string& primBasePath,
+    const std::string& meshAssetBasePath, bool splitVisualGeoms) const {
     SkeletonBridge bridge;
     bridge._fk = Animation::SkeletonFK::fromData(_data, _scale);
 
@@ -273,8 +346,15 @@ SkeletonBridgeAsset::instantiate(Scene::SceneBackend* scene,
     int numBodies = bridge._fk.numBodies();
     bridge._bodyPrims.resize(numBodies, nullptr);
     const bool useMeshInstances = !meshAssetBasePath.empty();
+    std::vector<std::shared_ptr<Scene::MeshData>> bodyMeshes;
+    if (!useMeshInstances) {
+        bodyMeshes = buildBodyMeshesFromVisuals(numBodies, _visualGeomAssets,
+                                                _data.collisionGeoms);
+    }
+    auto bodyColors = buildBodyColorsFromVisuals(numBodies, _visualGeomAssets);
+    auto bodyHasVisual = buildBodyHasVisualMap(numBodies, _visualGeomAssets);
     if (useMeshInstances)
-        defineMeshAssets(scene, meshAssetBasePath);
+        defineMeshAssets(scene, meshAssetBasePath, splitVisualGeoms);
 
     // Create one Prim per body
     for (int i = 0; i < numBodies; i++) {
@@ -282,14 +362,23 @@ SkeletonBridgeAsset::instantiate(Scene::SceneBackend* scene,
         std::string primPath = primBasePath + "/" + bodyName;
         std::string meshSourcePath =
             meshAssetBasePath + "/body_" + std::to_string(i);
+        const bool hasBodyMesh =
+            useMeshInstances || (i < static_cast<int>(bodyMeshes.size()) &&
+                                 bodyMeshes[i] != nullptr);
+        const bool hasSplitVisual =
+            i < static_cast<int>(bodyHasVisual.size()) &&
+            bodyHasVisual[static_cast<size_t>(i)];
+        const bool bodyIsRenderable = !splitVisualGeoms || !hasSplitVisual;
         auto* prim = scene->definePrim(
-            primPath, useMeshInstances ? Scene::PrimType::MeshInstance
-                                       : Scene::PrimType::Mesh);
-        if (useMeshInstances)
+            primPath, bodyIsRenderable
+                          ? (useMeshInstances ? Scene::PrimType::MeshInstance
+                                              : Scene::PrimType::Mesh)
+                          : Scene::PrimType::Xform);
+        if (bodyIsRenderable && useMeshInstances)
             prim->setMeshSourcePath(meshSourcePath);
         glm::vec4 displayColor(0.15f, 0.15f, 0.15f, 1.0f);
-        if (i < static_cast<int>(_bodyColors.size())) {
-            const auto& c = _bodyColors[static_cast<size_t>(i)];
+        if (i < static_cast<int>(bodyColors.size())) {
+            const auto& c = bodyColors[static_cast<size_t>(i)];
             displayColor = glm::vec4(c.x(), c.y(), c.z(), c.w());
         }
         prim->setDisplayColorAlpha(displayColor);
@@ -299,11 +388,55 @@ SkeletonBridgeAsset::instantiate(Scene::SceneBackend* scene,
         glm::quat rot = Animation::toGlm(globalTransforms[i].rotation);
         prim->setWorldMatrix(glm::translate(glm::mat4(1.0f), pos) *
                              glm::mat4_cast(rot));
+        prim->addArticulationBindingComponent()->setBinding(
+            Scene::ArticulationPrimRole::BodyFrame, i, bodyName, primBasePath);
         bridge._bodyPrims[i] = prim;
 
-        if (!useMeshInstances && i < static_cast<int>(_bodyMeshes.size()) &&
-            _bodyMeshes[i])
-            prim->setMeshData(_bodyMeshes[i]);
+        if (bodyIsRenderable && !useMeshInstances && hasBodyMesh)
+            prim->setMeshData(bodyMeshes[i]);
+        if (bodyIsRenderable) {
+            bridge._renderPrims.push_back(prim);
+            bridge._renderPrimBodyIndices.push_back(i);
+        }
+    }
+
+    if (splitVisualGeoms) {
+        std::vector<int> visualCounts(static_cast<size_t>(numBodies), 0);
+        for (int visualIndex = 0;
+             visualIndex < static_cast<int>(_visualGeomAssets.size());
+             visualIndex++) {
+            const auto& visual =
+                _visualGeomAssets[static_cast<size_t>(visualIndex)];
+            const int bodyIndex = visual.bodyIndex;
+            if (bodyIndex < 0 || bodyIndex >= numBodies ||
+                !bridge._bodyPrims[static_cast<size_t>(bodyIndex)] ||
+                !visual.mesh)
+                continue;
+
+            const int localIndex =
+                visualCounts[static_cast<size_t>(bodyIndex)]++;
+            auto* bodyPrim = bridge._bodyPrims[static_cast<size_t>(bodyIndex)];
+            const std::string bodyName =
+                bridge._fk.skeleton().nodeName(bodyIndex);
+            auto* visualPrim = scene->definePrim(
+                bodyPrim->getPath() + "/visual_" + std::to_string(localIndex),
+                useMeshInstances ? Scene::PrimType::MeshInstance
+                                 : Scene::PrimType::Mesh);
+            if (useMeshInstances) {
+                visualPrim->setMeshSourcePath(meshAssetBasePath + "/visual_" +
+                                              std::to_string(visualIndex));
+            } else {
+                visualPrim->setMeshData(visual.mesh);
+            }
+            const auto& c = visual.color;
+            visualPrim->setDisplayColorAlpha(
+                glm::vec4(c.x(), c.y(), c.z(), c.w()));
+            visualPrim->addArticulationBindingComponent()->setBinding(
+                Scene::ArticulationPrimRole::VisualGeom, bodyIndex, bodyName,
+                primBasePath);
+            bridge._renderPrims.push_back(visualPrim);
+            bridge._renderPrimBodyIndices.push_back(bodyIndex);
+        }
     }
 
     fmt::print("SkeletonBridge instantiated: {} bodies\n",

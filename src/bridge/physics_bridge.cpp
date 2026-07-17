@@ -1,4 +1,5 @@
 #include "physics_bridge.hpp"
+#include "engine/scene/component/articulation_binding_component.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "physics/articulation.hpp"
@@ -12,6 +13,14 @@
 
 namespace KE {
 namespace Bridge {
+
+namespace {
+
+std::string fallbackBodyName(int bodyIdx) {
+    return "body_" + std::to_string(bodyIdx);
+}
+
+} // namespace
 
 void PhysicsBridge::add(const Articulation& artic,
                         const SkeletonBridge& skelBridge) {
@@ -51,6 +60,21 @@ std::vector<Scene::Prim*> PhysicsBridge::addCollisionVisuals(
         if (bodyIdx >= static_cast<int>(links.size()))
             continue;
         physx::PxArticulationLink* lnk = links[bodyIdx];
+        std::string bodyName = fallbackBodyName(bodyIdx);
+        if (bodyIdx < static_cast<int>(artic.bodyNames().size()))
+            bodyName = artic.bodyName(bodyIdx);
+        std::string rootPath = basePath;
+        for (const auto& visual : _primVisuals) {
+            if (visual.link != lnk || !visual.prim)
+                continue;
+            if (auto binding = visual.prim->getArticulationBindingComponent()) {
+                if (!binding->bodyName().empty())
+                    bodyName = binding->bodyName();
+                if (!binding->articulationRootPath().empty())
+                    rootPath = binding->articulationRootPath();
+            }
+            break;
+        }
 
         for (int gi = 0; gi < static_cast<int>(geoms.size()); gi++) {
             const auto& geom = geoms[gi];
@@ -110,6 +134,9 @@ std::vector<Scene::Prim*> PhysicsBridge::addCollisionVisuals(
             prim->addTranslateOp(localPos);
             prim->addRotateQuaternionOp(localQuat);
             prim->setVisible(visibleByDefault);
+            prim->addArticulationBindingComponent()->setBinding(
+                Scene::ArticulationPrimRole::CollisionGeom, bodyIdx, bodyName,
+                rootPath);
 
             _colVisuals.push_back({lnk, prim, localPos, localQuat});
             result.push_back(prim);

@@ -46,8 +46,10 @@ class VisualArticulationSceneGraph:
     obj_id: int
     skeleton_bridge: object
     body_prims: list[object]
+    render_prims: list[object]
     collision_prims: list[object]
     body_handles: list[int]
+    handle_body_ids: dict[int, int] | None = None
 
     @property
     def key(self):
@@ -55,7 +57,11 @@ class VisualArticulationSceneGraph:
 
     @property
     def prims(self):
-        return tuple(self.body_prims)
+        return tuple(self.render_prims)
+
+    @property
+    def visual_prims(self):
+        return tuple(self.render_prims)
 
     @property
     def num_bodies(self) -> int:
@@ -67,6 +73,8 @@ class VisualArticulationSceneGraph:
 
     def body_id_from_render_handle(self, handle) -> int | None:
         handle = int(handle)
+        if self.handle_body_ids is not None:
+            return self.handle_body_ids.get(handle)
         for body_id, body_handle in enumerate(self.body_handles):
             if int(body_handle) == handle:
                 return body_id
@@ -83,12 +91,24 @@ class VisualArticulationSceneGraph:
     def set_color(self, color):
         rgba_vec = _normalize_color(color)
         if rgba_vec is not None:
-            for prim in self.body_prims:
+            for prim in self.render_prims:
                 prim.set_display_color_alpha(rgba_vec)
         return self
 
+    def set_alpha(self, alpha: float):
+        alpha = float(alpha)
+        for prim in self.render_prims:
+            color = prim.get_display_color_alpha()
+            if color is None:
+                prim.set_display_color_alpha(_ke.vec4(1.0, 1.0, 1.0, alpha))
+            else:
+                prim.set_display_color_alpha(
+                    _ke.vec4(float(color.x), float(color.y), float(color.z), alpha)
+                )
+        return self
+
     def set_visible(self, visible: bool):
-        for prim in self.body_prims:
+        for prim in self.render_prims:
             prim.set_visible(bool(visible))
         return self
 
@@ -728,6 +748,7 @@ class RigidVisualBridge:
         rigid,
         data,
         prim_base_path: str,
+        material=None,
         shader=None,
         add_shapes: bool = True,
         color=None,
@@ -743,8 +764,10 @@ class RigidVisualBridge:
         for idx, spec in enumerate(self.specs):
             prim = self._define_shape_prim(prim_base_path, idx, spec)
             _apply_prim_color([prim], color)
-            if add_shapes and shader is not None:
-                self.body_handles.append(app._add_renderable(shader, prim))
+            if material is None and shader is not None:
+                material = app.create_vertex_color_material(shader=shader)
+            if add_shapes and material is not None:
+                self.body_handles.append(app._add_renderable(material, prim))
             self.body_prims.append(prim)
 
     def sync(self):
@@ -869,9 +892,11 @@ class KangWorldVisualBridge:
         unexpected = set(kwargs) - {
             "scale",
             "order",
+            "material",
             "shader",
             "color",
             "collision_base_path",
+            "collision_material",
             "collision_shader",
             "show_collision",
         }
@@ -907,9 +932,11 @@ class KangWorldVisualBridge:
         prim_base_path: str = "/robot",
         scale: float = 1.0,
         order: str = "DFS",
+        material=None,
         shader=None,
         add_shapes: bool = True,
         collision_base_path: str | None = None,
+        collision_material=None,
         collision_shader=None,
         show_collision: bool = False,
         color=None,
@@ -932,14 +959,23 @@ class KangWorldVisualBridge:
             self.scene,
             prim_base_path,
             mesh_asset_base_path,
+            True,
         )
 
         body_prims = list(skeleton_bridge.body_prims())
-        _apply_prim_color(body_prims, color)
+        render_prims = list(skeleton_bridge.render_prims())
+        render_body_ids = [
+            int(i) for i in skeleton_bridge.render_prim_body_indices()
+        ]
+        _apply_prim_color(render_prims, color)
+        material = self._resolve_visual_material(material, shader)
         body_handles = []
-        if add_shapes and shader is not None:
-            for prim in body_prims:
-                body_handles.append(self.app._add_renderable(shader, prim))
+        handle_body_ids = {}
+        if add_shapes and material is not None:
+            for prim, body_id in zip(render_prims, render_body_ids):
+                handle = self.app._add_renderable(material, prim)
+                body_handles.append(handle)
+                handle_body_ids[int(handle)] = int(body_id)
         self.physics_bridge.add(articulation, skeleton_bridge)
         if _debug_registration:
             _debug_instancing(
@@ -961,18 +997,24 @@ class KangWorldVisualBridge:
                     bool(show_collision),
                 )
             )
-            shape_shader = collision_shader if collision_shader is not None else shader
-            if add_shapes and shape_shader is not None:
+            shape_material = (
+                material
+                if collision_material is None and collision_shader is None
+                else self._resolve_visual_material(collision_material, collision_shader)
+            )
+            if add_shapes and shape_material is not None:
                 for prim in collision_prims:
-                    self.app.scene.add_renderable(prim, shape_shader)
+                    self.app.scene.add_renderable(prim, shape_material)
 
         record = VisualArticulationSceneGraph(
             key[0],
             key[1],
             skeleton_bridge,
             body_prims,
+            render_prims,
             collision_prims,
             body_handles,
+            handle_body_ids,
         )
         self.visual_articulation_scene_graphs[key] = record
         return record
@@ -984,16 +1026,19 @@ class KangWorldVisualBridge:
         prim_base_path: str = "/gpu_robot",
         scale: float = 1.0,
         order: str = "DFS",
+        material=None,
         shader=None,
         color=None,
         collision_base_path: str | None = None,
+        collision_material=None,
         collision_shader=None,
         show_collision: bool = False,
     ) -> VisualBatch:
         """Create one renderable per link backed by CUDA instance transforms."""
         self._require_valid()
-        if shader is None:
-            raise ValueError("_add_gpu_articulation requires a shader")
+        material = self._resolve_visual_material(material, shader)
+        if material is None:
+            raise ValueError("_add_gpu_articulation requires a material or shader")
         if not hasattr(_ke, "articulation_link_state_to_mat4_cuda"):
             raise RuntimeError("KangEngine was built without CUDA transform kernels")
 
@@ -1015,14 +1060,18 @@ class KangWorldVisualBridge:
             )
         body_handles = [
             self.app._add_renderable(
-                shader, prim, _ke.TransformSource.ExternalBuffer
+                material, prim, _ke.TransformSource.ExternalBuffer
             )
             for prim in body_prims
         ]
         collision_prims = self._add_articulation_collision_visuals(
             sim_view.articulation,
             collision_base_path,
-            collision_shader if collision_shader is not None else shader,
+            (
+                material
+                if collision_material is None and collision_shader is None
+                else self._resolve_visual_material(collision_material, collision_shader)
+            ),
             show_collision,
         )
         backend = ArticulationGPUExternalBackend(
@@ -1048,16 +1097,19 @@ class KangWorldVisualBridge:
         prim_base_path: str = "/cpu_external_robot",
         scale: float = 1.0,
         order: str = "DFS",
+        material=None,
         shader=None,
         color=None,
         collision_base_path: str | None = None,
+        collision_material=None,
         collision_shader=None,
         show_collision: bool = False,
     ) -> VisualBatch:
         """Create one renderable per link backed by CPU ExternalBuffer."""
         self._require_valid()
-        if shader is None:
-            raise ValueError("_add_cpu_external_articulation requires a shader")
+        material = self._resolve_visual_material(material, shader)
+        if material is None:
+            raise ValueError("_add_cpu_external_articulation requires a material or shader")
 
         obj_id = int(sim_view.obj_id)
         env_ids = tuple(int(env_id) for env_id in sim_view.env_ids)
@@ -1083,14 +1135,18 @@ class KangWorldVisualBridge:
             )
         body_handles = [
             self.app._add_renderable(
-                shader, prim, _ke.TransformSource.ExternalBuffer
+                material, prim, _ke.TransformSource.ExternalBuffer
             )
             for prim in body_prims
         ]
         collision_prims = self._add_articulation_collision_visuals(
             sim_view.articulation,
             collision_base_path,
-            collision_shader if collision_shader is not None else shader,
+            (
+                material
+                if collision_material is None and collision_shader is None
+                else self._resolve_visual_material(collision_material, collision_shader)
+            ),
             show_collision,
         )
         backend = ArticulationCPUExternalBackend(
@@ -1116,13 +1172,15 @@ class KangWorldVisualBridge:
         prim_base_path: str = "/gpu_rigid",
         scale: float = 1.0,
         order: str = "DFS",
+        material=None,
         shader=None,
         color=None,
     ) -> VisualBatch:
         """Create a single-shape rigid batch backed by CUDA transforms."""
         self._require_valid()
-        if shader is None:
-            raise ValueError("_add_gpu_rigid requires a shader")
+        material = self._resolve_visual_material(material, shader)
+        if material is None:
+            raise ValueError("_add_gpu_rigid requires a material or shader")
         if not hasattr(_ke, "indexed_rigid_state_to_mat4_cuda"):
             raise RuntimeError("KangEngine was built without CUDA transform kernels")
 
@@ -1146,7 +1204,7 @@ class KangWorldVisualBridge:
             )
         prim = rigid_bridge.body_prims[0]
         handle = self.app._add_renderable(
-            shader, prim, _ke.TransformSource.ExternalBuffer
+            material, prim, _ke.TransformSource.ExternalBuffer
         )
         backend = RigidGPUExternalBackend(
             self.app, self.world, obj_id, env_ids, prim, handle
@@ -1165,13 +1223,15 @@ class KangWorldVisualBridge:
         prim_base_path: str = "/cpu_external_rigid",
         scale: float = 1.0,
         order: str = "DFS",
+        material=None,
         shader=None,
         color=None,
     ) -> VisualBatch:
         """Create a rigid shape batch backed by CPU ExternalBuffer."""
         self._require_valid()
-        if shader is None:
-            raise ValueError("_add_cpu_external_rigid requires a shader")
+        material = self._resolve_visual_material(material, shader)
+        if material is None:
+            raise ValueError("_add_cpu_external_rigid requires a material or shader")
 
         obj_id = int(sim_view.obj_id)
         env_ids = tuple(int(env_id) for env_id in sim_view.env_ids)
@@ -1196,7 +1256,7 @@ class KangWorldVisualBridge:
         body_prims = list(rigid_bridge.body_prims)
         body_handles = [
             self.app._add_renderable(
-                shader, prim, _ke.TransformSource.ExternalBuffer
+                material, prim, _ke.TransformSource.ExternalBuffer
             )
             for prim in body_prims
         ]
@@ -1225,6 +1285,7 @@ class KangWorldVisualBridge:
         prim_base_path: str = "/rigid",
         scale: float = 1.0,
         order: str = "DFS",
+        material=None,
         shader=None,
         add_shapes: bool = True,
         color=None,
@@ -1252,7 +1313,7 @@ class KangWorldVisualBridge:
             rigid,
             data,
             prim_base_path,
-            shader=shader,
+            material=self._resolve_visual_material(material, shader),
             add_shapes=add_shapes,
             color=color,
         )
@@ -1285,6 +1346,7 @@ class KangWorldVisualBridge:
         prim_base_path: str = "/robot",
         scale: float = 1.0,
         order: str = "DFS",
+        material=None,
         shader=None,
         add_shapes: bool = True,
         color=None,
@@ -1300,18 +1362,28 @@ class KangWorldVisualBridge:
             self.scene,
             prim_base_path,
             mesh_asset_base_path,
+            True,
         )
         body_prims = list(skeleton_bridge.body_prims())
-        _apply_prim_color(body_prims, color)
-        if add_shapes and shader is not None:
-            for prim in body_prims:
-                self.app.scene.add_renderable(prim, shader)
+        render_prims = list(skeleton_bridge.render_prims())
+        render_body_ids = [
+            int(i) for i in skeleton_bridge.render_prim_body_indices()
+        ]
+        _apply_prim_color(render_prims, color)
+        material = self._resolve_visual_material(material, shader)
+        body_handles = []
+        handle_body_ids = {}
+        if add_shapes and material is not None:
+            for prim, body_id in zip(render_prims, render_body_ids):
+                handle = self.app._add_renderable(material, prim)
+                body_handles.append(handle)
+                handle_body_ids[int(handle)] = int(body_id)
         _debug_instancing(
             kind="visual-scenegraph",
             env_id=key[0],
             obj_id=key[1],
             num_bodies=len(body_prims),
-            handles=[],
+            handles=body_handles,
             mesh_asset_base_path=mesh_asset_base_path,
         )
 
@@ -1320,8 +1392,10 @@ class KangWorldVisualBridge:
             key[1],
             skeleton_bridge,
             body_prims,
+            render_prims,
             [],
-            [],
+            body_handles,
+            handle_body_ids,
         )
         self.visual_articulation_scene_graphs[key] = record
         return record
@@ -1480,11 +1554,18 @@ class KangWorldVisualBridge:
         self._skeleton_assets[key] = record
         return record
 
+    def _resolve_visual_material(self, material=None, shader=None, *, fallback=None):
+        if material is not None:
+            return material
+        if shader is not None:
+            return self.app.create_vertex_color_material(shader=shader)
+        return fallback
+
     def _add_articulation_collision_visuals(
         self,
         articulation,
         collision_base_path: str | None,
-        shader,
+        material,
         visible: bool,
     ):
         if collision_base_path is None:
@@ -1497,9 +1578,9 @@ class KangWorldVisualBridge:
                 bool(visible),
             )
         )
-        if shader is not None:
+        if material is not None:
             for prim in collision_prims:
-                self.app.scene.add_renderable(prim, shader)
+                self.app.scene.add_renderable(prim, material)
         return collision_prims
 
 
@@ -1586,4 +1667,4 @@ def _mesh_asset_base_path(mjcf_path: str, scale: float, order: str) -> str:
         stem = "character"
     digest_src = f"{mjcf_path}|{float(scale):.9g}|{order}".encode("utf-8")
     digest = hashlib.sha1(digest_src).hexdigest()[:10]
-    return f"/mesh_assets/skeletons/{stem}_{digest}"
+    return f"/.Resources/Meshes/Skeletons/{stem}_{digest}"

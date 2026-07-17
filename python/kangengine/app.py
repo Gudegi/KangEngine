@@ -571,6 +571,12 @@ class App(NativeApp):
         self._register_material_resource(material)
         return material
 
+    def create_vertex_color_material(self, *, shader=None):
+        """Create and retain a material for display/vertex-color shaders."""
+        if shader is None:
+            shader = self.create_standard_shaders().common
+        return self._remember_material(_ke.VertexColorMaterial(shader))
+
     def _remember_textures(self, *textures):
         """Keep Python-created native textures alive while materials use them."""
         for texture in textures:

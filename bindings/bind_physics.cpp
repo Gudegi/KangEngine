@@ -406,6 +406,7 @@ void bind_physics(py::module& m) {
             },
             py::arg("physics"), py::arg("data"),
             py::arg("cfg") = ArticulationConfig{},
+            py::keep_alive<0, 1>(),
             "Build an articulation in a PhysicsWorld from character data.")
         .def("num_links", &Articulation::numLinks,
              "Return the number of links.")
@@ -712,6 +713,7 @@ void bind_physics(py::module& m) {
         .def(py::init<>(), "Create a scene-graph physics bridge.")
         .def("add", &PhysicsBridge::add, py::arg("artic"),
              py::arg("skel_bridge"),
+             py::keep_alive<1, 2>(), py::keep_alive<1, 3>(),
              "Connect an articulation to a SkeletonBridge.")
         .def("sync", &PhysicsBridge::sync,
              "Copy latest physics transforms into connected visuals.")
@@ -729,6 +731,7 @@ void bind_physics(py::module& m) {
             py::arg("base_path") = "/collision",
             py::arg("visible_by_default") = false,
             py::return_value_policy::reference,
+            py::keep_alive<1, 2>(), py::keep_alive<1, 3>(),
             "Create scene prims that visualize articulation collision shapes.");
 #endif
 }

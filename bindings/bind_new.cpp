@@ -590,6 +590,13 @@ PYBIND11_MODULE(_kangengine, m) {
              py::return_value_policy::reference,
              "Return the shader currently attached to this material.");
 
+    py::class_<VertexColorMaterial, Material>(
+        m, "VertexColorMaterial",
+        "Compatibility material for vertex/display-color shader rendering.")
+        .def(py::init<>(), "Create a vertex-color material without a shader.")
+        .def(py::init<Backend::Shader*>(), py::arg("shader"),
+             "Create a vertex-color material attached to a shader.");
+
     py::class_<PhongMaterial, Material>(
         m, "PhongMaterial",
         "Classic Blinn-Phong material with diffuse/specular factors and "

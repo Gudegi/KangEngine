@@ -7,6 +7,7 @@
 #include "engine/graphics/material/material.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
 #include "engine/scene/component/camera_component.hpp"
+#include "engine/scene/component/articulation_binding_component.hpp"
 #include "engine/scene/component/light_component.hpp"
 #include "engine/scene/component/material_binding_component.hpp"
 #include "engine/scene/component/mesh_component.hpp"
@@ -1108,6 +1109,38 @@ void InspectorPanel::buildPanel() {
                                selectionComponent->userTag().c_str());
     } else {
         ImGui::TextDisabled("No SelectionComponent");
+    }
+
+    if (auto articulation = prim->getArticulationBindingComponent()) {
+        ImGui::SeparatorText("Articulation Binding");
+        ImGui::Text("Component: attached=%s version=%llu",
+                    articulation->isAttached() ? "true" : "false",
+                    static_cast<unsigned long long>(articulation->version()));
+        if (ImGui::BeginTable("ArticulationBinding", 2,
+                              ImGuiTableFlags_SizingStretchProp)) {
+            const auto property = [](const char* label) {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::TextDisabled("%s", label);
+                ImGui::TableSetColumnIndex(1);
+            };
+            property("Role");
+            ImGui::TextUnformatted(Scene::articulationPrimRoleLabel(
+                articulation->role()));
+            property("Body Index");
+            ImGui::Text("%d", articulation->bodyIndex());
+            property("Body Name");
+            ImGui::TextUnformatted(articulation->bodyName().empty()
+                                       ? "<none>"
+                                       : articulation->bodyName().c_str());
+            property("Root");
+            ImGui::TextWrapped("%s",
+                               articulation->articulationRootPath().empty()
+                                   ? "<none>"
+                                   : articulation->articulationRootPath()
+                                         .c_str());
+            ImGui::EndTable();
+        }
     }
 
     ImGui::SeparatorText("Transform");

@@ -180,9 +180,10 @@ void setCollisionFilterData(PxRigidActor* actor, PxU32 collisionGroup) {
 // Move semantics
 Articulation::Articulation(Articulation&& o) noexcept
     : _artic(o._artic), _links(std::move(o._links)),
-      _joints(std::move(o._joints)), _colGeoms(std::move(o._colGeoms)),
-      _dofs(std::move(o._dofs)), _KPs(std::move(o._KPs)),
-      _KDs(std::move(o._KDs)), _effortLimits(std::move(o._effortLimits)),
+      _bodyNames(std::move(o._bodyNames)), _joints(std::move(o._joints)),
+      _colGeoms(std::move(o._colGeoms)), _dofs(std::move(o._dofs)),
+      _KPs(std::move(o._KPs)), _KDs(std::move(o._KDs)),
+      _effortLimits(std::move(o._effortLimits)),
       _appliedForces(std::move(o._appliedForces)) {
     o._artic = nullptr;
 }
@@ -192,6 +193,7 @@ Articulation& Articulation::operator=(Articulation&& o) noexcept {
         release();
         _artic = o._artic;
         _links = std::move(o._links);
+        _bodyNames = std::move(o._bodyNames);
         _joints = std::move(o._joints);
         _colGeoms = std::move(o._colGeoms);
         _dofs = std::move(o._dofs);
@@ -212,6 +214,7 @@ void Articulation::release() {
         _artic = nullptr;
     }
     _links.clear();
+    _bodyNames.clear();
     _joints.clear();
     _colGeoms.clear();
     _dofs.clear();
@@ -481,6 +484,9 @@ Articulation Articulation::build(
         PxArticulationFlag::eDISABLE_SELF_COLLISION, cfg.disableSelfCollision);
     artic._artic->setSolverIterationCounts(cfg.solverIterations);
     artic._links.resize(n, nullptr);
+    artic._bodyNames.resize(static_cast<size_t>(n));
+    for (int i = 0; i < n; ++i)
+        artic._bodyNames[static_cast<size_t>(i)] = tree->nodeName(i);
 
     // Root link
     auto& g0 = globals[0];
