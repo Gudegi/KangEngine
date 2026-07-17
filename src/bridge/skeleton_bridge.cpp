@@ -2,6 +2,7 @@
 #include "asset/mesh_loader.hpp"
 #include "asset/mjcf_loader.hpp"
 #include "animation/skeleton_math.hpp"
+#include "engine/scene/component/articulation_component.hpp"
 #include "engine/scene/component/articulation_binding_component.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/scene_backend.hpp"
@@ -260,7 +261,10 @@ SkeletonBridge SkeletonBridge::fromData(const Animation::CharacterData& data,
 SkeletonBridgeAsset SkeletonBridgeAsset::fromMJCF(const std::string& mjcfPath,
                                                   float scale,
                                                   const std::string& order) {
-    return fromData(Asset::MJCFLoader::load(mjcfPath, 1.0f, order), scale);
+    auto asset =
+        fromData(Asset::MJCFLoader::load(mjcfPath, 1.0f, order), scale);
+    asset._assetPath = mjcfPath;
+    return asset;
 }
 
 SkeletonBridgeAsset
@@ -345,6 +349,7 @@ SkeletonBridge SkeletonBridgeAsset::instantiate(
     auto globalTransforms = bridge._fk.state().computeGlobalTransforms();
     int numBodies = bridge._fk.numBodies();
     bridge._bodyPrims.resize(numBodies, nullptr);
+    auto* rootPrim = scene->definePrim(primBasePath, Scene::PrimType::Xform);
     const bool useMeshInstances = !meshAssetBasePath.empty();
     std::vector<std::shared_ptr<Scene::MeshData>> bodyMeshes;
     if (!useMeshInstances) {
@@ -438,6 +443,13 @@ SkeletonBridge SkeletonBridgeAsset::instantiate(
             bridge._renderPrimBodyIndices.push_back(bodyIndex);
         }
     }
+
+    auto articulationComponent = rootPrim->getArticulationComponent();
+    if (!articulationComponent)
+        articulationComponent = rootPrim->addArticulationComponent();
+    articulationComponent->setArticulationMetadata(
+        primBasePath, _assetPath, meshAssetBasePath, numBodies,
+        static_cast<int>(bridge._renderPrims.size()), splitVisualGeoms);
 
     fmt::print("SkeletonBridge instantiated: {} bodies\n",
                bridge._fk.numBodies());

@@ -7,6 +7,7 @@
 #include "engine/graphics/material/material.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
 #include "engine/scene/component/camera_component.hpp"
+#include "engine/scene/component/articulation_component.hpp"
 #include "engine/scene/component/articulation_binding_component.hpp"
 #include "engine/scene/component/light_component.hpp"
 #include "engine/scene/component/material_binding_component.hpp"
@@ -1109,6 +1110,47 @@ void InspectorPanel::buildPanel() {
                                selectionComponent->userTag().c_str());
     } else {
         ImGui::TextDisabled("No SelectionComponent");
+    }
+
+    if (auto articulationRoot = prim->getArticulationComponent()) {
+        ImGui::SeparatorText("Articulation");
+        ImGui::Text("Component: attached=%s version=%llu",
+                    articulationRoot->isAttached() ? "true" : "false",
+                    static_cast<unsigned long long>(
+                        articulationRoot->version()));
+        if (ImGui::BeginTable("ArticulationComponent", 2,
+                              ImGuiTableFlags_SizingStretchProp)) {
+            const auto property = [](const char* label) {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::TextDisabled("%s", label);
+                ImGui::TableSetColumnIndex(1);
+            };
+            property("Root");
+            ImGui::TextWrapped("%s",
+                               articulationRoot->rootPath().empty()
+                                   ? "<none>"
+                                   : articulationRoot->rootPath().c_str());
+            property("Asset");
+            ImGui::TextWrapped("%s",
+                               articulationRoot->assetPath().empty()
+                                   ? "<none>"
+                                   : articulationRoot->assetPath().c_str());
+            property("Mesh Assets");
+            ImGui::TextWrapped(
+                "%s", articulationRoot->meshAssetBasePath().empty()
+                          ? "<none>"
+                          : articulationRoot->meshAssetBasePath().c_str());
+            property("Bodies");
+            ImGui::Text("%d", articulationRoot->bodyCount());
+            property("Render Prims");
+            ImGui::Text("%d", articulationRoot->renderPrimCount());
+            property("Split Visual Geoms");
+            ImGui::TextUnformatted(articulationRoot->splitVisualGeoms()
+                                       ? "Yes"
+                                       : "No");
+            ImGui::EndTable();
+        }
     }
 
     if (auto articulation = prim->getArticulationBindingComponent()) {

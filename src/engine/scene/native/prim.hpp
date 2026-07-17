@@ -33,6 +33,7 @@ class CameraComponent;
 class MaterialBindingComponent;
 class ResourceComponent;
 class SelectionComponent;
+class ArticulationComponent;
 class ArticulationBindingComponent;
 
 using AttributeValue =
@@ -79,6 +80,7 @@ class Prim {
     std::shared_ptr<MaterialBindingComponent> _materialBindingComponent;
     std::shared_ptr<ResourceComponent> _resourceComponent;
     std::shared_ptr<SelectionComponent> _selectionComponent;
+    std::shared_ptr<ArticulationComponent> _articulationComponent;
     std::shared_ptr<ArticulationBindingComponent> _articulationBindingComponent;
 
     bool _renderable = false; // true for prim types that can submit geometry
@@ -167,6 +169,13 @@ class Prim {
         return _selectionComponent != nullptr;
     }
     bool removeSelectionComponent();
+
+    std::shared_ptr<ArticulationComponent> addArticulationComponent();
+    std::shared_ptr<ArticulationComponent> getArticulationComponent() const;
+    bool hasArticulationComponent() const {
+        return _articulationComponent != nullptr;
+    }
+    bool removeArticulationComponent();
 
     std::shared_ptr<ArticulationBindingComponent>
     addArticulationBindingComponent();

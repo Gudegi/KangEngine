@@ -74,6 +74,32 @@ def _check_binding(component, role, body_index, body_name, root_path):
         )
 
 
+def _check_articulation_root(
+    component,
+    root_path,
+    asset_path,
+    body_count,
+    render_prim_count,
+    split_visual_geoms,
+):
+    if component is None:
+        raise AssertionError("missing ArticulationComponent")
+    if component.root_path != root_path:
+        raise AssertionError(f"root path mismatch: {component.root_path}")
+    if component.asset_path != asset_path:
+        raise AssertionError(f"asset path mismatch: {component.asset_path}")
+    if component.body_count != body_count:
+        raise AssertionError(f"body count mismatch: {component.body_count}")
+    if component.render_prim_count != render_prim_count:
+        raise AssertionError(
+            f"render prim count mismatch: {component.render_prim_count}"
+        )
+    if component.split_visual_geoms != split_visual_geoms:
+        raise AssertionError(
+            f"split visual geoms mismatch: {component.split_visual_geoms}"
+        )
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -86,6 +112,14 @@ def main():
         asset = ke.animation.SkeletonBridgeAsset.from_mjcf(str(mjcf))
 
         merged = asset.instantiate(scene, "/merged_robot", "", False)
+        _check_articulation_root(
+            scene.get_prim_at_path("/merged_robot").get_articulation_component(),
+            "/merged_robot",
+            str(mjcf),
+            1,
+            1,
+            False,
+        )
         body = merged.body_prim(0)
         _check_binding(
             body.get_articulation_binding_component(),
@@ -99,6 +133,14 @@ def main():
             raise AssertionError("merged render prim should be the body frame")
 
         split = asset.instantiate(scene, "/split_robot", "", True)
+        _check_articulation_root(
+            scene.get_prim_at_path("/split_robot").get_articulation_component(),
+            "/split_robot",
+            str(mjcf),
+            1,
+            1,
+            True,
+        )
         split_body = split.body_prim(0)
         _check_binding(
             split_body.get_articulation_binding_component(),

@@ -19,6 +19,7 @@
 #include "engine/scene/component/camera_component.hpp"
 #include "engine/scene/component/material_binding_component.hpp"
 #include "engine/scene/component/resource_component.hpp"
+#include "engine/scene/component/articulation_component.hpp"
 #include "engine/scene/component/articulation_binding_component.hpp"
 #include "engine/scene/component/scene_render_system.hpp"
 #include "engine/scene/scene_resource_manager.hpp"
@@ -300,6 +301,59 @@ void bind_scene(py::module& m) {
                    "' version=" + std::to_string(c.version()) + ">";
         });
 
+    py::class_<KE::Scene::ArticulationComponent,
+               std::shared_ptr<KE::Scene::ArticulationComponent>>(
+        scene, "ArticulationComponent",
+        "Root-level metadata for an articulated object subtree.")
+        .def_property_readonly("attached",
+                               &KE::Scene::ArticulationComponent::isAttached,
+                               "Return whether this component is attached.")
+        .def_property_readonly("owner",
+                               &KE::Scene::ArticulationComponent::owner,
+                               py::return_value_policy::reference,
+                               "Return the owning prim, or None after detach.")
+        .def_property("asset_path",
+                      &KE::Scene::ArticulationComponent::assetPath,
+                      &KE::Scene::ArticulationComponent::setAssetPath,
+                      "Imported articulation asset path or URI.")
+        .def_property("root_path", &KE::Scene::ArticulationComponent::rootPath,
+                      &KE::Scene::ArticulationComponent::setRootPath,
+                      "Scene root prim path for this articulation.")
+        .def_property("mesh_asset_base_path",
+                      &KE::Scene::ArticulationComponent::meshAssetBasePath,
+                      &KE::Scene::ArticulationComponent::setMeshAssetBasePath,
+                      "Shared mesh resource base path, if any.")
+        .def_property("body_count",
+                      &KE::Scene::ArticulationComponent::bodyCount,
+                      &KE::Scene::ArticulationComponent::setBodyCount,
+                      "Number of body frame prims.")
+        .def_property("render_prim_count",
+                      &KE::Scene::ArticulationComponent::renderPrimCount,
+                      &KE::Scene::ArticulationComponent::setRenderPrimCount,
+                      "Number of renderable visual prims.")
+        .def_property("split_visual_geoms",
+                      &KE::Scene::ArticulationComponent::splitVisualGeoms,
+                      &KE::Scene::ArticulationComponent::setSplitVisualGeoms,
+                      "Whether visual geoms were instantiated as split child "
+                      "prims.")
+        .def("set_articulation_metadata",
+             &KE::Scene::ArticulationComponent::setArticulationMetadata,
+             py::arg("root_path"), py::arg("asset_path"),
+             py::arg("mesh_asset_base_path"), py::arg("body_count"),
+             py::arg("render_prim_count"), py::arg("split_visual_geoms"),
+             "Set all root articulation metadata fields at once.")
+        .def_property_readonly("version",
+                               &KE::Scene::ArticulationComponent::version,
+                               "Return the articulation metadata version.")
+        .def("__repr__", [](const KE::Scene::ArticulationComponent& c) {
+            const KE::Scene::Prim* owner = c.owner();
+            const std::string path = owner ? owner->getPath() : "<detached>";
+            return "<ArticulationComponent path='" + path +
+                   "' body_count=" + std::to_string(c.bodyCount()) +
+                   " render_prim_count=" + std::to_string(c.renderPrimCount()) +
+                   ">";
+        });
+
     py::class_<KE::Scene::ArticulationBindingComponent,
                std::shared_ptr<KE::Scene::ArticulationBindingComponent>>(
         scene, "ArticulationBindingComponent",
@@ -307,10 +361,10 @@ void bind_scene(py::module& m) {
         .def_property_readonly(
             "attached", &KE::Scene::ArticulationBindingComponent::isAttached,
             "Return whether this component is attached.")
-        .def_property_readonly(
-            "owner", &KE::Scene::ArticulationBindingComponent::owner,
-            py::return_value_policy::reference,
-            "Return the owning prim, or None after detach.")
+        .def_property_readonly("owner",
+                               &KE::Scene::ArticulationBindingComponent::owner,
+                               py::return_value_policy::reference,
+                               "Return the owning prim, or None after detach.")
         .def_property("role", &KE::Scene::ArticulationBindingComponent::role,
                       &KE::Scene::ArticulationBindingComponent::setRole,
                       "Role of this prim inside the articulation.")
@@ -325,8 +379,7 @@ void bind_scene(py::module& m) {
         .def_property(
             "articulation_root_path",
             &KE::Scene::ArticulationBindingComponent::articulationRootPath,
-            &KE::Scene::ArticulationBindingComponent::
-                setArticulationRootPath,
+            &KE::Scene::ArticulationBindingComponent::setArticulationRootPath,
             "Root prim path of the owning articulation.")
         .def("set_binding",
              &KE::Scene::ArticulationBindingComponent::setBinding,
@@ -340,8 +393,7 @@ void bind_scene(py::module& m) {
             const KE::Scene::Prim* owner = c.owner();
             const std::string path = owner ? owner->getPath() : "<detached>";
             return "<ArticulationBindingComponent path='" + path +
-                   "' role=" +
-                   KE::Scene::articulationPrimRoleLabel(c.role()) +
+                   "' role=" + KE::Scene::articulationPrimRoleLabel(c.role()) +
                    " body_index=" + std::to_string(c.bodyIndex()) + ">";
         });
 
@@ -361,15 +413,14 @@ void bind_scene(py::module& m) {
              py::arg("name"), py::arg("material"), py::arg("uri") = "",
              "Register a non-owned material and return a resource handle.")
         .def("register_texture",
-             &KE::Scene::SceneResourceManager::registerTexture,
-             py::arg("name"), py::arg("texture"), py::arg("uri") = "",
+             &KE::Scene::SceneResourceManager::registerTexture, py::arg("name"),
+             py::arg("texture"), py::arg("uri") = "",
              "Register a non-owned texture and return a resource handle.")
         .def("register_shader",
-             &KE::Scene::SceneResourceManager::registerShader,
-             py::arg("name"), py::arg("shader"), py::arg("uri") = "",
+             &KE::Scene::SceneResourceManager::registerShader, py::arg("name"),
+             py::arg("shader"), py::arg("uri") = "",
              "Register a non-owned shader and return a resource handle.")
-        .def("mesh", &KE::Scene::SceneResourceManager::mesh,
-             py::arg("handle"),
+        .def("mesh", &KE::Scene::SceneResourceManager::mesh, py::arg("handle"),
              "Return mesh data for a handle, or None.")
         .def("material", &KE::Scene::SceneResourceManager::material,
              py::arg("handle"), py::return_value_policy::reference,
@@ -378,11 +429,9 @@ void bind_scene(py::module& m) {
              py::arg("handle"), py::return_value_policy::reference,
              "Return texture for a handle, or None.")
         .def("shader", &KE::Scene::SceneResourceManager::shader,
-             py::arg("handle"),
-             py::return_value_policy::reference,
+             py::arg("handle"), py::return_value_policy::reference,
              "Return shader for a handle, or None.")
-        .def("resource_prim",
-             &KE::Scene::SceneResourceManager::resourcePrim,
+        .def("resource_prim", &KE::Scene::SceneResourceManager::resourcePrim,
              py::arg("handle"), py::return_value_policy::reference,
              "Return mirrored Resource prim for a handle, or None.")
         .def("usage_count", &KE::Scene::SceneResourceManager::usageCount,
@@ -686,6 +735,18 @@ void bind_scene(py::module& m) {
         .def("remove_resource_component",
              &KE::Scene::Prim::removeResourceComponent,
              "Detach this prim's resource component.")
+        .def("add_articulation_component",
+             &KE::Scene::Prim::addArticulationComponent,
+             "Attach and return this prim's articulation root component.")
+        .def("get_articulation_component",
+             &KE::Scene::Prim::getArticulationComponent,
+             "Return this prim's articulation root component, or None.")
+        .def("has_articulation_component",
+             &KE::Scene::Prim::hasArticulationComponent,
+             "Return whether this prim has an articulation root component.")
+        .def("remove_articulation_component",
+             &KE::Scene::Prim::removeArticulationComponent,
+             "Detach this prim's articulation root component.")
         .def("add_articulation_binding_component",
              &KE::Scene::Prim::addArticulationBindingComponent,
              "Attach and return this prim's articulation binding component.")

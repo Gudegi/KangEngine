@@ -111,6 +111,7 @@ class SkeletonBridgeAsset {
   private:
     Animation::CharacterData _data;
     float _scale = 1.0f;
+    std::string _assetPath;
     // Source visual assets, kept at MJCF geom granularity.  Merged body meshes
     // are derived from this data only for the performance-oriented path.
     std::vector<VisualGeomAsset> _visualGeomAssets;

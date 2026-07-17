@@ -11,6 +11,7 @@
 #include "engine/scene/component/material_binding_component.hpp"
 #include "engine/scene/component/resource_component.hpp"
 #include "engine/scene/component/selection_component.hpp"
+#include "engine/scene/component/articulation_component.hpp"
 #include "engine/scene/component/articulation_binding_component.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "utils/types.hpp"
@@ -92,6 +93,8 @@ Prim::~Prim() {
         _resourceComponent->detach();
     if (_selectionComponent)
         _selectionComponent->detach();
+    if (_articulationComponent)
+        _articulationComponent->detach();
     if (_articulationBindingComponent)
         _articulationBindingComponent->detach();
 }
@@ -378,6 +381,29 @@ bool Prim::removeSelectionComponent() {
         return false;
     _selectionComponent->detach();
     _selectionComponent.reset();
+    return true;
+}
+
+std::shared_ptr<ArticulationComponent> Prim::addArticulationComponent() {
+    if (_articulationComponent)
+        throw std::runtime_error("Prim '" + _path +
+                                 "' already has an ArticulationComponent");
+    _articulationComponent =
+        std::shared_ptr<ArticulationComponent>(
+            new ArticulationComponent(this));
+    return _articulationComponent;
+}
+
+std::shared_ptr<ArticulationComponent>
+Prim::getArticulationComponent() const {
+    return _articulationComponent;
+}
+
+bool Prim::removeArticulationComponent() {
+    if (!_articulationComponent)
+        return false;
+    _articulationComponent->detach();
+    _articulationComponent.reset();
     return true;
 }
 
