@@ -1,5 +1,6 @@
 #include "articulation.hpp"
 #include "animation/skeleton_state.hpp"
+#include "collision_material_utils.hpp"
 #include "physics/physx_compat.hpp"
 
 #include <Eigen/Geometry>
@@ -60,6 +61,7 @@ void applyContactOffsets(PxShape* shape, float contactOffset,
 Animation::CollisionGeom makeFallbackBoxGeom(const PxVec3& halfExtents) {
     Animation::CollisionGeom geom;
     geom.type = Animation::CollisionGeom::Type::Box;
+    geom.name = "__fallback_box";
     geom.size[0] = halfExtents.x;
     geom.size[1] = halfExtents.y;
     geom.size[2] = halfExtents.z;
@@ -69,26 +71,20 @@ Animation::CollisionGeom makeFallbackBoxGeom(const PxVec3& halfExtents) {
 
 // Creates and attaches PhysX shapes for each MJCF collision geom on the link.
 // Cylinders are approximated as capsules (PhysX has no native cylinder shape).
-void attachCollisionShapes(PxArticulationLink* link, PxPhysics* physics,
-                           PxMaterial* mat,
+void attachCollisionShapes(PxArticulationLink* link, PhysicsWorld& physics,
                            const Animation::CollisionGeom* geoms,
                            std::size_t count, float contactOffset,
-                           float restOffset) {
+                           float restOffset,
+                           const std::vector<
+                               Animation::CollisionMaterialOverride>& overrides,
+                           std::shared_ptr<const Animation::SkeletonTree> tree,
+                           int bodyIndex) {
     using Type = Animation::CollisionGeom::Type;
     for (std::size_t i = 0; i < count; ++i) {
         const auto& g = geoms[i];
-        PxMaterial* shapeMat = mat;
-        PxMaterial* ownedMat = nullptr;
-        const auto& material = g.physicsMaterial;
-        if (physics && (std::abs(material.staticFriction - 1.f) > 1e-6f ||
-                        std::abs(material.dynamicFriction - 1.f) > 1e-6f ||
-                        std::abs(material.restitution) > 1e-6f)) {
-            ownedMat = physics->createMaterial(material.staticFriction,
-                                               material.dynamicFriction,
-                                               material.restitution);
-            ownedMat->setFrictionCombineMode(PxCombineMode::eMIN);
-            shapeMat = ownedMat;
-        }
+        const auto material =
+            resolveCollisionMaterial(g, overrides, tree, bodyIndex,
+                                     static_cast<int>(i));
         PxShape* shape = nullptr;
         PxTransform localPose(PxIdentity);
         switch (g.type) {
@@ -97,26 +93,26 @@ void attachCollisionShapes(PxArticulationLink* link, PxPhysics* physics,
             float radius = g.size[0];
             if (g.hasFromTo) {
                 float halfH = (g.to - g.from).norm() * 0.5f;
-                shape = PxRigidActorExt::createExclusiveShape(
-                    *link, PxCapsuleGeometry(radius, halfH), *shapeMat);
+                shape = physics.createExclusiveShape(
+                    *link, PxCapsuleGeometry(radius, halfH), material);
                 localPose = fromToPose(g.from, g.to);
             } else {
-                shape = PxRigidActorExt::createExclusiveShape(
-                    *link, PxCapsuleGeometry(radius, g.size[1]), *shapeMat);
+                shape = physics.createExclusiveShape(
+                    *link, PxCapsuleGeometry(radius, g.size[1]), material);
                 localPose = PxTransform(PxVec3(g.pos.x(), g.pos.y(), g.pos.z()),
                                         mjcfShapeRot(g.quat));
             }
             break;
         }
         case Type::Sphere:
-            shape = PxRigidActorExt::createExclusiveShape(
-                *link, PxSphereGeometry(g.size[0]), *shapeMat);
+            shape = physics.createExclusiveShape(
+                *link, PxSphereGeometry(g.size[0]), material);
             localPose = PxTransform(PxVec3(g.pos.x(), g.pos.y(), g.pos.z()));
             break;
         case Type::Box:
-            shape = PxRigidActorExt::createExclusiveShape(
+            shape = physics.createExclusiveShape(
                 *link, PxBoxGeometry(g.size[0], g.size[1], g.size[2]),
-                *shapeMat);
+                material);
             localPose = PxTransform(
                 PxVec3(g.pos.x(), g.pos.y(), g.pos.z()),
                 PxQuat(g.quat.x(), g.quat.y(), g.quat.z(), g.quat.w()));
@@ -127,18 +123,19 @@ void attachCollisionShapes(PxArticulationLink* link, PxPhysics* physics,
             applyContactOffsets(
                 shape, g.margin >= 0.f ? g.margin : contactOffset, restOffset);
         }
-        if (ownedMat)
-            ownedMat->release();
     }
 }
 
 // Convenience overload accepting a vector of geoms.
-void attachCollisionShapes(PxArticulationLink* link, PxPhysics* physics,
-                           PxMaterial* mat,
+void attachCollisionShapes(PxArticulationLink* link, PhysicsWorld& physics,
                            const std::vector<Animation::CollisionGeom>& geoms,
-                           float contactOffset, float restOffset) {
-    attachCollisionShapes(link, physics, mat, geoms.data(), geoms.size(),
-                          contactOffset, restOffset);
+                           float contactOffset, float restOffset,
+                           const std::vector<
+                               Animation::CollisionMaterialOverride>& overrides,
+                           std::shared_ptr<const Animation::SkeletonTree> tree,
+                           int bodyIndex) {
+    attachCollisionShapes(link, physics, geoms.data(), geoms.size(),
+                          contactOffset, restOffset, overrides, tree, bodyIndex);
 }
 
 // Applies MJCF inertial properties (mass, COM, diag inertia) to a link.
@@ -511,16 +508,18 @@ Articulation Articulation::build(
     {
         auto it = colGeoms.find(0);
         if (it != colGeoms.end() && !it->second.empty())
-            attachCollisionShapes(artic._links[0], physics.getPhysics(),
-                                  physics.getMaterial(), it->second,
-                                  cfg.contactOffset, cfg.restOffset);
+            attachCollisionShapes(artic._links[0], physics, it->second,
+                                  cfg.contactOffset, cfg.restOffset,
+                                  cfg.materialOverrides, tree, 0);
         else if (it != colGeoms.end()) {
             artic._colGeoms[0].push_back(makeFallbackBoxGeom(cfg.rootBoxHalf));
-            PxShape* shape = PxRigidActorExt::createExclusiveShape(
+            const auto material = resolveCollisionMaterial(
+                artic._colGeoms[0].back(), cfg.materialOverrides, tree, 0, 0);
+            PxShape* shape = physics.createExclusiveShape(
                 *artic._links[0],
                 PxBoxGeometry(cfg.rootBoxHalf.x, cfg.rootBoxHalf.y,
                               cfg.rootBoxHalf.z),
-                *physics.getMaterial());
+                material);
             applyContactOffsets(shape, cfg.contactOffset, cfg.restOffset);
         }
     }
@@ -548,17 +547,20 @@ Articulation Articulation::build(
         {
             auto it = colGeoms.find(i);
             if (it != colGeoms.end() && !it->second.empty())
-                attachCollisionShapes(artic._links[i], physics.getPhysics(),
-                                      physics.getMaterial(), it->second,
-                                      cfg.contactOffset, cfg.restOffset);
+                attachCollisionShapes(artic._links[i], physics, it->second,
+                                      cfg.contactOffset, cfg.restOffset,
+                                      cfg.materialOverrides, tree, i);
             else if (it != colGeoms.end()) {
                 artic._colGeoms[i].push_back(
                     makeFallbackBoxGeom(cfg.linkBoxHalf));
-                PxShape* shape = PxRigidActorExt::createExclusiveShape(
+                const auto material = resolveCollisionMaterial(
+                    artic._colGeoms[i].back(), cfg.materialOverrides, tree, i,
+                    0);
+                PxShape* shape = physics.createExclusiveShape(
                     *artic._links[i],
                     PxBoxGeometry(cfg.linkBoxHalf.x, cfg.linkBoxHalf.y,
                                   cfg.linkBoxHalf.z),
-                    *physics.getMaterial());
+                    material);
                 applyContactOffsets(shape, cfg.contactOffset, cfg.restOffset);
             }
         }
@@ -791,6 +793,69 @@ void Articulation::setJointForces(const std::vector<float>& forces) {
     _appliedForces = forces;
     if (_artic->isSleeping())
         _artic->wakeUp();
+}
+
+int Articulation::setCollisionMaterial(
+    PhysicsWorld& physics, const Animation::PhysicsMaterialDesc& material) {
+    if (!physics.getPhysics() || !_artic)
+        return 0;
+
+    int updated = 0;
+    for (auto* link : _links) {
+        if (!link)
+            continue;
+        const PxU32 shapeCount = link->getNbShapes();
+        if (shapeCount == 0)
+            continue;
+
+        std::vector<PxShape*> shapes(shapeCount);
+        link->getShapes(shapes.data(), shapeCount);
+        for (auto* shape : shapes) {
+            if (!shape)
+                continue;
+            PxMaterial* shapeMat = physics.getMaterialForDesc(material);
+            shape->setMaterials(&shapeMat, 1);
+            ++updated;
+        }
+    }
+    return updated;
+}
+
+int Articulation::setCollisionMaterialOverrides(
+    PhysicsWorld& physics,
+    const std::vector<Animation::CollisionMaterialOverride>& overrides) {
+    if (!physics.getPhysics() || !_artic)
+        return 0;
+
+    int updated = 0;
+    for (const auto& [bodyIndex, geoms] : _colGeoms) {
+        if (bodyIndex < 0 || bodyIndex >= static_cast<int>(_links.size()))
+            continue;
+        auto* link = _links[static_cast<size_t>(bodyIndex)];
+        if (!link)
+            continue;
+
+        const PxU32 shapeCount = link->getNbShapes();
+        if (shapeCount == 0 || geoms.empty())
+            continue;
+
+        std::vector<PxShape*> shapes(shapeCount);
+        link->getShapes(shapes.data(), shapeCount);
+        const std::size_t count =
+            std::min<std::size_t>(geoms.size(), shapes.size());
+        for (std::size_t i = 0; i < count; ++i) {
+            auto* shape = shapes[i];
+            if (!shape)
+                continue;
+            const auto material = resolveCollisionMaterial(
+                geoms[i], overrides, _bodyNames, bodyIndex,
+                static_cast<int>(i));
+            PxMaterial* shapeMat = physics.getMaterialForDesc(material);
+            shape->setMaterials(&shapeMat, 1);
+            ++updated;
+        }
+    }
+    return updated;
 }
 
 void Articulation::addLinkForce(int linkIndex, const PxVec3& force) {

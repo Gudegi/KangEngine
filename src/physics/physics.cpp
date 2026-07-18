@@ -3,7 +3,9 @@
 #include "PxSceneDesc.h"
 #include "animation/character_description.hpp"
 #include "articulation.hpp"
+#include "collision_material_utils.hpp"
 #include "physics/physx_compat.hpp"
+#include <cooking/PxCooking.h>
 #ifndef __APPLE__
 #include "gpu/PxGpu.h"
 #endif
@@ -15,6 +17,7 @@
 #include <Eigen/Geometry>
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 #include <unordered_map>
 #include <vector>
@@ -67,6 +70,69 @@ void setRigidCollisionFilterData(PxRigidActor* actor, PxU32 collisionGroup) {
         shape->setSimulationFilterData(filterData);
         shape->setQueryFilterData(filterData);
     }
+}
+
+PxTransform heightFieldPose(int rows, int cols, float horizontalScale,
+                            UpAxis upAxis, bool center) {
+    const float originX =
+        center ? (static_cast<float>(cols - 1) * 0.5f * horizontalScale) : 0.f;
+    const float originZ =
+        center ? (static_cast<float>(rows - 1) * 0.5f * horizontalScale) : 0.f;
+
+    if (upAxis == UpAxis::Z) {
+        // PhysX heightfields are local Y-up. Rotate local Y to world Z, then
+        // reverse the row/column mapping below so source rows still increase
+        // along positive world Y like heightFieldToMesh(..., UpAxis::Z).
+        return PxTransform(
+            PxVec3(-originX,
+                   (static_cast<float>(rows - 1) * horizontalScale) - originZ,
+                   0.f),
+            PxQuat(PxHalfPi, PxVec3(1.f, 0.f, 0.f)));
+    }
+
+    return PxTransform(PxVec3(-originX, 0.f, -originZ));
+}
+
+std::vector<PxHeightFieldSample> makeHeightFieldSamples(const float* heights,
+                                                        int rows, int cols,
+                                                        UpAxis upAxis,
+                                                        float& outHeightScale) {
+    float maxAbsHeight = 0.f;
+    const int count = rows * cols;
+    for (int i = 0; i < count; ++i)
+        maxAbsHeight = std::max(maxAbsHeight, std::abs(heights[i]));
+
+    outHeightScale = maxAbsHeight > 1e-6f
+                         ? maxAbsHeight / static_cast<float>(
+                                              std::numeric_limits<PxI16>::max())
+                         : 1.0f;
+
+    // PhysX local X is sample row and local Z is sample column. KangEngine
+    // height grids are source row-major where col is X and row is horizontal Z
+    // (or Y in Z-up mode), so we transpose into PhysX's row/column convention.
+    const int hfRows = cols;
+    const int hfCols = rows;
+    std::vector<PxHeightFieldSample> samples(static_cast<size_t>(hfRows) *
+                                             static_cast<size_t>(hfCols));
+
+    for (int srcRow = 0; srcRow < rows; ++srcRow) {
+        for (int srcCol = 0; srcCol < cols; ++srcCol) {
+            const int hfRow = srcCol;
+            const int hfCol =
+                (upAxis == UpAxis::Z) ? (rows - 1 - srcRow) : srcRow;
+            auto& sample = samples[static_cast<size_t>(hfRow * hfCols + hfCol)];
+            const float h = heights[srcRow * cols + srcCol];
+            const float scaled = h / outHeightScale;
+            sample.height = static_cast<PxI16>(std::clamp(
+                std::lround(scaled),
+                static_cast<long>(std::numeric_limits<PxI16>::min()),
+                static_cast<long>(std::numeric_limits<PxI16>::max())));
+            sample.materialIndex0 = 0;
+            sample.materialIndex1 = 0;
+            sample.clearTessFlag();
+        }
+    }
+    return samples;
 }
 
 #ifdef KANGENGINE_USE_CUDA
@@ -285,6 +351,17 @@ PhysicsWorld::~PhysicsWorld() {
 #endif
     if (_material)
         _material->release();
+    for (auto* heightField : _heightFields) {
+        if (heightField)
+            heightField->release();
+    }
+    _heightFields.clear();
+    for (auto& [key, material] : _materialCache) {
+        PX_UNUSED(key);
+        if (material)
+            material->release();
+    }
+    _materialCache.clear();
     _contactCallback.reset();
     PxCloseExtensions();
     if (_physics)
@@ -292,6 +369,40 @@ PhysicsWorld::~PhysicsWorld() {
     if (_foundation)
         _foundation->release();
 };
+
+PxMaterial*
+PhysicsWorld::materialForDesc(const Animation::PhysicsMaterialDesc& material) {
+    if (!_physics)
+        return _material;
+    if (std::abs(material.staticFriction - _friction.x) <= 1e-6f &&
+        std::abs(material.dynamicFriction - _friction.y) <= 1e-6f &&
+        std::abs(material.restitution - _friction.z) <= 1e-6f)
+        return _material;
+
+    auto quantize = [](float value) {
+        return static_cast<int>(std::round(value * 10000.0f));
+    };
+    const MaterialKey key{quantize(material.staticFriction),
+                          quantize(material.dynamicFriction),
+                          quantize(material.restitution)};
+    auto it = _materialCache.find(key);
+    if (it != _materialCache.end())
+        return it->second;
+
+    PxMaterial* created = _physics->createMaterial(material.staticFriction,
+                                                   material.dynamicFriction,
+                                                   material.restitution);
+    created->setFrictionCombineMode(PxCombineMode::eMIN);
+    _materialCache.emplace(key, created);
+    return created;
+}
+
+PxShape* PhysicsWorld::createExclusiveShape(
+    PxRigidActor& actor, const PxGeometry& geometry,
+    const Animation::PhysicsMaterialDesc& material) {
+    PxMaterial* shapeMat = materialForDesc(material);
+    return PxRigidActorExt::createExclusiveShape(actor, geometry, *shapeMat);
+}
 
 void PhysicsWorld::step() {
     clearContacts();
@@ -333,6 +444,70 @@ void PhysicsWorld::addBox(float x, float y, float z) {
     _scene->addActor(*box);
 }
 
+PxRigidStatic* PhysicsWorld::createStaticBox(const glm::vec3& halfExtents,
+                                             const glm::vec3& pos,
+                                             const glm::quat& rot,
+                                             bool registerAsGround) {
+    PxTransform pose(PxVec3(pos.x, pos.y, pos.z),
+                     PxQuat(rot.x, rot.y, rot.z, rot.w));
+    PxRigidStatic* actor = _physics->createRigidStatic(pose);
+    if (!actor)
+        return nullptr;
+    PxShape* shape = PxRigidActorExt::createExclusiveShape(
+        *actor, PxBoxGeometry(halfExtents.x, halfExtents.y, halfExtents.z),
+        *_material);
+    applyRigidContactOffsets(shape, 0.02f, 0.0f);
+    _scene->addActor(*actor);
+    if (registerAsGround)
+        registerGroundActor(actor);
+    return actor;
+}
+
+PxRigidStatic* PhysicsWorld::createStaticHeightField(
+    const float* heights, int rows, int cols, float horizontalScale,
+    const Animation::PhysicsMaterialDesc& material, UpAxis upAxis, bool center,
+    bool registerAsGround) {
+    if (!heights || rows < 2 || cols < 2 || horizontalScale <= 0.f)
+        return nullptr;
+
+    float heightScale = 1.f;
+    std::vector<PxHeightFieldSample> samples =
+        makeHeightFieldSamples(heights, rows, cols, upAxis, heightScale);
+
+    PxHeightFieldDesc desc;
+    desc.nbRows = static_cast<PxU32>(cols);
+    desc.nbColumns = static_cast<PxU32>(rows);
+    desc.format = PxHeightFieldFormat::eS16_TM;
+    desc.samples.data = samples.data();
+    desc.samples.stride = sizeof(PxHeightFieldSample);
+    if (!desc.isValid())
+        return nullptr;
+
+    PxHeightField* heightField =
+        PxCreateHeightField(desc, _physics->getPhysicsInsertionCallback());
+    if (!heightField)
+        return nullptr;
+    _heightFields.push_back(heightField);
+
+    PxHeightFieldGeometry geometry(heightField, PxMeshGeometryFlags(),
+                                   heightScale, horizontalScale,
+                                   horizontalScale);
+    if (!geometry.isValid())
+        return nullptr;
+
+    PxRigidStatic* actor = _physics->createRigidStatic(
+        heightFieldPose(rows, cols, horizontalScale, upAxis, center));
+    if (!actor)
+        return nullptr;
+
+    PxShape* shape = createExclusiveShape(*actor, geometry, material);
+    applyRigidContactOffsets(shape, 0.02f, 0.0f);
+    _scene->addActor(*actor);
+    if (registerAsGround)
+        registerGroundActor(actor);
+    return actor;
+}
+
 PxRigidDynamic* PhysicsWorld::createDynamicBox(const glm::vec3& halfExtents,
                                                const glm::vec3& pos,
                                                const glm::quat& rot,
@@ -359,11 +534,12 @@ PxRigidDynamic* PhysicsWorld::createDynamicSphere(float radius,
     return actor;
 }
 
-PxRigidDynamic*
-PhysicsWorld::createDynamicRigid(const Animation::CharacterData& data,
-                                 const glm::vec3& pos, const glm::quat& rot,
-                                 float density, PxU32 collisionGroup,
-                                 float contactOffset, float restOffset) {
+PxRigidDynamic* PhysicsWorld::createDynamicRigid(
+    const Animation::CharacterData& data, const glm::vec3& pos,
+    const glm::quat& rot, float density, PxU32 collisionGroup,
+    float contactOffset, float restOffset,
+    const std::vector<Animation::CollisionMaterialOverride>&
+        materialOverrides) {
     PxTransform pose(PxVec3(pos.x, pos.y, pos.z),
                      PxQuat(rot.x, rot.y, rot.z, rot.w));
     PxRigidDynamic* actor = _physics->createRigidDynamic(pose);
@@ -371,38 +547,36 @@ PhysicsWorld::createDynamicRigid(const Animation::CharacterData& data,
         return nullptr;
 
     const std::vector<Animation::CollisionGeom>* geoms = nullptr;
+    int sourceBodyIndex = -1;
     auto rootIt = data.collisionGeoms.find(0);
     if (rootIt != data.collisionGeoms.end() && !rootIt->second.empty()) {
         geoms = &rootIt->second;
+        sourceBodyIndex = 0;
     } else {
         for (const auto& [bodyIdx, bodyGeoms] : data.collisionGeoms) {
-            PX_UNUSED(bodyIdx);
             if (!bodyGeoms.empty()) {
                 geoms = &bodyGeoms;
+                sourceBodyIndex = bodyIdx;
                 break;
             }
         }
     }
 
     if (!geoms) {
-        PxShape* shape = PxRigidActorExt::createExclusiveShape(
-            *actor, PxSphereGeometry(0.1f), *_material);
+        Animation::CollisionGeom fallbackGeom;
+        fallbackGeom.name = "__fallback_sphere";
+        const auto material = resolveCollisionMaterial(
+            fallbackGeom, materialOverrides, data.skeletonTree, -1, 0);
+        PxShape* shape =
+            createExclusiveShape(*actor, PxSphereGeometry(0.1f), material);
         applyRigidContactOffsets(shape, contactOffset, restOffset);
     } else {
         using Type = Animation::CollisionGeom::Type;
-        for (const auto& g : *geoms) {
-            PxMaterial* shapeMat = _material;
-            PxMaterial* ownedMat = nullptr;
-            const auto& material = g.physicsMaterial;
-            if (_physics && (std::abs(material.staticFriction - 1.f) > 1e-6f ||
-                             std::abs(material.dynamicFriction - 1.f) > 1e-6f ||
-                             std::abs(material.restitution) > 1e-6f)) {
-                ownedMat = _physics->createMaterial(material.staticFriction,
-                                                    material.dynamicFriction,
-                                                    material.restitution);
-                ownedMat->setFrictionCombineMode(PxCombineMode::eMIN);
-                shapeMat = ownedMat;
-            }
+        for (std::size_t i = 0; i < geoms->size(); ++i) {
+            const auto& g = (*geoms)[i];
+            const auto material = resolveCollisionMaterial(
+                g, materialOverrides, data.skeletonTree, sourceBodyIndex,
+                static_cast<int>(i));
 
             PxShape* shape = nullptr;
             PxTransform localPose(PxIdentity);
@@ -412,13 +586,12 @@ PhysicsWorld::createDynamicRigid(const Animation::CharacterData& data,
                 float radius = g.size[0];
                 if (g.hasFromTo) {
                     float halfH = (g.to - g.from).norm() * 0.5f;
-                    shape = PxRigidActorExt::createExclusiveShape(
-                        *actor, PxCapsuleGeometry(radius, halfH), *shapeMat);
+                    shape = createExclusiveShape(
+                        *actor, PxCapsuleGeometry(radius, halfH), material);
                     localPose = rigidFromToPose(g.from, g.to);
                 } else {
-                    shape = PxRigidActorExt::createExclusiveShape(
-                        *actor, PxCapsuleGeometry(radius, g.size[1]),
-                        *shapeMat);
+                    shape = createExclusiveShape(
+                        *actor, PxCapsuleGeometry(radius, g.size[1]), material);
                     localPose =
                         PxTransform(PxVec3(g.pos.x(), g.pos.y(), g.pos.z()),
                                     rigidMjcfShapeRot(g.quat));
@@ -426,15 +599,15 @@ PhysicsWorld::createDynamicRigid(const Animation::CharacterData& data,
                 break;
             }
             case Type::Sphere:
-                shape = PxRigidActorExt::createExclusiveShape(
-                    *actor, PxSphereGeometry(g.size[0]), *shapeMat);
+                shape = createExclusiveShape(
+                    *actor, PxSphereGeometry(g.size[0]), material);
                 localPose =
                     PxTransform(PxVec3(g.pos.x(), g.pos.y(), g.pos.z()));
                 break;
             case Type::Box:
-                shape = PxRigidActorExt::createExclusiveShape(
+                shape = createExclusiveShape(
                     *actor, PxBoxGeometry(g.size[0], g.size[1], g.size[2]),
-                    *shapeMat);
+                    material);
                 localPose = PxTransform(
                     PxVec3(g.pos.x(), g.pos.y(), g.pos.z()),
                     PxQuat(g.quat.x(), g.quat.y(), g.quat.z(), g.quat.w()));
@@ -447,8 +620,6 @@ PhysicsWorld::createDynamicRigid(const Animation::CharacterData& data,
                     shape, g.margin >= 0.f ? g.margin : contactOffset,
                     restOffset);
             }
-            if (ownedMat)
-                ownedMat->release();
         }
     }
 
@@ -456,6 +627,89 @@ PhysicsWorld::createDynamicRigid(const Animation::CharacterData& data,
     setRigidCollisionFilterData(actor, collisionGroup);
     _scene->addActor(*actor);
     return actor;
+}
+
+int PhysicsWorld::setRigidCollisionMaterial(
+    PxRigidDynamic& rigid, const Animation::PhysicsMaterialDesc& material) {
+    if (!_physics)
+        return 0;
+
+    const PxU32 shapeCount = rigid.getNbShapes();
+    if (shapeCount == 0)
+        return 0;
+
+    int updated = 0;
+    std::vector<PxShape*> shapes(shapeCount);
+    rigid.getShapes(shapes.data(), shapeCount);
+    for (auto* shape : shapes) {
+        if (!shape)
+            continue;
+        PxMaterial* shapeMat = materialForDesc(material);
+        shape->setMaterials(&shapeMat, 1);
+        ++updated;
+    }
+    return updated;
+}
+
+int PhysicsWorld::setRigidCollisionMaterialOverrides(
+    PxRigidDynamic& rigid, const Animation::CharacterData& data,
+    const std::vector<Animation::CollisionMaterialOverride>& overrides) {
+    if (!_physics)
+        return 0;
+
+    const std::vector<Animation::CollisionGeom>* geoms = nullptr;
+    int sourceBodyIndex = -1;
+    auto rootIt = data.collisionGeoms.find(0);
+    if (rootIt != data.collisionGeoms.end() && !rootIt->second.empty()) {
+        geoms = &rootIt->second;
+        sourceBodyIndex = 0;
+    } else {
+        for (const auto& [bodyIdx, bodyGeoms] : data.collisionGeoms) {
+            if (!bodyGeoms.empty()) {
+                geoms = &bodyGeoms;
+                sourceBodyIndex = bodyIdx;
+                break;
+            }
+        }
+    }
+
+    const PxU32 shapeCount = rigid.getNbShapes();
+    if (shapeCount == 0)
+        return 0;
+
+    int updated = 0;
+    std::vector<PxShape*> shapes(shapeCount);
+    rigid.getShapes(shapes.data(), shapeCount);
+
+    if (!geoms) {
+        Animation::CollisionGeom fallbackGeom;
+        fallbackGeom.name = "__fallback_sphere";
+        const auto material = resolveCollisionMaterial(
+            fallbackGeom, overrides, data.skeletonTree, -1, 0);
+        for (auto* shape : shapes) {
+            if (!shape)
+                continue;
+            PxMaterial* shapeMat = materialForDesc(material);
+            shape->setMaterials(&shapeMat, 1);
+            ++updated;
+        }
+        return updated;
+    }
+
+    const std::size_t count =
+        std::min<std::size_t>(geoms->size(), shapes.size());
+    for (std::size_t i = 0; i < count; ++i) {
+        auto* shape = shapes[i];
+        if (!shape)
+            continue;
+        const auto material =
+            resolveCollisionMaterial((*geoms)[i], overrides, data.skeletonTree,
+                                     sourceBodyIndex, static_cast<int>(i));
+        PxMaterial* shapeMat = materialForDesc(material);
+        shape->setMaterials(&shapeMat, 1);
+        ++updated;
+    }
+    return updated;
 }
 
 std::vector<float>

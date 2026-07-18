@@ -423,6 +423,9 @@ bool buildCollisionGeom(
     else
         return false;
 
+    if (auto* name = geomElem->Attribute("name"))
+        out.name = name;
+
     for (int i = 0; i < static_cast<int>(size.size()) && i < 3; ++i)
         out.size[i] = size[i];
 

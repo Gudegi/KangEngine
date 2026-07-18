@@ -350,6 +350,7 @@ class SimRigid:
     name: str
     rigid: object
     world: object | None = None
+    source_data: object | None = None
 
     @property
     def key(self):
@@ -465,6 +466,24 @@ class SimRigid:
             position,
         )
         return self
+
+    def set_collision_material(self, material):
+        """Replace all collision shape materials on this rigid at runtime."""
+        world = self._require_world()
+        return world.physics.set_rigid_collision_material(self.rigid, material)
+
+    def set_collision_material_overrides(self, material_overrides, data=None):
+        """Apply named/indexed collision material overrides at runtime."""
+        world = self._require_world()
+        source_data = self.source_data if data is None else data
+        if source_data is None:
+            raise RuntimeError(
+                "set_collision_material_overrides requires the CharacterData "
+                "used to create this rigid"
+            )
+        return world.physics.set_rigid_collision_material_overrides(
+            self.rigid, source_data, material_overrides
+        )
 
     def _selected_env_ids(self, env_ids: EnvIdLike | None):
         if env_ids is None:
@@ -796,6 +815,28 @@ class SimRigidBatch:
         )
         return self
 
+    def set_collision_material(self, env_ids: EnvIdLike | None, material):
+        """Replace collision shape materials for selected rigid env instances."""
+        selected = self._selected_env_ids(env_ids)
+        updated = 0
+        for env_id in selected:
+            updated += self.world.rigids[(env_id, self.obj_id)].set_collision_material(
+                material
+            )
+        return updated
+
+    def set_collision_material_overrides(
+        self, env_ids: EnvIdLike | None, material_overrides, data=None
+    ):
+        """Apply named/indexed material overrides to selected rigid env instances."""
+        selected = self._selected_env_ids(env_ids)
+        updated = 0
+        for env_id in selected:
+            updated += self.world.rigids[
+                (env_id, self.obj_id)
+            ].set_collision_material_overrides(material_overrides, data=data)
+        return updated
+
     def _selected_env_ids(self, env_ids: EnvIdLike | None):
         if env_ids is None:
             return self.env_ids
@@ -1088,7 +1129,7 @@ class KangSimWorld:
         body_names = [spec.name for spec in shape_specs]
         local_pos = np.stack([spec.local_pos for spec in shape_specs], axis=0)
         local_rot = np.stack([spec.local_rot for spec in shape_specs], axis=0)
-        record = SimRigid(key[0], key[1], str(name), rigid, self)
+        record = SimRigid(key[0], key[1], str(name), rigid, self, data)
         self.rigids[key] = record
         self.state.add_rigid(
             rigid,

@@ -7,7 +7,7 @@ import argparse
 import numpy as np
 
 import kangengine as ke
-from kangengine import imgui, terrain
+from kangengine import imgui, keys, terrain
 
 
 TERRAIN_TYPES = ("stairs", "slope", "pyramid", "wave", "random", "obstacles")
@@ -26,6 +26,8 @@ class ProceduralTerrainViewer(ke.App):
         vertical_scale: float = 0.005,
         backend: str = "cpp",
         seed: int = 7,
+        collision_test: bool = True,
+        test_bodies_per_type: int = 10,
     ):
         super().__init__()
         self.terrain_type = terrain_type
@@ -37,6 +39,9 @@ class ProceduralTerrainViewer(ke.App):
         self.vertical_scale = float(vertical_scale)
         self.backend = backend
         self.seed = int(seed)
+        self.collision_test = bool(collision_test)
+        self.test_bodies_per_type = int(test_bodies_per_type)
+        self.paused = False
 
     def setup(self):
         self.shaders = self.create_standard_shaders()
@@ -66,14 +71,44 @@ class ProceduralTerrainViewer(ke.App):
         self.view = self.scene.add_mesh("/procedural_terrain", self.mesh, self.material)
         self.view.set_double_sided(False)
 
+        self.physics = None
+        self.collision_added = False
+        self.test_bodies = []
+        if self.collision_test:
+            self.physics = ke.PhysicsWorld(ke.PhysicsConfig.y_up())
+            heights = np.ascontiguousarray(self.grid.height_meters(), dtype=np.float32)
+            self.collision_added = self.physics.add_heightfield(
+                heights.reshape(-1),
+                self.grid.width,
+                self.grid.length,
+                horizontal_scale=self.horizontal_scale,
+                up_axis=ke.UpAxis.Y,
+                center=True,
+                register_as_ground=True,
+                material=ke.PhysicsMaterialDesc([1.0, 1.0, 0.0]),
+            )
+            if self.collision_added:
+                self._create_collision_test_bodies()
+
         self._setup_camera()
         print(
             "Procedural terrain loaded: "
             f"type={self.terrain_type} tiles={self.rows}x{self.cols} "
             f"grid={self.grid.width}x{self.grid.length} "
             f"vertices={len(self.mesh.vertices)} "
-            f"triangles={len(self.mesh.indices) // 3}"
+            f"triangles={len(self.mesh.indices) // 3} "
+            f"collision={'yes' if self.collision_added else 'no'} "
+            f"test_bodies={len(self.test_bodies)}"
         )
+
+    def preRender(self):
+        if self.was_key_pressed(keys.R):
+            self._reset_collision_test_bodies()
+
+        if not self.physics or self.paused:
+            return
+        self.physics.step()
+        self._sync_collision_test_bodies()
 
     def render(self):
         imgui.begin("Procedural Terrain")
@@ -86,6 +121,14 @@ class ProceduralTerrainViewer(ke.App):
         imgui.text(f"vertical scale: {self.vertical_scale:.4f}")
         imgui.text(f"vertices: {len(self.mesh.vertices):,}")
         imgui.text(f"triangles: {len(self.mesh.indices) // 3:,}")
+        imgui.text(
+            f"collision test: {'on' if self.collision_test and self.collision_added else 'off'}"
+        )
+        imgui.text(f"test bodies: {len(self.test_bodies)}")
+        if self.test_bodies:
+            _, self.paused = imgui.checkbox("pause physics", self.paused)
+            if imgui.button("reset test bodies"):
+                self._reset_collision_test_bodies()
         imgui.end()
 
     def _generate_tile(
@@ -125,6 +168,92 @@ class ProceduralTerrainViewer(ke.App):
             return kind
         return TERRAIN_TYPES[(row * self.cols + col) % len(TERRAIN_TYPES)]
 
+    def _create_collision_test_bodies(self):
+        if self.physics is None or not self.collision_added:
+            return
+
+        count = max(0, self.test_bodies_per_type)
+        if count == 0:
+            return
+
+        sphere_material = self.create_phong_material(
+            shader=self.shaders.phong,
+            ambient=ke.vec3(0.12, 0.06, 0.03),
+            diffuse=ke.vec3(0.95, 0.32, 0.08),
+            specular=ke.vec3(0.08, 0.08, 0.08),
+            shininess=20.0,
+        )
+        box_material = self.create_phong_material(
+            shader=self.shaders.phong,
+            ambient=ke.vec3(0.03, 0.07, 0.12),
+            diffuse=ke.vec3(0.12, 0.42, 0.95),
+            specular=ke.vec3(0.08, 0.08, 0.08),
+            shininess=20.0,
+        )
+
+        radius = max(0.08, self.horizontal_scale * 5.0)
+        half = max(0.08, self.horizontal_scale * 4.0)
+        sphere_mesh = ke.scene.Prim.create_sphere_data(radius, 20, 10)
+        box_mesh = ke.scene.Prim.create_rectangle_data(half * 2.0, half * 2.0, half * 2.0)
+
+        for index in range(count):
+            pos = self._random_spawn_position(index, count * 2)
+            actor = self.physics.create_dynamic_sphere(
+                radius,
+                [pos.x, pos.y, pos.z],
+                [0.0, 0.0, 0.0, 1.0],
+                1.0,
+            )
+            view = self.scene.add_mesh(f"/collision_test/sphere_{index}", sphere_mesh, sphere_material)
+            self.test_bodies.append(("sphere", actor, view, radius))
+
+        for index in range(count):
+            pos = self._random_spawn_position(count + index, count * 2)
+            actor = self.physics.create_dynamic_box(
+                [half, half, half],
+                [pos.x, pos.y, pos.z],
+                [0.0, 0.0, 0.0, 1.0],
+                1.0,
+            )
+            view = self.scene.add_mesh(f"/collision_test/box_{index}", box_mesh, box_material)
+            self.test_bodies.append(("box", actor, view, half))
+
+        self._sync_collision_test_bodies()
+
+    def _random_spawn_position(self, index: int, total: int):
+        width = (self.grid.length - 1) * self.horizontal_scale
+        length = (self.grid.width - 1) * self.horizontal_scale
+        margin = max(width, length) * 0.12
+        x = self.rng.uniform(-width * 0.5 + margin, width * 0.5 - margin)
+        z = self.rng.uniform(-length * 0.5 + margin, length * 0.5 - margin)
+        max_height = float(np.max(self.grid.height_meters()))
+        drop_span = max(2.0, max(width, length) * 0.25)
+        y = max_height + 1.0 + drop_span * (0.35 + 0.65 * index / max(total - 1, 1))
+        return ke.vec3(float(x), float(y), float(z))
+
+    def _reset_collision_test_bodies(self):
+        total = len(self.test_bodies)
+        for index, (_kind, actor, _view, _size) in enumerate(self.test_bodies):
+            pos = self._random_spawn_position(index, total)
+            actor.set_root_state(
+                [pos.x, pos.y, pos.z],
+                [0.0, 0.0, 0.0, 1.0],
+                [0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0],
+            )
+        self._sync_collision_test_bodies()
+
+    def _sync_collision_test_bodies(self):
+        for _kind, actor, view, _size in self.test_bodies:
+            pos = actor.get_root_position()
+            rot = actor.get_root_rotation()
+            view.prim.set_local_translation(
+                ke.vec3(float(pos[0]), float(pos[1]), float(pos[2]))
+            )
+            view.prim.set_local_rotation(
+                ke.quat(float(rot[3]), float(rot[0]), float(rot[1]), float(rot[2]))
+            )
+
     def _setup_camera(self):
         camera = self.get_camera()
         camera.set_near_plane(0.02)
@@ -154,6 +283,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--vertical-scale", type=float, default=0.005)
     parser.add_argument("--backend", choices=("cpp", "python"), default="cpp")
     parser.add_argument("--seed", type=int, default=7)
+    parser.add_argument(
+        "--no-collision-test",
+        action="store_true",
+        help="Disable both PhysX heightfield collision and falling test bodies.",
+    )
+    parser.add_argument("--test-bodies-per-type", type=int, default=10)
     parser.add_argument("--window-width", type=int, default=1600)
     parser.add_argument("--window-height", type=int, default=1000)
     return parser
@@ -171,6 +306,8 @@ def main():
         vertical_scale=args.vertical_scale,
         backend=args.backend,
         seed=args.seed,
+        collision_test=not args.no_collision_test,
+        test_bodies_per_type=args.test_bodies_per_type,
     )
     app.initialize(args.window_width, args.window_height, False, ke.UpAxis.Y)
     app.start()

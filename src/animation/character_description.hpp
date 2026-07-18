@@ -70,6 +70,21 @@ struct PhysicsMaterialDesc {
     float restitution = 0.f;
 };
 
+struct CollisionMaterialOverride {
+    // Match by index when non-negative. Names are intended for Python/user
+    // facing APIs and are resolved against CharacterData/SkeletonTree at build
+    // time. Empty body name and bodyIndex < 0 means "all bodies".
+    int bodyIndex = -1;
+    std::string bodyName;
+
+    // Match one geom by index/name, or every collision geom on the matched body
+    // when both are unspecified.
+    int geomIndex = -1;
+    std::string geomName;
+
+    PhysicsMaterialDesc material;
+};
+
 inline PhysicsMaterialDesc mjcfFrictionToPhysX(
     const std::vector<float>& friction,
     const PhysicsMaterialDesc& fallback = PhysicsMaterialDesc()) {
@@ -95,6 +110,7 @@ struct CollisionGeom {
     // rather than reusing visual MeshData directly.
     enum class Type { Capsule, Cylinder, Sphere, Box };
     Type type = Type::Sphere;
+    std::string name;
 
     Eigen::Vector3f pos = Eigen::Vector3f::Zero();
     Eigen::Quaternionf quat = Eigen::Quaternionf::Identity();

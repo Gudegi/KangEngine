@@ -39,6 +39,8 @@ class HeightmapTerrainViewer(ke.App):
         height_scale: float = 64.0,
         height_offset: float = -16.0,
         sample_stride: int = 8,
+        collision_test: bool = False,
+        test_radius: float = 2.0,
         title: str | None = None,
     ):
         super().__init__()
@@ -48,7 +50,10 @@ class HeightmapTerrainViewer(ke.App):
         self.height_scale = float(height_scale)
         self.height_offset = float(height_offset)
         self.sample_stride = int(sample_stride)
+        self.collision_test = bool(collision_test)
+        self.test_radius = float(test_radius)
         self.title = title or f"Heightmap Terrain: {self.heightmap_path.name}"
+        self.paused = False
 
     def setup(self):
         self.shaders = self.create_standard_shaders()
@@ -76,14 +81,45 @@ class HeightmapTerrainViewer(ke.App):
         self.terrain.set_double_sided(True)
 
         self.bounds_min, self.bounds_max = self._compute_bounds()
+        self.physics = None
+        self.collision_added = False
+        self.test_actor = None
+        self.test_view = None
+        if self.collision_test:
+            config = (
+                ke.PhysicsConfig.z_up()
+                if self.up_axis == ke.UpAxis.Z
+                else ke.PhysicsConfig.y_up()
+            )
+            self.physics = ke.PhysicsWorld(config)
+            self.collision_added = self.physics.add_heightmap_collision(
+                str(self.heightmap_path),
+                up_axis=self.up_axis,
+                horizontal_scale=self.horizontal_scale,
+                height_scale=self.height_scale,
+                height_offset=self.height_offset,
+                sample_stride=self.sample_stride,
+                center=True,
+                register_as_ground=True,
+                material=ke.PhysicsMaterialDesc([1.0, 1.0, 0.0]),
+            )
+            if self.collision_test:
+                self._create_collision_test_sphere()
         self._setup_camera()
 
         print(
             "Heightmap terrain loaded: "
             f"{self.heightmap_path} vertices={len(self.mesh.vertices)} "
             f"triangles={len(self.mesh.indices) // 3} "
-            f"sample_stride={self.sample_stride}"
+            f"sample_stride={self.sample_stride} "
+            f"collision={'yes' if self.collision_added else 'no'}"
         )
+
+    def preRender(self):
+        if not self.physics or self.paused:
+            return
+        self.physics.step()
+        self._sync_collision_test_sphere()
 
     def render(self):
         imgui.begin(self.title)
@@ -94,6 +130,12 @@ class HeightmapTerrainViewer(ke.App):
         imgui.text(f"horizontal scale: {self.horizontal_scale:.3f}")
         imgui.text(f"height scale: {self.height_scale:.3f}")
         imgui.text(f"height offset: {self.height_offset:.3f}")
+        imgui.text(f"heightfield collision: {'on' if self.collision_added else 'off'}")
+        if self.test_actor is not None:
+            imgui.text("collision test sphere: active")
+            changed, self.paused = imgui.checkbox("pause physics", self.paused)
+            if imgui.button("reset sphere"):
+                self._reset_collision_test_sphere()
         if self.bounds_min is not None:
             size = self.bounds_max - self.bounds_min
             imgui.text(f"bounds: {size.x:.1f}, {size.y:.1f}, {size.z:.1f}")
@@ -113,6 +155,57 @@ class HeightmapTerrainViewer(ke.App):
             max_v.y = max(max_v.y, v.y)
             max_v.z = max(max_v.z, v.z)
         return min_v, max_v
+
+    def _create_collision_test_sphere(self):
+        if self.physics is None or self.bounds_min is None:
+            return
+        spawn = self._collision_test_spawn_position()
+        self.test_actor = self.physics.create_dynamic_sphere(
+            self.test_radius,
+            [spawn.x, spawn.y, spawn.z],
+            [0.0, 0.0, 0.0, 1.0],
+            1.0,
+        )
+        test_mat = self.create_phong_material(
+            shader=self.shaders.phong,
+            ambient=ke.vec3(0.18, 0.08, 0.04),
+            diffuse=ke.vec3(0.95, 0.35, 0.08),
+            specular=ke.vec3(0.1, 0.1, 0.1),
+            shininess=24.0,
+        )
+        sphere_mesh = ke.scene.Prim.create_sphere_data(self.test_radius, 24, 12)
+        self.test_view = self.scene.add_mesh("/collision_test_sphere", sphere_mesh, test_mat)
+        self._sync_collision_test_sphere()
+
+    def _collision_test_spawn_position(self):
+        center = (self.bounds_min + self.bounds_max) * 0.5
+        if self.up_axis == ke.UpAxis.Z:
+            return ke.vec3(center.x, center.y, self.bounds_max.z + self.test_radius * 6.0)
+        return ke.vec3(center.x, self.bounds_max.y + self.test_radius * 6.0, center.z)
+
+    def _reset_collision_test_sphere(self):
+        if self.test_actor is None:
+            return
+        spawn = self._collision_test_spawn_position()
+        self.test_actor.set_root_state(
+            [spawn.x, spawn.y, spawn.z],
+            [0.0, 0.0, 0.0, 1.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+        )
+        self._sync_collision_test_sphere()
+
+    def _sync_collision_test_sphere(self):
+        if self.test_actor is None or self.test_view is None:
+            return
+        pos = self.test_actor.get_root_position()
+        rot = self.test_actor.get_root_rotation()
+        self.test_view.prim.set_local_translation(
+            ke.vec3(float(pos[0]), float(pos[1]), float(pos[2]))
+        )
+        self.test_view.prim.set_local_rotation(
+            ke.quat(float(rot[3]), float(rot[1]), float(rot[2]), float(rot[0]))
+        )
 
     def _setup_camera(self):
         camera = self.get_camera()
@@ -148,6 +241,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--height-scale", type=float, default=64.0)
     parser.add_argument("--height-offset", type=float, default=-16.0)
     parser.add_argument("--up-axis", choices=("Y", "Z"), default="Y")
+    parser.add_argument(
+        "--collision-test",
+        action="store_true",
+        help="Drop a dynamic sphere onto the heightfield to visualize collision.",
+    )
+    parser.add_argument("--test-radius", type=float, default=10.0)
     parser.add_argument("--width", type=int, default=1920)
     parser.add_argument("--height", type=int, default=1080)
     parser.add_argument("--title", default=None)
@@ -168,6 +267,8 @@ def main():
         height_scale=args.height_scale,
         height_offset=args.height_offset,
         sample_stride=args.sample_stride,
+        collision_test=args.collision_test,
+        test_radius=args.test_radius,
         title=args.title,
     )
     app.initialize(args.width, args.height, False, up_axis)

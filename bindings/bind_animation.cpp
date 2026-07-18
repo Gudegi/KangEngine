@@ -63,6 +63,25 @@ std::vector<Eigen::Quaternionf> eigenQuatXyzwArray(const FloatArray& array,
     return result;
 }
 
+PhysicsMaterialDesc physicsMaterialFromPy(py::handle obj, const char* name) {
+    if (py::isinstance<PhysicsMaterialDesc>(obj))
+        return obj.cast<PhysicsMaterialDesc>();
+
+    if (auto values = fixedFloatArray<3>(obj, name)) {
+        return PhysicsMaterialDesc{(*values)[0], (*values)[1], (*values)[2]};
+    }
+
+    if (py::isinstance<py::sequence>(obj) && py::len(obj) == 3) {
+        auto seq = obj.cast<py::sequence>();
+        return PhysicsMaterialDesc{seq[0].cast<float>(), seq[1].cast<float>(),
+                                   seq[2].cast<float>()};
+    }
+
+    throw py::value_error(std::string(name) +
+                          " expects PhysicsMaterialDesc or 3 values "
+                          "[static_friction, dynamic_friction, restitution]");
+}
+
 py::array_t<int>
 intArrayFromVec4Vector(const std::vector<std::array<int, 4>>& values) {
     py::array_t<int> array(
@@ -571,12 +590,118 @@ void bind_animation(py::module& m) {
     py::class_<PhysicsMaterialDesc>(
         anim, "PhysicsMaterialDesc",
         "PhysX-style material factors derived from imported collision data.")
-        .def_readonly("static_friction", &PhysicsMaterialDesc::staticFriction,
-                      "PhysX static friction coefficient.")
-        .def_readonly("dynamic_friction", &PhysicsMaterialDesc::dynamicFriction,
-                      "PhysX dynamic friction coefficient.")
-        .def_readonly("restitution", &PhysicsMaterialDesc::restitution,
-                      "PhysX restitution coefficient.");
+        .def(py::init<>(), "Create default material [1, 1, 0].")
+        .def(py::init<float, float, float>(),
+             py::arg("static_friction") = 1.f,
+             py::arg("dynamic_friction") = 1.f,
+             py::arg("restitution") = 0.f,
+             "Create a material from scalar PhysX material factors.")
+        .def(py::init([](py::handle values) {
+                 return physicsMaterialFromPy(values, "PhysicsMaterialDesc");
+             }),
+             py::arg("values"),
+             "Create from [static_friction, dynamic_friction, restitution]. "
+             "Accepts list/tuple, NumPy array, or CPU torch tensor.")
+        .def_readwrite("static_friction", &PhysicsMaterialDesc::staticFriction,
+                       "PhysX static friction coefficient.")
+        .def_readwrite("dynamic_friction",
+                       &PhysicsMaterialDesc::dynamicFriction,
+                       "PhysX dynamic friction coefficient.")
+        .def_readwrite("restitution", &PhysicsMaterialDesc::restitution,
+                       "PhysX restitution coefficient.")
+        .def("as_tuple",
+             [](const PhysicsMaterialDesc& m) {
+                 return py::make_tuple(m.staticFriction, m.dynamicFriction,
+                                       m.restitution);
+             },
+             "Return (static_friction, dynamic_friction, restitution).")
+        .def("__repr__", [](const PhysicsMaterialDesc& m) {
+            return "PhysicsMaterialDesc(static_friction=" +
+                   std::to_string(m.staticFriction) +
+                   ", dynamic_friction=" +
+                   std::to_string(m.dynamicFriction) +
+                   ", restitution=" + std::to_string(m.restitution) + ")";
+        });
+
+    py::class_<CollisionMaterialOverride>(
+        anim, "CollisionMaterialOverride",
+        "Build-time collision material override matched by body/geom name or "
+        "index. Later overrides win.")
+        .def(py::init<>(), "Create an empty/global override descriptor.")
+        .def(py::init([](py::handle material) {
+                 CollisionMaterialOverride entry;
+                 entry.material =
+                     physicsMaterialFromPy(material, "material");
+                 return entry;
+             }),
+             py::arg("material"),
+             "Create a global material override for every collision geom.")
+        .def_static(
+            "all_geoms",
+            [](py::handle material) {
+                CollisionMaterialOverride entry;
+                entry.material =
+                    physicsMaterialFromPy(material, "material");
+                return entry;
+            },
+            py::arg("material"),
+            "Override every collision geom in the built actor/articulation.")
+        .def_static(
+            "for_body",
+            [](const std::string& bodyName, py::handle material) {
+                CollisionMaterialOverride entry;
+                entry.bodyName = bodyName;
+                entry.material =
+                    physicsMaterialFromPy(material, "material");
+                return entry;
+            },
+            py::arg("body_name"), py::arg("material"),
+            "Override every collision geom on a named body.")
+        .def_static(
+            "for_geom",
+            [](const std::string& bodyName, const std::string& geomName,
+               py::handle material) {
+                CollisionMaterialOverride entry;
+                entry.bodyName = bodyName;
+                entry.geomName = geomName;
+                entry.material =
+                    physicsMaterialFromPy(material, "material");
+                return entry;
+            },
+            py::arg("body_name"), py::arg("geom_name"), py::arg("material"),
+            "Override one named collision geom on a named body.")
+        .def_static(
+            "for_indices",
+            [](int bodyIndex, int geomIndex, py::handle material) {
+                CollisionMaterialOverride entry;
+                entry.bodyIndex = bodyIndex;
+                entry.geomIndex = geomIndex;
+                entry.material =
+                    physicsMaterialFromPy(material, "material");
+                return entry;
+            },
+            py::arg("body_index"), py::arg("geom_index"),
+            py::arg("material"),
+            "Override by imported body index and collision geom index.")
+        .def_readwrite("body_index", &CollisionMaterialOverride::bodyIndex,
+                       "Matched body index, or -1 for name/all matching.")
+        .def_readwrite("body_name", &CollisionMaterialOverride::bodyName,
+                       "Matched body name, or empty for all bodies.")
+        .def_readwrite("geom_index", &CollisionMaterialOverride::geomIndex,
+                       "Matched geom index inside the body, or -1.")
+        .def_readwrite("geom_name", &CollisionMaterialOverride::geomName,
+                       "Matched geom name, or empty for all geoms.")
+        .def_readwrite("material", &CollisionMaterialOverride::material,
+                       "Override material.")
+        .def("__repr__", [](const CollisionMaterialOverride& entry) {
+            return "CollisionMaterialOverride(body_index=" +
+                   std::to_string(entry.bodyIndex) + ", body_name='" +
+                   entry.bodyName + "', geom_index=" +
+                   std::to_string(entry.geomIndex) + ", geom_name='" +
+                   entry.geomName + "', material=" +
+                   py::repr(py::cast(entry.material)).cast<std::string>() +
+                   ")";
+        });
 
     anim.def(
         "mjcf_friction_to_physx",
@@ -590,6 +715,8 @@ void bind_animation(py::module& m) {
     py::class_<CollisionGeom>(anim, "CollisionGeom",
                               "Collision geometry attached to a body.")
         .def_readonly("type", &CollisionGeom::type, "Collision geometry type.")
+        .def_readonly("name", &CollisionGeom::name,
+                      "Imported MJCF geom name, if present.")
         .def_property_readonly(
             "pos", [](const CollisionGeom& g) { return toGlm(g.pos); },
             "Local collision position.")
@@ -617,7 +744,9 @@ void bind_animation(py::module& m) {
         .def_readonly("condim", &CollisionGeom::condim,
                       "Imported contact dimensionality.")
         .def_readonly("margin", &CollisionGeom::margin,
-                      "Imported collision margin.");
+                      "Imported collision margin.")
+        .def_readonly("is_fallback", &CollisionGeom::isFallback,
+                      "Whether KangEngine synthesized this fallback shape.");
 
     // CharacterData — aggregate returned by asset importers.
     py::class_<CharacterData>(anim, "CharacterData",

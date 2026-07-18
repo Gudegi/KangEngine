@@ -79,11 +79,9 @@ Scene::MeshData heightFieldToMesh(const float* heights, int rows, int cols,
     return meshData;
 }
 
-Scene::MeshData
-HeightmapLoader::loadHeightMapTerrain(const std::string& path,
-                                      HeightmapTerrainOptions options) {
-
-    Scene::MeshData meshData;
+HeightFieldData HeightmapLoader::loadHeightField(
+    const std::string& path, HeightmapTerrainOptions options) {
+    HeightFieldData field;
     options.sampleStride = std::max(1, options.sampleStride);
 
     int imageWidth = 0;
@@ -94,22 +92,27 @@ HeightmapLoader::loadHeightMapTerrain(const std::string& path,
     if (!data) {
         std::cerr << "Failed to load the Heightmap image '" << path
                   << "': " << stbi_failure_reason() << std::endl;
-        return meshData; // right?
+        return field;
     }
     if (imageWidth < 2 || imageHeight < 2) {
         std::cerr << "Heightmap image must be at least 2x2: '" << path << "'"
                   << std::endl;
         stbi_image_free(data);
-        return meshData;
+        return field;
     }
 
     const int sampledWidth = (imageWidth - 2) / options.sampleStride + 2;
     const int sampledHeight = (imageHeight - 2) / options.sampleStride + 2;
-    std::vector<float> heights;
-    heights.reserve(static_cast<size_t>(sampledWidth) *
-                    static_cast<size_t>(sampledHeight));
+    field.rows = sampledHeight;
+    field.cols = sampledWidth;
+    field.horizontalScale =
+        options.horizontalScale * static_cast<float>(options.sampleStride);
+    field.heights.reserve(static_cast<size_t>(sampledWidth) *
+                          static_cast<size_t>(sampledHeight));
 
-    // vertices
+    // Row-major source height grid. The render mesh and PhysX heightfield
+    // collision both consume this exact sampled data, so their surfaces stay in
+    // sync even when sampleStride includes the final source row/column.
     for (int sampleRow = 0; sampleRow < sampledHeight; sampleRow++) {
         const int row =
             std::min(sampleRow * options.sampleStride, imageHeight - 1);
@@ -120,17 +123,25 @@ HeightmapLoader::loadHeightMapTerrain(const std::string& path,
             // retrieve texel memory address
             unsigned char* texel = data + (row * imageWidth + col) * channels;
             float heightValue = readHeightValue(texel, channels, options);
-            heights.push_back(heightValue);
+            field.heights.push_back(heightValue);
         }
     }
     stbi_image_free(data);
+    return field;
+}
+
+Scene::MeshData
+HeightmapLoader::loadHeightMapTerrain(const std::string& path,
+                                      HeightmapTerrainOptions options) {
+    const HeightFieldData field = loadHeightField(path, options);
+    if (field.heights.empty())
+        return {};
 
     HeightFieldMeshOptions meshOptions;
     meshOptions.upAxis = options.upAxis;
-    meshOptions.horizontalScale =
-        options.horizontalScale * static_cast<float>(options.sampleStride);
+    meshOptions.horizontalScale = field.horizontalScale;
     meshOptions.center = true;
-    return heightFieldToMesh(heights.data(), sampledHeight, sampledWidth,
+    return heightFieldToMesh(field.heights.data(), field.rows, field.cols,
                              meshOptions);
 }
 

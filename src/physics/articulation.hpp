@@ -35,6 +35,10 @@ struct ArticulationConfig {
     PxVec3 rootBoxHalf = {0.075f, 0.075f, 0.075f};
     PxVec3 linkBoxHalf = {0.05f, 0.05f, 0.05f};
 
+    // Build-time material overrides. Later entries win, so callers can set a
+    // body-wide override and then refine one named geom.
+    std::vector<Animation::CollisionMaterialOverride> materialOverrides;
+
     static ArticulationConfig fixedBase() {
         return {}; // all defaults
     }
@@ -110,6 +114,11 @@ class Articulation {
     void addLinkForce(int linkIndex, const PxVec3& force);
     void addLinkForceAtPosition(int linkIndex, const PxVec3& force,
                                 const PxVec3& position);
+    int setCollisionMaterial(PhysicsWorld& physics,
+                             const Animation::PhysicsMaterialDesc& material);
+    int setCollisionMaterialOverrides(
+        PhysicsWorld& physics,
+        const std::vector<Animation::CollisionMaterialOverride>& overrides);
     void setKPs(const std::vector<float>& kps);
     const std::vector<float>& getKPs() const { return _KPs; }
     void setKDs(const std::vector<float>& kds);

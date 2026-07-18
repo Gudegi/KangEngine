@@ -130,6 +130,8 @@ Renderer = _set_public_module(_ke.Renderer, __name__)
 SkinnedCharacterBridge = _set_public_module(_ke.SkinnedCharacterBridge, __name__)
 SkeletonVisualBridge = animation.SkeletonVisualBridge
 SkeletonVisualConfig = animation.SkeletonVisualConfig
+PhysicsMaterialDesc = animation.PhysicsMaterialDesc
+CollisionMaterialOverride = animation.CollisionMaterialOverride
 MotionSequencerPanel = _set_public_module(_ke.MotionSequencerPanel, __name__)
 
 # GLM-style math types and helpers exposed by the C++ extension.
@@ -249,6 +251,8 @@ __all__ = [
     "SkinnedCharacterBridge",
     "SkeletonVisualBridge",
     "SkeletonVisualConfig",
+    "PhysicsMaterialDesc",
+    "CollisionMaterialOverride",
     "MotionSequencerPanel",
     "preset_rgba",
 ]

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 #include "engine/scene/scene_backend.hpp"
 #include "utils/types.hpp"
@@ -28,9 +29,20 @@ struct HeightmapTerrainOptions {
     int sampleStride = 1;
 };
 
+struct HeightFieldData {
+    int rows = 0;
+    int cols = 0;
+    float horizontalScale = 1.0f;
+    std::vector<float> heights;
+};
+
 class HeightmapLoader {
   public:
     HeightmapLoader() = delete;
+
+    static HeightFieldData
+    loadHeightField(const std::string& path,
+                    HeightmapTerrainOptions options = {});
 
     static Scene::MeshData
     loadHeightMapTerrain(const std::string& path,
