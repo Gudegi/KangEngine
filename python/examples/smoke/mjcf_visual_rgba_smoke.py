@@ -55,6 +55,7 @@ def main():
                     '    <body name="body">',
                     '      <joint name="root" type="free"/>',
                     '      <geom type="mesh" mesh="body_mesh" rgba="0.4 0.5 0.6 0.7"/>',
+                    '      <geom type="box" size="0.1 0.2 0.3" friction="1.7 0.4 0.2"/>',
                     "    </body>",
                     "  </worldbody>",
                     "</mujoco>",
@@ -68,6 +69,18 @@ def main():
         if len(data.mesh_infos) != 1:
             raise AssertionError("expected one visual mesh info")
         _assert_rgba(data.mesh_infos[0].rgba, (0.4, 0.5, 0.6, 0.7))
+        collision_geoms = data.collision_geoms
+        if 0 not in collision_geoms or len(collision_geoms[0]) != 1:
+            raise AssertionError("expected one body collision geom")
+        geom = collision_geoms[0][0]
+        mapped_material = ke.animation.mjcf_friction_to_physx([1.7, 0.4, 0.2])
+        _close(geom.friction, 1.7)
+        _close(mapped_material.static_friction, 1.7)
+        _close(mapped_material.dynamic_friction, 1.7)
+        _close(mapped_material.restitution, 0.0)
+        _close(geom.physics_material.static_friction, 1.7)
+        _close(geom.physics_material.dynamic_friction, 1.7)
+        _close(geom.physics_material.restitution, 0.0)
 
         scene = ke.scene.create_backend(ke.scene.BackendType.Native)
         bridge = ke.animation.SkeletonBridge.from_mjcf(str(mjcf), scene, "/robot")

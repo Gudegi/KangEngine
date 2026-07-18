@@ -21,6 +21,7 @@
 #include "engine/scene/component/resource_component.hpp"
 #include "engine/scene/component/articulation_component.hpp"
 #include "engine/scene/component/articulation_binding_component.hpp"
+#include "engine/scene/component/collision_shape_component.hpp"
 #include "engine/scene/component/scene_render_system.hpp"
 #include "engine/scene/scene_resource_manager.hpp"
 #include "engine/scene/native/prim.hpp"
@@ -87,6 +88,15 @@ void bind_scene(py::module& m) {
         .value("BodyFrame", KE::Scene::ArticulationPrimRole::BodyFrame)
         .value("VisualGeom", KE::Scene::ArticulationPrimRole::VisualGeom)
         .value("CollisionGeom", KE::Scene::ArticulationPrimRole::CollisionGeom)
+        .export_values();
+
+    py::enum_<KE::Scene::CollisionShapeType>(
+        scene, "CollisionShapeType",
+        "Primitive collision shape type mirrored onto debug collision prims.")
+        .value("Sphere", KE::Scene::CollisionShapeType::Sphere)
+        .value("Capsule", KE::Scene::CollisionShapeType::Capsule)
+        .value("Cylinder", KE::Scene::CollisionShapeType::Cylinder)
+        .value("Box", KE::Scene::CollisionShapeType::Box)
         .export_values();
 
     py::enum_<KE::Scene::ManipulationPolicy>(
@@ -395,6 +405,85 @@ void bind_scene(py::module& m) {
             return "<ArticulationBindingComponent path='" + path +
                    "' role=" + KE::Scene::articulationPrimRoleLabel(c.role()) +
                    " body_index=" + std::to_string(c.bodyIndex()) + ">";
+        });
+
+    py::class_<KE::Scene::CollisionShapeComponent,
+               std::shared_ptr<KE::Scene::CollisionShapeComponent>>(
+        scene, "CollisionShapeComponent",
+        "Scene-side metadata for a collision shape debug prim.")
+        .def_property_readonly("attached",
+                               &KE::Scene::CollisionShapeComponent::isAttached,
+                               "Return whether this component is attached.")
+        .def_property_readonly("owner",
+                               &KE::Scene::CollisionShapeComponent::owner,
+                               py::return_value_policy::reference,
+                               "Return the owning prim, or None after detach.")
+        .def_property_readonly("shape_type",
+                               &KE::Scene::CollisionShapeComponent::shapeType,
+                               "Primitive collision shape type.")
+        .def_property_readonly(
+            "size",
+            [](const KE::Scene::CollisionShapeComponent& c) {
+                return c.size();
+            },
+            "Shape size descriptor. Interpretation depends on shape type.")
+        .def_property_readonly(
+            "local_position",
+            [](const KE::Scene::CollisionShapeComponent& c) {
+                return c.localPosition();
+            },
+            "Body-local collision shape position.")
+        .def_property_readonly(
+            "local_rotation",
+            [](const KE::Scene::CollisionShapeComponent& c) {
+                return c.localRotation();
+            },
+            "Body-local collision shape rotation.")
+        .def_property_readonly("has_from_to",
+                               &KE::Scene::CollisionShapeComponent::hasFromTo,
+                               "Whether this shape was authored by from/to.")
+        .def_property_readonly(
+            "from_position",
+            [](const KE::Scene::CollisionShapeComponent& c) {
+                return c.fromPosition();
+            },
+            "Body-local from endpoint when has_from_to is true.")
+        .def_property_readonly(
+            "to_position",
+            [](const KE::Scene::CollisionShapeComponent& c) {
+                return c.toPosition();
+            },
+            "Body-local to endpoint when has_from_to is true.")
+        .def_property_readonly(
+            "static_friction",
+            &KE::Scene::CollisionShapeComponent::staticFriction,
+            "Reference PhysX static friction.")
+        .def_property_readonly(
+            "dynamic_friction",
+            &KE::Scene::CollisionShapeComponent::dynamicFriction,
+            "Reference PhysX dynamic friction.")
+        .def_property_readonly("restitution",
+                               &KE::Scene::CollisionShapeComponent::restitution,
+                               "Reference PhysX restitution.")
+        .def_property_readonly(
+            "condim", &KE::Scene::CollisionShapeComponent::condim,
+            "Imported MuJoCo contact dimensionality, if any.")
+        .def_property_readonly(
+            "margin", &KE::Scene::CollisionShapeComponent::margin,
+            "Imported MuJoCo margin mapped to contactOffset, if any.")
+        .def_property_readonly(
+            "source_geom_index",
+            &KE::Scene::CollisionShapeComponent::sourceGeomIndex,
+            "Index of the source collision geom inside the body descriptor.")
+        .def_property_readonly("version",
+                               &KE::Scene::CollisionShapeComponent::version,
+                               "Return the collision shape metadata version.")
+        .def("__repr__", [](const KE::Scene::CollisionShapeComponent& c) {
+            const KE::Scene::Prim* owner = c.owner();
+            const std::string path = owner ? owner->getPath() : "<detached>";
+            return "<CollisionShapeComponent path='" + path + "' shape=" +
+                   KE::Scene::collisionShapeTypeLabel(c.shapeType()) +
+                   " geom_index=" + std::to_string(c.sourceGeomIndex()) + ">";
         });
 
     py::class_<KE::Scene::SceneResourceManager>(
@@ -759,6 +848,19 @@ void bind_scene(py::module& m) {
         .def("remove_articulation_binding_component",
              &KE::Scene::Prim::removeArticulationBindingComponent,
              "Detach this prim's articulation binding component.")
+        .def("add_collision_shape_component",
+             &KE::Scene::Prim::addCollisionShapeComponent,
+             "Attach and return this prim's collision shape metadata "
+             "component.")
+        .def("get_collision_shape_component",
+             &KE::Scene::Prim::getCollisionShapeComponent,
+             "Return this prim's collision shape component, or None.")
+        .def("has_collision_shape_component",
+             &KE::Scene::Prim::hasCollisionShapeComponent,
+             "Return whether this prim has a collision shape component.")
+        .def("remove_collision_shape_component",
+             &KE::Scene::Prim::removeCollisionShapeComponent,
+             "Detach this prim's collision shape component.")
         // Mesh data
         .def("set_mesh_data", &KE::Scene::Prim::setMeshData,
              py::arg("mesh_data"), "Attach mesh data to this prim.")

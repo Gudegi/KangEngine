@@ -371,7 +371,14 @@ bool parseSite(
     return true;
 }
 
-// Returns false if the geom should be skipped (visual, mesh, unknown type).
+// Returns false if this loader cannot represent the geom as an explicit
+// CollisionGeom descriptor.
+//
+// Mesh collision geoms are intentionally unsupported here. Dynamic and
+// articulation bodies should use primitive shapes or a future convex-cooked
+// mesh path; visual MeshData cannot be attached directly as a safe PhysX link
+// collision shape. Bodies with no supported descriptors may still receive
+// KangEngine fallback boxes during Articulation::build().
 bool buildCollisionGeom(
     tinyxml2::XMLElement* geomElem,
     const std::unordered_map<std::string, DefaultGeomAttrs>& defaultMap,
@@ -435,8 +442,10 @@ bool buildCollisionGeom(
         out.from = Eigen::Vector3f(fromto[0], fromto[1], fromto[2]);
         out.to = Eigen::Vector3f(fromto[3], fromto[4], fromto[5]);
     }
-    if (!friction.empty())
+    if (!friction.empty()) {
         out.friction = friction[0];
+        out.physicsMaterial = mjcfFrictionToPhysX(friction);
+    }
     out.condim = defs.condim;
     geomElem->QueryIntAttribute("condim", &out.condim);
     out.margin = defs.margin;
@@ -612,6 +621,22 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
                 }
 
                 // Collision geom
+                // TODO : add convex mesh decomposition like COCAD
+                if (meshName && !isVisualMesh) {
+                    // Empty entry marks that the source authored a collidable
+                    // mesh geom that KangEngine cannot cook yet. Articulation
+                    // build may synthesize a fallback box only for these
+                    // bodies, while visual-only mesh bodies stay collisionless.
+                    _data.collisionGeoms.try_emplace(idx);
+                    fmt::print(
+                        stderr,
+                        "Warning: MJCF mesh collision geom '{}' on body '{}' "
+                        "is not supported yet; using KangEngine fallback "
+                        "collision if this body has no supported primitive "
+                        "collision geom.\n",
+                        meshName, bodyName);
+                    continue;
+                }
                 CollisionGeom g;
                 if (!buildCollisionGeom(geom, defaultMap, g, inheritedClass))
                     continue;

@@ -100,6 +100,28 @@ def _check_articulation_root(
         )
 
 
+def _check_collision_shape(component):
+    if component is None:
+        raise AssertionError("missing CollisionShapeComponent")
+    if component.shape_type != ke.scene.CollisionShapeType.Box:
+        raise AssertionError(f"shape type mismatch: {component.shape_type}")
+    if component.source_geom_index != 0:
+        raise AssertionError(f"source geom index mismatch: {component.source_geom_index}")
+    if component.has_from_to:
+        raise AssertionError("box collision shape should not use from/to")
+    size = component.size
+    expected = (0.1, 0.1, 0.1)
+    for actual, target in zip((size.x, size.y, size.z), expected):
+        if abs(actual - target) > 1e-5:
+            raise AssertionError(f"size mismatch: {size}")
+    if abs(component.static_friction - 1.0) > 1e-5:
+        raise AssertionError(f"static friction mismatch: {component.static_friction}")
+    if abs(component.dynamic_friction - 1.0) > 1e-5:
+        raise AssertionError(f"dynamic friction mismatch: {component.dynamic_friction}")
+    if abs(component.restitution - 0.0) > 1e-5:
+        raise AssertionError(f"restitution mismatch: {component.restitution}")
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -176,6 +198,7 @@ def main():
             "body",
             "/split_robot",
         )
+        _check_collision_shape(collision_prims[0].get_collision_shape_component())
 
     print("PASS: ArticulationBindingComponent smoke completed")
 

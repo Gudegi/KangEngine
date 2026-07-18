@@ -1,5 +1,6 @@
 #include "physics_bridge.hpp"
 #include "engine/scene/component/articulation_binding_component.hpp"
+#include "engine/scene/component/collision_shape_component.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "physics/articulation.hpp"
@@ -18,6 +19,21 @@ namespace {
 
 std::string fallbackBodyName(int bodyIdx) {
     return "body_" + std::to_string(bodyIdx);
+}
+
+Scene::CollisionShapeType
+toCollisionShapeType(Animation::CollisionGeom::Type type) {
+    switch (type) {
+    case Animation::CollisionGeom::Type::Sphere:
+        return Scene::CollisionShapeType::Sphere;
+    case Animation::CollisionGeom::Type::Capsule:
+        return Scene::CollisionShapeType::Capsule;
+    case Animation::CollisionGeom::Type::Cylinder:
+        return Scene::CollisionShapeType::Cylinder;
+    case Animation::CollisionGeom::Type::Box:
+        return Scene::CollisionShapeType::Box;
+    }
+    return Scene::CollisionShapeType::Sphere;
 }
 
 } // namespace
@@ -137,6 +153,19 @@ std::vector<Scene::Prim*> PhysicsBridge::addCollisionVisuals(
             prim->addArticulationBindingComponent()->setBinding(
                 Scene::ArticulationPrimRole::CollisionGeom, bodyIdx, bodyName,
                 rootPath);
+            auto collisionShape = prim->addCollisionShapeComponent();
+            collisionShape->setShapeMetadata(
+                toCollisionShapeType(geom.type),
+                glm::vec3(geom.size[0], geom.size[1], geom.size[2]), localPos,
+                localQuat, geom.physicsMaterial.staticFriction,
+                geom.physicsMaterial.dynamicFriction,
+                geom.physicsMaterial.restitution, geom.condim, geom.margin,
+                geom.isFallback ? -1 : gi);
+            if (geom.hasFromTo) {
+                collisionShape->setFromTo(
+                    glm::vec3(geom.from.x(), geom.from.y(), geom.from.z()),
+                    glm::vec3(geom.to.x(), geom.to.y(), geom.to.z()));
+            }
 
             _colVisuals.push_back({lnk, prim, localPos, localQuat});
             result.push_back(prim);

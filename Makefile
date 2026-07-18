@@ -97,6 +97,16 @@ validate_sim_visual_batch: build_python
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/sim_visual_batch_smoke.py
 
 validate_render_component: build_python
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/obj_material_loader_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/scene_add_obj_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/mjcf_visual_rgba_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/mjcf_visual_duplicate_mesh_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/articulation_binding_component_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/transform_component_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/mesh_component_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/resource_component_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/scene_resource_manager_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/python_resource_manager_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/render_component_lifecycle_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/scene_render_system_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/scene_render_instancing_smoke.py

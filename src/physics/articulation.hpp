@@ -29,9 +29,11 @@ struct ArticulationConfig {
     float contactOffset = 0.02f;
     float restOffset = 0.f;
 
-    // Fallback shapes when collisionGeoms has no entry for a body
-    PxVec3 rootBoxHalf = {0.15f, 0.1f, 0.1f};
-    PxVec3 linkBoxHalf = {0.04f, 0.04f, 0.04f};
+    // Fallback shapes for bodies whose MJCF authored a collidable mesh geom
+    // that KangEngine cannot cook yet. Bodies with only visual-only geoms do
+    // not receive fallback collision.
+    PxVec3 rootBoxHalf = {0.075f, 0.075f, 0.075f};
+    PxVec3 linkBoxHalf = {0.05f, 0.05f, 0.05f};
 
     static ArticulationConfig fixedBase() {
         return {}; // all defaults

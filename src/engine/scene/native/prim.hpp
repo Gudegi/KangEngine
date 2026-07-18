@@ -35,6 +35,7 @@ class ResourceComponent;
 class SelectionComponent;
 class ArticulationComponent;
 class ArticulationBindingComponent;
+class CollisionShapeComponent;
 
 using AttributeValue =
     std::variant<bool, int, float, std::string, glm::vec3, glm::vec4, glm::mat4,
@@ -82,6 +83,7 @@ class Prim {
     std::shared_ptr<SelectionComponent> _selectionComponent;
     std::shared_ptr<ArticulationComponent> _articulationComponent;
     std::shared_ptr<ArticulationBindingComponent> _articulationBindingComponent;
+    std::shared_ptr<CollisionShapeComponent> _collisionShapeComponent;
 
     bool _renderable = false; // true for prim types that can submit geometry
     bool _visible = true; // runtime show/hide toggle(just render visibility)
@@ -185,6 +187,13 @@ class Prim {
         return _articulationBindingComponent != nullptr;
     }
     bool removeArticulationBindingComponent();
+
+    std::shared_ptr<CollisionShapeComponent> addCollisionShapeComponent();
+    std::shared_ptr<CollisionShapeComponent> getCollisionShapeComponent() const;
+    bool hasCollisionShapeComponent() const {
+        return _collisionShapeComponent != nullptr;
+    }
+    bool removeCollisionShapeComponent();
 
     static MeshData createCubeData(float scale);
     static MeshData createSquareData(float scale); // Deprecated.

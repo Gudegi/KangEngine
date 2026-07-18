@@ -9,6 +9,7 @@
 #include "engine/scene/component/camera_component.hpp"
 #include "engine/scene/component/articulation_component.hpp"
 #include "engine/scene/component/articulation_binding_component.hpp"
+#include "engine/scene/component/collision_shape_component.hpp"
 #include "engine/scene/component/light_component.hpp"
 #include "engine/scene/component/material_binding_component.hpp"
 #include "engine/scene/component/mesh_component.hpp"
@@ -1073,10 +1074,10 @@ void InspectorPanel::buildPanel() {
     ImGui::SeparatorText("Selection");
     auto selectionComponent = prim->getSelectionComponent();
     if (selectionComponent) {
-        ImGui::Text("Component: attached=%s version=%llu",
-                    selectionComponent->isAttached() ? "true" : "false",
-                    static_cast<unsigned long long>(
-                        selectionComponent->version()));
+        ImGui::Text(
+            "Component: attached=%s version=%llu",
+            selectionComponent->isAttached() ? "true" : "false",
+            static_cast<unsigned long long>(selectionComponent->version()));
         if (ImGui::BeginTable("SelectionPolicy", 2,
                               ImGuiTableFlags_SizingStretchProp)) {
             const auto property = [](const char* label) {
@@ -1114,10 +1115,10 @@ void InspectorPanel::buildPanel() {
 
     if (auto articulationRoot = prim->getArticulationComponent()) {
         ImGui::SeparatorText("Articulation");
-        ImGui::Text("Component: attached=%s version=%llu",
-                    articulationRoot->isAttached() ? "true" : "false",
-                    static_cast<unsigned long long>(
-                        articulationRoot->version()));
+        ImGui::Text(
+            "Component: attached=%s version=%llu",
+            articulationRoot->isAttached() ? "true" : "false",
+            static_cast<unsigned long long>(articulationRoot->version()));
         if (ImGui::BeginTable("ArticulationComponent", 2,
                               ImGuiTableFlags_SizingStretchProp)) {
             const auto property = [](const char* label) {
@@ -1146,9 +1147,8 @@ void InspectorPanel::buildPanel() {
             property("Render Prims");
             ImGui::Text("%d", articulationRoot->renderPrimCount());
             property("Split Visual Geoms");
-            ImGui::TextUnformatted(articulationRoot->splitVisualGeoms()
-                                       ? "Yes"
-                                       : "No");
+            ImGui::TextUnformatted(articulationRoot->splitVisualGeoms() ? "Yes"
+                                                                        : "No");
             ImGui::EndTable();
         }
     }
@@ -1167,8 +1167,8 @@ void InspectorPanel::buildPanel() {
                 ImGui::TableSetColumnIndex(1);
             };
             property("Role");
-            ImGui::TextUnformatted(Scene::articulationPrimRoleLabel(
-                articulation->role()));
+            ImGui::TextUnformatted(
+                Scene::articulationPrimRoleLabel(articulation->role()));
             property("Body Index");
             ImGui::Text("%d", articulation->bodyIndex());
             property("Body Name");
@@ -1176,11 +1176,71 @@ void InspectorPanel::buildPanel() {
                                        ? "<none>"
                                        : articulation->bodyName().c_str());
             property("Root");
-            ImGui::TextWrapped("%s",
-                               articulation->articulationRootPath().empty()
-                                   ? "<none>"
-                                   : articulation->articulationRootPath()
-                                         .c_str());
+            ImGui::TextWrapped(
+                "%s", articulation->articulationRootPath().empty()
+                          ? "<none>"
+                          : articulation->articulationRootPath().c_str());
+            ImGui::EndTable();
+        }
+    }
+
+    if (auto collisionShape = prim->getCollisionShapeComponent()) {
+        ImGui::SeparatorText("Collision Shape");
+        ImGui::Text("Component: attached=%s version=%llu",
+                    collisionShape->isAttached() ? "true" : "false",
+                    static_cast<unsigned long long>(collisionShape->version()));
+        if (ImGui::BeginTable("CollisionShape", 2,
+                              ImGuiTableFlags_SizingStretchProp)) {
+            const auto property = [](const char* label) {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::TextDisabled("%s", label);
+                ImGui::TableSetColumnIndex(1);
+            };
+            property("Shape");
+            ImGui::TextUnformatted(
+                Scene::collisionShapeTypeLabel(collisionShape->shapeType()));
+            property("Source Geom");
+            if (collisionShape->sourceGeomIndex() >= 0)
+                ImGui::Text("%d", collisionShape->sourceGeomIndex());
+            else
+                ImGui::TextUnformatted("Fallback");
+            property("Size");
+            const glm::vec3& size = collisionShape->size();
+            ImGui::Text("%.4f, %.4f, %.4f", size.x, size.y, size.z);
+            property("Local Pos");
+            const glm::vec3& localPos = collisionShape->localPosition();
+            ImGui::Text("%.4f, %.4f, %.4f", localPos.x, localPos.y, localPos.z);
+            property("Local Rot");
+            const glm::quat& localRot = collisionShape->localRotation();
+            ImGui::Text("w %.4f, x %.4f, y %.4f, z %.4f", localRot.w,
+                        localRot.x, localRot.y, localRot.z);
+            property("From/To");
+            ImGui::TextUnformatted(collisionShape->hasFromTo() ? "Yes" : "No");
+            if (collisionShape->hasFromTo()) {
+                property("From");
+                const glm::vec3& from = collisionShape->fromPosition();
+                ImGui::Text("%.4f, %.4f, %.4f", from.x, from.y, from.z);
+                property("To");
+                const glm::vec3& to = collisionShape->toPosition();
+                ImGui::Text("%.4f, %.4f, %.4f", to.x, to.y, to.z);
+            }
+            property("Friction");
+            ImGui::Text("static %.4f, dynamic %.4f",
+                        collisionShape->staticFriction(),
+                        collisionShape->dynamicFriction());
+            property("Restitution");
+            ImGui::Text("%.4f", collisionShape->restitution());
+            property("Condim( Unused )");
+            if (collisionShape->condim() >= 0)
+                ImGui::Text("%d", collisionShape->condim());
+            else
+                ImGui::TextUnformatted("<none>");
+            property("Margin");
+            if (collisionShape->margin() >= 0.0f)
+                ImGui::Text("%.4f", collisionShape->margin());
+            else
+                ImGui::TextUnformatted("<none>");
             ImGui::EndTable();
         }
     }

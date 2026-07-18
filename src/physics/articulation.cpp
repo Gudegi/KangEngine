@@ -57,6 +57,16 @@ void applyContactOffsets(PxShape* shape, float contactOffset,
     shape->setContactOffset(std::max(contactOffset, restOffset + 1e-4f));
 }
 
+Animation::CollisionGeom makeFallbackBoxGeom(const PxVec3& halfExtents) {
+    Animation::CollisionGeom geom;
+    geom.type = Animation::CollisionGeom::Type::Box;
+    geom.size[0] = halfExtents.x;
+    geom.size[1] = halfExtents.y;
+    geom.size[2] = halfExtents.z;
+    geom.isFallback = true;
+    return geom;
+}
+
 // Creates and attaches PhysX shapes for each MJCF collision geom on the link.
 // Cylinders are approximated as capsules (PhysX has no native cylinder shape).
 void attachCollisionShapes(PxArticulationLink* link, PxPhysics* physics,
@@ -69,9 +79,13 @@ void attachCollisionShapes(PxArticulationLink* link, PxPhysics* physics,
         const auto& g = geoms[i];
         PxMaterial* shapeMat = mat;
         PxMaterial* ownedMat = nullptr;
-        const float friction = g.friction;
-        if (physics && std::abs(friction - 1.f) > 1e-6f) {
-            ownedMat = physics->createMaterial(friction, friction, 0.f);
+        const auto& material = g.physicsMaterial;
+        if (physics && (std::abs(material.staticFriction - 1.f) > 1e-6f ||
+                        std::abs(material.dynamicFriction - 1.f) > 1e-6f ||
+                        std::abs(material.restitution) > 1e-6f)) {
+            ownedMat = physics->createMaterial(material.staticFriction,
+                                               material.dynamicFriction,
+                                               material.restitution);
             ownedMat->setFrictionCombineMode(PxCombineMode::eMIN);
             shapeMat = ownedMat;
         }
@@ -500,7 +514,8 @@ Articulation Articulation::build(
             attachCollisionShapes(artic._links[0], physics.getPhysics(),
                                   physics.getMaterial(), it->second,
                                   cfg.contactOffset, cfg.restOffset);
-        else {
+        else if (it != colGeoms.end()) {
+            artic._colGeoms[0].push_back(makeFallbackBoxGeom(cfg.rootBoxHalf));
             PxShape* shape = PxRigidActorExt::createExclusiveShape(
                 *artic._links[0],
                 PxBoxGeometry(cfg.rootBoxHalf.x, cfg.rootBoxHalf.y,
@@ -536,7 +551,9 @@ Articulation Articulation::build(
                 attachCollisionShapes(artic._links[i], physics.getPhysics(),
                                       physics.getMaterial(), it->second,
                                       cfg.contactOffset, cfg.restOffset);
-            else {
+            else if (it != colGeoms.end()) {
+                artic._colGeoms[i].push_back(
+                    makeFallbackBoxGeom(cfg.linkBoxHalf));
                 PxShape* shape = PxRigidActorExt::createExclusiveShape(
                     *artic._links[i],
                     PxBoxGeometry(cfg.linkBoxHalf.x, cfg.linkBoxHalf.y,

@@ -296,18 +296,15 @@ void bind_animation(py::module& m) {
                       &ObjMaterialInfo::diffuseTexturePath)
         .def_readonly("specular_texture_path",
                       &ObjMaterialInfo::specularTexturePath)
-        .def_readonly("alpha_texture_path",
-                      &ObjMaterialInfo::alphaTexturePath)
+        .def_readonly("alpha_texture_path", &ObjMaterialInfo::alphaTexturePath)
         .def_readonly("normal_texture_path",
                       &ObjMaterialInfo::normalTexturePath)
         .def_readonly("has_diffuse_texture",
                       &ObjMaterialInfo::hasDiffuseTexture)
         .def_readonly("has_specular_texture",
                       &ObjMaterialInfo::hasSpecularTexture)
-        .def_readonly("has_alpha_texture",
-                      &ObjMaterialInfo::hasAlphaTexture)
-        .def_readonly("has_normal_texture",
-                      &ObjMaterialInfo::hasNormalTexture);
+        .def_readonly("has_alpha_texture", &ObjMaterialInfo::hasAlphaTexture)
+        .def_readonly("has_normal_texture", &ObjMaterialInfo::hasNormalTexture);
 
     py::class_<ObjMeshSubsetInfo>(
         asset, "ObjMeshSubsetInfo",
@@ -334,14 +331,12 @@ void bind_animation(py::module& m) {
         .def_readonly("subsets", &ObjMeshInfo::subsets)
         .def_readonly("primary_material_index",
                       &ObjMeshInfo::primaryMaterialIndex)
-        .def_property_readonly("material_count",
-                               [](const ObjMeshInfo& self) {
-                                   return self.materials.size();
-                               })
-        .def_property_readonly("subset_count",
-                               [](const ObjMeshInfo& self) {
-                                   return self.subsets.size();
-                               });
+        .def_property_readonly(
+            "material_count",
+            [](const ObjMeshInfo& self) { return self.materials.size(); })
+        .def_property_readonly("subset_count", [](const ObjMeshInfo& self) {
+            return self.subsets.size();
+        });
 
     asset.def(
         "load_obj",
@@ -355,7 +350,9 @@ void bind_animation(py::module& m) {
 
     asset.def(
         "load_obj_with_materials",
-        [](const std::string& path) { return KE::Asset::loadObjWithMaterials(path); },
+        [](const std::string& path) {
+            return KE::Asset::loadObjWithMaterials(path);
+        },
         py::arg("path"),
         "Load an OBJ file and return mesh data plus MTL material metadata.");
 
@@ -382,10 +379,8 @@ void bind_animation(py::module& m) {
                                                                  options));
         },
         py::arg("path"), py::arg("up_axis") = KE::UpAxis::Y,
-        py::arg("horizontal_scale") = 1.0f,
-        py::arg("height_scale") = 64.0f,
-        py::arg("height_offset") = -16.0f,
-        py::arg("sample_stride") = 1,
+        py::arg("horizontal_scale") = 1.0f, py::arg("height_scale") = 64.0f,
+        py::arg("height_offset") = -16.0f, py::arg("sample_stride") = 1,
         "Load a grayscale/RGB heightmap image and build a terrain MeshData.");
 
     asset.def(
@@ -399,8 +394,8 @@ void bind_animation(py::module& m) {
             const int rows = static_cast<int>(info.shape[0]);
             const int cols = static_cast<int>(info.shape[1]);
             if (rows < 2 || cols < 2)
-                throw py::value_error(
-                    "height_field_to_mesh requires at least a 2x2 height field");
+                throw py::value_error("height_field_to_mesh requires at least "
+                                      "a 2x2 height field");
 
             KE::Asset::HeightFieldMeshOptions options;
             options.upAxis = upAxis;
@@ -412,7 +407,8 @@ void bind_animation(py::module& m) {
         },
         py::arg("heights"), py::arg("up_axis") = KE::UpAxis::Y,
         py::arg("horizontal_scale") = 1.0f, py::arg("center") = true,
-        "Convert a 2D float height field array [rows, cols] into scene.MeshData.");
+        "Convert a 2D float height field array [rows, cols] into "
+        "scene.MeshData.");
 
     anim.def(
         "cpu_skin",
@@ -572,6 +568,25 @@ void bind_animation(py::module& m) {
         .value("Box", CollisionGeom::Type::Box)
         .export_values();
 
+    py::class_<PhysicsMaterialDesc>(
+        anim, "PhysicsMaterialDesc",
+        "PhysX-style material factors derived from imported collision data.")
+        .def_readonly("static_friction", &PhysicsMaterialDesc::staticFriction,
+                      "PhysX static friction coefficient.")
+        .def_readonly("dynamic_friction", &PhysicsMaterialDesc::dynamicFriction,
+                      "PhysX dynamic friction coefficient.")
+        .def_readonly("restitution", &PhysicsMaterialDesc::restitution,
+                      "PhysX restitution coefficient.");
+
+    anim.def(
+        "mjcf_friction_to_physx",
+        [](const std::vector<float>& friction) {
+            return mjcfFrictionToPhysX(friction);
+        },
+        py::arg("friction"),
+        "Map MJCF geom friction values to KangEngine's PhysX material "
+        "descriptor.");
+
     py::class_<CollisionGeom>(anim, "CollisionGeom",
                               "Collision geometry attached to a body.")
         .def_readonly("type", &CollisionGeom::type, "Collision geometry type.")
@@ -596,7 +611,9 @@ void bind_animation(py::module& m) {
             "to_pos", [](const CollisionGeom& g) { return toGlm(g.to); },
             "Collision endpoint end position.")
         .def_readonly("friction", &CollisionGeom::friction,
-                      "Imported friction value.")
+                      "Imported MuJoCo sliding friction value.")
+        .def_readonly("physics_material", &CollisionGeom::physicsMaterial,
+                      "PhysX-style material factors derived from this geom.")
         .def_readonly("condim", &CollisionGeom::condim,
                       "Imported contact dimensionality.")
         .def_readonly("margin", &CollisionGeom::margin,
@@ -1340,8 +1357,7 @@ void bind_animation(py::module& m) {
         .def("render_prims", &SkeletonBridge::renderPrims,
              py::return_value_policy::reference_internal,
              "Return actual renderable mesh prims.")
-        .def("render_prim_body_indices",
-             &SkeletonBridge::renderPrimBodyIndices,
+        .def("render_prim_body_indices", &SkeletonBridge::renderPrimBodyIndices,
              py::return_value_policy::reference_internal,
              "Return body index for each render prim.")
         .def("num_bodies", &SkeletonBridge::numBodies,

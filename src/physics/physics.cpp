@@ -95,13 +95,11 @@ CUcontext getCurrentCudaDriverContext() {
 
 } // namespace
 
-static PxFilterFlags kangFilterShader(PxFilterObjectAttributes attributes0,
-                                      PxFilterData filterData0,
-                                      PxFilterObjectAttributes attributes1,
-                                      PxFilterData filterData1,
-                                      PxPairFlags& pairFlags,
-                                      const void* constantBlock,
-                                      PxU32 constantBlockSize) {
+static PxFilterFlags
+kangFilterShader(PxFilterObjectAttributes attributes0, PxFilterData filterData0,
+                 PxFilterObjectAttributes attributes1, PxFilterData filterData1,
+                 PxPairFlags& pairFlags, const void* constantBlock,
+                 PxU32 constantBlockSize) {
     PxFilterFlags flags = PxDefaultSimulationFilterShader(
         attributes0, filterData0, attributes1, filterData1, pairFlags,
         constantBlock, constantBlockSize);
@@ -395,9 +393,13 @@ PhysicsWorld::createDynamicRigid(const Animation::CharacterData& data,
         for (const auto& g : *geoms) {
             PxMaterial* shapeMat = _material;
             PxMaterial* ownedMat = nullptr;
-            if (_physics && std::abs(g.friction - 1.f) > 1e-6f) {
-                ownedMat =
-                    _physics->createMaterial(g.friction, g.friction, 0.f);
+            const auto& material = g.physicsMaterial;
+            if (_physics && (std::abs(material.staticFriction - 1.f) > 1e-6f ||
+                             std::abs(material.dynamicFriction - 1.f) > 1e-6f ||
+                             std::abs(material.restitution) > 1e-6f)) {
+                ownedMat = _physics->createMaterial(material.staticFriction,
+                                                    material.dynamicFriction,
+                                                    material.restitution);
                 ownedMat->setFrictionCombineMode(PxCombineMode::eMIN);
                 shapeMat = ownedMat;
             }

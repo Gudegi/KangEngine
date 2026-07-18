@@ -13,6 +13,7 @@
 #include "engine/scene/component/selection_component.hpp"
 #include "engine/scene/component/articulation_component.hpp"
 #include "engine/scene/component/articulation_binding_component.hpp"
+#include "engine/scene/component/collision_shape_component.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "utils/types.hpp"
 #include <Eigen/Geometry>
@@ -97,6 +98,8 @@ Prim::~Prim() {
         _articulationComponent->detach();
     if (_articulationBindingComponent)
         _articulationBindingComponent->detach();
+    if (_collisionShapeComponent)
+        _collisionShapeComponent->detach();
 }
 
 Prim* Prim::addChild(const std::string& name, PrimType type) {
@@ -428,6 +431,29 @@ bool Prim::removeArticulationBindingComponent() {
         return false;
     _articulationBindingComponent->detach();
     _articulationBindingComponent.reset();
+    return true;
+}
+
+std::shared_ptr<CollisionShapeComponent> Prim::addCollisionShapeComponent() {
+    if (_collisionShapeComponent)
+        throw std::runtime_error("Prim '" + _path +
+                                 "' already has a CollisionShapeComponent");
+    _collisionShapeComponent =
+        std::shared_ptr<CollisionShapeComponent>(
+            new CollisionShapeComponent(this));
+    return _collisionShapeComponent;
+}
+
+std::shared_ptr<CollisionShapeComponent>
+Prim::getCollisionShapeComponent() const {
+    return _collisionShapeComponent;
+}
+
+bool Prim::removeCollisionShapeComponent() {
+    if (!_collisionShapeComponent)
+        return false;
+    _collisionShapeComponent->detach();
+    _collisionShapeComponent.reset();
     return true;
 }
 
