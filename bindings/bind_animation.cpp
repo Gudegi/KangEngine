@@ -591,10 +591,8 @@ void bind_animation(py::module& m) {
         anim, "PhysicsMaterialDesc",
         "PhysX-style material factors derived from imported collision data.")
         .def(py::init<>(), "Create default material [1, 1, 0].")
-        .def(py::init<float, float, float>(),
-             py::arg("static_friction") = 1.f,
-             py::arg("dynamic_friction") = 1.f,
-             py::arg("restitution") = 0.f,
+        .def(py::init<float, float, float>(), py::arg("static_friction") = 1.f,
+             py::arg("dynamic_friction") = 1.f, py::arg("restitution") = 0.f,
              "Create a material from scalar PhysX material factors.")
         .def(py::init([](py::handle values) {
                  return physicsMaterialFromPy(values, "PhysicsMaterialDesc");
@@ -609,17 +607,17 @@ void bind_animation(py::module& m) {
                        "PhysX dynamic friction coefficient.")
         .def_readwrite("restitution", &PhysicsMaterialDesc::restitution,
                        "PhysX restitution coefficient.")
-        .def("as_tuple",
-             [](const PhysicsMaterialDesc& m) {
-                 return py::make_tuple(m.staticFriction, m.dynamicFriction,
-                                       m.restitution);
-             },
-             "Return (static_friction, dynamic_friction, restitution).")
+        .def(
+            "as_tuple",
+            [](const PhysicsMaterialDesc& m) {
+                return py::make_tuple(m.staticFriction, m.dynamicFriction,
+                                      m.restitution);
+            },
+            "Return (static_friction, dynamic_friction, restitution).")
         .def("__repr__", [](const PhysicsMaterialDesc& m) {
             return "PhysicsMaterialDesc(static_friction=" +
                    std::to_string(m.staticFriction) +
-                   ", dynamic_friction=" +
-                   std::to_string(m.dynamicFriction) +
+                   ", dynamic_friction=" + std::to_string(m.dynamicFriction) +
                    ", restitution=" + std::to_string(m.restitution) + ")";
         });
 
@@ -630,8 +628,7 @@ void bind_animation(py::module& m) {
         .def(py::init<>(), "Create an empty/global override descriptor.")
         .def(py::init([](py::handle material) {
                  CollisionMaterialOverride entry;
-                 entry.material =
-                     physicsMaterialFromPy(material, "material");
+                 entry.material = physicsMaterialFromPy(material, "material");
                  return entry;
              }),
              py::arg("material"),
@@ -640,8 +637,7 @@ void bind_animation(py::module& m) {
             "all_geoms",
             [](py::handle material) {
                 CollisionMaterialOverride entry;
-                entry.material =
-                    physicsMaterialFromPy(material, "material");
+                entry.material = physicsMaterialFromPy(material, "material");
                 return entry;
             },
             py::arg("material"),
@@ -651,8 +647,7 @@ void bind_animation(py::module& m) {
             [](const std::string& bodyName, py::handle material) {
                 CollisionMaterialOverride entry;
                 entry.bodyName = bodyName;
-                entry.material =
-                    physicsMaterialFromPy(material, "material");
+                entry.material = physicsMaterialFromPy(material, "material");
                 return entry;
             },
             py::arg("body_name"), py::arg("material"),
@@ -664,8 +659,7 @@ void bind_animation(py::module& m) {
                 CollisionMaterialOverride entry;
                 entry.bodyName = bodyName;
                 entry.geomName = geomName;
-                entry.material =
-                    physicsMaterialFromPy(material, "material");
+                entry.material = physicsMaterialFromPy(material, "material");
                 return entry;
             },
             py::arg("body_name"), py::arg("geom_name"), py::arg("material"),
@@ -676,12 +670,10 @@ void bind_animation(py::module& m) {
                 CollisionMaterialOverride entry;
                 entry.bodyIndex = bodyIndex;
                 entry.geomIndex = geomIndex;
-                entry.material =
-                    physicsMaterialFromPy(material, "material");
+                entry.material = physicsMaterialFromPy(material, "material");
                 return entry;
             },
-            py::arg("body_index"), py::arg("geom_index"),
-            py::arg("material"),
+            py::arg("body_index"), py::arg("geom_index"), py::arg("material"),
             "Override by imported body index and collision geom index.")
         .def_readwrite("body_index", &CollisionMaterialOverride::bodyIndex,
                        "Matched body index, or -1 for name/all matching.")
@@ -696,11 +688,10 @@ void bind_animation(py::module& m) {
         .def("__repr__", [](const CollisionMaterialOverride& entry) {
             return "CollisionMaterialOverride(body_index=" +
                    std::to_string(entry.bodyIndex) + ", body_name='" +
-                   entry.bodyName + "', geom_index=" +
-                   std::to_string(entry.geomIndex) + ", geom_name='" +
-                   entry.geomName + "', material=" +
-                   py::repr(py::cast(entry.material)).cast<std::string>() +
-                   ")";
+                   entry.bodyName +
+                   "', geom_index=" + std::to_string(entry.geomIndex) +
+                   ", geom_name='" + entry.geomName + "', material=" +
+                   py::repr(py::cast(entry.material)).cast<std::string>() + ")";
         });
 
     anim.def(
