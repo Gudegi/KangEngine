@@ -17,7 +17,8 @@ def package_asset_path(*parts: str) -> str:
 
 
 def default_mjcf_path() -> Path:
-    return Path(package_asset_path("characters", "kw", "kw.xml"))
+    # return Path(package_asset_path("characters", "kw", "kw.xml"))
+    return Path(package_asset_path("external", "unitree_mujoco", "unitree_robots", "g1", "g1_23dof.xml"))
     # return Path(package_asset_path("external", "unitree_mujoco", "unitree_robots", "h2", "h2_mujoco.xml"))
 
 
@@ -29,7 +30,9 @@ class MjcfDofControlApp(ke.App):
     prim_base_path = "/mjcf"
     camera_pos = (3.8, -5.4, 1.2)
     camera_target = (0.0, 0.0, 0.45)
-    visual_color = (0.22, 0.48, 0.95, 1.0)
+    # None preserves per-geom MJCF rgba. Set an RGBA tuple to force a single
+    # override color for the whole articulation.
+    visual_color = None  # np.array([1,1,1, 1.0])
     ground_size = 10.0
     root_pos = (0.0, 0.0, 0.0)
     root_rot_xyzw = (0.0, 0.0, 0.0, 1.0)
@@ -60,7 +63,7 @@ class MjcfDofControlApp(ke.App):
         self.show_collision = False
         self.show_contact_forces = False
         self.contact_force_scale = float(self.default_contact_force_scale)
-        self.contact_force_handle = None
+        self.contact_force_view = None
         self.contact_force_color = np.array([[1.0, 0.25, 0.05, 1.0]], dtype=np.float32)
         self.empty_vec3 = np.empty((0, 3), dtype=np.float32)
         self.empty_vec4 = np.empty((0, 4), dtype=np.float32)
@@ -148,7 +151,7 @@ class MjcfDofControlApp(ke.App):
             config=config,
         ).articulation
 
-        self.articulation_visual_view = self.visual.add_articulation(
+        self.articulation_visual_view = self.visual.add_articulation_scene_graph(
             0,
             self.obj_id,
             self.mjcf_path,
@@ -157,7 +160,11 @@ class MjcfDofControlApp(ke.App):
             shader=self.robot_shader,
             collision_base_path=f"{self.prim_base_path}_collision",
             show_collision=self.show_collision,
-            color=np.array(self.visual_color, dtype=np.float32),
+            color=(
+                None
+                if self.visual_color is None
+                else np.array(self.visual_color, dtype=np.float32)
+            ),
         )
         self.visual_body_prims = self.articulation_visual_view.prims
         # self.collision_body_prims = self.articulation_visual_view.collision_visuals
@@ -254,22 +261,16 @@ class MjcfDofControlApp(ke.App):
         self.check_error()
 
     def onForceDragBegin(self, result, target):
-        if (
-            not self.drag_force_enabled
-            or not result.hit
-            or result.transform_source != ke.TransformSource.ExternalBuffer
-        ):
+        if not self.drag_force_enabled or not result.hit:
             self._clear_drag_force()
             return
 
-        body_id = self.articulation_visual_view.body_id_from_render_handle(
-            result.handle
-        )
-        if body_id is None:
+        pick = self.articulation_visual_view.pick_body(result)
+        if pick is None:
             self._clear_drag_force()
             return
 
-        self._drag_force_body_id = int(body_id)
+        self._drag_force_body_id = int(pick.body_id)
         body_state = self._drag_body_state(self._drag_force_body_id)
         if body_state is None:
             return
@@ -405,11 +406,9 @@ class MjcfDofControlApp(ke.App):
         self._drag_force_target = None
 
     def _clear_contact_force_arrows(self):
-        if self.contact_force_handle is None:
+        if self.contact_force_view is None:
             return
-        ke.scene.DebugDraw.update_arrows(
-            self,
-            self.contact_force_handle,
+        self.contact_force_view.update_arrows(
             self.empty_vec3,
             self.empty_vec3,
             self.empty_vec4,
@@ -452,11 +451,10 @@ class MjcfDofControlApp(ke.App):
         ends = np.asarray(ends, dtype=np.float32)
         colors = np.repeat(self.contact_force_color, starts.shape[0], axis=0)
 
-        if self.contact_force_handle is None:
-            self.contact_force_handle = ke.scene.DebugDraw.log_arrows(
-                self,
-                self.robot_shader,
+        if self.contact_force_view is None:
+            self.contact_force_view = self.scene.log_arrows(
                 "/debug/contact_forces",
+                self.robot_shader,
                 starts,
                 ends,
                 colors,
@@ -464,13 +462,7 @@ class MjcfDofControlApp(ke.App):
                 12,
             )
         else:
-            ke.scene.DebugDraw.update_arrows(
-                self,
-                self.contact_force_handle,
-                starts,
-                ends,
-                colors,
-            )
+            self.contact_force_view.update_arrows(starts, ends, colors)
 
     @staticmethod
     def _vec3_to_np(value) -> np.ndarray:
@@ -497,6 +489,9 @@ class MjcfDofControlApp(ke.App):
         return cls._quat_rotate_xyzw(q, vector)
 
     def _set_visual_alpha(self, alpha: float):
+        if self.visual_color is None:
+            self.articulation_visual_view.set_alpha(alpha)
+            return
         color = np.array(self.visual_color, dtype=np.float32).reshape(-1)
         if color.size == 3:
             color = np.concatenate([color, np.ones(1, dtype=np.float32)])

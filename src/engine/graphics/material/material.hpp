@@ -22,12 +22,36 @@ class Material {
     virtual bool hasNormalMap() const { return false; }
     // Texture sampled by depth-only passes when AlphaMode::Mask is active.
     virtual Backend::Texture* alphaTexture() const { return nullptr; }
+    virtual bool alphaTextureUsesRedChannel() const { return false; }
     virtual Backend::Shader* getShader() const { return _shader; }
     virtual void setShader(Backend::Shader* shader) { _shader = shader; }
 };
 
+// Compatibility material for legacy shader-only renderables.
+//
+// It intentionally owns no surface parameters: common.fs/commonTex.fs consume
+// per-instance vColor and any texture slots that MeshInstancer binds. This lets
+// the scene/render path treat shader-only objects as material-backed without
+// changing their visual behavior.
+class VertexColorMaterial : public Material {
+  public:
+    explicit VertexColorMaterial(Backend::Shader* shader = nullptr) {
+        setShader(shader);
+    }
+
+    void bind() override {
+        if (_shader)
+            _shader->use();
+    }
+
+    void unbind() override {}
+};
+
 class PhongMaterial : public Material {
   public:
+    PhongMaterial() = default;
+    explicit PhongMaterial(Backend::Shader* shader) { setShader(shader); }
+
     // Properties
     glm::vec3 ambient = glm::vec3(0.1f);
     glm::vec3 diffuse = glm::vec3(1.0f);
@@ -37,6 +61,7 @@ class PhongMaterial : public Material {
     // Textures
     Backend::Texture* diffuseMap = nullptr;
     Backend::Texture* specularMap = nullptr;
+    Backend::Texture* alphaMap = nullptr;
     Backend::Texture* normalMap = nullptr;
 
     PhongMaterial* setAmbient(glm::vec3 v) {
@@ -47,11 +72,43 @@ class PhongMaterial : public Material {
         diffuse = v;
         return this;
     }
+    PhongMaterial* setSpecular(glm::vec3 v) {
+        specular = v;
+        return this;
+    }
+    PhongMaterial* setShininess(float v) {
+        shininess = v;
+        return this;
+    }
+    PhongMaterial* setDiffuseMap(Backend::Texture* texture) {
+        diffuseMap = texture;
+        return this;
+    }
+    PhongMaterial* setSpecularMap(Backend::Texture* texture) {
+        specularMap = texture;
+        return this;
+    }
+    PhongMaterial* setAlphaMap(Backend::Texture* texture) {
+        alphaMap = texture;
+        return this;
+    }
+    PhongMaterial* setNormalMap(Backend::Texture* texture) {
+        normalMap = texture;
+        return this;
+    }
 
     bool hasNormalMap() const override { return normalMap != nullptr; }
-    Backend::Texture* alphaTexture() const override { return diffuseMap; }
+    Backend::Texture* alphaTexture() const override {
+        return alphaMap ? alphaMap : diffuseMap;
+    }
+    bool alphaTextureUsesRedChannel() const override {
+        // for an alpha mask only texture(normally stored in red channel)
+        return alphaMap != nullptr;
+    }
 
     void bind() override {
+        if (!_shader)
+            return;
         _shader->use();
         _shader->setVec3("material.ambient", ambient);
         _shader->setVec3("material.diffuse", diffuse);
@@ -64,6 +121,19 @@ class PhongMaterial : public Material {
             _shader->setInt("material.diffuseMap",
                             RendererTextureSlot::Diffuse);
         }
+        _shader->setInt("useDiffuseMap", diffuseMap ? 1 : 0);
+        if (specularMap) {
+            specularMap->bind(RendererTextureSlot::Specular);
+            _shader->setInt("specularMap", RendererTextureSlot::Specular);
+            _shader->setInt("material.specularMap",
+                            RendererTextureSlot::Specular);
+        }
+        _shader->setInt("useSpecularMap", specularMap ? 1 : 0);
+        if (alphaMap) {
+            alphaMap->bind(RendererTextureSlot::Alpha);
+            _shader->setInt("alphaMap", RendererTextureSlot::Alpha);
+        }
+        _shader->setInt("useAlphaMap", alphaMap ? 1 : 0);
         if (normalMap) {
             normalMap->bind(RendererTextureSlot::Normal);
             _shader->setInt("normalMap", RendererTextureSlot::Normal);
@@ -95,6 +165,9 @@ class PhongMaterial : public Material {
 
 class PBRMaterial : public Material {
   public:
+    PBRMaterial() = default;
+    explicit PBRMaterial(Backend::Shader* shader) { setShader(shader); }
+
     glm::vec4 baseColor = glm::vec4(1.0f);
     float metallic = 0.0f;
     float roughness = 0.5f;
@@ -113,7 +186,62 @@ class PBRMaterial : public Material {
     bool hasNormalMap() const override { return normalTexture != nullptr; }
     Backend::Texture* alphaTexture() const override { return baseColorTexture; }
 
+    PBRMaterial* setBaseColor(glm::vec4 v) {
+        baseColor = v;
+        return this;
+    }
+    PBRMaterial* setMetallic(float v) {
+        metallic = v;
+        return this;
+    }
+    PBRMaterial* setRoughness(float v) {
+        roughness = v;
+        return this;
+    }
+    PBRMaterial* setEmissiveColor(glm::vec3 v) {
+        emissiveColor = v;
+        return this;
+    }
+    PBRMaterial* setEmissiveStrength(float v) {
+        emissiveStrength = v;
+        return this;
+    }
+    PBRMaterial* setBaseColorTexture(Backend::Texture* texture) {
+        baseColorTexture = texture;
+        return this;
+    }
+    PBRMaterial* setNormalTexture(Backend::Texture* texture) {
+        normalTexture = texture;
+        return this;
+    }
+    PBRMaterial* setMetallicRoughnessTexture(Backend::Texture* texture) {
+        metallicRoughnessTexture = texture;
+        return this;
+    }
+    PBRMaterial* setMetallicTexture(Backend::Texture* texture) {
+        metallicTexture = texture;
+        return this;
+    }
+    PBRMaterial* setRoughnessTexture(Backend::Texture* texture) {
+        roughnessTexture = texture;
+        return this;
+    }
+    PBRMaterial* setAoTexture(Backend::Texture* texture) {
+        aoTexture = texture;
+        return this;
+    }
+    PBRMaterial* setOrmTexture(Backend::Texture* texture) {
+        ormTexture = texture;
+        return this;
+    }
+    PBRMaterial* setEmissiveTexture(Backend::Texture* texture) {
+        emissiveTexture = texture;
+        return this;
+    }
+
     void bind() override {
+        if (!_shader)
+            return;
         _shader->use();
         _shader->setVec4("uBaseColorFactor", baseColor);
         _shader->setFloat("uMetallicFactor", metallic);

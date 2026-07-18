@@ -12,8 +12,21 @@
 #include "engine/core/app/app.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/scene/debug_draw.hpp"
+#include "engine/scene/component/transform_component.hpp"
+#include "engine/scene/component/mesh_component.hpp"
+#include "engine/scene/component/render_component.hpp"
+#include "engine/scene/component/light_component.hpp"
+#include "engine/scene/component/camera_component.hpp"
+#include "engine/scene/component/material_binding_component.hpp"
+#include "engine/scene/component/resource_component.hpp"
+#include "engine/scene/component/articulation_component.hpp"
+#include "engine/scene/component/articulation_binding_component.hpp"
+#include "engine/scene/component/collision_shape_component.hpp"
+#include "engine/scene/component/scene_render_system.hpp"
+#include "engine/scene/scene_resource_manager.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/native/token.hpp"
+#include "engine/graphics/material/material.hpp"
 #include "py_array_view.hpp"
 
 #ifdef KANGENGINE_USE_USD
@@ -53,6 +66,37 @@ void bind_scene(py::module& m) {
         .value("MeshInstance", KE::Scene::PrimType::MeshInstance)
         .value("Camera", KE::Scene::PrimType::Camera)
         .value("Light", KE::Scene::PrimType::Light)
+        .value("Resource", KE::Scene::PrimType::Resource)
+        .export_values();
+
+    py::enum_<KE::Scene::ResourceType>(
+        scene, "ResourceType",
+        "Kind of shared resource represented by a ResourceComponent.")
+        .value("Unknown", KE::Scene::ResourceType::Unknown)
+        .value("Mesh", KE::Scene::ResourceType::Mesh)
+        .value("Material", KE::Scene::ResourceType::Material)
+        .value("Texture", KE::Scene::ResourceType::Texture)
+        .value("Shader", KE::Scene::ResourceType::Shader)
+        .export_values();
+    scene.attr("InvalidResourceHandle") =
+        py::int_(KE::Scene::InvalidResourceHandle);
+
+    py::enum_<KE::Scene::ArticulationPrimRole>(
+        scene, "ArticulationPrimRole",
+        "Role of a Prim inside an articulated character/robot.")
+        .value("Root", KE::Scene::ArticulationPrimRole::Root)
+        .value("BodyFrame", KE::Scene::ArticulationPrimRole::BodyFrame)
+        .value("VisualGeom", KE::Scene::ArticulationPrimRole::VisualGeom)
+        .value("CollisionGeom", KE::Scene::ArticulationPrimRole::CollisionGeom)
+        .export_values();
+
+    py::enum_<KE::Scene::CollisionShapeType>(
+        scene, "CollisionShapeType",
+        "Primitive collision shape type mirrored onto debug collision prims.")
+        .value("Sphere", KE::Scene::CollisionShapeType::Sphere)
+        .value("Capsule", KE::Scene::CollisionShapeType::Capsule)
+        .value("Cylinder", KE::Scene::CollisionShapeType::Cylinder)
+        .value("Box", KE::Scene::CollisionShapeType::Box)
         .export_values();
 
     py::enum_<KE::Scene::ManipulationPolicy>(
@@ -72,6 +116,626 @@ void bind_scene(py::module& m) {
         .value("Point", KE::Scene::LightType::Point)
         .value("Spot", KE::Scene::LightType::Spot)
         .export_values();
+
+    py::enum_<KE::Scene::CameraProjectionType>(
+        scene, "CameraProjectionType",
+        "Projection mode used by scene CameraComponent.")
+        .value("Perspective", KE::Scene::CameraProjectionType::Perspective)
+        .value("Orthographic", KE::Scene::CameraProjectionType::Orthographic)
+        .export_values();
+
+    py::class_<KE::Scene::RenderComponent,
+               std::shared_ptr<KE::Scene::RenderComponent>>(
+        scene, "RenderComponent",
+        "Renderer-independent visual state attached to one scene prim. "
+        "Renderer handles are owned by SceneRenderSystem, not by this object.")
+        .def_property_readonly("attached",
+                               &KE::Scene::RenderComponent::isAttached,
+                               "Return whether this component is attached.")
+        .def_property_readonly("owner", &KE::Scene::RenderComponent::owner,
+                               py::return_value_policy::reference,
+                               "Return the owning prim, or None after detach.")
+        .def_property("visible", &KE::Scene::RenderComponent::isVisible,
+                      &KE::Scene::RenderComponent::setVisible,
+                      "Get or set local render visibility. Registered "
+                      "components sync this change to the renderer.")
+        .def_property("double_sided",
+                      &KE::Scene::RenderComponent::isDoubleSided,
+                      &KE::Scene::RenderComponent::setDoubleSided,
+                      "Get or set double-sided rendering. Registered "
+                      "components sync this change to the renderer.")
+        .def_property("casts_shadow", &KE::Scene::RenderComponent::castsShadow,
+                      &KE::Scene::RenderComponent::setCastsShadow,
+                      "Get or set shadow casting. Registered components sync "
+                      "this change to the renderer.")
+        .def_property_readonly("alpha_mode",
+                               &KE::Scene::RenderComponent::alphaMode,
+                               "Return the alpha rendering mode.")
+        .def_property_readonly("alpha_cutoff",
+                               &KE::Scene::RenderComponent::alphaCutoff,
+                               "Return the alpha-mask cutoff.")
+        .def_property("transform_source",
+                      &KE::Scene::RenderComponent::transformSource,
+                      &KE::Scene::RenderComponent::setTransformSource,
+                      "Get or set the transform data source.")
+        .def_property_readonly("mesh_data",
+                               &KE::Scene::RenderComponent::resolveMeshData,
+                               "Resolve mesh data from the owning prim.")
+        .def_property_readonly("version", &KE::Scene::RenderComponent::version,
+                               "Return the visual state version.")
+        .def("__repr__", [](const KE::Scene::RenderComponent& c) {
+            const KE::Scene::Prim* owner = c.owner();
+            const std::string path = owner ? owner->getPath() : "<detached>";
+            return "<RenderComponent path='" + path +
+                   "' version=" + std::to_string(c.version()) + ">";
+        });
+
+    py::class_<KE::Scene::TransformComponent,
+               std::shared_ptr<KE::Scene::TransformComponent>>(
+        scene, "TransformComponent",
+        "Local/world transform state attached to every scene prim.")
+        .def_property_readonly("attached",
+                               &KE::Scene::TransformComponent::isAttached,
+                               "Return whether this component is attached.")
+        .def_property_readonly("owner", &KE::Scene::TransformComponent::owner,
+                               py::return_value_policy::reference,
+                               "Return the owning prim, or None after detach.")
+        .def_property_readonly("version",
+                               &KE::Scene::TransformComponent::version,
+                               "Return the transform state version.")
+        .def("set_local_translation",
+             &KE::Scene::TransformComponent::setLocalTranslation,
+             py::arg("translation"), "Set local translation.")
+        .def("set_local_scale", &KE::Scene::TransformComponent::setLocalScale,
+             py::arg("scale"), "Set local scale.")
+        .def("set_local_rotation",
+             &KE::Scene::TransformComponent::setLocalRotation,
+             py::arg("rotation"), "Set local rotation.")
+        .def("set_local_matrix", &KE::Scene::TransformComponent::setLocalMatrix,
+             py::arg("matrix"), "Set the local transform matrix.")
+        .def("set_world_translation",
+             &KE::Scene::TransformComponent::setWorldTranslation,
+             py::arg("translation"), "Set world translation.")
+        .def("set_world_rotation",
+             &KE::Scene::TransformComponent::setWorldRotation,
+             py::arg("rotation"), "Set world rotation.")
+        .def("set_world_matrix", &KE::Scene::TransformComponent::setWorldMatrix,
+             py::arg("matrix"), "Set the world transform matrix.")
+        .def("compute_local_matrix",
+             &KE::Scene::TransformComponent::computeLocalMatrix,
+             "Return the cached/computed local matrix.")
+        .def("compute_world_matrix",
+             &KE::Scene::TransformComponent::computeWorldMatrix,
+             "Return the cached/computed world matrix.")
+        .def("compute_model_matrix",
+             &KE::Scene::TransformComponent::computeModelMatrix,
+             "Return the model matrix, currently equal to world matrix.")
+        .def("__repr__", [](const KE::Scene::TransformComponent& c) {
+            const KE::Scene::Prim* owner = c.owner();
+            const std::string path = owner ? owner->getPath() : "<detached>";
+            return "<TransformComponent path='" + path +
+                   "' version=" + std::to_string(c.version()) + ">";
+        });
+
+    py::class_<KE::Scene::MeshComponent,
+               std::shared_ptr<KE::Scene::MeshComponent>>(
+        scene, "MeshComponent",
+        "Geometry payload/reference attached to a renderable mesh prim.")
+        .def_property_readonly("attached",
+                               &KE::Scene::MeshComponent::isAttached,
+                               "Return whether this component is attached.")
+        .def_property_readonly("owner", &KE::Scene::MeshComponent::owner,
+                               py::return_value_policy::reference,
+                               "Return the owning prim, or None after detach.")
+        .def_property("mesh_data", &KE::Scene::MeshComponent::meshData,
+                      &KE::Scene::MeshComponent::setMeshData,
+                      "Get or set directly attached mesh data.")
+        .def_property("mesh_source_path",
+                      &KE::Scene::MeshComponent::meshSourcePath,
+                      &KE::Scene::MeshComponent::setMeshSourcePath,
+                      "Get or set the source path for MeshInstance prims.")
+        .def_property("resource_handle",
+                      &KE::Scene::MeshComponent::resourceHandle,
+                      &KE::Scene::MeshComponent::setResourceHandle,
+                      "Get or set the optional SceneResourceManager handle.")
+        .def("resolve_mesh_data", &KE::Scene::MeshComponent::resolveMeshData,
+             "Return direct mesh data or resolved source mesh data.")
+        .def_property_readonly("version", &KE::Scene::MeshComponent::version,
+                               "Return the mesh component version.")
+        .def("__repr__", [](const KE::Scene::MeshComponent& c) {
+            const KE::Scene::Prim* owner = c.owner();
+            const std::string path = owner ? owner->getPath() : "<detached>";
+            return "<MeshComponent path='" + path +
+                   "' version=" + std::to_string(c.version()) + ">";
+        });
+
+    py::class_<KE::Scene::MaterialBindingComponent,
+               std::shared_ptr<KE::Scene::MaterialBindingComponent>>(
+        scene, "MaterialBindingComponent",
+        "Scene-level non-owning binding from one prim to a renderer material.")
+        .def_property_readonly("attached",
+                               &KE::Scene::MaterialBindingComponent::isAttached,
+                               "Return whether this component is attached.")
+        .def_property_readonly("owner",
+                               &KE::Scene::MaterialBindingComponent::owner,
+                               py::return_value_policy::reference,
+                               "Return the owning prim, or None after detach.")
+        .def_property(
+            "material", &KE::Scene::MaterialBindingComponent::material,
+            &KE::Scene::MaterialBindingComponent::setMaterial,
+            py::return_value_policy::reference,
+            "Get or set the bound material. The component does not own it.")
+        .def("clear_material",
+             &KE::Scene::MaterialBindingComponent::clearMaterial,
+             "Clear the material binding.")
+        .def_property_readonly("version",
+                               &KE::Scene::MaterialBindingComponent::version,
+                               "Return the material binding version.")
+        .def("__repr__", [](const KE::Scene::MaterialBindingComponent& c) {
+            const KE::Scene::Prim* owner = c.owner();
+            const std::string path = owner ? owner->getPath() : "<detached>";
+            return "<MaterialBindingComponent path='" + path +
+                   "' version=" + std::to_string(c.version()) + ">";
+        });
+
+    py::class_<KE::Scene::ResourceComponent,
+               std::shared_ptr<KE::Scene::ResourceComponent>>(
+        scene, "ResourceComponent",
+        "Lightweight resource metadata attached to a Resource prim.")
+        .def_property_readonly("attached",
+                               &KE::Scene::ResourceComponent::isAttached,
+                               "Return whether this component is attached.")
+        .def_property_readonly("owner", &KE::Scene::ResourceComponent::owner,
+                               py::return_value_policy::reference,
+                               "Return the owning prim, or None after detach.")
+        .def_property("type", &KE::Scene::ResourceComponent::type,
+                      &KE::Scene::ResourceComponent::setType,
+                      "Get or set the resource type.")
+        .def_property("handle", &KE::Scene::ResourceComponent::handle,
+                      &KE::Scene::ResourceComponent::setHandle,
+                      "Get or set the SceneResourceManager handle.")
+        .def_property("uri", &KE::Scene::ResourceComponent::uri,
+                      &KE::Scene::ResourceComponent::setUri,
+                      "Get or set the resource URI/path.")
+        .def_property("display_name",
+                      &KE::Scene::ResourceComponent::displayName,
+                      &KE::Scene::ResourceComponent::setDisplayName,
+                      "Get or set a user-facing resource name.")
+        .def_property_readonly("version",
+                               &KE::Scene::ResourceComponent::version,
+                               "Return the resource metadata version.")
+        .def("__repr__", [](const KE::Scene::ResourceComponent& c) {
+            const KE::Scene::Prim* owner = c.owner();
+            const std::string path = owner ? owner->getPath() : "<detached>";
+            return "<ResourceComponent path='" + path +
+                   "' version=" + std::to_string(c.version()) + ">";
+        });
+
+    py::class_<KE::Scene::ArticulationComponent,
+               std::shared_ptr<KE::Scene::ArticulationComponent>>(
+        scene, "ArticulationComponent",
+        "Root-level metadata for an articulated object subtree.")
+        .def_property_readonly("attached",
+                               &KE::Scene::ArticulationComponent::isAttached,
+                               "Return whether this component is attached.")
+        .def_property_readonly("owner",
+                               &KE::Scene::ArticulationComponent::owner,
+                               py::return_value_policy::reference,
+                               "Return the owning prim, or None after detach.")
+        .def_property("asset_path",
+                      &KE::Scene::ArticulationComponent::assetPath,
+                      &KE::Scene::ArticulationComponent::setAssetPath,
+                      "Imported articulation asset path or URI.")
+        .def_property("root_path", &KE::Scene::ArticulationComponent::rootPath,
+                      &KE::Scene::ArticulationComponent::setRootPath,
+                      "Scene root prim path for this articulation.")
+        .def_property("mesh_asset_base_path",
+                      &KE::Scene::ArticulationComponent::meshAssetBasePath,
+                      &KE::Scene::ArticulationComponent::setMeshAssetBasePath,
+                      "Shared mesh resource base path, if any.")
+        .def_property("body_count",
+                      &KE::Scene::ArticulationComponent::bodyCount,
+                      &KE::Scene::ArticulationComponent::setBodyCount,
+                      "Number of body frame prims.")
+        .def_property("render_prim_count",
+                      &KE::Scene::ArticulationComponent::renderPrimCount,
+                      &KE::Scene::ArticulationComponent::setRenderPrimCount,
+                      "Number of renderable visual prims.")
+        .def_property("split_visual_geoms",
+                      &KE::Scene::ArticulationComponent::splitVisualGeoms,
+                      &KE::Scene::ArticulationComponent::setSplitVisualGeoms,
+                      "Whether visual geoms were instantiated as split child "
+                      "prims.")
+        .def("set_articulation_metadata",
+             &KE::Scene::ArticulationComponent::setArticulationMetadata,
+             py::arg("root_path"), py::arg("asset_path"),
+             py::arg("mesh_asset_base_path"), py::arg("body_count"),
+             py::arg("render_prim_count"), py::arg("split_visual_geoms"),
+             "Set all root articulation metadata fields at once.")
+        .def_property_readonly("version",
+                               &KE::Scene::ArticulationComponent::version,
+                               "Return the articulation metadata version.")
+        .def("__repr__", [](const KE::Scene::ArticulationComponent& c) {
+            const KE::Scene::Prim* owner = c.owner();
+            const std::string path = owner ? owner->getPath() : "<detached>";
+            return "<ArticulationComponent path='" + path +
+                   "' body_count=" + std::to_string(c.bodyCount()) +
+                   " render_prim_count=" + std::to_string(c.renderPrimCount()) +
+                   ">";
+        });
+
+    py::class_<KE::Scene::ArticulationBindingComponent,
+               std::shared_ptr<KE::Scene::ArticulationBindingComponent>>(
+        scene, "ArticulationBindingComponent",
+        "Metadata binding a Prim to an articulated body/frame.")
+        .def_property_readonly(
+            "attached", &KE::Scene::ArticulationBindingComponent::isAttached,
+            "Return whether this component is attached.")
+        .def_property_readonly("owner",
+                               &KE::Scene::ArticulationBindingComponent::owner,
+                               py::return_value_policy::reference,
+                               "Return the owning prim, or None after detach.")
+        .def_property("role", &KE::Scene::ArticulationBindingComponent::role,
+                      &KE::Scene::ArticulationBindingComponent::setRole,
+                      "Role of this prim inside the articulation.")
+        .def_property("body_index",
+                      &KE::Scene::ArticulationBindingComponent::bodyIndex,
+                      &KE::Scene::ArticulationBindingComponent::setBodyIndex,
+                      "Articulation body index this prim belongs to.")
+        .def_property("body_name",
+                      &KE::Scene::ArticulationBindingComponent::bodyName,
+                      &KE::Scene::ArticulationBindingComponent::setBodyName,
+                      "Articulation body name this prim belongs to.")
+        .def_property(
+            "articulation_root_path",
+            &KE::Scene::ArticulationBindingComponent::articulationRootPath,
+            &KE::Scene::ArticulationBindingComponent::setArticulationRootPath,
+            "Root prim path of the owning articulation.")
+        .def("set_binding",
+             &KE::Scene::ArticulationBindingComponent::setBinding,
+             py::arg("role"), py::arg("body_index"), py::arg("body_name"),
+             py::arg("articulation_root_path"),
+             "Set all binding fields at once.")
+        .def_property_readonly(
+            "version", &KE::Scene::ArticulationBindingComponent::version,
+            "Return the articulation binding version.")
+        .def("__repr__", [](const KE::Scene::ArticulationBindingComponent& c) {
+            const KE::Scene::Prim* owner = c.owner();
+            const std::string path = owner ? owner->getPath() : "<detached>";
+            return "<ArticulationBindingComponent path='" + path +
+                   "' role=" + KE::Scene::articulationPrimRoleLabel(c.role()) +
+                   " body_index=" + std::to_string(c.bodyIndex()) + ">";
+        });
+
+    py::class_<KE::Scene::CollisionShapeComponent,
+               std::shared_ptr<KE::Scene::CollisionShapeComponent>>(
+        scene, "CollisionShapeComponent",
+        "Scene-side metadata for a collision shape debug prim.")
+        .def_property_readonly("attached",
+                               &KE::Scene::CollisionShapeComponent::isAttached,
+                               "Return whether this component is attached.")
+        .def_property_readonly("owner",
+                               &KE::Scene::CollisionShapeComponent::owner,
+                               py::return_value_policy::reference,
+                               "Return the owning prim, or None after detach.")
+        .def_property_readonly("shape_type",
+                               &KE::Scene::CollisionShapeComponent::shapeType,
+                               "Primitive collision shape type.")
+        .def_property_readonly(
+            "size",
+            [](const KE::Scene::CollisionShapeComponent& c) {
+                return c.size();
+            },
+            "Shape size descriptor. Interpretation depends on shape type.")
+        .def_property_readonly(
+            "local_position",
+            [](const KE::Scene::CollisionShapeComponent& c) {
+                return c.localPosition();
+            },
+            "Body-local collision shape position.")
+        .def_property_readonly(
+            "local_rotation",
+            [](const KE::Scene::CollisionShapeComponent& c) {
+                return c.localRotation();
+            },
+            "Body-local collision shape rotation.")
+        .def_property_readonly("has_from_to",
+                               &KE::Scene::CollisionShapeComponent::hasFromTo,
+                               "Whether this shape was authored by from/to.")
+        .def_property_readonly(
+            "from_position",
+            [](const KE::Scene::CollisionShapeComponent& c) {
+                return c.fromPosition();
+            },
+            "Body-local from endpoint when has_from_to is true.")
+        .def_property_readonly(
+            "to_position",
+            [](const KE::Scene::CollisionShapeComponent& c) {
+                return c.toPosition();
+            },
+            "Body-local to endpoint when has_from_to is true.")
+        .def_property_readonly(
+            "static_friction",
+            &KE::Scene::CollisionShapeComponent::staticFriction,
+            "Reference PhysX static friction.")
+        .def_property_readonly(
+            "dynamic_friction",
+            &KE::Scene::CollisionShapeComponent::dynamicFriction,
+            "Reference PhysX dynamic friction.")
+        .def_property_readonly("restitution",
+                               &KE::Scene::CollisionShapeComponent::restitution,
+                               "Reference PhysX restitution.")
+        .def_property_readonly(
+            "condim", &KE::Scene::CollisionShapeComponent::condim,
+            "Imported MuJoCo contact dimensionality, if any.")
+        .def_property_readonly(
+            "margin", &KE::Scene::CollisionShapeComponent::margin,
+            "Imported MuJoCo margin mapped to contactOffset, if any.")
+        .def_property_readonly(
+            "source_geom_index",
+            &KE::Scene::CollisionShapeComponent::sourceGeomIndex,
+            "Index of the source collision geom inside the body descriptor.")
+        .def_property_readonly("version",
+                               &KE::Scene::CollisionShapeComponent::version,
+                               "Return the collision shape metadata version.")
+        .def("__repr__", [](const KE::Scene::CollisionShapeComponent& c) {
+            const KE::Scene::Prim* owner = c.owner();
+            const std::string path = owner ? owner->getPath() : "<detached>";
+            return "<CollisionShapeComponent path='" + path + "' shape=" +
+                   KE::Scene::collisionShapeTypeLabel(c.shapeType()) +
+                   " geom_index=" + std::to_string(c.sourceGeomIndex()) + ">";
+        });
+
+    py::class_<KE::Scene::SceneResourceManager>(
+        scene, "SceneResourceManager",
+        "Scene resource manager mirrored into metadata-only /.Resources prims.")
+        .def(py::init<KE::Scene::SceneBackend*>(), py::arg("scene") = nullptr,
+             "Create a SceneResourceManager optionally bound to a scene "
+             "backend.")
+        .def("bind_scene", &KE::Scene::SceneResourceManager::bindScene,
+             py::arg("scene"), "Bind the scene used for Resource prim mirrors.")
+        .def("register_mesh", &KE::Scene::SceneResourceManager::registerMesh,
+             py::arg("name"), py::arg("mesh"), py::arg("uri") = "",
+             "Register mesh data and return a resource handle.")
+        .def("register_material",
+             &KE::Scene::SceneResourceManager::registerMaterial,
+             py::arg("name"), py::arg("material"), py::arg("uri") = "",
+             "Register a non-owned material and return a resource handle.")
+        .def("register_texture",
+             &KE::Scene::SceneResourceManager::registerTexture, py::arg("name"),
+             py::arg("texture"), py::arg("uri") = "",
+             "Register a non-owned texture and return a resource handle.")
+        .def("register_shader",
+             &KE::Scene::SceneResourceManager::registerShader, py::arg("name"),
+             py::arg("shader"), py::arg("uri") = "",
+             "Register a non-owned shader and return a resource handle.")
+        .def("mesh", &KE::Scene::SceneResourceManager::mesh, py::arg("handle"),
+             "Return mesh data for a handle, or None.")
+        .def("material", &KE::Scene::SceneResourceManager::material,
+             py::arg("handle"), py::return_value_policy::reference,
+             "Return material for a handle, or None.")
+        .def("texture", &KE::Scene::SceneResourceManager::texture,
+             py::arg("handle"), py::return_value_policy::reference,
+             "Return texture for a handle, or None.")
+        .def("shader", &KE::Scene::SceneResourceManager::shader,
+             py::arg("handle"), py::return_value_policy::reference,
+             "Return shader for a handle, or None.")
+        .def("resource_prim", &KE::Scene::SceneResourceManager::resourcePrim,
+             py::arg("handle"), py::return_value_policy::reference,
+             "Return mirrored Resource prim for a handle, or None.")
+        .def("usage_count", &KE::Scene::SceneResourceManager::usageCount,
+             py::arg("handle"),
+             "Return how many scene prim bindings currently reference this "
+             "resource.")
+        .def("usage_paths", &KE::Scene::SceneResourceManager::usagePaths,
+             py::arg("handle"),
+             "Return scene prim paths that currently reference this resource.")
+        .def("is_used", &KE::Scene::SceneResourceManager::isUsed,
+             py::arg("handle"),
+             "Return whether at least one scene prim binding references this "
+             "resource.")
+        .def("invalidate_usage_cache",
+             &KE::Scene::SceneResourceManager::invalidateUsageCache,
+             "Mark cached resource usage counts dirty after direct scene or "
+             "material mutation.")
+        .def("clear", &KE::Scene::SceneResourceManager::clear)
+        .def("__len__", &KE::Scene::SceneResourceManager::size);
+
+    py::class_<KE::Scene::LightComponent,
+               std::shared_ptr<KE::Scene::LightComponent>>(
+        scene, "LightComponent",
+        "Renderer-independent light state attached to one Light prim.")
+        .def_property_readonly("attached",
+                               &KE::Scene::LightComponent::isAttached,
+                               "Return whether this component is attached.")
+        .def_property_readonly("owner", &KE::Scene::LightComponent::owner,
+                               py::return_value_policy::reference,
+                               "Return the owning prim, or None after detach.")
+        .def_property_readonly("type", &KE::Scene::LightComponent::type,
+                               "Return the immutable light subtype.")
+        .def_property_readonly("version", &KE::Scene::LightComponent::version,
+                               "Return the light state version.")
+        .def("set_directional_light",
+             &KE::Scene::LightComponent::setDirectionalLight, py::arg("light"),
+             "Set this component from directional light data.")
+        .def("directional_light", &KE::Scene::LightComponent::directionalLight,
+             "Return directional light data in world space.")
+        .def("set_point_light", &KE::Scene::LightComponent::setPointLight,
+             py::arg("light"), "Set this component from point light data.")
+        .def("point_light", &KE::Scene::LightComponent::pointLight,
+             "Return point light data in world space.")
+        .def("set_spot_light", &KE::Scene::LightComponent::setSpotLight,
+             py::arg("light"), "Set this component from spot light data.")
+        .def("spot_light", &KE::Scene::LightComponent::spotLight,
+             "Return spot light data in world space.")
+        .def("__repr__", [](const KE::Scene::LightComponent& c) {
+            const KE::Scene::Prim* owner = c.owner();
+            const std::string path = owner ? owner->getPath() : "<detached>";
+            return "<LightComponent path='" + path +
+                   "' version=" + std::to_string(c.version()) + ">";
+        });
+
+    py::class_<KE::Scene::CameraComponent,
+               std::shared_ptr<KE::Scene::CameraComponent>>(
+        scene, "CameraComponent",
+        "Renderer-independent authored camera state attached to one Camera "
+        "prim.")
+        .def_property_readonly("attached",
+                               &KE::Scene::CameraComponent::isAttached,
+                               "Return whether this component is attached.")
+        .def_property_readonly("owner", &KE::Scene::CameraComponent::owner,
+                               py::return_value_policy::reference,
+                               "Return the owning prim, or None after detach.")
+        .def_property_readonly("projection_type",
+                               &KE::Scene::CameraComponent::projectionType,
+                               "Return the camera projection mode.")
+        .def_property_readonly("version", &KE::Scene::CameraComponent::version,
+                               "Return the camera state version.")
+        .def("set_perspective", &KE::Scene::CameraComponent::setPerspective,
+             py::arg("vertical_fov_degrees"), py::arg("near_plane"),
+             py::arg("far_plane"), "Set perspective projection settings.")
+        .def("set_orthographic", &KE::Scene::CameraComponent::setOrthographic,
+             py::arg("vertical_size"), py::arg("near_plane"),
+             py::arg("far_plane"), "Set orthographic projection settings.")
+        .def("vertical_fov_degrees",
+             &KE::Scene::CameraComponent::verticalFovDegrees,
+             "Return perspective vertical field of view in degrees.")
+        .def("orthographic_size", &KE::Scene::CameraComponent::orthographicSize,
+             "Return orthographic vertical size.")
+        .def("near_plane", &KE::Scene::CameraComponent::nearPlane,
+             "Return near clipping distance.")
+        .def("far_plane", &KE::Scene::CameraComponent::farPlane,
+             "Return far clipping distance.")
+        .def("position", &KE::Scene::CameraComponent::position,
+             "Return world-space camera position from the owning Prim "
+             "transform.")
+        .def("forward", &KE::Scene::CameraComponent::forward,
+             "Return world-space camera forward direction.")
+        .def("up", &KE::Scene::CameraComponent::up,
+             "Return world-space camera up direction.")
+        .def("view_matrix", &KE::Scene::CameraComponent::viewMatrix,
+             "Return view matrix from the owning Prim transform.")
+        .def("projection_matrix", &KE::Scene::CameraComponent::projectionMatrix,
+             py::arg("aspect"), "Return projection matrix for an aspect ratio.")
+        .def("view_projection_matrix",
+             &KE::Scene::CameraComponent::viewProjectionMatrix,
+             py::arg("aspect"),
+             "Return projection * view matrix for an aspect ratio.")
+        .def("__repr__", [](const KE::Scene::CameraComponent& c) {
+            const KE::Scene::Prim* owner = c.owner();
+            const std::string path = owner ? owner->getPath() : "<detached>";
+            return "<CameraComponent path='" + path +
+                   "' version=" + std::to_string(c.version()) + ">";
+        });
+
+    py::class_<KE::Scene::SceneRenderSystem>(
+        scene, "SceneRenderSystem",
+        "Registry connecting scene RenderComponents to renderer resources. "
+        "This hides raw renderable handles for normal scene use.")
+        .def_property_readonly(
+            "registration_count",
+            &KE::Scene::SceneRenderSystem::registrationCount,
+            "Return the number of registered render components.")
+        .def("is_registered", &KE::Scene::SceneRenderSystem::isRegistered,
+             py::arg("component"),
+             "Return whether a render component owns renderer resources.")
+        .def("shares_batch", &KE::Scene::SceneRenderSystem::sharesBatch,
+             py::arg("first"), py::arg("second"),
+             "Return whether two components share one renderer batch without "
+             "exposing the raw handle.")
+        .def("set_double_sided", &KE::Scene::SceneRenderSystem::setDoubleSided,
+             py::arg("component"), py::arg("enabled") = true,
+             "Set double-sided rendering through component registration.")
+        .def("set_casts_shadow", &KE::Scene::SceneRenderSystem::setCastsShadow,
+             py::arg("component"), py::arg("enabled") = true,
+             "Set shadow casting through component registration.")
+        .def("set_alpha_mode", &KE::Scene::SceneRenderSystem::setAlphaMode,
+             py::arg("component"), py::arg("mode"), py::arg("cutoff") = 0.5f,
+             "Set alpha rendering through component registration.")
+        .def("set_material", &KE::Scene::SceneRenderSystem::setMaterial,
+             py::arg("component"), py::arg("material"),
+             "Replace a registered SceneGraph renderable's material and move "
+             "it to the matching renderer batch. ExternalBuffer renderables "
+             "reject dynamic material replacement.")
+        .def(
+            "set_texture",
+            [](KE::Scene::SceneRenderSystem& self,
+               KE::Scene::RenderComponent& component,
+               KE::Backend::Texture* texture, KE::TextureRole role) {
+                self.setTexture(component, texture, role);
+            },
+            py::arg("component"), py::arg("texture"), py::arg("role"),
+            "Set a texture by material role through component registration.")
+        .def(
+            "set_texture",
+            [](KE::Scene::SceneRenderSystem& self,
+               KE::Scene::RenderComponent& component,
+               KE::Backend::Texture* texture,
+               int slot) { self.setTexture(component, texture, slot); },
+            py::arg("component"), py::arg("texture"), py::arg("slot") = 0,
+            "Set a texture by raw renderer slot through component "
+            "registration.")
+        .def("set_external_buffer",
+             &KE::Scene::SceneRenderSystem::setExternalBuffer,
+             py::arg("component"), py::arg("descriptor"),
+             "Attach an external transform buffer through registration.")
+        .def(
+            "update_instances",
+            [](KE::Scene::SceneRenderSystem& self,
+               KE::Scene::RenderComponent& component,
+               const FloatArray& transforms, py::object colors) {
+                auto transformVec = mat4Array(transforms, "transforms");
+                std::vector<glm::vec4> colorVec;
+                const std::vector<glm::vec4>* colorPtr = nullptr;
+                if (!colors.is_none()) {
+                    auto colorArray = colors.cast<FloatArray>();
+                    colorVec = vec4Array(colorArray, "colors");
+                    if (!colorVec.empty() && colorVec.size() != 1 &&
+                        colorVec.size() != transformVec.size()) {
+                        throw py::value_error(
+                            "colors must be empty, length 1, or match "
+                            "transforms length");
+                    }
+                    colorPtr = &colorVec;
+                }
+                self.updateInstances(component, transformVec, colorPtr);
+            },
+            py::arg("component"), py::arg("transforms"),
+            py::arg("colors") = py::none(),
+            "Update instanced transforms and optional colors through "
+            "component registration.")
+        .def(
+            "update_geometry",
+            [](KE::Scene::SceneRenderSystem& self,
+               KE::Scene::RenderComponent& component,
+               const FloatArray& positions, py::object normals) {
+                auto positionVec = vec3Array(positions, "positions");
+                std::vector<glm::vec3> normalVec;
+                if (!normals.is_none()) {
+                    auto normalArray = normals.cast<FloatArray>();
+                    normalVec = vec3Array(normalArray, "normals");
+                    if (normalVec.size() != positionVec.size()) {
+                        throw py::value_error(
+                            "normals must match positions length");
+                    }
+                }
+                self.updateGeometry(component, positionVec, normalVec);
+            },
+            py::arg("component"), py::arg("positions"),
+            py::arg("normals") = py::none(),
+            "Update dynamic vertex positions and optional normals through "
+            "component registration.")
+        .def(
+            "update_skinning",
+            [](KE::Scene::SceneRenderSystem& self,
+               KE::Scene::RenderComponent& component,
+               const FloatArray& boneMatrices) {
+                self.updateSkinning(
+                    component,
+                    mat4RowMajorArray(boneMatrices, "bone_matrices"));
+            },
+            py::arg("component"), py::arg("bone_matrices"),
+            "Update skinned bone matrices through component registration.");
 
     // Prim class
     py::class_<KE::Scene::Prim>(
@@ -102,6 +766,101 @@ void bind_scene(py::module& m) {
              "Find a descendant prim by absolute path.")
         .def("get_children", &KE::Scene::Prim::getChildren,
              "Return direct child prims.")
+        // Components
+        .def("add_render_component", &KE::Scene::Prim::addRenderComponent,
+             "Attach and return this prim's render component.")
+        .def("get_render_component", &KE::Scene::Prim::getRenderComponent,
+             "Return this prim's render component, or None.")
+        .def("has_render_component", &KE::Scene::Prim::hasRenderComponent,
+             "Return whether this prim has a render component.")
+        .def("remove_render_component", &KE::Scene::Prim::removeRenderComponent,
+             "Detach this prim's render component.")
+        .def("get_transform_component", &KE::Scene::Prim::getTransformComponent,
+             "Return this prim's mandatory transform component.")
+        .def("has_transform_component", &KE::Scene::Prim::hasTransformComponent,
+             "Return whether this prim has a transform component.")
+        .def("add_mesh_component", &KE::Scene::Prim::addMeshComponent,
+             "Attach and return this Mesh/MeshInstance prim's mesh component.")
+        .def("get_mesh_component", &KE::Scene::Prim::getMeshComponent,
+             "Return this prim's mesh component, or None.")
+        .def("has_mesh_component", &KE::Scene::Prim::hasMeshComponent,
+             "Return whether this prim has a mesh component.")
+        .def("remove_mesh_component", &KE::Scene::Prim::removeMeshComponent,
+             "Detach this prim's mesh component.")
+        .def("add_material_binding_component",
+             &KE::Scene::Prim::addMaterialBindingComponent,
+             "Attach and return this prim's material binding component.")
+        .def("get_material_binding_component",
+             &KE::Scene::Prim::getMaterialBindingComponent,
+             "Return this prim's material binding component, or None.")
+        .def("has_material_binding_component",
+             &KE::Scene::Prim::hasMaterialBindingComponent,
+             "Return whether this prim has a material binding component.")
+        .def("remove_material_binding_component",
+             &KE::Scene::Prim::removeMaterialBindingComponent,
+             "Detach this prim's material binding component.")
+        .def("add_light_component", &KE::Scene::Prim::addLightComponent,
+             "Attach and return this Light prim's light component.")
+        .def("get_light_component", &KE::Scene::Prim::getLightComponent,
+             "Return this prim's light component, or None.")
+        .def("has_light_component", &KE::Scene::Prim::hasLightComponent,
+             "Return whether this prim has a light component.")
+        .def("remove_light_component", &KE::Scene::Prim::removeLightComponent,
+             "Detach this prim's light component.")
+        .def("add_camera_component", &KE::Scene::Prim::addCameraComponent,
+             "Attach and return this Camera prim's camera component.")
+        .def("get_camera_component", &KE::Scene::Prim::getCameraComponent,
+             "Return this prim's camera component, or None.")
+        .def("has_camera_component", &KE::Scene::Prim::hasCameraComponent,
+             "Return whether this prim has a camera component.")
+        .def("remove_camera_component", &KE::Scene::Prim::removeCameraComponent,
+             "Detach this prim's camera component.")
+        .def("add_resource_component", &KE::Scene::Prim::addResourceComponent,
+             "Attach and return this Resource prim's resource component.")
+        .def("get_resource_component", &KE::Scene::Prim::getResourceComponent,
+             "Return this prim's resource component, or None.")
+        .def("has_resource_component", &KE::Scene::Prim::hasResourceComponent,
+             "Return whether this prim has a resource component.")
+        .def("remove_resource_component",
+             &KE::Scene::Prim::removeResourceComponent,
+             "Detach this prim's resource component.")
+        .def("add_articulation_component",
+             &KE::Scene::Prim::addArticulationComponent,
+             "Attach and return this prim's articulation root component.")
+        .def("get_articulation_component",
+             &KE::Scene::Prim::getArticulationComponent,
+             "Return this prim's articulation root component, or None.")
+        .def("has_articulation_component",
+             &KE::Scene::Prim::hasArticulationComponent,
+             "Return whether this prim has an articulation root component.")
+        .def("remove_articulation_component",
+             &KE::Scene::Prim::removeArticulationComponent,
+             "Detach this prim's articulation root component.")
+        .def("add_articulation_binding_component",
+             &KE::Scene::Prim::addArticulationBindingComponent,
+             "Attach and return this prim's articulation binding component.")
+        .def("get_articulation_binding_component",
+             &KE::Scene::Prim::getArticulationBindingComponent,
+             "Return this prim's articulation binding component, or None.")
+        .def("has_articulation_binding_component",
+             &KE::Scene::Prim::hasArticulationBindingComponent,
+             "Return whether this prim has an articulation binding component.")
+        .def("remove_articulation_binding_component",
+             &KE::Scene::Prim::removeArticulationBindingComponent,
+             "Detach this prim's articulation binding component.")
+        .def("add_collision_shape_component",
+             &KE::Scene::Prim::addCollisionShapeComponent,
+             "Attach and return this prim's collision shape metadata "
+             "component.")
+        .def("get_collision_shape_component",
+             &KE::Scene::Prim::getCollisionShapeComponent,
+             "Return this prim's collision shape component, or None.")
+        .def("has_collision_shape_component",
+             &KE::Scene::Prim::hasCollisionShapeComponent,
+             "Return whether this prim has a collision shape component.")
+        .def("remove_collision_shape_component",
+             &KE::Scene::Prim::removeCollisionShapeComponent,
+             "Detach this prim's collision shape component.")
         // Mesh data
         .def("set_mesh_data", &KE::Scene::Prim::setMeshData,
              py::arg("mesh_data"), "Attach mesh data to this prim.")
@@ -204,9 +963,12 @@ void bind_scene(py::module& m) {
              py::arg("color"), "Set RGBA display color metadata.")
         .def("get_display_color_alpha", &KE::Scene::Prim::getDisplayColorAlpha,
              "Return RGBA display color metadata if present.")
+        .def("set_material", &KE::Scene::Prim::setMaterial, py::arg("material"),
+             "Bind a non-owned material to this prim at the scene level.")
+        .def("get_material", &KE::Scene::Prim::getMaterial,
+             py::return_value_policy::reference,
+             "Return the bound material, or None.")
         // Light data
-        .def("set_light_type", &KE::Scene::Prim::setLightType, py::arg("type"),
-             "Set the light subtype for a Light prim.")
         .def("get_light_type", &KE::Scene::Prim::getLightType,
              py::arg("default_type") = KE::Scene::LightType::Point,
              "Return the light subtype for a Light prim.")
@@ -367,133 +1129,109 @@ void bind_scene(py::module& m) {
         scene, "DebugDraw",
         "Helpers for creating debug lines, arrows, and coordinate axes.")
         .def_static(
-            "log_lines",
+            "log_component_lines",
             [](KE::App* app, KE::Backend::Shader* shader,
                const std::string& path, const FloatArray& starts,
-               const FloatArray& ends, const FloatArray& colors, float radius,
+               const FloatArray& ends, py::object colors, float radius,
                int segments) {
-                auto s = vec3ArrayView(starts, "starts");
-                auto e = vec3ArrayView(ends, "ends");
-                auto c = vec4ArrayView(colors, "colors");
-                if (s.count != e.count) {
+                auto s = vec3Array(starts, "starts");
+                auto e = vec3Array(ends, "ends");
+                std::vector<glm::vec4> c;
+                if (!colors.is_none())
+                    c = vec4Array(colors.cast<FloatArray>(), "colors");
+                if (s.size() != e.size()) {
                     throw py::value_error(
                         "starts and ends must have the same length");
                 }
-                return KE::Scene::DebugDraw::logLines(
-                    app, shader, path, s.data, e.data, c.data, s.count, c.count,
-                    radius, segments);
+                if (!c.empty() && c.size() != 1 && c.size() != s.size()) {
+                    throw py::value_error(
+                        "colors must be empty, length 1, or match starts "
+                        "length");
+                }
+                return KE::Scene::DebugDraw::logLineComponent(
+                    app, shader, path, s, e, c, radius, segments);
             },
             py::arg("app"), py::arg("shader"), py::arg("path"),
-            py::arg("starts"), py::arg("ends"), py::arg("colors"),
+            py::arg("starts"), py::arg("ends"), py::arg("colors") = py::none(),
             py::arg("radius") = 0.005f, py::arg("segments") = 8,
-            "Create instanced debug line geometry from numpy arrays.")
+            "Create instanced debug line geometry and return its "
+            "RenderComponent.")
         .def_static(
-            "log_lines",
-            [](KE::App* app, KE::Backend::Shader* shader,
-               const std::string& path, const std::vector<glm::vec3>& starts,
-               const std::vector<glm::vec3>& ends,
-               const std::vector<glm::vec4>& colors, float radius,
-               int segments) {
-                return KE::Scene::DebugDraw::logLines(
-                    app, shader, path, starts, ends, colors, radius, segments);
-            },
-            py::arg("app"), py::arg("shader"), py::arg("path"),
-            py::arg("starts"), py::arg("ends"), py::arg("colors"),
-            py::arg("radius") = 0.005f, py::arg("segments") = 8,
-            "Create instanced debug line geometry.")
-        .def_static(
-            "update_lines",
-            [](KE::App* app, uint32_t handle, const FloatArray& starts,
-               const FloatArray& ends, const FloatArray& colors) {
-                auto s = vec3ArrayView(starts, "starts");
-                auto e = vec3ArrayView(ends, "ends");
-                auto c = vec4ArrayView(colors, "colors");
-                if (s.count != e.count) {
+            "update_component_lines",
+            [](KE::App* app, KE::Scene::RenderComponent& component,
+               const FloatArray& starts, const FloatArray& ends,
+               py::object colors) {
+                auto s = vec3Array(starts, "starts");
+                auto e = vec3Array(ends, "ends");
+                std::vector<glm::vec4> c;
+                if (!colors.is_none())
+                    c = vec4Array(colors.cast<FloatArray>(), "colors");
+                if (s.size() != e.size()) {
                     throw py::value_error(
                         "starts and ends must have the same length");
                 }
-                KE::Scene::DebugDraw::updateLines(app, handle, s.data, e.data,
-                                                  c.data, s.count, c.count);
+                if (!c.empty() && c.size() != 1 && c.size() != s.size()) {
+                    throw py::value_error(
+                        "colors must be empty, length 1, or match starts "
+                        "length");
+                }
+                KE::Scene::DebugDraw::updateLines(app, component, s, e, c);
             },
-            py::arg("app"), py::arg("handle"), py::arg("starts"),
-            py::arg("ends"), py::arg("colors"),
-            "Update existing debug line geometry from numpy arrays.")
+            py::arg("app"), py::arg("component"), py::arg("starts"),
+            py::arg("ends"), py::arg("colors") = py::none(),
+            "Update component-backed debug line geometry.")
         .def_static(
-            "update_lines",
-            [](KE::App* app, uint32_t handle,
-               const std::vector<glm::vec3>& starts,
-               const std::vector<glm::vec3>& ends,
-               const std::vector<glm::vec4>& colors) {
-                KE::Scene::DebugDraw::updateLines(app, handle, starts, ends,
-                                                  colors);
-            },
-            py::arg("app"), py::arg("handle"), py::arg("starts"),
-            py::arg("ends"), py::arg("colors"),
-            "Update existing debug line geometry.")
-        .def_static(
-            "log_arrows",
+            "log_component_arrows",
             [](KE::App* app, KE::Backend::Shader* shader,
                const std::string& path, const FloatArray& starts,
-               const FloatArray& ends, const FloatArray& colors, float radius,
+               const FloatArray& ends, py::object colors, float radius,
                int segments) {
-                auto s = vec3ArrayView(starts, "starts");
-                auto e = vec3ArrayView(ends, "ends");
-                auto c = vec4ArrayView(colors, "colors");
-                if (s.count != e.count) {
+                auto s = vec3Array(starts, "starts");
+                auto e = vec3Array(ends, "ends");
+                std::vector<glm::vec4> c;
+                if (!colors.is_none())
+                    c = vec4Array(colors.cast<FloatArray>(), "colors");
+                if (s.size() != e.size()) {
                     throw py::value_error(
                         "starts and ends must have the same length");
                 }
-                return KE::Scene::DebugDraw::logArrows(
-                    app, shader, path, s.data, e.data, c.data, s.count, c.count,
-                    radius, segments);
+                if (!c.empty() && c.size() != 1 && c.size() != s.size()) {
+                    throw py::value_error(
+                        "colors must be empty, length 1, or match starts "
+                        "length");
+                }
+                return KE::Scene::DebugDraw::logArrowComponent(
+                    app, shader, path, s, e, c, radius, segments);
             },
             py::arg("app"), py::arg("shader"), py::arg("path"),
-            py::arg("starts"), py::arg("ends"), py::arg("colors"),
+            py::arg("starts"), py::arg("ends"), py::arg("colors") = py::none(),
             py::arg("radius") = 0.02f, py::arg("segments") = 12,
-            "Create instanced debug arrow geometry from numpy arrays.")
+            "Create instanced debug arrow geometry and return its "
+            "RenderComponent.")
         .def_static(
-            "log_arrows",
-            [](KE::App* app, KE::Backend::Shader* shader,
-               const std::string& path, const std::vector<glm::vec3>& starts,
-               const std::vector<glm::vec3>& ends,
-               const std::vector<glm::vec4>& colors, float radius,
-               int segments) {
-                return KE::Scene::DebugDraw::logArrows(
-                    app, shader, path, starts, ends, colors, radius, segments);
-            },
-            py::arg("app"), py::arg("shader"), py::arg("path"),
-            py::arg("starts"), py::arg("ends"), py::arg("colors"),
-            py::arg("radius") = 0.02f, py::arg("segments") = 12,
-            "Create instanced debug arrow geometry.")
-        .def_static(
-            "update_arrows",
-            [](KE::App* app, uint32_t handle, const FloatArray& starts,
-               const FloatArray& ends, const FloatArray& colors) {
-                auto s = vec3ArrayView(starts, "starts");
-                auto e = vec3ArrayView(ends, "ends");
-                auto c = vec4ArrayView(colors, "colors");
-                if (s.count != e.count) {
+            "update_component_arrows",
+            [](KE::App* app, KE::Scene::RenderComponent& component,
+               const FloatArray& starts, const FloatArray& ends,
+               py::object colors) {
+                auto s = vec3Array(starts, "starts");
+                auto e = vec3Array(ends, "ends");
+                std::vector<glm::vec4> c;
+                if (!colors.is_none())
+                    c = vec4Array(colors.cast<FloatArray>(), "colors");
+                if (s.size() != e.size()) {
                     throw py::value_error(
                         "starts and ends must have the same length");
                 }
-                KE::Scene::DebugDraw::updateArrows(app, handle, s.data, e.data,
-                                                   c.data, s.count, c.count);
+                if (!c.empty() && c.size() != 1 && c.size() != s.size()) {
+                    throw py::value_error(
+                        "colors must be empty, length 1, or match starts "
+                        "length");
+                }
+                KE::Scene::DebugDraw::updateArrows(app, component, s, e, c);
             },
-            py::arg("app"), py::arg("handle"), py::arg("starts"),
-            py::arg("ends"), py::arg("colors"),
-            "Update existing debug arrow geometry from numpy arrays.")
-        .def_static(
-            "update_arrows",
-            [](KE::App* app, uint32_t handle,
-               const std::vector<glm::vec3>& starts,
-               const std::vector<glm::vec3>& ends,
-               const std::vector<glm::vec4>& colors) {
-                KE::Scene::DebugDraw::updateArrows(app, handle, starts, ends,
-                                                   colors);
-            },
-            py::arg("app"), py::arg("handle"), py::arg("starts"),
-            py::arg("ends"), py::arg("colors"),
-            "Update existing debug arrow geometry.")
+            py::arg("app"), py::arg("component"), py::arg("starts"),
+            py::arg("ends"), py::arg("colors") = py::none(),
+            "Update component-backed debug arrow geometry.")
         .def_static(
             "log_coordinate_axes",
             [](KE::App* app, KE::Backend::Shader* shader,
@@ -608,9 +1346,8 @@ void bind_scene(py::module& m) {
              "Return a prim at a scene path, or None if it does not exist.")
         .def("remove_prim", &KE::Scene::SceneBackend::removePrim,
              py::arg("path"),
-             "Remove a prim subtree from this scene backend. This does not "
-             "detach renderer resources by itself; prefer App scene helpers "
-             "for user-facing workflows.")
+             "Remove a prim subtree. Components registered by an App detach "
+             "their renderer resources during destruction.")
         .def("get_root_prim", &KE::Scene::SceneBackend::getRootPrim,
              py::return_value_policy::reference, "Return the scene root prim.");
 

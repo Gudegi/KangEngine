@@ -21,7 +21,21 @@
 
 namespace KE {
 
+class Material;
+
 namespace Scene {
+
+class RenderComponent;
+class TransformComponent;
+class MeshComponent;
+class LightComponent;
+class CameraComponent;
+class MaterialBindingComponent;
+class ResourceComponent;
+class SelectionComponent;
+class ArticulationComponent;
+class ArticulationBindingComponent;
+class CollisionShapeComponent;
 
 using AttributeValue =
     std::variant<bool, int, float, std::string, glm::vec3, glm::vec4, glm::mat4,
@@ -34,7 +48,8 @@ enum class PrimType {
     Mesh,         // Mesh 데이터 owner
     MeshInstance, // Mesh geometry reference with its own scene identity
     Camera,       // Camera
-    Light         // Light
+    Light,        // Light
+    Resource      // Shared asset/resource entry, not renderable by itself
 };
 
 // ray pick같은 걸로 조작할 때 정책
@@ -57,32 +72,37 @@ class Prim {
     std::map<std::string, Prim*> _childrenMap;    // 빠른 탐색용
 
     // 데이터 (타입에 따라 다름)
-    std::shared_ptr<MeshData> _meshData;
-    std::string _meshSourcePath;
-    mutable std::weak_ptr<MeshData> _resolvedMeshDataCache;
     std::unordered_map<Token, AttributeValue, Token::Hash> _Attributes;
+    std::shared_ptr<TransformComponent> _transformComponent;
+    std::shared_ptr<MeshComponent> _meshComponent;
+    std::shared_ptr<RenderComponent> _renderComponent;
+    std::shared_ptr<LightComponent> _lightComponent;
+    std::shared_ptr<CameraComponent> _cameraComponent;
+    std::shared_ptr<MaterialBindingComponent> _materialBindingComponent;
+    std::shared_ptr<ResourceComponent> _resourceComponent;
+    std::shared_ptr<SelectionComponent> _selectionComponent;
+    std::shared_ptr<ArticulationComponent> _articulationComponent;
+    std::shared_ptr<ArticulationBindingComponent> _articulationBindingComponent;
+    std::shared_ptr<CollisionShapeComponent> _collisionShapeComponent;
 
     bool _renderable = false; // true for prim types that can submit geometry
     bool _visible = true; // runtime show/hide toggle(just render visibility)
     bool _active = true;  // Scene traversal / update participation
     ManipulationPolicy _manipulationPolicy = ManipulationPolicy::Inherit;
 
-    bool _localDirty = true;
-    bool _worldDirty = true;
-    glm::mat4 _cachedLocalMat = glm::mat4(1.0f);
-    glm::mat4 _cachedWorldMat = glm::mat4(1.0f);
-
     void onAttributeChanged(const Token& name);
     void markLocalTransformDirty();
     void markWorldTransformDirtyRecursive();
+    TransformComponent& getTransformComponentOrThrow();
+    const TransformComponent& getTransformComponentOrThrow() const;
 
   public:
     Prim(const std::string& name, PrimType type, Prim* parent = nullptr);
-    ~Prim() = default;
+    ~Prim();
 
-    // 이동만 허용 (unique_ptr 멤버 때문에 복사 불가)
-    Prim(Prim&&) = default;
-    Prim& operator=(Prim&&) = default;
+    // Prim addresses are stable scene identities used by children and systems.
+    Prim(Prim&&) = delete;
+    Prim& operator=(Prim&&) = delete;
     Prim(const Prim&) = delete;
     Prim& operator=(const Prim&) = delete;
 
@@ -105,6 +125,75 @@ class Prim {
     void setMeshSourcePath(const std::string& path);
     const std::string& getMeshSourcePath() const;
     std::shared_ptr<MeshData> resolveMeshData() const;
+    std::shared_ptr<MeshComponent> addMeshComponent();
+    std::shared_ptr<MeshComponent> getMeshComponent() const;
+    bool hasMeshComponent() const { return _meshComponent != nullptr; }
+    bool removeMeshComponent();
+
+    std::shared_ptr<TransformComponent> getTransformComponent() const;
+    bool hasTransformComponent() const {
+        return _transformComponent != nullptr;
+    }
+
+    std::shared_ptr<RenderComponent> addRenderComponent();
+    std::shared_ptr<RenderComponent> getRenderComponent() const;
+    bool hasRenderComponent() const { return _renderComponent != nullptr; }
+    bool removeRenderComponent();
+
+    std::shared_ptr<MaterialBindingComponent> addMaterialBindingComponent();
+    std::shared_ptr<MaterialBindingComponent>
+    getMaterialBindingComponent() const;
+    bool hasMaterialBindingComponent() const {
+        return _materialBindingComponent != nullptr;
+    }
+    bool removeMaterialBindingComponent();
+    void setMaterial(Material* material);
+    Material* getMaterial() const;
+
+    std::shared_ptr<LightComponent> addLightComponent();
+    std::shared_ptr<LightComponent> getLightComponent() const;
+    bool hasLightComponent() const { return _lightComponent != nullptr; }
+    bool removeLightComponent();
+
+    std::shared_ptr<CameraComponent> addCameraComponent();
+    std::shared_ptr<CameraComponent> getCameraComponent() const;
+    bool hasCameraComponent() const { return _cameraComponent != nullptr; }
+    bool removeCameraComponent();
+
+    std::shared_ptr<ResourceComponent> addResourceComponent();
+    std::shared_ptr<ResourceComponent> getResourceComponent() const;
+    bool hasResourceComponent() const { return _resourceComponent != nullptr; }
+    bool removeResourceComponent();
+
+    std::shared_ptr<SelectionComponent> addSelectionComponent();
+    std::shared_ptr<SelectionComponent> getSelectionComponent() const;
+    bool hasSelectionComponent() const {
+        return _selectionComponent != nullptr;
+    }
+    bool removeSelectionComponent();
+
+    std::shared_ptr<ArticulationComponent> addArticulationComponent();
+    std::shared_ptr<ArticulationComponent> getArticulationComponent() const;
+    bool hasArticulationComponent() const {
+        return _articulationComponent != nullptr;
+    }
+    bool removeArticulationComponent();
+
+    std::shared_ptr<ArticulationBindingComponent>
+    addArticulationBindingComponent();
+    std::shared_ptr<ArticulationBindingComponent>
+    getArticulationBindingComponent() const;
+    bool hasArticulationBindingComponent() const {
+        return _articulationBindingComponent != nullptr;
+    }
+    bool removeArticulationBindingComponent();
+
+    std::shared_ptr<CollisionShapeComponent> addCollisionShapeComponent();
+    std::shared_ptr<CollisionShapeComponent> getCollisionShapeComponent() const;
+    bool hasCollisionShapeComponent() const {
+        return _collisionShapeComponent != nullptr;
+    }
+    bool removeCollisionShapeComponent();
 
     static MeshData createCubeData(float scale);
     static MeshData createSquareData(float scale); // Deprecated.
@@ -204,7 +293,7 @@ class Prim {
 
     bool isRenderable() const { return _renderable; }
     bool isVisible() const { return _visible; }
-    void setVisible(bool v) { _visible = v; }
+    void setVisible(bool visible);
     bool isActive() const { return _active; }
     bool isActiveInHierarchy() const;
     bool isVisibleInHierarchy() const;
@@ -245,7 +334,6 @@ class Prim {
         return std::nullopt;
     }
 
-    void setLightType(LightType type);
     LightType getLightType(LightType defaultType = LightType::Point) const;
     void setDirectionalLight(const DirectionalLight& light);
     DirectionalLight getDirectionalLight();

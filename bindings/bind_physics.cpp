@@ -10,6 +10,7 @@
 #include "py_array_view.hpp"
 
 #ifdef KANGENGINE_USE_PHYSX
+#include "asset/heightmap_loader.hpp"
 #include "animation/character_description.hpp"
 #include "bridge/physics_bridge.hpp"
 #include "bridge/skeleton_bridge.hpp"
@@ -238,6 +239,8 @@ void bind_physics(py::module& m) {
              "Remove all ground actors from the scene.")
         .def("num_ground_actors", &PhysicsWorld::numGroundActors,
              "Return the number of ground actors.")
+        .def("num_cached_materials", &PhysicsWorld::numCachedMaterials,
+             "Return the number of non-default cached PhysX materials.")
         .def("num_body_actors", &PhysicsWorld::numBodyActors,
              "Return the number of dynamic body actors.")
         .def("num_contacts", &PhysicsWorld::numContacts,
@@ -247,6 +250,81 @@ void bind_physics(py::module& m) {
              "Return contact points collected during the last step.")
         .def("clear_contacts", &PhysicsWorld::clearContacts,
              "Clear collected contact points.")
+        .def(
+            "add_static_box",
+            [](PhysicsWorld& self, const std::vector<float>& halfExtents,
+               const std::vector<float>& pos,
+               const std::vector<float>& rotXyzw, bool registerAsGround) {
+                if (halfExtents.size() != 3 || pos.size() != 3 ||
+                    rotXyzw.size() != 4) {
+                    throw py::value_error(
+                        "add_static_box expects half_extents[3], pos[3], "
+                        "and rot_xyzw[4]");
+                }
+                self.createStaticBox(
+                    glm::vec3(halfExtents[0], halfExtents[1], halfExtents[2]),
+                    glm::vec3(pos[0], pos[1], pos[2]),
+                    glm::quat(rotXyzw[3], rotXyzw[0], rotXyzw[1],
+                              rotXyzw[2]),
+                    registerAsGround);
+            },
+            py::arg("half_extents"), py::arg("pos"),
+            py::arg("rot_xyzw") = std::vector<float>{0.f, 0.f, 0.f, 1.f},
+            py::arg("register_as_ground") = true,
+            "Add a static box collider, useful for ramps and simple terrain.")
+        .def(
+            "add_heightfield",
+            [](PhysicsWorld& self, const FloatArray& heights, int rows,
+               int cols, float horizontalScale, UpAxis upAxis, bool center,
+               bool registerAsGround, const PhysicsMaterialDesc& material) {
+                auto h = floatVectorView(heights, "heights");
+                if (rows < 2 || cols < 2)
+                    throw py::value_error(
+                        "add_heightfield expects rows >= 2 and cols >= 2");
+                if (h.count != static_cast<size_t>(rows * cols))
+                    throw py::value_error(
+                        "add_heightfield expects heights.size == rows * cols");
+                return self.createStaticHeightField(
+                           h.data, rows, cols, horizontalScale, material,
+                           upAxis, center, registerAsGround) != nullptr;
+            },
+            py::arg("heights"), py::arg("rows"), py::arg("cols"),
+            py::arg("horizontal_scale") = 1.0f,
+            py::arg("up_axis") = UpAxis::Y, py::arg("center") = true,
+            py::arg("register_as_ground") = true,
+            py::arg("material") = PhysicsMaterialDesc{},
+            "Create a static PhysX heightfield collider from a row-major "
+            "float height grid. The shape is registered as ground by default.")
+        .def(
+            "add_heightmap_collision",
+            [](PhysicsWorld& self, const std::string& path, UpAxis upAxis,
+               float horizontalScale, float heightScale, float heightOffset,
+               int sampleStride, bool center, bool registerAsGround,
+               const PhysicsMaterialDesc& material) {
+                Asset::HeightmapTerrainOptions options;
+                options.upAxis = upAxis;
+                options.horizontalScale = horizontalScale;
+                options.heightScale = heightScale;
+                options.heightOffset = heightOffset;
+                options.sampleStride = sampleStride;
+                Asset::HeightFieldData field =
+                    Asset::HeightmapLoader::loadHeightField(path, options);
+                if (field.heights.empty())
+                    return false;
+                return self.createStaticHeightField(
+                           field.heights.data(), field.rows, field.cols,
+                           field.horizontalScale, material, upAxis, center,
+                           registerAsGround) != nullptr;
+            },
+            py::arg("path"), py::arg("up_axis") = UpAxis::Y,
+            py::arg("horizontal_scale") = 1.0f,
+            py::arg("height_scale") = 64.0f,
+            py::arg("height_offset") = -16.0f,
+            py::arg("sample_stride") = 1, py::arg("center") = true,
+            py::arg("register_as_ground") = true,
+            py::arg("material") = PhysicsMaterialDesc{},
+            "Load a heightmap image and create a static PhysX heightfield "
+            "collider using the same sampling options as the render terrain.")
         .def(
             "create_dynamic_box",
             [](PhysicsWorld& self, const std::vector<float>& halfExtents,
@@ -270,6 +348,27 @@ void bind_physics(py::module& m) {
             py::arg("density") = 1.0f,
             py::return_value_policy::reference,
             "Create a dynamic box for low-level physics tests and tools.")
+        .def(
+            "create_dynamic_sphere",
+            [](PhysicsWorld& self, float radius,
+               const std::vector<float>& pos,
+               const std::vector<float>& rotXyzw, float density) {
+                if (pos.size() != 3 || rotXyzw.size() != 4) {
+                    throw py::value_error(
+                        "create_dynamic_sphere expects pos[3] and "
+                        "rot_xyzw[4]");
+                }
+                return self.createDynamicSphere(
+                    radius, glm::vec3(pos[0], pos[1], pos[2]),
+                    glm::quat(rotXyzw[3], rotXyzw[0], rotXyzw[1],
+                              rotXyzw[2]),
+                    density);
+            },
+            py::arg("radius"), py::arg("pos"),
+            py::arg("rot_xyzw") = std::vector<float>{0.f, 0.f, 0.f, 1.f},
+            py::arg("density") = 1.0f,
+            py::return_value_policy::reference,
+            "Create a dynamic sphere for low-level physics tests and tools.")
         .def(
             "get_contact_forces",
             [](const PhysicsWorld& self, const Articulation& articulation,
@@ -305,10 +404,25 @@ void bind_physics(py::module& m) {
             py::arg("rigid"),
             "Return net ground contact force on a rigid body.")
         .def(
+            "set_rigid_collision_material",
+            &PhysicsWorld::setRigidCollisionMaterial, py::arg("rigid"),
+            py::arg("material"),
+            "Replace all collision shape materials on an existing rigid body. "
+            "Returns the number of updated shapes.")
+        .def(
+            "set_rigid_collision_material_overrides",
+            &PhysicsWorld::setRigidCollisionMaterialOverrides,
+            py::arg("rigid"), py::arg("data"),
+            py::arg("material_overrides"),
+            "Apply named/indexed material overrides to an existing rigid body "
+            "created from character data. Returns updated shape count.")
+        .def(
             "create_dynamic_rigid",
             [](PhysicsWorld& self, const CharacterData& data,
                const FloatArray& pos, const FloatArray& rot_xyzw, float density,
-               PxU32 collisionGroup, float contactOffset, float restOffset) {
+               PxU32 collisionGroup, float contactOffset, float restOffset,
+               const std::vector<CollisionMaterialOverride>&
+                   materialOverrides) {
                 auto p = vec3ArrayView(pos, "pos");
                 auto q = vec4ArrayView(rot_xyzw, "rot_xyzw");
                 if (p.count != 1 || q.count != 1) {
@@ -318,11 +432,14 @@ void bind_physics(py::module& m) {
                 return self.createDynamicRigid(
                     data, glm::vec3(p.data[0], p.data[1], p.data[2]),
                     glm::quat(q.data[3], q.data[0], q.data[1], q.data[2]),
-                    density, collisionGroup, contactOffset, restOffset);
+                    density, collisionGroup, contactOffset, restOffset,
+                    materialOverrides);
             },
             py::arg("data"), py::arg("pos"), py::arg("rot_xyzw"),
             py::arg("density") = 1.0f, py::arg("collision_group") = 0,
             py::arg("contact_offset") = 0.02f, py::arg("rest_offset") = 0.0f,
+            py::arg("material_overrides") =
+                std::vector<CollisionMaterialOverride>{},
             py::return_value_policy::reference,
             "Create a dynamic rigid body from imported character data.")
         .def(
@@ -330,7 +447,9 @@ void bind_physics(py::module& m) {
             [](PhysicsWorld& self, const CharacterData& data,
                const std::vector<float>& pos,
                const std::vector<float>& rot_xyzw, float density,
-               PxU32 collisionGroup, float contactOffset, float restOffset) {
+               PxU32 collisionGroup, float contactOffset, float restOffset,
+               const std::vector<CollisionMaterialOverride>&
+                   materialOverrides) {
                 if (pos.size() != 3 || rot_xyzw.size() != 4) {
                     throw std::runtime_error(
                         "create_dynamic_rigid expects pos[3], rot_xyzw[4]");
@@ -339,12 +458,15 @@ void bind_physics(py::module& m) {
                     data, glm::vec3(pos[0], pos[1], pos[2]),
                     glm::quat(rot_xyzw[3], rot_xyzw[0], rot_xyzw[1],
                               rot_xyzw[2]),
-                    density, collisionGroup, contactOffset, restOffset);
+                    density, collisionGroup, contactOffset, restOffset,
+                    materialOverrides);
             },
             py::arg("data"), py::arg("pos"),
             py::arg("rot_xyzw") = std::vector<float>{0.f, 0.f, 0.f, 1.f},
             py::arg("density") = 1.0f, py::arg("collision_group") = 0,
             py::arg("contact_offset") = 0.02f, py::arg("rest_offset") = 0.0f,
+            py::arg("material_overrides") =
+                std::vector<CollisionMaterialOverride>{},
             py::return_value_policy::reference,
             "Create a dynamic rigid body from imported character data.")
         .def("set_dt", &PhysicsWorld::setDt, py::arg("dt"),
@@ -388,6 +510,27 @@ void bind_physics(py::module& m) {
                        "PhysX contact offset.")
         .def_readwrite("rest_offset", &ArticulationConfig::restOffset,
                        "PhysX rest offset.")
+        .def_readwrite("material_overrides",
+                       &ArticulationConfig::materialOverrides,
+                       "Build-time collision material overrides.")
+        .def(
+            "add_material_override",
+            [](ArticulationConfig& self,
+               const CollisionMaterialOverride& entry) -> ArticulationConfig& {
+                self.materialOverrides.push_back(entry);
+                return self;
+            },
+            py::arg("override"), py::return_value_policy::reference_internal,
+            "Append a build-time collision material override. Later overrides "
+            "win.")
+        .def(
+            "clear_material_overrides",
+            [](ArticulationConfig& self) -> ArticulationConfig& {
+                self.materialOverrides.clear();
+                return self;
+            },
+            py::return_value_policy::reference_internal,
+            "Remove all collision material overrides.")
         .def_readwrite("enable_ccd", &ArticulationConfig::enableCCD,
                        "Enable continuous collision detection.");
 
@@ -406,6 +549,7 @@ void bind_physics(py::module& m) {
             },
             py::arg("physics"), py::arg("data"),
             py::arg("cfg") = ArticulationConfig{},
+            py::keep_alive<0, 1>(),
             "Build an articulation in a PhysicsWorld from character data.")
         .def("num_links", &Articulation::numLinks,
              "Return the number of links.")
@@ -474,6 +618,8 @@ void bind_physics(py::module& m) {
              "Return measured/applied DOF forces.")
         .def("get_dof_names", &Articulation::getDofNames,
              "Return DOF names.")
+        .def("get_dof_gpu_indices", &Articulation::getDofGpuIndices,
+             "Return logical DOF -> PhysX low-level GPU DOF indices.")
         .def("get_dof_limits",
              [](const Articulation& self) {
                  return floatArrayFromVec2Vector(self.getDofLimits());
@@ -558,6 +704,15 @@ void bind_physics(py::module& m) {
             py::arg("forces"), "Apply per-DOF joint forces.")
         .def("set_joint_forces", &Articulation::setJointForces,
              py::arg("forces"), "Apply per-DOF joint forces.")
+        .def("set_collision_material", &Articulation::setCollisionMaterial,
+             py::arg("physics"), py::arg("material"),
+             "Replace all collision shape materials on this articulation at "
+             "runtime. Returns the number of updated shapes.")
+        .def("set_collision_material_overrides",
+             &Articulation::setCollisionMaterialOverrides, py::arg("physics"),
+             py::arg("material_overrides"),
+             "Apply named/indexed collision material overrides at runtime. "
+             "Returns the number of updated shapes.")
         .def(
             "add_link_force",
             [](Articulation& self, int linkIndex, const FloatArray& force) {
@@ -707,17 +862,11 @@ void bind_physics(py::module& m) {
     py::class_<PhysicsBridge>(
         m, "PhysicsBridge",
         "Syncs PhysX articulation state into KangEngine scene/render visuals.")
-        .def(py::init<App*>(), py::arg("app") = nullptr,
-             "Create a physics bridge for an optional application.")
+        .def(py::init<>(), "Create a scene-graph physics bridge.")
         .def("add", &PhysicsBridge::add, py::arg("artic"),
              py::arg("skel_bridge"),
+             py::keep_alive<1, 2>(), py::keep_alive<1, 3>(),
              "Connect an articulation to a SkeletonBridge.")
-        .def("add_instanced",
-             static_cast<void (PhysicsBridge::*)(
-                 const Articulation&, const std::vector<RenderableHandle>&)>(
-                 &PhysicsBridge::addInstanced),
-             py::arg("artic"), py::arg("handles"),
-             "Connect an articulation to existing instanced render handles.")
         .def("sync", &PhysicsBridge::sync,
              "Copy latest physics transforms into connected visuals.")
         .def("set_collision_visible", &PhysicsBridge::setCollisionVisible,
@@ -734,6 +883,7 @@ void bind_physics(py::module& m) {
             py::arg("base_path") = "/collision",
             py::arg("visible_by_default") = false,
             py::return_value_policy::reference,
+            py::keep_alive<1, 2>(), py::keep_alive<1, 3>(),
             "Create scene prims that visualize articulation collision shapes.");
 #endif
 }

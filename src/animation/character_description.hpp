@@ -64,9 +64,53 @@ struct Inertial {
     Eigen::Vector3f diagInertia = Eigen::Vector3f(1e-4f, 1e-4f, 1e-4f);
 };
 
+struct PhysicsMaterialDesc {
+    float staticFriction = 1.f;
+    float dynamicFriction = 1.f;
+    float restitution = 0.f;
+};
+
+struct CollisionMaterialOverride {
+    // Match by index when non-negative. Names are intended for Python/user
+    // facing APIs and are resolved against CharacterData/SkeletonTree at build
+    // time. Empty body name and bodyIndex < 0 means "all bodies".
+    int bodyIndex = -1;
+    std::string bodyName;
+
+    // Match one geom by index/name, or every collision geom on the matched body
+    // when both are unspecified.
+    int geomIndex = -1;
+    std::string geomName;
+
+    PhysicsMaterialDesc material;
+};
+
+inline PhysicsMaterialDesc mjcfFrictionToPhysX(
+    const std::vector<float>& friction,
+    const PhysicsMaterialDesc& fallback = PhysicsMaterialDesc()) {
+    PhysicsMaterialDesc material = fallback;
+    if (friction.empty())
+        return material;
+
+    // MuJoCo friction[0] is sliding friction. PhysX exposes separate static
+    // and dynamic friction coefficients, so KangEngine maps sliding friction
+    // to both for now. MuJoCo torsional/rolling friction are intentionally not
+    // mapped yet because PhysX material properties do not have direct scalar
+    // equivalents.
+    material.staticFriction = friction[0];
+    material.dynamicFriction = friction[0];
+    material.restitution = 0.f;
+    return material;
+}
+
 struct CollisionGeom {
+    // Supported collision payloads are primitive-only for now. MJCF
+    // type="mesh" collision geoms are intentionally not represented here yet;
+    // dynamic/articulation mesh collision needs a separate convex-cooking path
+    // rather than reusing visual MeshData directly.
     enum class Type { Capsule, Cylinder, Sphere, Box };
     Type type = Type::Sphere;
+    std::string name;
 
     Eigen::Vector3f pos = Eigen::Vector3f::Zero();
     Eigen::Quaternionf quat = Eigen::Quaternionf::Identity();
@@ -85,7 +129,8 @@ struct CollisionGeom {
 
     // MuJoCo friction[0] is sliding friction. PhysX uses separate static and
     // dynamic friction coefficients; KangEngine maps sliding friction to both.
-    float friction = 1.f;
+    float friction = 1.f; // legacy, deprecated.
+    PhysicsMaterialDesc physicsMaterial;
 
     // MuJoCo contact dimensionality. KangEngine parses it for diagnostics and
     // future matching, but does not alter PhysX material behavior by default.
@@ -94,6 +139,12 @@ struct CollisionGeom {
     // MuJoCo geom margin controls the distance at which contacts become active.
     // When present, KangEngine maps it to PhysX shape contactOffset.
     float margin = -1.f;
+
+    // True when KangEngine synthesized this descriptor from ArticulationConfig
+    // fallback boxes because the source body had no supported collision geom.
+    // These descriptors make debug collision visuals match the actual PhysX
+    // shapes without pretending they came from MJCF.
+    bool isFallback = false;
 };
 
 // ---------------------------------------------------------------------------

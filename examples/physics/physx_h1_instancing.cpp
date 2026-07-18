@@ -1,5 +1,5 @@
 ///
-/// H1 Robot — N-robot instanced rendering with PhysicsBridge::syncInstanced()
+/// H1 Robot — N-robot instanced rendering with SimVisualBatch.
 ///
 /// N identical H1 robots in a grid, all controlled by one shared PD target
 /// array. Rendering uses one instancer per body type (M body types x N robots).
@@ -11,6 +11,7 @@
 ///
 
 #include "kangEngine.hpp"
+#include "physics/sim_model.hpp"
 #include <Eigen/Geometry>
 #include <glm/glm.hpp>
 #include <imgui.h>
@@ -42,9 +43,11 @@ class H1InstancingApp : public App {
     PhysicsWorld physics{PhysicsConfig::zUp()};
     SkeletonBridge refRobot; // MeshInstance prims used for instancer setup
     std::vector<Articulation> _artics;
-    Bridge::PhysicsBridge physicsBridge;
-
     std::vector<RenderableHandle> _bodyHandles;
+    SimModel _simModel;
+    SimState _simState;
+    SimVisualBatch _visualBatch;
+    uint64_t _transformVersion = 0;
     std::vector<std::vector<float>> _targets; // per-robot random targets
 
     float kp = 200.f;
@@ -64,6 +67,7 @@ class H1InstancingApp : public App {
             commonVSPath, commonFSPath);
         groundShader = getRenderer().device()->createShaderFromFile(
             commonVSPath, groundFSPath);
+        getRenderer().setBackgroundShader(groundShader.get());
 
         commonShader->use();
         commonShader->setUniformBlockBinding("cameraUBO", 0);
@@ -109,6 +113,8 @@ class H1InstancingApp : public App {
         for (auto* prim : refRobot.bodyPrims())
             _bodyHandles.push_back(addRenderable(
                 commonShader.get(), prim, TransformSource::ExternalBuffer));
+        _simModel.setBodyRenderables(_bodyHandles);
+        _visualBatch.setModel(&_simModel);
 
         // Per-robot colors — same color for all bodies of one robot
         std::vector<glm::vec4> colors(N);
@@ -122,17 +128,12 @@ class H1InstancingApp : public App {
 
         // Build N articulations
         _artics.resize(N);
-        std::vector<Articulation*> articPtrs(N);
         for (int i = 0; i < N; i++) {
             _artics[i] = Articulation::build(
                 physics, mjcfData.skeletonTree, mjcfData.collisionGeoms,
                 mjcfData.joints, mjcfData.inertials,
                 ArticulationConfig::freeBase());
-            articPtrs[i] = &_artics[i];
         }
-
-        physicsBridge = Bridge::PhysicsBridge{this};
-        physicsBridge.addInstanced(articPtrs, _bodyHandles);
 
         // random targets per robot, clamped to joint limits
         _targets.resize(N);
@@ -167,6 +168,27 @@ class H1InstancingApp : public App {
         }
     }
 
+    void syncVisuals() {
+        const int numBodies = _simModel.bodyCount();
+        _simState.resize(N, numBodies);
+        for (int bodyId = 0; bodyId < numBodies; ++bodyId) {
+            for (int envId = 0; envId < N; ++envId) {
+                const PxTransform pose =
+                    _artics[envId].link(bodyId)->getGlobalPose();
+                _simState.setBodyTransform(envId, bodyId, pxToGlm(pose.p),
+                                           pxToGlm(pose.q));
+            }
+        }
+        _visualBatch.prepareFromState(_simState);
+        ++_transformVersion;
+        for (int shapeId = 0; shapeId < _visualBatch.renderableCount();
+             ++shapeId) {
+            auto desc = _visualBatch.externalTransformDesc(
+                shapeId, _transformVersion, "h1_instancing_transforms");
+            setRenderableExternalBuffer(_visualBatch.renderable(shapeId), desc);
+        }
+    }
+
     // -----------------------------------------------------------------------
     void preRender() override {
         bool spaceDown = glfwGetKey(getWindow(), GLFW_KEY_SPACE) == GLFW_PRESS;
@@ -198,7 +220,7 @@ class H1InstancingApp : public App {
                 _artics[i].setDriveTargets(_targets[i], kp, kd);
             physics.step();
         }
-        physicsBridge.sync();
+        syncVisuals();
 
         checkError();
     }

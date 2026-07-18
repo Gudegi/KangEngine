@@ -1,17 +1,111 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "mesh_loader.hpp"
 #include "geometry/mesh_utils.hpp"
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
+#include <stdexcept>
 #include <sstream>
 #include <unordered_map>
 
 namespace KE {
 namespace Asset {
 
+Scene::MeshData deduplicateMeshData(const Scene::MeshData& meshData);
+
 namespace {
+
+std::string parentDirectory(const std::string& path) {
+    std::filesystem::path p(path);
+    const auto parent = p.parent_path();
+    if (parent.empty())
+        return "./";
+    return parent.string();
+}
+
+std::string resolveObjTexturePath(const std::string& objPath,
+                                  const std::string& texturePath) {
+    if (texturePath.empty())
+        return {};
+    std::filesystem::path tex(texturePath);
+    if (tex.is_absolute())
+        return tex.lexically_normal().string();
+    return (std::filesystem::path(parentDirectory(objPath)) / tex)
+        .lexically_normal()
+        .string();
+}
+
+std::vector<ObjMaterialInfo>
+makeObjMaterials(const std::string& objPath,
+                 const std::vector<tinyobj::material_t>& tinyMaterials) {
+    std::vector<ObjMaterialInfo> materials;
+    materials.reserve(tinyMaterials.size());
+    for (const auto& src : tinyMaterials) {
+        ObjMaterialInfo dst;
+        dst.name = src.name;
+        dst.ambientColor = {src.ambient[0], src.ambient[1], src.ambient[2],
+                            1.0f};
+        dst.diffuseColor = {src.diffuse[0], src.diffuse[1], src.diffuse[2],
+                            src.dissolve};
+        dst.specularColor = {src.specular[0], src.specular[1], src.specular[2],
+                             1.0f};
+        dst.shininess = src.shininess;
+        dst.diffuseTexturePath =
+            resolveObjTexturePath(objPath, src.diffuse_texname);
+        dst.specularTexturePath =
+            resolveObjTexturePath(objPath, src.specular_texname);
+        dst.alphaTexturePath =
+            resolveObjTexturePath(objPath, src.alpha_texname);
+        dst.normalTexturePath = resolveObjTexturePath(
+            objPath,
+            src.normal_texname.empty() ? src.bump_texname : src.normal_texname);
+        dst.hasDiffuseTexture = !dst.diffuseTexturePath.empty();
+        dst.hasSpecularTexture = !dst.specularTexturePath.empty();
+        dst.hasAlphaTexture = !dst.alphaTexturePath.empty();
+        dst.hasNormalTexture = !dst.normalTexturePath.empty();
+        materials.push_back(std::move(dst));
+    }
+    return materials;
+}
+
+void appendObjCorner(Scene::MeshData& mesh, const tinyobj::attrib_t& attrib,
+                     const tinyobj::index_t& idx) {
+    tinyobj::real_t vx = attrib.vertices[3 * size_t(idx.vertex_index) + 0];
+    tinyobj::real_t vy = attrib.vertices[3 * size_t(idx.vertex_index) + 1];
+    tinyobj::real_t vz = attrib.vertices[3 * size_t(idx.vertex_index) + 2];
+    mesh.vertices.emplace_back(vx, vy, vz);
+
+    if (idx.normal_index >= 0) {
+        tinyobj::real_t nx = attrib.normals[3 * size_t(idx.normal_index) + 0];
+        tinyobj::real_t ny = attrib.normals[3 * size_t(idx.normal_index) + 1];
+        tinyobj::real_t nz = attrib.normals[3 * size_t(idx.normal_index) + 2];
+        mesh.normals.emplace_back(nx, ny, nz);
+    } else {
+        mesh.normals.emplace_back(0.0f, 1.0f, 0.0f);
+    }
+
+    if (idx.texcoord_index >= 0) {
+        tinyobj::real_t tx =
+            attrib.texcoords[2 * size_t(idx.texcoord_index) + 0];
+        tinyobj::real_t ty =
+            attrib.texcoords[2 * size_t(idx.texcoord_index) + 1];
+        mesh.uvs.emplace_back(tx, ty);
+    } else {
+        mesh.uvs.emplace_back(0.0f, 0.0f);
+    }
+
+    mesh.indices.push_back(static_cast<unsigned int>(mesh.vertices.size() - 1));
+}
+
+Scene::MeshData finalizeObjMesh(Scene::MeshData mesh) {
+    mesh.fillMissingAttributes();
+    Scene::MeshData deduped = deduplicateMeshData(mesh);
+    Geometry::computeTangents(deduped);
+    return deduped;
+}
 
 uint32_t floatBits(float value) {
     uint32_t bits = 0;
@@ -271,6 +365,13 @@ Scene::MeshData loadStl(const std::string& path) {
 
 Scene::MeshData loadObj(std::string path,
                         std::optional<tinyobj::ObjReaderConfig> render_config) {
+    return loadObjWithMaterials(std::move(path), std::move(render_config))
+        .meshData;
+}
+
+ObjMeshInfo
+loadObjWithMaterials(std::string path,
+                     std::optional<tinyobj::ObjReaderConfig> render_config) {
 
     tinyobj::ObjReader reader;
     tinyobj::ObjReaderConfig config;
@@ -278,14 +379,14 @@ Scene::MeshData loadObj(std::string path,
     if (render_config.has_value()) {
         config = render_config.value();
     } else {
-        config.mtl_search_path = "./"; // Path to material files
+        config.mtl_search_path = parentDirectory(path);
     }
 
     if (!reader.ParseFromFile(path, config)) {
-        if (!reader.Error().empty()) {
-            std::cerr << "TinyObjReader: " << reader.Error();
-        }
-        exit(1);
+        const std::string error =
+            reader.Error().empty() ? "unknown OBJ parse error" : reader.Error();
+        throw std::runtime_error("TinyObjReader failed to load '" + path +
+                                 "': " + error);
     }
 
     if (!reader.Warning().empty()) {
@@ -294,12 +395,11 @@ Scene::MeshData loadObj(std::string path,
 
     auto& attrib = reader.GetAttrib();
     auto& shapes = reader.GetShapes();
-    auto& materials = reader.GetMaterials();
+    const auto& materials = reader.GetMaterials();
 
-    std::vector<glm::vec3> positions = {};
-    std::vector<glm::vec3> normals = {};
-    std::vector<glm::vec2> uvs = {};
-    std::vector<unsigned int> indices = {};
+    Scene::MeshData combined;
+    std::unordered_map<int, Scene::MeshData> subsetsByMaterial;
+    std::vector<size_t> materialUseCounts(materials.size(), 0);
 
     // Loop over shapes
     for (size_t s = 0; s < shapes.size(); s++) {
@@ -307,72 +407,56 @@ Scene::MeshData loadObj(std::string path,
         size_t index_offset = 0;
         for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
             size_t fv = size_t(shapes[s].mesh.num_face_vertices[f]);
+            int materialId = -1;
+            if (f < shapes[s].mesh.material_ids.size()) {
+                materialId = shapes[s].mesh.material_ids[f];
+                if (materialId >= 0 &&
+                    static_cast<size_t>(materialId) < materialUseCounts.size())
+                    ++materialUseCounts[static_cast<size_t>(materialId)];
+            }
 
             // Loop over vertices in the face.
             for (size_t v = 0; v < fv; v++) {
-                // access to vertex
                 tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
-                tinyobj::real_t vx =
-                    attrib.vertices[3 * size_t(idx.vertex_index) + 0];
-                tinyobj::real_t vy =
-                    attrib.vertices[3 * size_t(idx.vertex_index) + 1];
-                tinyobj::real_t vz =
-                    attrib.vertices[3 * size_t(idx.vertex_index) + 2];
-
-                positions.push_back(glm::vec3(vx, vy, vz));
-
-                // Normal (default if not present)
-                if (idx.normal_index >= 0) {
-                    tinyobj::real_t nx =
-                        attrib.normals[3 * size_t(idx.normal_index) + 0];
-                    tinyobj::real_t ny =
-                        attrib.normals[3 * size_t(idx.normal_index) + 1];
-                    tinyobj::real_t nz =
-                        attrib.normals[3 * size_t(idx.normal_index) + 2];
-                    normals.push_back(glm::vec3(nx, ny, nz));
-                } else {
-                    normals.push_back(glm::vec3(0.0f, 1.0f, 0.0f));
-                }
-
-                // UV (default if not present)
-                if (idx.texcoord_index >= 0) {
-                    tinyobj::real_t tx =
-                        attrib.texcoords[2 * size_t(idx.texcoord_index) + 0];
-                    tinyobj::real_t ty =
-                        attrib.texcoords[2 * size_t(idx.texcoord_index) + 1];
-                    uvs.push_back(glm::vec2(tx, ty));
-                } else {
-                    uvs.push_back(glm::vec2(0.0f, 0.0f));
-                }
-
-                // Optional: vertex colors
-                // tinyobj::real_t red   =
-                // attrib.colors[3*size_t(idx.vertex_index)+0];
-                // tinyobj::real_t green =
-                // attrib.colors[3*size_t(idx.vertex_index)+1];
-                // tinyobj::real_t blue  =
-                // attrib.colors[3*size_t(idx.vertex_index)+2];
-
-                // Index - current vertex index
-                // indices.push_back((unsigned
-                // int)size_t(idx.texcoord_index)); // wrong
-                indices.push_back(
-                    static_cast<unsigned int>(positions.size() - 1));
+                appendObjCorner(combined, attrib, idx);
+                appendObjCorner(subsetsByMaterial[materialId], attrib, idx);
             }
             index_offset += fv;
         }
     }
 
-    Scene::MeshData meshData;
-    meshData.vertices = positions;
-    meshData.normals = normals;
-    meshData.uvs = uvs;
-    meshData.indices = indices;
+    ObjMeshInfo result;
+    result.meshData = finalizeObjMesh(std::move(combined));
+    result.materials = makeObjMaterials(path, materials);
+    if (!materialUseCounts.empty()) {
+        auto best = std::max_element(materialUseCounts.begin(),
+                                     materialUseCounts.end());
+        if (best != materialUseCounts.end() && *best > 0) {
+            result.primaryMaterialIndex = static_cast<int>(
+                std::distance(materialUseCounts.begin(), best));
+        }
+    }
 
-    meshData.fillMissingAttributes();
-    Scene::MeshData deduped = deduplicateMeshData(meshData);
-    Geometry::computeTangents(deduped);
-    return deduped;
+    std::vector<int> subsetMaterialIds;
+    subsetMaterialIds.reserve(subsetsByMaterial.size());
+    for (const auto& [materialId, mesh] : subsetsByMaterial)
+        subsetMaterialIds.push_back(materialId);
+    std::sort(subsetMaterialIds.begin(), subsetMaterialIds.end());
+
+    result.subsets.reserve(subsetMaterialIds.size());
+    for (int materialId : subsetMaterialIds) {
+        ObjMeshSubsetInfo subset;
+        subset.materialIndex = materialId;
+        if (materialId >= 0 &&
+            static_cast<size_t>(materialId) < materials.size())
+            subset.name = materials[static_cast<size_t>(materialId)].name;
+        else
+            subset.name = "default";
+        subset.meshData =
+            finalizeObjMesh(std::move(subsetsByMaterial[materialId]));
+        result.subsets.push_back(std::move(subset));
+    }
+    return result;
 }
 
 } // namespace Asset

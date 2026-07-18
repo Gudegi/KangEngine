@@ -10,6 +10,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace KE {
 namespace Asset {
@@ -61,7 +62,7 @@ Eigen::Quaternionf quatFromZAxis(const Eigen::Vector3f& zaxis) {
     if (zaxis.squaredNorm() < 1e-12f)
         return Eigen::Quaternionf::Identity();
     return Eigen::Quaternionf::FromTwoVectors(Eigen::Vector3f::UnitZ(),
-                                             zaxis.normalized());
+                                              zaxis.normalized());
 }
 
 std::string resolveMeshDir(const std::string& mjcfPath, const char* meshdir) {
@@ -142,6 +143,7 @@ struct DefaultGeomAttrs {
     std::vector<float> quat;
     std::vector<float> fromto;
     std::vector<float> friction;
+    std::vector<float> rgba;
     int condim = -1;
     float margin = -1.f;
     std::string parentClass;
@@ -178,6 +180,9 @@ void readGeomDefaults(tinyxml2::XMLElement* defElem, DefaultGeomAttrs& out) {
     auto fr = splitFloats(g->Attribute("friction"));
     if (!fr.empty())
         out.friction = fr;
+    auto rgba = splitFloats(g->Attribute("rgba"));
+    if (!rgba.empty())
+        out.rgba = rgba;
     g->QueryIntAttribute("condim", &out.condim);
     g->QueryFloatAttribute("margin", &out.margin);
 }
@@ -205,9 +210,26 @@ void readSiteDefaults(tinyxml2::XMLElement* defElem, DefaultSiteAttrs& out) {
         out.rgba = rgba;
 }
 
-void collectDefaults(tinyxml2::XMLElement* elem, const std::string& parentClass,
-                     std::unordered_map<std::string, DefaultGeomAttrs>& geomMap,
-                     std::unordered_map<std::string, DefaultSiteAttrs>& siteMap) {
+bool geomHasZeroContact(tinyxml2::XMLElement* geom) {
+    int contype = 1;
+    int conaffinity = 1;
+    const bool hasContype =
+        geom->QueryIntAttribute("contype", &contype) == tinyxml2::XML_SUCCESS;
+    const bool hasConaffinity =
+        geom->QueryIntAttribute("conaffinity", &conaffinity) ==
+        tinyxml2::XML_SUCCESS;
+    return hasContype && hasConaffinity && contype == 0 && conaffinity == 0;
+}
+
+bool meshGeomIsVisualOnly(tinyxml2::XMLElement* geom,
+                          const std::string& effectiveClass) {
+    return effectiveClass == "visual" || geomHasZeroContact(geom);
+}
+
+void collectDefaults(
+    tinyxml2::XMLElement* elem, const std::string& parentClass,
+    std::unordered_map<std::string, DefaultGeomAttrs>& geomMap,
+    std::unordered_map<std::string, DefaultSiteAttrs>& siteMap) {
     for (auto* def = elem->FirstChildElement("default"); def;
          def = def->NextSiblingElement("default")) {
         const char* cls = def->Attribute("class");
@@ -250,6 +272,8 @@ resolveClass(const std::string& cls,
             out.fromto = a.fromto;
         if (out.friction.empty() && !a.friction.empty())
             out.friction = a.friction;
+        if (out.rgba.empty() && !a.rgba.empty())
+            out.rgba = a.rgba;
         if (out.condim < 0 && a.condim >= 0)
             out.condim = a.condim;
         if (out.margin < 0.f && a.margin >= 0.f)
@@ -286,10 +310,10 @@ resolveSiteClass(const std::string& cls,
     return out;
 }
 
-bool parseSite(tinyxml2::XMLElement* siteElem,
-               const std::unordered_map<std::string, DefaultSiteAttrs>&
-                   defaultMap,
-               Site& out, const std::string& inheritedClass = "") {
+bool parseSite(
+    tinyxml2::XMLElement* siteElem,
+    const std::unordered_map<std::string, DefaultSiteAttrs>& defaultMap,
+    Site& out, const std::string& inheritedClass = "") {
     const char* siteName = siteElem->Attribute("name");
     if (!siteName || siteName[0] == '\0')
         return false;
@@ -347,7 +371,14 @@ bool parseSite(tinyxml2::XMLElement* siteElem,
     return true;
 }
 
-// Returns false if the geom should be skipped (visual, mesh, unknown type).
+// Returns false if this loader cannot represent the geom as an explicit
+// CollisionGeom descriptor.
+//
+// Mesh collision geoms are intentionally unsupported here. Dynamic and
+// articulation bodies should use primitive shapes or a future convex-cooked
+// mesh path; visual MeshData cannot be attached directly as a safe PhysX link
+// collision shape. Bodies with no supported descriptors may still receive
+// KangEngine fallback boxes during Articulation::build().
 bool buildCollisionGeom(
     tinyxml2::XMLElement* geomElem,
     const std::unordered_map<std::string, DefaultGeomAttrs>& defaultMap,
@@ -392,6 +423,9 @@ bool buildCollisionGeom(
     else
         return false;
 
+    if (auto* name = geomElem->Attribute("name"))
+        out.name = name;
+
     for (int i = 0; i < static_cast<int>(size.size()) && i < 3; ++i)
         out.size[i] = size[i];
 
@@ -411,8 +445,10 @@ bool buildCollisionGeom(
         out.from = Eigen::Vector3f(fromto[0], fromto[1], fromto[2]);
         out.to = Eigen::Vector3f(fromto[3], fromto[4], fromto[5]);
     }
-    if (!friction.empty())
+    if (!friction.empty()) {
         out.friction = friction[0];
+        out.physicsMaterial = mjcfFrictionToPhysX(friction);
+    }
     out.condim = defs.condim;
     geomElem->QueryIntAttribute("condim", &out.condim);
     out.margin = defs.margin;
@@ -529,28 +565,58 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
         [&](tinyxml2::XMLElement* elem, int idx, const char* bodyName,
             const std::string& inheritedClass) {
             std::vector<GeomMassData> geomMasses;
+            std::unordered_set<std::string> visualOnlyMeshNames;
+
+            // Some MJCF assets provide two mesh geoms for the same body/mesh:
+            // one visual-only geom (e.g. contype=0 conaffinity=0 group=1) and
+            // one collidable mesh geom.  Keep the visual-only mesh as the
+            // render asset and avoid creating a duplicate visual_N prim for
+            // the collidable copy.
+            for (auto* geom = elem->FirstChildElement("geom"); geom;
+                 geom = geom->NextSiblingElement("geom")) {
+                const char* meshName = geom->Attribute("mesh");
+                if (!meshName)
+                    continue;
+                const char* cls = geom->Attribute("class");
+                std::string effectiveCls = cls ? cls : inheritedClass;
+                if (meshGeomIsVisualOnly(geom, effectiveCls))
+                    visualOnlyMeshNames.insert(meshName);
+            }
 
             for (auto* geom = elem->FirstChildElement("geom"); geom;
                  geom = geom->NextSiblingElement("geom")) {
                 const char* cls = geom->Attribute("class");
+                std::string effectiveCls = cls ? cls : inheritedClass;
                 const char* meshName = geom->Attribute("mesh");
                 auto geomType = geom->Attribute("type")
                                     ? std::string(geom->Attribute("type"))
                                     : std::string();
-                bool isCollisionMesh = cls && std::string(cls) == "collision";
-                bool isVisualMesh = cls && std::string(cls) == "visual";
+                bool isCollisionMesh = effectiveCls == "collision";
+                bool isVisualMesh = meshGeomIsVisualOnly(geom, effectiveCls);
+                bool hasVisualOnlyDuplicate =
+                    meshName && visualOnlyMeshNames.count(meshName) != 0;
 
                 // Visual mesh
                 if (meshName && !isCollisionMesh &&
-                    (isVisualMesh || geomType == "mesh")) {
+                    (isVisualMesh ||
+                     (geomType == "mesh" && !hasVisualOnlyDuplicate))) {
                     auto it = meshNameToFile.find(meshName);
                     if (it != meshNameToFile.end()) {
+                        DefaultGeomAttrs defs;
+                        if (!effectiveCls.empty())
+                            defs = resolveClass(effectiveCls, defaultMap);
                         Eigen::Vector3f meshPos =
                             parseVec3(geom->Attribute("pos")) * scale;
                         Eigen::Quaternionf meshQuat =
                             parseQuatWxyz(geom->Attribute("quat"));
+                        auto rgbaValues = splitFloats(geom->Attribute("rgba"));
+                        if (rgbaValues.empty())
+                            rgbaValues = defs.rgba;
                         Eigen::Vector4f rgba =
-                            parseVec4(geom->Attribute("rgba"));
+                            rgbaValues.size() >= 4
+                                ? Eigen::Vector4f(rgbaValues[0], rgbaValues[1],
+                                                  rgbaValues[2], rgbaValues[3])
+                                : Eigen::Vector4f(0.15f, 0.15f, 0.15f, 1.0f);
                         _data.meshInfos.push_back({bodyName, it->second, idx,
                                                    meshPos, meshQuat, rgba});
                     }
@@ -558,6 +624,22 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
                 }
 
                 // Collision geom
+                // TODO : add convex mesh decomposition like COCAD
+                if (meshName && !isVisualMesh) {
+                    // Empty entry marks that the source authored a collidable
+                    // mesh geom that KangEngine cannot cook yet. Articulation
+                    // build may synthesize a fallback box only for these
+                    // bodies, while visual-only mesh bodies stay collisionless.
+                    _data.collisionGeoms.try_emplace(idx);
+                    fmt::print(
+                        stderr,
+                        "Warning: MJCF mesh collision geom '{}' on body '{}' "
+                        "is not supported yet; using KangEngine fallback "
+                        "collision if this body has no supported primitive "
+                        "collision geom.\n",
+                        meshName, bodyName);
+                    continue;
+                }
                 CollisionGeom g;
                 if (!buildCollisionGeom(geom, defaultMap, g, inheritedClass))
                     continue;

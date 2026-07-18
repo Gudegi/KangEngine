@@ -65,7 +65,7 @@ class H1RagdollApp(ke.App):
             "DFS",
         )
 
-        self.physics_bridge = ke.PhysicsBridge(self)
+        self.physics_bridge = ke.PhysicsBridge()
         self.physics_bridge.add(self.articulation, self.robot)
 
         for prim in self.robot.body_prims():

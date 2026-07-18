@@ -187,9 +187,7 @@ void Camera::setFarPlane(const float dis) {
 
 float Camera::getCamToLookDistance() { return _camToLookDistance; }
 
-void Camera::setCameraPos(glm::vec3 cameraPos) {
-    _cameraPos = cameraPos;
-    _camToLookDistance = glm::length(_targetPos - _cameraPos);
+void Camera::syncOrbitAnglesFromView() {
     glm::vec3 offset = _cameraPos - _targetPos;
     float r = glm::length(offset);
     if (r > 0.0001f) {
@@ -201,12 +199,19 @@ void Camera::setCameraPos(glm::vec3 cameraPos) {
             azimuth = glm::degrees(glm::atan(offset.z, offset.x));
         }
     }
+}
+
+void Camera::setCameraPos(glm::vec3 cameraPos) {
+    _cameraPos = cameraPos;
+    _camToLookDistance = glm::length(_targetPos - _cameraPos);
+    syncOrbitAnglesFromView();
     updateViewMatrix();
 }
 
 void Camera::setTargetPos(glm::vec3 targetPos) {
     _targetPos = targetPos;
     _camToLookDistance = glm::length(_targetPos - _cameraPos);
+    syncOrbitAnglesFromView();
     updateViewMatrix();
 }
 

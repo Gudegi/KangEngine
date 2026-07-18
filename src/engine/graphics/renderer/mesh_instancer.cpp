@@ -145,6 +145,23 @@ void MeshInstancer::addPrim(Scene::Prim* prim) { _prims.push_back(prim); }
 
 void MeshInstancer::removePrim(Scene::Prim* prim) {
     _prims.erase(std::remove(_prims.begin(), _prims.end(), prim), _prims.end());
+    if (!_prims.empty() ||
+        (!_hasExternalBufferDesc && !_hasDirectCudaTransforms))
+        return;
+
+    _externalBufferDesc = ExternalBufferDesc{};
+    _hasExternalBufferDesc = false;
+    _externalBufferLoaded = false;
+    _externalBufferVersion = 0;
+    _hasDirectCudaTransforms = false;
+    _usesGpuExternalTransforms = false;
+    _useExternalTransforms = false;
+    _transforms.clear();
+    _colors.clear();
+    _instancePrims.clear();
+    _worldBounds.clear();
+    _combinedWorldBounds = Geometry::AABB::empty();
+    _visibleCount = 0;
 }
 
 void MeshInstancer::_setupInstanceAttribs(Backend::VertexArray* vao,
@@ -293,15 +310,19 @@ void MeshInstancer::_updateTransparency() {
     }
 }
 
-void MeshInstancer::bindAlphaState(Backend::Shader* shader) const {
+void MeshInstancer::bindAlphaState(Backend::Shader* shader,
+                                   bool bindAlphaTextureForPass) const {
     if (!shader)
         return;
 
     shader->setInt("uAlphaMode", static_cast<int>(_alphaMode));
     shader->setFloat("uAlphaCutoff", _alphaCutoff);
+    shader->setInt("uAlphaTextureRedChannel",
+                   (_material && _material->alphaTextureUsesRedChannel()) ? 1
+                                                                          : 0);
     shader->setInt("uTexture", RendererTextureSlot::BaseColor);
 
-    if (_alphaMode != AlphaMode::Mask)
+    if (_alphaMode != AlphaMode::Mask || !bindAlphaTextureForPass)
         return;
 
     Backend::Texture* texture = _material ? _material->alphaTexture() : nullptr;

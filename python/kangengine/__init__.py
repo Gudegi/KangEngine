@@ -10,7 +10,7 @@ if _assets_dir.exists():
 
 from ._core import _ke
 from ._public import set_public_module as _set_public_module
-from . import animation, asset, physics, scene
+from . import animation, asset, physics, scene, terrain
 from .app import App, NativeApp, RenderablePrimView, SceneContext
 from .motion_editor import (
     MotionEditor,
@@ -41,10 +41,11 @@ from .utils import (
     preset_rgba,
 )
 from .visual import (
-    ArticulationVisualView,
     KangWorldVisualBridge,
-    RigidVisualView,
-    SimVisualBatch,
+    VisualArticulationSceneGraph,
+    VisualBodyPick,
+    VisualBatch,
+    VisualRigidSceneGraph,
 )
 # TODO: Keep Torch-heavy modules lazy until CUDA context interop is explicit.
 # This avoids accidental Torch CUDA initialization before PhysX GPU setup.
@@ -52,9 +53,9 @@ _LAZY_IMPORTS = {
     "ControlMode": (".sim", "ControlMode"),
     "SimDevice": (".sim", "SimDevice"),
     "SimArticulation": (".sim", "SimArticulation"),
-    "SimArticulationView": (".sim", "SimArticulationView"),
+    "SimArticulationBatch": (".sim", "SimArticulationBatch"),
     "SimRigid": (".sim", "SimRigid"),
-    "SimRigidView": (".sim", "SimRigidView"),
+    "SimRigidBatch": (".sim", "SimRigidBatch"),
     "KangSimWorld": (".sim", "KangSimWorld"),
     "ContactSensor": (".sensor", "ContactSensor"),
     "ContactSensorData": (".sensor", "ContactSensorData"),
@@ -72,10 +73,10 @@ if _TYPE_CHECKING:
         ControlMode,
         KangSimWorld,
         SimArticulation,
-        SimArticulationView,
+        SimArticulationBatch,
         SimDevice,
         SimRigid,
-        SimRigidView,
+        SimRigidBatch,
     )
     from .sensor import ContactSensor, ContactSensorData, ForceSensor
     from .mimickit_engine import (
@@ -122,12 +123,15 @@ ColorType = _set_public_module(_ke.ColorType, __name__)
 Color = _set_public_module(_ke.Color, __name__)
 Material = _set_public_module(_ke.Material, __name__)
 PhongMaterial = _set_public_module(_ke.PhongMaterial, __name__)
+PhongMaterialType = _set_public_module(_ke.PhongMaterialType, __name__)
 PBRMaterial = _set_public_module(_ke.PBRMaterial, __name__)
 PBRMaterialType = _set_public_module(_ke.PBRMaterialType, __name__)
 Renderer = _set_public_module(_ke.Renderer, __name__)
 SkinnedCharacterBridge = _set_public_module(_ke.SkinnedCharacterBridge, __name__)
 SkeletonVisualBridge = animation.SkeletonVisualBridge
 SkeletonVisualConfig = animation.SkeletonVisualConfig
+PhysicsMaterialDesc = animation.PhysicsMaterialDesc
+CollisionMaterialOverride = animation.CollisionMaterialOverride
 MotionSequencerPanel = _set_public_module(_ke.MotionSequencerPanel, __name__)
 
 # GLM-style math types and helpers exposed by the C++ extension.
@@ -181,17 +185,19 @@ __all__ = [
     "ControlMode",
     "SimDevice",
     "SimArticulation",
-    "SimArticulationView",
+    "SimArticulationBatch",
     "SimRigid",
-    "SimRigidView",
+    "SimRigidBatch",
     "KangSimWorld",
     "ContactSensor",
     "ContactSensorData",
     "ForceSensor",
     "KangWorldVisualBridge",
-    "ArticulationVisualView",
-    "RigidVisualView",
-    "SimVisualBatch",
+    "VisualArticulationSceneGraph",
+    "VisualRigidSceneGraph",
+    "VisualBatch",
+    "VisualBodyPick",
+    "terrain",
     "KangEngineEngine",
     "build_mimickit_engine",
     "install_mimickit_engine_builder",
@@ -238,12 +244,15 @@ __all__ = [
     "Color",
     "Material",
     "PhongMaterial",
+    "PhongMaterialType",
     "PBRMaterial",
     "PBRMaterialType",
     "Renderer",
     "SkinnedCharacterBridge",
     "SkeletonVisualBridge",
     "SkeletonVisualConfig",
+    "PhysicsMaterialDesc",
+    "CollisionMaterialOverride",
     "MotionSequencerPanel",
     "preset_rgba",
 ]

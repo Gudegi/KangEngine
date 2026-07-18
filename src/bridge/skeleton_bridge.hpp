@@ -9,6 +9,7 @@
 #define _SKELETON_BRIDGE_HPP_
 
 #include "animation/skeleton_fk.hpp"
+#include <Eigen/Geometry>
 #include <memory>
 #include <string>
 #include <vector>
@@ -58,6 +59,12 @@ class SkeletonBridge {
     Animation::SkeletonFK& fk() { return _fk; }
     const Animation::SkeletonFK& fk() const { return _fk; }
     const std::vector<Scene::Prim*>& bodyPrims() const { return _bodyPrims; }
+    const std::vector<Scene::Prim*>& renderPrims() const {
+        return _renderPrims;
+    }
+    const std::vector<int>& renderPrimBodyIndices() const {
+        return _renderPrimBodyIndices;
+    }
     Scene::Prim* bodyPrim(int idx) const { return _bodyPrims[idx]; }
     int numBodies() const { return _fk.numBodies(); }
 
@@ -65,7 +72,9 @@ class SkeletonBridge {
     friend class SkeletonBridgeAsset;
 
     Animation::SkeletonFK _fk;
-    std::vector<Scene::Prim*> _bodyPrims; // non-owning, scene owns
+    std::vector<Scene::Prim*> _bodyPrims;   // non-owning, scene owns
+    std::vector<Scene::Prim*> _renderPrims; // actual renderable mesh prims
+    std::vector<int> _renderPrimBodyIndices;
 };
 
 class SkeletonBridgeAsset {
@@ -80,18 +89,32 @@ class SkeletonBridgeAsset {
                                         float scale = 1.0f);
 
     void defineMeshAssets(Scene::SceneBackend* scene,
-                          const std::string& meshAssetBasePath) const;
+                          const std::string& meshAssetBasePath,
+                          bool splitVisualGeoms = false) const;
 
     SkeletonBridge instantiate(Scene::SceneBackend* scene,
                                const std::string& primBasePath = "/robot",
-                               const std::string& meshAssetBasePath = "") const;
+                               const std::string& meshAssetBasePath = "",
+                               bool splitVisualGeoms = false) const;
 
-    int numBodies() const { return static_cast<int>(_bodyMeshes.size()); }
+    int numBodies() const {
+        return _data.skeletonTree ? _data.skeletonTree->numJoints() : 0;
+    }
+
+  public:
+    struct VisualGeomAsset {
+        int bodyIndex = -1;
+        std::shared_ptr<Scene::MeshData> mesh;
+        Eigen::Vector4f color = Eigen::Vector4f(0.15f, 0.15f, 0.15f, 1.0f);
+    };
 
   private:
     Animation::CharacterData _data;
     float _scale = 1.0f;
-    std::vector<std::shared_ptr<Scene::MeshData>> _bodyMeshes;
+    std::string _assetPath;
+    // Source visual assets, kept at MJCF geom granularity.  Merged body meshes
+    // are derived from this data only for the performance-oriented path.
+    std::vector<VisualGeomAsset> _visualGeomAssets;
 };
 
 } // namespace Bridge

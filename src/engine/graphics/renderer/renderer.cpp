@@ -24,6 +24,24 @@ void Renderer::setViewportSize(int width, int height) {
     _viewportHeight = height;
 }
 
+void Renderer::setBackgroundShader(Backend::Shader* shader) {
+    _backgroundShader = shader;
+    applyBackgroundSettings();
+}
+
+void Renderer::applyBackgroundSettings() {
+    if (!_backgroundShader)
+        return;
+
+    _backgroundShader->use();
+    _backgroundShader->setVec4("checkerColor1",
+                               _settings.background.checkerColor1);
+    _backgroundShader->setVec4("checkerColor2",
+                               _settings.background.checkerColor2);
+    _backgroundShader->setBool("uShowGrid", _settings.background.showGrid);
+    _backgroundShader->setVec4("gridColor", _settings.background.gridColor);
+}
+
 void Renderer::setLight(const DirectionalLight& light) {
     if (_rasterizer)
         _rasterizer->setLight(light);
@@ -118,17 +136,46 @@ void Renderer::renderSceneToFramebuffer(Camera& camera,
     const glm::mat4 view = camera.getViewMatrix();
     const glm::mat4 proj = camera.getProjMatrix();
 
+    applyBackgroundSettings();
     _rasterizer->updateFrameData(view, proj);
     target->bind();
     _device->setViewport(0, 0, width, height);
-    if (clear)
-        _device->clear(0.2f, 0.3f, 0.3f, 1.0f);
+    if (clear) {
+        const glm::vec4& color = _settings.background.backgroundColor;
+        _device->clear(color.r, color.g, color.b, color.a);
+    }
     _rasterizer->render(view, proj);
     _device->setPolygonMode(Backend::PolygonMode::Fill);
     target->resolve();
     target->unbind();
     if (_viewportWidth > 0 && _viewportHeight > 0)
         _device->setViewport(0, 0, _viewportWidth, _viewportHeight);
+}
+
+RenderableHandle Renderer::addRenderable(Material* material, Scene::Prim* prim,
+                                         TransformSource transformSource) {
+    return _rasterizer
+               ? _rasterizer->addRenderable(material, prim, transformSource)
+               : InvalidHandle;
+}
+
+RenderableHandle Renderer::addSkinnedRenderable(
+    Material* material, Scene::Prim* prim,
+    const Scene::SkinnedMeshData& skinnedMesh,
+    TransformSource transformSource) {
+    return _rasterizer ? _rasterizer->addSkinnedRenderable(
+                             material, prim, skinnedMesh, transformSource)
+                       : InvalidHandle;
+}
+
+void Renderer::removePrim(RenderableHandle handle, Scene::Prim* prim) {
+    if (_rasterizer)
+        _rasterizer->removePrim(handle, prim);
+}
+
+void Renderer::removePrim(Scene::Prim* prim) {
+    if (_rasterizer)
+        _rasterizer->removePrim(prim);
 }
 
 void Renderer::updateRenderableTransforms(

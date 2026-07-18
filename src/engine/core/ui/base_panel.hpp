@@ -86,9 +86,29 @@ class ViewportPanel : public Panel {
     bool viewGuizmoCapturesMouse() const { return _viewGuizmoCapturesMouse; }
 };
 
+class CameraViewPanel : public Panel {
+  private:
+    App* _app = nullptr;
+    ImVec2 _imageMin = {0.0f, 0.0f};
+    ImVec2 _imageSize = {0.0f, 0.0f};
+    int _aspectPreset = 0;
+    float _customAspect = 16.0f / 9.0f;
+    int _capturePreset = 1;
+    int _customCaptureWidth = 1920;
+    int _customCaptureHeight = 1080;
+    std::string _lastSaveStatus;
+
+  public:
+    explicit CameraViewPanel(App* app, std::string name = "Camera View");
+    ~CameraViewPanel();
+    virtual void buildPanel();
+};
+
 class ScenePanel : public Panel {
   private:
     App* _app;
+    std::string _pendingDeletePath;
+    bool _deletePopupRequested = false;
 
   public:
     ScenePanel(App* app);

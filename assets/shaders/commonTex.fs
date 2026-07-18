@@ -1,4 +1,7 @@
 #version 410 core
+// TexturedVertexColorMaterial / legacy textured simple-lit path.
+// This shader combines uTexture with per-instance vColor and optional normal
+// mapping. Use phong.fs for PhongMaterial and pbr_forward.fs for PBRMaterial.
 out vec4 FragColor;
 in vec3 Normal;
 in vec3 FragPos;

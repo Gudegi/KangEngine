@@ -33,7 +33,7 @@ class ControlDemo(ke.App):
         self.empty_vec3 = torch.empty((0, 3), dtype=torch.float32)
         self.empty_vec4 = torch.empty((0, 4), dtype=torch.float32)
         self.force_arrow_scale = 0.05
-        self.force_arrow_handle = None
+        self.force_arrow_view = None
         self.force_arrow_visible = False
 
         device = self.get_renderer().device()
@@ -63,7 +63,7 @@ class ControlDemo(ke.App):
 
         ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
         ground.set_mesh_data(scene.Prim.create_plane_data(100.0, ke.UpAxis.Z))
-        self.add_renderable(self.ground_shader, ground)
+        self.scene.add_renderable(ground, self.ground_shader)
 
         self.robot_xml = asset_path("characters", "kw", "kw5.xml")
         self.ball_xml = asset_path("objects", "ball.xml")
@@ -89,7 +89,7 @@ class ControlDemo(ke.App):
             density=1000.0,  # approx 7kg
         ).rigid
 
-        self.visual.add_articulation(
+        self.visual.add_articulation_scene_graph(
             0,
             0,
             self.robot_xml,
@@ -98,7 +98,7 @@ class ControlDemo(ke.App):
             shader=self.robot_shader,
             color=torch.tensor([0.25, 0.42, 0.95, 1.0], dtype=torch.float32),
         )
-        self.visual.add_rigid(
+        self.visual.add_rigid_scene_graph(
             0,
             1,
             self.ball_xml,
@@ -151,9 +151,7 @@ class ControlDemo(ke.App):
 
     def preRender(self):
         if self.force_arrow_visible and self.force_time_left <= 0.0:
-            ke.scene.DebugDraw.update_arrows(
-                self,
-                self.force_arrow_handle,
+            self.force_arrow_view.update_arrows(
                 self.empty_vec3,
                 self.empty_vec3,
                 self.empty_vec4,
@@ -200,11 +198,10 @@ class ControlDemo(ke.App):
         starts = start.reshape(1, 3)
         ends = end.reshape(1, 3)
 
-        if self.force_arrow_handle is None:
-            self.force_arrow_handle = ke.scene.DebugDraw.log_arrows(
-                self,
-                self.rigid_shader,
+        if self.force_arrow_view is None:
+            self.force_arrow_view = self.scene.log_arrows(
                 "/debug/force_arrow",
+                self.rigid_shader,
                 starts,
                 ends,
                 self.arrow_color,
@@ -212,9 +209,7 @@ class ControlDemo(ke.App):
                 12,
             )
         else:
-            ke.scene.DebugDraw.update_arrows(
-                self, self.force_arrow_handle, starts, ends, self.arrow_color
-            )
+            self.force_arrow_view.update_arrows(starts, ends, self.arrow_color)
         self.force_arrow_visible = True
 
     def render(self):

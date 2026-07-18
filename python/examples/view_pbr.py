@@ -9,8 +9,6 @@ from kangengine import imgui, scene
 class PBRViewer(ke.App):
     def setup(self):
         self.shaders = self.create_standard_shaders()
-        self.pbr_shader = self.create_asset_shader("common.vs", "pbr_forward.fs")
-        self.materials = []
         self.local_lights_enabled = True
         self.local_light_prims = []
 
@@ -37,13 +35,7 @@ class PBRViewer(ke.App):
         self.check_error()
 
     def _make_material(self, preset, roughness=None):
-        material = ke.PBRMaterial()
-        material.set_shader(self.pbr_shader)
-        material.load_from_preset(preset)
-        if roughness is not None:
-            material.roughness = float(roughness)
-        self.materials.append(material)
-        return material
+        return self.create_pbr_material(preset, roughness=roughness)
 
     def _add_pbr_sphere(self, path, position, material, radius=0.34):
         view = self.scene.add_mesh(

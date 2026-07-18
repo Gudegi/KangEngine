@@ -5,6 +5,7 @@
 #include "engine/scene/scene_backend.hpp"
 #include <cstddef>
 #include <glm/gtc/quaternion.hpp>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -14,6 +15,8 @@ namespace Backend {
 class Shader;
 }
 namespace Scene {
+
+class RenderComponent;
 
 class DebugDraw {
   public:
@@ -52,6 +55,12 @@ class DebugDraw {
                                      const std::vector<glm::vec3>& ends,
                                      const std::vector<glm::vec4>& colors = {},
                                      float radius = 0.005f, int segments = 8);
+    static std::shared_ptr<RenderComponent>
+    logLineComponent(App* app, Backend::Shader* shader, const std::string& path,
+                     const std::vector<glm::vec3>& starts,
+                     const std::vector<glm::vec3>& ends,
+                     const std::vector<glm::vec4>& colors = {},
+                     float radius = 0.005f, int segments = 8);
 
     static RenderableHandle logLines(App* app, Backend::Shader* shader,
                                      const std::string& path,
@@ -61,6 +70,10 @@ class DebugDraw {
                                      int segments = 8);
 
     static void updateLines(App* app, RenderableHandle handle,
+                            const std::vector<glm::vec3>& starts,
+                            const std::vector<glm::vec3>& ends,
+                            const std::vector<glm::vec4>& colors = {});
+    static void updateLines(App* app, RenderComponent& component,
                             const std::vector<glm::vec3>& starts,
                             const std::vector<glm::vec3>& ends,
                             const std::vector<glm::vec4>& colors = {});
@@ -76,6 +89,13 @@ class DebugDraw {
                                       const std::vector<glm::vec3>& ends,
                                       const std::vector<glm::vec4>& colors = {},
                                       float radius = 0.02f, int segments = 12);
+    static std::shared_ptr<RenderComponent>
+    logArrowComponent(App* app, Backend::Shader* shader,
+                      const std::string& path,
+                      const std::vector<glm::vec3>& starts,
+                      const std::vector<glm::vec3>& ends,
+                      const std::vector<glm::vec4>& colors = {},
+                      float radius = 0.02f, int segments = 12);
 
     static RenderableHandle logArrows(App* app, Backend::Shader* shader,
                                       const std::string& path,
@@ -85,6 +105,10 @@ class DebugDraw {
                                       int segments = 12);
 
     static void updateArrows(App* app, RenderableHandle handle,
+                             const std::vector<glm::vec3>& starts,
+                             const std::vector<glm::vec3>& ends,
+                             const std::vector<glm::vec4>& colors = {});
+    static void updateArrows(App* app, RenderComponent& component,
                              const std::vector<glm::vec3>& starts,
                              const std::vector<glm::vec3>& ends,
                              const std::vector<glm::vec4>& colors = {});
@@ -100,6 +124,40 @@ class DebugDraw {
         glm::quat orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
         float length = 1.0f, float radius = 0.005f, int segments = 8);
 };
+
+namespace DebugGeometry {
+
+void appendLine(std::vector<glm::vec3>& starts, std::vector<glm::vec3>& ends,
+                const glm::vec3& start, const glm::vec3& end);
+// Light
+void appendDirectionArrowWire(std::vector<glm::vec3>& starts,
+                              std::vector<glm::vec3>& ends,
+                              const glm::vec3& origin,
+                              const glm::vec3& direction, float length);
+void appendSphereWire(std::vector<glm::vec3>& starts,
+                      std::vector<glm::vec3>& ends, const glm::vec3& center,
+                      float radius, int segments = 64);
+void appendConeWire(std::vector<glm::vec3>& starts,
+                    std::vector<glm::vec3>& ends, const glm::vec3& apex,
+                    const glm::vec3& direction, float range,
+                    float outerConeAngle, int segments = 64);
+// Camera
+void appendCameraGlyphWire(std::vector<glm::vec3>& starts,
+                           std::vector<glm::vec3>& ends,
+                           const glm::vec3& position, const glm::vec3& forward,
+                           const glm::vec3& up, float size);
+void appendPerspectiveFrustumWire(std::vector<glm::vec3>& starts,
+                                  std::vector<glm::vec3>& ends,
+                                  const glm::vec3& position,
+                                  const glm::vec3& forward, const glm::vec3& up,
+                                  float verticalFovRadians, float aspect,
+                                  float nearPlane, float farPlane);
+void appendOrthographicFrustumWire(
+    std::vector<glm::vec3>& starts, std::vector<glm::vec3>& ends,
+    const glm::vec3& position, const glm::vec3& forward, const glm::vec3& up,
+    float verticalSize, float aspect, float nearPlane, float farPlane);
+
+} // namespace DebugGeometry
 
 } // namespace Scene
 } // namespace KE

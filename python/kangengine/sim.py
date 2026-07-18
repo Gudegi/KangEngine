@@ -51,6 +51,15 @@ def _clip_forces(forces, limits):
     return np.clip(forces, -limits, limits).astype(np.float32, copy=False)
 
 
+def _copy_command_from_dof_reset(positions):
+    import sys
+
+    torch = sys.modules.get("torch")
+    if torch is not None and torch.is_tensor(positions):
+        return positions.reshape(-1).contiguous().clone()
+    return np.asarray(positions, dtype=np.float32).reshape(-1).copy()
+
+
 def _torch():
     global _TORCH
     if _TORCH is None:
@@ -341,6 +350,7 @@ class SimRigid:
     name: str
     rigid: object
     world: object | None = None
+    source_data: object | None = None
 
     @property
     def key(self):
@@ -457,6 +467,24 @@ class SimRigid:
         )
         return self
 
+    def set_collision_material(self, material):
+        """Replace all collision shape materials on this rigid at runtime."""
+        world = self._require_world()
+        return world.physics.set_rigid_collision_material(self.rigid, material)
+
+    def set_collision_material_overrides(self, material_overrides, data=None):
+        """Apply named/indexed collision material overrides at runtime."""
+        world = self._require_world()
+        source_data = self.source_data if data is None else data
+        if source_data is None:
+            raise RuntimeError(
+                "set_collision_material_overrides requires the CharacterData "
+                "used to create this rigid"
+            )
+        return world.physics.set_rigid_collision_material_overrides(
+            self.rigid, source_data, material_overrides
+        )
+
     def _selected_env_ids(self, env_ids: EnvIdLike | None):
         if env_ids is None:
             return self.env_id
@@ -472,7 +500,7 @@ class SimRigid:
 
 
 @dataclass(slots=True)
-class SimArticulationView:
+class SimArticulationBatch:
     """Batched simulation-facing view for one logical articulation object."""
 
     world: object
@@ -665,7 +693,7 @@ class SimArticulationView:
 
 
 @dataclass(slots=True)
-class SimRigidView:
+class SimRigidBatch:
     """Batched simulation-facing view for one logical rigid object."""
 
     world: object
@@ -787,6 +815,28 @@ class SimRigidView:
         )
         return self
 
+    def set_collision_material(self, env_ids: EnvIdLike | None, material):
+        """Replace collision shape materials for selected rigid env instances."""
+        selected = self._selected_env_ids(env_ids)
+        updated = 0
+        for env_id in selected:
+            updated += self.world.rigids[(env_id, self.obj_id)].set_collision_material(
+                material
+            )
+        return updated
+
+    def set_collision_material_overrides(
+        self, env_ids: EnvIdLike | None, material_overrides, data=None
+    ):
+        """Apply named/indexed material overrides to selected rigid env instances."""
+        selected = self._selected_env_ids(env_ids)
+        updated = 0
+        for env_id in selected:
+            updated += self.world.rigids[
+                (env_id, self.obj_id)
+            ].set_collision_material_overrides(material_overrides, data=data)
+        return updated
+
     def _selected_env_ids(self, env_ids: EnvIdLike | None):
         if env_ids is None:
             return self.env_ids
@@ -818,6 +868,16 @@ class ControlMode(str, Enum):
 class CommandBuffer:
     mode: ControlMode
     cmd: object | None = None
+    kp: object | None = None
+    kd: object | None = None
+
+
+@dataclass(slots=True)
+class BatchCommandBuffer:
+    mode: ControlMode
+    env_ids: tuple[int, ...]
+    obj_id: int
+    cmd: object
     kp: object | None = None
     kd: object | None = None
 
@@ -904,6 +964,7 @@ class KangSimWorld:
         self.articulations: dict[tuple[int, int], SimArticulation] = {}
         self.rigids: dict[tuple[int, int], SimRigid] = {}
         self.commands: dict[tuple[int, int], CommandBuffer] = {}
+        self.batch_commands: dict[int, BatchCommandBuffer] = {}
         self.resets: dict[tuple[int, int], ResetBuffer] = {}
         self.body_forces: dict[tuple[int, int], np.ndarray] = {}
         self.body_force_positions: dict[tuple[int, int], np.ndarray] = {}
@@ -921,6 +982,7 @@ class KangSimWorld:
         self._articulation_gpu_index_tensors: dict[
             tuple[tuple[int, int], ...], object
         ] = {}
+        self._articulation_gpu_row_tensors: dict[tuple[tuple[int, int], ...], object] = {}
         self.sensors: dict[str, object] = {}
         self._contact_sensor_batch = None
         self._released = False
@@ -1067,7 +1129,7 @@ class KangSimWorld:
         body_names = [spec.name for spec in shape_specs]
         local_pos = np.stack([spec.local_pos for spec in shape_specs], axis=0)
         local_rot = np.stack([spec.local_rot for spec in shape_specs], axis=0)
-        record = SimRigid(key[0], key[1], str(name), rigid, self)
+        record = SimRigid(key[0], key[1], str(name), rigid, self, data)
         self.rigids[key] = record
         self.state.add_rigid(
             rigid,
@@ -1100,41 +1162,67 @@ class KangSimWorld:
         data = self.load_mjcf(mjcf_path, scale=scale, order=order)
         return self.add_articulation(data, env_id, obj_id, name, config)
 
-    def get_articulation_view(
+    def get_articulation(self, env_id: int = 0, obj_id: int = 0) -> SimArticulation:
+        key = (int(env_id), int(obj_id))
+        try:
+            return self.articulations[key]
+        except KeyError as exc:
+            raise KeyError(
+                f"no articulation registered at env={key[0]}, obj={key[1]}"
+            ) from exc
+
+    def get_rigid(self, env_id: int = 0, obj_id: int = 0) -> SimRigid:
+        key = (int(env_id), int(obj_id))
+        try:
+            return self.rigids[key]
+        except KeyError as exc:
+            raise KeyError(f"no rigid registered at env={key[0]}, obj={key[1]}") from exc
+
+    def get_object(
+        self, env_id: int = 0, obj_id: int = 0
+    ) -> SimArticulation | SimRigid:
+        key = (int(env_id), int(obj_id))
+        if key in self.articulations:
+            return self.articulations[key]
+        if key in self.rigids:
+            return self.rigids[key]
+        raise KeyError(f"no object registered at env={key[0]}, obj={key[1]}")
+
+    def get_articulation_batch(
         self,
         env_ids: EnvIdLike = None,
         obj_id: int = 0,
         name: str | None = None,
-    ) -> SimArticulationView:
+    ) -> SimArticulationBatch:
         obj_id = int(obj_id)
         selected_env_ids = self._object_env_ids(self.articulations, obj_id, env_ids)
         if name is None:
             name = self.articulations[(selected_env_ids[0], obj_id)].name
-        return SimArticulationView(self, obj_id, selected_env_ids, str(name))
+        return SimArticulationBatch(self, obj_id, selected_env_ids, str(name))
 
-    def get_rigid_view(
+    def get_rigid_batch(
         self,
         env_ids: EnvIdLike = None,
         obj_id: int = 0,
         name: str | None = None,
-    ) -> SimRigidView:
+    ) -> SimRigidBatch:
         obj_id = int(obj_id)
         selected_env_ids = self._object_env_ids(self.rigids, obj_id, env_ids)
         if name is None:
             name = self.rigids[(selected_env_ids[0], obj_id)].name
-        return SimRigidView(self, obj_id, selected_env_ids, str(name))
+        return SimRigidBatch(self, obj_id, selected_env_ids, str(name))
 
-    def get_object_view(
+    def get_object_batch(
         self,
         env_ids: EnvIdLike = None,
         obj_id: int = 0,
         name: str | None = None,
-    ) -> SimArticulationView | SimRigidView:
+    ) -> SimArticulationBatch | SimRigidBatch:
         obj_id = int(obj_id)
         if any(key[1] == obj_id for key in self.articulations):
-            return self.get_articulation_view(env_ids, obj_id, name)
+            return self.get_articulation_batch(env_ids, obj_id, name)
         if any(key[1] == obj_id for key in self.rigids):
-            return self.get_rigid_view(env_ids, obj_id, name)
+            return self.get_rigid_batch(env_ids, obj_id, name)
         raise KeyError(f"no object registered with obj_id={obj_id}")
 
     def _object_env_ids(self, records, obj_id: int, env_ids: EnvIdLike):
@@ -1202,6 +1290,17 @@ class KangSimWorld:
                 raise TypeError("CUDA command tensor must have dtype=torch.float32")
             if not cmd.is_contiguous():
                 raise ValueError("CUDA command tensor must be contiguous")
+            batch = self._try_set_cuda_batch_command(
+                env_ids,
+                int(obj_id),
+                cmd,
+                mode,
+                kp,
+                kd,
+                torch=torch,
+            )
+            if batch:
+                return
 
         for env_index, eid in enumerate(env_ids):
             key = (eid, int(obj_id))
@@ -1276,6 +1375,129 @@ class KangSimWorld:
                 kd_arr = _optional_drive_array(kd, expected)
             stored = arr if cuda_cmd else arr.copy()
             self.commands[key] = CommandBuffer(mode, stored, kp_arr, kd_arr)
+
+    def _try_set_cuda_batch_command(
+        self,
+        env_ids: list[int],
+        obj_id: int,
+        cmd,
+        mode: ControlMode,
+        kp,
+        kd,
+        *,
+        torch,
+    ) -> bool:
+        if self._gpu_system is None or not torch.is_tensor(cmd):
+            return False
+        if cmd.device.type != "cuda" or cmd.ndim != 2:
+            return False
+        if tuple(env_ids) != tuple(range(self.num_envs)):
+            return False
+        key0 = (0, int(obj_id))
+        if key0 in self.rigids:
+            raise TypeError(f"rigid body obj={obj_id} does not accept commands")
+        if key0 not in self.articulations:
+            return False
+        expected = self.articulations[key0].articulation.num_dofs()
+        if tuple(cmd.shape) != (self.num_envs, expected):
+            return False
+
+        gpu_device = int(self.gpu_system.articulation_joint_forces().device_id)
+        cmd_device = cmd.device.index if cmd.device.index is not None else 0
+        if cmd_device != gpu_device:
+            raise ValueError(
+                f"CUDA command tensor is on cuda:{cmd_device}, expected "
+                f"cuda:{gpu_device}"
+            )
+        for eid in env_ids:
+            key = (int(eid), int(obj_id))
+            if key in self.rigids:
+                raise TypeError(
+                    f"rigid body at env={eid}, obj={obj_id} does not accept commands"
+                )
+            if key not in self.articulations:
+                raise KeyError(f"articulation env={eid}, obj={obj_id} is not registered")
+            dofs = self.articulations[key].articulation.num_dofs()
+            if dofs != expected:
+                raise RuntimeError(
+                    f"articulation obj={obj_id} has inconsistent DOF counts: "
+                    f"env 0 has {expected}, env {eid} has {dofs}"
+                )
+
+        if mode == ControlMode.PD_EXPLICIT:
+            kp_arr = self._select_cuda_batch_pd_gain(
+                kp, self.num_envs, expected, torch=torch, device=cmd.device, name="kp"
+            )
+            kd_arr = self._select_cuda_batch_pd_gain(
+                kd, self.num_envs, expected, torch=torch, device=cmd.device, name="kd"
+            )
+        else:
+            kp_arr = _optional_drive_array(kp, expected)
+            kd_arr = _optional_drive_array(kd, expected)
+
+        self.batch_commands[int(obj_id)] = BatchCommandBuffer(
+            mode=mode,
+            env_ids=tuple(int(eid) for eid in env_ids),
+            obj_id=int(obj_id),
+            cmd=cmd,
+            kp=kp_arr,
+            kd=kd_arr,
+        )
+        for eid in env_ids:
+            self.commands[(int(eid), int(obj_id))] = CommandBuffer(ControlMode.NONE)
+        return True
+
+    def _select_cuda_batch_pd_gain(
+        self,
+        value,
+        env_count: int,
+        expected: int,
+        *,
+        torch,
+        device,
+        name: str,
+    ):
+        if value is None:
+            raise ValueError(f"GPU PD_EXPLICIT requires per-DOF {name} array")
+        if torch.is_tensor(value):
+            if value.device.type != "cuda":
+                raise RuntimeError(
+                    f"GPU PD_EXPLICIT {name} tensor must be CUDA; mixed "
+                    "CPU/CUDA gains are not allowed"
+                )
+            value_device = value.device.index if value.device.index is not None else 0
+            cmd_device = device.index if device.index is not None else 0
+            if value_device != cmd_device:
+                raise ValueError(
+                    f"GPU PD_EXPLICIT {name} tensor is on cuda:{value_device}, "
+                    f"expected cuda:{cmd_device}"
+                )
+            if value.dtype != torch.float32:
+                raise TypeError(
+                    f"GPU PD_EXPLICIT {name} tensor must have dtype=torch.float32"
+                )
+            if not value.is_contiguous():
+                raise ValueError(f"GPU PD_EXPLICIT {name} tensor must be contiguous")
+            if value.ndim == 1 and tuple(value.shape) == (expected,):
+                return value
+            if value.ndim == 2 and tuple(value.shape) == (env_count, expected):
+                return value
+            raise ValueError(
+                f"GPU PD_EXPLICIT {name} tensor expected shape "
+                f"[{expected}] or [{env_count}, {expected}], got "
+                f"{list(value.shape)}"
+            )
+        array = _as_cpu_numpy(value).astype(np.float32, copy=False)
+        if array.ndim == 0 or array.size == 1:
+            raise ValueError(f"GPU PD_EXPLICIT {name} must be a per-DOF array")
+        if array.shape == (expected,):
+            return array.copy()
+        if array.shape == (env_count, expected):
+            return array.copy()
+        raise ValueError(
+            f"GPU PD_EXPLICIT {name} array expected shape "
+            f"[{expected}] or [{env_count}, {expected}], got {list(array.shape)}"
+        )
 
     def _select_cuda_pd_gain(
         self,
@@ -1363,11 +1585,31 @@ class KangSimWorld:
             if obj_id is not None and key[1] != int(obj_id):
                 continue
             self.commands[key] = CommandBuffer(ControlMode.NONE)
+        if env_id is None:
+            if obj_id is None:
+                self.batch_commands.clear()
+            else:
+                self.batch_commands.pop(int(obj_id), None)
+        else:
+            for oid, batch in list(self.batch_commands.items()):
+                if obj_id is not None and oid != int(obj_id):
+                    continue
+                if any(eid in env_ids for eid in batch.env_ids):
+                    self.batch_commands.pop(oid, None)
 
     def apply_commands(self):
-        gpu_articulation_commands = []
+        gpu_per_env_commands = []
+        gpu_full_batch_commands = []
+        if self._gpu_system is not None:
+            gpu_full_batch_commands = [
+                batch
+                for batch in self.batch_commands.values()
+                if batch.mode != ControlMode.NONE and batch.cmd is not None
+            ]
         for key, buffer in self.commands.items():
             if buffer.mode == ControlMode.NONE or buffer.cmd is None:
+                continue
+            if key[1] in self.batch_commands:
                 continue
             if (
                 self._gpu_system is not None
@@ -1380,7 +1622,7 @@ class KangSimWorld:
                     ControlMode.PD_EXPLICIT,
                 )
             ):
-                gpu_articulation_commands.append((key, buffer))
+                gpu_per_env_commands.append((key, buffer))
                 continue
             articulation = self.articulations[key].articulation
             if buffer.mode == ControlMode.POS:
@@ -1425,10 +1667,115 @@ class KangSimWorld:
                 raise NotImplementedError(
                     f"control mode '{buffer.mode.value}' is not implemented yet"
                 )
-        if gpu_articulation_commands:
-            self._apply_gpu_articulation_commands(gpu_articulation_commands)
+        if gpu_full_batch_commands:
+            self._apply_gpu_articulation_full_batch_commands(
+                gpu_full_batch_commands
+            )
+        if gpu_per_env_commands:
+            self._apply_gpu_articulation_per_env_commands(gpu_per_env_commands)
 
-    def _apply_gpu_articulation_commands(
+    def _apply_gpu_articulation_full_batch_commands(
+        self, commands: list[BatchCommandBuffer]
+    ):
+        torch = _torch()
+        gpu_system = self.gpu_system
+        target_qpos_view = gpu_system.articulation_target_joint_positions()
+        target_qvel_view = gpu_system.articulation_target_joint_velocities()
+        qf_view = gpu_system.articulation_joint_forces()
+        qpos_view = gpu_system.articulation_joint_positions()
+        qvel_view = gpu_system.articulation_joint_velocities()
+        device_id = int(target_qpos_view.device_id)
+        device = torch.device(f"cuda:{device_id}")
+        target_qpos = target_qpos_view.torch()
+        target_qvel = target_qvel_view.torch()
+        qf = qf_view.torch()
+        qpos = qpos_view.torch()
+        qvel = qvel_view.torch()
+
+        for batch in commands:
+            rows = self._articulation_gpu_rows_for_obj(
+                batch.obj_id, batch.env_ids, device=device
+            )
+            dof_indices = self._articulation_gpu_dof_indices(
+                (batch.env_ids[0], batch.obj_id), device=device
+            )
+            dof_count = int(gpu_system.articulation_dof_count(int(rows[0].item())))
+            cmd = torch.as_tensor(batch.cmd, dtype=torch.float32, device=device)
+            if cmd.ndim == 1:
+                cmd = cmd.reshape(1, -1).expand(len(batch.env_ids), -1)
+            cmd = cmd[:, :dof_count]
+            cols = dof_indices[:dof_count]
+
+            if batch.mode == ControlMode.POS:
+                target_qpos[rows[:, None], cols[None, :]] = cmd
+                gpu_system.apply_articulation_target_joint_positions(
+                    self._articulation_gpu_index_view_for_keys(
+                        tuple((eid, batch.obj_id) for eid in batch.env_ids),
+                        device=device,
+                        name="kangsimworld_articulation_pos_batch_command_indices",
+                    )
+                )
+            elif batch.mode == ControlMode.VEL:
+                target_qvel[rows[:, None], cols[None, :]] = cmd
+                gpu_system.apply_articulation_target_joint_velocities(
+                    self._articulation_gpu_index_view_for_keys(
+                        tuple((eid, batch.obj_id) for eid in batch.env_ids),
+                        device=device,
+                        name="kangsimworld_articulation_vel_batch_command_indices",
+                    )
+                )
+            elif batch.mode == ControlMode.TORQUE:
+                limits = torch.as_tensor(
+                    self.articulations[(batch.env_ids[0], batch.obj_id)]
+                    .articulation.get_effort_limits(),
+                    dtype=torch.float32,
+                    device=device,
+                )[:dof_count]
+                qf[rows[:, None], cols[None, :]] = torch.clamp(
+                    cmd, -limits[None, :], limits[None, :]
+                )
+                gpu_system.apply_articulation_joint_forces(
+                    self._articulation_gpu_index_view_for_keys(
+                        tuple((eid, batch.obj_id) for eid in batch.env_ids),
+                        device=device,
+                        name="kangsimworld_articulation_torque_batch_command_indices",
+                    )
+                )
+            elif batch.mode == ControlMode.PD_EXPLICIT:
+                kp = torch.as_tensor(batch.kp, dtype=torch.float32, device=device)
+                kd = torch.as_tensor(batch.kd, dtype=torch.float32, device=device)
+                if kp.ndim == 1:
+                    kp = kp.reshape(1, -1).expand(len(batch.env_ids), -1)
+                if kd.ndim == 1:
+                    kd = kd.reshape(1, -1).expand(len(batch.env_ids), -1)
+                limits = torch.as_tensor(
+                    self.articulations[(batch.env_ids[0], batch.obj_id)]
+                    .articulation.get_effort_limits(),
+                    dtype=torch.float32,
+                    device=device,
+                )[:dof_count]
+                current_qpos = qpos[rows[:, None], cols[None, :]]
+                current_qvel = qvel[rows[:, None], cols[None, :]]
+                torque = (
+                    kp[:, :dof_count] * (cmd - current_qpos)
+                    - kd[:, :dof_count] * current_qvel
+                )
+                qf[rows[:, None], cols[None, :]] = torch.clamp(
+                    torque, -limits[None, :], limits[None, :]
+                )
+                gpu_system.apply_articulation_joint_forces(
+                    self._articulation_gpu_index_view_for_keys(
+                        tuple((eid, batch.obj_id) for eid in batch.env_ids),
+                        device=device,
+                        name="kangsimworld_articulation_pd_batch_command_indices",
+                    )
+                )
+            else:
+                raise NotImplementedError(
+                    f"control mode '{batch.mode.value}' is not implemented yet"
+                )
+
+    def _apply_gpu_articulation_per_env_commands(
         self, commands: list[tuple[tuple[int, int], CommandBuffer]]
     ):
         torch = _torch()
@@ -1452,12 +1799,13 @@ class KangSimWorld:
         for key, buffer in commands:
             row = self.articulation_gpu_row(key[0], key[1])
             dof_count = int(gpu_system.articulation_dof_count(row))
+            dof_indices = self._articulation_gpu_dof_indices(key, device=device)
             cmd = torch.as_tensor(buffer.cmd, dtype=torch.float32, device=device)
             if buffer.mode == ControlMode.POS:
-                target_qpos[row, :dof_count] = cmd
+                target_qpos[row, dof_indices] = cmd[:dof_count]
                 pos_keys.append(key)
             elif buffer.mode == ControlMode.VEL:
-                target_qvel[row, :dof_count] = cmd
+                target_qvel[row, dof_indices] = cmd[:dof_count]
                 vel_keys.append(key)
             elif buffer.mode == ControlMode.TORQUE:
                 limits = torch.as_tensor(
@@ -1465,7 +1813,9 @@ class KangSimWorld:
                     dtype=torch.float32,
                     device=device,
                 )
-                qf[row, :dof_count] = torch.clamp(cmd, -limits, limits)
+                qf[row, dof_indices] = torch.clamp(
+                    cmd[:dof_count], -limits[:dof_count], limits[:dof_count]
+                )
                 torque_keys.append(key)
             elif buffer.mode == ControlMode.PD_EXPLICIT:
                 kp = torch.as_tensor(buffer.kp, dtype=torch.float32, device=device)
@@ -1476,10 +1826,13 @@ class KangSimWorld:
                     device=device,
                 )
                 torque = (
-                    kp[:dof_count] * (cmd[:dof_count] - qpos[row, :dof_count])
-                    - kd[:dof_count] * qvel[row, :dof_count]
+                    kp[:dof_count]
+                    * (cmd[:dof_count] - qpos[row, dof_indices])
+                    - kd[:dof_count] * qvel[row, dof_indices]
                 )
-                qf[row, :dof_count] = torch.clamp(torque, -limits, limits)
+                qf[row, dof_indices] = torch.clamp(
+                    torque, -limits[:dof_count], limits[:dof_count]
+                )
                 torque_keys.append(key)
 
         if pos_keys:
@@ -1544,10 +1897,12 @@ class KangSimWorld:
                 else:
                     cache.set_dofs(reset.dof.positions, reset.dof.velocities)
                 command = self.commands.get(key)
-                if command is not None and command.mode == ControlMode.POS:
-                    command.cmd = np.asarray(
-                        reset.dof.positions, dtype=np.float32
-                    ).reshape(-1).copy()
+                if (
+                    command is not None
+                    and command.mode == ControlMode.POS
+                    and command.cmd is None
+                ):
+                    command.cmd = _copy_command_from_dof_reset(reset.dof.positions)
             self.resets[key] = ResetBuffer()
         if gpu_rigid_root_resets:
             self._apply_gpu_rigid_root_resets(gpu_rigid_root_resets)
@@ -1636,10 +1991,13 @@ class KangSimWorld:
 
         for key, reset in resets:
             row = self.articulation_gpu_row(key[0], key[1])
-            link_state[row, 0, 0:3] = torch.as_tensor(
+            root_link_index = int(
+                self.articulations[key].articulation.get_link_indices()[0]
+            )
+            link_state[row, root_link_index, 0:3] = torch.as_tensor(
                 reset.pos, dtype=torch.float32, device=device
             )
-            link_state[row, 0, 3:7] = torch.as_tensor(
+            link_state[row, root_link_index, 3:7] = torch.as_tensor(
                 reset.rot_xyzw, dtype=torch.float32, device=device
             )
             linear_velocity = (
@@ -1652,10 +2010,10 @@ class KangSimWorld:
                 if reset.angular_velocity is None
                 else reset.angular_velocity
             )
-            link_state[row, 0, 7:10] = torch.as_tensor(
+            link_state[row, root_link_index, 7:10] = torch.as_tensor(
                 linear_velocity, dtype=torch.float32, device=device
             )
-            link_state[row, 0, 10:13] = torch.as_tensor(
+            link_state[row, root_link_index, 10:13] = torch.as_tensor(
                 angular_velocity, dtype=torch.float32, device=device
             )
 
@@ -1682,17 +2040,18 @@ class KangSimWorld:
         for key, reset in resets:
             row = self.articulation_gpu_row(key[0], key[1])
             dof_count = int(gpu_system.articulation_dof_count(row))
-            qpos[row, :dof_count] = torch.as_tensor(
+            dof_indices = self._articulation_gpu_dof_indices(key, device=device)
+            qpos[row, dof_indices] = torch.as_tensor(
                 reset.positions, dtype=torch.float32, device=device
-            )
+            )[:dof_count]
             velocity = (
                 np.zeros(dof_count, dtype=np.float32)
                 if reset.velocities is None
                 else reset.velocities
             )
-            qvel[row, :dof_count] = torch.as_tensor(
+            qvel[row, dof_indices] = torch.as_tensor(
                 velocity, dtype=torch.float32, device=device
-            )
+            )[:dof_count]
 
         index_view = self._articulation_gpu_index_view_for_keys(
             keys, device=device, name="kangsimworld_articulation_dof_reset_indices"
@@ -1725,6 +2084,13 @@ class KangSimWorld:
         link_view = gpu_system.articulation_link_data()
         device = torch.device(f"cuda:{int(link_view.device_id)}")
         for key in keys:
+            command = self.commands.get(key)
+            if (
+                command is not None
+                and command.mode != ControlMode.NONE
+                and command.cmd is not None
+            ):
+                continue
             self.commands[key] = CommandBuffer(ControlMode.NONE)
 
         index_view = self._articulation_gpu_index_view_for_keys(
@@ -1921,6 +2287,7 @@ class KangSimWorld:
         }
         self._rigid_gpu_index_tensors.clear()
         self._articulation_gpu_index_tensors.clear()
+        self._articulation_gpu_row_tensors.clear()
         return gpu_system
 
     @property
@@ -2056,6 +2423,23 @@ class KangSimWorld:
             tensor = torch.tensor(rows, dtype=torch.int32, device=device)
             self._articulation_gpu_index_tensors[keys] = tensor
         return to_gpu_array_view(tensor, dtype=torch.int32, name=name)
+
+    def _articulation_gpu_rows_for_obj(self, obj_id: int, env_ids, *, device):
+        torch = _torch()
+
+        keys = tuple((int(env_id), int(obj_id)) for env_id in env_ids)
+        tensor = self._articulation_gpu_row_tensors.get(keys)
+        if tensor is None or tensor.device != device:
+            rows = [
+                self.articulation_gpu_row(env_id, obj_id)
+                for env_id, obj_id in keys
+            ]
+            tensor = torch.tensor(rows, dtype=torch.long, device=device)
+            self._articulation_gpu_row_tensors[keys] = tensor
+        return tensor
+
+    def _articulation_gpu_dof_indices(self, key, *, device):
+        return self.state.record(key[0], key[1]).cache.dof_gpu_indices.to(device)
 
     def _require_gpu_runtime_uninitialized(self, operation: str):
         if self._gpu_system is not None:
@@ -2369,6 +2753,8 @@ class KangSimWorld:
         self._rigid_gpu_index_tensors.clear()
         self._articulation_gpu_rows.clear()
         self._articulation_gpu_index_tensors.clear()
+        self._articulation_gpu_row_tensors.clear()
+        self.batch_commands.clear()
         for record in self.articulations.values():
             record.articulation.release()
         for record in self.rigids.values():

@@ -67,7 +67,7 @@ class KwMotionTrackingApp(ke.App):
 
         ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
         ground.set_mesh_data(scene.Prim.create_plane_data(100.0, ke.UpAxis.Z))
-        self.add_renderable(self.ground_shader, ground)
+        self.scene.add_renderable(ground, self.ground_shader)
 
         mjcf_data = asset.MJCFLoader.load(self.char_file, order=self.order)
         sim_record = self.sim_world.add_articulation(
@@ -81,7 +81,7 @@ class KwMotionTrackingApp(ke.App):
         self.num_dofs = self.articulation.num_dofs()
 
         self.visual_bridge = ke.KangWorldVisualBridge(self, self.sim_world)
-        self.visual_bridge.add_articulation(
+        self.visual_bridge.add_articulation_scene_graph(
             0,
             0,
             self.char_file,
@@ -101,7 +101,7 @@ class KwMotionTrackingApp(ke.App):
         )
         for prim in self.ghost.body_prims():
             prim.set_display_color_alpha(ke.vec4(0.2, 0.6, 1.0, 0.35))
-            self.add_renderable(self.ghost_shader, prim)
+            self.scene.add_renderable(prim, self.ghost_shader)
 
         self.body_axes: dict[int, list[np.ndarray]] = {}
         for body_idx, joints in self.articulation.joints().items():

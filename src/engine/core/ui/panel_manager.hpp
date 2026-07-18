@@ -33,6 +33,7 @@ class PanelManager {
     static constexpr const char* PANEL_PERFORMANCE = "Performance";
     static constexpr const char* PANEL_INSPECTOR = "Inspector";
     static constexpr const char* PANEL_VIEWPORT = "Viewport";
+    static constexpr const char* PANEL_CAMERA_VIEW = "Camera View";
 
   private:
     float _fontSize = 12.0f;

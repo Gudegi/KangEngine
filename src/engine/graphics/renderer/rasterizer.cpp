@@ -136,48 +136,22 @@ void Rasterizer::unregisterPrimSource(Scene::Prim* prim,
         _primSourceRegistrations.erase(it);
 }
 
-RenderableHandle Rasterizer::addRenderable(Backend::Shader* shader,
-                                           Scene::Prim* prim,
-                                           TransformSource transformSource) {
-    auto meshData = prim->resolveMeshData();
-    if (!meshData || meshData->vertices.empty() || meshData->indices.empty())
-        return InvalidHandle;
-
-    InstancerKey key{shader, meshData.get(), nullptr, transformSource};
-    auto it = _instancers.find(key);
-    if (it == _instancers.end()) {
-        auto [newIt, inserted] = _instancers.emplace(key, MeshInstancer{});
-        newIt->second.init(_graphicsDevice, shader, *meshData, transformSource);
-        it = newIt;
-    }
-    registerPrimSource(prim, transformSource);
-    it->second.addPrim(prim);
-
-    auto hIt = _handleMap.find(key);
-    if (hIt == _handleMap.end()) {
-        RenderableHandle h = static_cast<RenderableHandle>(_handleTable.size());
-        _handleMap[key] = h;
-        _handleTable.push_back(&it->second);
-        return h;
-    }
-    return hIt->second;
-}
-
 RenderableHandle
-Rasterizer::addSkinnedRenderable(Backend::Shader* shader, Scene::Prim* prim,
+Rasterizer::addSkinnedRenderable(Material* material, Scene::Prim* prim,
                                  const Scene::SkinnedMeshData& skinnedMesh,
                                  TransformSource transformSource) {
     auto meshData = prim->resolveMeshData();
-    if (!meshData || meshData->vertices.empty() || meshData->indices.empty() ||
-        !skinnedMesh.hasValidVertexSkinning())
+    if (!material || !meshData || meshData->vertices.empty() ||
+        meshData->indices.empty() || !skinnedMesh.hasValidVertexSkinning())
         return InvalidHandle;
 
-    InstancerKey key{shader, meshData.get(), nullptr, transformSource};
+    auto* shader = material->getShader();
+    InstancerKey key{shader, meshData.get(), material, transformSource};
     auto it = _instancers.find(key);
     if (it == _instancers.end()) {
         auto [newIt, inserted] = _instancers.emplace(key, MeshInstancer{});
         newIt->second.init(_graphicsDevice, shader, skinnedMesh,
-                           transformSource);
+                           transformSource, material);
         it = newIt;
     }
     registerPrimSource(prim, transformSource);
@@ -308,8 +282,8 @@ void Rasterizer::setRenderableCastsShadow(RenderableHandle handle,
     _handleTable[handle]->setCastsShadow(castsShadow);
 }
 
-void Rasterizer::setRenderableAlphaMode(RenderableHandle handle,
-                                        AlphaMode mode, float cutoff) {
+void Rasterizer::setRenderableAlphaMode(RenderableHandle handle, AlphaMode mode,
+                                        float cutoff) {
     if (handle >= _handleTable.size())
         return;
     _handleTable[handle]->setAlphaMode(mode, cutoff);

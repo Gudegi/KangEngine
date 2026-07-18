@@ -318,11 +318,12 @@ if(IS_PYTHON_LIB)
         DESTINATION "${PYTHON_ASSETS_DIR}"
         PATTERN ".git" EXCLUDE
     )
-    #add_custom_command(TARGET ${PYTHON_MODULE_NAME} POST_BUILD
-    #    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    #    "${ASSETS_DIR}" "PYTHON_ASSETS_DIR"
-    #    COMMENT "Copying assets to Python module directory"
-    #)
+    add_custom_command(TARGET ${PYTHON_MODULE_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E rm -rf "${PYTHON_ASSETS_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${PYTHON_ASSETS_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${ASSETS_DIR}" "${PYTHON_ASSETS_DIR}"
+        COMMENT "Copying assets to Python module directory"
+    )
 
     # cmake --build build/release --target install
     install(DIRECTORY "${ASSETS_DIR}/" 

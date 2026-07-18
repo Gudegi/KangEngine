@@ -4,7 +4,18 @@
 #include "imgui.h"
 #include "engine/core/app/app.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
+#include "engine/graphics/material/material.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
+#include "engine/scene/component/camera_component.hpp"
+#include "engine/scene/component/articulation_component.hpp"
+#include "engine/scene/component/articulation_binding_component.hpp"
+#include "engine/scene/component/collision_shape_component.hpp"
+#include "engine/scene/component/light_component.hpp"
+#include "engine/scene/component/material_binding_component.hpp"
+#include "engine/scene/component/mesh_component.hpp"
+#include "engine/scene/component/resource_component.hpp"
+#include "engine/scene/component/selection_component.hpp"
+#include "engine/scene/component/transform_component.hpp"
 #include "engine/scene/native/xform_token.hpp"
 #include <IconsFontAwesome7.h>
 #include <algorithm>
@@ -48,8 +59,600 @@ const char* primTypeLabel(Scene::PrimType type) {
         return "Camera";
     case Scene::PrimType::Light:
         return "Light";
+    case Scene::PrimType::Resource:
+        return "Resource";
     }
     return "Unknown";
+}
+
+const char* lightTypeLabel(Scene::LightType type) {
+    switch (type) {
+    case Scene::LightType::Directional:
+        return "Directional";
+    case Scene::LightType::Point:
+        return "Point";
+    case Scene::LightType::Spot:
+        return "Spot";
+    }
+    return "Unknown";
+}
+
+const char* cameraProjectionTypeLabel(Scene::CameraProjectionType type) {
+    switch (type) {
+    case Scene::CameraProjectionType::Perspective:
+        return "Perspective";
+    case Scene::CameraProjectionType::Orthographic:
+        return "Orthographic";
+    }
+    return "Unknown";
+}
+
+std::vector<Scene::Prim*> collectCameraPrims(Scene::SceneBackend* scene) {
+    std::vector<Scene::Prim*> cameras;
+    if (!scene || !scene->getRootPrim())
+        return cameras;
+    scene->getRootPrim()->traverse([&](Scene::Prim* prim) {
+        if (prim && prim->getType() == Scene::PrimType::Camera &&
+            prim->hasCameraComponent()) {
+            cameras.push_back(prim);
+        }
+    });
+    std::sort(cameras.begin(), cameras.end(),
+              [](const Scene::Prim* lhs, const Scene::Prim* rhs) {
+                  return lhs->getPath() < rhs->getPath();
+              });
+    return cameras;
+}
+
+std::string cameraDisplayName(const Scene::Prim* prim) {
+    if (!prim)
+        return "None";
+    return std::string(ICON_FA_CAMERA " ") + prim->getPath();
+}
+
+const char* cameraAspectPresetLabel(int preset) {
+    switch (preset) {
+    case 0:
+        return "Free";
+    case 1:
+        return "16:9";
+    case 2:
+        return "4:3";
+    case 3:
+        return "1:1";
+    case 4:
+        return "Custom";
+    }
+    return "Free";
+}
+
+float cameraAspectPresetValue(int preset, float customAspect) {
+    switch (preset) {
+    case 1:
+        return 16.0f / 9.0f;
+    case 2:
+        return 4.0f / 3.0f;
+    case 3:
+        return 1.0f;
+    case 4:
+        return std::max(0.01f, customAspect);
+    default:
+        return 0.0f;
+    }
+}
+
+const char* cameraCapturePresetLabel(int preset) {
+    switch (preset) {
+    case 0:
+        return "Panel";
+    case 1:
+        return "FHD";
+    case 2:
+        return "4K";
+    case 3:
+        return "Custom";
+    }
+    return "FHD";
+}
+
+ImVec2 cameraCapturePresetSize(int preset, int customWidth, int customHeight,
+                               const ImVec2& panelSize) {
+    switch (preset) {
+    case 0:
+        return panelSize;
+    case 1:
+        return {1920.0f, 1080.0f};
+    case 2:
+        return {3840.0f, 2160.0f};
+    case 3:
+        return {static_cast<float>(std::max(1, customWidth)),
+                static_cast<float>(std::max(1, customHeight))};
+    }
+    return {1920.0f, 1080.0f};
+}
+
+std::string nextScenePath(Scene::SceneBackend* scene, const std::string& base) {
+    if (!scene)
+        return base;
+    if (!scene->getPrimAtPath(base))
+        return base;
+    for (int index = 1; index < 10000; ++index) {
+        const std::string candidate = base + "_" + std::to_string(index);
+        if (!scene->getPrimAtPath(candidate))
+            return candidate;
+    }
+    return base + "_many";
+}
+
+bool isEngineOwnedPrim(const Scene::Prim* prim) {
+    return prim && prim->getPath() == "/lights/default_directional";
+}
+
+bool isResourceNamespacePrim(const Scene::Prim* prim) {
+    if (!prim)
+        return false;
+    const std::string& path = prim->getPath();
+    return path == "/.Resources" || path.rfind("/.Resources/", 0) == 0;
+}
+
+bool subtreeHasResourceNamespacePrim(Scene::Prim* prim) {
+    if (!prim)
+        return false;
+    bool found = false;
+    prim->traverse([&](Scene::Prim* child) {
+        if (isResourceNamespacePrim(child))
+            found = true;
+    });
+    return found;
+}
+
+bool subtreeHasEngineOwnedPrim(Scene::Prim* prim) {
+    if (!prim)
+        return false;
+    bool found = false;
+    prim->traverse([&](Scene::Prim* child) {
+        if (isEngineOwnedPrim(child))
+            found = true;
+    });
+    return found;
+}
+
+bool subtreeHasExternalPrim(App* app, Scene::Prim* prim) {
+    if (!app || !prim)
+        return false;
+    bool found = false;
+    prim->traverse([&](Scene::Prim* child) {
+        TransformSource source = TransformSource::SceneGraph;
+        if (app->getPrimTransformSource(child, source) &&
+            source == TransformSource::ExternalBuffer) {
+            found = true;
+        }
+    });
+    return found;
+}
+
+Scene::Prim* addLightPrim(App* app, Scene::LightType type) {
+    if (!app || !app->getScene())
+        return nullptr;
+
+    const char* baseName = "light";
+    switch (type) {
+    case Scene::LightType::Directional:
+        baseName = "directional";
+        break;
+    case Scene::LightType::Point:
+        baseName = "point";
+        break;
+    case Scene::LightType::Spot:
+        baseName = "spot";
+        break;
+    }
+
+    Scene::Prim* prim = app->getScene()->definePrim(
+        nextScenePath(app->getScene(), std::string("/lights/") + baseName),
+        Scene::PrimType::Light);
+    if (!prim)
+        return nullptr;
+
+    switch (type) {
+    case Scene::LightType::Directional: {
+        Scene::DirectionalLight light = app->getLight();
+        prim->setDirectionalLight(light);
+        break;
+    }
+    case Scene::LightType::Point: {
+        Scene::PointLight light;
+        light.position = glm::vec3(0.0f, 2.0f, 2.0f);
+        prim->setPointLight(light);
+        break;
+    }
+    case Scene::LightType::Spot: {
+        Scene::SpotLight light;
+        light.position = glm::vec3(0.0f, 2.0f, 2.0f);
+        light.direction = glm::normalize(glm::vec3(0.0f, -1.0f, -1.0f));
+        prim->setSpotLight(light);
+        break;
+    }
+    }
+
+    app->selectPrim(prim);
+    return prim;
+}
+
+bool setCameraWorldOrientation(Scene::Prim& prim, const glm::vec3& forward,
+                               const glm::vec3& up);
+
+Scene::Prim* addCameraPrim(App* app) {
+    if (!app || !app->getScene())
+        return nullptr;
+
+    Scene::Prim* prim = app->getScene()->definePrim(
+        nextScenePath(app->getScene(), "/cameras/camera"),
+        Scene::PrimType::Camera);
+    if (!prim)
+        return nullptr;
+
+    prim->addTranslateOp(app->getCamera().getCameraPos());
+    setCameraWorldOrientation(*prim, app->getCamera().getCameraLookDir(),
+                              app->getCamera().getCameraUpDir());
+    prim->addCameraComponent();
+    app->selectPrim(prim);
+    return prim;
+}
+
+bool drawLightComponentEditor(Scene::Prim& prim, bool editable) {
+    if (prim.getType() != Scene::PrimType::Light)
+        return false;
+
+    if (!prim.hasLightComponent())
+        prim.addLightComponent();
+
+    auto component = prim.getLightComponent();
+    if (!component || !component->isAttached())
+        return false;
+
+    bool changed = false;
+    ImGui::PushID("LightComponent");
+    if (!editable)
+        ImGui::BeginDisabled();
+
+    ImGui::TextDisabled("Type");
+    ImGui::SameLine();
+    ImGui::TextUnformatted(lightTypeLabel(component->type()));
+
+    ImGui::TextDisabled("Source");
+    ImGui::SameLine();
+    ImGui::TextUnformatted("LightComponent");
+    ImGui::TextDisabled("Version");
+    ImGui::SameLine();
+    ImGui::Text("%llu", static_cast<unsigned long long>(component->version()));
+
+    switch (component->type()) {
+    case Scene::LightType::Directional: {
+        Scene::DirectionalLight light = component->directionalLight();
+        glm::vec3 direction = light.direction;
+        glm::vec3 ambient = light.ambient;
+        float color[3] = {light.color.r, light.color.g, light.color.b};
+        bool lightChanged = false;
+        lightChanged |= ImGui::DragFloat3("Direction", &direction.x, 0.02f);
+        lightChanged |= ImGui::ColorEdit3("Color", color);
+        lightChanged |=
+            ImGui::SliderFloat("Intensity", &light.intensity, 0.0f, 5.0f);
+        lightChanged |= ImGui::ColorEdit3("Ambient", &ambient.x);
+        if (lightChanged) {
+            if (glm::length(direction) > 1e-4f)
+                light.direction = glm::normalize(direction);
+            light.color = glm::vec3(color[0], color[1], color[2]);
+            light.ambient = ambient;
+            prim.setDirectionalLight(light);
+            changed = true;
+        }
+        break;
+    }
+    case Scene::LightType::Point: {
+        Scene::PointLight light = component->pointLight();
+        float color[3] = {light.color.r, light.color.g, light.color.b};
+        bool lightChanged = false;
+        lightChanged |= ImGui::DragFloat3("Position", &light.position.x, 0.01f);
+        lightChanged |= ImGui::ColorEdit3("Color", color);
+        lightChanged |=
+            ImGui::SliderFloat("Intensity", &light.intensity, 0.0f, 10.0f);
+        lightChanged |=
+            ImGui::DragFloat("Range", &light.range, 0.05f, 0.0f, FLT_MAX);
+        if (lightChanged) {
+            light.color = glm::vec3(color[0], color[1], color[2]);
+            prim.setPointLight(light);
+            changed = true;
+        }
+        break;
+    }
+    case Scene::LightType::Spot: {
+        Scene::SpotLight light = component->spotLight();
+        glm::vec3 direction = light.direction;
+        float color[3] = {light.color.r, light.color.g, light.color.b};
+        float innerDegrees = glm::degrees(light.innerConeAngle);
+        float outerDegrees = glm::degrees(light.outerConeAngle);
+        bool lightChanged = false;
+        lightChanged |= ImGui::DragFloat3("Position", &light.position.x, 0.01f);
+        lightChanged |= ImGui::DragFloat3("Direction", &direction.x, 0.02f);
+        lightChanged |= ImGui::ColorEdit3("Color", color);
+        lightChanged |=
+            ImGui::SliderFloat("Intensity", &light.intensity, 0.0f, 10.0f);
+        lightChanged |=
+            ImGui::DragFloat("Range", &light.range, 0.05f, 0.0f, FLT_MAX);
+        lightChanged |= ImGui::SliderFloat("Inner Cone", &innerDegrees, 0.0f,
+                                           179.0f, "%.1f deg");
+        lightChanged |= ImGui::SliderFloat("Outer Cone", &outerDegrees, 0.0f,
+                                           179.0f, "%.1f deg");
+        if (lightChanged) {
+            if (glm::length(direction) > 1e-4f)
+                light.direction = glm::normalize(direction);
+            light.color = glm::vec3(color[0], color[1], color[2]);
+            light.innerConeAngle = glm::radians(std::max(0.0f, innerDegrees));
+            light.outerConeAngle =
+                glm::radians(std::max(innerDegrees, outerDegrees));
+            prim.setSpotLight(light);
+            changed = true;
+        }
+        break;
+    }
+    }
+
+    if (!editable)
+        ImGui::EndDisabled();
+    ImGui::PopID();
+    return changed;
+}
+
+bool drawCameraComponentEditor(App* app, Scene::Prim& prim, bool editable) {
+    if (prim.getType() != Scene::PrimType::Camera)
+        return false;
+
+    if (!prim.hasCameraComponent())
+        prim.addCameraComponent();
+
+    auto component = prim.getCameraComponent();
+    if (!component || !component->isAttached())
+        return false;
+
+    bool changed = false;
+    ImGui::PushID("CameraComponent");
+    if (!editable)
+        ImGui::BeginDisabled();
+
+    ImGui::TextDisabled("Source");
+    ImGui::SameLine();
+    ImGui::TextUnformatted("CameraComponent");
+    ImGui::TextDisabled("Type");
+    ImGui::SameLine();
+    ImGui::TextUnformatted(
+        cameraProjectionTypeLabel(component->projectionType()));
+    ImGui::TextDisabled("Version");
+    ImGui::SameLine();
+    ImGui::Text("%llu", static_cast<unsigned long long>(component->version()));
+    if (app) {
+        const bool active = app->activeSceneCameraPath() == prim.getPath();
+        ImGui::TextDisabled("Scene View");
+        ImGui::SameLine();
+        ImGui::TextUnformatted(active ? "Camera View / Viewer Source"
+                                      : "Editor View");
+        if (!active) {
+            if (ImGui::Button("Use as Scene Camera"))
+                app->setActiveSceneCamera(&prim);
+        } else {
+            if (ImGui::Button("Clear Scene Camera"))
+                app->clearActiveSceneCamera();
+        }
+    }
+
+    const char* projectionLabels[] = {"Perspective", "Orthographic"};
+    int projection = static_cast<int>(component->projectionType());
+    float fov = component->verticalFovDegrees();
+    float orthoSize = component->orthographicSize();
+    float nearPlane = component->nearPlane();
+    float farPlane = component->farPlane();
+
+    bool projectionChanged = false;
+    projectionChanged |=
+        ImGui::Combo("Projection", &projection, projectionLabels,
+                     static_cast<int>(std::size(projectionLabels)));
+    if (projection ==
+        static_cast<int>(Scene::CameraProjectionType::Perspective)) {
+        projectionChanged |=
+            ImGui::SliderFloat("Vertical FOV", &fov, 1.0f, 179.0f, "%.1f deg");
+    } else {
+        projectionChanged |= ImGui::DragFloat("Orthographic Size", &orthoSize,
+                                              0.05f, 0.001f, FLT_MAX, "%.3f");
+    }
+    projectionChanged |=
+        ImGui::DragFloat("Near Plane", &nearPlane, 0.01f, 0.001f, FLT_MAX);
+    projectionChanged |=
+        ImGui::DragFloat("Far Plane", &farPlane, 0.1f, 0.001f, FLT_MAX);
+
+    if (projectionChanged) {
+        if (projection ==
+            static_cast<int>(Scene::CameraProjectionType::Orthographic)) {
+            component->setOrthographic(orthoSize, nearPlane, farPlane);
+        } else {
+            component->setPerspective(fov, nearPlane, farPlane);
+        }
+        changed = true;
+    }
+
+    glm::vec3 position = component->position();
+    glm::vec3 forward = component->forward();
+    glm::vec3 up = component->up();
+    if (ImGui::DragFloat3("Position", &position.x, 0.01f)) {
+        prim.setWorldTranslation(position);
+        changed = true;
+    }
+    if (ImGui::DragFloat3("Forward", &forward.x, 0.01f)) {
+        changed |= setCameraWorldOrientation(prim, forward, up);
+    }
+    if (ImGui::DragFloat3("Up", &up.x, 0.01f)) {
+        changed |= setCameraWorldOrientation(prim, forward, up);
+    }
+
+    if (!editable)
+        ImGui::EndDisabled();
+    ImGui::PopID();
+    return changed;
+}
+
+const char* materialTypeLabel(const Material* material) {
+    if (!material)
+        return "None";
+    if (dynamic_cast<const PBRMaterial*>(material))
+        return "PBRMaterial";
+    if (dynamic_cast<const PhongMaterial*>(material))
+        return "PhongMaterial";
+    if (dynamic_cast<const VertexColorMaterial*>(material))
+        return "VertexColorMaterial";
+    return "Material";
+}
+
+void drawTextureStatus(const char* label, const Backend::Texture* texture) {
+    ImGui::TextDisabled("%s", label);
+    ImGui::SameLine();
+    if (texture)
+        ImGui::TextColored(ImVec4(0.45f, 0.82f, 0.52f, 1.0f), "Bound");
+    else
+        ImGui::TextDisabled("None");
+}
+
+void drawSharedMaterialHint() {
+    ImGui::TextWrapped(
+        "Editing this material changes every Prim that shares the same "
+        "Material*.");
+}
+
+void drawMaterialInspector(Scene::Prim& prim) {
+    auto binding = prim.getMaterialBindingComponent();
+    Material* material = prim.getMaterial();
+
+    ImGui::SeparatorText("Material");
+    if (!binding || !binding->isAttached()) {
+        ImGui::TextDisabled("No MaterialBindingComponent");
+        return;
+    }
+
+    ImGui::TextDisabled("Source");
+    ImGui::SameLine();
+    ImGui::TextUnformatted("MaterialBindingComponent");
+    ImGui::TextDisabled("Version");
+    ImGui::SameLine();
+    ImGui::Text("%llu", static_cast<unsigned long long>(binding->version()));
+    ImGui::TextDisabled("Type");
+    ImGui::SameLine();
+    ImGui::TextUnformatted(materialTypeLabel(material));
+    ImGui::TextDisabled("Material*");
+    ImGui::SameLine();
+    ImGui::Text("%p", static_cast<void*>(material));
+
+    if (!material) {
+        ImGui::TextDisabled("No material bound");
+        return;
+    }
+
+    Backend::Shader* shader = material->getShader();
+    ImGui::TextDisabled("Shader*");
+    ImGui::SameLine();
+    ImGui::Text("%p", static_cast<void*>(shader));
+    drawSharedMaterialHint();
+
+    if (auto* phong = dynamic_cast<PhongMaterial*>(material)) {
+        ImGui::SeparatorText("Phong Parameters");
+        ImGui::ColorEdit3("Ambient", &phong->ambient.x);
+        ImGui::ColorEdit3("Diffuse", &phong->diffuse.x);
+        ImGui::ColorEdit3("Specular", &phong->specular.x);
+        ImGui::DragFloat("Shininess", &phong->shininess, 0.25f, 1.0f, 512.0f);
+        drawTextureStatus("Diffuse Map", phong->diffuseMap);
+        drawTextureStatus("Specular Map", phong->specularMap);
+        drawTextureStatus("Alpha Map", phong->alphaMap);
+        drawTextureStatus("Normal Map", phong->normalMap);
+    } else if (auto* pbr = dynamic_cast<PBRMaterial*>(material)) {
+        ImGui::SeparatorText("PBR Parameters");
+        ImGui::ColorEdit4("Base Color", &pbr->baseColor.x);
+        ImGui::SliderFloat("Metallic", &pbr->metallic, 0.0f, 1.0f);
+        ImGui::SliderFloat("Roughness", &pbr->roughness, 0.02f, 1.0f);
+        ImGui::ColorEdit3("Emissive Color", &pbr->emissiveColor.x);
+        ImGui::DragFloat("Emissive Strength", &pbr->emissiveStrength, 0.05f,
+                         0.0f, 100.0f);
+        drawTextureStatus("Base Color Map", pbr->baseColorTexture);
+        drawTextureStatus("Normal Map", pbr->normalTexture);
+        drawTextureStatus("MetallicRoughness Map",
+                          pbr->metallicRoughnessTexture);
+        drawTextureStatus("Metallic Map", pbr->metallicTexture);
+        drawTextureStatus("Roughness Map", pbr->roughnessTexture);
+        drawTextureStatus("AO Map", pbr->aoTexture);
+        drawTextureStatus("ORM Map", pbr->ormTexture);
+        drawTextureStatus("Emissive Map", pbr->emissiveTexture);
+    } else if (dynamic_cast<VertexColorMaterial*>(material)) {
+        ImGui::TextWrapped(
+            "Compatibility wrapper for legacy shader-only renderables. "
+            "Surface color comes from per-instance display/base color.");
+    }
+}
+
+void drawResourceComponentEditor(App* app, Scene::Prim& prim) {
+    auto resource = prim.getResourceComponent();
+    if (!resource) {
+        ImGui::TextDisabled("No ResourceComponent");
+        return;
+    }
+    ImGui::BeginDisabled();
+    ImGui::Text("Component: attached=%s version=%llu",
+                resource->isAttached() ? "true" : "false",
+                static_cast<unsigned long long>(resource->version()));
+    ImGui::Text("Handle: %u", resource->handle());
+
+    const char* kindLabels[] = {"Unknown", "Mesh", "Material", "Texture",
+                                "Shader"};
+    int kind = static_cast<int>(resource->type());
+    if (ImGui::Combo("Kind", &kind, kindLabels,
+                     static_cast<int>(std::size(kindLabels)))) {
+        resource->setType(static_cast<Scene::ResourceType>(kind));
+    }
+
+    char displayName[256] = {};
+    std::snprintf(displayName, sizeof(displayName), "%s",
+                  resource->displayName().c_str());
+    if (ImGui::InputText("Display Name", displayName, sizeof(displayName)))
+        resource->setDisplayName(displayName);
+
+    char uri[512] = {};
+    std::snprintf(uri, sizeof(uri), "%s", resource->uri().c_str());
+    if (ImGui::InputText("URI", uri, sizeof(uri)))
+        resource->setUri(uri);
+    ImGui::EndDisabled();
+
+    ImGui::SeparatorText("Usage");
+    if (!app || resource->handle() == Scene::InvalidResourceHandle) {
+        ImGui::TextDisabled("No resource manager handle");
+        return;
+    }
+
+    const auto& manager = app->getSceneResourceManager();
+    const auto& paths = manager.usagePaths(resource->handle());
+    ImGui::Text("Usage count: %zu", paths.size());
+    if (paths.empty()) {
+        ImGui::TextDisabled("Unused");
+        return;
+    }
+
+    if (ImGui::BeginTable("ResourceUsagePaths", 1,
+                          ImGuiTableFlags_RowBg |
+                              ImGuiTableFlags_BordersInnerH |
+                              ImGuiTableFlags_SizingStretchProp)) {
+        ImGui::TableSetupColumn("Used By");
+        ImGui::TableHeadersRow();
+        for (const std::string& path : paths) {
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::TextUnformatted(path.c_str());
+        }
+        ImGui::EndTable();
+    }
 }
 
 bool drawAttributeValue(const std::string& name,
@@ -126,6 +729,22 @@ bool decomposeTransform(const glm::mat4& matrix, glm::vec3& translation,
     return true;
 }
 
+bool setCameraWorldOrientation(Scene::Prim& prim, const glm::vec3& forward,
+                               const glm::vec3& up) {
+    if (glm::length2(forward) < 1.0e-8f || glm::length2(up) < 1.0e-8f)
+        return false;
+
+    const glm::vec3 safeForward = glm::normalize(forward);
+    const glm::vec3 right = glm::cross(safeForward, glm::normalize(up));
+    if (glm::length2(right) < 1.0e-8f)
+        return false;
+
+    const glm::vec3 safeUp =
+        glm::normalize(glm::cross(glm::normalize(right), safeForward));
+    prim.setWorldRotation(glm::quatLookAt(safeForward, safeUp));
+    return true;
+}
+
 } // namespace
 
 PerformancePanel::PerformancePanel(App* app)
@@ -175,6 +794,17 @@ void RendererDebugPanel::buildPanel() {
 
     if (ImGui::CollapsingHeader("Controls", defaultOpen)) {
         ImGui::Checkbox("Wireframe", &_app->_renderWireframe);
+        ImGui::SeparatorText("Background");
+        ImGui::Checkbox("Show Grid", &rendererSettings.background.showGrid);
+        ImGui::ColorEdit4("Grid Color",
+                          &rendererSettings.background.gridColor.x);
+        ImGui::ColorEdit4("Background Color",
+                          &rendererSettings.background.backgroundColor.x);
+        ImGui::ColorEdit4("Checker A",
+                          &rendererSettings.background.checkerColor1.x);
+        ImGui::ColorEdit4("Checker B",
+                          &rendererSettings.background.checkerColor2.x);
+        ImGui::SeparatorText("Interaction");
         const char* interactionLabels[] = {"Inspect", "Edit", "Force"};
         int interactionMode = static_cast<int>(_app->getInteractionMode());
         if (ImGui::Combo("Interaction Mode", &interactionMode,
@@ -383,6 +1013,7 @@ void InspectorPanel::buildPanel() {
     TransformSource source = selection.transformSource;
     _app->getPrimTransformSource(prim, source);
     const bool external = source == TransformSource::ExternalBuffer;
+    const bool resourceMirror = isResourceNamespacePrim(prim);
 
     ImGui::SeparatorText("Prim");
     if (ImGui::BeginTable("PrimSummary", 2,
@@ -416,7 +1047,7 @@ void InspectorPanel::buildPanel() {
     }
 
     ImGui::SeparatorText("State");
-    if (external)
+    if (external || resourceMirror)
         ImGui::BeginDisabled();
     bool active = prim->isActive();
     if (ImGui::Checkbox("Active", &active))
@@ -433,18 +1064,208 @@ void InspectorPanel::buildPanel() {
         prim->setManipulationPolicy(
             static_cast<Scene::ManipulationPolicy>(policy));
     }
-    if (external)
+    if (external || resourceMirror)
         ImGui::EndDisabled();
+    if (resourceMirror) {
+        ImGui::TextDisabled(
+            "Resource mirrors are managed by SceneResourceManager.");
+    }
 
-    ImGui::SeparatorText("World Transform");
+    ImGui::SeparatorText("Selection");
+    auto selectionComponent = prim->getSelectionComponent();
+    if (selectionComponent) {
+        ImGui::Text(
+            "Component: attached=%s version=%llu",
+            selectionComponent->isAttached() ? "true" : "false",
+            static_cast<unsigned long long>(selectionComponent->version()));
+        if (ImGui::BeginTable("SelectionPolicy", 2,
+                              ImGuiTableFlags_SizingStretchProp)) {
+            const auto property = [](const char* label) {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::TextDisabled("%s", label);
+                ImGui::TableSetColumnIndex(1);
+            };
+            const auto yesNo = [](bool value) { return value ? "Yes" : "No"; };
+
+            property("Pickable");
+            ImGui::TextUnformatted(yesNo(selectionComponent->isPickable()));
+            property("Selectable");
+            ImGui::TextUnformatted(yesNo(selectionComponent->isSelectable()));
+            property("Manipulatable");
+            ImGui::TextUnformatted(
+                yesNo(selectionComponent->isManipulatable()));
+            property("Force Draggable");
+            ImGui::TextUnformatted(
+                yesNo(selectionComponent->isForceDraggable()));
+            property("Interaction Kind");
+            ImGui::TextUnformatted(Scene::interactionKindLabel(
+                selectionComponent->interactionKind()));
+            ImGui::EndTable();
+        }
+        ImGui::Text("Metadata: env=%d obj=%d body=%d",
+                    selectionComponent->envId(), selectionComponent->objId(),
+                    selectionComponent->bodyId());
+        if (!selectionComponent->userTag().empty())
+            ImGui::TextWrapped("Tag: %s",
+                               selectionComponent->userTag().c_str());
+    } else {
+        ImGui::TextDisabled("No SelectionComponent");
+    }
+
+    if (auto articulationRoot = prim->getArticulationComponent()) {
+        ImGui::SeparatorText("Articulation");
+        ImGui::Text(
+            "Component: attached=%s version=%llu",
+            articulationRoot->isAttached() ? "true" : "false",
+            static_cast<unsigned long long>(articulationRoot->version()));
+        if (ImGui::BeginTable("ArticulationComponent", 2,
+                              ImGuiTableFlags_SizingStretchProp)) {
+            const auto property = [](const char* label) {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::TextDisabled("%s", label);
+                ImGui::TableSetColumnIndex(1);
+            };
+            property("Root");
+            ImGui::TextWrapped("%s",
+                               articulationRoot->rootPath().empty()
+                                   ? "<none>"
+                                   : articulationRoot->rootPath().c_str());
+            property("Asset");
+            ImGui::TextWrapped("%s",
+                               articulationRoot->assetPath().empty()
+                                   ? "<none>"
+                                   : articulationRoot->assetPath().c_str());
+            property("Mesh Assets");
+            ImGui::TextWrapped(
+                "%s", articulationRoot->meshAssetBasePath().empty()
+                          ? "<none>"
+                          : articulationRoot->meshAssetBasePath().c_str());
+            property("Bodies");
+            ImGui::Text("%d", articulationRoot->bodyCount());
+            property("Render Prims");
+            ImGui::Text("%d", articulationRoot->renderPrimCount());
+            property("Split Visual Geoms");
+            ImGui::TextUnformatted(articulationRoot->splitVisualGeoms() ? "Yes"
+                                                                        : "No");
+            ImGui::EndTable();
+        }
+    }
+
+    if (auto articulation = prim->getArticulationBindingComponent()) {
+        ImGui::SeparatorText("Articulation Binding");
+        ImGui::Text("Component: attached=%s version=%llu",
+                    articulation->isAttached() ? "true" : "false",
+                    static_cast<unsigned long long>(articulation->version()));
+        if (ImGui::BeginTable("ArticulationBinding", 2,
+                              ImGuiTableFlags_SizingStretchProp)) {
+            const auto property = [](const char* label) {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::TextDisabled("%s", label);
+                ImGui::TableSetColumnIndex(1);
+            };
+            property("Role");
+            ImGui::TextUnformatted(
+                Scene::articulationPrimRoleLabel(articulation->role()));
+            property("Body Index");
+            ImGui::Text("%d", articulation->bodyIndex());
+            property("Body Name");
+            ImGui::TextUnformatted(articulation->bodyName().empty()
+                                       ? "<none>"
+                                       : articulation->bodyName().c_str());
+            property("Root");
+            ImGui::TextWrapped(
+                "%s", articulation->articulationRootPath().empty()
+                          ? "<none>"
+                          : articulation->articulationRootPath().c_str());
+            ImGui::EndTable();
+        }
+    }
+
+    if (auto collisionShape = prim->getCollisionShapeComponent()) {
+        ImGui::SeparatorText("Collision Shape");
+        ImGui::Text("Component: attached=%s version=%llu",
+                    collisionShape->isAttached() ? "true" : "false",
+                    static_cast<unsigned long long>(collisionShape->version()));
+        if (ImGui::BeginTable("CollisionShape", 2,
+                              ImGuiTableFlags_SizingStretchProp)) {
+            const auto property = [](const char* label) {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::TextDisabled("%s", label);
+                ImGui::TableSetColumnIndex(1);
+            };
+            property("Shape");
+            ImGui::TextUnformatted(
+                Scene::collisionShapeTypeLabel(collisionShape->shapeType()));
+            property("Source Geom");
+            if (collisionShape->sourceGeomIndex() >= 0)
+                ImGui::Text("%d", collisionShape->sourceGeomIndex());
+            else
+                ImGui::TextUnformatted("Fallback");
+            property("Size");
+            const glm::vec3& size = collisionShape->size();
+            ImGui::Text("%.4f, %.4f, %.4f", size.x, size.y, size.z);
+            property("Local Pos");
+            const glm::vec3& localPos = collisionShape->localPosition();
+            ImGui::Text("%.4f, %.4f, %.4f", localPos.x, localPos.y, localPos.z);
+            property("Local Rot");
+            const glm::quat& localRot = collisionShape->localRotation();
+            ImGui::Text("w %.4f, x %.4f, y %.4f, z %.4f", localRot.w,
+                        localRot.x, localRot.y, localRot.z);
+            property("From/To");
+            ImGui::TextUnformatted(collisionShape->hasFromTo() ? "Yes" : "No");
+            if (collisionShape->hasFromTo()) {
+                property("From");
+                const glm::vec3& from = collisionShape->fromPosition();
+                ImGui::Text("%.4f, %.4f, %.4f", from.x, from.y, from.z);
+                property("To");
+                const glm::vec3& to = collisionShape->toPosition();
+                ImGui::Text("%.4f, %.4f, %.4f", to.x, to.y, to.z);
+            }
+            property("Friction");
+            ImGui::Text("static %.4f, dynamic %.4f",
+                        collisionShape->staticFriction(),
+                        collisionShape->dynamicFriction());
+            property("Restitution");
+            ImGui::Text("%.4f", collisionShape->restitution());
+            property("Condim( Unused )");
+            if (collisionShape->condim() >= 0)
+                ImGui::Text("%d", collisionShape->condim());
+            else
+                ImGui::TextUnformatted("<none>");
+            property("Margin");
+            if (collisionShape->margin() >= 0.0f)
+                ImGui::Text("%.4f", collisionShape->margin());
+            else
+                ImGui::TextUnformatted("<none>");
+            ImGui::EndTable();
+        }
+    }
+
+    ImGui::SeparatorText("Transform");
+    auto transform = prim->getTransformComponent();
+    if (transform) {
+        ImGui::Text("Component: attached=%s version=%llu",
+                    transform->isAttached() ? "true" : "false",
+                    static_cast<unsigned long long>(transform->version()));
+    } else {
+        ImGui::TextColored(ImVec4(0.95f, 0.45f, 0.35f, 1.0f),
+                           "Missing TransformComponent");
+    }
+
     if (external) {
         ImGui::TextColored(ImVec4(0.48f, 0.72f, 0.94f, 1.0f),
                            ICON_FA_LOCK "  Owned by ExternalBuffer");
+    } else if (!transform) {
+        ImGui::TextDisabled("No transform data");
     } else {
         glm::vec3 translation(0.0f);
         glm::vec3 rotationDegrees(0.0f);
         glm::vec3 scale(1.0f);
-        if (decomposeTransform(prim->computeWorldMatrix(), translation,
+        if (decomposeTransform(transform->computeWorldMatrix(), translation,
                                rotationDegrees, scale)) {
             ImGui::BeginDisabled();
             ImGui::DragFloat3("Position", &translation.x, 0.01f);
@@ -459,11 +1280,42 @@ void InspectorPanel::buildPanel() {
 
     if (const std::shared_ptr<Scene::MeshData> mesh = prim->resolveMeshData()) {
         ImGui::SeparatorText("Mesh");
-        if (!prim->getMeshSourcePath().empty())
-            ImGui::TextWrapped("Source: %s", prim->getMeshSourcePath().c_str());
+        auto meshComponent = prim->getMeshComponent();
+        if (meshComponent) {
+            ImGui::Text(
+                "Component: attached=%s version=%llu",
+                meshComponent->isAttached() ? "true" : "false",
+                static_cast<unsigned long long>(meshComponent->version()));
+            if (meshComponent->resourceHandle() !=
+                Scene::InvalidResourceHandle) {
+                ImGui::Text("Resource Handle: %u",
+                            meshComponent->resourceHandle());
+            }
+            if (!meshComponent->meshSourcePath().empty())
+                ImGui::TextWrapped("Source: %s",
+                                   meshComponent->meshSourcePath().c_str());
+        }
         ImGui::Text("Vertices: %zu", mesh->vertices.size());
         ImGui::Text("Indices: %zu", mesh->indices.size());
         ImGui::Text("Triangles: %zu", mesh->indices.size() / 3);
+    }
+
+    if (prim->hasMaterialBindingComponent())
+        drawMaterialInspector(*prim);
+
+    if (prim->getType() == Scene::PrimType::Light) {
+        ImGui::SeparatorText("Light");
+        drawLightComponentEditor(*prim, !external);
+    }
+
+    if (prim->getType() == Scene::PrimType::Camera) {
+        ImGui::SeparatorText("Camera");
+        drawCameraComponentEditor(_app, *prim, !external);
+    }
+
+    if (prim->getType() == Scene::PrimType::Resource) {
+        ImGui::SeparatorText("Resource");
+        drawResourceComponentEditor(_app, *prim);
     }
 
     ImGui::SeparatorText("Attributes");
@@ -526,6 +1378,20 @@ void MenuBarPanel::buildPanel() {
             }
             ImGui::EndMenu();
         }
+        if (ImGui::BeginMenu("Add")) {
+            if (ImGui::MenuItem("Camera"))
+                addCameraPrim(_app);
+            if (ImGui::BeginMenu("Light")) {
+                if (ImGui::MenuItem("Directional"))
+                    addLightPrim(_app, Scene::LightType::Directional);
+                if (ImGui::MenuItem("Point"))
+                    addLightPrim(_app, Scene::LightType::Point);
+                if (ImGui::MenuItem("Spot"))
+                    addLightPrim(_app, Scene::LightType::Spot);
+                ImGui::EndMenu();
+            }
+            ImGui::EndMenu();
+        }
         if (ImGui::BeginMenu("Settings")) {
             ImGui::EndMenu();
         }
@@ -560,11 +1426,17 @@ void MenuBarPanel::buildPanel() {
                     panels.isPanelOpen(PanelManager::PANEL_INSPECTOR);
                 bool viewportOpen =
                     panels.isPanelOpen(PanelManager::PANEL_VIEWPORT);
+                bool cameraViewOpen =
+                    panels.isPanelOpen(PanelManager::PANEL_CAMERA_VIEW);
 
                 if (layoutMode == UILayoutMode::Editor &&
                     ImGui::MenuItem("Viewport", nullptr, viewportOpen))
                     panels.setPanelOpen(PanelManager::PANEL_VIEWPORT,
                                         !viewportOpen);
+                if (layoutMode == UILayoutMode::Editor &&
+                    ImGui::MenuItem("Camera View", nullptr, cameraViewOpen))
+                    panels.setPanelOpen(PanelManager::PANEL_CAMERA_VIEW,
+                                        !cameraViewOpen);
                 if (ImGui::MenuItem("Scene", nullptr, sceneOpen))
                     panels.setPanelOpen(PanelManager::PANEL_SCENE, !sceneOpen);
                 if (ImGui::MenuItem("Renderer Debug", nullptr,
@@ -770,8 +1642,7 @@ void ViewportPanel::buildPanel() {
         const float guizmoExtent =
             (128.0f + guizmoStyle.circleRadius) * guizmoStyle.scale;
         const float guizmoMargin = style.ItemSpacing.x;
-        if (_camera &&
-            _imageSize.x >= 2.0f * (guizmoExtent + guizmoMargin) &&
+        if (_camera && _imageSize.x >= 2.0f * (guizmoExtent + guizmoMargin) &&
             _imageSize.y >= 2.0f * (guizmoExtent + guizmoMargin)) {
             const ImVec2 imageMax(_imageMin.x + _imageSize.x,
                                   _imageMin.y + _imageSize.y);
@@ -848,6 +1719,178 @@ void ViewportPanel::buildPanel() {
     ImGui::End();
 }
 
+CameraViewPanel::CameraViewPanel(App* app, std::string name)
+    : Panel(std::move(name)), _app(app) {
+    setOpen(false);
+}
+
+CameraViewPanel::~CameraViewPanel() {}
+
+void CameraViewPanel::buildPanel() {
+    if (!ImGui::Begin(name().c_str(), openPtr())) {
+        ImGui::End();
+        return;
+    }
+
+    if (!_app || !_app->getScene()) {
+        ImGui::TextDisabled("No scene");
+        ImGui::End();
+        return;
+    }
+
+    std::vector<Scene::Prim*> cameras = collectCameraPrims(_app->getScene());
+    Scene::Prim* activeCamera = nullptr;
+    for (Scene::Prim* camera : cameras) {
+        if (camera && camera->getPath() == _app->activeSceneCameraPath()) {
+            activeCamera = camera;
+            break;
+        }
+    }
+
+    const std::string currentLabel = activeCamera
+                                         ? cameraDisplayName(activeCamera)
+                                         : "No active scene camera";
+    ImGui::SetNextItemWidth(std::min(360.0f, ImGui::GetContentRegionAvail().x));
+    if (ImGui::BeginCombo("Camera", currentLabel.c_str())) {
+        for (Scene::Prim* camera : cameras) {
+            const bool selected = camera == activeCamera;
+            const std::string label = cameraDisplayName(camera);
+            if (ImGui::Selectable(label.c_str(), selected)) {
+                _app->setActiveSceneCamera(camera);
+                activeCamera = camera;
+            }
+            if (selected)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+
+    if (cameras.empty()) {
+        ImGui::TextDisabled("No CameraComponent in scene");
+        ImGui::End();
+        return;
+    }
+
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(120.0f);
+    if (ImGui::BeginCombo("Aspect", cameraAspectPresetLabel(_aspectPreset))) {
+        for (int preset = 0; preset <= 4; ++preset) {
+            const bool selected = preset == _aspectPreset;
+            if (ImGui::Selectable(cameraAspectPresetLabel(preset), selected))
+                _aspectPreset = preset;
+            if (selected)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+    if (_aspectPreset == 4) {
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(100.0f);
+        ImGui::DragFloat("Custom", &_customAspect, 0.01f, 0.01f, 100.0f,
+                         "%.2f");
+    }
+
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(115.0f);
+    if (ImGui::BeginCombo("Capture",
+                          cameraCapturePresetLabel(_capturePreset))) {
+        for (int preset = 0; preset <= 3; ++preset) {
+            const bool selected = preset == _capturePreset;
+            if (ImGui::Selectable(cameraCapturePresetLabel(preset), selected))
+                _capturePreset = preset;
+            if (selected)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+    if (_capturePreset == 3) {
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(90.0f);
+        ImGui::InputInt("W", &_customCaptureWidth, 0, 0);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(90.0f);
+        ImGui::InputInt("H", &_customCaptureHeight, 0, 0);
+        _customCaptureWidth = std::max(1, _customCaptureWidth);
+        _customCaptureHeight = std::max(1, _customCaptureHeight);
+    }
+
+    ImGui::SameLine();
+    const bool screenshotRequested =
+        ImGui::Button(ICON_FA_CAMERA "##CameraViewScreenshot");
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Save Camera View screenshot");
+
+    if (!activeCamera) {
+        ImGui::TextDisabled("Select a camera to preview");
+        ImGui::End();
+        return;
+    }
+
+    const ImVec2 contentMin = ImGui::GetCursorScreenPos();
+    const ImVec2 contentSize = ImGui::GetContentRegionAvail();
+    ImVec2 imageMin = contentMin;
+    ImVec2 imageSize = contentSize;
+    const float aspectOverride =
+        cameraAspectPresetValue(_aspectPreset, _customAspect);
+    if (aspectOverride > 0.0f && contentSize.x > 1.0f && contentSize.y > 1.0f) {
+        const float availableAspect = contentSize.x / contentSize.y;
+        if (availableAspect > aspectOverride) {
+            imageSize.y = contentSize.y;
+            imageSize.x = contentSize.y * aspectOverride;
+            imageMin.x += (contentSize.x - imageSize.x) * 0.5f;
+        } else {
+            imageSize.x = contentSize.x;
+            imageSize.y = contentSize.x / aspectOverride;
+            imageMin.y += (contentSize.y - imageSize.y) * 0.5f;
+        }
+    }
+
+    const int width = std::max(1, static_cast<int>(imageSize.x));
+    const int height = std::max(1, static_cast<int>(imageSize.y));
+    Backend::Texture* texture =
+        _app->renderActiveSceneCameraPreview(width, height, aspectOverride);
+    if (!texture || texture->getWidth() <= 0 || texture->getHeight() <= 0) {
+        ImGui::TextDisabled("Camera preview unavailable");
+        ImGui::End();
+        return;
+    }
+    if (screenshotRequested) {
+        const ImVec2 captureSize =
+            cameraCapturePresetSize(_capturePreset, _customCaptureWidth,
+                                    _customCaptureHeight, imageSize);
+        const int captureWidth = std::max(1, static_cast<int>(captureSize.x));
+        const int captureHeight = std::max(1, static_cast<int>(captureSize.y));
+        const float captureAspect = aspectOverride > 0.0f
+                                        ? aspectOverride
+                                        : static_cast<float>(captureWidth) /
+                                              static_cast<float>(captureHeight);
+        const bool saved = _app->writeActiveSceneCameraPreviewPNG(
+            captureWidth, captureHeight, captureAspect);
+        _lastSaveStatus = saved ? "Saved Camera View screenshot"
+                                : "Failed to save screenshot";
+    }
+
+    _imageMin = imageMin;
+    _imageSize = imageSize;
+    ImGui::SetCursorScreenPos(_imageMin);
+    ImGui::Image((ImTextureID)(uintptr_t)texture->getNativeHandle(), _imageSize,
+                 ImVec2(0, 1), ImVec2(1, 0));
+
+    ImGui::SetCursorScreenPos(
+        ImVec2(_imageMin.x + ImGui::GetStyle().ItemSpacing.x,
+               _imageMin.y + ImGui::GetStyle().ItemSpacing.y));
+    ImGui::TextDisabled("%s", activeCamera->getPath().c_str());
+    if (!_lastSaveStatus.empty()) {
+        ImGui::SetCursorScreenPos(
+            ImVec2(_imageMin.x + ImGui::GetStyle().ItemSpacing.x,
+                   _imageMin.y + ImGui::GetStyle().ItemSpacing.y +
+                       ImGui::GetTextLineHeightWithSpacing()));
+        ImGui::TextDisabled("%s", _lastSaveStatus.c_str());
+    }
+
+    ImGui::End();
+}
+
 ScenePanel::ScenePanel(App* app) : Panel("Scene"), _app(app) {}
 
 ScenePanel::~ScenePanel() {}
@@ -863,8 +1906,13 @@ void ScenePanel::buildPanel() {
             ImGui::TableSetColumnIndex(0);
             ImGui::PushID(prim);
             bool visible = prim->isVisible();
+            const bool resourceMirror = isResourceNamespacePrim(prim);
+            if (resourceMirror)
+                ImGui::BeginDisabled();
             if (ImGui::Checkbox("##Visible", &visible))
                 prim->setVisible(visible);
+            if (resourceMirror)
+                ImGui::EndDisabled();
             ImGui::SameLine();
 
             const bool activeInHierarchy = prim->isActiveInHierarchy();
@@ -874,11 +1922,26 @@ void ScenePanel::buildPanel() {
             const bool external =
                 _app->getPrimTransformSource(prim, transformSource) &&
                 transformSource == TransformSource::ExternalBuffer;
-            const bool customTextColor = disabled || external;
+            bool unusedResource = false;
+            bool actualResourcePrim = false;
+            if (prim->getType() == Scene::PrimType::Resource) {
+                if (auto resource = prim->getResourceComponent()) {
+                    actualResourcePrim = true;
+                    const auto handle = resource->handle();
+                    unusedResource =
+                        handle != Scene::InvalidResourceHandle &&
+                        _app->getSceneResourceManager().usageCount(handle) == 0;
+                }
+            }
+            const bool resourceFolderMirror =
+                resourceMirror && !actualResourcePrim;
+            const bool customTextColor =
+                disabled || external || resourceFolderMirror || unusedResource;
             if (customTextColor) {
                 const ImVec4 textColor =
-                    disabled ? ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled)
-                             : ImVec4(0.48f, 0.72f, 0.94f, 1.0f);
+                    (disabled || unusedResource || resourceFolderMirror)
+                        ? ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled)
+                        : ImVec4(0.48f, 0.72f, 0.94f, 1.0f);
                 ImGui::PushStyleColor(ImGuiCol_Text, textColor);
             }
 
@@ -900,9 +1963,48 @@ void ScenePanel::buildPanel() {
                                         prim->getName().c_str());
             if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
                 _app->selectPrim(prim);
+            if (ImGui::BeginPopupContextItem("PrimContextMenu")) {
+                const bool rootPrim = prim->getPath() == "/";
+                const bool engineOwned = isEngineOwnedPrim(prim);
+                const bool subtreeHasEngineOwned =
+                    subtreeHasEngineOwnedPrim(prim);
+                const bool resourceNamespace = isResourceNamespacePrim(prim);
+                const bool subtreeHasResourceNamespace =
+                    subtreeHasResourceNamespacePrim(prim);
+                const bool subtreeHasExternal =
+                    subtreeHasExternalPrim(_app, prim);
+                const bool canDelete =
+                    !rootPrim && !engineOwned && !subtreeHasEngineOwned &&
+                    !resourceNamespace && !subtreeHasResourceNamespace &&
+                    !subtreeHasExternal;
+                if (!canDelete)
+                    ImGui::BeginDisabled();
+                if (ImGui::MenuItem("Delete...")) {
+                    _pendingDeletePath = prim->getPath();
+                    _deletePopupRequested = true;
+                }
+                if (!canDelete)
+                    ImGui::EndDisabled();
+                if (rootPrim)
+                    ImGui::TextDisabled("Root prim cannot be deleted.");
+                else if (engineOwned || subtreeHasEngineOwned)
+                    ImGui::TextDisabled(
+                        "Subtree contains engine-owned default light.");
+                else if (resourceNamespace || subtreeHasResourceNamespace)
+                    ImGui::TextDisabled("Resource mirrors are managed by "
+                                        "SceneResourceManager.");
+                else if (subtreeHasExternal)
+                    ImGui::TextDisabled(
+                        "Subtree contains ExternalBuffer prims.");
+                ImGui::EndPopup();
+            }
             if (external &&
                 ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
                 ImGui::SetTooltip("External Buffer (read-only transform)");
+            }
+            if (unusedResource &&
+                ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
+                ImGui::SetTooltip("Unused resource");
             }
 
             ImGui::TableSetColumnIndex(1);
@@ -931,6 +2033,33 @@ void ScenePanel::buildPanel() {
                 drawPrimTree(drawPrimTree, child);
             ImGui::EndTable();
         }
+    }
+
+    if (_deletePopupRequested) {
+        ImGui::OpenPopup("Delete Prim");
+        _deletePopupRequested = false;
+    }
+    if (ImGui::BeginPopupModal("Delete Prim", nullptr,
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::TextUnformatted("Delete this prim and all children?");
+        ImGui::Spacing();
+        ImGui::TextWrapped("%s", _pendingDeletePath.c_str());
+        ImGui::Spacing();
+        if (ImGui::Button("Cancel")) {
+            _pendingDeletePath.clear();
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_Button,
+                              ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+        if (ImGui::Button("Delete")) {
+            if (_app && !_pendingDeletePath.empty())
+                _app->removePrim(_pendingDeletePath);
+            _pendingDeletePath.clear();
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::PopStyleColor();
+        ImGui::EndPopup();
     }
     ImGui::End();
 }

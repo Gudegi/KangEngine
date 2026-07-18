@@ -6,6 +6,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <glm/vec4.hpp>
 
 namespace KE {
 
@@ -242,6 +243,11 @@ class ColorLibrary {
     // Helper to get rgba array directly
     static constexpr const std::array<float, 4>& getRGBA(ColorType type) {
         return colors[static_cast<size_t>(type)].rgba;
+    }
+
+    static glm::vec4 getVec4(ColorType type) {
+        auto color = colors[static_cast<size_t>(type)];
+        return glm::vec4(color.r, color.g, color.b, color.a);
     }
 
     // Helper to create color from hex (e.g., 0xFF5733FF for RGBA)

@@ -29,9 +29,15 @@ struct ArticulationConfig {
     float contactOffset = 0.02f;
     float restOffset = 0.f;
 
-    // Fallback shapes when collisionGeoms has no entry for a body
-    PxVec3 rootBoxHalf = {0.15f, 0.1f, 0.1f};
-    PxVec3 linkBoxHalf = {0.04f, 0.04f, 0.04f};
+    // Fallback shapes for bodies whose MJCF authored a collidable mesh geom
+    // that KangEngine cannot cook yet. Bodies with only visual-only geoms do
+    // not receive fallback collision.
+    PxVec3 rootBoxHalf = {0.075f, 0.075f, 0.075f};
+    PxVec3 linkBoxHalf = {0.05f, 0.05f, 0.05f};
+
+    // Build-time material overrides. Later entries win, so callers can set a
+    // body-wide override and then refine one named geom.
+    std::vector<Animation::CollisionMaterialOverride> materialOverrides;
 
     static ArticulationConfig fixedBase() {
         return {}; // all defaults
@@ -67,6 +73,7 @@ class Articulation {
 
     PxArticulationReducedCoordinate* _artic = nullptr;
     std::vector<PxArticulationLink*> _links;
+    std::vector<std::string> _bodyNames;
     Animation::JointMap _joints; // body index -> joints (empty = fixed)
     Animation::CollisionGeomMap _colGeoms;
     std::vector<DofInfo> _dofs;
@@ -107,6 +114,11 @@ class Articulation {
     void addLinkForce(int linkIndex, const PxVec3& force);
     void addLinkForceAtPosition(int linkIndex, const PxVec3& force,
                                 const PxVec3& position);
+    int setCollisionMaterial(PhysicsWorld& physics,
+                             const Animation::PhysicsMaterialDesc& material);
+    int setCollisionMaterialOverrides(
+        PhysicsWorld& physics,
+        const std::vector<Animation::CollisionMaterialOverride>& overrides);
     void setKPs(const std::vector<float>& kps);
     const std::vector<float>& getKPs() const { return _KPs; }
     void setKDs(const std::vector<float>& kds);
@@ -123,6 +135,8 @@ class Articulation {
     // Data accessors for PhysicsBridge
     const std::vector<PxArticulationLink*>& links() const { return _links; }
     const Animation::CollisionGeomMap& colGeoms() const { return _colGeoms; }
+    const std::vector<std::string>& bodyNames() const { return _bodyNames; }
+    const std::string& bodyName(int index) const { return _bodyNames[index]; }
 
     // State queries for Python/Model-State integration.
     // Flat arrays use xyz for vectors and xyzw for quaternions.
@@ -139,6 +153,7 @@ class Articulation {
     std::vector<float> getDofVelocities() const;
     std::vector<float> getDofForces() const;
     std::vector<std::string> getDofNames() const;
+    std::vector<int> getDofGpuIndices() const;
     std::vector<std::array<float, 2>> getDofLimits() const;
     std::vector<float> getDofEffortLimits() const;
     std::vector<float> getLinkMasses() const;

@@ -12,16 +12,20 @@
 namespace KE {
 
 class Camera;
+class Material;
 class Rasterizer;
 class SelectionOutlineProcessor;
 
 namespace Scene {
+class Prim;
 class SceneBackend;
+struct SkinnedMeshData;
 } // namespace Scene
 
 namespace Backend {
 class Framebuffer;
 class GraphicsDevice;
+class Shader;
 class Texture;
 } // namespace Backend
 
@@ -30,6 +34,7 @@ struct RendererSettings {
     ToneMapMode toneMapMode = ToneMapMode::None;
     float toneMapExposure = 1.0f;
     BloomConfig bloom;
+    BackgroundSettings background;
 };
 
 // Facade for render-system access. App owns the concrete resources; Renderer
@@ -56,6 +61,9 @@ class Renderer {
     }
     RendererSettings& settings() { return _settings; }
     const RendererSettings& settings() const { return _settings; }
+    void setBackgroundShader(Backend::Shader* shader);
+    Backend::Shader* backgroundShader() const { return _backgroundShader; }
+    void applyBackgroundSettings();
 
     void setLight(const DirectionalLight& light);
     const DirectionalLight& light() const;
@@ -67,6 +75,16 @@ class Renderer {
     Backend::Framebuffer* shadowFbo();
     void renderSceneToFramebuffer(Camera& camera, Backend::Framebuffer* target,
                                   int width, int height, bool clear = true);
+
+    RenderableHandle addRenderable(
+        Material* material, Scene::Prim* prim,
+        TransformSource transformSource = TransformSource::SceneGraph);
+    RenderableHandle addSkinnedRenderable(
+        Material* material, Scene::Prim* prim,
+        const Scene::SkinnedMeshData& skinnedMesh,
+        TransformSource transformSource = TransformSource::SceneGraph);
+    void removePrim(RenderableHandle handle, Scene::Prim* prim);
+    void removePrim(Scene::Prim* prim);
 
     // RenderableHandle identifies a renderable batch/instancer. Most controls
     // apply to the whole batch; APIs with instanceIndex can target one
@@ -112,6 +130,7 @@ class Renderer {
     Rasterizer* _rasterizer = nullptr;
     PostProcessor* _postProcessor = nullptr;
     SelectionOutlineProcessor* _selectionOutlineProcessor = nullptr;
+    Backend::Shader* _backgroundShader = nullptr;
     RendererSettings _settings;
     int _viewportWidth = 0;
     int _viewportHeight = 0;

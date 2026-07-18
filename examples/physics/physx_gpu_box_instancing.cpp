@@ -63,6 +63,7 @@ class GpuBoxInstancingApp : public App {
         groundShader = getRenderer().device()->createShaderFromFile(
             KE::getAssetPath("shaders/common.vs"),
             KE::getAssetPath("shaders/checkerboard.fs"));
+        getRenderer().setBackgroundShader(groundShader.get());
 
         commonShader->use();
         commonShader->setUniformBlockBinding("cameraUBO", 0);

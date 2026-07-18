@@ -1,5 +1,6 @@
 #include "physics_bridge.hpp"
-#include "engine/core/app/app.hpp"
+#include "engine/scene/component/articulation_binding_component.hpp"
+#include "engine/scene/component/collision_shape_component.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "physics/articulation.hpp"
@@ -7,13 +8,35 @@
 #include "skeleton_bridge.hpp"
 
 #include <Eigen/Geometry>
-#include <cassert>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
 namespace KE {
 namespace Bridge {
+
+namespace {
+
+std::string fallbackBodyName(int bodyIdx) {
+    return "body_" + std::to_string(bodyIdx);
+}
+
+Scene::CollisionShapeType
+toCollisionShapeType(Animation::CollisionGeom::Type type) {
+    switch (type) {
+    case Animation::CollisionGeom::Type::Sphere:
+        return Scene::CollisionShapeType::Sphere;
+    case Animation::CollisionGeom::Type::Capsule:
+        return Scene::CollisionShapeType::Capsule;
+    case Animation::CollisionGeom::Type::Cylinder:
+        return Scene::CollisionShapeType::Cylinder;
+    case Animation::CollisionGeom::Type::Box:
+        return Scene::CollisionShapeType::Box;
+    }
+    return Scene::CollisionShapeType::Sphere;
+}
+
+} // namespace
 
 void PhysicsBridge::add(const Articulation& artic,
                         const SkeletonBridge& skelBridge) {
@@ -22,50 +45,11 @@ void PhysicsBridge::add(const Articulation& artic,
         _primVisuals.push_back({artic.link(i), skelBridge.bodyPrim(i)});
 }
 
-void PhysicsBridge::addInstanced(std::vector<Articulation*> artics,
-                                 std::vector<RenderableHandle> handles) {
-    InstancedGroup group;
-    group.handles = std::move(handles);
-    group.model.setBodyRenderables(group.handles);
-    group.visualBatch.setModel(&group.model);
-    group.artics.reserve(artics.size());
-    for (auto* artic : artics)
-        group.artics.push_back(artic);
-    _instancedGroups.push_back(std::move(group));
-}
-
-void PhysicsBridge::addInstanced(const Articulation& artic,
-                                 const std::vector<RenderableHandle>& handles) {
-    for (auto& group : _instancedGroups) {
-        if (group.handles == handles) {
-            group.artics.push_back(&artic);
-            return;
-        }
-    }
-
-    _instancedGroups.push_back(
-        {std::vector<const Articulation*>{&artic},
-         handles,
-         SimModel{},
-         SimState{},
-         SimVisualBatch{}});
-    _instancedGroups.back().model.setBodyRenderables(handles);
-    _instancedGroups.back().visualBatch.setModel(&_instancedGroups.back().model);
-}
-
 void PhysicsBridge::sync() {
     // Prim-based: PhysX pose -> Prim xform attributes
     for (auto& v : _primVisuals) {
         physx::PxTransform pose = v.link->getGlobalPose();
         v.prim->setWorldMatrix(pxToMat4(pose));
-    }
-
-    // Handle-based instanced: collect N transforms per body, expose as external buffers
-    assert((_instancedGroups.empty() || _app) &&
-           "App* required for instanced sync — pass it to PhysicsBridge ctor");
-    for (auto& grp : _instancedGroups) {
-        fillSimStateFromPhysX(grp);
-        uploadSimVisualBatch(grp);
     }
 
     // Collision visuals: link pose * local offset
@@ -77,34 +61,6 @@ void PhysicsBridge::sync() {
         const glm::quat worldRot = linkRot * cv.localQuat;
         cv.prim->setWorldMatrix(glm::translate(glm::mat4(1.0f), worldPos) *
                                 glm::mat4_cast(worldRot));
-    }
-}
-
-void PhysicsBridge::fillSimStateFromPhysX(InstancedGroup& group) {
-    const int numBodies = group.model.bodyCount();
-    const int numRobots = static_cast<int>(group.artics.size());
-    group.state.resize(numRobots, numBodies);
-
-    for (int bodyId = 0; bodyId < numBodies; ++bodyId) {
-        for (int envId = 0; envId < numRobots; ++envId) {
-            physx::PxTransform pose =
-                group.artics[static_cast<size_t>(envId)]->link(bodyId)
-                    ->getGlobalPose();
-            group.state.setBodyTransform(envId, bodyId, pxToGlm(pose.p),
-                                         pxToGlm(pose.q));
-        }
-    }
-}
-
-void PhysicsBridge::uploadSimVisualBatch(InstancedGroup& group) {
-    group.visualBatch.prepareFromState(group.state);
-    ++group.transformVersion;
-    for (int shapeId = 0; shapeId < group.visualBatch.renderableCount();
-         ++shapeId) {
-        auto desc = group.visualBatch.externalTransformDesc(
-            shapeId, group.transformVersion, "physics_bridge_transforms");
-        _app->setRenderableExternalBuffer(group.visualBatch.renderable(shapeId),
-                                          desc);
     }
 }
 
@@ -120,6 +76,21 @@ std::vector<Scene::Prim*> PhysicsBridge::addCollisionVisuals(
         if (bodyIdx >= static_cast<int>(links.size()))
             continue;
         physx::PxArticulationLink* lnk = links[bodyIdx];
+        std::string bodyName = fallbackBodyName(bodyIdx);
+        if (bodyIdx < static_cast<int>(artic.bodyNames().size()))
+            bodyName = artic.bodyName(bodyIdx);
+        std::string rootPath = basePath;
+        for (const auto& visual : _primVisuals) {
+            if (visual.link != lnk || !visual.prim)
+                continue;
+            if (auto binding = visual.prim->getArticulationBindingComponent()) {
+                if (!binding->bodyName().empty())
+                    bodyName = binding->bodyName();
+                if (!binding->articulationRootPath().empty())
+                    rootPath = binding->articulationRootPath();
+            }
+            break;
+        }
 
         for (int gi = 0; gi < static_cast<int>(geoms.size()); gi++) {
             const auto& geom = geoms[gi];
@@ -179,6 +150,22 @@ std::vector<Scene::Prim*> PhysicsBridge::addCollisionVisuals(
             prim->addTranslateOp(localPos);
             prim->addRotateQuaternionOp(localQuat);
             prim->setVisible(visibleByDefault);
+            prim->addArticulationBindingComponent()->setBinding(
+                Scene::ArticulationPrimRole::CollisionGeom, bodyIdx, bodyName,
+                rootPath);
+            auto collisionShape = prim->addCollisionShapeComponent();
+            collisionShape->setShapeMetadata(
+                toCollisionShapeType(geom.type),
+                glm::vec3(geom.size[0], geom.size[1], geom.size[2]), localPos,
+                localQuat, geom.physicsMaterial.staticFriction,
+                geom.physicsMaterial.dynamicFriction,
+                geom.physicsMaterial.restitution, geom.condim, geom.margin,
+                geom.isFallback ? -1 : gi);
+            if (geom.hasFromTo) {
+                collisionShape->setFromTo(
+                    glm::vec3(geom.from.x(), geom.from.y(), geom.from.z()),
+                    glm::vec3(geom.to.x(), geom.to.y(), geom.to.z()));
+            }
 
             _colVisuals.push_back({lnk, prim, localPos, localQuat});
             result.push_back(prim);

@@ -144,6 +144,25 @@ void bind_sim(py::module& m) {
         .def_readwrite("stream_handle", &GpuArrayView::streamHandle)
         .def_readwrite("ready_event_handle", &GpuArrayView::readyEventHandle)
         .def_readwrite("name", &GpuArrayView::name)
+        .def(
+            "set_owner",
+            [](GpuArrayView& self, py::object owner) {
+                if (owner.is_none()) {
+                    self.owner.reset();
+                    return;
+                }
+                PyObject* retained = owner.ptr();
+                Py_INCREF(retained);
+                self.owner = std::shared_ptr<void>(
+                    retained, [](void* value) {
+                        if (!value || !Py_IsInitialized())
+                            return;
+                        py::gil_scoped_acquire gil;
+                        Py_DECREF(reinterpret_cast<PyObject*>(value));
+                    });
+            },
+            py::arg("owner"),
+            "Keep a Python buffer owner alive with this metadata view.")
         .def_property_readonly("empty", &GpuArrayView::empty)
         .def_property_readonly("has_owner", &GpuArrayView::hasOwner)
         .def_property_readonly("is_cuda", &GpuArrayView::isCuda)
@@ -178,9 +197,13 @@ void bind_sim(py::module& m) {
 
     py::class_<KE::SimModel>(
         m, "SimModel",
-        "Low-level C++ simulation topology used by renderer batch paths.")
+        "Low-level C++ simulation topology for engine-owned renderer batch "
+        "paths. This API intentionally deals in internal renderable handles.")
         .def(py::init<>())
-        .def("set_body_renderables", &KE::SimModel::setBodyRenderables)
+        .def("set_body_renderables", &KE::SimModel::setBodyRenderables,
+             py::arg("renderable_handles"),
+             "Compatibility helper for one shape per body. Expects internal "
+             "renderable handles from low-level renderer paths.")
         .def("add_shape",
              [](KE::SimModel& self, int bodyId, KE::RenderableHandle renderable,
                 py::sequence localPos, py::sequence localRot,
@@ -189,10 +212,13 @@ void bind_sim(py::module& m) {
                                       vec3FromSequence(localPos),
                                       quatFromXYZWSequence(localRot), name);
              },
-             py::arg("body_id"), py::arg("renderable"),
+             py::arg("body_id"), py::arg("renderable_handle"),
              py::arg("local_pos") = py::make_tuple(0.0f, 0.0f, 0.0f),
              py::arg("local_rot") = py::make_tuple(0.0f, 0.0f, 0.0f, 1.0f),
-             py::arg("name") = "")
+             py::arg("name") = "",
+             "Add one shape-to-renderable mapping for native visual batches. "
+             "Regular scene objects should be authored through app.scene "
+             "instead.")
         .def("add_object_boundary", &KE::SimModel::addObjectBoundary,
              py::arg("body_start"), py::arg("body_count"),
              py::arg("name") = "")
@@ -236,7 +262,9 @@ void bind_sim(py::module& m) {
 
     py::class_<KE::SimVisualBatch>(
         m, "SimVisualBatch",
-        "Low-level C++ SimState-to-renderable transform batch.")
+        "Low-level C++ SimState-to-renderable transform batch. This is the "
+        "native backend for ExternalBuffer visual sync, not the high-level "
+        "viewer wrapper.")
         .def(py::init<>())
         .def("clear", &KE::SimVisualBatch::clear)
         .def("set_model",
@@ -246,7 +274,9 @@ void bind_sim(py::module& m) {
         .def("prepare_from_state", &KE::SimVisualBatch::prepareFromState)
         .def_property_readonly("renderable_count",
                                &KE::SimVisualBatch::renderableCount)
-        .def("renderable", &KE::SimVisualBatch::renderable)
+        .def("renderable", &KE::SimVisualBatch::renderable,
+             py::arg("shape_id"),
+             "Return the internal renderable handle for a native batch shape.")
         .def("transforms",
              [](const KE::SimVisualBatch& self, int shapeId) {
                  return mat4List(self.transforms(shapeId));

@@ -54,8 +54,8 @@ class FbxCharacterViewer(ke.App):
         self.animate = True
         self.playback_speed = 1.0
         self.time = 0.0
-        self.line_handle = None
-        self.mesh_handles = []
+        self.line_view = None
+        self.mesh_views = []
         self.mesh_prims = []
         self.mesh_colors = []
         self.textures = []
@@ -95,7 +95,7 @@ class FbxCharacterViewer(ke.App):
 
         ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
         ground.set_mesh_data(scene.Prim.create_plane_data(20.0, self.up_axis))
-        self.add_renderable(self.ground_shader, ground)
+        self.scene.add_renderable(ground, self.ground_shader)
 
         camera = self.get_camera()
         camera.set_camera_pos(ke.vec3(0.0, 1.45, 3.2))
@@ -191,19 +191,15 @@ class FbxCharacterViewer(ke.App):
             texture = self._load_mesh_texture(mesh)
             normal_texture = self._load_mesh_normal_texture(mesh)
             shader = self.textured_mesh_shader if texture is not None else self.mesh_shader
-            handle = self.add_skinned_renderable(
-                shader,
-                prim,
-                mesh.skinned_mesh_data,
-            )
+            view = self.add_skinned_mesh(prim, shader, mesh.skinned_mesh_data)
             if texture is not None:
-                self.set_renderable_texture(handle, texture, 0)
+                view.set_texture(texture, 0)
                 if normal_texture is not None:
-                    self.set_renderable_texture(handle, normal_texture, 5)
-            # self.set_renderable_double_sided(handle, True)
+                    view.set_texture(normal_texture, 5)
+            # view.set_double_sided(True)
             self.mesh_prims.append(prim)
             self.mesh_colors.append(color)
-            self.mesh_handles.append(handle)
+            self.mesh_views.append(view)
             inverse_bind_matrices = np.asarray(
                 mesh.inverse_bind_matrices,
                 dtype=np.float32,
@@ -220,7 +216,7 @@ class FbxCharacterViewer(ke.App):
                         np.eye(4, dtype=np.float32),
                         (len(inverse_bind_matrices), 1, 1),
                     ),
-                    "handle": handle,
+                    "view": view,
                 }
             )
 
@@ -340,7 +336,7 @@ class FbxCharacterViewer(ke.App):
             """
             Reference C++ CPU helper path kept for comparing the GPU path.
             To re-enable it, cache vertices/normals/bone_indices/bone_weights
-            in _create_mesh_prims and call update_renderable_geometry below.
+            in _create_mesh_prims and call mesh["view"].update_geometry below.
 
             skinned = animation.cpu_skin(
                 mesh["vertices"],
@@ -352,11 +348,7 @@ class FbxCharacterViewer(ke.App):
                 global_mats,
             )
 
-            self.update_renderable_geometry(
-                mesh["handle"],
-                skinned["positions"],
-                skinned["normals"],
-            )
+            mesh["view"].update_geometry(skinned["positions"], skinned["normals"])
             """
 
             bone_node_indices = mesh["bone_node_indices"]
@@ -368,13 +360,10 @@ class FbxCharacterViewer(ke.App):
                 global_mats,
                 bone_matrices,
             )
-            self.update_renderable_skinning_matrices(
-                mesh["handle"],
-                bone_matrices,
-            )
+            mesh["view"].update_skinning(bone_matrices)
 
     def _update_skeleton_lines_from_state(self, state):
-        if not self.show_skeleton and self.line_handle is not None:
+        if not self.show_skeleton and self.line_view is not None:
             return
 
         positions = state.compute_global_positions()
@@ -408,11 +397,10 @@ class FbxCharacterViewer(ke.App):
         self.skeleton_ends = ends_t
         self.skeleton_colors = torch.tensor(colors, dtype=torch.float32)
 
-        if self.line_handle is None:
-            self.line_handle = scene.DebugDraw.log_lines(
-                self,
-                self.skeleton_shader,
+        if self.line_view is None:
+            self.line_view = self.scene.log_lines(
                 "/debug/fbx_character_skeleton",
+                self.skeleton_shader,
                 starts_t,
                 ends_t,
                 colors_t,
@@ -420,13 +408,7 @@ class FbxCharacterViewer(ke.App):
                 8,
             )
         else:
-            scene.DebugDraw.update_lines(
-                self,
-                self.line_handle,
-                starts_t,
-                ends_t,
-                colors_t,
-            )
+            self.line_view.update_lines(starts_t, ends_t, colors_t)
 
     def _apply_visibility(self):
         mesh_alpha = 1.0 if self.show_mesh else 0.0
@@ -438,12 +420,12 @@ class FbxCharacterViewer(ke.App):
         self._apply_skeleton_visibility()
 
     def _apply_shadow_casting(self):
-        for handle in self.mesh_handles:
-            self.set_renderable_casts_shadow(handle, self.cast_shadows)
+        for view in self.mesh_views:
+            view.set_casts_shadow(self.cast_shadows)
 
     def _apply_skeleton_visibility(self):
         if (
-            self.line_handle is None
+            self.line_view is None
             or self.skeleton_starts is None
             or self.skeleton_ends is None
             or self.skeleton_colors is None
@@ -452,9 +434,7 @@ class FbxCharacterViewer(ke.App):
 
         colors = self.skeleton_colors.clone()
         colors[:, 3] = 1.0 if self.show_skeleton else 0.0
-        scene.DebugDraw.update_lines(
-            self,
-            self.line_handle,
+        self.line_view.update_lines(
             self.skeleton_starts,
             self.skeleton_ends,
             colors,

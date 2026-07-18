@@ -268,6 +268,7 @@ class CameraFrustumDebugApp : public App {
             getRenderer().device()->createShaderFromFile(commonVS, commonFS);
         groundShader =
             getRenderer().device()->createShaderFromFile(commonVS, checkerFS);
+        getRenderer().setBackgroundShader(groundShader.get());
 
         for (Backend::Shader* s : {shader.get(), groundShader.get()}) {
             s->use();
@@ -495,9 +496,13 @@ class CameraFrustumDebugApp : public App {
     void createFrustumDebug() {
         updateFrustumDebug();
 
-        subjectBodyHandle = addSphere(
-            "/debug/subject_camera_body", 0.12f, subjectCamera.getCameraPos(),
-            glm::vec4(1.0f, 0.15f, 0.15f, 1.0f), shader.get());
+        MeshPrimDesc subjectBody;
+        subjectBody.shader = shader.get();
+        subjectBody.path = "/debug/subject_camera_body";
+        subjectBody.meshData = Scene::Prim::createSphereData(0.12f, 32, 16);
+        subjectBody.position = subjectCamera.getCameraPos();
+        subjectBody.color = glm::vec4(1.0f, 0.15f, 0.15f, 1.0f);
+        subjectBodyHandle = addMeshPrim(std::move(subjectBody)).handle;
         setRenderableCastsShadow(subjectBodyHandle, false);
     }
 

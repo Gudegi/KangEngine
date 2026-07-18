@@ -96,8 +96,8 @@ def create_simulation(num_envs: int, cuda_device: int):
                 config=robot_config,
             )
 
-        balls = world.get_rigid_view(obj_id=RIGID_OBJ_ID)
-        robots = world.get_articulation_view(obj_id=ROBOT_OBJ_ID)
+        balls = world.get_rigid_batch(obj_id=RIGID_OBJ_ID)
+        robots = world.get_articulation_batch(obj_id=ROBOT_OBJ_ID)
         origins = env_origins(num_envs)
         rotations = identity_quaternions(num_envs)
         zeros3 = torch.zeros((num_envs, 3), dtype=torch.float32)
@@ -184,7 +184,7 @@ def configure_position_drives(robots, kp: float, kd: float):
         record.articulation.set_kds([float(kd)] * robots.num_dofs)
 
 
-def update_random_position_pd_targets(
+def update_random_position_targets(
     robots,
     targets,
     kp,
@@ -195,6 +195,7 @@ def update_random_position_pd_targets(
     generator,
     sim_time: float,
     noise_scale: float,
+    control_mode: str,
 ):
     targets.copy_(
         noise_scale
@@ -202,13 +203,18 @@ def update_random_position_pd_targets(
     )
     noise.uniform_(-noise_scale * 0.08, noise_scale * 0.08, generator=generator)
     targets.add_(noise).clamp_(-noise_scale, noise_scale)
-    robots.set_cmd(
-        None,
-        targets,
-        mode=ke.ControlMode.PD_EXPLICIT,
-        kp=kp,
-        kd=kd,
-    )
+    if control_mode == "pos":
+        robots.set_cmd(None, targets, mode=ke.ControlMode.POS, kp=None, kd=None)
+    elif control_mode == "pd-explicit":
+        robots.set_cmd(
+            None,
+            targets,
+            mode=ke.ControlMode.PD_EXPLICIT,
+            kp=kp,
+            kd=kd,
+        )
+    else:
+        raise ValueError(f"unsupported control mode: {control_mode}")
 
 
 def step_with_random_position_control(
@@ -222,10 +228,11 @@ def step_with_random_position_control(
     noise,
     generator,
     noise_scale: float,
+    control_mode: str,
     substeps: int = 1,
 ):
     for _ in range(int(substeps)):
-        update_random_position_pd_targets(
+        update_random_position_targets(
             robots,
             targets,
             kp,
@@ -236,6 +243,7 @@ def step_with_random_position_control(
             generator,
             world.sim_time,
             noise_scale,
+            control_mode,
         )
         world.step(substeps=1, refresh=False)
 
@@ -321,7 +329,10 @@ def run_headless(args):
         pd_kp.fill_(float(args.pd_kp))
         pd_kd.fill_(float(args.pd_kd))
 
-        print(f"  Torch PD cmd  : {device} (continuous randomized targets)")
+        print(
+            f"  Torch cmd     : {device} "
+            f"({args.control_mode}, continuous randomized targets)"
+        )
 
         reset_step = args.steps // 2
 
@@ -349,6 +360,7 @@ def run_headless(args):
                 command_noise,
                 command_rng,
                 args.joint_noise,
+                args.control_mode,
                 substeps=args.substeps,
             )
             if step % args.report_every == 0 or step == args.steps - 1:
@@ -397,7 +409,7 @@ class MixedGpuBatchViewer(ke.App):
         self.pd_kd.fill_(float(self.args.pd_kd))
 
         self.visual = ke.KangWorldVisualBridge(self, self.world)
-        self.ball_visual = self.visual.add_gpu_rigid(
+        self.ball_visual = self.visual.add(
             self.balls,
             asset_path("objects", "ball.xml"),
             prim_base_path="/gpu_batch/balls",
@@ -407,7 +419,7 @@ class MixedGpuBatchViewer(ke.App):
                 for env_id in range(self.args.num_envs)
             ],
         )
-        self.robot_visual = self.visual.add_gpu_articulation(
+        self.robot_visual = self.visual.add(
             self.robots,
             asset_path("characters", "kw", "kw5.xml"),
             prim_base_path="/gpu_batch/robots",
@@ -447,6 +459,7 @@ class MixedGpuBatchViewer(ke.App):
             self.command_noise,
             self.command_rng,
             self.args.joint_noise,
+            self.args.control_mode,
             substeps=self.args.substeps,
         )
         self.visual.sync()
@@ -458,7 +471,7 @@ class MixedGpuBatchViewer(ke.App):
         imgui.text(f"Rigid instances: {self.balls.num_envs}")
         imgui.text(f"Articulation instances: {self.robots.num_envs}")
         imgui.text(f"Links per articulation: {self.robots.num_bodies}")
-        imgui.text("PhysX GPU -> CUDA PD_EXPLICIT -> ExternalBuffer")
+        imgui.text(f"PhysX GPU -> CUDA {self.args.control_mode} -> ExternalBuffer")
         imgui.separator()
         imgui.text("Space: pause/resume    R: reset scene")
         imgui.end()
@@ -481,6 +494,12 @@ def parse_args():
     parser.add_argument("--motion-frequency", type=float, default=1.2)
     parser.add_argument("--pd-kp", type=float, default=60.0)
     parser.add_argument("--pd-kd", type=float, default=6.0)
+    parser.add_argument(
+        "--control-mode",
+        choices=("pd-explicit", "pos"),
+        default="pd-explicit",
+        help="Articulation command path to test.",
+    )
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--viewer", action="store_true")
     parser.add_argument("--width", type=int, default=1280)

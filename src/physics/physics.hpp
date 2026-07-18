@@ -12,6 +12,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <memory>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -21,8 +22,10 @@ namespace KE {
 
 class Articulation;
 namespace Animation {
+struct CollisionMaterialOverride;
 struct CharacterData;
-}
+struct PhysicsMaterialDesc;
+} // namespace Animation
 
 struct PhysicsGpuDynamicsConfig {
     uint64_t tempBufferCapacity = 64ull * 1024 * 1024;
@@ -70,6 +73,28 @@ class PhysicsWorld {
   private:
     class ContactReportCallback;
 
+    struct MaterialKey {
+        int staticFriction = 0;
+        int dynamicFriction = 0;
+        int restitution = 0;
+
+        bool operator==(const MaterialKey& other) const {
+            return staticFriction == other.staticFriction &&
+                   dynamicFriction == other.dynamicFriction &&
+                   restitution == other.restitution;
+        }
+    };
+
+    struct MaterialKeyHash {
+        std::size_t operator()(const MaterialKey& key) const {
+            const std::size_t a = static_cast<std::size_t>(key.staticFriction);
+            const std::size_t b = static_cast<std::size_t>(key.dynamicFriction);
+            const std::size_t c = static_cast<std::size_t>(key.restitution);
+            return a ^ (b + 0x9e3779b9u + (a << 6) + (a >> 2)) ^
+                   (c + 0x9e3779b9u + (b << 6) + (b >> 2));
+        }
+    };
+
     PxDefaultAllocator _allocator;
     PxDefaultErrorCallback _errorCallback;
     PxFoundation* _foundation = nullptr;
@@ -78,6 +103,7 @@ class PhysicsWorld {
     PxMaterial* _material = nullptr;
     PxDefaultCpuDispatcher* _dispatcher = nullptr;
     PxCudaContextManager* _cudaContextManager = nullptr;
+    std::vector<physx::PxHeightField*> _heightFields;
 
     float _dt;
     UpAxis _upAxis;
@@ -85,7 +111,12 @@ class PhysicsWorld {
     PxVec3 _friction;
     std::vector<ContactPoint> _contacts;
     std::unordered_set<const PxActor*> _groundActors;
+    std::unordered_map<MaterialKey, PxMaterial*, MaterialKeyHash>
+        _materialCache;
     std::unique_ptr<ContactReportCallback> _contactCallback;
+
+    physx::PxMaterial*
+    materialForDesc(const Animation::PhysicsMaterialDesc& material);
 
   public:
     PhysicsWorld(PhysicsConfig config);
@@ -101,8 +132,31 @@ class PhysicsWorld {
     PxU32 numGroundActors() const {
         return static_cast<PxU32>(_groundActors.size());
     }
+    PxU32 numCachedMaterials() const {
+        return static_cast<PxU32>(_materialCache.size());
+    }
+
+    // PhysX shapes are intentionally created as exclusive per actor/link
+    // objects. Per-instance PxShape state (local pose, filter data, contact
+    // offsets, material slot) stays local, while heavier resources such as
+    // PxMaterial and future cooked collision meshes are shared/cached by
+    // PhysicsWorld.
+    physx::PxShape*
+    createExclusiveShape(physx::PxRigidActor& actor,
+                         const physx::PxGeometry& geometry,
+                         const Animation::PhysicsMaterialDesc& material);
 
     void addBox(float x, float y, float z);
+    physx::PxRigidStatic*
+    createStaticBox(const glm::vec3& halfExtents, const glm::vec3& pos,
+                    const glm::quat& rot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+                    bool registerAsGround = true);
+    physx::PxRigidStatic*
+    createStaticHeightField(const float* heights, int rows, int cols,
+                            float horizontalScale,
+                            const Animation::PhysicsMaterialDesc& material,
+                            UpAxis upAxis = UpAxis::Y, bool center = true,
+                            bool registerAsGround = true);
 
     physx::PxRigidDynamic*
     createDynamicBox(const glm::vec3& halfExtents, const glm::vec3& pos,
@@ -119,7 +173,17 @@ class PhysicsWorld {
         const Animation::CharacterData& data, const glm::vec3& pos,
         const glm::quat& rot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
         float density = 1.0f, PxU32 collisionGroup = 0,
-        float contactOffset = 0.02f, float restOffset = 0.0f);
+        float contactOffset = 0.02f, float restOffset = 0.0f,
+        const std::vector<Animation::CollisionMaterialOverride>&
+            materialOverrides = {});
+
+    int
+    setRigidCollisionMaterial(physx::PxRigidDynamic& rigid,
+                              const Animation::PhysicsMaterialDesc& material);
+
+    int setRigidCollisionMaterialOverrides(
+        physx::PxRigidDynamic& rigid, const Animation::CharacterData& data,
+        const std::vector<Animation::CollisionMaterialOverride>& overrides);
 
     void fecthData();
 
@@ -149,6 +213,10 @@ class PhysicsWorld {
     UpAxis getUpAxis() const { return _upAxis; }
     PxPhysics* getPhysics() { return _physics; }
     PxMaterial* getMaterial() { return _material; }
+    PxMaterial*
+    getMaterialForDesc(const Animation::PhysicsMaterialDesc& material) {
+        return materialForDesc(material);
+    }
     PxScene* getScene() { return _scene; }
     const PxScene* getScene() const { return _scene; }
     PxCudaContextManager* getCudaContextManager() {

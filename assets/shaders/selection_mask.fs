@@ -5,9 +5,12 @@ in vec2 TexCoord;
 uniform sampler2D uTexture;
 uniform int uAlphaMode;
 uniform float uAlphaCutoff;
+uniform int uAlphaTextureRedChannel;
 
 void main() {
-    if(uAlphaMode == 1 && texture(uTexture, TexCoord).a < uAlphaCutoff)
+    vec4 alphaTexel = texture(uTexture, TexCoord);
+    float alpha = uAlphaTextureRedChannel != 0 ? alphaTexel.r : alphaTexel.a;
+    if(uAlphaMode == 1 && alpha < uAlphaCutoff)
         discard;
     FragColor = vec4(1.0);
 }

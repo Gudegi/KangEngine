@@ -5,7 +5,9 @@
 #include <utility>
 
 #include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 
+#include "engine/graphics/material/colors.hpp"
 #include "geometry/bounds.hpp"
 #include "sim/gpu_array_view.hpp"
 
@@ -16,7 +18,6 @@ class Prim;
 } // namespace Scene
 
 using RenderableHandle = uint32_t;
-using MeshHandle = RenderableHandle; // Deprecated: use RenderableHandle.
 static constexpr RenderableHandle InvalidHandle = ~0u;
 
 enum class TransformSource {
@@ -31,6 +32,14 @@ enum class AlphaMode {
     Opaque,
     Mask,
     Blend,
+};
+
+struct BackgroundSettings {
+    glm::vec4 checkerColor1 = ColorLibrary::getVec4(ColorType::WHITE);
+    glm::vec4 checkerColor2 = ColorLibrary::getVec4(ColorType::DARK_GREEN);
+    bool showGrid = true;
+    glm::vec4 gridColor = ColorLibrary::getVec4(ColorType::BLACK);
+    glm::vec4 backgroundColor = {0.2f, 0.3f, 0.3f, 1.0f};
 };
 
 enum class ExternalBufferFormat {
@@ -92,6 +101,8 @@ constexpr int Emissive = 8;
 constexpr int Metallic = 9;
 constexpr int Roughness = 10;
 constexpr int OcclusionRoughnessMetallic = 11;
+constexpr int Specular = 12;
+constexpr int Alpha = 13;
 
 } // namespace RendererTextureSlot
 

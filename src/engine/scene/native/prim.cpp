@@ -3,6 +3,17 @@
 ///
 
 #include "prim.hpp"
+#include "engine/scene/component/transform_component.hpp"
+#include "engine/scene/component/mesh_component.hpp"
+#include "engine/scene/component/render_component.hpp"
+#include "engine/scene/component/light_component.hpp"
+#include "engine/scene/component/camera_component.hpp"
+#include "engine/scene/component/material_binding_component.hpp"
+#include "engine/scene/component/resource_component.hpp"
+#include "engine/scene/component/selection_component.hpp"
+#include "engine/scene/component/articulation_component.hpp"
+#include "engine/scene/component/articulation_binding_component.hpp"
+#include "engine/scene/component/collision_shape_component.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "utils/types.hpp"
 #include <Eigen/Geometry>
@@ -16,20 +27,13 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <sstream>
 #include <algorithm>
+#include <stdexcept>
 #include "xform_token.hpp"
 
 namespace KE {
 namespace Scene {
 
 namespace {
-void decomposeTRS(const glm::mat4& matrix, glm::vec3& translation,
-                  glm::quat& rotation, glm::vec3& scale) {
-    glm::vec3 skew;
-    glm::vec4 perspective;
-    glm::decompose(matrix, scale, rotation, translation, skew, perspective);
-    rotation = glm::normalize(rotation);
-}
-
 bool isRenderableType(PrimType type) {
     return type == PrimType::Mesh || type == PrimType::MeshInstance;
 }
@@ -44,6 +48,24 @@ glm::vec3 safeDirection(glm::vec3 direction, glm::vec3 fallback) {
 Prim::Prim(const std::string& name, PrimType type, Prim* parent)
     : _name(name), _type(type), _parent(parent) {
     _renderable = isRenderableType(type);
+    if (_type != PrimType::Resource) {
+        _transformComponent =
+            std::shared_ptr<TransformComponent>(new TransformComponent(this));
+    }
+    _selectionComponent =
+        std::shared_ptr<SelectionComponent>(new SelectionComponent(this));
+    if (_type == PrimType::Root) {
+        _selectionComponent->setPickable(false);
+        _selectionComponent->setSelectable(false);
+        _selectionComponent->setManipulatable(false);
+        _selectionComponent->setForceDraggable(false);
+        _selectionComponent->setInteractionKind(InteractionKind::Helper);
+    } else if (_type == PrimType::Resource) {
+        _selectionComponent->setPickable(false);
+        _selectionComponent->setManipulatable(false);
+        _selectionComponent->setForceDraggable(false);
+        _selectionComponent->setInteractionKind(InteractionKind::Resource);
+    }
 
     // Initialize prim path
     if (parent == nullptr) {
@@ -53,6 +75,31 @@ Prim::Prim(const std::string& name, PrimType type, Prim* parent)
     } else {
         _path = parent->getPath() + "/" + name;
     }
+}
+
+Prim::~Prim() {
+    if (_transformComponent)
+        _transformComponent->detach();
+    if (_meshComponent)
+        _meshComponent->detach();
+    if (_renderComponent)
+        _renderComponent->detach();
+    if (_lightComponent)
+        _lightComponent->detach();
+    if (_cameraComponent)
+        _cameraComponent->detach();
+    if (_materialBindingComponent)
+        _materialBindingComponent->detach();
+    if (_resourceComponent)
+        _resourceComponent->detach();
+    if (_selectionComponent)
+        _selectionComponent->detach();
+    if (_articulationComponent)
+        _articulationComponent->detach();
+    if (_articulationBindingComponent)
+        _articulationBindingComponent->detach();
+    if (_collisionShapeComponent)
+        _collisionShapeComponent->detach();
 }
 
 Prim* Prim::addChild(const std::string& name, PrimType type) {
@@ -135,47 +182,284 @@ std::vector<Prim*> Prim::getChildren() const {
 }
 
 void Prim::setMeshData(std::shared_ptr<MeshData> data) {
-    _meshData = std::move(data);
-    _resolvedMeshDataCache.reset();
+    if (!_meshComponent)
+        addMeshComponent();
+    _meshComponent->setMeshData(std::move(data));
 }
 
-std::shared_ptr<MeshData> Prim::getMeshData() const { return _meshData; }
+std::shared_ptr<MeshData> Prim::getMeshData() const {
+    return _meshComponent ? _meshComponent->meshData() : nullptr;
+}
 
 void Prim::setMeshSourcePath(const std::string& path) {
-    _meshSourcePath = path;
-    _resolvedMeshDataCache.reset();
+    if (!_meshComponent)
+        addMeshComponent();
+    _meshComponent->setMeshSourcePath(path);
 }
 
-const std::string& Prim::getMeshSourcePath() const { return _meshSourcePath; }
+const std::string& Prim::getMeshSourcePath() const {
+    static const std::string empty;
+    return _meshComponent ? _meshComponent->meshSourcePath() : empty;
+}
 
 std::shared_ptr<MeshData> Prim::resolveMeshData() const {
-    if (_meshData)
-        return _meshData;
-
-    if (_type != PrimType::MeshInstance || _meshSourcePath.empty())
-        return nullptr;
-
-    if (auto cached = _resolvedMeshDataCache.lock())
-        return cached;
-
-    const Prim* root = this;
-    while (root->_parent)
-        root = root->_parent;
-
-    auto* source = const_cast<Prim*>(root)->getPrimAtPath(_meshSourcePath);
-    if (!source || source == this)
-        return nullptr;
-
-    auto resolved = source->resolveMeshData();
-    _resolvedMeshDataCache = resolved;
-    return resolved;
+    return _meshComponent ? _meshComponent->resolveMeshData() : nullptr;
 }
 
-void Prim::setLightType(LightType type) {
-    setAttribute("light:type", static_cast<int>(type));
+std::shared_ptr<MeshComponent> Prim::addMeshComponent() {
+    if (_type != PrimType::Mesh && _type != PrimType::MeshInstance &&
+        _type != PrimType::Resource)
+        throw std::runtime_error(
+            "Prim '" + _path +
+            "' must be PrimType::Mesh, MeshInstance, or Resource to add a "
+            "MeshComponent");
+    if (_meshComponent)
+        throw std::runtime_error("Prim '" + _path +
+                                 "' already has a MeshComponent");
+    _meshComponent = std::shared_ptr<MeshComponent>(new MeshComponent(this));
+    return _meshComponent;
+}
+
+std::shared_ptr<MeshComponent> Prim::getMeshComponent() const {
+    return _meshComponent;
+}
+
+bool Prim::removeMeshComponent() {
+    if (!_meshComponent)
+        return false;
+    _meshComponent->detach();
+    _meshComponent.reset();
+    if (_renderComponent)
+        _renderComponent->markChanged();
+    return true;
+}
+
+std::shared_ptr<TransformComponent> Prim::getTransformComponent() const {
+    return _transformComponent;
+}
+
+std::shared_ptr<RenderComponent> Prim::addRenderComponent() {
+    if (_renderComponent)
+        throw std::runtime_error("Prim '" + _path +
+                                 "' already has a RenderComponent");
+    _renderComponent =
+        std::shared_ptr<RenderComponent>(new RenderComponent(this));
+    return _renderComponent;
+}
+
+std::shared_ptr<RenderComponent> Prim::getRenderComponent() const {
+    return _renderComponent;
+}
+
+bool Prim::removeRenderComponent() {
+    if (!_renderComponent)
+        return false;
+    _renderComponent->detach();
+    _renderComponent.reset();
+    return true;
+}
+
+std::shared_ptr<MaterialBindingComponent> Prim::addMaterialBindingComponent() {
+    if (_materialBindingComponent)
+        throw std::runtime_error("Prim '" + _path +
+                                 "' already has a MaterialBindingComponent");
+    _materialBindingComponent = std::shared_ptr<MaterialBindingComponent>(
+        new MaterialBindingComponent(this));
+    return _materialBindingComponent;
+}
+
+std::shared_ptr<MaterialBindingComponent>
+Prim::getMaterialBindingComponent() const {
+    return _materialBindingComponent;
+}
+
+bool Prim::removeMaterialBindingComponent() {
+    if (!_materialBindingComponent)
+        return false;
+    _materialBindingComponent->detach();
+    _materialBindingComponent.reset();
+    return true;
+}
+
+void Prim::setMaterial(Material* material) {
+    if (!_materialBindingComponent)
+        addMaterialBindingComponent();
+    _materialBindingComponent->setMaterial(material);
+}
+
+Material* Prim::getMaterial() const {
+    return _materialBindingComponent ? _materialBindingComponent->material()
+                                     : nullptr;
+}
+
+std::shared_ptr<LightComponent> Prim::addLightComponent() {
+    if (_type != PrimType::Light)
+        throw std::runtime_error(
+            "Prim '" + _path +
+            "' must be PrimType::Light to add a LightComponent");
+    if (_lightComponent)
+        throw std::runtime_error("Prim '" + _path +
+                                 "' already has a LightComponent");
+    _lightComponent = std::shared_ptr<LightComponent>(new LightComponent(this));
+    return _lightComponent;
+}
+
+std::shared_ptr<LightComponent> Prim::getLightComponent() const {
+    return _lightComponent;
+}
+
+bool Prim::removeLightComponent() {
+    if (!_lightComponent)
+        return false;
+    _lightComponent->detach();
+    _lightComponent.reset();
+    return true;
+}
+
+std::shared_ptr<CameraComponent> Prim::addCameraComponent() {
+    if (_type != PrimType::Camera)
+        throw std::runtime_error(
+            "Prim '" + _path +
+            "' must be PrimType::Camera to add a CameraComponent");
+    if (_cameraComponent)
+        throw std::runtime_error("Prim '" + _path +
+                                 "' already has a CameraComponent");
+    _cameraComponent =
+        std::shared_ptr<CameraComponent>(new CameraComponent(this));
+    return _cameraComponent;
+}
+
+std::shared_ptr<CameraComponent> Prim::getCameraComponent() const {
+    return _cameraComponent;
+}
+
+bool Prim::removeCameraComponent() {
+    if (!_cameraComponent)
+        return false;
+    _cameraComponent->detach();
+    _cameraComponent.reset();
+    return true;
+}
+
+std::shared_ptr<ResourceComponent> Prim::addResourceComponent() {
+    if (_type != PrimType::Resource)
+        throw std::runtime_error(
+            "Prim '" + _path +
+            "' must be PrimType::Resource to add a ResourceComponent");
+    if (_resourceComponent)
+        throw std::runtime_error("Prim '" + _path +
+                                 "' already has a ResourceComponent");
+    _resourceComponent =
+        std::shared_ptr<ResourceComponent>(new ResourceComponent(this));
+    return _resourceComponent;
+}
+
+std::shared_ptr<ResourceComponent> Prim::getResourceComponent() const {
+    return _resourceComponent;
+}
+
+bool Prim::removeResourceComponent() {
+    if (!_resourceComponent)
+        return false;
+    _resourceComponent->detach();
+    _resourceComponent.reset();
+    return true;
+}
+
+std::shared_ptr<SelectionComponent> Prim::addSelectionComponent() {
+    if (_selectionComponent)
+        throw std::runtime_error("Prim '" + _path +
+                                 "' already has a SelectionComponent");
+    _selectionComponent =
+        std::shared_ptr<SelectionComponent>(new SelectionComponent(this));
+    return _selectionComponent;
+}
+
+std::shared_ptr<SelectionComponent> Prim::getSelectionComponent() const {
+    return _selectionComponent;
+}
+
+bool Prim::removeSelectionComponent() {
+    if (!_selectionComponent)
+        return false;
+    _selectionComponent->detach();
+    _selectionComponent.reset();
+    return true;
+}
+
+std::shared_ptr<ArticulationComponent> Prim::addArticulationComponent() {
+    if (_articulationComponent)
+        throw std::runtime_error("Prim '" + _path +
+                                 "' already has an ArticulationComponent");
+    _articulationComponent =
+        std::shared_ptr<ArticulationComponent>(
+            new ArticulationComponent(this));
+    return _articulationComponent;
+}
+
+std::shared_ptr<ArticulationComponent>
+Prim::getArticulationComponent() const {
+    return _articulationComponent;
+}
+
+bool Prim::removeArticulationComponent() {
+    if (!_articulationComponent)
+        return false;
+    _articulationComponent->detach();
+    _articulationComponent.reset();
+    return true;
+}
+
+std::shared_ptr<ArticulationBindingComponent>
+Prim::addArticulationBindingComponent() {
+    if (_articulationBindingComponent)
+        throw std::runtime_error(
+            "Prim '" + _path + "' already has an ArticulationBindingComponent");
+    _articulationBindingComponent =
+        std::shared_ptr<ArticulationBindingComponent>(
+            new ArticulationBindingComponent(this));
+    return _articulationBindingComponent;
+}
+
+std::shared_ptr<ArticulationBindingComponent>
+Prim::getArticulationBindingComponent() const {
+    return _articulationBindingComponent;
+}
+
+bool Prim::removeArticulationBindingComponent() {
+    if (!_articulationBindingComponent)
+        return false;
+    _articulationBindingComponent->detach();
+    _articulationBindingComponent.reset();
+    return true;
+}
+
+std::shared_ptr<CollisionShapeComponent> Prim::addCollisionShapeComponent() {
+    if (_collisionShapeComponent)
+        throw std::runtime_error("Prim '" + _path +
+                                 "' already has a CollisionShapeComponent");
+    _collisionShapeComponent =
+        std::shared_ptr<CollisionShapeComponent>(
+            new CollisionShapeComponent(this));
+    return _collisionShapeComponent;
+}
+
+std::shared_ptr<CollisionShapeComponent>
+Prim::getCollisionShapeComponent() const {
+    return _collisionShapeComponent;
+}
+
+bool Prim::removeCollisionShapeComponent() {
+    if (!_collisionShapeComponent)
+        return false;
+    _collisionShapeComponent->detach();
+    _collisionShapeComponent.reset();
+    return true;
 }
 
 LightType Prim::getLightType(LightType defaultType) const {
+    if (_lightComponent)
+        return _lightComponent->type();
     if (!hasAttribute("light:type"))
         return defaultType;
     const int value = getAttribute<int>("light:type");
@@ -186,7 +470,11 @@ LightType Prim::getLightType(LightType defaultType) const {
 }
 
 void Prim::setDirectionalLight(const DirectionalLight& light) {
-    setLightType(LightType::Directional);
+    if (!_lightComponent)
+        addLightComponent();
+    _lightComponent->setDirectionalLight(light);
+
+    setAttribute("light:type", static_cast<int>(LightType::Directional));
     setAttribute("light:direction",
                  safeDirection(light.direction, glm::vec3(0.0f, 0.0f, -1.0f)));
     setAttribute("light:color", light.color);
@@ -195,6 +483,9 @@ void Prim::setDirectionalLight(const DirectionalLight& light) {
 }
 
 DirectionalLight Prim::getDirectionalLight() {
+    if (_lightComponent)
+        return _lightComponent->directionalLight();
+
     DirectionalLight light;
     const glm::vec3 localDirection =
         getAttribute<glm::vec3>("light:direction", light.direction);
@@ -209,14 +500,20 @@ DirectionalLight Prim::getDirectionalLight() {
 }
 
 void Prim::setPointLight(const PointLight& light) {
-    setLightType(LightType::Point);
-    setLocalTranslation(light.position);
+    if (!_lightComponent)
+        addLightComponent();
+    _lightComponent->setPointLight(light);
+
+    setAttribute("light:type", static_cast<int>(LightType::Point));
     setAttribute("light:color", light.color);
     setAttribute("light:intensity", std::max(0.0f, light.intensity));
     setAttribute("light:range", std::max(0.0f, light.range));
 }
 
 PointLight Prim::getPointLight() {
+    if (_lightComponent)
+        return _lightComponent->pointLight();
+
     PointLight light;
     const glm::mat4 world = computeWorldMatrix();
     light.position = glm::vec3(world[3]);
@@ -229,8 +526,11 @@ PointLight Prim::getPointLight() {
 }
 
 void Prim::setSpotLight(const SpotLight& light) {
-    setLightType(LightType::Spot);
-    setLocalTranslation(light.position);
+    if (!_lightComponent)
+        addLightComponent();
+    _lightComponent->setSpotLight(light);
+
+    setAttribute("light:type", static_cast<int>(LightType::Spot));
     setAttribute("light:direction",
                  safeDirection(light.direction, glm::vec3(0.0f, 0.0f, -1.0f)));
     setAttribute("light:color", light.color);
@@ -242,6 +542,9 @@ void Prim::setSpotLight(const SpotLight& light) {
 }
 
 SpotLight Prim::getSpotLight() {
+    if (_lightComponent)
+        return _lightComponent->spotLight();
+
     SpotLight light;
     const glm::mat4 world = computeWorldMatrix();
     const glm::vec3 localDirection =
@@ -277,6 +580,14 @@ bool Prim::isVisibleInHierarchy() const {
             return false;
     }
     return true;
+}
+
+void Prim::setVisible(bool visible) {
+    if (_visible == visible)
+        return;
+    _visible = visible;
+    if (_renderComponent)
+        _renderComponent->markChanged();
 }
 
 void Prim::setActive(bool a) { _active = a; }
@@ -1033,146 +1344,70 @@ void Prim::onAttributeChanged(const Token& name) {
 }
 
 void Prim::markLocalTransformDirty() {
-    _localDirty = true;
-    markWorldTransformDirtyRecursive();
+    if (_transformComponent)
+        _transformComponent->markLocalTransformDirty();
 }
 
 void Prim::markWorldTransformDirtyRecursive() {
-    _worldDirty = true;
-    for (auto& child : _children)
-        child->markWorldTransformDirtyRecursive();
+    if (_transformComponent)
+        _transformComponent->markWorldTransformDirtyRecursive();
+}
+
+TransformComponent& Prim::getTransformComponentOrThrow() {
+    if (!_transformComponent) {
+        throw std::runtime_error("Prim '" + _path +
+                                 "' has no TransformComponent");
+    }
+    return *_transformComponent;
+}
+
+const TransformComponent& Prim::getTransformComponentOrThrow() const {
+    if (!_transformComponent) {
+        throw std::runtime_error("Prim '" + _path +
+                                 "' has no TransformComponent");
+    }
+    return *_transformComponent;
 }
 
 void Prim::setLocalTranslation(glm::vec3 trans) {
-    setAttribute(XformTokens::translate, trans);
-    setXformOpOrder(
-        {"xformOp:scale", "xformOp:rotateQuaternion", "xformOp:translate"});
+    getTransformComponentOrThrow().setLocalTranslation(trans);
 }
 
 void Prim::setLocalScale(glm::vec3 scale) {
-    setAttribute(XformTokens::scale, scale);
-    setXformOpOrder(
-        {"xformOp:scale", "xformOp:rotateQuaternion", "xformOp:translate"});
+    getTransformComponentOrThrow().setLocalScale(scale);
 }
 
 void Prim::setLocalRotation(glm::quat quat) {
-    setAttribute(XformTokens::rotateQuat, glm::normalize(quat));
-    setXformOpOrder(
-        {"xformOp:scale", "xformOp:rotateQuaternion", "xformOp:translate"});
+    getTransformComponentOrThrow().setLocalRotation(quat);
 }
 
 void Prim::setLocalMatrix(const glm::mat4& matrix) {
-    setAttribute(XformTokens::transform, matrix);
-    setXformOpOrder({"xformOp:transform"});
+    getTransformComponentOrThrow().setLocalMatrix(matrix);
 }
 
 void Prim::setWorldTranslation(glm::vec3 trans) {
-    const glm::mat4 parentWorld =
-        _parent ? _parent->computeWorldMatrix() : glm::mat4(1.0f);
-    const glm::vec3 local =
-        glm::vec3(glm::inverse(parentWorld) * glm::vec4(trans, 1.0f));
-    setLocalTranslation(local);
+    getTransformComponentOrThrow().setWorldTranslation(trans);
 }
 
 void Prim::setWorldRotation(glm::quat quat) {
-    const glm::mat4 parentWorld =
-        _parent ? _parent->computeWorldMatrix() : glm::mat4(1.0f);
-    glm::vec3 parentTranslation;
-    glm::quat parentRotation;
-    glm::vec3 parentScale;
-    decomposeTRS(parentWorld, parentTranslation, parentRotation, parentScale);
-    setLocalRotation(glm::inverse(parentRotation) * glm::normalize(quat));
+    getTransformComponentOrThrow().setWorldRotation(quat);
 }
 
 void Prim::setWorldMatrix(const glm::mat4& matrix) {
-    const glm::mat4 parentWorld =
-        _parent ? _parent->computeWorldMatrix() : glm::mat4(1.0f);
-    const glm::mat4 localMatrix = glm::inverse(parentWorld) * matrix;
-    setLocalMatrix(localMatrix);
+    getTransformComponentOrThrow().setWorldMatrix(matrix);
 }
 
 glm::mat4 Prim::computeLocalMatrix() {
-    if (_localDirty) {
-        glm::mat4 result(1.0f);
-
-        const std::vector<Token>* orderPtr = &XformTokens::defaultOpOrder;
-        std::vector<Token> customOrder;
-
-        if (hasAttribute(XformTokens::opOrder)) {
-            const auto& strOrder =
-                getAttribute<std::vector<std::string>>(XformTokens::opOrder);
-            customOrder.reserve(strOrder.size());
-            for (const auto& s : strOrder) {
-                customOrder.emplace_back(s);
-            }
-            orderPtr = &customOrder;
-        }
-
-        for (const auto& opToken : *orderPtr) {
-            if (!this->hasAttribute(opToken))
-                continue;
-
-            XformOpType type = XformTokens::getXformOpType(opToken);
-            glm::mat4 opMat(1.0f);
-
-            switch (type) {
-            case XformOpType::Translate: {
-                auto t = getAttribute<glm::vec3>(opToken);
-                opMat = glm::translate(glm::mat4(1.0f), t);
-                break;
-            }
-            case XformOpType::RotateQuat: {
-                auto q = getAttribute<glm::quat>(opToken);
-                opMat = glm::mat4_cast(q);
-                break;
-            }
-            case XformOpType::RotateXYZ: {
-                auto r = getAttribute<glm::vec3>(opToken);
-                glm::mat4 rot =
-                    glm::rotate(glm::mat4(1.0f), glm::radians(r.x), {1, 0, 0});
-                rot = glm::rotate(rot, glm::radians(r.y), {0, 1, 0});
-                rot = glm::rotate(rot, glm::radians(r.z), {0, 0, 1});
-                opMat = rot;
-                break;
-            }
-            case XformOpType::Scale: {
-                auto s = getAttribute<glm::vec3>(opToken);
-                opMat = glm::scale(glm::mat4(1.0f), s);
-                break;
-            }
-            case XformOpType::Matrix: {
-                opMat = getAttribute<glm::mat4>(opToken);
-                break;
-            }
-            default:
-                // TODO: Unknown Op 혹은 지원하지 않는 타입 처리
-                break;
-            }
-
-            // Apply operations in reverse order of the list
-            // (Pre-multiplication). If opOrder is {Scale, Rotate, Translate},
-            // this results in: Result = Translate * (Rotate * (Scale * I)) = T
-            // * R * S This produces the standard Local-to-Parent transform.
-            result = opMat * result; // T * R * S * vec right when using glm.
-            // result = result * opMat; // S * R * T * vec
-        }
-        _cachedLocalMat = result;
-        _localDirty = false;
-    }
-    return _cachedLocalMat;
+    return getTransformComponentOrThrow().computeLocalMatrix();
 }
 
 glm::mat4 Prim::computeWorldMatrix() {
-    if (_worldDirty) {
-        const glm::mat4 local = computeLocalMatrix();
-        _cachedWorldMat =
-            _parent ? _parent->computeWorldMatrix() * local : local;
-        _worldDirty = false;
-    }
-    return _cachedWorldMat;
+    return getTransformComponentOrThrow().computeWorldMatrix();
 }
 
-glm::mat4 Prim::computeModelMatrix() { return computeWorldMatrix(); }
+glm::mat4 Prim::computeModelMatrix() {
+    return getTransformComponentOrThrow().computeModelMatrix();
+}
 
 } // namespace Scene
 } // namespace KE

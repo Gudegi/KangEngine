@@ -90,9 +90,10 @@ class FBXLoader {
     static std::vector<FBXAnimationClipInfo>
     loadAnimationClipInfos(const std::string& fbxPath);
 
-    static Animation::SkeletonMotion
-    loadMotion(const std::string& fbxPath, int clipIndex = -1,
-               float fps = -1.0f, float scale = 0.01f);
+    static Animation::SkeletonMotion loadMotion(const std::string& fbxPath,
+                                                int clipIndex = -1,
+                                                float fps = -1.0f,
+                                                float scale = 0.01f);
 
     static std::vector<FBXStaticMeshInfo> loadMeshes(const std::string& fbxPath,
                                                      float scale = 0.01f);
@@ -109,12 +110,13 @@ class FBXLoader {
                                          float scale = 0.01f);
 
     static FBXCharacterData loadCharacter(const std::string& fbxPath,
-                                         int clipIndex = -1, float fps = -1.0f,
-                                         float scale = 0.01f);
+                                          int clipIndex = -1, float fps = -1.0f,
+                                          float scale = 0.01f);
 
-    static FBXCharacterData loadCharacterWithBind(
-        const std::string& motionFbxPath, const std::string& bindFbxPath,
-        int clipIndex = -1, float fps = -1.0f, float scale = 0.01f);
+    static FBXCharacterData
+    loadCharacterWithBind(const std::string& motionFbxPath,
+                          const std::string& bindFbxPath, int clipIndex = -1,
+                          float fps = -1.0f, float scale = 0.01f);
 };
 
 namespace FBXDebug {

@@ -5,6 +5,8 @@
 #include "animation/skinning.hpp"
 #include "engine/core/app/app.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
+#include "engine/scene/component/render_component.hpp"
+#include "engine/scene/component/scene_render_system.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/prim_path.hpp"
 #include "engine/scene/scene_backend.hpp"
@@ -149,7 +151,8 @@ SkinnedCharacterBridge SkinnedCharacterBridge::fromFBXWithBind(
             shader, path, std::move(imported.skinnedMeshData), glm::vec3(0.0f),
             color, true);
         binding.prim = result.prim;
-        binding.handle = result.handle;
+        binding.component =
+            binding.prim ? binding.prim->getRenderComponent() : nullptr;
 
         const std::string texturePath =
             useMaterials ? diffuseTexturePathFromMaterial(imported.metadata)
@@ -171,10 +174,12 @@ SkinnedCharacterBridge SkinnedCharacterBridge::fromFBXWithBind(
                                                            true));
             normalTexture = bridge._textures.back().get();
         }
-        if (binding.handle != InvalidHandle && diffuseTexture)
-            app->setRenderableTexture(binding.handle, diffuseTexture, 0);
-        if (binding.handle != InvalidHandle && normalTexture)
-            app->setRenderableTexture(binding.handle, normalTexture, 5);
+        if (binding.component && diffuseTexture)
+            app->getSceneRenderSystem().setTexture(*binding.component,
+                                                   diffuseTexture, 0);
+        if (binding.component && normalTexture)
+            app->getSceneRenderSystem().setTexture(*binding.component,
+                                                   normalTexture, 5);
 
         bridge._meshes.push_back(std::move(binding));
     }
@@ -227,8 +232,9 @@ SkinnedCharacterBridge::applyState(const Animation::SkeletonState& state) {
             mesh.boneNodeIndices, mesh.inverseBindMatrices, _globalMatrices,
             mesh.boneMatrices);
 
-        if (mesh.handle != InvalidHandle)
-            _app->updateRenderableSkinningMatrices(mesh.handle, mesh.boneMatrices);
+        if (mesh.component)
+            _app->getSceneRenderSystem().updateSkinning(*mesh.component,
+                                                        mesh.boneMatrices);
     }
 
     return state;
@@ -254,11 +260,9 @@ void SkinnedCharacterBridge::setColor(const glm::vec4& color) {
 }
 
 void SkinnedCharacterBridge::setCastsShadow(bool castsShadow) {
-    if (!_app)
-        return;
     for (const MeshBinding& mesh : _meshes) {
-        if (mesh.handle != InvalidHandle)
-            _app->setRenderableCastsShadow(mesh.handle, castsShadow);
+        if (mesh.component)
+            mesh.component->setCastsShadow(castsShadow);
     }
 }
 

@@ -14,8 +14,6 @@ ROOT = Path("assets/external/PBR/woods/oak-wood-bare-bl")
 class PBROakWoodViewer(ke.App):
     def setup(self):
         self.shaders = self.create_standard_shaders()
-        self.pbr_shader = self.create_asset_shader("common.vs", "pbr_forward.fs")
-        self.materials = []
         self.textures = []
         self.texture_flags = {
             "albedo": True,
@@ -51,8 +49,6 @@ class PBROakWoodViewer(ke.App):
         return texture
 
     def _make_oak_material(self):
-        material = ke.PBRMaterial()
-        material.set_shader(self.pbr_shader)
         self.oak_textures = {
             "albedo": self._load_texture("oak-wood-bare_albedo.png"),
             "normal": self._load_texture("oak-wood-bare_normal-ogl.png"),
@@ -60,10 +56,8 @@ class PBROakWoodViewer(ke.App):
             "roughness": self._load_texture("oak-wood-bare_roughness.png"),
             "ao": self._load_texture("oak-wood-bare_ao.png"),
         }
-        material.metallic = 1.0
-        material.roughness = 1.0
+        material = self.create_pbr_material(metallic=1.0, roughness=1.0)
         self._apply_texture_flags(material)
-        self.materials.append(material)
         return material
 
     def _apply_texture_flags(self, material=None):

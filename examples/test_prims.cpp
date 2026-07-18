@@ -41,6 +41,7 @@ class PrimShowcaseApp : public App {
             commonVSPath, commonFSPath);
         groundShader = getRenderer().device()->createShaderFromFile(
             commonVSPath, groundFSPath);
+        getRenderer().setBackgroundShader(groundShader.get());
 
         phongShader->setUniformBlockBinding("cameraUBO", 0);
         phongShader->setUniformBlockBinding("lightUBO", 1);
@@ -89,7 +90,7 @@ class PrimShowcaseApp : public App {
             Prim::defineCoordinateAxes(getScene(), "/shapes/coordinate_axes",
                                        1.8f, 0.04f, 16, upPos(0.f, 0.f, 0.02f));
         for (auto* p : prims)
-            addRenderable(phongShader.get(), p);
+            getSceneRenderSystem().addRenderable(*p, phongShader.get());
         if (!prims.empty())
             entries.push_back({prims[0], "Scene Axes (arrow prims)"});
 
@@ -269,7 +270,7 @@ class PrimShowcaseApp : public App {
                 Prim::definePoints(getScene(), "/shapes/points", pts, 0.12f,
                                    {0.95f, 0.35f, 0.55f, 1.f}, 12);
             for (auto* p : prims)
-                addRenderable(phongShader.get(), p);
+                getSceneRenderSystem().addRenderable(*p, phongShader.get());
             if (!prims.empty())
                 entries.push_back({prims[0], "Points (5 spheres, instanced)"});
         }
@@ -286,7 +287,7 @@ class PrimShowcaseApp : public App {
                 Prim::defineLines(getScene(), "/shapes/lines", verts, lineIdx,
                                   0.04f, {0.35f, 0.75f, 0.95f, 1.f}, 8);
             for (auto* p : prims)
-                addRenderable(phongShader.get(), p);
+                getSceneRenderSystem().addRenderable(*p, phongShader.get());
             if (!prims.empty())
                 entries.push_back({prims[0], "Lines (5 capsules, instanced)"});
         }

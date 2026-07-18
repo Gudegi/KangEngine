@@ -1,5 +1,7 @@
 #include "engine/scene/debug_draw.hpp"
 #include "engine/core/app/app.hpp"
+#include "engine/scene/component/render_component.hpp"
+#include "engine/scene/component/scene_render_system.hpp"
 #include "engine/scene/native/prim.hpp"
 #include <Eigen/Geometry>
 #include <algorithm>
@@ -260,28 +262,39 @@ RenderableHandle DebugDraw::logLines(App* app, Backend::Shader* shader,
                                      const std::vector<glm::vec3>& ends,
                                      const std::vector<glm::vec4>& colors,
                                      float radius, int segments) {
+    auto component = logLineComponent(app, shader, path, starts, ends, colors,
+                                      radius, segments);
+    return component ? app->getSceneRenderSystem().handle(*component)
+                     : InvalidHandle;
+}
+
+std::shared_ptr<RenderComponent> DebugDraw::logLineComponent(
+    App* app, Backend::Shader* shader, const std::string& path,
+    const std::vector<glm::vec3>& starts, const std::vector<glm::vec3>& ends,
+    const std::vector<glm::vec4>& colors, float radius, int segments) {
     if (!app || !shader || !app->getScene())
-        return InvalidHandle;
+        return nullptr;
 
     validateLineInputs("DebugDraw::logLines", starts, ends, colors);
 
     auto [transforms, instanceColors] =
         buildTransforms(starts, ends, colors, makeLineTransform);
     if (transforms.empty())
-        return InvalidHandle;
+        return nullptr;
 
     const float safeRadius = std::max(radius, 1e-5f);
     auto* prim = app->getScene()->definePrim(path, PrimType::Mesh);
     prim->setMeshData(std::make_shared<MeshData>(
         Prim::createCapsuleData(safeRadius, 1.0f, UpAxis::Y, segments)));
 
-    RenderableHandle handle = app->addRenderable(shader, prim);
-    if (handle == InvalidHandle)
-        return InvalidHandle;
+    auto component = app->getSceneRenderSystem().addRenderable(*prim, shader);
+    if (!component)
+        return nullptr;
 
-    app->updateRenderableTransforms(handle, transforms, &instanceColors);
-    app->setRenderableCastsShadow(handle, false);
-    return handle;
+    app->getSceneRenderSystem().updateInstances(*component, transforms,
+                                                &instanceColors);
+    component->setCastsShadow(false);
+    return component;
 }
 
 RenderableHandle DebugDraw::logLines(App* app, Backend::Shader* shader,
@@ -327,6 +340,19 @@ void DebugDraw::updateLines(App* app, RenderableHandle handle,
     app->updateRenderableTransforms(handle, transforms, &instanceColors);
 }
 
+void DebugDraw::updateLines(App* app, RenderComponent& component,
+                            const std::vector<glm::vec3>& starts,
+                            const std::vector<glm::vec3>& ends,
+                            const std::vector<glm::vec4>& colors) {
+    if (!app)
+        return;
+    validateLineInputs("DebugDraw::updateLines", starts, ends, colors);
+    auto [transforms, instanceColors] =
+        buildTransforms(starts, ends, colors, makeLineTransform);
+    app->getSceneRenderSystem().updateInstances(component, transforms,
+                                                &instanceColors);
+}
+
 void DebugDraw::updateLines(App* app, RenderableHandle handle,
                             const float* starts, const float* ends,
                             const float* colors, size_t count,
@@ -346,28 +372,39 @@ RenderableHandle DebugDraw::logArrows(App* app, Backend::Shader* shader,
                                       const std::vector<glm::vec3>& ends,
                                       const std::vector<glm::vec4>& colors,
                                       float radius, int segments) {
+    auto component = logArrowComponent(app, shader, path, starts, ends, colors,
+                                       radius, segments);
+    return component ? app->getSceneRenderSystem().handle(*component)
+                     : InvalidHandle;
+}
+
+std::shared_ptr<RenderComponent> DebugDraw::logArrowComponent(
+    App* app, Backend::Shader* shader, const std::string& path,
+    const std::vector<glm::vec3>& starts, const std::vector<glm::vec3>& ends,
+    const std::vector<glm::vec4>& colors, float radius, int segments) {
     if (!app || !shader || !app->getScene())
-        return InvalidHandle;
+        return nullptr;
 
     validateLineInputs("DebugDraw::logArrows", starts, ends, colors);
 
     auto [transforms, instanceColors] =
         buildTransforms(starts, ends, colors, makeArrowTransform);
     if (transforms.empty())
-        return InvalidHandle;
+        return nullptr;
 
     const float safeRadius = std::max(radius, 1e-5f);
     auto* prim = app->getScene()->definePrim(path, PrimType::Mesh);
     prim->setMeshData(std::make_shared<MeshData>(Prim::createArrowData(
         safeRadius, 0.78f, UpAxis::Y, safeRadius * 2.4f, 0.22f, segments)));
 
-    RenderableHandle handle = app->addRenderable(shader, prim);
-    if (handle == InvalidHandle)
-        return InvalidHandle;
+    auto component = app->getSceneRenderSystem().addRenderable(*prim, shader);
+    if (!component)
+        return nullptr;
 
-    app->updateRenderableTransforms(handle, transforms, &instanceColors);
-    app->setRenderableCastsShadow(handle, false);
-    return handle;
+    app->getSceneRenderSystem().updateInstances(*component, transforms,
+                                                &instanceColors);
+    component->setCastsShadow(false);
+    return component;
 }
 
 RenderableHandle DebugDraw::logArrows(App* app, Backend::Shader* shader,
@@ -413,6 +450,19 @@ void DebugDraw::updateArrows(App* app, RenderableHandle handle,
     app->updateRenderableTransforms(handle, transforms, &instanceColors);
 }
 
+void DebugDraw::updateArrows(App* app, RenderComponent& component,
+                             const std::vector<glm::vec3>& starts,
+                             const std::vector<glm::vec3>& ends,
+                             const std::vector<glm::vec4>& colors) {
+    if (!app)
+        return;
+    validateLineInputs("DebugDraw::updateArrows", starts, ends, colors);
+    auto [transforms, instanceColors] =
+        buildTransforms(starts, ends, colors, makeArrowTransform);
+    app->getSceneRenderSystem().updateInstances(component, transforms,
+                                                &instanceColors);
+}
+
 void DebugDraw::updateArrows(App* app, RenderableHandle handle,
                              const float* starts, const float* ends,
                              const float* colors, size_t count,
@@ -449,6 +499,239 @@ RenderableHandle DebugDraw::logCoordinateAxes(App* app, Backend::Shader* shader,
 
     return logLines(app, shader, path, starts, ends, colors, radius, segments);
 }
+
+namespace DebugGeometry {
+namespace {
+
+glm::vec3 safeNormalized(const glm::vec3& value, const glm::vec3& fallback) {
+    if (glm::dot(value, value) < 1.0e-8f)
+        return glm::normalize(fallback);
+    return glm::normalize(value);
+}
+
+void basisFromDirection(const glm::vec3& direction, glm::vec3& right,
+                        glm::vec3& up) {
+    const glm::vec3 forward =
+        safeNormalized(direction, glm::vec3(0.0f, 0.0f, -1.0f));
+    const glm::vec3 helper = std::abs(forward.y) < 0.92f
+                                 ? glm::vec3(0.0f, 1.0f, 0.0f)
+                                 : glm::vec3(1.0f, 0.0f, 0.0f);
+    right = safeNormalized(glm::cross(helper, forward),
+                           glm::vec3(1.0f, 0.0f, 0.0f));
+    up =
+        safeNormalized(glm::cross(forward, right), glm::vec3(0.0f, 1.0f, 0.0f));
+}
+
+void basisFromForwardUp(const glm::vec3& forwardInput, const glm::vec3& upInput,
+                        glm::vec3& forward, glm::vec3& right, glm::vec3& up) {
+    forward = safeNormalized(forwardInput, glm::vec3(0.0f, 0.0f, -1.0f));
+    const glm::vec3 safeUp =
+        safeNormalized(upInput, glm::vec3(0.0f, 1.0f, 0.0f));
+    right = safeNormalized(glm::cross(forward, safeUp),
+                           glm::vec3(1.0f, 0.0f, 0.0f));
+    up =
+        safeNormalized(glm::cross(right, forward), glm::vec3(0.0f, 1.0f, 0.0f));
+}
+
+void appendFrustumEdges(std::vector<glm::vec3>& starts,
+                        std::vector<glm::vec3>& ends,
+                        const glm::vec3 corners[8]) {
+    constexpr int edges[][2] = {
+        {0, 1}, {1, 3}, {3, 2}, {2, 0}, {4, 5}, {5, 7},
+        {7, 6}, {6, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7},
+    };
+    for (const auto& edge : edges)
+        appendLine(starts, ends, corners[edge[0]], corners[edge[1]]);
+}
+
+void appendCircle(std::vector<glm::vec3>& starts, std::vector<glm::vec3>& ends,
+                  const glm::vec3& center, const glm::vec3& axisA,
+                  const glm::vec3& axisB, float radius, int segments) {
+    const float safeRadius = std::max(0.0f, radius);
+    if (safeRadius <= 1.0e-5f || segments < 3)
+        return;
+    for (int i = 0; i < segments; ++i) {
+        const float a0 = glm::two_pi<float>() * static_cast<float>(i) /
+                         static_cast<float>(segments);
+        const float a1 = glm::two_pi<float>() * static_cast<float>(i + 1) /
+                         static_cast<float>(segments);
+        const glm::vec3 p0 =
+            center + (std::cos(a0) * axisA + std::sin(a0) * axisB) * safeRadius;
+        const glm::vec3 p1 =
+            center + (std::cos(a1) * axisA + std::sin(a1) * axisB) * safeRadius;
+        appendLine(starts, ends, p0, p1);
+    }
+}
+
+} // namespace
+
+void appendLine(std::vector<glm::vec3>& starts, std::vector<glm::vec3>& ends,
+                const glm::vec3& start, const glm::vec3& end) {
+    starts.push_back(start);
+    ends.push_back(end);
+}
+
+void appendDirectionArrowWire(std::vector<glm::vec3>& starts,
+                              std::vector<glm::vec3>& ends,
+                              const glm::vec3& origin,
+                              const glm::vec3& direction, float length) {
+    const float safeLength = std::max(0.0f, length);
+    if (safeLength <= 1.0e-5f)
+        return;
+
+    const glm::vec3 forward =
+        safeNormalized(direction, glm::vec3(0.0f, 0.0f, -1.0f));
+    const glm::vec3 tip = origin + forward * safeLength;
+    appendLine(starts, ends, origin, tip);
+
+    glm::vec3 right, up;
+    basisFromDirection(forward, right, up);
+    const float headLength = safeLength * 0.18f;
+    const float headRadius = safeLength * 0.08f;
+    appendLine(starts, ends, tip,
+               tip - forward * headLength + right * headRadius);
+    appendLine(starts, ends, tip,
+               tip - forward * headLength - right * headRadius);
+    appendLine(starts, ends, tip, tip - forward * headLength + up * headRadius);
+    appendLine(starts, ends, tip, tip - forward * headLength - up * headRadius);
+}
+
+void appendSphereWire(std::vector<glm::vec3>& starts,
+                      std::vector<glm::vec3>& ends, const glm::vec3& center,
+                      float radius, int segments) {
+    appendCircle(starts, ends, center, glm::vec3(1.0f, 0.0f, 0.0f),
+                 glm::vec3(0.0f, 1.0f, 0.0f), radius, segments);
+    appendCircle(starts, ends, center, glm::vec3(1.0f, 0.0f, 0.0f),
+                 glm::vec3(0.0f, 0.0f, 1.0f), radius, segments);
+    appendCircle(starts, ends, center, glm::vec3(0.0f, 1.0f, 0.0f),
+                 glm::vec3(0.0f, 0.0f, 1.0f), radius, segments);
+}
+
+void appendConeWire(std::vector<glm::vec3>& starts,
+                    std::vector<glm::vec3>& ends, const glm::vec3& apex,
+                    const glm::vec3& direction, float range,
+                    float outerConeAngle, int segments) {
+    const float safeRange = std::max(0.0f, range);
+    if (safeRange <= 1.0e-5f)
+        return;
+
+    const glm::vec3 forward =
+        safeNormalized(direction, glm::vec3(0.0f, 0.0f, -1.0f));
+    glm::vec3 right, up;
+    basisFromDirection(forward, right, up);
+    const glm::vec3 center = apex + forward * safeRange;
+    const float coneRadius =
+        std::tan(std::max(0.0f, outerConeAngle)) * safeRange;
+    appendCircle(starts, ends, center, right, up, coneRadius, segments);
+
+    for (int i = 0; i < 4; ++i) {
+        const float a = glm::half_pi<float>() * static_cast<float>(i);
+        const glm::vec3 rim =
+            center + (std::cos(a) * right + std::sin(a) * up) * coneRadius;
+        appendLine(starts, ends, apex, rim);
+    }
+    appendLine(starts, ends, apex, center);
+}
+
+void appendCameraGlyphWire(std::vector<glm::vec3>& starts,
+                           std::vector<glm::vec3>& ends,
+                           const glm::vec3& position,
+                           const glm::vec3& forwardInput,
+                           const glm::vec3& upInput, float size) {
+    const float safeSize = std::max(0.001f, size);
+
+    glm::vec3 forward, right, up;
+    basisFromForwardUp(forwardInput, upInput, forward, right, up);
+
+    const float halfWidth = safeSize * 0.36f;
+    const float halfHeight = safeSize * 0.24f;
+    const glm::vec3 center = position - forward * safeSize * 0.12f;
+    const glm::vec3 corners[4] = {
+        center - right * halfWidth - up * halfHeight,
+        center - right * halfWidth + up * halfHeight,
+        center + right * halfWidth + up * halfHeight,
+        center + right * halfWidth - up * halfHeight,
+    };
+
+    appendLine(starts, ends, corners[0], corners[1]);
+    appendLine(starts, ends, corners[1], corners[2]);
+    appendLine(starts, ends, corners[2], corners[3]);
+    appendLine(starts, ends, corners[3], corners[0]);
+    appendLine(starts, ends, position, position + forward * safeSize * 0.72f);
+    appendLine(starts, ends, corners[1], corners[1] + up * safeSize * 0.28f);
+    appendLine(starts, ends, corners[2], corners[2] + up * safeSize * 0.28f);
+    appendLine(starts, ends, corners[1] + up * safeSize * 0.28f,
+               corners[2] + up * safeSize * 0.28f);
+}
+
+void appendPerspectiveFrustumWire(std::vector<glm::vec3>& starts,
+                                  std::vector<glm::vec3>& ends,
+                                  const glm::vec3& position,
+                                  const glm::vec3& forwardInput,
+                                  const glm::vec3& upInput,
+                                  float verticalFovRadians, float aspect,
+                                  float nearPlane, float farPlane) {
+    const float safeNear = std::max(0.001f, nearPlane);
+    const float safeFar = std::max(safeNear + 0.001f, farPlane);
+    const float safeAspect = std::max(0.001f, aspect);
+    const float halfFov = glm::clamp(verticalFovRadians, glm::radians(1.0f),
+                                     glm::radians(179.0f)) *
+                          0.5f;
+
+    glm::vec3 forward, right, up;
+    basisFromForwardUp(forwardInput, upInput, forward, right, up);
+
+    const float nearHalfHeight = std::tan(halfFov) * safeNear;
+    const float nearHalfWidth = nearHalfHeight * safeAspect;
+    const float farHalfHeight = std::tan(halfFov) * safeFar;
+    const float farHalfWidth = farHalfHeight * safeAspect;
+    const glm::vec3 nearCenter = position + forward * safeNear;
+    const glm::vec3 farCenter = position + forward * safeFar;
+
+    const glm::vec3 corners[8] = {
+        nearCenter - right * nearHalfWidth - up * nearHalfHeight,
+        nearCenter - right * nearHalfWidth + up * nearHalfHeight,
+        nearCenter + right * nearHalfWidth - up * nearHalfHeight,
+        nearCenter + right * nearHalfWidth + up * nearHalfHeight,
+        farCenter - right * farHalfWidth - up * farHalfHeight,
+        farCenter - right * farHalfWidth + up * farHalfHeight,
+        farCenter + right * farHalfWidth - up * farHalfHeight,
+        farCenter + right * farHalfWidth + up * farHalfHeight,
+    };
+    appendFrustumEdges(starts, ends, corners);
+}
+
+void appendOrthographicFrustumWire(std::vector<glm::vec3>& starts,
+                                   std::vector<glm::vec3>& ends,
+                                   const glm::vec3& position,
+                                   const glm::vec3& forwardInput,
+                                   const glm::vec3& upInput, float verticalSize,
+                                   float aspect, float nearPlane,
+                                   float farPlane) {
+    const float safeNear = std::max(0.001f, nearPlane);
+    const float safeFar = std::max(safeNear + 0.001f, farPlane);
+    const float halfHeight = std::max(0.001f, verticalSize) * 0.5f;
+    const float halfWidth = halfHeight * std::max(0.001f, aspect);
+
+    glm::vec3 forward, right, up;
+    basisFromForwardUp(forwardInput, upInput, forward, right, up);
+
+    const glm::vec3 nearCenter = position + forward * safeNear;
+    const glm::vec3 farCenter = position + forward * safeFar;
+    const glm::vec3 corners[8] = {
+        nearCenter - right * halfWidth - up * halfHeight,
+        nearCenter - right * halfWidth + up * halfHeight,
+        nearCenter + right * halfWidth - up * halfHeight,
+        nearCenter + right * halfWidth + up * halfHeight,
+        farCenter - right * halfWidth - up * halfHeight,
+        farCenter - right * halfWidth + up * halfHeight,
+        farCenter + right * halfWidth - up * halfHeight,
+        farCenter + right * halfWidth + up * halfHeight,
+    };
+    appendFrustumEdges(starts, ends, corners);
+}
+
+} // namespace DebugGeometry
 
 } // namespace Scene
 } // namespace KE

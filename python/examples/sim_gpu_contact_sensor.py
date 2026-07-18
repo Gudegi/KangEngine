@@ -108,8 +108,8 @@ class GpuContactSensorDemo:
                 density=200.0,
             )
 
-        self.left = self.world.get_rigid_view(obj_id=LEFT_OBJ_ID)
-        self.right = self.world.get_rigid_view(obj_id=RIGHT_OBJ_ID)
+        self.left = self.world.get_rigid_batch(obj_id=LEFT_OBJ_ID)
+        self.right = self.world.get_rigid_batch(obj_id=RIGHT_OBJ_ID)
         self.left_contact = self.left.add_contact_sensor(
             body_ids=[0], name="left_contact"
         )
@@ -222,8 +222,8 @@ class GpuContactSensorViewer(ke.App):
     def setup(self):
         self.paused = False
         self.show_contact_debug = True
-        self.contact_marker_handle = None
-        self.force_arrow_handle = None
+        self.contact_marker_view = None
+        self.force_arrow_view = None
         self.demo = GpuContactSensorDemo(self.args).setup()
         self.shaders = self.create_standard_shaders()
         self.add_ground(scale=16.0, shader=self.shaders.ground)
@@ -232,14 +232,14 @@ class GpuContactSensorViewer(ke.App):
         self.visual = ke.KangWorldVisualBridge(self, self.demo.world)
         rigid_xml = contact_asset(self.args)
         group_colors = env_group_colors(self.args.num_envs)
-        self.visual.add_gpu_rigid(
+        self.visual.add(
             self.demo.left,
             rigid_xml,
             prim_base_path="/gpu_contact/left",
             shader=self.shaders.common,
             color=group_colors,
         )
-        self.visual.add_gpu_rigid(
+        self.visual.add(
             self.demo.right,
             rigid_xml,
             prim_base_path="/gpu_contact/right",
@@ -268,14 +268,10 @@ class GpuContactSensorViewer(ke.App):
     def _clear_contact_debug(self):
         empty3 = np.zeros((0, 3), dtype=np.float32)
         empty4 = np.zeros((0, 4), dtype=np.float32)
-        if self.contact_marker_handle is not None:
-            ke.scene.DebugDraw.update_lines(
-                self, self.contact_marker_handle, empty3, empty3, empty4
-            )
-        if self.force_arrow_handle is not None:
-            ke.scene.DebugDraw.update_arrows(
-                self, self.force_arrow_handle, empty3, empty3, empty4
-            )
+        if self.contact_marker_view is not None:
+            self.contact_marker_view.update_lines(empty3, empty3, empty4)
+        if self.force_arrow_view is not None:
+            self.force_arrow_view.update_arrows(empty3, empty3, empty4)
 
     def _update_contact_debug(self):
         if not self.show_contact_debug:
@@ -330,11 +326,10 @@ class GpuContactSensorViewer(ke.App):
             starts.shape[0],
             axis=0,
         )
-        if self.contact_marker_handle is None:
-            self.contact_marker_handle = ke.scene.DebugDraw.log_lines(
-                self,
-                self.shaders.common,
+        if self.contact_marker_view is None:
+            self.contact_marker_view = self.scene.log_lines(
                 "/debug/gpu_contact_points",
+                self.shaders.common,
                 starts,
                 ends,
                 colors,
@@ -342,9 +337,7 @@ class GpuContactSensorViewer(ke.App):
                 8,
             )
         else:
-            ke.scene.DebugDraw.update_lines(
-                self, self.contact_marker_handle, starts, ends, colors
-            )
+            self.contact_marker_view.update_lines(starts, ends, colors)
 
     def _update_force_arrows(self, positions, impulses):
         dt = max(float(self.demo.world.sim_dt), 1e-8)
@@ -354,10 +347,8 @@ class GpuContactSensorViewer(ke.App):
         if not np.any(active):
             empty3 = np.zeros((0, 3), dtype=np.float32)
             empty4 = np.zeros((0, 4), dtype=np.float32)
-            if self.force_arrow_handle is not None:
-                ke.scene.DebugDraw.update_arrows(
-                    self, self.force_arrow_handle, empty3, empty3, empty4
-                )
+            if self.force_arrow_view is not None:
+                self.force_arrow_view.update_arrows(empty3, empty3, empty4)
             return
 
         starts = positions[active].astype(np.float32, copy=False)
@@ -369,11 +360,10 @@ class GpuContactSensorViewer(ke.App):
             starts.shape[0],
             axis=0,
         )
-        if self.force_arrow_handle is None:
-            self.force_arrow_handle = ke.scene.DebugDraw.log_arrows(
-                self,
-                self.shaders.common,
+        if self.force_arrow_view is None:
+            self.force_arrow_view = self.scene.log_arrows(
                 "/debug/gpu_contact_forces",
+                self.shaders.common,
                 starts,
                 ends,
                 colors,
@@ -381,9 +371,7 @@ class GpuContactSensorViewer(ke.App):
                 12,
             )
         else:
-            ke.scene.DebugDraw.update_arrows(
-                self, self.force_arrow_handle, starts, ends, colors
-            )
+            self.force_arrow_view.update_arrows(starts, ends, colors)
 
     def render(self):
         counts = self.demo.left_contact.contact_count[:, 0]

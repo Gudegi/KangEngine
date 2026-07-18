@@ -228,13 +228,18 @@ class MeshInstancer {
             _shader->setInt("uTexture", RendererTextureSlot::Diffuse);
             _shader->setInt("normalMap", RendererTextureSlot::Normal);
             _shader->setInt("useNormalMap", hasNormalMap ? 1 : 0);
-            bindAlphaState(_shader);
+            if (!_material) {
+                _shader->setInt("useDiffuseMap", 0);
+                _shader->setInt("useSpecularMap", 0);
+            }
+            bindAlphaState(_shader, false);
         }
     }
 
     // Bind the alpha state and base-color texture to an arbitrary pass shader
     // (notably shadow and selection-mask passes).
-    void bindAlphaState(Backend::Shader* shader) const;
+    void bindAlphaState(Backend::Shader* shader,
+                        bool bindAlphaTextureForPass = true) const;
 
     Backend::Shader* shader() const { return _shader; }
     Material* material() const { return _material; }

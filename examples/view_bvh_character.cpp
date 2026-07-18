@@ -63,6 +63,7 @@ class BvhCharacterCppApp : public App {
             getRenderer().device()->createShaderFromFile(commonVS, commonFS);
         groundShader =
             getRenderer().device()->createShaderFromFile(commonVS, checkerFS);
+        getRenderer().setBackgroundShader(groundShader.get());
 
         for (auto* shader : {skeletonShader.get(), groundShader.get()}) {
             shader->use();

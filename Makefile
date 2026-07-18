@@ -2,6 +2,7 @@
         build_usd build_usd_debug build_python build_python_debug \
         build_python_cuda build_usd_python build_usd_python_debug \
         validate_physx_gpu validate_physx_gpu_cpp validate_sim_visual_batch \
+        validate_render_component \
         docs docs_clean \
         run run2 run_debug run_release run_relWithDebInfo \
         clean_all clean_debug clean_release clean_relWithDebInfo
@@ -94,6 +95,21 @@ validate_physx_gpu_cpp: build_cuda
 
 validate_sim_visual_batch: build_python
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/sim_visual_batch_smoke.py
+
+validate_render_component: build_python
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/obj_material_loader_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/scene_add_obj_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/mjcf_visual_rgba_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/mjcf_visual_duplicate_mesh_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/articulation_binding_component_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/transform_component_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/mesh_component_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/resource_component_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/scene_resource_manager_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/python_resource_manager_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/render_component_lifecycle_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/scene_render_system_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/scene_render_instancing_smoke.py
 
 # USD + Python builds
 build_usd_python:

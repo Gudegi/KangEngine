@@ -1114,6 +1114,7 @@ void OpenGLFramebuffer::resize(int w, int h) {
         glBindTexture(GL_TEXTURE_2D, _colorTexObj->getHandle());
         glTexImage2D(GL_TEXTURE_2D, 0, glColorFormat.internalFormat, w, h, 0,
                      glColorFormat.format, glColorFormat.type, nullptr);
+        _colorTexObj->setSize(w, h);
     }
     glBindTexture(GL_TEXTURE_2D, _depthTexObj->getHandle());
     {
@@ -1124,6 +1125,7 @@ void OpenGLFramebuffer::resize(int w, int h) {
         GLenum depthType = _desc.stencil ? GL_UNSIGNED_INT_24_8 : GL_FLOAT;
         glTexImage2D(GL_TEXTURE_2D, 0, depthFmt, w, h, 0, depthBase, depthType,
                      nullptr);
+        _depthTexObj->setSize(w, h);
     }
 
     // Resize MSAA RBOs

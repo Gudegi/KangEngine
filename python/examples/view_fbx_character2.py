@@ -65,7 +65,7 @@ class FbxCharacterBridgeViewer(ke.App):
         self.show_skeleton = True
         self.follow_camera = True
         self.mesh_color = ke.preset_rgba(ke.ColorType.PASTEL_GREEN)
-        self.line_handle = None
+        self.line_view = None
         self.skeleton_starts = None
         self.skeleton_ends = None
         self.skeleton_colors = None
@@ -107,7 +107,7 @@ class FbxCharacterBridgeViewer(ke.App):
 
         ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
         ground.set_mesh_data(scene.Prim.create_plane_data(20.0, self.up_axis))
-        self.add_renderable(self.ground_shader, ground)
+        self.scene.add_renderable(ground, self.ground_shader)
 
         camera = self.get_camera()
         camera.set_camera_pos(ke.vec3(0.0, 1.45, 3.2))
@@ -227,11 +227,10 @@ class FbxCharacterBridgeViewer(ke.App):
         self.skeleton_ends = ends_t
         self.skeleton_colors = torch.tensor(colors, dtype=torch.float32)
 
-        if self.line_handle is None:
-            self.line_handle = scene.DebugDraw.log_lines(
-                self,
-                self.skeleton_shader,
+        if self.line_view is None:
+            self.line_view = self.scene.log_lines(
                 "/debug/fbx_character2_skeleton",
+                self.skeleton_shader,
                 starts_t,
                 ends_t,
                 colors_t,
@@ -239,23 +238,15 @@ class FbxCharacterBridgeViewer(ke.App):
                 8,
             )
         else:
-            scene.DebugDraw.update_lines(
-                self,
-                self.line_handle,
-                starts_t,
-                ends_t,
-                colors_t,
-            )
+            self.line_view.update_lines(starts_t, ends_t, colors_t)
 
     def _apply_visibility(self):
         self.character.set_visible(self.show_mesh)
-        if self.line_handle is None:
+        if self.line_view is None:
             return
         colors = self.skeleton_colors.clone()
         colors[:, 3] = 1.0 if self.show_skeleton else 0.0
-        scene.DebugDraw.update_lines(
-            self,
-            self.line_handle,
+        self.line_view.update_lines(
             self.skeleton_starts,
             self.skeleton_ends,
             colors,
