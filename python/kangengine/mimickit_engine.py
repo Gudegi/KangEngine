@@ -33,7 +33,7 @@ except ImportError:
     _mk_engine = None
 
 try:
-    _ArticulationConfig = _ke.ArticulationConfig
+    _ArticulationConfig = _ke.physics.ArticulationConfig
 except AttributeError:
     _ArticulationConfig = None
 
@@ -381,7 +381,7 @@ class KangEngineEngine(_BaseEngine):
         if sim_device is None:
             sim_device = str(self._device) if self._device.type == "cuda" else "cpu"
 
-        physics_config = _ke.PhysicsConfig.z_up()
+        physics_config = _ke.physics.PhysicsConfig.z_up()
         found_lost_pairs_capacity = self._config.get(
             "found_lost_pairs_capacity",
             self._config.get("gpu_found_lost_pairs_capacity", None),
@@ -496,7 +496,7 @@ class KangEngineEngine(_BaseEngine):
         if not is_visual and is_articulated:
             if _ArticulationConfig is None:
                 raise RuntimeError("ArticulationConfig not available: build with USE_PHYSX=ON")
-            cfg = _ke.ArticulationConfig.fixed_base() if fix_root else _ke.ArticulationConfig.free_base()
+            cfg = _ke.physics.ArticulationConfig.fixed_base() if fix_root else _ke.physics.ArticulationConfig.free_base()
             if "enable_self_collisions" in self._config:
                 enable_self_collisions = _parse_bool(
                     self._config["enable_self_collisions"]

@@ -87,11 +87,11 @@ class HeightmapTerrainViewer(ke.App):
         self.test_view = None
         if self.collision_test:
             config = (
-                ke.PhysicsConfig.z_up()
+                ke.physics.PhysicsConfig.z_up()
                 if self.up_axis == ke.UpAxis.Z
-                else ke.PhysicsConfig.y_up()
+                else ke.physics.PhysicsConfig.y_up()
             )
-            self.physics = ke.PhysicsWorld(config)
+            self.physics = ke.physics.PhysicsWorld(config)
             self.collision_added = self.physics.add_heightmap_collision(
                 str(self.heightmap_path),
                 up_axis=self.up_axis,
@@ -101,7 +101,7 @@ class HeightmapTerrainViewer(ke.App):
                 sample_stride=self.sample_stride,
                 center=True,
                 register_as_ground=True,
-                material=ke.PhysicsMaterialDesc([1.0, 1.0, 0.0]),
+                material=ke.physics.PhysicsMaterialDesc([1.0, 1.0, 0.0]),
             )
             if self.collision_test:
                 self._create_collision_test_sphere()

@@ -75,7 +75,7 @@ class KwMotionTrackingApp(ke.App):
             env_id=0,
             obj_id=0,
             name="kw",
-            config=ke.ArticulationConfig.free_base(),
+            config=ke.physics.ArticulationConfig.free_base(),
         )
         self.articulation = sim_record.articulation
         self.num_dofs = self.articulation.num_dofs()
@@ -236,6 +236,7 @@ class KwMotionTrackingApp(ke.App):
 
 
 def main():
+    physics = getattr(ke, "physics", None)
     missing = [
         name
         for name in (
@@ -245,7 +246,7 @@ def main():
             "Articulation",
             "PhysicsBridge",
         )
-        if not hasattr(ke, name)
+        if physics is None or not hasattr(physics, name)
     ]
     if missing:
         raise RuntimeError(

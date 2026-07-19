@@ -75,7 +75,7 @@ class ControlDemo(ke.App):
             env_id=0,
             obj_id=self.robot_obj_id,
             name="kw5",
-            config=ke.ArticulationConfig.free_base(),
+            config=ke.physics.ArticulationConfig.free_base(),
         ).articulation
 
         ball_data = self.world.load_mjcf(self.ball_xml)

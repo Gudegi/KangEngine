@@ -59,8 +59,11 @@ void bind_physics(py::module& m) {
     using namespace KE::Physics;
     using namespace KE::Bridge;
 
+    py::module physics = m.def_submodule(
+        "physics", "PhysX world, articulation, and collision material APIs.");
+
     py::class_<PhysicsGpuDynamicsConfig>(
-        m, "PhysicsGpuDynamicsConfig",
+        physics, "PhysicsGpuDynamicsConfig",
         "PhysX GPU dynamics buffer capacities used during scene creation.")
         .def(py::init<>())
         .def_readwrite("temp_buffer_capacity",
@@ -78,7 +81,7 @@ void bind_physics(py::module& m) {
 
     // PhysicsConfig
     py::class_<PhysicsConfig>(
-        m, "PhysicsConfig",
+        physics, "PhysicsConfig",
         "PhysX world configuration including timestep, up axis, and reporting.")
         .def(py::init<>(), "Create default physics configuration.")
         .def_static("y_up", &PhysicsConfig::yUp,
@@ -111,7 +114,7 @@ void bind_physics(py::module& m) {
                        "Enable contact collection during simulation.");
 
     py::class_<PhysicsMaterialDesc>(
-        m, "PhysicsMaterialDesc",
+        physics, "PhysicsMaterialDesc",
         "PhysX material factors used by collision shapes.")
         .def(py::init<>(), "Create default material [1, 1, 0].")
         .def(py::init<float, float, float>(), py::arg("static_friction") = 1.f,
@@ -148,7 +151,7 @@ void bind_physics(py::module& m) {
         });
 
     py::class_<CollisionMaterialOverride>(
-        m, "CollisionMaterialOverride",
+        physics, "CollisionMaterialOverride",
         "Collision material override matched by body/geom name or index. "
         "Later overrides win.")
         .def(py::init<>(), "Create an empty/global override descriptor.")
@@ -220,7 +223,7 @@ void bind_physics(py::module& m) {
                    py::repr(py::cast(entry.material)).cast<std::string>() + ")";
         });
 
-    m.def(
+    physics.def(
         "mjcf_friction_to_physx",
         [](const std::vector<float>& friction) {
             return mjcfFrictionToPhysX(friction);
@@ -229,7 +232,7 @@ void bind_physics(py::module& m) {
         "Map MJCF geom friction values to KangEngine's PhysX material "
         "descriptor.");
 
-    py::class_<ContactPoint>(m, "ContactPoint",
+    py::class_<ContactPoint>(physics, "ContactPoint",
                              "Contact point reported by the PhysX world.")
         .def_readonly("position", &ContactPoint::position,
                       "World-space contact position.")
@@ -376,7 +379,7 @@ void bind_physics(py::module& m) {
 
     // PhysicsWorld (non-copyable, non-movable — Python must keep it alive)
     py::class_<PhysicsWorld>(
-        m, "PhysicsWorld",
+        physics, "PhysicsWorld",
         "PhysX simulation world for rigid bodies and articulations.")
         .def(py::init<PhysicsConfig>(), py::arg("config") = PhysicsConfig{},
              "Create a physics world from configuration.")
@@ -623,7 +626,7 @@ void bind_physics(py::module& m) {
 
     // ArticulationConfig
     py::class_<ArticulationConfig>(
-        m, "ArticulationConfig",
+        physics, "ArticulationConfig",
         "PhysX articulation construction settings.")
         .def(py::init<>(), "Create default articulation configuration.")
         .def_static("fixed_base", &ArticulationConfig::fixedBase,
@@ -685,7 +688,7 @@ void bind_physics(py::module& m) {
 
     // Articulation (non-copyable)
     py::class_<Articulation>(
-        m, "Articulation",
+        physics, "Articulation",
         "PhysX articulated character or robot built from imported character data.")
         .def(py::init<>(), "Create an empty articulation handle.")
         .def_static(
@@ -1009,7 +1012,7 @@ void bind_physics(py::module& m) {
 
     // PhysicsBridge
     py::class_<PhysicsBridge>(
-        m, "PhysicsBridge",
+        physics, "PhysicsBridge",
         "Syncs PhysX articulation state into KangEngine scene/render visuals.")
         .def(py::init<>(), "Create a scene-graph physics bridge.")
         .def("add", &PhysicsBridge::add, py::arg("artic"),

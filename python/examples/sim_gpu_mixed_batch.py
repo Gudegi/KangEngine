@@ -78,7 +78,7 @@ def create_simulation(num_envs: int, cuda_device: int):
         robot_data = world.load_mjcf(
             asset_path("characters", "kw", "kw5.xml"), order="DFS"
         )
-        robot_config = ke.ArticulationConfig.free_base()
+        robot_config = ke.physics.ArticulationConfig.free_base()
 
         for env_id in range(num_envs):
             world.add_rigid(

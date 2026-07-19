@@ -80,7 +80,7 @@ class SimObjectState:
 
 
 class ArticulationStateCache:
-    """Torch cache around ``ke.Articulation`` flat state getters."""
+    """Torch cache around ``ke.physics.Articulation`` flat state getters."""
 
     def __init__(self, articulation, physics=None, device=None):
         self.articulation = articulation

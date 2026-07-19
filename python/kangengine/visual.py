@@ -816,12 +816,12 @@ class KangWorldVisualBridge:
     """
 
     def __init__(self, app, world):
-        if not hasattr(_ke, "PhysicsBridge"):
+        if not hasattr(getattr(_ke, "physics", None), "PhysicsBridge"):
             raise RuntimeError("KangWorldVisualBridge requires PhysicsBridge bindings")
         self.app = app
         self.world = world
         self.scene = app.get_scene()
-        self.physics_bridge = _ke.PhysicsBridge()
+        self.physics_bridge = _ke.physics.PhysicsBridge()
         self.visual_articulation_scene_graphs: dict[
             tuple[int, int], VisualArticulationSceneGraph
         ] = {}

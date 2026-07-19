@@ -83,8 +83,8 @@ class MultiEnvSimWorldApp(ke.App):
         if not self.high_friction_envs and self.num_envs > 0:
             self.high_friction_envs = (0,)
             self.low_friction_envs = ()
-        self.low_friction_material = ke.PhysicsMaterialDesc([0.05, 0.05, 0.0])
-        self.high_friction_material = ke.PhysicsMaterialDesc([3.0, 2.5, 0.0])
+        self.low_friction_material = ke.physics.PhysicsMaterialDesc([0.05, 0.05, 0.0])
+        self.high_friction_material = ke.physics.PhysicsMaterialDesc([3.0, 2.5, 0.0])
 
         self.shaders = self.create_standard_shaders()
         self.set_camera_view([3.6, -5.0, 2.8], [0.0, 0.0, 0.6])

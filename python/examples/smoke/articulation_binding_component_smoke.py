@@ -180,11 +180,11 @@ def main():
             "/split_robot",
         )
 
-        physics = ke.PhysicsWorld(ke.PhysicsConfig.y_up())
-        articulation = ke.Articulation.build(
-            physics, ke.asset.MJCFLoader.load(str(mjcf)), ke.ArticulationConfig.fixed_base()
+        physics = ke.physics.PhysicsWorld(ke.physics.PhysicsConfig.y_up())
+        articulation = ke.physics.Articulation.build(
+            physics, ke.asset.MJCFLoader.load(str(mjcf)), ke.physics.ArticulationConfig.fixed_base()
         )
-        physics_bridge = ke.PhysicsBridge()
+        physics_bridge = ke.physics.PhysicsBridge()
         physics_bridge.add(articulation, split)
         collision_prims = physics_bridge.add_collision_visuals(
             articulation, scene, "/split_robot/collision", False

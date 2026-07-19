@@ -130,8 +130,6 @@ Renderer = _set_public_module(_ke.Renderer, __name__)
 SkinnedCharacterBridge = _set_public_module(_ke.SkinnedCharacterBridge, __name__)
 SkeletonVisualBridge = animation.SkeletonVisualBridge
 SkeletonVisualConfig = animation.SkeletonVisualConfig
-PhysicsMaterialDesc = physics.PhysicsMaterialDesc
-CollisionMaterialOverride = physics.CollisionMaterialOverride
 MotionSequencerPanel = _set_public_module(_ke.MotionSequencerPanel, __name__)
 
 # GLM-style math types and helpers exposed by the C++ extension.
@@ -251,31 +249,8 @@ __all__ = [
     "SkinnedCharacterBridge",
     "SkeletonVisualBridge",
     "SkeletonVisualConfig",
-    "PhysicsMaterialDesc",
-    "CollisionMaterialOverride",
     "MotionSequencerPanel",
     "preset_rgba",
 ]
 
-_OPTIONAL_EXPORTS = [
-    "PhysicsGpuDynamicsConfig",
-    "PhysicsConfig",
-    "PhysicsWorld",
-    "ArticulationConfig",
-    "Articulation",
-    "PhysicsBridge",
-    "SimMemoryType",
-    "SimDType",
-    "SimLifetimePolicy",
-    "GpuArrayView",
-    "GpuPhysicsConfig",
-    "PhysicsGpuStateViews",
-    "PhysicsGpuSystem",
-]
-
-for _name in _OPTIONAL_EXPORTS:
-    if hasattr(physics, _name):
-        globals()[_name] = getattr(physics, _name)
-        __all__.append(_name)
-
-del _assets_dir, _name, _OPTIONAL_EXPORTS, _Path, _os, _set_public_module, _ke
+del _assets_dir, _Path, _os, _set_public_module, _ke

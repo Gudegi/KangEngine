@@ -43,7 +43,7 @@ class H1RagdollApp(ke.App):
         self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
         self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
 
-        self.physics = ke.PhysicsWorld(ke.PhysicsConfig.z_up())
+        self.physics = ke.physics.PhysicsWorld(ke.physics.PhysicsConfig.z_up())
         self.physics.add_default_ground()
 
         self.scene.add_ground(scale=100.0, shader=self.ground_shader)
@@ -51,10 +51,10 @@ class H1RagdollApp(ke.App):
         mjcf = asset_path("external", "retargetted", "kw", "kw5.xml")
         mjcf_data = asset.MJCFLoader.load(mjcf)
 
-        self.articulation = ke.Articulation.build(
+        self.articulation = ke.physics.Articulation.build(
             self.physics,
             mjcf_data,
-            ke.ArticulationConfig.free_base(),
+            ke.physics.ArticulationConfig.free_base(),
         )
 
         self.robot = animation.SkeletonBridge.from_mjcf(
@@ -65,7 +65,7 @@ class H1RagdollApp(ke.App):
             "DFS",
         )
 
-        self.physics_bridge = ke.PhysicsBridge()
+        self.physics_bridge = ke.physics.PhysicsBridge()
         self.physics_bridge.add(self.articulation, self.robot)
 
         for prim in self.robot.body_prims():
@@ -189,6 +189,7 @@ class H1RagdollApp(ke.App):
 
 
 if __name__ == "__main__":
+    physics = getattr(ke, "physics", None)
     missing = [
         name
         for name in (
@@ -198,7 +199,7 @@ if __name__ == "__main__":
             "Articulation",
             "PhysicsBridge",
         )
-        if not hasattr(ke, name)
+        if physics is None or not hasattr(physics, name)
     ]
     if missing:
         raise RuntimeError(

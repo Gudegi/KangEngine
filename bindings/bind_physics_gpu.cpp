@@ -20,8 +20,10 @@ void bind_physics_gpu(py::module& m) {
 #ifdef KANGENGINE_USE_PHYSX
     using namespace KE;
 
+    py::module physics = py::reinterpret_borrow<py::module>(m.attr("physics"));
+
     py::class_<GpuPhysicsConfig>(
-        m, "GpuPhysicsConfig",
+        physics, "GpuPhysicsConfig",
         "Configuration for explicit GPU physics state synchronization.")
         .def(py::init<>())
         .def_readwrite("cuda_device_id", &GpuPhysicsConfig::cudaDeviceId)
@@ -31,7 +33,7 @@ void bind_physics_gpu(py::module& m) {
                        &GpuPhysicsConfig::maxContactPoints);
 
     py::class_<PhysicsGpuStateViews>(
-        m, "PhysicsGpuStateViews",
+        physics, "PhysicsGpuStateViews",
         "GPU buffer views used by PhysicsGpuSystem.")
         .def(py::init<>())
         .def_readwrite("rigid_data", &PhysicsGpuStateViews::rigidData)
@@ -70,7 +72,7 @@ void bind_physics_gpu(py::module& m) {
                        &PhysicsGpuStateViews::contactPointPairIndices);
 
     py::class_<PhysicsGpuSystem>(
-        m, "PhysicsGpuSystem",
+        physics, "PhysicsGpuSystem",
         "Explicit GPU physics synchronization surface for high-throughput "
         "simulation.")
         .def(py::init<PhysicsWorld*, GpuPhysicsConfig>(), py::arg("world"),
@@ -214,7 +216,7 @@ void bind_physics_gpu(py::module& m) {
                  &PhysicsGpuSystem::views),
              py::return_value_policy::reference_internal);
 #ifdef KANGENGINE_USE_CUDA
-    m.def("aggregate_contact_sensors_cuda",
+    physics.def("aggregate_contact_sensors_cuda",
           &PhysicsGpuKernels::aggregateContactSensorsCUDA,
           py::arg("contact_pair_body_refs"), py::arg("contact_pair_count"),
           py::arg("contact_points"), py::arg("contact_point_count"),

@@ -70,6 +70,7 @@ def _torch():
 
 
 def _require_physx():
+    physics = getattr(_ke, "physics", None)
     missing = [
         name
         for name in (
@@ -78,7 +79,7 @@ def _require_physx():
             "ArticulationConfig",
             "Articulation",
         )
-        if not hasattr(_ke, name)
+        if physics is None or not hasattr(physics, name)
     ]
     if missing:
         raise RuntimeError(
@@ -934,7 +935,7 @@ class KangSimWorld:
     ):
         _require_physx()
         if physics_config is None:
-            physics_config = _ke.PhysicsConfig.z_up()
+            physics_config = _ke.physics.PhysicsConfig.z_up()
         if sim_dt is not None:
             physics_config.dt = float(sim_dt)
         sim_device = _resolve_sim_device(sim_device)
@@ -943,7 +944,7 @@ class KangSimWorld:
             physics_config.enable_gpu = uses_gpu_sim
 
         self.num_envs = int(num_envs)
-        self.physics = _ke.PhysicsWorld(physics_config)
+        self.physics = _ke.physics.PhysicsWorld(physics_config)
         if add_ground:
             self.physics.add_default_ground()
 
@@ -1063,7 +1064,7 @@ class KangSimWorld:
         config=None,
     ) -> SimArticulation:
         if config is None:
-            config = _ke.ArticulationConfig.free_base()
+            config = _ke.physics.ArticulationConfig.free_base()
         restore_collision_group = None
         if hasattr(config, "collision_group") and int(config.collision_group) == 0:
             restore_collision_group = int(config.collision_group)
@@ -1074,7 +1075,7 @@ class KangSimWorld:
             raise ValueError(f"object already registered at env={key[0]}, obj={key[1]}")
 
         try:
-            articulation = _ke.Articulation.build(self.physics, data, config)
+            articulation = _ke.physics.Articulation.build(self.physics, data, config)
         finally:
             if restore_collision_group is not None:
                 config.collision_group = restore_collision_group
@@ -2262,16 +2263,21 @@ class KangSimWorld:
             raise RuntimeError(
                 "KangSimWorld.init_gpu_system() requires sim_device='cuda'"
             )
-        if not hasattr(_ke, "PhysicsGpuSystem") or not hasattr(_ke, "GpuPhysicsConfig"):
+        physics = getattr(_ke, "physics", None)
+        if (
+            physics is None
+            or not hasattr(physics, "PhysicsGpuSystem")
+            or not hasattr(physics, "GpuPhysicsConfig")
+        ):
             raise RuntimeError("KangEngine was built without PhysicsGpuSystem bindings")
         if self._gpu_system is not None:
             return self._gpu_system
 
         if cuda_device_id is None:
             cuda_device_id = 0 if self.sim_device.index is None else self.sim_device.index
-        config = _ke.GpuPhysicsConfig()
+        config = _ke.physics.GpuPhysicsConfig()
         config.cuda_device_id = int(cuda_device_id)
-        gpu_system = _ke.PhysicsGpuSystem(self.physics, config)
+        gpu_system = _ke.physics.PhysicsGpuSystem(self.physics, config)
         gpu_system.init()
         if stream_handle is not None:
             gpu_system.set_cuda_stream(int(stream_handle))

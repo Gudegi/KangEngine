@@ -75,7 +75,7 @@ class ProceduralTerrainViewer(ke.App):
         self.collision_added = False
         self.test_bodies = []
         if self.collision_test:
-            self.physics = ke.PhysicsWorld(ke.PhysicsConfig.y_up())
+            self.physics = ke.physics.PhysicsWorld(ke.physics.PhysicsConfig.y_up())
             heights = np.ascontiguousarray(self.grid.height_meters(), dtype=np.float32)
             self.collision_added = self.physics.add_heightfield(
                 heights.reshape(-1),
@@ -85,7 +85,7 @@ class ProceduralTerrainViewer(ke.App):
                 up_axis=ke.UpAxis.Y,
                 center=True,
                 register_as_ground=True,
-                material=ke.PhysicsMaterialDesc([1.0, 1.0, 0.0]),
+                material=ke.physics.PhysicsMaterialDesc([1.0, 1.0, 0.0]),
             )
             if self.collision_added:
                 self._create_collision_test_bodies()

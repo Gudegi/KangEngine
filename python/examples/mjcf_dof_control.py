@@ -18,8 +18,10 @@ def package_asset_path(*parts: str) -> str:
 
 def default_mjcf_path() -> Path:
     # return Path(package_asset_path("characters", "kw", "kw.xml"))
-    return Path(package_asset_path("external", "unitree_mujoco", "unitree_robots", "g1", "g1_23dof.xml"))
+    # return Path(package_asset_path("external", "unitree_mujoco", "unitree_robots", "g1", "g1_23dof.xml"))
     # return Path(package_asset_path("external", "unitree_mujoco", "unitree_robots", "h2", "h2_mujoco.xml"))
+    return Path("/Users/asaid/Dev/KangEngine/references/MimicKit/data/assets/g1/g1.xml")
+    # return Path("/Users/asaid/Dev/KangEngine/references/MimicKit/data/assets/go2/go2.xml")
 
 
 class MjcfDofControlApp(ke.App):
@@ -34,7 +36,7 @@ class MjcfDofControlApp(ke.App):
     # override color for the whole articulation.
     visual_color = None  # np.array([1,1,1, 1.0])
     ground_size = 10.0
-    root_pos = (0.0, 0.0, 0.0)
+    root_pos = (0.0, 0.0, 1.5)
     root_rot_xyzw = (0.0, 0.0, 0.0, 1.0)
     fixed_base = False
     order = "DFS"
@@ -139,9 +141,9 @@ class MjcfDofControlApp(ke.App):
         data = self.world.load_mjcf(self.mjcf_path, order=self.order)
         self.obj_id = 0
         config = (
-            ke.ArticulationConfig.fixed_base()
+            ke.physics.ArticulationConfig.fixed_base()
             if self.fixed_base
-            else ke.ArticulationConfig.free_base()
+            else ke.physics.ArticulationConfig.free_base()
         )
         self.robot = self.world.add_articulation(
             data,

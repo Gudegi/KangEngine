@@ -37,7 +37,7 @@ def make_world(*, gpu: bool, cuda_device: int = 0):
         add_ground=False,
     )
     data = world.load_mjcf(asset_path("characters", "kw", "kw5.xml"), order="DFS")
-    config = ke.ArticulationConfig.fixed_base()
+    config = ke.physics.ArticulationConfig.fixed_base()
     record = world.add_articulation(data, env_id=0, obj_id=OBJ_ID, config=config)
     num_dofs = record.num_dofs
     world.set_root_state(
