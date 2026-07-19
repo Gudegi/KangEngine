@@ -1,2 +1,4 @@
 recursive-include kangengine/assets *
 include kangengine/_kangengine.so
+include kangengine/physics.pyi
+include kangengine/py.typed

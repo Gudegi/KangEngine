@@ -38,5 +38,7 @@ include-package-data = true
 [tool.setuptools.package-data]
 kangengine = [
     "_kangengine.so",
+    "physics.pyi",
+    "py.typed",
     "assets/**/*",
 ]
