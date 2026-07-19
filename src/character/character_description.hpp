@@ -5,7 +5,8 @@
 // etc.) so that downstream code (physics bridge, skeleton FK) is
 // format-agnostic.
 
-#include "skeleton_tree.hpp"
+#include "animation/skeleton_tree.hpp"
+#include "physics/physics_material.hpp"
 
 #include <cfloat>
 #include <Eigen/Geometry>
@@ -15,13 +16,13 @@
 #include <vector>
 
 namespace KE {
-namespace Animation {
+namespace Character {
 
 // ---------------------------------------------------------------------------
 // Data types
 // ---------------------------------------------------------------------------
 
-struct MeshInfo {
+struct VisualGeomDesc {
     std::string bodyName;
     std::string meshFile;
     int bodyIndex;
@@ -30,7 +31,7 @@ struct MeshInfo {
     Eigen::Vector4f rgba = Eigen::Vector4f(0.15f, 0.15f, 0.15f, 1.0f);
 };
 
-struct Joint {
+struct JointDesc {
     enum class Type { Revolute, Spherical, Fixed };
     Type type = Type::Revolute;
     std::string name;
@@ -43,7 +44,7 @@ struct Joint {
 };
 
 // Named body-local reference frame parsed from MJCF <site> elements.
-struct Site {
+struct SiteDesc {
     enum class Type { Sphere, Capsule, Box };
     Type type = Type::Sphere;
     std::string name;
@@ -57,53 +58,14 @@ struct Site {
     Eigen::Vector3f zaxis = Eigen::Vector3f::UnitZ();
 };
 
-struct Inertial {
+struct InertialDesc {
     float mass = 1.f;
     Eigen::Vector3f com = Eigen::Vector3f::Zero();
     Eigen::Quaternionf quat = Eigen::Quaternionf::Identity();
     Eigen::Vector3f diagInertia = Eigen::Vector3f(1e-4f, 1e-4f, 1e-4f);
 };
 
-struct PhysicsMaterialDesc {
-    float staticFriction = 1.f;
-    float dynamicFriction = 1.f;
-    float restitution = 0.f;
-};
-
-struct CollisionMaterialOverride {
-    // Match by index when non-negative. Names are intended for Python/user
-    // facing APIs and are resolved against CharacterData/SkeletonTree at build
-    // time. Empty body name and bodyIndex < 0 means "all bodies".
-    int bodyIndex = -1;
-    std::string bodyName;
-
-    // Match one geom by index/name, or every collision geom on the matched body
-    // when both are unspecified.
-    int geomIndex = -1;
-    std::string geomName;
-
-    PhysicsMaterialDesc material;
-};
-
-inline PhysicsMaterialDesc mjcfFrictionToPhysX(
-    const std::vector<float>& friction,
-    const PhysicsMaterialDesc& fallback = PhysicsMaterialDesc()) {
-    PhysicsMaterialDesc material = fallback;
-    if (friction.empty())
-        return material;
-
-    // MuJoCo friction[0] is sliding friction. PhysX exposes separate static
-    // and dynamic friction coefficients, so KangEngine maps sliding friction
-    // to both for now. MuJoCo torsional/rolling friction are intentionally not
-    // mapped yet because PhysX material properties do not have direct scalar
-    // equivalents.
-    material.staticFriction = friction[0];
-    material.dynamicFriction = friction[0];
-    material.restitution = 0.f;
-    return material;
-}
-
-struct CollisionGeom {
+struct CollisionGeomDesc {
     // Supported collision payloads are primitive-only for now. MJCF
     // type="mesh" collision geoms are intentionally not represented here yet;
     // dynamic/articulation mesh collision needs a separate convex-cooking path
@@ -130,7 +92,7 @@ struct CollisionGeom {
     // MuJoCo friction[0] is sliding friction. PhysX uses separate static and
     // dynamic friction coefficients; KangEngine maps sliding friction to both.
     float friction = 1.f; // legacy, deprecated.
-    PhysicsMaterialDesc physicsMaterial;
+    Physics::PhysicsMaterialDesc physicsMaterial;
 
     // MuJoCo contact dimensionality. KangEngine parses it for diagnostics and
     // future matching, but does not alter PhysX material behavior by default.
@@ -151,26 +113,26 @@ struct CollisionGeom {
 // Map aliases  (body index -> data)
 // ---------------------------------------------------------------------------
 
-using JointMap = std::unordered_map<int, std::vector<Joint>>;
-using SiteMap = std::unordered_map<std::string, Site>;
-using InertialMap = std::unordered_map<int, Inertial>;
-using CollisionGeomMap = std::unordered_map<int, std::vector<CollisionGeom>>;
+using JointDescMap = std::unordered_map<int, std::vector<JointDesc>>;
+using SiteDescMap = std::unordered_map<std::string, SiteDesc>;
+using InertialDescMap = std::unordered_map<int, InertialDesc>;
+using CollisionGeomDescMap = std::unordered_map<int, std::vector<CollisionGeomDesc>>;
 
 // ---------------------------------------------------------------------------
 // Aggregate output
 // ---------------------------------------------------------------------------
 
 struct CharacterData {
-    std::shared_ptr<const SkeletonTree> skeletonTree;
-    std::vector<MeshInfo> meshInfos;
+    std::shared_ptr<const Animation::SkeletonTree> skeletonTree;
+    std::vector<VisualGeomDesc> meshInfos;
     std::string meshDir;
-    JointMap joints;
-    SiteMap sites;
-    CollisionGeomMap collisionGeoms;
-    InertialMap inertials;
+    JointDescMap joints;
+    SiteDescMap sites;
+    CollisionGeomDescMap collisionGeoms;
+    InertialDescMap inertials;
 };
 
-} // namespace Animation
+} // namespace Character
 } // namespace KE
 
 #endif

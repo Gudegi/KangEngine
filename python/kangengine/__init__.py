@@ -10,7 +10,7 @@ if _assets_dir.exists():
 
 from ._core import _ke
 from ._public import set_public_module as _set_public_module
-from . import animation, asset, physics, scene, terrain
+from . import animation, asset, character, physics, scene, terrain
 from .app import App, NativeApp, RenderablePrimView, SceneContext
 from .motion_editor import (
     MotionEditor,
@@ -130,8 +130,8 @@ Renderer = _set_public_module(_ke.Renderer, __name__)
 SkinnedCharacterBridge = _set_public_module(_ke.SkinnedCharacterBridge, __name__)
 SkeletonVisualBridge = animation.SkeletonVisualBridge
 SkeletonVisualConfig = animation.SkeletonVisualConfig
-PhysicsMaterialDesc = animation.PhysicsMaterialDesc
-CollisionMaterialOverride = animation.CollisionMaterialOverride
+PhysicsMaterialDesc = physics.PhysicsMaterialDesc
+CollisionMaterialOverride = physics.CollisionMaterialOverride
 MotionSequencerPanel = _set_public_module(_ke.MotionSequencerPanel, __name__)
 
 # GLM-style math types and helpers exposed by the C++ extension.

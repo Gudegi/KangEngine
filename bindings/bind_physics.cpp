@@ -11,22 +11,52 @@
 
 #ifdef KANGENGINE_USE_PHYSX
 #include "asset/heightmap_loader.hpp"
-#include "animation/character_description.hpp"
+#include "character/character_description.hpp"
 #include "bridge/physics_bridge.hpp"
 #include "bridge/skeleton_bridge.hpp"
 #include "engine/core/app/app.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "physics/articulation.hpp"
+#include "physics/physics_material.hpp"
 #include "physics/physics.hpp"
 #include <extensions/PxRigidBodyExt.h>
 #endif
 
 namespace py = pybind11;
 
+#ifdef KANGENGINE_USE_PHYSX
+namespace {
+
+KE::Physics::PhysicsMaterialDesc physicsMaterialFromPy(py::handle obj,
+                                                       const char* name) {
+    if (py::isinstance<KE::Physics::PhysicsMaterialDesc>(obj))
+        return obj.cast<KE::Physics::PhysicsMaterialDesc>();
+
+    if (auto values = fixedFloatArray<3>(obj, name)) {
+        return KE::Physics::PhysicsMaterialDesc{(*values)[0], (*values)[1],
+                                                (*values)[2]};
+    }
+
+    if (py::isinstance<py::sequence>(obj) && py::len(obj) == 3) {
+        auto seq = obj.cast<py::sequence>();
+        return KE::Physics::PhysicsMaterialDesc{
+            seq[0].cast<float>(), seq[1].cast<float>(),
+            seq[2].cast<float>()};
+    }
+
+    throw py::value_error(std::string(name) +
+                          " expects PhysicsMaterialDesc or 3 values "
+                          "[static_friction, dynamic_friction, restitution]");
+}
+
+} // namespace
+#endif
+
 void bind_physics(py::module& m) {
 #ifdef KANGENGINE_USE_PHYSX
     using namespace KE;
-    using namespace KE::Animation;
+    using namespace KE::Character;
+    using namespace KE::Physics;
     using namespace KE::Bridge;
 
     py::class_<PhysicsGpuDynamicsConfig>(
@@ -79,6 +109,125 @@ void bind_physics(py::module& m) {
         .def_readwrite("enable_contact_reports",
                        &PhysicsConfig::enableContactReports,
                        "Enable contact collection during simulation.");
+
+    py::class_<PhysicsMaterialDesc>(
+        m, "PhysicsMaterialDesc",
+        "PhysX material factors used by collision shapes.")
+        .def(py::init<>(), "Create default material [1, 1, 0].")
+        .def(py::init<float, float, float>(), py::arg("static_friction") = 1.f,
+             py::arg("dynamic_friction") = 1.f, py::arg("restitution") = 0.f,
+             "Create a material from scalar PhysX material factors.")
+        .def(py::init([](py::handle values) {
+                 return physicsMaterialFromPy(values, "PhysicsMaterialDesc");
+             }),
+             py::arg("values"),
+             "Create from [static_friction, dynamic_friction, restitution]. "
+             "Accepts list/tuple, NumPy array, or CPU torch tensor.")
+        .def_readwrite("static_friction", &PhysicsMaterialDesc::staticFriction,
+                       "PhysX static friction coefficient.")
+        .def_readwrite("dynamic_friction",
+                       &PhysicsMaterialDesc::dynamicFriction,
+                       "PhysX dynamic friction coefficient.")
+        .def_readwrite("restitution", &PhysicsMaterialDesc::restitution,
+                       "PhysX restitution coefficient.")
+        .def(
+            "as_tuple",
+            [](const PhysicsMaterialDesc& material) {
+                return py::make_tuple(material.staticFriction,
+                                      material.dynamicFriction,
+                                      material.restitution);
+            },
+            "Return (static_friction, dynamic_friction, restitution).")
+        .def("__repr__", [](const PhysicsMaterialDesc& material) {
+            return "PhysicsMaterialDesc(static_friction=" +
+                   std::to_string(material.staticFriction) +
+                   ", dynamic_friction=" +
+                   std::to_string(material.dynamicFriction) +
+                   ", restitution=" +
+                   std::to_string(material.restitution) + ")";
+        });
+
+    py::class_<CollisionMaterialOverride>(
+        m, "CollisionMaterialOverride",
+        "Collision material override matched by body/geom name or index. "
+        "Later overrides win.")
+        .def(py::init<>(), "Create an empty/global override descriptor.")
+        .def(py::init([](py::handle material) {
+                 CollisionMaterialOverride entry;
+                 entry.material = physicsMaterialFromPy(material, "material");
+                 return entry;
+             }),
+             py::arg("material"),
+             "Create a global material override for every collision geom.")
+        .def_static(
+            "all_geoms",
+            [](py::handle material) {
+                CollisionMaterialOverride entry;
+                entry.material = physicsMaterialFromPy(material, "material");
+                return entry;
+            },
+            py::arg("material"),
+            "Override every collision geom in the built actor/articulation.")
+        .def_static(
+            "for_body",
+            [](const std::string& bodyName, py::handle material) {
+                CollisionMaterialOverride entry;
+                entry.bodyName = bodyName;
+                entry.material = physicsMaterialFromPy(material, "material");
+                return entry;
+            },
+            py::arg("body_name"), py::arg("material"),
+            "Override every collision geom on a named body.")
+        .def_static(
+            "for_geom",
+            [](const std::string& bodyName, const std::string& geomName,
+               py::handle material) {
+                CollisionMaterialOverride entry;
+                entry.bodyName = bodyName;
+                entry.geomName = geomName;
+                entry.material = physicsMaterialFromPy(material, "material");
+                return entry;
+            },
+            py::arg("body_name"), py::arg("geom_name"), py::arg("material"),
+            "Override one named collision geom on a named body.")
+        .def_static(
+            "for_indices",
+            [](int bodyIndex, int geomIndex, py::handle material) {
+                CollisionMaterialOverride entry;
+                entry.bodyIndex = bodyIndex;
+                entry.geomIndex = geomIndex;
+                entry.material = physicsMaterialFromPy(material, "material");
+                return entry;
+            },
+            py::arg("body_index"), py::arg("geom_index"), py::arg("material"),
+            "Override by imported body index and collision geom index.")
+        .def_readwrite("body_index", &CollisionMaterialOverride::bodyIndex,
+                       "Matched body index, or -1 for name/all matching.")
+        .def_readwrite("body_name", &CollisionMaterialOverride::bodyName,
+                       "Matched body name, or empty for all bodies.")
+        .def_readwrite("geom_index", &CollisionMaterialOverride::geomIndex,
+                       "Matched geom index inside the body, or -1.")
+        .def_readwrite("geom_name", &CollisionMaterialOverride::geomName,
+                       "Matched geom name, or empty for all geoms.")
+        .def_readwrite("material", &CollisionMaterialOverride::material,
+                       "Override material.")
+        .def("__repr__", [](const CollisionMaterialOverride& entry) {
+            return "CollisionMaterialOverride(body_index=" +
+                   std::to_string(entry.bodyIndex) + ", body_name='" +
+                   entry.bodyName +
+                   "', geom_index=" + std::to_string(entry.geomIndex) +
+                   ", geom_name='" + entry.geomName + "', material=" +
+                   py::repr(py::cast(entry.material)).cast<std::string>() + ")";
+        });
+
+    m.def(
+        "mjcf_friction_to_physx",
+        [](const std::vector<float>& friction) {
+            return mjcfFrictionToPhysX(friction);
+        },
+        py::arg("friction"),
+        "Map MJCF geom friction values to KangEngine's PhysX material "
+        "descriptor.");
 
     py::class_<ContactPoint>(m, "ContactPoint",
                              "Contact point reported by the PhysX world.")
@@ -850,7 +999,7 @@ void bind_physics(py::module& m) {
             "Set DOF positions and velocities from numpy arrays.")
         .def("set_dof_state", &Articulation::setDofState, py::arg("positions"),
              py::arg("velocities"), "Set DOF positions and velocities.")
-        // joints: dict[int, list[Joint]]
+        // joints: dict[int, list[JointDesc]]
         .def("joints", [](const Articulation& self) {
             py::dict result;
             for (const auto& [idx, jvec] : self.joints())

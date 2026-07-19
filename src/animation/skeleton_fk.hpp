@@ -23,7 +23,8 @@ class SkeletonFK {
                                const std::string& order = "DFS");
 
     // Build from pre-parsed CharacterData (no extra file I/O).
-    static SkeletonFK fromData(const CharacterData& data, float scale = 1.0f);
+    static SkeletonFK fromData(const Character::CharacterData& data,
+                               float scale = 1.0f);
 
     void setJointRotation(int idx, const Eigen::Quaternionf& q);
     void setRootTranslation(const Eigen::Vector3f& t);

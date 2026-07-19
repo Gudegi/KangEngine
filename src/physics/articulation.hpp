@@ -1,7 +1,7 @@
 #ifndef _ARTICULATION_HPP_
 #define _ARTICULATION_HPP_
 
-#include "animation/character_description.hpp"
+#include "character/character_description.hpp"
 #include "physics.hpp"
 #include <array>
 #include <memory>
@@ -37,7 +37,7 @@ struct ArticulationConfig {
 
     // Build-time material overrides. Later entries win, so callers can set a
     // body-wide override and then refine one named geom.
-    std::vector<Animation::CollisionMaterialOverride> materialOverrides;
+    std::vector<Physics::CollisionMaterialOverride> materialOverrides;
 
     static ArticulationConfig fixedBase() {
         return {}; // all defaults
@@ -74,8 +74,8 @@ class Articulation {
     PxArticulationReducedCoordinate* _artic = nullptr;
     std::vector<PxArticulationLink*> _links;
     std::vector<std::string> _bodyNames;
-    Animation::JointMap _joints; // body index -> joints (empty = fixed)
-    Animation::CollisionGeomMap _colGeoms;
+    Character::JointDescMap _joints; // body index -> joints (empty = fixed)
+    Character::CollisionGeomDescMap _colGeoms;
     std::vector<DofInfo> _dofs;
     std::vector<float> _KPs;
     std::vector<float> _KDs;
@@ -96,9 +96,9 @@ class Articulation {
     static Articulation
     build(PhysicsWorld& physics,
           std::shared_ptr<const Animation::SkeletonTree> tree,
-          const Animation::CollisionGeomMap& colGeoms,
-          const Animation::JointMap& joints,
-          const Animation::InertialMap& inertials,
+          const Character::CollisionGeomDescMap& colGeoms,
+          const Character::JointDescMap& joints,
+          const Character::InertialDescMap& inertials,
           const ArticulationConfig& cfg = {});
 
     void release();
@@ -115,10 +115,10 @@ class Articulation {
     void addLinkForceAtPosition(int linkIndex, const PxVec3& force,
                                 const PxVec3& position);
     int setCollisionMaterial(PhysicsWorld& physics,
-                             const Animation::PhysicsMaterialDesc& material);
+                             const Physics::PhysicsMaterialDesc& material);
     int setCollisionMaterialOverrides(
         PhysicsWorld& physics,
-        const std::vector<Animation::CollisionMaterialOverride>& overrides);
+        const std::vector<Physics::CollisionMaterialOverride>& overrides);
     void setKPs(const std::vector<float>& kps);
     const std::vector<float>& getKPs() const { return _KPs; }
     void setKDs(const std::vector<float>& kds);
@@ -129,12 +129,14 @@ class Articulation {
     PxArticulationLink* link(int i) const { return _links[i]; }
     int numLinks() const { return static_cast<int>(_links.size()); }
     PxArticulationReducedCoordinate* raw() { return _artic; }
-    const Animation::JointMap& joints() const { return _joints; }
+    const Character::JointDescMap& joints() const { return _joints; }
     int numDofs() const { return static_cast<int>(_dofs.size()); }
 
     // Data accessors for PhysicsBridge
     const std::vector<PxArticulationLink*>& links() const { return _links; }
-    const Animation::CollisionGeomMap& colGeoms() const { return _colGeoms; }
+    const Character::CollisionGeomDescMap& colGeoms() const {
+        return _colGeoms;
+    }
     const std::vector<std::string>& bodyNames() const { return _bodyNames; }
     const std::string& bodyName(int index) const { return _bodyNames[index]; }
 

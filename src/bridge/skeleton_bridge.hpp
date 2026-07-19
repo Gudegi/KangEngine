@@ -41,7 +41,7 @@ class SkeletonBridge {
                                    const std::string& order = "DFS",
                                    const std::string& meshAssetBasePath = "");
 
-    static SkeletonBridge fromData(const Animation::CharacterData& data,
+    static SkeletonBridge fromData(const Character::CharacterData& data,
                                    Scene::SceneBackend* scene,
                                    const std::string& primBasePath = "/robot",
                                    float scale = 1.0f,
@@ -85,7 +85,7 @@ class SkeletonBridgeAsset {
                                         float scale = 1.0f,
                                         const std::string& order = "DFS");
 
-    static SkeletonBridgeAsset fromData(const Animation::CharacterData& data,
+    static SkeletonBridgeAsset fromData(const Character::CharacterData& data,
                                         float scale = 1.0f);
 
     void defineMeshAssets(Scene::SceneBackend* scene,
@@ -109,7 +109,7 @@ class SkeletonBridgeAsset {
     };
 
   private:
-    Animation::CharacterData _data;
+    Character::CharacterData _data;
     float _scale = 1.0f;
     std::string _assetPath;
     // Source visual assets, kept at MJCF geom granularity.  Merged body meshes

@@ -16,6 +16,8 @@ namespace KE {
 namespace Asset {
 
 using namespace Animation;
+using namespace Character;
+using namespace Physics;
 
 namespace {
 
@@ -313,7 +315,7 @@ resolveSiteClass(const std::string& cls,
 bool parseSite(
     tinyxml2::XMLElement* siteElem,
     const std::unordered_map<std::string, DefaultSiteAttrs>& defaultMap,
-    Site& out, const std::string& inheritedClass = "") {
+    SiteDesc& out, const std::string& inheritedClass = "") {
     const char* siteName = siteElem->Attribute("name");
     if (!siteName || siteName[0] == '\0')
         return false;
@@ -328,11 +330,11 @@ bool parseSite(
                        ? std::string(siteElem->Attribute("type"))
                        : defs.type;
     if (typeStr == "capsule")
-        out.type = Site::Type::Capsule;
+        out.type = SiteDesc::Type::Capsule;
     else if (typeStr == "box")
-        out.type = Site::Type::Box;
+        out.type = SiteDesc::Type::Box;
     else
-        out.type = Site::Type::Sphere;
+        out.type = SiteDesc::Type::Sphere;
 
     auto size = splitFloats(siteElem->Attribute("size"));
     auto pos = splitFloats(siteElem->Attribute("pos"));
@@ -372,7 +374,7 @@ bool parseSite(
 }
 
 // Returns false if this loader cannot represent the geom as an explicit
-// CollisionGeom descriptor.
+// CollisionGeomDesc descriptor.
 //
 // Mesh collision geoms are intentionally unsupported here. Dynamic and
 // articulation bodies should use primitive shapes or a future convex-cooked
@@ -382,7 +384,7 @@ bool parseSite(
 bool buildCollisionGeom(
     tinyxml2::XMLElement* geomElem,
     const std::unordered_map<std::string, DefaultGeomAttrs>& defaultMap,
-    CollisionGeom& out, const std::string& inheritedClass = "") {
+    CollisionGeomDesc& out, const std::string& inheritedClass = "") {
 
     const char* clsAttr = geomElem->Attribute("class");
     std::string effectiveCls = clsAttr ? clsAttr : inheritedClass;
@@ -413,13 +415,13 @@ bool buildCollisionGeom(
         friction = defs.friction;
 
     if (typeStr == "capsule")
-        out.type = CollisionGeom::Type::Capsule;
+        out.type = CollisionGeomDesc::Type::Capsule;
     else if (typeStr == "cylinder")
-        out.type = CollisionGeom::Type::Cylinder;
+        out.type = CollisionGeomDesc::Type::Cylinder;
     else if (typeStr == "sphere")
-        out.type = CollisionGeom::Type::Sphere;
+        out.type = CollisionGeomDesc::Type::Sphere;
     else if (typeStr == "box")
-        out.type = CollisionGeom::Type::Box;
+        out.type = CollisionGeomDesc::Type::Box;
     else
         return false;
 
@@ -463,8 +465,8 @@ struct GeomMassData {
     Eigen::Vector3f iDiag;
 };
 
-GeomMassData geomMassContribution(const CollisionGeom& g, float density) {
-    using Type = CollisionGeom::Type;
+GeomMassData geomMassContribution(const CollisionGeomDesc& g, float density) {
+    using Type = CollisionGeomDesc::Type;
     float V = 0.f;
     Eigen::Vector3f center = g.pos;
     Eigen::Vector3f iDiag = Eigen::Vector3f::Zero();
@@ -640,7 +642,7 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
                         meshName, bodyName);
                     continue;
                 }
-                CollisionGeom g;
+                CollisionGeomDesc g;
                 if (!buildCollisionGeom(geom, defaultMap, g, inheritedClass))
                     continue;
 
@@ -670,7 +672,7 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
             // Named body-local frames
             for (auto* sElem = elem->FirstChildElement("site"); sElem;
                  sElem = sElem->NextSiblingElement("site")) {
-                Site site;
+                SiteDesc site;
                 if (!parseSite(sElem, siteDefaultMap, site, inheritedClass))
                     continue;
                 site.bodyIndex = idx;
@@ -682,10 +684,10 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
             // Joints for this body
             for (auto* jElem = elem->FirstChildElement("joint"); jElem;
                  jElem = jElem->NextSiblingElement("joint")) {
-                Joint jd;
+                JointDesc jd;
                 jd.name =
                     jElem->Attribute("name") ? jElem->Attribute("name") : "";
-                jd.type = Joint::Type::Revolute;
+                jd.type = JointDesc::Type::Revolute;
                 auto axisVals = splitFloats(jElem->Attribute("axis"));
                 if (axisVals.size() >= 3)
                     jd.axis =
@@ -707,9 +709,9 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
                 _data.joints[idx].push_back(jd);
             }
 
-            // Inertial: explicit element takes priority over geom-derived
+            // InertialDesc: explicit element takes priority over geom-derived
             if (auto* ie = elem->FirstChildElement("inertial")) {
-                Inertial inertial;
+                InertialDesc inertial;
                 ie->QueryFloatAttribute("mass", &inertial.mass);
                 auto pos = splitFloats(ie->Attribute("pos"));
                 if (pos.size() >= 3)
@@ -747,7 +749,7 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
                                   gmd.mass * (r.x() * r.x() + r.y() * r.y());
                 }
 
-                Inertial inertial;
+                InertialDesc inertial;
                 inertial.mass = totalMass;
                 inertial.com = com;
                 inertial.diagInertia = iTotal.cwiseMax(1e-4f);

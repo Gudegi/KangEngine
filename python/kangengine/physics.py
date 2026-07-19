@@ -7,6 +7,9 @@ from ._public import set_public_module
 _NAMES = [
     "PhysicsGpuDynamicsConfig",
     "PhysicsConfig",
+    "PhysicsMaterialDesc",
+    "CollisionMaterialOverride",
+    "mjcf_friction_to_physx",
     "ContactPoint",
     "RigidDynamic",
     "PhysicsWorld",

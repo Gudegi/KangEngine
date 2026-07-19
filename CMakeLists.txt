@@ -280,6 +280,8 @@ if(IS_PYTHON_LIB)
         "${BIND_DIR}/bind_new.cpp"
         "${BIND_DIR}/bind_scene.cpp"
         "${BIND_DIR}/bind_animation.cpp"
+        "${BIND_DIR}/bind_character.cpp"
+        "${BIND_DIR}/bind_asset.cpp"
         "${BIND_DIR}/bind_sim.cpp"
         "${BIND_DIR}/bind_physics.cpp"
         "${BIND_DIR}/bind_physics_gpu.cpp"

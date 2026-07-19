@@ -8,7 +8,8 @@ SkeletonFK SkeletonFK::fromMJCF(const std::string& mjcfPath, float scale,
     return fromData(Asset::MJCFLoader::load(mjcfPath, 1.0f, order), scale);
 }
 
-SkeletonFK SkeletonFK::fromData(const CharacterData& data, float scale) {
+SkeletonFK SkeletonFK::fromData(const Character::CharacterData& data,
+                                float scale) {
     SkeletonFK fk;
     fk._scale = scale;
     fk._skeleton = data.skeletonTree;

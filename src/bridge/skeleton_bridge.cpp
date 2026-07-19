@@ -31,7 +31,7 @@ namespace fs = std::filesystem;
 // Build a merged MeshData from all collision geoms of one body,
 // with each geom's vertices/normals transformed into body-local space.
 static Scene::MeshData
-buildCollisionMesh(const std::vector<Animation::CollisionGeom>& geoms) {
+buildCollisionMesh(const std::vector<Character::CollisionGeomDesc>& geoms) {
     Scene::MeshData combined;
     for (const auto& geom : geoms) {
         glm::vec3 localPos;
@@ -47,7 +47,7 @@ buildCollisionMesh(const std::vector<Animation::CollisionGeom>& geoms) {
             localPos = glm::vec3(center.x(), center.y(), center.z());
             localQuat = glm::quat(eq.w(), eq.x(), eq.y(), eq.z());
             float r = geom.size[0];
-            if (geom.type == Animation::CollisionGeom::Type::Capsule)
+            if (geom.type == Character::CollisionGeomDesc::Type::Capsule)
                 part = Scene::Prim::createCapsuleData(r, halfLen * 2.f,
                                                       UpAxis::Z, 12);
             else
@@ -58,18 +58,18 @@ buildCollisionMesh(const std::vector<Animation::CollisionGeom>& geoms) {
             localQuat = glm::quat(geom.quat.w(), geom.quat.x(), geom.quat.y(),
                                   geom.quat.z());
             switch (geom.type) {
-            case Animation::CollisionGeom::Type::Sphere:
+            case Character::CollisionGeomDesc::Type::Sphere:
                 part = Scene::Prim::createSphereData(geom.size[0], 12, 8);
                 break;
-            case Animation::CollisionGeom::Type::Capsule:
+            case Character::CollisionGeomDesc::Type::Capsule:
                 part = Scene::Prim::createCapsuleData(
                     geom.size[0], geom.size[1] * 2.f, UpAxis::Z, 12);
                 break;
-            case Animation::CollisionGeom::Type::Cylinder:
+            case Character::CollisionGeomDesc::Type::Cylinder:
                 part = Scene::Prim::createCylinderData(
                     geom.size[0], geom.size[1] * 2.f, UpAxis::Z, 12);
                 break;
-            case Animation::CollisionGeom::Type::Box:
+            case Character::CollisionGeomDesc::Type::Box:
                 part = Scene::Prim::createRectangleData(
                     geom.size[0] * 2.f, geom.size[1] * 2.f, geom.size[2] * 2.f);
                 break;
@@ -117,7 +117,7 @@ static Scene::MeshData loadVisualMesh(const std::string& path) {
 }
 
 static void applyMeshInfoTransform(Scene::MeshData& mesh,
-                                   const Animation::MeshInfo& meshInfo) {
+                                   const Character::VisualGeomDesc& meshInfo) {
     glm::vec3 localPos(meshInfo.pos.x(), meshInfo.pos.y(), meshInfo.pos.z());
     glm::quat localQuat(meshInfo.quat.w(), meshInfo.quat.x(), meshInfo.quat.y(),
                         meshInfo.quat.z());
@@ -141,7 +141,7 @@ static void appendMesh(Scene::MeshData& dst, Scene::MeshData&& part) {
 }
 
 static std::vector<SkeletonBridgeAsset::VisualGeomAsset>
-buildVisualGeomAssets(const Animation::CharacterData& data) {
+buildVisualGeomAssets(const Character::CharacterData& data) {
     std::vector<SkeletonBridgeAsset::VisualGeomAsset> visualGeomAssets;
     visualGeomAssets.reserve(data.meshInfos.size());
 
@@ -167,7 +167,7 @@ buildVisualGeomAssets(const Animation::CharacterData& data) {
 static std::vector<std::shared_ptr<Scene::MeshData>> buildBodyMeshesFromVisuals(
     int numBodies,
     const std::vector<SkeletonBridgeAsset::VisualGeomAsset>& visualGeomAssets,
-    const Animation::CollisionGeomMap& collisionGeoms) {
+    const Character::CollisionGeomDescMap& collisionGeoms) {
     std::vector<std::shared_ptr<Scene::MeshData>> bodyMeshes(numBodies);
     std::vector<bool> hasVisual(static_cast<size_t>(numBodies), false);
 
@@ -249,7 +249,7 @@ SkeletonBridge SkeletonBridge::fromMJCF(const std::string& mjcfPath,
     return asset.instantiate(scene, primBasePath, meshAssetBasePath);
 }
 
-SkeletonBridge SkeletonBridge::fromData(const Animation::CharacterData& data,
+SkeletonBridge SkeletonBridge::fromData(const Character::CharacterData& data,
                                         Scene::SceneBackend* scene,
                                         const std::string& primBasePath,
                                         float scale,
@@ -268,7 +268,7 @@ SkeletonBridgeAsset SkeletonBridgeAsset::fromMJCF(const std::string& mjcfPath,
 }
 
 SkeletonBridgeAsset
-SkeletonBridgeAsset::fromData(const Animation::CharacterData& data,
+SkeletonBridgeAsset::fromData(const Character::CharacterData& data,
                               float scale) {
     SkeletonBridgeAsset asset;
     asset._data = data;

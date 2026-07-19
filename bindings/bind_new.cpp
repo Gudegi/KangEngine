@@ -29,6 +29,8 @@ using namespace KE;
 // Forward declarations for submodule bindings
 void bind_scene(py::module& m);
 void bind_animation(py::module& m);
+void bind_character(py::module& m);
+void bind_asset(py::module& m);
 void bind_sim(py::module& m);
 void bind_physics(py::module& m);
 void bind_physics_gpu(py::module& m);
@@ -479,6 +481,8 @@ PYBIND11_MODULE(_kangengine, m) {
 
     bind_scene(m);
     bind_animation(m);
+    bind_character(m);
+    bind_asset(m);
     bind_imgui(m);
     bind_keys(m);
     // bind_physics is called after GLM types are registered (uses glm defaults)
