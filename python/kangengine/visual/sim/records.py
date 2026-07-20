@@ -105,7 +105,7 @@ class VisualRigidSceneGraph:
     env_id: int
     obj_id: int
     rigid: object
-    rigid_bridge: object
+    rigid_visual: object
     body_prims: list[object]
     body_handles: list[int]
 

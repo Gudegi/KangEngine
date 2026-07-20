@@ -488,7 +488,7 @@ class RigidGPUExternalBackend(_VisualLifetime):
         return self
 
 
-class RigidVisualBridge:
+class RigidVisual:
     """Viewer-side visualizer for one compound rigid actor."""
 
     def __init__(
@@ -540,17 +540,17 @@ class RigidVisualBridge:
         geom_type = spec.geom_type
         size = spec.size
         if geom_type == "Sphere":
-            mesh = _ke.scene.Prim.create_sphere_data(float(size[0]), 24, 12)
+            mesh = _ke.geometry.create_sphere_data(float(size[0]), 24, 12)
         elif geom_type == "Box":
-            mesh = _ke.scene.Prim.create_rectangle_data(
+            mesh = _ke.geometry.create_box_data(
                 float(size[0] * 2.0), float(size[1] * 2.0), float(size[2] * 2.0)
             )
         elif geom_type == "Cylinder":
-            mesh = _ke.scene.Prim.create_cylinder_data(
+            mesh = _ke.geometry.create_cylinder_data(
                 float(size[0]), float(size[1] * 2.0), _ke.UpAxis.X, 24
             )
         else:
-            mesh = _ke.scene.Prim.create_capsule_data(
+            mesh = _ke.geometry.create_capsule_data(
                 float(size[0]), float(size[1] * 2.0), _ke.UpAxis.X, 24
             )
         prim.set_mesh_data(mesh)
@@ -939,7 +939,7 @@ class SimWorldVisualizer:
         if obj_id in self.gpu_visual_batches:
             raise ValueError(f"GPU visual batch already registered for obj={obj_id}")
         data = self.world.load_mjcf(mjcf_path, scale=scale, order=order)
-        rigid_bridge = RigidVisualBridge(
+        rigid_visual = RigidVisual(
             self.app,
             self.scene,
             sim_view.rigid,
@@ -948,11 +948,11 @@ class SimWorldVisualizer:
             add_shapes=False,
             color=color,
         )
-        if len(rigid_bridge.body_prims) != 1:
+        if len(rigid_visual.body_prims) != 1:
             raise NotImplementedError(
                 "GPU rigid visual batches currently require one MJCF shape"
             )
-        prim = rigid_bridge.body_prims[0]
+        prim = rigid_visual.body_prims[0]
         handle = self.app._add_renderable(
             material, prim, _ke.TransformSource.ExternalBuffer
         )
@@ -994,7 +994,7 @@ class SimWorldVisualizer:
         if obj_id in self.gpu_visual_batches:
             raise ValueError(f"GPU visual batch already registered for obj={obj_id}")
         data = self.world.load_mjcf(mjcf_path, scale=scale, order=order)
-        rigid_bridge = RigidVisualBridge(
+        rigid_visual = RigidVisual(
             self.app,
             self.scene,
             sim_view.rigid,
@@ -1003,7 +1003,7 @@ class SimWorldVisualizer:
             add_shapes=False,
             color=color,
         )
-        body_prims = list(rigid_bridge.body_prims)
+        body_prims = list(rigid_visual.body_prims)
         body_handles = [
             self.app._add_renderable(
                 material, prim, _ke.TransformSource.ExternalBuffer
@@ -1017,8 +1017,8 @@ class SimWorldVisualizer:
             env_ids,
             body_prims,
             body_handles,
-            rigid_bridge.local_pos,
-            rigid_bridge.local_rot,
+            rigid_visual.local_pos,
+            rigid_visual.local_rot,
         )
         batch = VisualBatch(obj_id, env_ids, backend=backend)
         batch.set_color(color)
@@ -1057,7 +1057,7 @@ class SimWorldVisualizer:
 
         rigid = self.world.rigid(key[0], key[1])
         data = self.world.load_mjcf(mjcf_path, scale=scale, order=order)
-        rigid_bridge = RigidVisualBridge(
+        rigid_visual = RigidVisual(
             self.app,
             self.scene,
             rigid,
@@ -1072,9 +1072,9 @@ class SimWorldVisualizer:
             key[0],
             key[1],
             rigid,
-            rigid_bridge,
-            list(rigid_bridge.body_prims),
-            list(rigid_bridge.body_handles),
+            rigid_visual,
+            list(rigid_visual.body_prims),
+            list(rigid_visual.body_handles),
         )
         self.visual_rigid_scene_graphs[key] = record
         if _debug_registration:
@@ -1212,7 +1212,7 @@ class SimWorldVisualizer:
 
     def _sync_rigids(self):
         for record in self.visual_rigid_scene_graphs.values():
-            record.rigid_bridge.sync()
+            record.rigid_visual.sync()
 
     def set_body_transforms_scene_graph(
         self, env_id: int, obj_id: int, body_pos=None, body_rot=None

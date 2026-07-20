@@ -50,7 +50,7 @@ class BloomViewer(ke.App):
     def _add_sphere(self, path, pos, radius, color):
         view = self.scene.add_mesh(
             path,
-            scene.Prim.create_sphere_data(radius, 32, 16),
+            ke.geometry.create_sphere_data(radius, 32, 16),
             self.shaders.common,
             color=ke.vec4(*color),
         )

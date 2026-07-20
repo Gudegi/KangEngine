@@ -247,14 +247,14 @@ class MultiEnvSimWorldApp(ke.App):
         )
 
     def _add_ramp_visual(self):
-        mesh = ke.scene.Prim.create_rectangle_data(
+        mesh_data = ke.geometry.create_box_data(
             self.ramp_half_extents[0] * 2.0,
             self.ramp_half_extents[1] * 2.0,
             self.ramp_half_extents[2] * 2.0,
         )
         view = self.add_mesh(
             "/terrain/inclined_box",
-            mesh,
+            mesh_data,
             self.shaders.common,
             color=[0.45, 0.45, 0.5, 1.0],
         )

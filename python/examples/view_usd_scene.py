@@ -51,7 +51,7 @@ class USDSceneViewer(ke.App):
         if self.show_ground:
             self.scene.add_mesh(
                 "/ground",
-                scene.Prim.create_plane_data(50.0, ke.UpAxis.Y),
+                ke.geometry.create_plane_data(50.0, ke.UpAxis.Y),
                 self.shaders.ground,
             )
 

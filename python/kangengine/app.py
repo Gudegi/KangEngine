@@ -319,7 +319,7 @@ class SceneContext:
             self._app.configure_checker_shader(shader)
         return self.add_mesh(
             path,
-            scene.Prim.create_plane_data(float(scale), self._app.up_axis),
+            _ke.geometry.create_plane_data(float(scale), self._app.up_axis),
             shader,
         )
 

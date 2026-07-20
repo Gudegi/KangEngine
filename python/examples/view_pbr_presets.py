@@ -46,7 +46,7 @@ class PBRPresetViewer(ke.App):
     def _add_sphere(self, path, position, material):
         view = self.scene.add_mesh(
             path,
-            scene.Prim.create_sphere_data(0.32, 48, 24),
+            ke.geometry.create_sphere_data(0.32, 48, 24),
             material,
         )
         view.prim.add_translate_op(ke.vec3(*position))

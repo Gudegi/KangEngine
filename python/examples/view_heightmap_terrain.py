@@ -173,8 +173,10 @@ class HeightmapTerrainViewer(ke.App):
             specular=ke.vec3(0.1, 0.1, 0.1),
             shininess=24.0,
         )
-        sphere_mesh = ke.scene.Prim.create_sphere_data(self.test_radius, 24, 12)
-        self.test_view = self.scene.add_mesh("/collision_test_sphere", sphere_mesh, test_mat)
+        sphere_mesh_data = ke.geometry.create_sphere_data(self.test_radius, 24, 12)
+        self.test_view = self.scene.add_mesh(
+            "/collision_test_sphere", sphere_mesh_data, test_mat
+        )
         self._sync_collision_test_sphere()
 
     def _collision_test_spawn_position(self):

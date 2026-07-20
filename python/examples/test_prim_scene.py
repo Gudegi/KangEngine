@@ -70,15 +70,15 @@ print(f"Model matrix computed: {type(model_mat)}")
 
 # Test MeshData creation
 print("\n=== MeshData Test ===")
-square_data = scene.Prim.create_square_data(1.0)
+square_data = ke.geometry.create_cube_data(1.0)
 print(f"Square vertices count: {len(square_data.vertices)}")
 print(f"Square indices count: {len(square_data.indices)}")
 
-sphere_data = scene.Prim.create_sphere_data(1.0, 12, 11)
+sphere_data = ke.geometry.create_sphere_data(1.0, 12, 11)
 print(f"Sphere vertices count: {len(sphere_data.vertices)}")
 print(f"Sphere indices count: {len(sphere_data.indices)}")
 
-plane_data = scene.Prim.create_plane_data(30.0)
+plane_data = ke.geometry.create_plane_data(30.0)
 print(f"Plane vertices count: {len(plane_data.vertices)}")
 print(f"Plane indices count: {len(plane_data.indices)}")
 

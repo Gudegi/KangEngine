@@ -193,8 +193,10 @@ class ProceduralTerrainViewer(ke.App):
 
         radius = max(0.08, self.horizontal_scale * 5.0)
         half = max(0.08, self.horizontal_scale * 4.0)
-        sphere_mesh = ke.scene.Prim.create_sphere_data(radius, 20, 10)
-        box_mesh = ke.scene.Prim.create_rectangle_data(half * 2.0, half * 2.0, half * 2.0)
+        sphere_mesh_data = ke.geometry.create_sphere_data(radius, 20, 10)
+        box_mesh_data = ke.geometry.create_box_data(
+            half * 2.0, half * 2.0, half * 2.0
+        )
 
         for index in range(count):
             pos = self._random_spawn_position(index, count * 2)
@@ -204,7 +206,9 @@ class ProceduralTerrainViewer(ke.App):
                 [0.0, 0.0, 0.0, 1.0],
                 1.0,
             )
-            view = self.scene.add_mesh(f"/collision_test/sphere_{index}", sphere_mesh, sphere_material)
+            view = self.scene.add_mesh(
+                f"/collision_test/sphere_{index}", sphere_mesh_data, sphere_material
+            )
             self.test_bodies.append(("sphere", actor, view, radius))
 
         for index in range(count):
@@ -215,7 +219,9 @@ class ProceduralTerrainViewer(ke.App):
                 [0.0, 0.0, 0.0, 1.0],
                 1.0,
             )
-            view = self.scene.add_mesh(f"/collision_test/box_{index}", box_mesh, box_material)
+            view = self.scene.add_mesh(
+                f"/collision_test/box_{index}", box_mesh_data, box_material
+            )
             self.test_bodies.append(("box", actor, view, half))
 
         self._sync_collision_test_bodies()

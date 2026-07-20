@@ -49,10 +49,10 @@ class PhongTextureViewer(ke.App):
             diffuse_map=texture,
         )
 
-        mesh = scene.Prim.create_plane_data(1.8, ke.UpAxis.Z)
+        mesh_data = ke.geometry.create_plane_data(1.8, ke.UpAxis.Z)
         left = self.scene.add_mesh(
             "/phong_texture/white_diffuse",
-            mesh,
+            mesh_data,
             white,
             color=ke.vec4(1.0, 1.0, 1.0, 1.0),
         )
@@ -61,7 +61,7 @@ class PhongTextureViewer(ke.App):
 
         right = self.scene.add_mesh(
             "/phong_texture/red_tint",
-            mesh,
+            mesh_data,
             tinted,
             color=ke.vec4(1.0, 1.0, 1.0, 1.0),
         )

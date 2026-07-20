@@ -10,7 +10,7 @@ if _assets_dir.exists():
 
 from ._core import _ke
 from ._public import set_public_module as _set_public_module
-from . import animation, asset, character, physics, scene, terrain, visual
+from . import animation, asset, character, geometry, physics, scene, terrain, visual
 from .app import App, NativeApp, RenderablePrimView, SceneContext
 from .motion_editor import (
     MotionEditor,
@@ -214,6 +214,7 @@ __all__ = [
     "scene",
     "asset",
     "animation",
+    "geometry",
     "physics",
     "imgui",
     "keys",

@@ -27,7 +27,7 @@ class PBROakWoodViewer(ke.App):
         self.material = self._make_oak_material()
         oak_view = self.scene.add_mesh(
             "/pbr/oak_wood",
-            scene.Prim.create_plane_data(3.0, ke.UpAxis.Z),
+            ke.geometry.create_plane_data(3.0, ke.UpAxis.Z),
             self.material,
         )
         oak_view.prim.add_translate_op(ke.vec3(0.0, 0.0, 0.02))

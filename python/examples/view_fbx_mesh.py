@@ -67,7 +67,7 @@ class FBXMeshViewer(ke.App):
         if self.show_ground:
             self.scene.add_mesh(
                 "/ground",
-                scene.Prim.create_plane_data(4.0, self.up_axis),
+                ke.geometry.create_plane_data(4.0, self.up_axis),
                 self.ground_shader,
             )
 

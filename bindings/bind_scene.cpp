@@ -27,6 +27,7 @@
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/native/token.hpp"
 #include "engine/graphics/material/material.hpp"
+#include "geometry/primitive_mesh.hpp"
 #include "py_array_view.hpp"
 
 #ifdef KANGENGINE_USE_USD
@@ -40,6 +41,8 @@ namespace py = pybind11;
 void bind_scene(py::module& m) {
     py::module scene = m.def_submodule(
         "scene", "Scene graph, prim, mesh, and debug drawing APIs.");
+    py::module geometry = m.def_submodule(
+        "geometry", "Geometry algorithms and procedural mesh factories.");
 
     // Token class
     py::class_<KE::Scene::Token>(
@@ -878,14 +881,14 @@ void bind_scene(py::module& m) {
             "create_square_data",
             [](float scale) {
                 return std::make_shared<KE::Scene::MeshData>(
-                    KE::Scene::Prim::createSquareData(scale));
+                    KE::Geometry::createCube(scale));
             },
             py::arg("scale") = 1.0f, "Create square mesh data.")
         .def_static(
             "create_plane_data",
             [](float scale, KE::UpAxis upAxis) {
                 return std::make_shared<KE::Scene::MeshData>(
-                    KE::Scene::Prim::createPlaneData(scale, upAxis));
+                    KE::Geometry::createPlane(scale, upAxis));
             },
             py::arg("scale"), py::arg("up_axis") = KE::UpAxis::Y,
             "Create plane mesh data.")
@@ -893,8 +896,8 @@ void bind_scene(py::module& m) {
             "create_sphere_data",
             [](float radius, int numLongitudes, int numLatitudes) {
                 return std::make_shared<KE::Scene::MeshData>(
-                    KE::Scene::Prim::createSphereData(radius, numLongitudes,
-                                                      numLatitudes));
+                    KE::Geometry::createSphere(radius, numLongitudes,
+                                               numLatitudes));
             },
             py::arg("radius"), py::arg("num_longitudes"),
             py::arg("num_latitudes"), "Create sphere mesh data.")
@@ -902,8 +905,7 @@ void bind_scene(py::module& m) {
             "create_rectangle_data",
             [](float xScale, float yScale, float zScale) {
                 return std::make_shared<KE::Scene::MeshData>(
-                    KE::Scene::Prim::createRectangleData(xScale, yScale,
-                                                         zScale));
+                    KE::Geometry::createBox(xScale, yScale, zScale));
             },
             py::arg("x_scale"), py::arg("y_scale"), py::arg("z_scale"),
             "Create box/rectangle mesh data.")
@@ -911,8 +913,8 @@ void bind_scene(py::module& m) {
             "create_cylinder_data",
             [](float radius, float length, KE::UpAxis upAxis, int segments) {
                 return std::make_shared<KE::Scene::MeshData>(
-                    KE::Scene::Prim::createCylinderData(radius, length, upAxis,
-                                                        segments));
+                    KE::Geometry::createCylinder(radius, length, upAxis,
+                                                 segments));
             },
             py::arg("radius"), py::arg("length"),
             py::arg("up_axis") = KE::UpAxis::Y, py::arg("segments") = 32,
@@ -921,8 +923,8 @@ void bind_scene(py::module& m) {
             "create_capsule_data",
             [](float radius, float height, KE::UpAxis upAxis, int segments) {
                 return std::make_shared<KE::Scene::MeshData>(
-                    KE::Scene::Prim::createCapsuleData(radius, height, upAxis,
-                                                       segments));
+                    KE::Geometry::createCapsule(radius, height, upAxis,
+                                                segments));
             },
             py::arg("radius"), py::arg("height"),
             py::arg("up_axis") = KE::UpAxis::Y, py::arg("segments") = 32,
@@ -1109,6 +1111,62 @@ void bind_scene(py::module& m) {
                        "Vertex texture coordinates.")
         .def_readwrite("indices", &KE::Scene::MeshData::indices,
                        "Triangle index buffer.");
+
+    auto meshResult = [](KE::Scene::MeshData data) {
+        return std::make_shared<KE::Scene::MeshData>(std::move(data));
+    };
+    geometry.def("create_cube_data", [meshResult](float scale) {
+        return meshResult(KE::Geometry::createCube(scale));
+    }, py::arg("scale") = 1.0f, "Create a cube mesh payload.");
+    geometry.def("create_plane_data", [meshResult](float scale, KE::UpAxis upAxis) {
+        return meshResult(KE::Geometry::createPlane(scale, upAxis));
+    }, py::arg("scale"), py::arg("up_axis") = KE::UpAxis::Y,
+       "Create a plane mesh payload.");
+    geometry.def("create_sphere_data",
+                 [meshResult](float radius, int longitudes, int latitudes) {
+        return meshResult(
+            KE::Geometry::createSphere(radius, longitudes, latitudes));
+    }, py::arg("radius"), py::arg("num_longitudes"),
+       py::arg("num_latitudes"), "Create a UV sphere mesh payload.");
+    geometry.def("create_box_data",
+                 [meshResult](float x, float y, float z) {
+        return meshResult(KE::Geometry::createBox(x, y, z));
+    }, py::arg("x_scale"), py::arg("y_scale"), py::arg("z_scale"),
+       "Create a box mesh payload with independent axis lengths.");
+    geometry.def("create_cylinder_data",
+                 [meshResult](float radius, float length, KE::UpAxis upAxis,
+                              int segments) {
+        return meshResult(
+            KE::Geometry::createCylinder(radius, length, upAxis, segments));
+    }, py::arg("radius"), py::arg("length"),
+       py::arg("up_axis") = KE::UpAxis::Y, py::arg("segments") = 32,
+       "Create a cylinder mesh payload.");
+    geometry.def("create_arrow_data",
+                 [meshResult](float baseRadius, float baseHeight,
+                              KE::UpAxis upAxis, float capRadius,
+                              float capHeight, int segments) {
+        return meshResult(KE::Geometry::createArrow(
+            baseRadius, baseHeight, upAxis, capRadius, capHeight, segments));
+    }, py::arg("base_radius"), py::arg("base_height"),
+       py::arg("up_axis") = KE::UpAxis::Y, py::arg("cap_radius") = -1.0f,
+       py::arg("cap_height") = -1.0f, py::arg("segments") = 32,
+       "Create an arrow mesh payload.");
+    geometry.def("create_capsule_data",
+                 [meshResult](float radius, float height, KE::UpAxis upAxis,
+                              int segments) {
+        return meshResult(
+            KE::Geometry::createCapsule(radius, height, upAxis, segments));
+    }, py::arg("radius"), py::arg("height"),
+       py::arg("up_axis") = KE::UpAxis::Y, py::arg("segments") = 32,
+       "Create a capsule mesh payload.");
+    geometry.def("create_cone_data",
+                 [meshResult](float radius, float height, KE::UpAxis upAxis,
+                              int segments) {
+        return meshResult(
+            KE::Geometry::createCone(radius, height, upAxis, segments));
+    }, py::arg("radius"), py::arg("height"),
+       py::arg("up_axis") = KE::UpAxis::Y, py::arg("segments") = 32,
+       "Create a cone mesh payload.");
 
     py::class_<KE::Scene::SkinnedMeshData,
                std::shared_ptr<KE::Scene::SkinnedMeshData>>(

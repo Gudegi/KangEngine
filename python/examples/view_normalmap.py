@@ -59,7 +59,7 @@ class BrickwallNormalMapViewer(ke.App):
 
         self.wall_view = self.scene.add_mesh(
             "/brickwall",
-            scene.Prim.create_plane_data(4.0, ke.UpAxis.Z),
+            ke.geometry.create_plane_data(4.0, ke.UpAxis.Z),
             self.wall_shader,
             color=ke.vec4(1.0, 1.0, 1.0, 1.0),
         )
@@ -69,7 +69,7 @@ class BrickwallNormalMapViewer(ke.App):
 
         ground_view = self.scene.add_mesh(
             "/ground",
-            scene.Prim.create_plane_data(6.0, ke.UpAxis.Y),
+            ke.geometry.create_plane_data(6.0, ke.UpAxis.Y),
             self.ground_shader,
         )
         ground_view.prim.add_translate_op(ke.vec3(0.0, -2.0, 0.0))

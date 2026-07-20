@@ -36,14 +36,14 @@ class MyApp(ke.App):
         # Ground plane (Y-up)
         self.scene.add_mesh(
             "/ground",
-            scene.Prim.create_plane_data(30.0),
+            ke.geometry.create_plane_data(30.0),
             self.ground_shader,
         )
 
         # Box
         box = self.scene.add_mesh(
             "/box",
-            scene.Prim.create_square_data(1.0),
+            ke.geometry.create_cube_data(1.0),
             self.obj_shader,
             color=ke.vec4(0.8, 0.3, 0.02, 1.0),
         )
@@ -52,7 +52,7 @@ class MyApp(ke.App):
         # Sphere
         sphere = self.scene.add_mesh(
             "/sphere",
-            scene.Prim.create_sphere_data(0.5, 16, 12),
+            ke.geometry.create_sphere_data(0.5, 16, 12),
             self.obj_shader,
             color=ke.vec4(0.2, 0.4, 0.9, 1.0),
         )
