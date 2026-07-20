@@ -1,13 +1,14 @@
 ///
-/// SkeletonVisualBridge — SkeletonState to renderer-backed line/point
+/// SkeletalVisualBridge — SkeletonState to renderer-backed line/point
 /// visualizer.
 ///
-/// Unlike SkeletonBridge, this does not author a body hierarchy for simulation.
-/// It owns lightweight render handles for visualizing BVH/FBX skeleton motion.
+/// Unlike ArticulationVisualBridge, this does not author a body hierarchy for
+/// simulation. It owns lightweight render handles for visualizing BVH/FBX
+/// skeleton motion.
 ///
 
-#ifndef _SKELETON_VISUAL_BRIDGE_HPP_
-#define _SKELETON_VISUAL_BRIDGE_HPP_
+#ifndef _SKELETAL_VISUAL_BRIDGE_HPP_
+#define _SKELETAL_VISUAL_BRIDGE_HPP_
 
 #include "animation/skeleton_motion.hpp"
 #include "animation/skeleton_state.hpp"
@@ -31,7 +32,7 @@ inline glm::vec4 skeletonVisualColor(ColorType type, float alpha = 1.0f) {
     return glm::vec4(color.r, color.g, color.b, alpha);
 }
 
-struct SkeletonVisualConfig {
+struct SkeletalVisualConfig {
     glm::vec4 boneColor = skeletonVisualColor(ColorType::PASTEL_SKY);
     glm::vec4 jointColor = skeletonVisualColor(ColorType::PASTEL_CORAL);
     float boneRadius = 0.006f;
@@ -41,27 +42,27 @@ struct SkeletonVisualConfig {
     bool showJoints = true;
 };
 
-class SkeletonVisualBridge {
+class SkeletalVisualBridge {
   public:
-    SkeletonVisualBridge() = default;
+    SkeletalVisualBridge() = default;
 
-    static SkeletonVisualBridge define(App* app, Backend::Shader* shader,
+    static SkeletalVisualBridge define(App* app, Backend::Shader* shader,
                                        const std::string& basePath,
                                        const Animation::SkeletonState& state,
-                                       const SkeletonVisualConfig& config = {});
+                                       const SkeletalVisualConfig& config = {});
 
-    static SkeletonVisualBridge define(App* app, Backend::Shader* shader,
+    static SkeletalVisualBridge define(App* app, Backend::Shader* shader,
                                        const std::string& basePath,
                                        const Animation::SkeletonMotion& motion,
                                        float time, bool loop = true,
-                                       const SkeletonVisualConfig& config = {});
+                                       const SkeletalVisualConfig& config = {});
 
     void applyState(const Animation::SkeletonState& state);
     void applyMotion(const Animation::SkeletonMotion& motion, float time,
                      bool loop = true);
     void setVisible(bool visible);
     void setShowJoints(bool showJoints);
-    const SkeletonVisualConfig& config() const { return _config; }
+    const SkeletalVisualConfig& config() const { return _config; }
 
     RenderableHandle boneHandle() const { return _boneHandle; }
     RenderableHandle jointHandle() const { return _jointHandle; }
@@ -70,7 +71,7 @@ class SkeletonVisualBridge {
     App* _app = nullptr;                // non-owning
     Backend::Shader* _shader = nullptr; // non-owning
     std::string _basePath;
-    SkeletonVisualConfig _config;
+    SkeletalVisualConfig _config;
     std::optional<Animation::SkeletonState> _lastState;
     RenderableHandle _boneHandle = InvalidHandle;
     RenderableHandle _jointHandle = InvalidHandle;

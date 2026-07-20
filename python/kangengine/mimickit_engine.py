@@ -25,7 +25,7 @@ from .sim import ControlMode, KangSimWorld
 from .utils import preset_rgba
 from .utils.env_utils import EnvIdLike, env_id_list
 from .utils.tensor import as_cpu_numpy, as_tensor, resolve_device
-from .visual import KangWorldVisualBridge
+from .visual import sim as visual_sim
 
 try:
     import engines.engine as _mk_engine
@@ -260,10 +260,8 @@ class _KangEngineViewer(App):
             _ke.vec4(*preset_rgba(_ke.ColorType.DARK_GREEN)),
         )
 
-        ground = self.get_scene().define_prim("/ground", _ke.scene.PrimType.Mesh)
-        ground.set_mesh_data(_ke.scene.Prim.create_plane_data(100.0, _ke.UpAxis.Z))
-        self.scene.add_renderable(ground, self.ground_shader)
-        self.visual_bridge = KangWorldVisualBridge(self, self.world)
+        self.scene.add_ground(scale=100.0, shader=self.ground_shader)
+        self.visual_bridge = visual_sim.SimWorldVisualizer(self, self.world)
         self._setup_done = True
 
     def add_articulation_scene_graph(self, env_id, obj_id, asset_file, order, color=None):

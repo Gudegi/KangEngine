@@ -273,7 +273,7 @@ class SO101DofControlApp(MjcfDofControlApp):
         self.targets[dof_idx] = float(lo + alpha * (hi - lo))
 
     def _create_target_ball(self):
-        self.target_ball_prim = self.get_scene().define_prim(
+        self.target_ball_prim = self.scene.define_prim(
             "/ik_target_ball", ke.scene.PrimType.Mesh
         )
         self.target_ball_prim.set_mesh_data(

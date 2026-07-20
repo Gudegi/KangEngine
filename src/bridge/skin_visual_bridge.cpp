@@ -1,4 +1,4 @@
-#include "skinned_character_bridge.hpp"
+#include "skin_visual_bridge.hpp"
 
 #include "asset/fbx_loader.hpp"
 #include "animation/skeleton_math.hpp"
@@ -45,12 +45,12 @@ std::string normalTexturePathFromMaterial(const Asset::FBXMeshMetadata& mesh) {
     return material.hasNormalTexture ? material.normalTexturePath : "";
 }
 
-void validateBoneSlots(const SkinnedCharacterBridge::MeshBinding& mesh,
+void validateBoneSlots(const SkinVisualBridge::MeshBinding& mesh,
                        size_t motionNodeCount) {
     if (mesh.boneNames.size() != mesh.boneNodeIndices.size() ||
         mesh.boneNames.size() != mesh.inverseBindMatrices.size()) {
         throw std::runtime_error(
-            "SkinnedCharacterBridge bone slot data size mismatch for mesh " +
+            "SkinVisualBridge bone slot data size mismatch for mesh " +
             mesh.name);
     }
 
@@ -61,7 +61,7 @@ void validateBoneSlots(const SkinnedCharacterBridge::MeshBinding& mesh,
                                              ? mesh.boneNames[slot]
                                              : std::to_string(slot);
             throw std::runtime_error(
-                "SkinnedCharacterBridge bone '" + boneName +
+                "SkinVisualBridge bone '" + boneName +
                 "' maps outside the current motion skeleton");
         }
     }
@@ -69,8 +69,8 @@ void validateBoneSlots(const SkinnedCharacterBridge::MeshBinding& mesh,
 
 } // namespace
 
-SkinnedCharacterBridge
-SkinnedCharacterBridge::fromFBX(App* app, Backend::Shader* shader,
+SkinVisualBridge
+SkinVisualBridge::fromFBX(App* app, Backend::Shader* shader,
                                 const std::string& fbxPath,
                                 const std::string& primBasePath, int clipIndex,
                                 float fps, float scale, bool useMaterials) {
@@ -78,18 +78,18 @@ SkinnedCharacterBridge::fromFBX(App* app, Backend::Shader* shader,
                            clipIndex, fps, scale, useMaterials);
 }
 
-SkinnedCharacterBridge SkinnedCharacterBridge::fromFBXWithBind(
+SkinVisualBridge SkinVisualBridge::fromFBXWithBind(
     App* app, Backend::Shader* shader, const std::string& motionFbxPath,
     const std::string& bindFbxPath, const std::string& primBasePath,
     int clipIndex, float fps, float scale, bool useMaterials) {
     if (!app)
         throw std::runtime_error(
-            "SkinnedCharacterBridge::fromFBX requires App");
+            "SkinVisualBridge::fromFBX requires App");
     if (!shader)
         throw std::runtime_error(
-            "SkinnedCharacterBridge::fromFBX requires Shader");
+            "SkinVisualBridge::fromFBX requires Shader");
 
-    SkinnedCharacterBridge bridge;
+    SkinVisualBridge bridge;
     bridge._app = app;
     Asset::FBXCharacterData character =
         (motionFbxPath == bindFbxPath)
@@ -188,18 +188,18 @@ SkinnedCharacterBridge SkinnedCharacterBridge::fromFBXWithBind(
     return bridge;
 }
 
-Animation::SkeletonState SkinnedCharacterBridge::applyTime(float time,
+Animation::SkeletonState SkinVisualBridge::applyTime(float time,
                                                            bool loop) {
     const Animation::SkeletonState state = _motion.sample(time, loop);
     return applyState(state);
 }
 
-Animation::SkeletonState SkinnedCharacterBridge::applyPose(
+Animation::SkeletonState SkinVisualBridge::applyPose(
     const Eigen::Vector3f& rootTranslation,
     const std::vector<Eigen::Quaternionf>& localRotations) {
     if (static_cast<int>(localRotations.size()) != _motion.numJoints()) {
         throw std::runtime_error(
-            "SkinnedCharacterBridge::applyPose local rotation count does not "
+            "SkinVisualBridge::applyPose local rotation count does not "
             "match motion skeleton joint count");
     }
 
@@ -217,7 +217,7 @@ Animation::SkeletonState SkinnedCharacterBridge::applyPose(
 }
 
 Animation::SkeletonState
-SkinnedCharacterBridge::applyState(const Animation::SkeletonState& state) {
+SkinVisualBridge::applyState(const Animation::SkeletonState& state) {
     if (!_app)
         return state;
 
@@ -240,7 +240,7 @@ SkinnedCharacterBridge::applyState(const Animation::SkeletonState& state) {
     return state;
 }
 
-void SkinnedCharacterBridge::setVisible(bool visible) {
+void SkinVisualBridge::setVisible(bool visible) {
     const float alpha = visible ? 1.0f : 0.0f;
     for (MeshBinding& mesh : _meshes) {
         if (!mesh.prim)
@@ -251,7 +251,7 @@ void SkinnedCharacterBridge::setVisible(bool visible) {
     }
 }
 
-void SkinnedCharacterBridge::setColor(const glm::vec4& color) {
+void SkinVisualBridge::setColor(const glm::vec4& color) {
     for (MeshBinding& mesh : _meshes) {
         mesh.baseColor = color;
         if (mesh.prim)
@@ -259,7 +259,7 @@ void SkinnedCharacterBridge::setColor(const glm::vec4& color) {
     }
 }
 
-void SkinnedCharacterBridge::setCastsShadow(bool castsShadow) {
+void SkinVisualBridge::setCastsShadow(bool castsShadow) {
     for (const MeshBinding& mesh : _meshes) {
         if (mesh.component)
             mesh.component->setCastsShadow(castsShadow);

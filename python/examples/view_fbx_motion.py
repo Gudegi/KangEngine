@@ -94,9 +94,7 @@ class FbxMotionViewer(ke.App):
             )
         )
 
-        ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
-        ground.set_mesh_data(scene.Prim.create_plane_data(20.0, self.up_axis))
-        self.scene.add_renderable(ground, self.ground_shader)
+        self.scene.add_ground(scale=20.0, shader=self.ground_shader)
 
         camera = self.get_camera()
         camera.set_camera_pos(ke.vec3(0.0, 1.6, 3.8))

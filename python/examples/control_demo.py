@@ -1,6 +1,6 @@
 """Direct KangEngine Python API control demo.
 - KangSimWorld owns PhysX simulation and state cache.
-- KangWorldVisualBridge syncs simulation objects into the viewer.
+- SimWorldVisualizer syncs simulation objects into the viewer.
 - App owns rendering, camera, input, and UI.
 """
 
@@ -59,11 +59,9 @@ class ControlDemo(ke.App):
         )
 
         self.world = ke.KangSimWorld(num_envs=1, sim_dt=1.0 / 120.0, add_ground=True)
-        self.visual = ke.KangWorldVisualBridge(self, self.world)
+        self.visual = ke.visual.sim.SimWorldVisualizer(self, self.world)
 
-        ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
-        ground.set_mesh_data(scene.Prim.create_plane_data(100.0, ke.UpAxis.Z))
-        self.scene.add_renderable(ground, self.ground_shader)
+        self.scene.add_ground(scale=100.0, shader=self.ground_shader)
 
         self.robot_xml = asset_path("characters", "kw", "kw5.xml")
         self.ball_xml = asset_path("objects", "ball.xml")

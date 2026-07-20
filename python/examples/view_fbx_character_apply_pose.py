@@ -84,7 +84,7 @@ class FbxCharacterApplyPoseViewer(ke.App):
         self.add_ground(shader=self.shaders.ground)
         self.set_camera_view([0.0, 1.45, 3.2], [0.0, 0.85, 0.0])
 
-        self.character = ke.SkinnedCharacterBridge.from_fbx(
+        self.character = ke.visual.SkinVisual.from_fbx(
             self,
             self.mesh_shader,
             self.fbx_file,
@@ -243,7 +243,7 @@ class FbxCharacterApplyPoseViewer(ke.App):
     def _print_import_info(self):
         clips = asset.FBXLoader.load_animation_clip_infos(self.fbx_file)
         print(f"FBX apply-pose character loaded: {Path(self.fbx_file).name}")
-        print(f"load: SkinnedCharacterBridge.from_fbx(...)")
+        print(f"load: SkinVisual.from_fbx(...)")
         print(
             "pose path: motion -> root_translations/local_rotations_wxyz "
             "-> sampled pose -> character.apply_pose(...)"

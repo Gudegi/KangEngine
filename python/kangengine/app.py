@@ -184,17 +184,23 @@ class SceneContext:
         self._app = app
 
     @property
-    def backend(self):
-        return self._app.get_scene()
+    def native(self):
+        """Return the native SceneBackend escape hatch.
+
+        Prefer SceneContext helpers such as add_mesh(), add_ground(), and
+        define_prim() for authored scene objects. Use native only when a C++ or
+        pybind API explicitly requires SceneBackend.
+        """
+        return self._app.get_native_scene()
 
     def define_prim(self, path: str, prim_type):
-        return self.backend.define_prim(path, prim_type)
+        return self.native.define_prim(path, prim_type)
 
     def get_prim_at_path(self, path: str):
-        return self.backend.get_prim_at_path(path)
+        return self.native.get_prim_at_path(path)
 
     def get_root_prim(self):
-        return self.backend.get_root_prim()
+        return self.native.get_root_prim()
 
     def add_renderable(
         self,
@@ -404,6 +410,23 @@ class App(NativeApp):
         self._resource_handles_by_object_id = {}
         self._resource_counter = 0
         self._textures_by_uri = {}
+
+    def get_native_scene(self):
+        """Return the native SceneBackend escape hatch.
+
+        Public Python code should prefer self.scene for authored scene workflows.
+        Use this only when a C++ or pybind API explicitly requires SceneBackend.
+        """
+        return super().get_scene()
+
+    def get_scene(self):
+        """Return the Python-friendly SceneContext facade.
+
+        This mirrors the ``app.scene`` property. Use get_native_scene() or
+        scene.native only when a C++ or pybind API explicitly requires the
+        native SceneBackend.
+        """
+        return self.scene
 
     def package_asset_path(self, *parts: str) -> str:
         return str(Path(_ke.__file__).resolve().parent / "assets" / Path(*parts))
@@ -937,7 +960,7 @@ class App(NativeApp):
         )
         # Native initialize() recreates the SceneBackend. Keep the resource
         # registry mirrored into the live scene used by ScenePanel/rendering.
-        self.resources.bind_scene(self.get_scene())
+        self.resources.bind_scene(self.get_native_scene())
         return result
 
     def is_key_down(self, key):

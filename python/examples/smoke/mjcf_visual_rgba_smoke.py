@@ -83,7 +83,7 @@ def main():
         _close(geom.physics_material.restitution, 0.0)
 
         scene = ke.scene.create_backend(ke.scene.BackendType.Native)
-        bridge = ke.animation.SkeletonBridge.from_mjcf(str(mjcf), scene, "/robot")
+        bridge = ke.visual.ArticulationVisual.from_mjcf(str(mjcf), scene, "/robot")
         body = bridge.body_prim(0)
         if body is None:
             raise AssertionError("body prim was not created")

@@ -1,12 +1,12 @@
 ///
-/// SkeletonBridge — adapter from SkeletonFK/SkeletonState to scene Prim xforms.
+/// ArticulationVisualBridge — articulated rigid-link visual bridge.
 ///
-/// FK/IK calculation belongs in animation/. This class is the scene mutation
-/// bridge that applies computed skeleton poses to non-owning Prim visuals.
+/// FK/IK calculation belongs in animation/. This class owns the viewer-side
+/// mapping from articulation/body poses to non-owning scene Prim visuals.
 ///
 
-#ifndef _SKELETON_BRIDGE_HPP_
-#define _SKELETON_BRIDGE_HPP_
+#ifndef _ARTICULATION_VISUAL_BRIDGE_HPP_
+#define _ARTICULATION_VISUAL_BRIDGE_HPP_
 
 #include "animation/skeleton_fk.hpp"
 #include <Eigen/Geometry>
@@ -24,24 +24,24 @@ struct MeshData;
 
 namespace Bridge {
 
-class SkeletonBridgeAsset;
+class ArticulationVisualBridgeAsset;
 
-// Scene mutation adapter for SkeletonFK/SkeletonState.
+// Scene mutation adapter for articulated rigid-link visuals.
 // FK/IK calculation belongs in animation/; this class applies computed poses
-// to non-owning scene Prims.
-class SkeletonBridge {
+// or physics articulation poses to non-owning scene Prims.
+class ArticulationVisualBridge {
   public:
-    SkeletonBridge() {}
+    ArticulationVisualBridge() {}
 
-    // Load MJCF: builds SkeletonFK + creates one scene Prim per body
-    static SkeletonBridge fromMJCF(const std::string& mjcfPath,
+    // Load MJCF: builds FK/link visual mapping + creates one scene Prim per body.
+    static ArticulationVisualBridge fromMJCF(const std::string& mjcfPath,
                                    Scene::SceneBackend* scene,
                                    const std::string& primBasePath = "/robot",
                                    float scale = 1.0f,
                                    const std::string& order = "DFS",
                                    const std::string& meshAssetBasePath = "");
 
-    static SkeletonBridge fromData(const Character::CharacterData& data,
+    static ArticulationVisualBridge fromData(const Character::CharacterData& data,
                                    Scene::SceneBackend* scene,
                                    const std::string& primBasePath = "/robot",
                                    float scale = 1.0f,
@@ -69,7 +69,7 @@ class SkeletonBridge {
     int numBodies() const { return _fk.numBodies(); }
 
   private:
-    friend class SkeletonBridgeAsset;
+    friend class ArticulationVisualBridgeAsset;
 
     Animation::SkeletonFK _fk;
     std::vector<Scene::Prim*> _bodyPrims;   // non-owning, scene owns
@@ -77,22 +77,22 @@ class SkeletonBridge {
     std::vector<int> _renderPrimBodyIndices;
 };
 
-class SkeletonBridgeAsset {
+class ArticulationVisualBridgeAsset {
   public:
-    SkeletonBridgeAsset() = default;
+    ArticulationVisualBridgeAsset() = default;
 
-    static SkeletonBridgeAsset fromMJCF(const std::string& mjcfPath,
+    static ArticulationVisualBridgeAsset fromMJCF(const std::string& mjcfPath,
                                         float scale = 1.0f,
                                         const std::string& order = "DFS");
 
-    static SkeletonBridgeAsset fromData(const Character::CharacterData& data,
+    static ArticulationVisualBridgeAsset fromData(const Character::CharacterData& data,
                                         float scale = 1.0f);
 
     void defineMeshAssets(Scene::SceneBackend* scene,
                           const std::string& meshAssetBasePath,
                           bool splitVisualGeoms = false) const;
 
-    SkeletonBridge instantiate(Scene::SceneBackend* scene,
+    ArticulationVisualBridge instantiate(Scene::SceneBackend* scene,
                                const std::string& primBasePath = "/robot",
                                const std::string& meshAssetBasePath = "",
                                bool splitVisualGeoms = false) const;

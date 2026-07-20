@@ -5,7 +5,7 @@
 #include "engine/scene/scene_backend.hpp"
 #include "physics/articulation.hpp"
 #include "physics/physics.hpp"
-#include "skeleton_bridge.hpp"
+#include "articulation_visual_bridge.hpp"
 
 #include <Eigen/Geometry>
 #include <glm/glm.hpp>
@@ -39,10 +39,10 @@ toCollisionShapeType(Character::CollisionGeomDesc::Type type) {
 } // namespace
 
 void PhysicsBridge::add(const Articulation& artic,
-                        const SkeletonBridge& skelBridge) {
+                        const ArticulationVisualBridge& articulationVisual) {
     int n = artic.numLinks();
     for (int i = 0; i < n; i++)
-        _primVisuals.push_back({artic.link(i), skelBridge.bodyPrim(i)});
+        _primVisuals.push_back({artic.link(i), articulationVisual.bodyPrim(i)});
 }
 
 void PhysicsBridge::sync() {

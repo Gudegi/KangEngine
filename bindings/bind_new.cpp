@@ -1784,9 +1784,9 @@ py::class_<glm::vec3>(m, "vec3")
         .def("get_scene", &App::getScene, py::return_value_policy::reference,
              "Return the active scene backend.");
 
-    py::class_<Bridge::SkinnedCharacterBridge,
-               std::unique_ptr<Bridge::SkinnedCharacterBridge>>(
-        m, "SkinnedCharacterBridge")
+    py::class_<Bridge::SkinVisualBridge,
+               std::unique_ptr<Bridge::SkinVisualBridge>>(
+        m, "SkinVisual")
         .def_static(
             "from_fbx",
             [](App* app, Backend::Shader* shader, const std::string& fbxPath,
@@ -1795,8 +1795,8 @@ py::class_<glm::vec3>(m, "vec3")
                float scale, bool useMaterials) {
                 const std::string& resolvedBindPath =
                     bindFbxPath.has_value() ? bindFbxPath.value() : fbxPath;
-                return std::make_unique<Bridge::SkinnedCharacterBridge>(
-                    Bridge::SkinnedCharacterBridge::fromFBXWithBind(
+                return std::make_unique<Bridge::SkinVisualBridge>(
+                    Bridge::SkinVisualBridge::fromFBXWithBind(
                         app, shader, fbxPath, resolvedBindPath, primBasePath,
                         clipIndex, fps, scale, useMaterials));
             },
@@ -1805,11 +1805,11 @@ py::class_<glm::vec3>(m, "vec3")
             py::arg("prim_base_path") = "/fbx_character",
             py::arg("clip_index") = -1, py::arg("fps") = -1.0f,
             py::arg("scale") = 0.01f, py::arg("use_materials") = true)
-        .def("apply_time", &Bridge::SkinnedCharacterBridge::applyTime,
+        .def("apply_time", &Bridge::SkinVisualBridge::applyTime,
              py::arg("time"), py::arg("loop") = true)
         .def(
             "apply_pose",
-            [](Bridge::SkinnedCharacterBridge& self,
+            [](Bridge::SkinVisualBridge& self,
                py::array_t<float, py::array::c_style | py::array::forcecast>
                    rootTranslation,
                py::array_t<float, py::array::c_style | py::array::forcecast>
@@ -1842,16 +1842,16 @@ py::class_<glm::vec3>(m, "vec3")
                     Eigen::Vector3f(root[0], root[1], root[2]), rotations);
             },
             py::arg("root_translation"), py::arg("local_rotations_wxyz"))
-        .def("set_visible", &Bridge::SkinnedCharacterBridge::setVisible,
+        .def("set_visible", &Bridge::SkinVisualBridge::setVisible,
              py::arg("visible"))
-        .def("set_color", &Bridge::SkinnedCharacterBridge::setColor,
+        .def("set_color", &Bridge::SkinVisualBridge::setColor,
              py::arg("color"))
         .def("set_casts_shadow",
-             &Bridge::SkinnedCharacterBridge::setCastsShadow,
+             &Bridge::SkinVisualBridge::setCastsShadow,
              py::arg("casts_shadow"))
-        .def("motion", &Bridge::SkinnedCharacterBridge::motion,
+        .def("motion", &Bridge::SkinVisualBridge::motion,
              py::return_value_policy::reference_internal)
-        .def("num_meshes", [](const Bridge::SkinnedCharacterBridge& self) {
+        .def("num_meshes", [](const Bridge::SkinVisualBridge& self) {
             return self.meshes().size();
         });
 }

@@ -229,7 +229,7 @@ class GpuContactSensorViewer(ke.App):
         self.add_ground(scale=16.0, shader=self.shaders.ground)
         self.set_camera_view([3.5, -5.5, 3.4], [2.0, 1.2, 0.8])
 
-        self.visual = ke.KangWorldVisualBridge(self, self.demo.world)
+        self.visual = ke.visual.sim.SimWorldVisualizer(self, self.demo.world)
         rigid_xml = contact_asset(self.args)
         group_colors = env_group_colors(self.args.num_envs)
         self.visual.add(

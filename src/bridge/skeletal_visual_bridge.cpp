@@ -1,4 +1,4 @@
-#include "skeleton_visual_bridge.hpp"
+#include "skeletal_visual_bridge.hpp"
 #include "animation/skeleton_math.hpp"
 #include "engine/core/app/app.hpp"
 #include "engine/scene/debug_draw.hpp"
@@ -32,10 +32,10 @@ jointTransforms(const std::vector<glm::vec3>& positions, float radius) {
     return transforms;
 }
 
-SkeletonVisualBridge SkeletonVisualBridge::define(
+SkeletalVisualBridge SkeletalVisualBridge::define(
     App* app, Backend::Shader* shader, const std::string& basePath,
-    const Animation::SkeletonState& state, const SkeletonVisualConfig& config) {
-    SkeletonVisualBridge bridge;
+    const Animation::SkeletonState& state, const SkeletalVisualConfig& config) {
+    SkeletalVisualBridge bridge;
     bridge._app = app;
     bridge._shader = shader;
     bridge._basePath = basePath;
@@ -44,14 +44,14 @@ SkeletonVisualBridge SkeletonVisualBridge::define(
     return bridge;
 }
 
-SkeletonVisualBridge SkeletonVisualBridge::define(
+SkeletalVisualBridge SkeletalVisualBridge::define(
     App* app, Backend::Shader* shader, const std::string& basePath,
     const Animation::SkeletonMotion& motion, float time, bool loop,
-    const SkeletonVisualConfig& config) {
+    const SkeletalVisualConfig& config) {
     return define(app, shader, basePath, motion.sample(time, loop), config);
 }
 
-void SkeletonVisualBridge::applyState(const Animation::SkeletonState& state) {
+void SkeletalVisualBridge::applyState(const Animation::SkeletonState& state) {
     _lastState = state;
     if (!_app || !_shader)
         return;
@@ -96,12 +96,12 @@ void SkeletonVisualBridge::applyState(const Animation::SkeletonState& state) {
     }
 }
 
-void SkeletonVisualBridge::applyMotion(const Animation::SkeletonMotion& motion,
+void SkeletalVisualBridge::applyMotion(const Animation::SkeletonMotion& motion,
                                        float time, bool loop) {
     applyState(motion.sample(time, loop));
 }
 
-void SkeletonVisualBridge::setVisible(bool visible) {
+void SkeletalVisualBridge::setVisible(bool visible) {
     if (_config.visible == visible)
         return;
     _config.visible = visible;
@@ -109,7 +109,7 @@ void SkeletonVisualBridge::setVisible(bool visible) {
         applyState(*_lastState);
 }
 
-void SkeletonVisualBridge::setShowJoints(bool showJoints) {
+void SkeletalVisualBridge::setShowJoints(bool showJoints) {
     if (_config.showJoints == showJoints)
         return;
     _config.showJoints = showJoints;

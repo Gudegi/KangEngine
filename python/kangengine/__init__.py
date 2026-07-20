@@ -10,7 +10,7 @@ if _assets_dir.exists():
 
 from ._core import _ke
 from ._public import set_public_module as _set_public_module
-from . import animation, asset, character, physics, scene, terrain
+from . import animation, asset, character, physics, scene, terrain, visual
 from .app import App, NativeApp, RenderablePrimView, SceneContext
 from .motion_editor import (
     MotionEditor,
@@ -39,13 +39,6 @@ from .utils import (
     KW5,
     MIXAMO,
     preset_rgba,
-)
-from .visual import (
-    KangWorldVisualBridge,
-    VisualArticulationSceneGraph,
-    VisualBodyPick,
-    VisualBatch,
-    VisualRigidSceneGraph,
 )
 # TODO: Keep Torch-heavy modules lazy until CUDA context interop is explicit.
 # This avoids accidental Torch CUDA initialization before PhysX GPU setup.
@@ -127,9 +120,6 @@ PhongMaterialType = _set_public_module(_ke.PhongMaterialType, __name__)
 PBRMaterial = _set_public_module(_ke.PBRMaterial, __name__)
 PBRMaterialType = _set_public_module(_ke.PBRMaterialType, __name__)
 Renderer = _set_public_module(_ke.Renderer, __name__)
-SkinnedCharacterBridge = _set_public_module(_ke.SkinnedCharacterBridge, __name__)
-SkeletonVisualBridge = animation.SkeletonVisualBridge
-SkeletonVisualConfig = animation.SkeletonVisualConfig
 MotionSequencerPanel = _set_public_module(_ke.MotionSequencerPanel, __name__)
 
 # GLM-style math types and helpers exposed by the C++ extension.
@@ -190,11 +180,7 @@ __all__ = [
     "ContactSensor",
     "ContactSensorData",
     "ForceSensor",
-    "KangWorldVisualBridge",
-    "VisualArticulationSceneGraph",
-    "VisualRigidSceneGraph",
-    "VisualBatch",
-    "VisualBodyPick",
+    "visual",
     "terrain",
     "KangEngineEngine",
     "build_mimickit_engine",
@@ -246,9 +232,6 @@ __all__ = [
     "PBRMaterial",
     "PBRMaterialType",
     "Renderer",
-    "SkinnedCharacterBridge",
-    "SkeletonVisualBridge",
-    "SkeletonVisualConfig",
     "MotionSequencerPanel",
     "preset_rgba",
 ]

@@ -1,5 +1,5 @@
 #include "kangEngine.hpp"
-#include "bridge/skeleton_visual_bridge.hpp"
+#include "bridge/skeletal_visual_bridge.hpp"
 
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -36,7 +36,7 @@ class BvhCharacterCppApp : public App {
     std::unique_ptr<Backend::Shader> skeletonShader;
     std::unique_ptr<Backend::Shader> groundShader;
     Animation::SkeletonMotion motion;
-    SkeletonVisualBridge skeletonVisualBridge;
+    SkeletalVisualBridge skeletonVisualBridge;
     MotionSequencerPanel motionPanel;
 
     bool animate = true;
@@ -99,12 +99,12 @@ class BvhCharacterCppApp : public App {
         motionPanel.setPlayingChangedCallback(
             [this](bool playing) { animate = playing; });
 
-        SkeletonVisualConfig visualConfig;
+        SkeletalVisualConfig visualConfig;
         visualConfig.boneRadius = 0.008f;
         visualConfig.jointRadius = 0.025f;
         visualConfig.visible = showSkeleton;
         visualConfig.showJoints = showJoints;
-        skeletonVisualBridge = SkeletonVisualBridge::define(
+        skeletonVisualBridge = SkeletalVisualBridge::define(
             this, skeletonShader.get(), "/bvh_skeleton", motion, 0.0f, true,
             visualConfig);
 

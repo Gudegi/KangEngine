@@ -137,7 +137,7 @@ def main():
     assert render_system.registration_count == 1
 
     # Direct backend removal must still release the private renderer handle.
-    assert app.get_scene().remove_prim("/group")
+    assert app.get_native_scene().remove_prim("/group")
     assert not component.attached
     assert component.owner is None
     assert render_system.registration_count == 0

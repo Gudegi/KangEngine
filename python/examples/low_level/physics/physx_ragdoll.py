@@ -9,7 +9,7 @@ kp in code for active pose holding.
 import os
 
 import kangengine as ke
-from kangengine import animation, asset, imgui, keys, scene
+from kangengine import asset, imgui, keys, scene, visual
 
 
 def asset_path(*parts):
@@ -17,7 +17,7 @@ def asset_path(*parts):
     return os.path.join(base, *parts)
 
 
-class H1RagdollApp(ke.App):
+class RagdollApp(ke.App):
     def setup(self):
         self.spawn_height_offset = 1.5
         self.kp = 0.0
@@ -57,9 +57,9 @@ class H1RagdollApp(ke.App):
             ke.physics.ArticulationConfig.free_base(),
         )
 
-        self.robot = animation.SkeletonBridge.from_mjcf(
+        self.robot = visual.ArticulationVisual.from_mjcf(
             mjcf,
-            self.get_scene(),
+            self.scene.native,
             "/robot",
             1.0,
             "DFS",
@@ -73,7 +73,7 @@ class H1RagdollApp(ke.App):
 
         collision_prims = self.physics_bridge.add_collision_visuals(
             self.articulation,
-            self.get_scene(),
+            self.scene.native,
             "/collision",
             self.show_collision,
         )
@@ -207,6 +207,6 @@ if __name__ == "__main__":
             f"Missing: {', '.join(missing)}"
         )
 
-    app = H1RagdollApp()
+    app = RagdollApp()
     app.initialize(1920, 1080, False, ke.UpAxis.Z)
     app.start()

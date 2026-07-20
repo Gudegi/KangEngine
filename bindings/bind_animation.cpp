@@ -15,8 +15,8 @@
 #include "animation/skeleton_state.hpp"
 #include "animation/skeleton_tree.hpp"
 #include "animation/skinning.hpp"
-#include "bridge/skeleton_bridge.hpp"
-#include "bridge/skeleton_visual_bridge.hpp"
+#include "bridge/articulation_visual_bridge.hpp"
+#include "bridge/skeletal_visual_bridge.hpp"
 #include "engine/core/app/app.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/scene_backend.hpp"
@@ -555,28 +555,28 @@ void bind_animation(py::module& m) {
         .def("print_global_positions", &SkeletonState::printGlobalPositions,
              "Print global joint positions for debugging.");
 
-    // SkeletonBridge
-    py::class_<SkeletonBridge>(
-        anim, "SkeletonBridge",
-        "Bridge that maps a skeleton pose onto scene prim transforms.")
+    // ArticulationVisual / ArticulationVisualAsset
+    py::class_<ArticulationVisualBridge>(
+        anim, "ArticulationVisual",
+        "Viewer-side articulated rigid-link visual object.")
         .def_static(
             "from_mjcf",
             [](const std::string& mjcfPath, Scene::SceneBackend* scene,
                const std::string& primBasePath, float scale,
                const std::string& order, const std::string& meshAssetBasePath) {
-                return SkeletonBridge::fromMJCF(mjcfPath, scene, primBasePath,
+                return ArticulationVisualBridge::fromMJCF(mjcfPath, scene, primBasePath,
                                                 scale, order,
                                                 meshAssetBasePath);
             },
             py::arg("mjcf_path"), py::arg("scene"),
             py::arg("prim_base_path") = "/robot", py::arg("scale") = 1.0f,
             py::arg("order") = "DFS", py::arg("mesh_asset_base_path") = "",
-            "Create a skeleton bridge and scene prims from an MJCF file.")
-        .def("apply_pose", &SkeletonBridge::applyPose,
-             "Apply the bridge's current SkeletonState to scene prims.")
+            "Create an articulation visual and scene prims from an MJCF file.")
+        .def("apply_pose", &ArticulationVisualBridge::applyPose,
+             "Apply the current skeleton/body state to scene prims.")
         .def(
             "set_joint_rotation",
-            [](SkeletonBridge& self, int idx, const FloatArray& q) {
+            [](ArticulationVisualBridge& self, int idx, const FloatArray& q) {
                 self.setJointRotation(idx,
                                       eigenQuatXyzwFromArray(q, "rotation"));
             },
@@ -584,130 +584,130 @@ void bind_animation(py::module& m) {
             "Set a joint rotation from an XYZW array.")
         .def(
             "set_joint_rotation",
-            [](SkeletonBridge& self, int idx, const glm::quat& q) {
+            [](ArticulationVisualBridge& self, int idx, const glm::quat& q) {
                 self.setJointRotation(idx, fromGlm(q));
             },
             py::arg("index"), py::arg("rotation"),
             "Set a joint rotation from a quaternion.")
         .def(
             "set_root_translation",
-            [](SkeletonBridge& self, const FloatArray& t) {
+            [](ArticulationVisualBridge& self, const FloatArray& t) {
                 self.setRootTranslation(
                     eigenVec3FromArray(t, "root_translation"));
             },
             py::arg("translation"), "Set the root translation from an array.")
         .def(
             "set_root_translation",
-            [](SkeletonBridge& self, const glm::vec3& t) {
+            [](ArticulationVisualBridge& self, const glm::vec3& t) {
                 self.setRootTranslation(fromGlm(t));
             },
             py::arg("translation"), "Set the root translation from a vec3.")
-        .def("reset_to_zero_pose", &SkeletonBridge::resetToZeroPose,
+        .def("reset_to_zero_pose", &ArticulationVisualBridge::resetToZeroPose,
              "Reset all joint rotations and root translation to zero pose.")
         .def(
             "skeleton",
-            [](SkeletonBridge& self) -> const SkeletonTree& {
+            [](ArticulationVisualBridge& self) -> const SkeletonTree& {
                 return self.fk().skeleton();
             },
             py::return_value_policy::reference_internal,
             "Return the bridged skeleton tree.")
         .def(
             "state",
-            [](SkeletonBridge& self) -> SkeletonState& {
+            [](ArticulationVisualBridge& self) -> SkeletonState& {
                 return self.fk().state();
             },
             py::return_value_policy::reference_internal,
             "Return the mutable current skeleton state.")
-        .def("body_prim", &SkeletonBridge::bodyPrim, py::arg("index"),
+        .def("body_prim", &ArticulationVisualBridge::bodyPrim, py::arg("index"),
              py::return_value_policy::reference,
              "Return the scene prim for a body index.")
-        .def("body_prims", &SkeletonBridge::bodyPrims,
+        .def("body_prims", &ArticulationVisualBridge::bodyPrims,
              py::return_value_policy::reference_internal,
              "Return all body scene prims.")
-        .def("render_prims", &SkeletonBridge::renderPrims,
+        .def("render_prims", &ArticulationVisualBridge::renderPrims,
              py::return_value_policy::reference_internal,
              "Return actual renderable mesh prims.")
-        .def("render_prim_body_indices", &SkeletonBridge::renderPrimBodyIndices,
+        .def("render_prim_body_indices", &ArticulationVisualBridge::renderPrimBodyIndices,
              py::return_value_policy::reference_internal,
              "Return body index for each render prim.")
-        .def("num_bodies", &SkeletonBridge::numBodies,
+        .def("num_bodies", &ArticulationVisualBridge::numBodies,
              "Return the number of bridged bodies.");
 
-    py::class_<SkeletonBridgeAsset>(
-        anim, "SkeletonBridgeAsset",
-        "Reusable skeleton bridge asset that can instantiate scene prims.")
-        .def_static("from_mjcf", &SkeletonBridgeAsset::fromMJCF,
+    py::class_<ArticulationVisualBridgeAsset>(
+        anim, "ArticulationVisualAsset",
+        "Reusable articulated rigid-link visual asset that can instantiate scene prims.")
+        .def_static("from_mjcf", &ArticulationVisualBridgeAsset::fromMJCF,
                     py::arg("mjcf_path"), py::arg("scale") = 1.0f,
                     py::arg("order") = "DFS",
                     "Load reusable bridge asset data from an MJCF file.")
-        .def("define_mesh_assets", &SkeletonBridgeAsset::defineMeshAssets,
+        .def("define_mesh_assets", &ArticulationVisualBridgeAsset::defineMeshAssets,
              py::arg("scene"), py::arg("mesh_asset_base_path"),
              py::arg("split_visual_geoms") = false,
              "Define shared mesh asset prims in a scene.")
-        .def("instantiate", &SkeletonBridgeAsset::instantiate, py::arg("scene"),
+        .def("instantiate", &ArticulationVisualBridgeAsset::instantiate, py::arg("scene"),
              py::arg("prim_base_path") = "/robot",
              py::arg("mesh_asset_base_path") = "",
              py::arg("split_visual_geoms") = false,
              "Instantiate this asset into a scene.")
-        .def("num_bodies", &SkeletonBridgeAsset::numBodies,
+        .def("num_bodies", &ArticulationVisualBridgeAsset::numBodies,
              "Return the number of bodies in this asset.");
 
-    py::class_<SkeletonVisualConfig>(
-        anim, "SkeletonVisualConfig",
-        "Style settings for SkeletonVisualBridge line/joint rendering.")
+    py::class_<SkeletalVisualConfig>(
+        anim, "SkeletalVisualConfig",
+        "Style settings for SkeletalVisual line/joint rendering.")
         .def(py::init<>(), "Create default skeleton visual settings.")
-        .def_readwrite("bone_color", &SkeletonVisualConfig::boneColor,
+        .def_readwrite("bone_color", &SkeletalVisualConfig::boneColor,
                        "RGBA color for bones.")
-        .def_readwrite("joint_color", &SkeletonVisualConfig::jointColor,
+        .def_readwrite("joint_color", &SkeletalVisualConfig::jointColor,
                        "RGBA color for joints.")
-        .def_readwrite("bone_radius", &SkeletonVisualConfig::boneRadius,
+        .def_readwrite("bone_radius", &SkeletalVisualConfig::boneRadius,
                        "Radius used for bone line geometry.")
-        .def_readwrite("joint_radius", &SkeletonVisualConfig::jointRadius,
+        .def_readwrite("joint_radius", &SkeletalVisualConfig::jointRadius,
                        "Radius used for joint point geometry.")
-        .def_readwrite("segments", &SkeletonVisualConfig::segments,
+        .def_readwrite("segments", &SkeletalVisualConfig::segments,
                        "Segment count for generated round geometry.")
-        .def_readwrite("visible", &SkeletonVisualConfig::visible,
+        .def_readwrite("visible", &SkeletalVisualConfig::visible,
                        "Initial visibility state.")
-        .def_readwrite("show_joints", &SkeletonVisualConfig::showJoints,
+        .def_readwrite("show_joints", &SkeletalVisualConfig::showJoints,
                        "Whether joint markers should be visible.");
 
-    py::class_<SkeletonVisualBridge>(
-        anim, "SkeletonVisualBridge",
+    py::class_<SkeletalVisualBridge>(
+        anim, "SkeletalVisual",
         "Instanced line/point renderer for skeleton poses and motion clips.")
-        .def(py::init<>(), "Create an empty skeleton visual bridge.")
+        .def(py::init<>(), "Create an empty skeletal visual.")
         .def_static(
             "define",
             [](App* app, Backend::Shader* shader, const std::string& basePath,
-               const SkeletonState& state, const SkeletonVisualConfig& config) {
-                return SkeletonVisualBridge::define(app, shader, basePath,
+               const SkeletonState& state, const SkeletalVisualConfig& config) {
+                return SkeletalVisualBridge::define(app, shader, basePath,
                                                     state, config);
             },
             py::arg("app"), py::arg("shader"), py::arg("base_path"),
-            py::arg("state"), py::arg("config") = SkeletonVisualConfig{},
+            py::arg("state"), py::arg("config") = SkeletalVisualConfig{},
             "Create skeleton visuals from a SkeletonState.")
         .def_static(
             "define",
             [](App* app, Backend::Shader* shader, const std::string& basePath,
                const SkeletonMotion& motion, float time, bool loop,
-               const SkeletonVisualConfig& config) {
-                return SkeletonVisualBridge::define(app, shader, basePath,
+               const SkeletalVisualConfig& config) {
+                return SkeletalVisualBridge::define(app, shader, basePath,
                                                     motion, time, loop, config);
             },
             py::arg("app"), py::arg("shader"), py::arg("base_path"),
             py::arg("motion"), py::arg("time") = 0.0f, py::arg("loop") = true,
-            py::arg("config") = SkeletonVisualConfig{},
+            py::arg("config") = SkeletalVisualConfig{},
             "Create skeleton visuals by sampling a SkeletonMotion.")
-        .def("apply_state", &SkeletonVisualBridge::applyState, py::arg("state"),
+        .def("apply_state", &SkeletalVisualBridge::applyState, py::arg("state"),
              "Update visuals from a SkeletonState.")
-        .def("apply_motion", &SkeletonVisualBridge::applyMotion,
+        .def("apply_motion", &SkeletalVisualBridge::applyMotion,
              py::arg("motion"), py::arg("time"), py::arg("loop") = true,
              "Update visuals by sampling a SkeletonMotion.")
-        .def("set_visible", &SkeletonVisualBridge::setVisible,
+        .def("set_visible", &SkeletalVisualBridge::setVisible,
              py::arg("visible"), "Set visibility for all skeleton visuals.")
-        .def("set_show_joints", &SkeletonVisualBridge::setShowJoints,
+        .def("set_show_joints", &SkeletalVisualBridge::setShowJoints,
              py::arg("show_joints"), "Show or hide joint markers.")
-        .def("bone_handle", &SkeletonVisualBridge::boneHandle,
+        .def("bone_handle", &SkeletalVisualBridge::boneHandle,
              "Return the renderable handle used for bones.")
-        .def("joint_handle", &SkeletonVisualBridge::jointHandle,
+        .def("joint_handle", &SkeletalVisualBridge::jointHandle,
              "Return the renderable handle used for joints.");
 }

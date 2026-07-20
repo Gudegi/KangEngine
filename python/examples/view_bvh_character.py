@@ -1,4 +1,4 @@
-"""View a BVH motion with the C++ SkeletonVisualBridge."""
+"""View a BVH motion with the C++ SkeletalVisual."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import argparse
 from pathlib import Path
 
 import kangengine as ke
-from kangengine import asset, imgui
+from kangengine import asset, imgui, visual
 
 
 def repo_root() -> Path:
@@ -41,12 +41,12 @@ class BVHCharacterViewer(ke.App):
         motion_name = Path(self.motion.motion_name() or self.bvh_file).name
         self.editor = ke.MotionEditor(self.motion, motion_name=motion_name)
 
-        config = ke.SkeletonVisualConfig()
+        config = visual.SkeletalVisualConfig()
         config.bone_radius = 0.03
         config.joint_radius = 0.025
         config.visible = self.show_skeleton
         config.show_joints = self.show_joints
-        self.skeleton_visual = ke.SkeletonVisualBridge.define(
+        self.skeleton_visual = visual.SkeletalVisual.define(
             self,
             self.skeleton_shader,
             "/bvh_skeleton",

@@ -1,5 +1,5 @@
-#ifndef _SKINNED_CHARACTER_BRIDGE_HPP_
-#define _SKINNED_CHARACTER_BRIDGE_HPP_
+#ifndef _SKIN_VISUAL_BRIDGE_HPP_
+#define _SKIN_VISUAL_BRIDGE_HPP_
 
 #include "animation/skeleton_motion.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
@@ -33,7 +33,7 @@ namespace Bridge {
 // Long term, this should split into SkeletonState calculation and upload
 // plumbing. Keep it as a convenience adapter while the runtime/render state
 // boundary is still settling.
-class SkinnedCharacterBridge {
+class SkinVisualBridge {
   public:
     struct MeshBinding {
         std::string name;
@@ -45,17 +45,17 @@ class SkinnedCharacterBridge {
         glm::vec4 baseColor = glm::vec4(1.0f);
 
       private:
-        friend class SkinnedCharacterBridge;
+        friend class SkinVisualBridge;
         std::shared_ptr<Scene::RenderComponent> component;
     };
 
-    static SkinnedCharacterBridge
+    static SkinVisualBridge
     fromFBX(App* app, Backend::Shader* shader, const std::string& fbxPath,
             const std::string& primBasePath = "/fbx_character",
             int clipIndex = -1, float fps = -1.0f, float scale = 0.01f,
             bool useMaterials = true);
 
-    static SkinnedCharacterBridge fromFBXWithBind(
+    static SkinVisualBridge fromFBXWithBind(
         App* app, Backend::Shader* shader, const std::string& motionFbxPath,
         const std::string& bindFbxPath,
         const std::string& primBasePath = "/fbx_character", int clipIndex = -1,

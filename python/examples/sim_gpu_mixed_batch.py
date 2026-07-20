@@ -408,7 +408,7 @@ class MixedGpuBatchViewer(ke.App):
         self.pd_kp.fill_(float(self.args.pd_kp))
         self.pd_kd.fill_(float(self.args.pd_kd))
 
-        self.visual = ke.KangWorldVisualBridge(self, self.world)
+        self.visual = ke.visual.sim.SimWorldVisualizer(self, self.world)
         self.ball_visual = self.visual.add(
             self.balls,
             asset_path("objects", "ball.xml"),

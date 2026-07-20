@@ -100,7 +100,7 @@ class MultiEnvSimWorldApp(ke.App):
             self.ramp_rot_xyzw,
             register_as_ground=True,
         )
-        self.visual = ke.KangWorldVisualBridge(self, self.world)
+        self.visual = ke.visual.sim.SimWorldVisualizer(self, self.world)
         self._add_ramp_visual()
         self.box_xml = package_asset_path("objects", "box.xml")
         box_data = self.world.load_mjcf(self.box_xml)

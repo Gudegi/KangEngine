@@ -62,7 +62,7 @@ class FBXMeshViewer(ke.App):
         self._configure_lighting()
         self._configure_camera()
         self.meshes = asset.FBXLoader.load_meshes(self.fbx_file, self.scale)
-        scene.Prim.define_manipulation_group(self.get_scene(), FBX_ROOT_PATH)
+        scene.Prim.define_manipulation_group(self.scene.native, FBX_ROOT_PATH)
 
         if self.show_ground:
             self.scene.add_mesh(

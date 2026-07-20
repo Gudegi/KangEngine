@@ -40,7 +40,7 @@ class H1RagdollApp : public App {
     std::unique_ptr<Backend::Shader> commonShader;
     std::unique_ptr<Backend::Shader> groundShader;
 
-    SkeletonBridge robot;
+    ArticulationVisualBridge robot;
     PhysicsWorld physics{PhysicsConfig::zUp()};
     Articulation artic;
     Bridge::PhysicsBridge physicsBridge;
@@ -116,7 +116,7 @@ class H1RagdollApp : public App {
                                     mjcfData.inertials,
                                     ArticulationConfig::freeBase());
 
-        robot = SkeletonBridge::fromData(mjcfData, getScene());
+        robot = ArticulationVisualBridge::fromData(mjcfData, getScene());
         physicsBridge.add(artic, robot);
         bodyHandles.clear();
         bodyHandles.reserve(robot.bodyPrims().size());

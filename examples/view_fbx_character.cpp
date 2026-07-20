@@ -60,7 +60,7 @@ class FbxCharacterCppApp : public App {
     std::unique_ptr<Backend::Shader> skinnedShader;
     std::unique_ptr<Backend::Shader> lineShader;
     std::unique_ptr<Backend::Shader> groundShader;
-    SkinnedCharacterBridge character;
+    SkinVisualBridge character;
     MotionSequencerPanel motionPanel;
 
     RenderableHandle skeletonHandle = InvalidHandle;
@@ -121,7 +121,7 @@ class FbxCharacterCppApp : public App {
         ground.meshData = Scene::Prim::createPlaneData(20.0f, _upAxis);
         addMeshPrim(std::move(ground));
 
-        character = SkinnedCharacterBridge::fromFBX(
+        character = SkinVisualBridge::fromFBX(
             this, skinnedShader.get(), fbxPath, "/fbx_character", clipIndex,
             fps, importScale);
         Scene::Prim::defineManipulationGroup(getScene(), "/fbx_character");

@@ -129,7 +129,7 @@ class MjcfDofControlApp(ke.App):
             sim_dt=float(self.sim_dt),
             add_ground=True,
         )
-        self.visual = ke.KangWorldVisualBridge(self, self.world)
+        self.visual = ke.visual.sim.SimWorldVisualizer(self, self.world)
 
         self.ground_view = self.scene.add_ground(
             "/ground",

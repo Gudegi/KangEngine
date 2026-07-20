@@ -13,7 +13,7 @@ from pathlib import Path
 import numpy as np
 
 import kangengine as ke
-from kangengine import animation, asset, imgui, keys, scene
+from kangengine import asset, imgui, keys, scene, visual
 from kangengine.utils.math import quat_wxyz_to_xyzw, quat_wxyz_twist_angle
 
 from view_motion import default_char_file, default_motion_file, load_motion
@@ -65,9 +65,7 @@ class KwMotionTrackingApp(ke.App):
 
         self.sim_world = ke.KangSimWorld(add_ground=True)
 
-        ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
-        ground.set_mesh_data(scene.Prim.create_plane_data(100.0, ke.UpAxis.Z))
-        self.scene.add_renderable(ground, self.ground_shader)
+        self.scene.add_ground(scale=100.0, shader=self.ground_shader)
 
         mjcf_data = asset.MJCFLoader.load(self.char_file, order=self.order)
         sim_record = self.sim_world.add_articulation(
@@ -80,7 +78,7 @@ class KwMotionTrackingApp(ke.App):
         self.articulation = sim_record.articulation
         self.num_dofs = self.articulation.num_dofs()
 
-        self.visual_bridge = ke.KangWorldVisualBridge(self, self.sim_world)
+        self.visual_bridge = ke.visual.sim.SimWorldVisualizer(self, self.sim_world)
         self.visual_bridge.add_articulation_scene_graph(
             0,
             0,
@@ -92,9 +90,9 @@ class KwMotionTrackingApp(ke.App):
             show_collision=self.show_collision,
         )
 
-        self.ghost = animation.SkeletonBridge.from_mjcf(
+        self.ghost = visual.ArticulationVisual.from_mjcf(
             self.char_file,
-            self.get_scene(),
+            self.scene.native,
             "/ghost",
             1.0,
             self.order,

@@ -13,7 +13,7 @@
 #include "asset/heightmap_loader.hpp"
 #include "character/character_description.hpp"
 #include "bridge/physics_bridge.hpp"
-#include "bridge/skeleton_bridge.hpp"
+#include "bridge/articulation_visual_bridge.hpp"
 #include "engine/core/app/app.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "physics/articulation.hpp"
@@ -1018,7 +1018,7 @@ void bind_physics(py::module& m) {
         .def("add", &PhysicsBridge::add, py::arg("artic"),
              py::arg("skel_bridge"),
              py::keep_alive<1, 2>(), py::keep_alive<1, 3>(),
-             "Connect an articulation to a SkeletonBridge.")
+             "Connect an articulation to an ArticulationVisualBridge.")
         .def("sync", &PhysicsBridge::sync,
              "Copy latest physics transforms into connected visuals.")
         .def("set_collision_visible", &PhysicsBridge::setCollisionVisible,
