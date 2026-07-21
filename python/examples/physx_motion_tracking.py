@@ -63,7 +63,7 @@ class KwMotionTrackingApp(ke.App):
         self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
         self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
 
-        self.sim_world = ke.KangSimWorld(add_ground=True)
+        self.sim_world = ke.sim.KangSimWorld(add_ground=True)
 
         self.scene.add_ground(scale=100.0, shader=self.ground_shader)
 
@@ -164,7 +164,7 @@ class KwMotionTrackingApp(ke.App):
         targets = self._motion_dof_targets(self.local_rot[0])
         if len(targets) == self.num_dofs:
             self.sim_world.set_dof_state(None, 0, targets)
-            self.sim_world.set_cmd(None, 0, targets, ke.ControlMode.POS, self.kp, self.kd)
+            self.sim_world.set_cmd(None, 0, targets, ke.sim.ControlMode.POS, self.kp, self.kd)
         self.sim_world.step(substeps=0, apply_commands=False)
         self.visual_bridge.sync()
 
@@ -190,7 +190,7 @@ class KwMotionTrackingApp(ke.App):
 
         targets = self._motion_dof_targets(self.local_rot[idx])
         if len(targets) == self.num_dofs:
-            self.sim_world.set_cmd(None, 0, targets, ke.ControlMode.POS, self.kp, self.kd)
+            self.sim_world.set_cmd(None, 0, targets, ke.sim.ControlMode.POS, self.kp, self.kd)
 
         self.sim_world.step()
         self.visual_bridge.sync()

@@ -32,7 +32,7 @@ def main():
     parser.add_argument("--cuda-device", type=int, default=0)
     args = parser.parse_args()
 
-    world = ke.KangSimWorld(
+    world = ke.sim.KangSimWorld(
         num_envs=args.num_envs,
         sim_device=f"cuda:{args.cuda_device}",
         sim_dt=1.0 / 120.0,

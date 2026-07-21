@@ -10,7 +10,18 @@ if _assets_dir.exists():
 
 from ._core import _ke
 from ._public import set_public_module as _set_public_module
-from . import animation, asset, character, geometry, physics, scene, terrain, visual
+from . import (
+    animation,
+    asset,
+    character,
+    geometry,
+    material,
+    physics,
+    render,
+    scene,
+    terrain,
+    visual,
+)
 from .app import App, NativeApp, RenderablePrimView, SceneContext
 from .motion_editor import (
     MotionEditor,
@@ -20,13 +31,6 @@ from .motion_editor import (
     MotionCameraFollower,
     RootTrajectoryData,
     TrackingData,
-)
-from .motion_modules import (
-    MotionModule,
-    ContactModule,
-    RootTrajectoryModule,
-    TargetModule,
-    TrackingModule,
 )
 from .utils import (
     COMMON,
@@ -43,13 +47,6 @@ from .utils import (
 # TODO: Keep Torch-heavy modules lazy until CUDA context interop is explicit.
 # This avoids accidental Torch CUDA initialization before PhysX GPU setup.
 _LAZY_IMPORTS = {
-    "ControlMode": (".sim", "ControlMode"),
-    "SimDevice": (".sim", "SimDevice"),
-    "SimArticulation": (".sim", "SimArticulation"),
-    "SimArticulationBatch": (".sim", "SimArticulationBatch"),
-    "SimRigid": (".sim", "SimRigid"),
-    "SimRigidBatch": (".sim", "SimRigidBatch"),
-    "KangSimWorld": (".sim", "KangSimWorld"),
     "ContactSensor": (".sensor", "ContactSensor"),
     "ContactSensorData": (".sensor", "ContactSensorData"),
     "ForceSensor": (".sensor", "ForceSensor"),
@@ -60,17 +57,14 @@ _LAZY_IMPORTS = {
         "install_mimickit_engine_builder",
     ),
 }
+_LAZY_MODULES = {
+    "motion_module": ".motion_module",
+    "sim": ".sim",
+}
 
 if _TYPE_CHECKING:
-    from .sim import (
-        ControlMode,
-        KangSimWorld,
-        SimArticulation,
-        SimArticulationBatch,
-        SimDevice,
-        SimRigid,
-        SimRigidBatch,
-    )
+    from . import motion_module as motion_module
+    from . import sim as sim
     from .sensor import ContactSensor, ContactSensorData, ForceSensor
     from .mimickit_engine import (
         KangEngineEngine,
@@ -80,12 +74,18 @@ if _TYPE_CHECKING:
 
 
 def __getattr__(name):
+    from importlib import import_module
+
+    module_name = _LAZY_MODULES.get(name)
+    if module_name is not None:
+        value = import_module(module_name, __name__)
+        globals()[name] = value
+        return value
+
     try:
         module_name, attr_name = _LAZY_IMPORTS[name]
     except KeyError as exc:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from exc
-
-    from importlib import import_module
 
     value = getattr(import_module(module_name, __name__), attr_name)
     globals()[name] = value
@@ -93,20 +93,9 @@ def __getattr__(name):
 
 # Core engine API. Keep top-level exports focused on common viewer/app usage;
 # heavier simulation and MimicKit APIs stay lazy via _LAZY_IMPORTS.
-BackendType = _set_public_module(_ke.BackendType, __name__)
-GraphicsDevice = _set_public_module(_ke.GraphicsDevice, __name__)
-Shader = _set_public_module(_ke.Shader, __name__)
-Texture = _set_public_module(_ke.Texture, __name__)
 Camera = _set_public_module(_ke.Camera, __name__)
 UpAxis = _set_public_module(_ke.UpAxis, __name__)
-TransformSource = _set_public_module(_ke.TransformSource, __name__)
-ExternalBufferFormat = _set_public_module(_ke.ExternalBufferFormat, __name__)
-ExternalSyncPolicy = _set_public_module(_ke.ExternalSyncPolicy, __name__)
-ExternalBufferDesc = _set_public_module(_ke.ExternalBufferDesc, __name__)
 InteractionMode = _set_public_module(_ke.InteractionMode, __name__)
-ToneMapMode = _set_public_module(_ke.ToneMapMode, __name__)
-TextureRole = _set_public_module(_ke.TextureRole, __name__)
-AlphaMode = _set_public_module(_ke.AlphaMode, __name__)
 RayPickResult = _set_public_module(_ke.RayPickResult, __name__)
 DirectionalLight = _set_public_module(_ke.DirectionalLight, __name__)
 PointLight = _set_public_module(_ke.PointLight, __name__)
@@ -114,12 +103,6 @@ SpotLight = _set_public_module(_ke.SpotLight, __name__)
 ColorLibrary = _set_public_module(_ke.ColorLibrary, __name__)
 ColorType = _set_public_module(_ke.ColorType, __name__)
 Color = _set_public_module(_ke.Color, __name__)
-Material = _set_public_module(_ke.Material, __name__)
-PhongMaterial = _set_public_module(_ke.PhongMaterial, __name__)
-PhongMaterialType = _set_public_module(_ke.PhongMaterialType, __name__)
-PBRMaterial = _set_public_module(_ke.PBRMaterial, __name__)
-PBRMaterialType = _set_public_module(_ke.PBRMaterialType, __name__)
-Renderer = _set_public_module(_ke.Renderer, __name__)
 MotionSequencerPanel = _set_public_module(_ke.MotionSequencerPanel, __name__)
 
 # GLM-style math types and helpers exposed by the C++ extension.
@@ -150,17 +133,12 @@ __all__ = [
     "RenderablePrimView",
     "SceneContext",
     "MotionEditor",
-    "MotionModule",
     "MotionPlayer",
     "MotionSampleData",
-    "ContactModule",
     "ContactData",
     "MotionCameraFollower",
-    "RootTrajectoryModule",
     "RootTrajectoryData",
     "TrackingData",
-    "TrackingModule",
-    "TargetModule",
     "JointMapper",
     "JointSemantic",
     "COMMON",
@@ -170,13 +148,6 @@ __all__ = [
     "KW",
     "KW5",
     "MIXAMO",
-    "ControlMode",
-    "SimDevice",
-    "SimArticulation",
-    "SimArticulationBatch",
-    "SimRigid",
-    "SimRigidBatch",
-    "KangSimWorld",
     "ContactSensor",
     "ContactSensorData",
     "ForceSensor",
@@ -185,20 +156,9 @@ __all__ = [
     "KangEngineEngine",
     "build_mimickit_engine",
     "install_mimickit_engine_builder",
-    "BackendType",
-    "GraphicsDevice",
-    "Shader",
-    "Texture",
     "Camera",
     "UpAxis",
-    "TransformSource",
-    "ExternalBufferFormat",
-    "ExternalSyncPolicy",
-    "ExternalBufferDesc",
     "InteractionMode",
-    "ToneMapMode",
-    "TextureRole",
-    "AlphaMode",
     "RayPickResult",
     "DirectionalLight",
     "PointLight",
@@ -215,7 +175,11 @@ __all__ = [
     "asset",
     "animation",
     "geometry",
+    "material",
+    "motion_module",
     "physics",
+    "render",
+    "sim",
     "imgui",
     "keys",
     "X",
@@ -227,12 +191,6 @@ __all__ = [
     "ColorLibrary",
     "ColorType",
     "Color",
-    "Material",
-    "PhongMaterial",
-    "PhongMaterialType",
-    "PBRMaterial",
-    "PBRMaterialType",
-    "Renderer",
     "MotionSequencerPanel",
     "preset_rgba",
 ]

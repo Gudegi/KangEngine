@@ -134,7 +134,7 @@ class FbxCharacterBridgeViewer(ke.App):
         )
         self.camera_follower.update(camera, 0, force=True)
         self.editor.add_module(
-            ke.RootTrajectoryModule(
+            ke.motion_module.RootTrajectoryModule(
                 self,
                 "/debug/fbx_character2_root_trajectory",
                 line_width=2.0,
@@ -150,7 +150,7 @@ class FbxCharacterBridgeViewer(ke.App):
             JointSemantic.RIGHT_ANKLE,
         ])
         self.editor.add_module(
-            ke.TrackingModule(
+            ke.motion_module.TrackingModule(
                 self,
                 "/debug/fbx_character2_tracking",
                 joint_indices=tracking,
@@ -159,14 +159,14 @@ class FbxCharacterBridgeViewer(ke.App):
             )
         )
         self.editor.add_module(
-            ke.ContactModule(
+            ke.motion_module.ContactModule(
                 self,
                 "/debug/fbx_character2_contacts",
                 point_size=15.0,
             )
         )
         self.editor.add_module(
-            ke.TargetModule(
+            ke.motion_module.TargetModule(
                 self,
                 "/debug/fbx_character2_target",
                 source_semantic=JointSemantic.RIGHT_HAND,

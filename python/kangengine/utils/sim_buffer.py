@@ -4,6 +4,8 @@ from dataclasses import dataclass
 
 import torch
 
+from .. import render as render_api
+
 
 @dataclass(frozen=True)
 class SimBuffer:
@@ -281,13 +283,13 @@ def to_external_transform_desc(
     if version is not None:
         view.version = int(version)
 
-    desc = _ke.ExternalBufferDesc()
+    desc = render_api.ExternalBufferDesc()
     desc.view = view
-    desc.format = _ke.ExternalBufferFormat.MAT4
+    desc.format = render_api.ExternalBufferFormat.MAT4
     desc.count = int(buffer.shape[0])
     desc.stride_bytes = 0
     desc.sync_policy = (
-        _ke.ExternalSyncPolicy.VERSIONED
+        render_api.ExternalSyncPolicy.VERSIONED
         if sync_policy is None
         else sync_policy
     )

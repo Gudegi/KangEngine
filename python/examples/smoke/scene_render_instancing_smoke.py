@@ -52,7 +52,7 @@ def main():
         "/external/batch",
         mesh,
         shader,
-        transform_source=ke.TransformSource.ExternalBuffer,
+        transform_source=ke.render.TransformSource.ExternalBuffer,
     )
     transforms = torch.eye(4, dtype=torch.float32).repeat(3, 1, 1)
     transforms[:, 3, 0] = torch.tensor([-1.0, 0.0, 1.0])
@@ -67,7 +67,7 @@ def main():
         ke.vec3(0.0, 0.0, 5.0), ke.vec3(0.0, 0.0, -1.0)
     )
     assert batch_pick.hit
-    assert batch_pick.transform_source == ke.TransformSource.ExternalBuffer
+    assert batch_pick.transform_source == ke.render.TransformSource.ExternalBuffer
     assert batch_pick.prim is None
 
     assert batch.remove()

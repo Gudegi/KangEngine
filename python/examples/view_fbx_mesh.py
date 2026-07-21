@@ -104,7 +104,7 @@ class FBXMeshViewer(ke.App):
                     # FBX does not reliably describe alpha semantics. Atlas
                     # textures in these formats commonly use binary cutouts;
                     # Mask keeps depth writes and clips their empty texels.
-                    view.set_alpha_mode(ke.AlphaMode.Mask, 0.5)
+                    view.set_alpha_mode(ke.render.AlphaMode.Mask, 0.5)
                 textured_count += 1
             if diffuse_texture is not None and normal_texture is not None:
                 view.set_texture(normal_texture, 5)

@@ -89,7 +89,7 @@ class MultiEnvSimWorldApp(ke.App):
         self.shaders = self.create_standard_shaders()
         self.set_camera_view([3.6, -5.0, 2.8], [0.0, 0.0, 0.6])
 
-        self.world = ke.KangSimWorld(
+        self.world = ke.sim.KangSimWorld(
             num_envs=self.num_envs,
             sim_dt=1.0 / 120.0,
             add_ground=False,

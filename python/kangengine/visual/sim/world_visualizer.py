@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from ..._core import _ke
+from ... import render as render_api
 from ...rigid import expand_rigid_body_state, rigid_shape_specs
 from ..articulation import ArticulationVisualAsset
 from .batch import VisualBatch
@@ -810,7 +811,7 @@ class SimWorldVisualizer:
             )
         body_handles = [
             self.app._add_renderable(
-                material, prim, _ke.TransformSource.ExternalBuffer
+                material, prim, render_api.TransformSource.ExternalBuffer
             )
             for prim in body_prims
         ]
@@ -885,7 +886,7 @@ class SimWorldVisualizer:
             )
         body_handles = [
             self.app._add_renderable(
-                material, prim, _ke.TransformSource.ExternalBuffer
+                material, prim, render_api.TransformSource.ExternalBuffer
             )
             for prim in body_prims
         ]
@@ -954,7 +955,7 @@ class SimWorldVisualizer:
             )
         prim = rigid_visual.body_prims[0]
         handle = self.app._add_renderable(
-            material, prim, _ke.TransformSource.ExternalBuffer
+            material, prim, render_api.TransformSource.ExternalBuffer
         )
         backend = RigidGPUExternalBackend(
             self.app, self.world, obj_id, env_ids, prim, handle
@@ -1006,7 +1007,7 @@ class SimWorldVisualizer:
         body_prims = list(rigid_visual.body_prims)
         body_handles = [
             self.app._add_renderable(
-                material, prim, _ke.TransformSource.ExternalBuffer
+                material, prim, render_api.TransformSource.ExternalBuffer
             )
             for prim in body_prims
         ]

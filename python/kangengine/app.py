@@ -11,6 +11,9 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from ._core import _ke
+from ._public import unwrap_native
+from . import material as material_api
+from . import render as render_api
 
 keys = _ke.keys
 scene = _ke.scene
@@ -78,13 +81,15 @@ class RenderablePrimView:
         """Return the per-instance base-color multiplier."""
         return self.prim.get_display_color_alpha()
 
-    def set_texture(self, texture, role_or_slot=_ke.TextureRole.BaseColor):
-        self._render_system.set_texture(self.component, texture, role_or_slot)
+    def set_texture(self, texture, role_or_slot=render_api.TextureRole.BaseColor):
+        self._render_system.set_texture(
+            self.component, unwrap_native(texture), role_or_slot
+        )
         return self
 
     def set_material(self, material):
         """Replace this renderable's material and move it to the right batch."""
-        self._render_system.set_material(self.component, material)
+        self._render_system.set_material(self.component, unwrap_native(material))
         return self
 
     def set_transform_buffer(
@@ -103,7 +108,7 @@ class RenderablePrimView:
             dtype="float32",
             name=f"{self.path}:transforms",
             sync_policy=(
-                _ke.ExternalSyncPolicy.NONE
+                render_api.ExternalSyncPolicy.NONE
                 if sync_policy is None
                 else sync_policy
             ),
@@ -217,7 +222,7 @@ class SceneContext:
         wrapped internally by the native SceneRenderSystem.
         """
         if transform_source is None:
-            transform_source = _ke.TransformSource.SceneGraph
+            transform_source = render_api.TransformSource.SceneGraph
         self._app._add_renderable(material, prim, transform_source)
         component = prim.get_render_component()
         if component is None:
@@ -306,9 +311,9 @@ class SceneContext:
             if double_sided:
                 view.set_double_sided(True)
             if self._app._obj_subset_has_alpha_texture(info, subset):
-                view.set_alpha_mode(_ke.AlphaMode.Mask)
+                view.set_alpha_mode(render_api.AlphaMode.Mask)
             elif self._app._obj_subset_alpha(info, subset) < 1.0:
-                view.set_alpha_mode(_ke.AlphaMode.Blend)
+                view.set_alpha_mode(render_api.AlphaMode.Blend)
             views.append(view)
 
         return ObjImportView(root, views, info)
@@ -402,7 +407,7 @@ class App(NativeApp):
         self.materials = []
         self.textures = []
         self.up_axis = _ke.UpAxis.Y
-        self.graphics_backend_type = _ke.BackendType.OpenGL
+        self.graphics_backend_type = render_api.BackendType.OpenGL
         self.scene_backend_type = scene.BackendType.Native
         self.headless = False
         self.scene = SceneContext(self)
@@ -427,6 +432,10 @@ class App(NativeApp):
         native SceneBackend.
         """
         return self.scene
+
+    def get_renderer(self):
+        """Return the native renderer exposed through ``ke.render``."""
+        return super().get_renderer()
 
     def package_asset_path(self, *parts: str) -> str:
         return str(Path(_ke.__file__).resolve().parent / "assets" / Path(*parts))
@@ -454,7 +463,7 @@ class App(NativeApp):
         )
         self._bind_common_ubos(shader)
         if str(fragment_shader).endswith("checkerboard.fs"):
-            self.set_background_shader(shader)
+            self.set_background_shader(unwrap_native(shader))
         self._register_shader_resource(
             shader,
             f"{vertex_shader}+{fragment_shader}",
@@ -526,20 +535,26 @@ class App(NativeApp):
     def _remember_resource_handle(self, obj, handle):
         if obj is not None:
             # C++ resource entries for materials/textures/shaders are
-            # intentionally non-owning. Holding the Python wrapper here keeps
+            # intentionally non-owning. Holding the Python object here keeps
             # those objects alive and prevents stale id() reuse from returning
             # an unrelated handle.
             self._resource_handles_by_object_id[id(obj)] = (obj, handle)
+            native = unwrap_native(obj)
+            if native is not obj:
+                self._resource_handles_by_object_id[id(native)] = (native, handle)
         return handle
 
     def _existing_resource_handle(self, obj):
         if obj is None:
             return None
-        record = self._resource_handles_by_object_id.get(id(obj))
-        if record is None:
-            return None
-        recorded_obj, handle = record
-        return handle if recorded_obj is obj else None
+        for candidate in (obj, unwrap_native(obj)):
+            record = self._resource_handles_by_object_id.get(id(candidate))
+            if record is None:
+                continue
+            recorded_obj, handle = record
+            if recorded_obj is candidate:
+                return handle
+        return None
 
     def _next_resource_name(self, obj, prefix: str):
         self._resource_counter += 1
@@ -549,7 +564,9 @@ class App(NativeApp):
         existing = self._existing_resource_handle(shader)
         if existing is not None:
             return existing
-        handle = self.resources.register_shader(str(display_name), shader, str(uri))
+        handle = self.resources.register_shader(
+            str(display_name), unwrap_native(shader), str(uri)
+        )
         return self._remember_resource_handle(shader, handle)
 
     def _register_material_resource(self, material):
@@ -559,7 +576,7 @@ class App(NativeApp):
         name = self._next_resource_name(material, "Material")
         handle = self.resources.register_material(
             name,
-            material,
+            unwrap_native(material),
             f"python://resource/Material/{name}",
         )
         return self._remember_resource_handle(material, handle)
@@ -571,7 +588,7 @@ class App(NativeApp):
         name = str(display_name) if display_name else self._next_resource_name(texture, "Texture")
         handle = self.resources.register_texture(
             name,
-            texture,
+            unwrap_native(texture),
             str(uri) if uri is not None else f"python://resource/Texture/{name}",
         )
         return self._remember_resource_handle(texture, handle)
@@ -594,11 +611,11 @@ class App(NativeApp):
         self._register_material_resource(material)
         return material
 
-    def create_vertex_color_material(self, *, shader=None):
+    def create_vertex_color_material(self, *, shader=None) -> material_api.VertexColorMaterial:
         """Create and retain a material for display/vertex-color shaders."""
         if shader is None:
             shader = self.create_standard_shaders().common
-        return self._remember_material(_ke.VertexColorMaterial(shader))
+        return self._remember_material(material_api.VertexColorMaterial(shader))
 
     def _remember_textures(self, *textures):
         """Keep Python-created native textures alive while materials use them."""
@@ -607,7 +624,7 @@ class App(NativeApp):
                 self.textures.append(texture)
                 self._register_texture_resource(texture)
 
-    def load_texture(self, path, *, flip: bool = True):
+    def load_texture(self, path, *, flip: bool = True) -> render_api.Texture:
         """Load and retain a GPU texture, cached by normalized path."""
         texture_path = str(_texture_path_candidate(path).resolve())
         cached = self._textures_by_uri.get(texture_path)
@@ -637,7 +654,7 @@ class App(NativeApp):
         specular_map=None,
         alpha_map=None,
         normal_map=None,
-    ):
+    ) -> material_api.PhongMaterial:
         """Create and retain a Phong material instance.
 
         Each call returns a distinct material, so two meshes can share the same
@@ -645,7 +662,7 @@ class App(NativeApp):
         """
         if shader is None:
             shader = self.create_standard_shaders().phong
-        material = _ke.PhongMaterial(shader)
+        material = material_api.PhongMaterial(shader)
         if preset is not None:
             material.load_from_preset(preset)
         if ambient is not None:
@@ -685,7 +702,7 @@ class App(NativeApp):
         ao_texture=None,
         orm_texture=None,
         emissive_texture=None,
-    ):
+    ) -> material_api.PBRMaterial:
         """Create and retain a PBR material instance.
 
         Material identity is intentionally per instance: sharing one material
@@ -694,7 +711,7 @@ class App(NativeApp):
         """
         if shader is None:
             shader = self.create_standard_shaders().pbr
-        material = _ke.PBRMaterial(shader)
+        material = material_api.PBRMaterial(shader)
         if preset is not None:
             material.load_from_preset(preset)
         if base_color is not None:
@@ -817,8 +834,10 @@ class App(NativeApp):
     def _add_renderable(self, material_or_shader, prim, transform_source=None):
         """Low-level renderer handle path used by internal bridges."""
         if transform_source is None:
-            transform_source = _ke.TransformSource.SceneGraph
-        return super().add_renderable(material_or_shader, prim, transform_source)
+            transform_source = render_api.TransformSource.SceneGraph
+        return super().add_renderable(
+            unwrap_native(material_or_shader), prim, transform_source
+        )
 
     def _add_skinned_renderable(
         self,
@@ -829,9 +848,9 @@ class App(NativeApp):
     ):
         """Low-level skinned renderer handle path used by internal bridges."""
         if transform_source is None:
-            transform_source = _ke.TransformSource.SceneGraph
+            transform_source = render_api.TransformSource.SceneGraph
         return super().add_skinned_renderable(
-            material_or_shader,
+            unwrap_native(material_or_shader),
             prim,
             skinned_mesh_data,
             transform_source,
@@ -871,7 +890,7 @@ class App(NativeApp):
         Prefer a Material. Shader input remains accepted for compatibility.
         """
         if transform_source is None:
-            transform_source = _ke.TransformSource.SceneGraph
+            transform_source = render_api.TransformSource.SceneGraph
         self._add_skinned_renderable(
             material,
             prim,
@@ -943,7 +962,7 @@ class App(NativeApp):
 
         self.up_axis = _ke.UpAxis.Y if up_axis is None else up_axis
         if graphics_backend_type is None:
-            graphics_backend_type = _ke.BackendType.OpenGL
+            graphics_backend_type = render_api.BackendType.OpenGL
         if scene_backend_type is None:
             scene_backend_type = scene.BackendType.Native
         self.graphics_backend_type = graphics_backend_type

@@ -2,7 +2,7 @@
         build_usd build_usd_debug build_python build_python_debug \
         build_python_cuda build_usd_python build_usd_python_debug \
         validate_physx_gpu validate_physx_gpu_cpp validate_sim_visual_batch \
-        validate_render_component \
+        validate_python_api validate_render_component \
         docs docs_clean \
         run run2 run_debug run_release run_relWithDebInfo \
         clean_all clean_debug clean_release clean_relWithDebInfo
@@ -95,6 +95,17 @@ validate_physx_gpu_cpp: build_cuda
 
 validate_sim_visual_batch: build_python
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/sim_visual_batch_smoke.py
+
+validate_python_api: build_python
+	PYTHONPYCACHEPREFIX=/tmp/kangengine-pycache $(PYTHON) -m py_compile \
+		python/kangengine/__init__.py \
+		python/kangengine/material/__init__.py \
+		python/kangengine/material/materials.py \
+		python/kangengine/render/__init__.py \
+		python/kangengine/sim.py \
+		python/kangengine/motion_module/__init__.py \
+		python/kangengine/motion_module/modules.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/public_api_surface_smoke.py
 
 validate_render_component: build_python
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/obj_material_loader_smoke.py

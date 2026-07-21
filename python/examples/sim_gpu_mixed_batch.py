@@ -67,7 +67,7 @@ def print_gpu_state(world, step: int, cuda_device: int):
 
 
 def create_simulation(num_envs: int, cuda_device: int):
-    world = ke.KangSimWorld(
+    world = ke.sim.KangSimWorld(
         num_envs=num_envs,
         sim_device=f"cuda:{cuda_device}",
         sim_dt=1.0 / 120.0,
@@ -204,12 +204,12 @@ def update_random_position_targets(
     noise.uniform_(-noise_scale * 0.08, noise_scale * 0.08, generator=generator)
     targets.add_(noise).clamp_(-noise_scale, noise_scale)
     if control_mode == "pos":
-        robots.set_cmd(None, targets, mode=ke.ControlMode.POS, kp=None, kd=None)
+        robots.set_cmd(None, targets, mode=ke.sim.ControlMode.POS, kp=None, kd=None)
     elif control_mode == "pd-explicit":
         robots.set_cmd(
             None,
             targets,
-            mode=ke.ControlMode.PD_EXPLICIT,
+            mode=ke.sim.ControlMode.PD_EXPLICIT,
             kp=kp,
             kd=kd,
         )

@@ -124,7 +124,7 @@ class MjcfDofControlApp(ke.App):
         self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
 
     def create_world(self):
-        self.world = ke.KangSimWorld(
+        self.world = ke.sim.KangSimWorld(
             num_envs=1,
             sim_dt=float(self.sim_dt),
             add_ground=True,
@@ -208,7 +208,7 @@ class MjcfDofControlApp(ke.App):
             None,
             self.obj_id,
             self.targets,
-            mode=ke.ControlMode.POS,
+            mode=ke.sim.ControlMode.POS,
             kp=self.kp,
             kd=self.kd,
         )
@@ -252,7 +252,7 @@ class MjcfDofControlApp(ke.App):
             None,
             self.obj_id,
             self.targets,
-            mode=ke.ControlMode.POS,
+            mode=ke.sim.ControlMode.POS,
             kp=self.kp,
             kd=self.kd,
         )

@@ -58,7 +58,7 @@ class ControlDemo(ke.App):
             "checkerColor2", ke.vec4([0.77, 0.93, 0.78, 1.0])
         )
 
-        self.world = ke.KangSimWorld(num_envs=1, sim_dt=1.0 / 120.0, add_ground=True)
+        self.world = ke.sim.KangSimWorld(num_envs=1, sim_dt=1.0 / 120.0, add_ground=True)
         self.visual = ke.visual.sim.SimWorldVisualizer(self, self.world)
 
         self.scene.add_ground(scale=100.0, shader=self.ground_shader)
@@ -172,7 +172,7 @@ class ControlDemo(ke.App):
             None,
             0,
             self._joint_targets(),
-            mode=ke.ControlMode.POS,
+            mode=ke.sim.ControlMode.POS,
             kp=self.kp,
             kd=self.kd,
         )

@@ -82,7 +82,7 @@ class GpuContactSensorDemo:
         physics_config = ke.physics.PhysicsConfig.z_up()
         physics_config.enable_contact_reports = False  # Turn off CPU contact report callback
         physics_config.restitution = 0.3
-        self.world = ke.KangSimWorld(
+        self.world = ke.sim.KangSimWorld(
             num_envs=args.num_envs,
             physics_config=physics_config,
             sim_device=self.device,

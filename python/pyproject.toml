@@ -32,13 +32,16 @@ mimickit-full = [
 ]
 
 [tool.setuptools]
-packages = ["kangengine", "kangengine.utils"]
 include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["kangengine*"]
 
 [tool.setuptools.package-data]
 kangengine = [
     "_kangengine.so",
-    "physics.pyi",
+    "**/*.pyi",
     "py.typed",
     "assets/**/*",
 ]

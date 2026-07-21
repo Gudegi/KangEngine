@@ -253,7 +253,7 @@ class SO101DofControlApp(MjcfDofControlApp):
             None,
             self.obj_id,
             self.targets,
-            mode=ke.ControlMode.POS,
+            mode=ke.sim.ControlMode.POS,
             kp=self.kp,
             kd=self.kd,
         )

@@ -26,7 +26,7 @@ class MinimalSimWorldApp(ke.App):
         self.add_ground(shader=self.shaders.ground)
         self.set_camera_view([3.0, -4.0, 2.2], [0.0, 0.0, 0.7])
 
-        self.world = ke.KangSimWorld(num_envs=1, sim_dt=1.0 / 120.0, add_ground=True)
+        self.world = ke.sim.KangSimWorld(num_envs=1, sim_dt=1.0 / 120.0, add_ground=True)
         self.visual = ke.visual.sim.SimWorldVisualizer(self, self.world)
 
         self.ball_xml = package_asset_path("objects", "ball.xml")

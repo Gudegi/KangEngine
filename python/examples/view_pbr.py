@@ -21,7 +21,7 @@ class PBRViewer(ke.App):
         self.set_light_color(ke.vec3(1.0, 0.96, 0.88))
         self.set_light_intensity(0.45)
         self.set_light_ambient(ke.vec3(0.025, 0.028, 0.032))
-        self.set_tone_map(ke.ToneMapMode.AcesNarkowicz, 1.0)
+        self.set_tone_map(ke.render.ToneMapMode.AcesNarkowicz, 1.0)
         self.set_bloom(
             True,
             threshold=1.4,
@@ -48,9 +48,9 @@ class PBRViewer(ke.App):
 
     def _build_material_grid(self):
         presets = [
-            ke.PBRMaterialType.CARROT,
-            ke.PBRMaterialType.CHARCOAL,
-            ke.PBRMaterialType.GOLD,
+            ke.material.PBRMaterialType.CARROT,
+            ke.material.PBRMaterialType.CHARCOAL,
+            ke.material.PBRMaterialType.GOLD,
         ]
         roughness_values = [0.18, 0.42, 0.78]
 
@@ -66,7 +66,7 @@ class PBRViewer(ke.App):
                 )
 
     def _add_emissive_sphere(self):
-        material = self._make_material(ke.PBRMaterialType.EMISSIVE_BLUE)
+        material = self._make_material(ke.material.PBRMaterialType.EMISSIVE_BLUE)
         view = self._add_pbr_sphere(
             "/pbr/emissive",
             [2.45, -1.7, 0.9],

@@ -9,7 +9,7 @@ import torch
 
 
 def main():
-    world = ke.KangSimWorld(num_envs=2, sim_device="cuda", add_ground=False)
+    world = ke.sim.KangSimWorld(num_envs=2, sim_device="cuda", add_ground=False)
     try:
         ball_xml = Path(ke.__file__).resolve().parent / "assets" / "objects" / "ball.xml"
         data = world.load_mjcf(str(ball_xml))

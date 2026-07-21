@@ -36,7 +36,7 @@ class PBROakWoodViewer(ke.App):
         self.set_light_color(ke.vec3(1.0, 1.0, 1.0))
         self.set_light_intensity(1.2)
         self.set_light_ambient(ke.vec3(0.22, 0.22, 0.22))
-        self.set_tone_map(ke.ToneMapMode.AcesNarkowicz, 1.0)
+        self.set_tone_map(ke.render.ToneMapMode.AcesNarkowicz, 1.0)
         self.set_bloom(False)
 
         self.set_camera_view([0.0, -3.0, 2.2], [0.0, 0.0, 0.15])

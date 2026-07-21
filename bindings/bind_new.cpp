@@ -741,6 +741,14 @@ PYBIND11_MODULE(_kangengine, m) {
         .def("set_color", &Backend::Shader::setColor, py::arg("name"),
              py::arg("r"), py::arg("g"), py::arg("b"), py::arg("a"),
              "Set a color uniform from RGBA components.")
+        .def(
+            "set_color",
+            [](Backend::Shader& self, const std::string& name,
+               const glm::vec4& value) {
+                self.setColor(name, value.r, value.g, value.b, value.a);
+            },
+            py::arg("name"), py::arg("value"),
+            "Set a color uniform from an RGBA vector.")
         .def("set_vec2",
              py::overload_cast<const std::string&, const glm::vec2&>(
                  &Backend::Shader::setVec2),
@@ -789,7 +797,11 @@ PYBIND11_MODULE(_kangengine, m) {
         .def("get_width", &Backend::Texture::getWidth,
              "Return the texture width in pixels.")
         .def("get_height", &Backend::Texture::getHeight,
-             "Return the texture height in pixels.");
+             "Return the texture height in pixels.")
+        .def_property_readonly("width", &Backend::Texture::getWidth,
+                               "Texture width in pixels.")
+        .def_property_readonly("height", &Backend::Texture::getHeight,
+                               "Texture height in pixels.");
 
     py::enum_<Backend::TextureWrap>(
         m, "TextureWrap", "Backend-neutral texture coordinate wrapping mode.")

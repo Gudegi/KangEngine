@@ -7,18 +7,18 @@ from kangengine import imgui, scene
 
 
 PRESETS = [
-    ("Gray Card", ke.PBRMaterialType.GRAY_CARD),
-    ("White Plastic", ke.PBRMaterialType.WHITE_PLASTIC),
-    ("Black Plastic", ke.PBRMaterialType.BLACK_PLASTIC),
-    ("Black Rubber", ke.PBRMaterialType.BLACK_RUBBER),
-    ("Charcoal", ke.PBRMaterialType.CHARCOAL),
-    ("Carrot", ke.PBRMaterialType.CARROT),
-    ("Concrete", ke.PBRMaterialType.CONCRETE),
-    ("Red Brick", ke.PBRMaterialType.RED_BRICK),
-    ("Aluminum", ke.PBRMaterialType.ALUMINUM),
-    ("Chrome", ke.PBRMaterialType.CHROME),
-    ("Copper", ke.PBRMaterialType.COPPER),
-    ("Gold", ke.PBRMaterialType.GOLD),
+    ("Gray Card", ke.material.PBRMaterialType.GRAY_CARD),
+    ("White Plastic", ke.material.PBRMaterialType.WHITE_PLASTIC),
+    ("Black Plastic", ke.material.PBRMaterialType.BLACK_PLASTIC),
+    ("Black Rubber", ke.material.PBRMaterialType.BLACK_RUBBER),
+    ("Charcoal", ke.material.PBRMaterialType.CHARCOAL),
+    ("Carrot", ke.material.PBRMaterialType.CARROT),
+    ("Concrete", ke.material.PBRMaterialType.CONCRETE),
+    ("Red Brick", ke.material.PBRMaterialType.RED_BRICK),
+    ("Aluminum", ke.material.PBRMaterialType.ALUMINUM),
+    ("Chrome", ke.material.PBRMaterialType.CHROME),
+    ("Copper", ke.material.PBRMaterialType.COPPER),
+    ("Gold", ke.material.PBRMaterialType.GOLD),
 ]
 
 
@@ -33,7 +33,7 @@ class PBRPresetViewer(ke.App):
         self.set_light_color(ke.vec3(1.0, 1.0, 1.0))
         self.set_light_intensity(0.8)
         self.set_light_ambient(ke.vec3(0.55, 0.55, 0.55))
-        self.set_tone_map(ke.ToneMapMode.Off, 1.0)
+        self.set_tone_map(ke.render.ToneMapMode.Off, 1.0)
         self.set_bloom(False)
 
         self.set_camera_view([0.0, -6.4, 4.0], [0.0, 0.0, 0.75])

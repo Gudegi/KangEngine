@@ -30,7 +30,7 @@ def configure_drives(articulation, num_dofs: int, kp: float, kd: float):
 
 
 def make_world(*, gpu: bool, cuda_device: int = 0):
-    world = ke.KangSimWorld(
+    world = ke.sim.KangSimWorld(
         num_envs=1,
         sim_device=f"cuda:{cuda_device}" if gpu else "cpu",
         sim_dt=1.0 / 120.0,
@@ -93,7 +93,7 @@ def run_cpu_pos(steps: int, kp: float, kd: float):
                 None,
                 OBJ_ID,
                 target.numpy(),
-                mode=ke.ControlMode.POS,
+                mode=ke.sim.ControlMode.POS,
                 kp=None,
                 kd=None,
             )
@@ -124,7 +124,7 @@ def run_gpu_pos(steps: int, kp: float, kd: float, cuda_device: int):
                 None,
                 OBJ_ID,
                 target,
-                mode=ke.ControlMode.POS,
+                mode=ke.sim.ControlMode.POS,
                 kp=None,
                 kd=None,
             )
@@ -166,7 +166,7 @@ def run_gpu_explicit_pd(steps: int, kp: float, kd: float, cuda_device: int):
                 None,
                 OBJ_ID,
                 target,
-                mode=ke.ControlMode.PD_EXPLICIT,
+                mode=ke.sim.ControlMode.PD_EXPLICIT,
                 kp=kp_array,
                 kd=kd_array,
             )
