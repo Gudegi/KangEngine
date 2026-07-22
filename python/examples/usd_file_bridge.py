@@ -1,33 +1,23 @@
-#!/usr/bin/env python3
-"""
-Simple USD Scene Example - File-based workflow
-Uses USD files as the bridge between Python USD and KangEngine
-"""
+"""Demonstrate a file-based bridge between Python OpenUSD and KangEngine."""
 
+from __future__ import annotations
 
-import sys
-import os
-sys.path.append(os.getcwd() + "/build")
+import argparse
+from pathlib import Path
+
 import kangengine as ke
 
 try:
-    pass
-    #import kangengine as ke
-except ImportError:
-    print("Error: kangengine module not found.")
-    print("Build with: cmake --preset=vcpkg -DUSE_USD=ON -DIS_PYTHON_LIB=ON")
-    print("Then: cmake --build build --target install")
-    sys.exit(1)
-
-try:
-    from pxr import Usd, UsdGeom, Sdf, Gf
-except ImportError:
-    print("Error: pxr (OpenUSD) module not found.")
-    print("Install with: pip install usd-core")
-    sys.exit(1)
+    from pxr import Gf, Usd, UsdGeom
+except ImportError as exc:
+    raise RuntimeError(
+        "usd_file_bridge.py requires Python OpenUSD (pxr) and a USD-enabled "
+        "KangEngine development build"
+    ) from exc
 
 
-def main():
+def main(output_dir: Path):
+    output_dir.mkdir(parents=True, exist_ok=True)
     print("=== KangEngine + Python OpenUSD Integration (File-based) ===\n")
 
     # Check USD support
@@ -77,8 +67,8 @@ def main():
     stage.SetDefaultPrim(world.GetPrim())
 
     # Save to file
-    output_file = "python_created_scene.usda"
-    stage.Export(output_file)
+    output_file = output_dir / "python_created_scene.usda"
+    stage.Export(str(output_file))
     print(f"   Saved to: {output_file}\n")
 
     # ===========================================================
@@ -90,7 +80,7 @@ def main():
     ke_scene = ke.scene.USDScene()
 
     # Load the file we created
-    if ke_scene.load_scene(output_file):
+    if ke_scene.load_scene(str(output_file)):
         print("   Scene loaded successfully!")
 
         # Print hierarchy
@@ -116,7 +106,7 @@ def main():
     print("\n5. Modifying scene with Python USD...")
 
     # Re-open the stage to modify
-    stage = Usd.Stage.Open(output_file)
+    stage = Usd.Stage.Open(str(output_file))
 
     # Add more objects
     cube = UsdGeom.Cube.Define(stage, "/World/AddedCube")
@@ -124,14 +114,14 @@ def main():
     cube.AddTranslateOp().Set(Gf.Vec3d(0, 0, 5))
 
     # Save modified scene
-    modified_file = "python_modified_scene.usda"
-    stage.Export(modified_file)
+    modified_file = output_dir / "python_modified_scene.usda"
+    stage.Export(str(modified_file))
     print(f"   Saved modified scene to: {modified_file}")
 
     # Reload in KangEngine
     print("\n6. Reloading modified scene...")
     ke_scene_mod = ke.scene.USDScene()
-    if ke_scene_mod.load_scene(modified_file):
+    if ke_scene_mod.load_scene(str(modified_file)):
         print("   Modified scene loaded!")
         meshes = ke_scene_mod.list_meshes()
         print(f"   Now has {len(meshes)} meshes")
@@ -151,13 +141,13 @@ def main():
     ke_scene_new.create_cube("/EngineWorld/EngineCube", size=2.0)
 
     # Save
-    engine_file = "kangengine_created_scene.usda"
-    ke_scene_new.save_scene(engine_file)
+    engine_file = output_dir / "kangengine_created_scene.usda"
+    ke_scene_new.save_scene(str(engine_file))
     print(f"   Saved KangEngine scene to: {engine_file}")
 
     # Now open with Python USD to verify
     print("\n8. Verifying with Python USD...")
-    verify_stage = Usd.Stage.Open(engine_file)
+    verify_stage = Usd.Stage.Open(str(engine_file))
     print(f"   Stage root layer: {verify_stage.GetRootLayer().identifier}")
     print(f"   Default prim: {verify_stage.GetDefaultPrim().GetPath()}")
 
@@ -185,4 +175,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path.cwd(),
+        help="Directory for generated USD files (default: current directory)",
+    )
+    main(parser.parse_args().output_dir)

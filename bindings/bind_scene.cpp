@@ -194,6 +194,10 @@ void bind_scene(py::module& m) {
         .def("set_local_rotation",
              &KE::Scene::TransformComponent::setLocalRotation,
              py::arg("rotation"), "Set local rotation.")
+        .def("set_local_rotation_axis_angle",
+             &KE::Scene::TransformComponent::setLocalRotationAxisAngle,
+             py::arg("axis"), py::arg("angle_radians"),
+             "Set local rotation from an axis and an angle in radians.")
         .def("set_local_matrix", &KE::Scene::TransformComponent::setLocalMatrix,
              py::arg("matrix"), "Set the local transform matrix.")
         .def("set_world_translation",
@@ -202,8 +206,24 @@ void bind_scene(py::module& m) {
         .def("set_world_rotation",
              &KE::Scene::TransformComponent::setWorldRotation,
              py::arg("rotation"), "Set world rotation.")
+        .def("set_world_rotation_axis_angle",
+             &KE::Scene::TransformComponent::setWorldRotationAxisAngle,
+             py::arg("axis"), py::arg("angle_radians"),
+             "Set world rotation from an axis and an angle in radians.")
         .def("set_world_matrix", &KE::Scene::TransformComponent::setWorldMatrix,
              py::arg("matrix"), "Set the world transform matrix.")
+        .def("get_local_translation",
+             &KE::Scene::TransformComponent::getLocalTranslation,
+             "Return the effective parent-relative translation.")
+        .def("get_local_rotation",
+             &KE::Scene::TransformComponent::getLocalRotation,
+             "Return the effective parent-relative quaternion rotation.")
+        .def("get_world_translation",
+             &KE::Scene::TransformComponent::getWorldTranslation,
+             "Return the effective world-space translation.")
+        .def("get_world_rotation",
+             &KE::Scene::TransformComponent::getWorldRotation,
+             "Return the effective world-space quaternion rotation.")
         .def("compute_local_matrix",
              &KE::Scene::TransformComponent::computeLocalMatrix,
              "Return the cached/computed local matrix.")
@@ -940,14 +960,30 @@ void bind_scene(py::module& m) {
              py::arg("scale"), "Set local scale.")
         .def("set_local_rotation", &KE::Scene::Prim::setLocalRotation,
              py::arg("rotation"), "Set local quaternion rotation.")
+        .def("set_local_rotation_axis_angle",
+             &KE::Scene::Prim::setLocalRotationAxisAngle, py::arg("axis"),
+             py::arg("angle_radians"),
+             "Set local rotation from an axis and an angle in radians.")
         .def("set_local_matrix", &KE::Scene::Prim::setLocalMatrix,
              py::arg("matrix"), "Set local transform matrix.")
         .def("set_world_translation", &KE::Scene::Prim::setWorldTranslation,
              py::arg("translation"), "Set world translation.")
         .def("set_world_rotation", &KE::Scene::Prim::setWorldRotation,
              py::arg("rotation"), "Set world quaternion rotation.")
+        .def("set_world_rotation_axis_angle",
+             &KE::Scene::Prim::setWorldRotationAxisAngle, py::arg("axis"),
+             py::arg("angle_radians"),
+             "Set world rotation from an axis and an angle in radians.")
         .def("set_world_matrix", &KE::Scene::Prim::setWorldMatrix,
              py::arg("matrix"), "Set world transform matrix.")
+        .def("get_local_translation", &KE::Scene::Prim::getLocalTranslation,
+             "Return the effective parent-relative translation.")
+        .def("get_local_rotation", &KE::Scene::Prim::getLocalRotation,
+             "Return the effective parent-relative quaternion rotation.")
+        .def("get_world_translation", &KE::Scene::Prim::getWorldTranslation,
+             "Return the effective world-space translation.")
+        .def("get_world_rotation", &KE::Scene::Prim::getWorldRotation,
+             "Return the effective world-space quaternion rotation.")
         .def("add_translate_op", &KE::Scene::Prim::addTranslateOp,
              py::arg("translation"),
              "Compatibility alias for local translation.")
@@ -1186,6 +1222,29 @@ void bind_scene(py::module& m) {
     py::class_<KE::Scene::DebugDraw>(
         scene, "DebugDraw",
         "Helpers for creating debug lines, arrows, and coordinate axes.")
+        .def_static(
+            "make_arrow_transform",
+            [](const glm::vec3& start, const glm::vec3& end) -> py::object {
+                glm::mat4 transform(1.0f);
+                if (!KE::Scene::DebugDraw::makeArrowTransform(start, end,
+                                                              transform))
+                    return py::none();
+                return py::cast(transform);
+            },
+            py::arg("start"), py::arg("end"),
+            "Return the arrow transform, or None for a zero-length arrow.")
+        .def_static(
+            "make_line_transform",
+            [](const glm::vec3& start, const glm::vec3& end) -> py::object {
+                glm::mat4 transform(1.0f);
+                if (!KE::Scene::DebugDraw::makeLineTransform(start, end,
+                                                             transform))
+                    return py::none();
+                return py::cast(transform);
+            },
+            py::arg("start"), py::arg("end"),
+            "Return the centered line transform, or None for a zero-length "
+            "line.")
         .def_static(
             "log_component_lines",
             [](KE::App* app, KE::Backend::Shader* shader,

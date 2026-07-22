@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+
 import kangengine as ke
 
 
@@ -16,6 +18,14 @@ def _close_tuple(actual, expected, eps=1.0e-5):
     for i, (a, b) in enumerate(zip(actual, expected)):
         if abs(a - b) > eps:
             raise AssertionError(f"value {i} mismatch: {a} != {b}")
+
+
+def _vec3_tuple(value):
+    return (float(value.x), float(value.y), float(value.z))
+
+
+def _quat_wxyz(value):
+    return (float(value.w), float(value.x), float(value.y), float(value.z))
 
 
 def main():
@@ -42,6 +52,8 @@ def main():
             "set_local_translation should advance TransformComponent version once"
         )
     child.set_local_translation(ke.vec3(0.0, 2.0, 0.0))
+    _close_tuple(_vec3_tuple(child.get_local_translation()), (0.0, 2.0, 0.0))
+    _close_tuple(_vec3_tuple(child.get_world_translation()), (1.0, 2.0, 0.0))
     _close_tuple(_translation(child.compute_world_matrix()), (1.0, 2.0, 0.0))
     _close_tuple(
         _translation(child_transform.compute_world_matrix()), (1.0, 2.0, 0.0)
@@ -63,6 +75,42 @@ def main():
         )
     _close_tuple(_translation(child.compute_world_matrix()), (10.0, 5.0, 0.0))
     _close_tuple(_translation(child.compute_local_matrix()), (7.0, 5.0, 0.0))
+
+    child.set_local_rotation_axis_angle(ke.vec3(0.0, 0.0, 1.0), math.pi / 2.0)
+    if not child.has_attribute("xformOp:rotateQuaternion"):
+        raise AssertionError("quaternion rotation attribute was not authored")
+    local = child.compute_local_matrix()
+    _close_tuple((float(local[0].x), float(local[0].y)), (0.0, 1.0))
+    expected_local_rotation = (
+        math.cos(math.pi / 4.0),
+        0.0,
+        0.0,
+        math.sin(math.pi / 4.0),
+    )
+    local_rotation = _quat_wxyz(child.get_local_rotation())
+    if local_rotation[0] < 0.0:
+        local_rotation = tuple(-value for value in local_rotation)
+    _close_tuple(local_rotation, expected_local_rotation)
+
+    child_transform.set_world_rotation_axis_angle(
+        ke.vec3(0.0, 1.0, 0.0), math.pi / 4.0
+    )
+    expected_world_rotation = (
+        math.cos(math.pi / 8.0),
+        0.0,
+        math.sin(math.pi / 8.0),
+        0.0,
+    )
+    world_rotation = _quat_wxyz(child_transform.get_world_rotation())
+    if world_rotation[0] < 0.0:
+        world_rotation = tuple(-value for value in world_rotation)
+    _close_tuple(world_rotation, expected_world_rotation)
+    try:
+        child.set_local_rotation_axis_angle(ke.vec3(0.0, 0.0, 0.0), 1.0)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("zero rotation axis should be rejected")
 
     if not parent.has_transform_component():
         raise AssertionError("Prim should report mandatory TransformComponent")

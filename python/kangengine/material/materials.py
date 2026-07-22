@@ -42,6 +42,15 @@ class Material(NativeWrapper):
     def get_shader(self):
         return self._native.get_shader()
 
+    @property
+    def shader(self):
+        """Shader used by this material."""
+        return self.get_shader()
+
+    @shader.setter
+    def shader(self, value) -> None:
+        self.set_shader(value)
+
 
 class VertexColorMaterial(Material):
     """Material for vertex/display-color shaders."""

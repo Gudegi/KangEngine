@@ -49,7 +49,7 @@ class PBRPresetViewer(ke.App):
             ke.geometry.create_sphere_data(0.32, 48, 24),
             material,
         )
-        view.prim.add_translate_op(ke.vec3(*position))
+        view.prim.set_local_translation(ke.vec3(*position))
         return view
 
     def _build_preset_grid(self):

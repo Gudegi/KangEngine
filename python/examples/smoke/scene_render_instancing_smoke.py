@@ -8,7 +8,7 @@ import torch
 
 
 def _translate(prim, x, y, z):
-    prim.add_translate_op(ke.vec3(float(x), float(y), float(z)))
+    prim.set_local_translation(ke.vec3(float(x), float(y), float(z)))
 
 
 def main():

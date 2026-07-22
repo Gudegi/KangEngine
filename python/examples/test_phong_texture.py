@@ -56,7 +56,7 @@ class PhongTextureViewer(ke.App):
             white,
             color=ke.vec4(1.0, 1.0, 1.0, 1.0),
         )
-        left.prim.add_translate_op(ke.vec3(-1.15, 0.0, 0.0))
+        left.prim.set_local_translation(ke.vec3(-1.15, 0.0, 0.0))
         left.set_alpha_mode(ke.render.AlphaMode.Blend)
 
         right = self.scene.add_mesh(
@@ -65,7 +65,7 @@ class PhongTextureViewer(ke.App):
             tinted,
             color=ke.vec4(1.0, 1.0, 1.0, 1.0),
         )
-        right.prim.add_translate_op(ke.vec3(1.15, 0.0, 0.0))
+        right.prim.set_local_translation(ke.vec3(1.15, 0.0, 0.0))
         right.set_alpha_mode(ke.render.AlphaMode.Blend)
 
         self.set_light_direction(ke.vec3(0.0, 0.0, 1.0))

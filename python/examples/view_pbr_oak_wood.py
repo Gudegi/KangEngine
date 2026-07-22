@@ -30,7 +30,7 @@ class PBROakWoodViewer(ke.App):
             ke.geometry.create_plane_data(3.0, ke.UpAxis.Z),
             self.material,
         )
-        oak_view.prim.add_translate_op(ke.vec3(0.0, 0.0, 0.02))
+        oak_view.prim.set_local_translation(ke.vec3(0.0, 0.0, 0.02))
 
         self.set_light_direction(ke.vec3(-0.35, 0.45, 0.82))
         self.set_light_color(ke.vec3(1.0, 1.0, 1.0))

@@ -54,7 +54,7 @@ class BloomViewer(ke.App):
             self.shaders.common,
             color=ke.vec4(*color),
         )
-        view.prim.add_translate_op(ke.vec3(*pos))
+        view.prim.set_local_translation(ke.vec3(*pos))
         return view
 
     def _add_glow_sphere(self, path, pos, radius, color):

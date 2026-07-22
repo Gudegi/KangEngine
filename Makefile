@@ -142,6 +142,8 @@ validate_render_component: build_python
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/mjcf_visual_rgba_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/mjcf_visual_duplicate_mesh_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/articulation_binding_component_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/debug_draw_transform_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/quaternion_binding_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/transform_component_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/mesh_component_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/resource_component_smoke.py

@@ -15,7 +15,7 @@ class SubTerrain:
     """Discrete height-field terrain buffer.
 
     ``height_field_raw`` stores integer height units.  Convert to meters with
-    :meth:`height_meters` before building render/physics meshes.
+    height_meters() before building render/physics meshes.
     """
 
     width: int
@@ -302,7 +302,7 @@ def height_field_to_mesh_python(
     """Pure Python height field to ``scene.MeshData`` conversion.
 
     This is useful for prototyping terrain generators without adding new C++
-    bindings.  Use :func:`height_field_to_mesh` with the default ``backend="cpp"``
+    bindings. Use height_field_to_mesh() with the default ``backend="cpp"``
     when mesh generation itself becomes a hot path.
     """
 

@@ -318,14 +318,27 @@ class SceneContext:
 
         return ObjImportView(root, views, info)
 
-    def add_ground(self, path: str = "/ground", scale: float = 20.0, shader=None):
-        if shader is None:
-            shader = self._app.create_asset_shader("common.vs", "checkerboard.fs")
-            self._app.configure_checker_shader(shader)
+    def add_ground(
+        self,
+        path: str = "/ground",
+        scale: float = 20.0,
+        material=None,
+        *,
+        shader=None,
+    ):
+        """Add a checkerboard ground plane.
+
+        ``material`` is the canonical surface input. ``shader`` remains as a
+        compatibility keyword for older callers.
+        """
+        if material is None:
+            material = shader
+        if material is None:
+            material = self._app.create_standard_materials().ground
         return self.add_mesh(
             path,
             _ke.geometry.create_plane_data(float(scale), self._app.up_axis),
-            shader,
+            material,
         )
 
     def log_lines(
@@ -404,6 +417,7 @@ class App(_NativeApp):
         # Lazily populated after the native graphics device/context exists.
         # Pure compute/headless apps can leave this as None.
         self.shaders = None
+        self.standard_materials = None
         self.materials = []
         self.textures = []
         self.up_axis = _ke.UpAxis.Y
@@ -528,6 +542,38 @@ class App(_NativeApp):
         self.set_texture_uniform(self.shaders.skinned_texture)
         self.configure_checker_shader(self.shaders.ground)
         return self.shaders
+
+    def create_standard_materials(self, *, force: bool = False):
+        """Create or return the cached standard material bundle.
+
+        The bundle contains shared defaults for common scene and visualization
+        work. Use create_phong_material() or create_pbr_material() when an
+        object needs independently mutable surface parameters.
+        """
+        if self.standard_materials is not None and not force:
+            return self.standard_materials
+
+        shaders = self.create_standard_shaders(force=force)
+        self.standard_materials = SimpleNamespace(
+            common=self.create_vertex_color_material(shader=shaders.common),
+            common_texture=self.create_vertex_color_material(
+                shader=shaders.common_texture
+            ),
+            ground=self.create_vertex_color_material(shader=shaders.ground),
+            debug=self.create_vertex_color_material(shader=shaders.common_debug),
+            skinned=self.create_vertex_color_material(shader=shaders.skinned),
+            skinned_texture=self.create_vertex_color_material(
+                shader=shaders.skinned_texture
+            ),
+            skinned_debug=self.create_vertex_color_material(
+                shader=shaders.skinned_debug
+            ),
+            phong=self.create_phong_material(shader=shaders.phong),
+            pbr=self.create_pbr_material(shader=shaders.pbr),
+            skinned_phong=self.create_phong_material(shader=shaders.skinned_phong),
+            skinned_pbr=self.create_pbr_material(shader=shaders.skinned_pbr),
+        )
+        return self.standard_materials
 
     #################################################################
 
@@ -856,8 +902,15 @@ class App(_NativeApp):
             transform_source,
         )
 
-    def add_ground(self, path: str = "/ground", scale: float = 20.0, shader=None):
-        return self.scene.add_ground(path, scale, shader)
+    def add_ground(
+        self,
+        path: str = "/ground",
+        scale: float = 20.0,
+        material=None,
+        *,
+        shader=None,
+    ):
+        return self.scene.add_ground(path, scale, material, shader=shader)
 
     def add_mesh(
         self,

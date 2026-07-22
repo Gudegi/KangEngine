@@ -831,9 +831,9 @@ App::MeshPrimResult App::addMeshPrim(MeshPrimDesc desc) {
     auto* prim = _scene->definePrim(desc.path, Scene::PrimType::Mesh);
     prim->setMeshData(
         std::make_shared<Scene::MeshData>(std::move(desc.meshData)));
-    prim->addTranslateOp(desc.position);
-    prim->addRotateQuaternionOp(glm::normalize(desc.orientation));
-    prim->addScaleOp(desc.scale);
+    prim->setLocalTranslation(desc.position);
+    prim->setLocalRotation(glm::normalize(desc.orientation));
+    prim->setLocalScale(desc.scale);
     prim->setDisplayColorAlpha(desc.color);
 
     RenderableHandle handle = addRenderable(desc.shader, prim);
@@ -874,7 +874,7 @@ App::MeshPrimResult App::addSkinnedMeshPrim(Backend::Shader* shader,
 
     auto* prim = _scene->definePrim(path, Scene::PrimType::Mesh);
     prim->setMeshData(std::make_shared<Scene::MeshData>(skinnedMesh.mesh));
-    prim->addTranslateOp(position);
+    prim->setLocalTranslation(position);
     prim->setDisplayColorAlpha(color);
 
     RenderableHandle handle = addSkinnedRenderable(shader, prim, skinnedMesh);

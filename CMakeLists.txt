@@ -36,17 +36,18 @@ option(IS_PYTHON_LIB "Build Python bindings" OFF) # Use -DIS_PYTHON_LIB=ON to en
 option(USE_USD "Enable USD support" OFF) # Use -DUSE_USD=ON to enable
 option(USE_PHYSX "Enable Physx support" ON) # Use -DUSE_PHYSX=ON to enable
 option(USE_CUDA_INTEROP "Enable CUDA/graphics buffer interop when explicitly configured" OFF)
+set(USD_DIR "$ENV{HOME}/usd_build" CACHE PATH "OpenUSD installation prefix")
 
 
 ##### Link pre-compiled libs #####
 add_library(pre_compiled_ext INTERFACE)
 
 if(USE_USD)
-    set(pxr_DIR "$ENV{HOME}/usd_build") # User config path
-    if(NOT EXISTS "${pxr_DIR}")
-        message(FATAL_ERROR "pxr_DIR path '${pxr_DIR}' does not exist. Please check your USD build path.")
+    if(NOT EXISTS "${USD_DIR}")
+        message(FATAL_ERROR "USD_DIR path '${USD_DIR}' does not exist. Please check your OpenUSD installation prefix.")
     endif()
-    set(CMAKE_PREFIX_PATH "${pxr_DIR}" ${CMAKE_PREFIX_PATH})
+    list(PREPEND CMAKE_PREFIX_PATH "${USD_DIR}")
+    set(pxr_DIR "${USD_DIR}" CACHE PATH "OpenUSD package location derived from USD_DIR" FORCE)
     find_package(pxr REQUIRED)
 
     target_compile_definitions(pre_compiled_ext INTERFACE KANGENGINE_USE_USD)
@@ -58,8 +59,8 @@ if(USE_USD)
         )
     endif()
 
-    target_include_directories(pre_compiled_ext INTERFACE ${pxr_DIR}/include)
-    target_link_directories(pre_compiled_ext INTERFACE ${pxr_DIR}/lib)
+    target_include_directories(pre_compiled_ext INTERFACE ${USD_DIR}/include)
+    target_link_directories(pre_compiled_ext INTERFACE ${USD_DIR}/lib)
     target_link_libraries(pre_compiled_ext INTERFACE
         usd
         usdGeom
@@ -69,8 +70,9 @@ if(USE_USD)
     )
 
     message(STATUS "USD support enabled")
-    message(STATUS "USD include dir: ${pxr_DIR}/include")
-    message(STATUS "USD lib dir: ${pxr_DIR}/lib")
+    message(STATUS "USD installation prefix: ${USD_DIR}")
+    message(STATUS "USD include dir: ${USD_DIR}/include")
+    message(STATUS "USD lib dir: ${USD_DIR}/lib")
 endif()
 
 if(USE_PHYSX)

@@ -22,8 +22,8 @@ class MinimalSimWorldApp(ke.App):
         self.paused = False
         self.spawn_pos = [0.0, 0.0, 1.8]
 
-        self.shaders = self.create_standard_shaders()
-        self.add_ground(shader=self.shaders.ground)
+        self.standard_materials = self.create_standard_materials()
+        self.add_ground()
         self.set_camera_view([3.0, -4.0, 2.2], [0.0, 0.0, 0.7])
 
         self.world = ke.sim.KangSimWorld(num_envs=1, sim_dt=1.0 / 120.0, add_ground=True)
@@ -43,7 +43,7 @@ class MinimalSimWorldApp(ke.App):
             self.ball,
             self.ball_xml,
             prim_base_path="/ball",
-            shader=self.shaders.common,
+            material=self.standard_materials.common,
             color=[0.95, 0.2, 0.12, 1.0],
         )
 

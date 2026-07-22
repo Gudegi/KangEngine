@@ -147,8 +147,8 @@ std::vector<Scene::Prim*> PhysicsBridge::addCollisionVisuals(
             prim->setMeshData(
                 std::make_shared<Scene::MeshData>(std::move(meshData)));
             prim->setDisplayColorAlpha(glm::vec4(1.f, 0.5f, 0.f, 0.8f));
-            prim->addTranslateOp(localPos);
-            prim->addRotateQuaternionOp(localQuat);
+            prim->setLocalTranslation(localPos);
+            prim->setLocalRotation(localQuat);
             prim->setVisible(visibleByDefault);
             prim->addArticulationBindingComponent()->setBinding(
                 Scene::ArticulationPrimRole::CollisionGeom, bodyIdx, bodyName,

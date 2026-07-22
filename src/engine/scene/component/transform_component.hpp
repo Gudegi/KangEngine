@@ -20,11 +20,18 @@ class TransformComponent : public ComponentBase {
     void setLocalTranslation(glm::vec3 translation);
     void setLocalScale(glm::vec3 scale);
     void setLocalRotation(glm::quat rotation);
+    void setLocalRotationAxisAngle(glm::vec3 axis, float angleRadians);
     void setLocalMatrix(const glm::mat4& matrix);
 
     void setWorldTranslation(glm::vec3 translation);
     void setWorldRotation(glm::quat rotation);
+    void setWorldRotationAxisAngle(glm::vec3 axis, float angleRadians);
     void setWorldMatrix(const glm::mat4& matrix);
+
+    glm::vec3 getLocalTranslation();
+    glm::quat getLocalRotation();
+    glm::vec3 getWorldTranslation();
+    glm::quat getWorldRotation();
 
     glm::mat4 computeLocalMatrix();
     glm::mat4 computeWorldMatrix();

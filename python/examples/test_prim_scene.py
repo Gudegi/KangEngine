@@ -43,9 +43,9 @@ print(f"quat: {q}")
 # Test setAttribute/getAttribute
 print("\n=== Prim Attribute Test ===")
 box_pos = ke.vec3(0.0, 10.0, 0.0)
-cube_prim.add_translate_op(box_pos)
-cube_prim.add_scale_op(ke.vec3(1.3, 1.3, 1.3))
-cube_prim.add_rotate_quaternion_op(ke.quat(1.0, 0.0, 0.0, 0.0))
+cube_prim.set_local_translation(box_pos)
+cube_prim.set_local_scale(ke.vec3(1.3, 1.3, 1.3))
+cube_prim.set_local_rotation(ke.quat(1.0, 0.0, 0.0, 0.0))
 
 # Test display color
 cube_prim.set_display_color(ke.vec3(0.8, 0.3, 0.02))

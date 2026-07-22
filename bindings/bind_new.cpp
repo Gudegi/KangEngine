@@ -1165,15 +1165,15 @@ py::class_<glm::vec3>(m, "vec3")
 
     py::implicitly_convertible<py::object, glm::vec4>();
 
-    py::class_<glm::quat>(m, "quat", py::buffer_protocol())
+    py::class_<glm::quat>(m, "quat")
         .def(py::init<float, float, float, float>(), py::arg("w"), py::arg("x"),
              py::arg("y"), py::arg("z"))
         .def(py::init([](py::object obj) {
-            // Buffer protocol (GLM quat memory layout: x, y, z, w)
+            // Python quaternion values consistently use wxyz order,
+            // independent of GLM's internal memory layout.
             if (auto values = fixedFloatArray<4>(obj, "quat"))
-                // GLM stores as x,y,z,w but constructor is w,x,y,z.
-                return glm::quat((*values)[3], (*values)[0], (*values)[1],
-                                 (*values)[2]);
+                return glm::quat((*values)[0], (*values)[1], (*values)[2],
+                                 (*values)[3]);
             // Attribute access
             if (py::hasattr(obj, "w") && py::hasattr(obj, "x") &&
                 py::hasattr(obj, "y") && py::hasattr(obj, "z")) {
@@ -1184,18 +1184,80 @@ py::class_<glm::vec3>(m, "vec3")
             // Sequence
             if (py::isinstance<py::sequence>(obj) && py::len(obj) == 4) {
                 auto seq = obj.cast<py::sequence>();
-                // PyGLM quat: (w, x, y, z) order
                 return glm::quat(seq[0].cast<float>(), seq[1].cast<float>(),
                                  seq[2].cast<float>(), seq[3].cast<float>());
             }
             throw std::runtime_error("Cannot convert to quat");
         }))
-        .def_buffer([](glm::quat& q) -> py::buffer_info {
-            // GLM quat memory layout: x, y, z, w (연속 메모리)
-            return py::buffer_info(&q.x, sizeof(float),
-                                   py::format_descriptor<float>::format(), 1,
-                                   {4}, {sizeof(float)});
-        })
+        .def_static(
+            "from_wxyz",
+            [](py::object obj) {
+                auto values = fixedFloatArray<4>(obj, "wxyz quaternion");
+                if (!values && py::len_hint(obj) == 4) {
+                    values = std::array<float, 4>{
+                        obj[py::int_(0)].cast<float>(),
+                        obj[py::int_(1)].cast<float>(),
+                        obj[py::int_(2)].cast<float>(),
+                        obj[py::int_(3)].cast<float>()};
+                }
+                if (!values)
+                    throw py::value_error(
+                        "wxyz quaternion expected exactly 4 values");
+                return glm::quat((*values)[0], (*values)[1], (*values)[2],
+                                 (*values)[3]);
+            },
+            py::arg("values"), "Create a quaternion from wxyz values.")
+        .def_static(
+            "from_xyzw",
+            [](py::object obj) {
+                auto values = fixedFloatArray<4>(obj, "xyzw quaternion");
+                if (!values && py::len_hint(obj) == 4) {
+                    values = std::array<float, 4>{
+                        obj[py::int_(0)].cast<float>(),
+                        obj[py::int_(1)].cast<float>(),
+                        obj[py::int_(2)].cast<float>(),
+                        obj[py::int_(3)].cast<float>()};
+                }
+                if (!values)
+                    throw py::value_error(
+                        "xyzw quaternion expected exactly 4 values");
+                return glm::quat((*values)[3], (*values)[0], (*values)[1],
+                                 (*values)[2]);
+            },
+            py::arg("values"), "Create a quaternion from xyzw values.")
+        .def("to_wxyz", [](const glm::quat& q) {
+            py::array_t<float> result(4);
+            auto values = result.mutable_unchecked<1>();
+            values(0) = q.w;
+            values(1) = q.x;
+            values(2) = q.y;
+            values(3) = q.z;
+            return result;
+        }, "Return a copied wxyz NumPy array.")
+        .def("to_xyzw", [](const glm::quat& q) {
+            py::array_t<float> result(4);
+            auto values = result.mutable_unchecked<1>();
+            values(0) = q.x;
+            values(1) = q.y;
+            values(2) = q.z;
+            values(3) = q.w;
+            return result;
+        }, "Return a copied xyzw NumPy array.")
+        .def(
+            "__array__",
+            [](const glm::quat& q, py::object dtype, py::object) -> py::object {
+                py::array_t<float> result(4);
+                auto values = result.mutable_unchecked<1>();
+                values(0) = q.w;
+                values(1) = q.x;
+                values(2) = q.y;
+                values(3) = q.z;
+                if (!dtype.is_none())
+                    return result.attr("astype")(dtype, py::arg("copy") = false);
+                return result;
+            },
+            py::arg("dtype") = py::none(), py::arg("copy") = py::none(),
+            "Return a copied wxyz NumPy array.")
         .def_readwrite("w", &glm::quat::w)
         .def_readwrite("x", &glm::quat::x)
         .def_readwrite("y", &glm::quat::y)

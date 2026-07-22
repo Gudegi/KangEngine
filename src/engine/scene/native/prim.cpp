@@ -732,6 +732,11 @@ void Prim::setLocalRotation(glm::quat quat) {
     getTransformComponentOrThrow().setLocalRotation(quat);
 }
 
+void Prim::setLocalRotationAxisAngle(glm::vec3 axis, float angleRadians) {
+    getTransformComponentOrThrow().setLocalRotationAxisAngle(axis,
+                                                            angleRadians);
+}
+
 void Prim::setLocalMatrix(const glm::mat4& matrix) {
     getTransformComponentOrThrow().setLocalMatrix(matrix);
 }
@@ -744,8 +749,29 @@ void Prim::setWorldRotation(glm::quat quat) {
     getTransformComponentOrThrow().setWorldRotation(quat);
 }
 
+void Prim::setWorldRotationAxisAngle(glm::vec3 axis, float angleRadians) {
+    getTransformComponentOrThrow().setWorldRotationAxisAngle(axis,
+                                                            angleRadians);
+}
+
 void Prim::setWorldMatrix(const glm::mat4& matrix) {
     getTransformComponentOrThrow().setWorldMatrix(matrix);
+}
+
+glm::vec3 Prim::getLocalTranslation() {
+    return getTransformComponentOrThrow().getLocalTranslation();
+}
+
+glm::quat Prim::getLocalRotation() {
+    return getTransformComponentOrThrow().getLocalRotation();
+}
+
+glm::vec3 Prim::getWorldTranslation() {
+    return getTransformComponentOrThrow().getWorldTranslation();
+}
+
+glm::quat Prim::getWorldRotation() {
+    return getTransformComponentOrThrow().getWorldRotation();
 }
 
 glm::mat4 Prim::computeLocalMatrix() {

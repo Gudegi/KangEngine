@@ -43,7 +43,7 @@ class PBRViewer(ke.App):
             ke.geometry.create_sphere_data(radius, 48, 24),
             material,
         )
-        view.prim.add_translate_op(ke.vec3(*position))
+        view.prim.set_local_translation(ke.vec3(*position))
         return view
 
     def _build_material_grid(self):

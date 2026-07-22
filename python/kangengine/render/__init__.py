@@ -1,6 +1,6 @@
 """Low-level rendering API exposed directly from the native bindings.
 
-General scene workflows should prefer :class:`kangengine.App`,
+General scene workflows should prefer kangengine.App,
 ``app.scene``, and renderable views. This package owns the stable public paths
 for lower-level renderer, graphics-device, shader, texture, and external-buffer
 APIs; the runtime objects themselves remain pybind types.
