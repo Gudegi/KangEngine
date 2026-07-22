@@ -7,7 +7,7 @@ from typing import Callable
 
 import numpy as np
 
-from ._core import _ke
+from .._core import _ke
 
 
 @dataclass

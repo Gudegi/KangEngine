@@ -5,7 +5,7 @@ from typing import Optional
 import numpy as np
 
 from .._core import _ke
-from ..motion_editor import (
+from .editor import (
     ContactData,
     MotionEditor,
     MotionSampleData,

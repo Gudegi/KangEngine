@@ -1,8 +1,22 @@
-"""Simulation sensors built as consumers of canonical world state."""
+"""Sensors bound to the high-level simulation world."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+
+
+def _contact_sensor_aggregator():
+    """Return the optional native CUDA contact aggregator."""
+    from .._core import _ke
+
+    aggregator = getattr(
+        getattr(_ke, "physics", None),
+        "aggregate_contact_sensors_cuda",
+        None,
+    )
+    if aggregator is None:
+        raise RuntimeError("KangEngine was built without CUDA contact aggregation")
+    return aggregator
 
 
 @dataclass(frozen=True, slots=True)
@@ -183,14 +197,12 @@ class _ContactSensorBatch:
         if self._dirty:
             self._prepare(tuple(sensors))
 
-        from ._core import _ke
-
         stream = int(
             self._torch.cuda.current_stream(self._storage[3].device).cuda_stream
         )
         for view in self._native_views:
             view.stream_handle = stream
-        _ke.aggregate_contact_sensors_cuda(
+        _contact_sensor_aggregator()(
             self.world.gpu_system.contact_pair_body_refs(),
             self.world.gpu_system.contact_pair_count(),
             self.world.gpu_system.contact_points(),
@@ -216,13 +228,11 @@ class _ContactSensorBatch:
     def _prepare(self, sensors):
         import torch
 
-        from ._core import _ke
-        from .utils import to_gpu_array_view
+        from ..utils import to_gpu_array_view
 
         if not sensors:
             raise RuntimeError("contact sensor batch requires at least one sensor")
-        if not hasattr(_ke, "aggregate_contact_sensors_cuda"):
-            raise RuntimeError("KangEngine was built without CUDA contact aggregation")
+        _contact_sensor_aggregator()
 
         device_id = int(self.world.gpu_system.contact_pair_body_refs().device_id)
         device = torch.device(f"cuda:{device_id}")

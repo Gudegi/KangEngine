@@ -22,16 +22,7 @@ from . import (
     terrain,
     visual,
 )
-from .app import App, NativeApp, RenderablePrimView, SceneContext
-from .motion_editor import (
-    MotionEditor,
-    MotionPlayer,
-    MotionSampleData,
-    ContactData,
-    MotionCameraFollower,
-    RootTrajectoryData,
-    TrackingData,
-)
+from .app import App, RenderablePrimView, SceneContext
 from .utils import (
     COMMON,
     DEFAULT_PROFILE_ORDER,
@@ -47,9 +38,6 @@ from .utils import (
 # TODO: Keep Torch-heavy modules lazy until CUDA context interop is explicit.
 # This avoids accidental Torch CUDA initialization before PhysX GPU setup.
 _LAZY_IMPORTS = {
-    "ContactSensor": (".sensor", "ContactSensor"),
-    "ContactSensorData": (".sensor", "ContactSensorData"),
-    "ForceSensor": (".sensor", "ForceSensor"),
     "KangEngineEngine": (".mimickit_engine", "KangEngineEngine"),
     "build_mimickit_engine": (".mimickit_engine", "build_engine"),
     "install_mimickit_engine_builder": (
@@ -65,7 +53,6 @@ _LAZY_MODULES = {
 if _TYPE_CHECKING:
     from . import motion_module as motion_module
     from . import sim as sim
-    from .sensor import ContactSensor, ContactSensorData, ForceSensor
     from .mimickit_engine import (
         KangEngineEngine,
         build_engine as build_mimickit_engine,
@@ -129,16 +116,8 @@ WebGPU = _ke.WebGPU
 
 __all__ = [
     "App",
-    "NativeApp",
     "RenderablePrimView",
     "SceneContext",
-    "MotionEditor",
-    "MotionPlayer",
-    "MotionSampleData",
-    "ContactData",
-    "MotionCameraFollower",
-    "RootTrajectoryData",
-    "TrackingData",
     "JointMapper",
     "JointSemantic",
     "COMMON",
@@ -148,9 +127,6 @@ __all__ = [
     "KW",
     "KW5",
     "MIXAMO",
-    "ContactSensor",
-    "ContactSensorData",
-    "ForceSensor",
     "visual",
     "terrain",
     "KangEngineEngine",

@@ -6,8 +6,8 @@ from dataclasses import dataclass
 from typing import Optional
 import numpy as np
 
-from ._core import _ke
-from .utils import (
+from .._core import _ke
+from ..utils import (
     DEFAULT_CONTACT_SEMANTICS,
     DEFAULT_TRACKING_SEMANTICS,
     JointMapper,
@@ -502,4 +502,3 @@ class MotionEditor:
 
     def render(self) -> bool:
         return self.render_panel()
-

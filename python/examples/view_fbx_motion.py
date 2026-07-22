@@ -48,7 +48,7 @@ class FbxMotionViewer(ke.App):
             fps=self.fps,
             scale=self.scale,
         )
-        self.editor = ke.MotionEditor(self.motion)
+        self.editor = ke.motion_module.MotionEditor(self.motion)
         self.parents = self.motion.parent_indices()
         self.names = self.motion.node_names()
 

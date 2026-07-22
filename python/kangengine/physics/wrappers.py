@@ -13,8 +13,8 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from typing import Any
 
-from ._core import _ke
-from ._public import set_public_module
+from .._core import _ke
+from .._public import set_public_module
 
 _native = getattr(_ke, "physics", None)
 

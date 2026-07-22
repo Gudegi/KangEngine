@@ -10,14 +10,14 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
-from ._core import _ke
-from ._public import unwrap_native
-from . import material as material_api
-from . import render as render_api
+from .._core import _ke
+from .._public import unwrap_native
+from .. import material as material_api
+from .. import render as render_api
 
 keys = _ke.keys
 scene = _ke.scene
-NativeApp = _ke.App
+_NativeApp = _ke.App
 
 
 def _safe_scene_segment(value, fallback: str = "item") -> str:
@@ -100,7 +100,7 @@ class RenderablePrimView:
         sync_policy=None,
     ):
         """Set the ``[N, 4, 4]`` buffer of an ExternalBuffer renderable."""
-        from .utils.sim_buffer import to_external_transform_desc
+        from ..utils.sim_buffer import to_external_transform_desc
 
         descriptor, _ = to_external_transform_desc(
             transforms,
@@ -380,7 +380,7 @@ class SceneContext:
         return self._app.remove_prim(path_or_prim)
 
 
-class App(NativeApp):
+class App(_NativeApp):
     """Base class for Python KangEngine apps.
 
     This mirrors the C++ App lifecycle:

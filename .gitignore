@@ -64,6 +64,7 @@ references
 *.pyc
 *.egg-info
 python/kangengine/assets
+python/dist/
 assets/external/
 docs/_build/
 _private

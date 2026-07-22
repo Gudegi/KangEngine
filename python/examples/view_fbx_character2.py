@@ -123,8 +123,10 @@ class FbxCharacterBridgeViewer(ke.App):
             use_materials=self.use_materials,
         )
         self.motion = self.character.motion()
-        self.editor = ke.MotionEditor(self.motion, Path(self.fbx_file).name)
-        self.camera_follower = ke.MotionCameraFollower(
+        self.editor = ke.motion_module.MotionEditor(
+            self.motion, Path(self.fbx_file).name
+        )
+        self.camera_follower = ke.motion_module.MotionCameraFollower(
             self.motion,
             samples=self.editor.motion_samples(),
             target_semantic=JointSemantic.ROOT,

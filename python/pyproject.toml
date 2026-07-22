@@ -45,3 +45,6 @@ kangengine = [
     "py.typed",
     "assets/**/*",
 ]
+
+[tool.setuptools.exclude-package-data]
+kangengine = ["assets/external/**/*"]
