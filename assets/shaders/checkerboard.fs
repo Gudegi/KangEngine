@@ -60,7 +60,8 @@ void main() {
     vec4 finalCheckerColor = vec4(col.rgb * light * ShadowCascadeTint(), col.a);
 
     if (uShowGrid) {
-        vec4 finalGridColor = vec4(gridColor.rgb * light * ShadowCascadeTint(), gridColor.a);
+        // vec4 finalGridColor = vec4(gridColor.rgb * light * ShadowCascadeTint(), gridColor.a);
+        vec4 finalGridColor = vec4(gridColor.rgb, gridColor.a);
         // thikness line per 1.0M 
         float gridMask = getGrid(TexCoord, 1.0, 0.005);
         FragColor = mix(finalCheckerColor, finalGridColor, gridMask);

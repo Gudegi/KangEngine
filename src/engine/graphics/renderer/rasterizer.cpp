@@ -986,7 +986,10 @@ void Rasterizer::renderShadowMap(Camera& camera, UpAxis upAxis,
 void Rasterizer::drawShadowCasters() {
     // Front-face culling avoids storing the same front surfaces that receive
     // the shadow, reducing acne on closed meshes.
-    _graphicsDevice->setCullFaceMode(Backend::CullFaceMode::Front);
+    // _graphicsDevice->setCullFaceMode(Backend::CullFaceMode::Front);
+    // Store the light-facing surface so caster silhouettes remain attached at
+    // contact points. Receiver/depth bias handles self-shadowing acne.
+    _graphicsDevice->setCullFaceMode(Backend::CullFaceMode::Back);
     for (auto& [key, inst] : _instancers) {
         if (inst.visibleCount() == 0)
             continue;
@@ -1008,7 +1011,7 @@ void Rasterizer::drawShadowCasters() {
         if (inst.isDoubleSided())
             _graphicsDevice->setCullFace(true);
     }
-    _graphicsDevice->setCullFaceMode(Backend::CullFaceMode::Back);
+    // _graphicsDevice->setCullFaceMode(Backend::CullFaceMode::Back);
 }
 
 } // namespace KE
