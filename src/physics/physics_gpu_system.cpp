@@ -4,6 +4,7 @@
 #include "physics/physx_compat.hpp"
 #include "physics/physics_gpu_system_kernels.hpp"
 
+#include <array>
 #include <cstdint>
 #include <string>
 #include <utility>
@@ -31,6 +32,7 @@ namespace {
 constexpr int32_t kContactRefUnknown = -1;
 constexpr int32_t kContactRefRigid = 0;
 constexpr int32_t kContactRefArticulation = 1;
+constexpr uint64_t kContactActorHashMultiplier = 11400714819323198485ull;
 constexpr int kArticulationReadJointPosition =
     PxArticulationGPUAPIReadType::eJOINT_POSITION;
 constexpr int kArticulationReadJointVelocity =
@@ -235,6 +237,8 @@ void PhysicsGpuSystem::init() {
 
     PxScene* scene = _world->getScene();
     std::vector<int32_t> contactNodeBodyRefs;
+    std::vector<std::pair<uint64_t, std::array<int32_t, 3>>>
+        contactActorBodyRefs;
     _rigidCount = scene->getNbActors(PxActorTypeFlag::eRIGID_DYNAMIC);
     if (_rigidCount > 0) {
         std::vector<PxActor*> actors(_rigidCount);
@@ -255,6 +259,9 @@ void PhysicsGpuSystem::init() {
             setContactBodyRef(contactNodeBodyRefs,
                               body->getInternalIslandNodeIndex(),
                               kContactRefRigid, static_cast<int32_t>(i), 0);
+            contactActorBodyRefs.push_back(
+                {reinterpret_cast<uint64_t>(body),
+                 {kContactRefRigid, static_cast<int32_t>(i), 0}});
         }
 
         checkCuda(cudaMalloc(&_rigidIndexBuffer,
@@ -335,6 +342,10 @@ void PhysicsGpuSystem::init() {
                                   kContactRefArticulation,
                                   static_cast<int32_t>(i),
                                   static_cast<int32_t>(link->getLinkIndex()));
+                contactActorBodyRefs.push_back(
+                    {reinterpret_cast<uint64_t>(link),
+                     {kContactRefArticulation, static_cast<int32_t>(i),
+                      static_cast<int32_t>(link->getLinkIndex())}});
             }
         }
 
@@ -454,6 +465,48 @@ void PhysicsGpuSystem::init() {
                                  sizeof(int32_t) * contactNodeBodyRefs.size(),
                                  cudaMemcpyHostToDevice),
                       "cudaMemcpy(contact node body refs)");
+        }
+        if (!contactActorBodyRefs.empty()) {
+            // Build a low-load GPU hash table for fast actor -> body lookup.
+            _contactActorHashCapacity = 1;
+            while (_contactActorHashCapacity < contactActorBodyRefs.size() * 2)
+                _contactActorHashCapacity <<= 1;
+            std::vector<uint64_t> actorKeys(_contactActorHashCapacity, 0);
+            std::vector<int32_t> actorRefs(
+                static_cast<size_t>(_contactActorHashCapacity) * 3,
+                kContactRefUnknown);
+            const uint32_t mask = _contactActorHashCapacity - 1;
+            for (const auto& entry : contactActorBodyRefs) {
+                const uint64_t alignedActorKey = entry.first >> 4;
+                uint32_t slot = static_cast<uint32_t>(
+                                    alignedActorKey *
+                                    kContactActorHashMultiplier) &
+                                mask;
+                while (actorKeys[slot] != 0)
+                    slot = (slot + 1) & mask;
+                actorKeys[slot] = entry.first;
+                for (uint32_t field = 0; field < 3; ++field)
+                    actorRefs[static_cast<size_t>(slot) * 3 + field] =
+                        entry.second[field];
+            }
+            checkCuda(cudaMalloc(&_contactActorKeysBuffer,
+                                 sizeof(uint64_t) *
+                                     _contactActorHashCapacity),
+                      "cudaMalloc(contact actor keys)");
+            checkCuda(cudaMalloc(&_contactActorBodyRefBuffer,
+                                 sizeof(int32_t) * 3 *
+                                     _contactActorHashCapacity),
+                      "cudaMalloc(contact actor body refs)");
+            checkCuda(cudaMemcpy(_contactActorKeysBuffer, actorKeys.data(),
+                                 sizeof(uint64_t) *
+                                     _contactActorHashCapacity,
+                                 cudaMemcpyHostToDevice),
+                      "cudaMemcpy(contact actor keys)");
+            checkCuda(cudaMemcpy(_contactActorBodyRefBuffer, actorRefs.data(),
+                                 sizeof(int32_t) * 3 *
+                                     _contactActorHashCapacity,
+                                 cudaMemcpyHostToDevice),
+                      "cudaMemcpy(contact actor body refs)");
         }
     }
     if (_config.maxContactPoints > 0) {
@@ -1013,6 +1066,8 @@ void PhysicsGpuSystem::fetchContactPairs() {
     PhysicsGpuKernels::flattenContactPairsCUDA(
         _contactPairBuffer, _contactPairCountBuffer, _contactPairHeaderBuffer,
         _contactNodeBodyRefBuffer, _contactNodeBodyRefCapacity,
+        _contactActorKeysBuffer, _contactActorBodyRefBuffer,
+        _contactActorHashCapacity,
         _contactPairBodyRefBuffer, _contactPointBuffer,
         _contactPointCountBuffer, _contactPointPairIndexBuffer,
         _config.maxContactPairs, _config.maxContactPoints, _streamHandle);
@@ -1759,6 +1814,10 @@ void PhysicsGpuSystem::releaseGpuBuffers() {
         cudaFree(_contactPairHeaderBuffer);
     if (_contactNodeBodyRefBuffer)
         cudaFree(_contactNodeBodyRefBuffer);
+    if (_contactActorKeysBuffer)
+        cudaFree(_contactActorKeysBuffer);
+    if (_contactActorBodyRefBuffer)
+        cudaFree(_contactActorBodyRefBuffer);
     if (_contactPairBodyRefBuffer)
         cudaFree(_contactPairBodyRefBuffer);
     if (_contactPointBuffer)
@@ -1794,6 +1853,9 @@ void PhysicsGpuSystem::releaseGpuBuffers() {
     _contactPairHeaderBuffer = nullptr;
     _contactNodeBodyRefBuffer = nullptr;
     _contactNodeBodyRefCapacity = 0;
+    _contactActorKeysBuffer = nullptr;
+    _contactActorBodyRefBuffer = nullptr;
+    _contactActorHashCapacity = 0;
     _contactPairBodyRefBuffer = nullptr;
     _contactPointBuffer = nullptr;
     _contactPointCountBuffer = nullptr;

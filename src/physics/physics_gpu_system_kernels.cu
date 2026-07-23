@@ -23,6 +23,8 @@ enum ContactSensorDescriptorField : uint32_t {
     SensorDescriptorSize,
 };
 
+constexpr uint64_t kContactActorHashMultiplier = 11400714819323198485ull;
+
 void checkCUDA(cudaError_t result, const char* operation) {
     if (result != cudaSuccess)
         throw std::runtime_error(std::string(operation) + ": " +
@@ -176,11 +178,10 @@ __global__ void packSparseArticulationRootStateKernel(
 }
 
 template <typename IndexT>
-__global__ void clearSparseRigidCommandsKernel(const IndexT* logicalIndices,
-                                               float* denseForce,
-                                               float* denseTorque,
-                                               uint32_t count,
-                                               uint32_t rigidCount) {
+__global__ void
+clearSparseRigidCommandsKernel(const IndexT* logicalIndices, float* denseForce,
+                               float* denseTorque, uint32_t count,
+                               uint32_t rigidCount) {
     const uint32_t item = blockIdx.x * blockDim.x + threadIdx.x;
     const uint32_t total = count * 3;
     if (item >= total)
@@ -238,17 +239,44 @@ __device__ void writeContactBodyRef(physx::PxNodeIndex node,
     output[2] = source[2];
 }
 
-__global__ void flattenContactPairsKernel(const physx::PxGpuContactPair* pairs,
-                                          const uint32_t* pairCount,
-                                          uint64_t* contactPairHeaders,
-                                          const int32_t* nodeBodyRefs,
-                                          uint32_t nodeBodyRefCapacity,
-                                          int32_t* contactPairBodyRefs,
-                                          float* contactPoints,
-                                          uint32_t* contactPointCount,
-                                          uint32_t* contactPointPairIndices,
-                                          uint32_t maxPairs,
-                                          uint32_t maxContactPoints) {
+__device__ bool writeContactActorBodyRef(const void* actor,
+                                         const uint64_t* actorKeys,
+                                         const int32_t* actorBodyRefs,
+                                         uint32_t actorHashCapacity,
+                                         int32_t* output) {
+    if (!actor || !actorKeys || !actorBodyRefs || actorHashCapacity == 0)
+        return false;
+    const uint64_t key = reinterpret_cast<uint64_t>(actor);
+    const uint32_t mask = actorHashCapacity - 1;
+    const uint64_t alignedActorKey = key >> 4;
+    uint32_t slot =
+        static_cast<uint32_t>(alignedActorKey * kContactActorHashMultiplier) &
+        mask;
+    for (uint32_t probe = 0; probe < actorHashCapacity; ++probe) {
+        const uint64_t candidate = actorKeys[slot];
+        if (candidate == key) {
+            const int32_t* source =
+                actorBodyRefs + static_cast<size_t>(slot) * 3;
+            output[0] = source[0];
+            output[1] = source[1];
+            output[2] = source[2];
+            return true;
+        }
+        if (candidate == 0)
+            return false;
+        slot = (slot + 1) & mask;
+    }
+    return false;
+}
+
+__global__ void flattenContactPairsKernel(
+    const physx::PxGpuContactPair* pairs, const uint32_t* pairCount,
+    uint64_t* contactPairHeaders, const int32_t* nodeBodyRefs,
+    uint32_t nodeBodyRefCapacity, const uint64_t* actorKeys,
+    const int32_t* actorBodyRefs, uint32_t actorHashCapacity,
+    int32_t* contactPairBodyRefs, float* contactPoints,
+    uint32_t* contactPointCount, uint32_t* contactPointPairIndices,
+    uint32_t maxPairs, uint32_t maxContactPoints) {
     const uint32_t pairIndex = blockIdx.x * blockDim.x + threadIdx.x;
     const uint32_t count = pairCount ? min(*pairCount, maxPairs) : 0;
     if (pairIndex >= count)
@@ -259,26 +287,31 @@ __global__ void flattenContactPairsKernel(const physx::PxGpuContactPair* pairs,
         uint64_t* row = contactPairHeaders + static_cast<size_t>(pairIndex) * 6;
         row[0] = static_cast<uint64_t>(pair.nodeIndex0.getInd());
         row[1] = static_cast<uint64_t>(pair.nodeIndex1.getInd());
-        row[2] = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(pair.actor0));
-        row[3] = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(pair.actor1));
+        row[2] =
+            static_cast<uint64_t>(reinterpret_cast<uintptr_t>(pair.actor0));
+        row[3] =
+            static_cast<uint64_t>(reinterpret_cast<uintptr_t>(pair.actor1));
         row[4] = static_cast<uint64_t>(pair.transformCacheRef0);
         row[5] = static_cast<uint64_t>(pair.transformCacheRef1);
     }
     if (contactPairBodyRefs) {
-        int32_t* row =
-            contactPairBodyRefs + static_cast<size_t>(pairIndex) * 6;
-        writeContactBodyRef(pair.nodeIndex0, nodeBodyRefs,
-                            nodeBodyRefCapacity, row);
-        writeContactBodyRef(pair.nodeIndex1, nodeBodyRefs,
-                            nodeBodyRefCapacity, row + 3);
+        int32_t* row = contactPairBodyRefs + static_cast<size_t>(pairIndex) * 6;
+        if (!writeContactActorBodyRef(pair.actor0, actorKeys, actorBodyRefs,
+                                      actorHashCapacity, row))
+            writeContactBodyRef(pair.nodeIndex0, nodeBodyRefs,
+                                nodeBodyRefCapacity, row);
+        if (!writeContactActorBodyRef(pair.actor1, actorKeys, actorBodyRefs,
+                                      actorHashCapacity, row + 3))
+            writeContactBodyRef(pair.nodeIndex1, nodeBodyRefs,
+                                nodeBodyRefCapacity, row + 3);
     }
     if (pair.nbContacts == 0 || pair.nbPatches == 0 || !pair.contactPatches ||
         !pair.contactPoints)
         return;
 
-    physx::PxContactStreamIterator iterator(
-        pair.contactPatches, pair.contactPoints, nullptr, pair.nbPatches,
-        pair.nbContacts);
+    physx::PxContactStreamIterator iterator(pair.contactPatches,
+                                            pair.contactPoints, nullptr,
+                                            pair.nbPatches, pair.nbContacts);
     uint32_t localContact = 0;
     while (iterator.hasNextPatch()) {
         iterator.nextPatch();
@@ -288,8 +321,9 @@ __global__ void flattenContactPairsKernel(const physx::PxGpuContactPair* pairs,
             if (outIndex < maxContactPoints) {
                 const physx::PxVec3& point = iterator.getContactPoint();
                 const physx::PxVec3& normal = iterator.getContactNormal();
-                const float force =
-                    pair.contactForces ? pair.contactForces[localContact] : 0.0f;
+                const float force = pair.contactForces
+                                        ? pair.contactForces[localContact]
+                                        : 0.0f;
                 float* row = contactPoints + static_cast<size_t>(outIndex) * 10;
                 if (contactPointPairIndices)
                     contactPointPairIndices[outIndex] = pairIndex;
@@ -309,10 +343,10 @@ __global__ void flattenContactPairsKernel(const physx::PxGpuContactPair* pairs,
     }
 }
 
-__device__ int32_t contactSensorOutput(
-    const int32_t* ref, const int32_t* desc,
-    const int32_t* rowToEnvironment, const int32_t* bodyToSlot,
-    uint32_t outputCount) {
+__device__ int32_t contactSensorOutput(const int32_t* ref, const int32_t* desc,
+                                       const int32_t* rowToEnvironment,
+                                       const int32_t* bodyToSlot,
+                                       uint32_t outputCount) {
     const int32_t row = ref[1];
     const int32_t body = ref[2];
     if (ref[0] != desc[SensorBodyKind] || row < 0 || body < 0 ||
@@ -329,9 +363,8 @@ __device__ int32_t contactSensorOutput(
 
     const int32_t output = desc[SensorOutputOffset] +
                            environment * desc[SensorBodyCount] + bodySlot;
-    return output >= 0 && static_cast<uint32_t>(output) < outputCount
-               ? output
-               : -1;
+    return output >= 0 && static_cast<uint32_t>(output) < outputCount ? output
+                                                                      : -1;
 }
 
 __global__ void aggregateContactSensorsKernel(
@@ -376,7 +409,8 @@ __global__ void aggregateContactSensorImpulseKernel(
         return;
 
     const int32_t* pair = pairBodyRefs + static_cast<size_t>(pairIndex) * 6;
-    const float* impulse = contactPoints + static_cast<size_t>(pointIndex) * 10 + 6;
+    const float* impulse =
+        contactPoints + static_cast<size_t>(pointIndex) * 10 + 6;
     for (uint32_t endpoint = 0; endpoint < 2; ++endpoint) {
         const int32_t* ref = pair + endpoint * 3;
         const float sign = endpoint == 0 ? 1.0f : -1.0f;
@@ -649,8 +683,7 @@ void packSparseArticulationRootStateCUDA(
 
 void clearSparseRigidCommandsCUDA(const Sim::GpuArrayView& logicalIndices,
                                   void* denseForce, void* denseTorque,
-                                  uint32_t rigidCount,
-                                  uint64_t streamHandle) {
+                                  uint32_t rigidCount, uint64_t streamHandle) {
     validateSparseIndexView(logicalIndices, rigidCount,
                             "sparse rigid command clear");
     const uint32_t count = viewCount(logicalIndices);
@@ -734,15 +767,13 @@ void clearSparseArticulationCommandsCUDA(
     checkCUDA(cudaGetLastError(), "clearSparseArticulationCommandsKernel");
 }
 
-void flattenContactPairsCUDA(const void* contactPairs, const void* pairCount,
-                             void* contactPairHeaders,
-                             const void* contactNodeBodyRefs,
-                             uint32_t contactNodeBodyRefCapacity,
-                             void* contactPairBodyRefs, void* contactPoints,
-                             void* contactPointCount,
-                             void* contactPointPairIndices, uint32_t maxPairs,
-                             uint32_t maxContactPoints,
-                             uint64_t streamHandle) {
+void flattenContactPairsCUDA(
+    const void* contactPairs, const void* pairCount, void* contactPairHeaders,
+    const void* contactNodeBodyRefs, uint32_t contactNodeBodyRefCapacity,
+    const void* contactActorKeys, const void* contactActorBodyRefs,
+    uint32_t contactActorHashCapacity, void* contactPairBodyRefs,
+    void* contactPoints, void* contactPointCount, void* contactPointPairIndices,
+    uint32_t maxPairs, uint32_t maxContactPoints, uint64_t streamHandle) {
     if (!contactPairs || !pairCount || !contactPoints || !contactPointCount ||
         maxPairs == 0 || maxContactPoints == 0)
         return;
@@ -755,11 +786,11 @@ void flattenContactPairsCUDA(const void* contactPairs, const void* pairCount,
                                   stream),
                   "cudaMemsetAsync(contact pair headers)");
     if (contactPairBodyRefs)
-        checkCUDA(cudaMemsetAsync(contactPairBodyRefs, 0xFF,
-                                  sizeof(int32_t) *
-                                      static_cast<size_t>(maxPairs) * 6,
-                                  stream),
-                  "cudaMemsetAsync(contact pair body refs)");
+        checkCUDA(
+            cudaMemsetAsync(contactPairBodyRefs, 0xFF,
+                            sizeof(int32_t) * static_cast<size_t>(maxPairs) * 6,
+                            stream),
+            "cudaMemsetAsync(contact pair body refs)");
     checkCUDA(cudaMemsetAsync(contactPointCount, 0, sizeof(uint32_t), stream),
               "cudaMemsetAsync(contact point count)");
     if (contactPointPairIndices)
@@ -770,14 +801,17 @@ void flattenContactPairsCUDA(const void* contactPairs, const void* pairCount,
                   "cudaMemsetAsync(contact point pair indices)");
 
     const int blockSize = 128;
-    const int gridSize = (static_cast<int>(maxPairs) + blockSize - 1) / blockSize;
+    const int gridSize =
+        (static_cast<int>(maxPairs) + blockSize - 1) / blockSize;
     flattenContactPairsKernel<<<gridSize, blockSize, 0, stream>>>(
         static_cast<const physx::PxGpuContactPair*>(contactPairs),
         static_cast<const uint32_t*>(pairCount),
         static_cast<uint64_t*>(contactPairHeaders),
         static_cast<const int32_t*>(contactNodeBodyRefs),
         contactNodeBodyRefCapacity,
-        static_cast<int32_t*>(contactPairBodyRefs),
+        static_cast<const uint64_t*>(contactActorKeys),
+        static_cast<const int32_t*>(contactActorBodyRefs),
+        contactActorHashCapacity, static_cast<int32_t*>(contactPairBodyRefs),
         static_cast<float*>(contactPoints),
         static_cast<uint32_t*>(contactPointCount),
         static_cast<uint32_t*>(contactPointPairIndices), maxPairs,
@@ -793,9 +827,8 @@ void aggregateContactSensorsCUDA(
     const Sim::GpuArrayView& contactPointPairIndices,
     const Sim::GpuArrayView& sensorDescriptors,
     const Sim::GpuArrayView& rowToEnvironment,
-    const Sim::GpuArrayView& bodyToSlot,
-    Sim::GpuArrayView& contactCount, Sim::GpuArrayView& inContact,
-    Sim::GpuArrayView& netImpulse) {
+    const Sim::GpuArrayView& bodyToSlot, Sim::GpuArrayView& contactCount,
+    Sim::GpuArrayView& inContact, Sim::GpuArrayView& netImpulse) {
     validateContactSensorView(contactPairBodyRefs, Sim::SimDType::Int32, 2,
                               "contact pair body refs");
     validateContactSensorView(contactPairCount, Sim::SimDType::UInt32, 1,
@@ -804,8 +837,7 @@ void aggregateContactSensorsCUDA(
                               "contact points");
     validateContactSensorView(contactPointCount, Sim::SimDType::UInt32, 1,
                               "contact point count");
-    validateContactSensorView(contactPointPairIndices,
-                              Sim::SimDType::UInt32, 1,
+    validateContactSensorView(contactPointPairIndices, Sim::SimDType::UInt32, 1,
                               "contact point pair indices");
     validateContactSensorView(sensorDescriptors, Sim::SimDType::Int32, 2,
                               "contact sensor descriptors");
@@ -847,11 +879,12 @@ void aggregateContactSensorsCUDA(
                   "cudaStreamWaitEvent(aggregate contact sensor)");
     }
 
-    checkCUDA(cudaMemsetAsync(contactCount.data, 0, contactCount.byteSize(),
-                              stream),
-              "cudaMemsetAsync(contact sensor count)");
-    checkCUDA(cudaMemsetAsync(netImpulse.data, 0, netImpulse.byteSize(), stream),
-              "cudaMemsetAsync(contact sensor impulse)");
+    checkCUDA(
+        cudaMemsetAsync(contactCount.data, 0, contactCount.byteSize(), stream),
+        "cudaMemsetAsync(contact sensor count)");
+    checkCUDA(
+        cudaMemsetAsync(netImpulse.data, 0, netImpulse.byteSize(), stream),
+        "cudaMemsetAsync(contact sensor impulse)");
     const uint32_t maxPairs =
         static_cast<uint32_t>(contactPairBodyRefs.shape[0]);
     const uint32_t outputCount = static_cast<uint32_t>(contactCount.numel());
@@ -865,13 +898,13 @@ void aggregateContactSensorsCUDA(
         static_cast<uint32_t>(sensorDescriptors.shape[0]),
         static_cast<const int32_t*>(rowToEnvironment.data),
         static_cast<const int32_t*>(bodyToSlot.data),
-        static_cast<int32_t*>(contactCount.data),
-        outputCount, maxPairs);
+        static_cast<int32_t*>(contactCount.data), outputCount, maxPairs);
     checkCUDA(cudaGetLastError(), "aggregateContactSensorsKernel");
     const uint32_t maxPoints = static_cast<uint32_t>(contactPoints.shape[0]);
     const int pointGridSize =
         (static_cast<int>(maxPoints) + blockSize - 1) / blockSize;
-    aggregateContactSensorImpulseKernel<<<pointGridSize, blockSize, 0, stream>>>(
+    aggregateContactSensorImpulseKernel<<<pointGridSize, blockSize, 0,
+                                          stream>>>(
         static_cast<const int32_t*>(contactPairBodyRefs.data),
         static_cast<const uint32_t*>(contactPairCount.data),
         static_cast<const float*>(contactPoints.data),

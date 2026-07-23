@@ -236,6 +236,9 @@ class PhysicsGpuSystem {
     void* _contactPairHeaderBuffer = nullptr;
     void* _contactNodeBodyRefBuffer = nullptr;
     uint32_t _contactNodeBodyRefCapacity = 0;
+    void* _contactActorKeysBuffer = nullptr;
+    void* _contactActorBodyRefBuffer = nullptr;
+    uint32_t _contactActorHashCapacity = 0;
     void* _contactPairBodyRefBuffer = nullptr;
     void* _contactPointBuffer = nullptr;
     void* _contactPointCountBuffer = nullptr;

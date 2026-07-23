@@ -426,6 +426,8 @@ class KangEngineEngine(_BaseEngine):
         self._visual_root_rot = {}
         self._body_velocity_overrides: _BodyVelocityOverrideBuffers | None = None
         self._pending_state: _PendingStateBuffers | None = None
+        self._contact_sensors = {}
+        self._contact_body_indices = {}
         self._debug_visual_pose = (
             os.environ.get("KANGENGINE_DEBUG_VISUAL_POSE") == "1"
             or _parse_bool(self._config.get("debug_visual_pose", False))
@@ -532,8 +534,13 @@ class KangEngineEngine(_BaseEngine):
         )
         self._objects[env_id].append(obj)
         if not is_visual:
+            # Separate envs before the first GPU step to avoid pair explosion.
             self._world.set_root_state(
-                env_id, obj_id, self._world_pos(env_id, start_pos), start_rot
+                env_id,
+                obj_id,
+                self._world_pos(env_id, start_pos),
+                start_rot,
+                immediate=True,
             )
         viewer_color = self._viewer_color(is_visual, color)
         obj.color = viewer_color
@@ -553,18 +560,48 @@ class KangEngineEngine(_BaseEngine):
             for obj in env_objs:
                 if obj.is_visual:
                     continue
+                # Apply env offsets before GPU broadphase initialization.
                 self._world.set_root_state(
                     obj.env_id,
                     obj.obj_id,
                     self._world_pos(obj.env_id, obj.start_pos),
                     obj.start_rot,
+                    immediate=True,
                 )
         self._init_gpu_system_if_needed()
+        self._register_contact_sensors()
         self._world.step(substeps=0, apply_commands=False)
         self._register_sim_visual_batches()
         self._init_body_velocity_override_buffers()
         self._init_state_pending_buffers()
         self._initialized = True
+
+    def _register_contact_sensors(self):
+        if not self._use_gpu_logical_state():
+            return
+        for obj_id in range(self.get_objs_per_env()):
+            first = self._objects[0][obj_id]
+            if first.is_visual:
+                continue
+            obj_type_name = str(getattr(first.obj_type, "name", first.obj_type)).lower()
+            if obj_type_name == "articulated":
+                target = self._world.get_articulation_batch(obj_id=obj_id)
+                body_indices = tuple(
+                    int(value)
+                    for value in self._world.articulation(
+                        env_id=0, obj_id=obj_id
+                    ).get_link_indices()
+                )
+            elif obj_type_name == "rigid":
+                target = self._world.get_rigid_batch(obj_id=obj_id)
+                body_indices = tuple(range(int(target.num_bodies)))
+            else:
+                continue
+            self._contact_sensors[obj_id] = target.add_force_sensor(
+                body_ids=None,
+                name=f"mimickit_obj_{obj_id}_contact_force",
+            )
+            self._contact_body_indices[obj_id] = body_indices
 
     def _init_gpu_system_if_needed(self):
         if not self._auto_init_gpu_system:
@@ -774,12 +811,19 @@ class KangEngineEngine(_BaseEngine):
         if self._is_visual_obj(obj_id):
             value = self._visual_body_pose_batch(self._visual_body_pos, obj_id, 3)
             return self._out(self._local_pos_batch(value))
-        return self._out(self._local_pos_batch(self._state_body_pos(obj_id)))
+        value = self._pending_body_pose_batch(
+            self._visual_body_pos, obj_id, self._state_body_pos(obj_id)
+        )
+        return self._out(self._local_pos_batch(value))
 
     def get_body_rot(self, obj_id):
         if self._is_visual_obj(obj_id):
             return self._out(self._visual_body_pose_batch(self._visual_body_rot, obj_id, 4))
-        return self._out(self._state_body_rot(obj_id))
+        return self._out(
+            self._pending_body_pose_batch(
+                self._visual_body_rot, obj_id, self._state_body_rot(obj_id)
+            )
+        )
 
     def get_body_vel(self, obj_id):
         if self._is_visual_obj(obj_id):
@@ -805,6 +849,17 @@ class KangEngineEngine(_BaseEngine):
         return self._out(self._world.state.get_contact_forces(obj_id))
 
     def get_ground_contact_forces(self, obj_id):
+        sensor = self._contact_sensors.get(int(obj_id))
+        if sensor is not None:
+            # MimicKit environments separate simulated objects spatially and
+            # disable articulation self-collision. Under that contract the
+            # per-body normal contact force is the ground-contact force.
+            forces = sensor.force
+            body_indices = self._contact_body_indices[int(obj_id)]
+            index = torch.as_tensor(
+                body_indices, dtype=torch.long, device=forces.device
+            )
+            return self._out(forces.index_select(1, index))
         return self._out(self._world.state.get_ground_contact_forces(obj_id))
 
     def set_root_pos(self, env_id: EnvIdLike, obj_id: int, root_pos: ArrayLike) -> None:
@@ -883,18 +938,24 @@ class KangEngineEngine(_BaseEngine):
 
     def set_body_pos(self, env_id: EnvIdLike, obj_id: int, body_pos: ArrayLike) -> None:
         # MimicKit uses this in view_motion to publish global FK body positions
-        # for visualization. Physics simulation state is still owned by root/DOF setters.
+        # and during deferred resets. Physics state is still owned by root/DOF
+        # setters, but queries must expose this pose until PhysX applies them.
+        self._set_visual_body_override(
+            self._visual_body_pos, env_id, obj_id, body_pos, 3
+        )
         if self._viewer is not None:
-            self._set_visual_body_override(self._visual_body_pos, env_id, obj_id, body_pos, 3)
             self._debug_visual_body_pose(obj_id)
             self._apply_visual_body_overrides()
         return
 
     def set_body_rot(self, env_id: EnvIdLike, obj_id: int, body_rot: ArrayLike) -> None:
         # MimicKit body rotations are xyzw quaternions in world space. Cache them
-        # for the viewer path; the physics backend does not accept direct body poses.
+        # for reset-time state reads and the viewer path; the physics backend
+        # does not accept direct body poses.
+        self._set_visual_body_override(
+            self._visual_body_rot, env_id, obj_id, body_rot, 4
+        )
         if self._viewer is not None:
-            self._set_visual_body_override(self._visual_body_rot, env_id, obj_id, body_rot, 4)
             self._apply_visual_body_overrides()
         return
 
@@ -1619,6 +1680,28 @@ class KangEngineEngine(_BaseEngine):
             value = storage.get((env_id, int(obj_id)))
             if value is not None:
                 out[env_id] = value
+        return out
+
+    def _pending_body_pose_batch(self, storage, obj_id, values):
+        keys = [
+            (env_id, int(obj_id))
+            for env_id in range(self._num_envs)
+            if (env_id, int(obj_id)) in storage
+        ]
+        if not keys:
+            return values
+        if torch.is_tensor(values):
+            out = values.clone()
+            for env_id, key_obj_id in keys:
+                out[env_id] = torch.as_tensor(
+                    storage[(env_id, key_obj_id)],
+                    dtype=out.dtype,
+                    device=out.device,
+                )
+            return out
+        out = np.asarray(values, dtype=np.float32).copy()
+        for env_id, key_obj_id in keys:
+            out[env_id] = storage[(env_id, key_obj_id)]
         return out
 
     def _clear_dynamic_body_velocity_overrides(self):
