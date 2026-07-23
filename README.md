@@ -10,6 +10,8 @@ A lightweight C++/Python engine for visualizing motion, robotics assets, and Phy
 ![Python](https://img.shields.io/badge/Python-3.12-blue)
 ![PhysX](https://img.shields.io/badge/Physics-PhysX-green)
 
+📚 [Official Documentation](https://gudegi.github.io/KangEngine/)
+
 <table align="center">
   <tr>
     <td width="33%" align="center"><img src="images/instanced_robots.png" alt="Instanced robot simulation" style="width:100%;"></td>

@@ -32,4 +32,7 @@ python ./python/examples/mjcf_dof_control.py /path/to/robot.xml
 The example exposes every DOF as an ImGui slider and also demonstrates animated
 targets, reset, collision visualization, and force dragging.
 
+The [MJCF articulation guide](MJCF_ARTICULATION.md) includes the complete
+`mjcf_dof_control.py` source.
+
 ![Robot with DOF control panel](../images/simulation/dof_control.png)

@@ -28,4 +28,14 @@ python ./python/examples/sim_gpu_contact_sensor.py --num-envs 8 --viewer
 
 The second command requires Linux/NVIDIA CUDA/OpenGL interop.
 
+<details>
+<summary>Complete source: <code>sim_gpu_contact_sensor.py</code></summary>
+
+```{literalinclude} ../../../../python/examples/sim_gpu_contact_sensor.py
+:language: python
+:linenos:
+```
+
+</details>
+
 ![GPU contact points and force arrows](../images/simulation/contact.png)

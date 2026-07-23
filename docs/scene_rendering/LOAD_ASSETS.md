@@ -20,6 +20,16 @@ Run:
 python ./python/examples/view_obj_scene.py --obj-file /path/to/model.obj
 ```
 
+<details>
+<summary>Complete source: <code>view_obj_scene.py</code></summary>
+
+```{literalinclude} ../../../../python/examples/view_obj_scene.py
+:language: python
+:linenos:
+```
+
+</details>
+
 ## FBX mesh
 
 ```python

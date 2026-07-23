@@ -35,6 +35,16 @@ Run:
 python ./python/examples/sim_world_multi_env.py --num-envs 16
 ```
 
+<details>
+<summary>Complete source: <code>sim_world_multi_env.py</code></summary>
+
+```{literalinclude} ../../../../python/examples/sim_world_multi_env.py
+:language: python
+:linenos:
+```
+
+</details>
+
 The example compares low- and high-friction groups on a ramp and displays
 batched state statistics.
 

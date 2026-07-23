@@ -32,4 +32,6 @@ ball.set_root_state(
 `None` selects every environment represented by the view. For one object in
 one environment, that still means a batch of size one.
 
-Complete example: `python/examples/sim_world_minimal.py`.
+Complete example: `python/examples/sim_world_minimal.py`. The
+[First Simulation guide](../getting_started/FIRST_SIMULATION.md) includes its
+complete source.

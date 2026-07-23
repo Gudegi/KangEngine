@@ -38,6 +38,16 @@ Run the complete control example with an MJCF file:
 python ./python/examples/mjcf_dof_control.py /path/to/robot.xml
 ```
 
+<details>
+<summary>Complete source: <code>mjcf_dof_control.py</code></summary>
+
+```{literalinclude} ../../../../python/examples/mjcf_dof_control.py
+:language: python
+:linenos:
+```
+
+</details>
+
 | MJCF articulation | Collision debug |
 |---|---|
 | ![Loaded MJCF articulation](../images/simulation/mjcf_articulation.png) | ![MJCF collision debug geometry](../images/simulation/mjcf_articulation_collision.png) |

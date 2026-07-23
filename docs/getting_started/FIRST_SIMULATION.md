@@ -39,6 +39,16 @@ Run the complete example:
 python ./python/examples/sim_world_minimal.py --width 1280 --height 720
 ```
 
+<details>
+<summary>Complete source: <code>sim_world_minimal.py</code></summary>
+
+```{literalinclude} ../../../../python/examples/sim_world_minimal.py
+:language: python
+:linenos:
+```
+
+</details>
+
 Expected result: the ball falls onto the ground. Press Space to pause and `R`
 to reset it.
 

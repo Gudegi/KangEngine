@@ -13,6 +13,16 @@ python ./python/examples/view_procedural_terrain.py
 It also drops dynamic spheres and boxes onto the terrain to verify that the
 rendered surface and PhysX heightfield agree. Press `R` to reset the bodies.
 
+<details>
+<summary>Complete source: <code>view_procedural_terrain.py</code></summary>
+
+```{literalinclude} ../../../../python/examples/view_procedural_terrain.py
+:language: python
+:linenos:
+```
+
+</details>
+
 ![procedural_terrain](../images/simulation/procedural_terrain.png)
 
 ## Generate the height field

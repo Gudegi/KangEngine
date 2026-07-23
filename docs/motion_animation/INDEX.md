@@ -36,6 +36,16 @@ Run:
 python ./python/examples/view_bvh_character.py /path/to/motion.bvh
 ```
 
+<details>
+<summary>Complete source: <code>view_bvh_character.py</code></summary>
+
+```{literalinclude} ../../../../python/examples/view_bvh_character.py
+:language: python
+:linenos:
+```
+
+</details>
+
 Other examples:
 
 - `python/examples/view_fbx_character.py`

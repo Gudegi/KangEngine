@@ -107,6 +107,16 @@ Run the complete example:
 python ./python/examples/render_prim_scene.py
 ```
 
+<details>
+<summary>Complete source: <code>render_prim_scene.py</code></summary>
+
+```{literalinclude} ../../../../python/examples/render_prim_scene.py
+:language: python
+:linenos:
+```
+
+</details>
+
 ![Parent and child prims with transform axes](../images/getting_started/first_scene.png)
 
 Next: [First Simulation](FIRST_SIMULATION.md) or
