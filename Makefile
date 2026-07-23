@@ -162,10 +162,10 @@ build_usd_python_debug:
 
 # Documentation
 docs:
-	uv run --project python --extra docs sphinx-build -b html _private/sphinx_docs _private/sphinx_docs/_build/html
+	uv run --project python --extra docs sphinx-build -b html docs/sphinx docs/sphinx/_build/html
 
 docs_clean:
-	rm -rf _private/sphinx_docs/_build
+	rm -rf docs/sphinx/_build
 
 # Run commands
 run: run_release
