@@ -1,6 +1,6 @@
 """Direct KangEngine Python API control demo.
 - KangSimWorld owns PhysX simulation and state cache.
-- KangWorldVisualBridge syncs simulation objects into the viewer.
+- SimWorldVisualizer syncs simulation objects into the viewer.
 - App owns rendering, camera, input, and UI.
 """
 
@@ -58,12 +58,10 @@ class ControlDemo(ke.App):
             "checkerColor2", ke.vec4([0.77, 0.93, 0.78, 1.0])
         )
 
-        self.world = ke.KangSimWorld(num_envs=1, sim_dt=1.0 / 120.0, add_ground=True)
-        self.visual = ke.KangWorldVisualBridge(self, self.world)
+        self.world = ke.sim.KangSimWorld(num_envs=1, sim_dt=1.0 / 120.0, add_ground=True)
+        self.visual = ke.visual.sim.SimWorldVisualizer(self, self.world)
 
-        ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
-        ground.set_mesh_data(scene.Prim.create_plane_data(100.0, ke.UpAxis.Z))
-        self.scene.add_renderable(ground, self.ground_shader)
+        self.scene.add_ground(scale=100.0, shader=self.ground_shader)
 
         self.robot_xml = asset_path("characters", "kw", "kw5.xml")
         self.ball_xml = asset_path("objects", "ball.xml")
@@ -75,7 +73,7 @@ class ControlDemo(ke.App):
             env_id=0,
             obj_id=self.robot_obj_id,
             name="kw5",
-            config=ke.ArticulationConfig.free_base(),
+            config=ke.physics.ArticulationConfig.free_base(),
         ).articulation
 
         ball_data = self.world.load_mjcf(self.ball_xml)
@@ -174,7 +172,7 @@ class ControlDemo(ke.App):
             None,
             0,
             self._joint_targets(),
-            mode=ke.ControlMode.POS,
+            mode=ke.sim.ControlMode.POS,
             kp=self.kp,
             kd=self.kd,
         )

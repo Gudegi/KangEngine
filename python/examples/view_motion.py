@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 
 import kangengine as ke
-from kangengine import animation, imgui, keys, scene
+from kangengine import imgui, keys, scene, visual
 
 
 def repo_root() -> Path:
@@ -111,13 +111,11 @@ class MotionViewer(ke.App):
         self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
         self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
 
-        ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
-        ground.set_mesh_data(scene.Prim.create_plane_data(100.0, ke.UpAxis.Z))
-        self.scene.add_renderable(ground, self.ground_shader)
+        self.scene.add_ground(scale=100.0, shader=self.ground_shader)
 
-        self.robot = animation.SkeletonBridge.from_mjcf(
+        self.robot = visual.ArticulationVisual.from_mjcf(
             self.char_file,
-            self.get_scene(),
+            self.scene.native,
             "/kw",
             1.0,
             "DFS",

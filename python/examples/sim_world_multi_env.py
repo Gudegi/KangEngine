@@ -83,13 +83,13 @@ class MultiEnvSimWorldApp(ke.App):
         if not self.high_friction_envs and self.num_envs > 0:
             self.high_friction_envs = (0,)
             self.low_friction_envs = ()
-        self.low_friction_material = ke.PhysicsMaterialDesc([0.05, 0.05, 0.0])
-        self.high_friction_material = ke.PhysicsMaterialDesc([3.0, 2.5, 0.0])
+        self.low_friction_material = ke.physics.PhysicsMaterialDesc([0.05, 0.05, 0.0])
+        self.high_friction_material = ke.physics.PhysicsMaterialDesc([3.0, 2.5, 0.0])
 
         self.shaders = self.create_standard_shaders()
         self.set_camera_view([3.6, -5.0, 2.8], [0.0, 0.0, 0.6])
 
-        self.world = ke.KangSimWorld(
+        self.world = ke.sim.KangSimWorld(
             num_envs=self.num_envs,
             sim_dt=1.0 / 120.0,
             add_ground=False,
@@ -100,7 +100,7 @@ class MultiEnvSimWorldApp(ke.App):
             self.ramp_rot_xyzw,
             register_as_ground=True,
         )
-        self.visual = ke.KangWorldVisualBridge(self, self.world)
+        self.visual = ke.visual.sim.SimWorldVisualizer(self, self.world)
         self._add_ramp_visual()
         self.box_xml = package_asset_path("objects", "box.xml")
         box_data = self.world.load_mjcf(self.box_xml)
@@ -247,14 +247,14 @@ class MultiEnvSimWorldApp(ke.App):
         )
 
     def _add_ramp_visual(self):
-        mesh = ke.scene.Prim.create_rectangle_data(
+        mesh_data = ke.geometry.create_box_data(
             self.ramp_half_extents[0] * 2.0,
             self.ramp_half_extents[1] * 2.0,
             self.ramp_half_extents[2] * 2.0,
         )
         view = self.add_mesh(
             "/terrain/inclined_box",
-            mesh,
+            mesh_data,
             self.shaders.common,
             color=[0.45, 0.45, 0.5, 1.0],
         )

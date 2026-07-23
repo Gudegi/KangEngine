@@ -8,6 +8,8 @@
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/trigonometric.hpp>
 
+#include <stdexcept>
+
 namespace KE {
 namespace Scene {
 
@@ -19,6 +21,7 @@ void decomposeTRS(const glm::mat4& matrix, glm::vec3& translation,
     glm::decompose(matrix, scale, rotation, translation, skew, perspective);
     rotation = glm::normalize(rotation);
 }
+
 } // namespace
 
 TransformComponent::TransformComponent(Prim* owner)
@@ -57,8 +60,7 @@ void TransformComponent::setLocalTranslation(glm::vec3 translation) {
     try {
         _owner->setAttribute(XformTokens::translate, translation);
         _owner->setXformOpOrder(
-            {"xformOp:scale", "xformOp:rotateQuaternion",
-             "xformOp:translate"});
+            {"xformOp:scale", "xformOp:rotateQuaternion", "xformOp:translate"});
     } catch (...) {
         _suppressLocalDirtyVersion = false;
         throw;
@@ -73,8 +75,7 @@ void TransformComponent::setLocalScale(glm::vec3 scale) {
     try {
         _owner->setAttribute(XformTokens::scale, scale);
         _owner->setXformOpOrder(
-            {"xformOp:scale", "xformOp:rotateQuaternion",
-             "xformOp:translate"});
+            {"xformOp:scale", "xformOp:rotateQuaternion", "xformOp:translate"});
     } catch (...) {
         _suppressLocalDirtyVersion = false;
         throw;
@@ -87,17 +88,22 @@ void TransformComponent::setLocalRotation(glm::quat rotation) {
     requireAttached();
     _suppressLocalDirtyVersion = true;
     try {
-        _owner->setAttribute(XformTokens::rotateQuat,
-                             glm::normalize(rotation));
+        _owner->setAttribute(XformTokens::rotateQuat, glm::normalize(rotation));
         _owner->setXformOpOrder(
-            {"xformOp:scale", "xformOp:rotateQuaternion",
-             "xformOp:translate"});
+            {"xformOp:scale", "xformOp:rotateQuaternion", "xformOp:translate"});
     } catch (...) {
         _suppressLocalDirtyVersion = false;
         throw;
     }
     _suppressLocalDirtyVersion = false;
     markChanged();
+}
+
+void TransformComponent::setLocalRotationAxisAngle(glm::vec3 axis,
+                                                   float angleRadians) {
+    if (glm::length(axis) <= 1e-6f)
+        throw std::invalid_argument("rotation axis must be non-zero");
+    setLocalRotation(glm::angleAxis(angleRadians, glm::normalize(axis)));
 }
 
 void TransformComponent::setLocalMatrix(const glm::mat4& matrix) {
@@ -138,6 +144,13 @@ void TransformComponent::setWorldRotation(glm::quat rotation) {
     setLocalRotation(glm::inverse(parentRotation) * glm::normalize(rotation));
 }
 
+void TransformComponent::setWorldRotationAxisAngle(glm::vec3 axis,
+                                                   float angleRadians) {
+    if (glm::length(axis) <= 1e-6f)
+        throw std::invalid_argument("rotation axis must be non-zero");
+    setWorldRotation(glm::angleAxis(angleRadians, glm::normalize(axis)));
+}
+
 void TransformComponent::setWorldMatrix(const glm::mat4& matrix) {
     requireAttached();
     const Prim* parent = _owner->getParent();
@@ -146,6 +159,39 @@ void TransformComponent::setWorldMatrix(const glm::mat4& matrix) {
                : glm::mat4(1.0f);
     const glm::mat4 localMatrix = glm::inverse(parentWorld) * matrix;
     setLocalMatrix(localMatrix);
+}
+
+// TODO : inefficient
+glm::vec3 TransformComponent::getLocalTranslation() {
+    glm::vec3 translation;
+    glm::quat rotation;
+    glm::vec3 scale;
+    decomposeTRS(computeLocalMatrix(), translation, rotation, scale);
+    return translation;
+}
+
+glm::quat TransformComponent::getLocalRotation() {
+    glm::vec3 translation;
+    glm::quat rotation;
+    glm::vec3 scale;
+    decomposeTRS(computeLocalMatrix(), translation, rotation, scale);
+    return rotation;
+}
+
+glm::vec3 TransformComponent::getWorldTranslation() {
+    glm::vec3 translation;
+    glm::quat rotation;
+    glm::vec3 scale;
+    decomposeTRS(computeWorldMatrix(), translation, rotation, scale);
+    return translation;
+}
+
+glm::quat TransformComponent::getWorldRotation() {
+    glm::vec3 translation;
+    glm::quat rotation;
+    glm::vec3 scale;
+    decomposeTRS(computeWorldMatrix(), translation, rotation, scale);
+    return rotation;
 }
 
 glm::mat4 TransformComponent::computeLocalMatrix() {

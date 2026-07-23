@@ -41,7 +41,7 @@ class H1InstancingApp : public App {
     std::unique_ptr<Backend::Shader> groundShader;
 
     PhysicsWorld physics{PhysicsConfig::zUp()};
-    SkeletonBridge refRobot; // MeshInstance prims used for instancer setup
+    ArticulationVisualBridge refRobot; // MeshInstance prims used for instancer setup
     std::vector<Articulation> _artics;
     std::vector<RenderableHandle> _bodyHandles;
     SimModel _simModel;
@@ -99,11 +99,11 @@ class H1InstancingApp : public App {
 
         // Old pattern: create direct Mesh prims as a renderer setup reference.
         // This still works, but every reference prim owns mesh data directly.
-        // refRobot = SkeletonBridge::fromData(mjcfData, getScene());
+        // refRobot = ArticulationVisualBridge::fromData(mjcfData, getScene());
 
         // Current pattern: create source Mesh prims once, then use
         // MeshInstance body prims as the renderer setup reference.
-        auto refAsset = SkeletonBridgeAsset::fromData(mjcfData);
+        auto refAsset = ArticulationVisualBridgeAsset::fromData(mjcfData);
         const std::string meshAssetBasePath = "/mesh_assets/h1";
         refAsset.defineMeshAssets(getScene(), meshAssetBasePath);
         refRobot =

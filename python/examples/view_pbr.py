@@ -21,7 +21,7 @@ class PBRViewer(ke.App):
         self.set_light_color(ke.vec3(1.0, 0.96, 0.88))
         self.set_light_intensity(0.45)
         self.set_light_ambient(ke.vec3(0.025, 0.028, 0.032))
-        self.set_tone_map(ke.ToneMapMode.AcesNarkowicz, 1.0)
+        self.set_tone_map(ke.render.ToneMapMode.AcesNarkowicz, 1.0)
         self.set_bloom(
             True,
             threshold=1.4,
@@ -40,17 +40,17 @@ class PBRViewer(ke.App):
     def _add_pbr_sphere(self, path, position, material, radius=0.34):
         view = self.scene.add_mesh(
             path,
-            scene.Prim.create_sphere_data(radius, 48, 24),
+            ke.geometry.create_sphere_data(radius, 48, 24),
             material,
         )
-        view.prim.add_translate_op(ke.vec3(*position))
+        view.prim.set_local_translation(ke.vec3(*position))
         return view
 
     def _build_material_grid(self):
         presets = [
-            ke.PBRMaterialType.CARROT,
-            ke.PBRMaterialType.CHARCOAL,
-            ke.PBRMaterialType.GOLD,
+            ke.material.PBRMaterialType.CARROT,
+            ke.material.PBRMaterialType.CHARCOAL,
+            ke.material.PBRMaterialType.GOLD,
         ]
         roughness_values = [0.18, 0.42, 0.78]
 
@@ -66,7 +66,7 @@ class PBRViewer(ke.App):
                 )
 
     def _add_emissive_sphere(self):
-        material = self._make_material(ke.PBRMaterialType.EMISSIVE_BLUE)
+        material = self._make_material(ke.material.PBRMaterialType.EMISSIVE_BLUE)
         view = self._add_pbr_sphere(
             "/pbr/emissive",
             [2.45, -1.7, 0.9],
@@ -81,7 +81,7 @@ class PBRViewer(ke.App):
         warm_light.color = ke.vec3(1.0, 0.55, 0.28)
         warm_light.intensity = 85.0
         warm_light.range = 5.0
-        warm_prim = self.get_scene().define_prim(
+        warm_prim = self.scene.define_prim(
             "/lights/warm_point", scene.PrimType.Light
         )
         warm_prim.set_point_light(warm_light)
@@ -91,7 +91,7 @@ class PBRViewer(ke.App):
         cool_light.color = ke.vec3(0.25, 0.55, 1.0)
         cool_light.intensity = 70.0
         cool_light.range = 4.8
-        cool_prim = self.get_scene().define_prim(
+        cool_prim = self.scene.define_prim(
             "/lights/cool_point", scene.PrimType.Light
         )
         cool_prim.set_point_light(cool_light)
@@ -104,7 +104,7 @@ class PBRViewer(ke.App):
         spot_light.range = 6.0
         spot_light.inner_cone_angle = 0.34
         spot_light.outer_cone_angle = 0.62
-        spot_prim = self.get_scene().define_prim(
+        spot_prim = self.scene.define_prim(
             "/lights/soft_spot", scene.PrimType.Light
         )
         spot_prim.set_spot_light(spot_light)

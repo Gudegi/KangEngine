@@ -73,7 +73,7 @@ def main():
         if 0 not in collision_geoms or len(collision_geoms[0]) != 1:
             raise AssertionError("expected one body collision geom")
         geom = collision_geoms[0][0]
-        mapped_material = ke.animation.mjcf_friction_to_physx([1.7, 0.4, 0.2])
+        mapped_material = ke.physics.mjcf_friction_to_physx([1.7, 0.4, 0.2])
         _close(geom.friction, 1.7)
         _close(mapped_material.static_friction, 1.7)
         _close(mapped_material.dynamic_friction, 1.7)
@@ -83,7 +83,7 @@ def main():
         _close(geom.physics_material.restitution, 0.0)
 
         scene = ke.scene.create_backend(ke.scene.BackendType.Native)
-        bridge = ke.animation.SkeletonBridge.from_mjcf(str(mjcf), scene, "/robot")
+        bridge = ke.visual.ArticulationVisual.from_mjcf(str(mjcf), scene, "/robot")
         body = bridge.body_prim(0)
         if body is None:
             raise AssertionError("body prim was not created")

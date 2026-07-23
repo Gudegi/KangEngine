@@ -22,12 +22,12 @@ class MinimalSimWorldApp(ke.App):
         self.paused = False
         self.spawn_pos = [0.0, 0.0, 1.8]
 
-        self.shaders = self.create_standard_shaders()
-        self.add_ground(shader=self.shaders.ground)
+        self.standard_materials = self.create_standard_materials()
+        self.add_ground()
         self.set_camera_view([3.0, -4.0, 2.2], [0.0, 0.0, 0.7])
 
-        self.world = ke.KangSimWorld(num_envs=1, sim_dt=1.0 / 120.0, add_ground=True)
-        self.visual = ke.KangWorldVisualBridge(self, self.world)
+        self.world = ke.sim.KangSimWorld(num_envs=1, sim_dt=1.0 / 120.0, add_ground=True)
+        self.visual = ke.visual.sim.SimWorldVisualizer(self, self.world)
 
         self.ball_xml = package_asset_path("objects", "ball.xml")
         ball_data = self.world.load_mjcf(self.ball_xml)
@@ -43,7 +43,7 @@ class MinimalSimWorldApp(ke.App):
             self.ball,
             self.ball_xml,
             prim_base_path="/ball",
-            shader=self.shaders.common,
+            material=self.standard_materials.common,
             color=[0.95, 0.2, 0.12, 1.0],
         )
 
@@ -78,7 +78,7 @@ class MinimalSimWorldApp(ke.App):
         pos = self.ball.get_root_pos()
 
         imgui.begin("Minimal Sim World")
-        imgui.text("KangSimWorld + KangWorldVisualBridge")
+        imgui.text("KangSimWorld + SimWorldVisualizer")
         imgui.text("Space: pause/resume    R: reset")
         imgui.separator()
         imgui.text(f"State: {'paused' if self.paused else 'running'}")

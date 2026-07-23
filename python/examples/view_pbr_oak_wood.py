@@ -27,16 +27,16 @@ class PBROakWoodViewer(ke.App):
         self.material = self._make_oak_material()
         oak_view = self.scene.add_mesh(
             "/pbr/oak_wood",
-            scene.Prim.create_plane_data(3.0, ke.UpAxis.Z),
+            ke.geometry.create_plane_data(3.0, ke.UpAxis.Z),
             self.material,
         )
-        oak_view.prim.add_translate_op(ke.vec3(0.0, 0.0, 0.02))
+        oak_view.prim.set_local_translation(ke.vec3(0.0, 0.0, 0.02))
 
         self.set_light_direction(ke.vec3(-0.35, 0.45, 0.82))
         self.set_light_color(ke.vec3(1.0, 1.0, 1.0))
         self.set_light_intensity(1.2)
         self.set_light_ambient(ke.vec3(0.22, 0.22, 0.22))
-        self.set_tone_map(ke.ToneMapMode.AcesNarkowicz, 1.0)
+        self.set_tone_map(ke.render.ToneMapMode.AcesNarkowicz, 1.0)
         self.set_bloom(False)
 
         self.set_camera_view([0.0, -3.0, 2.2], [0.0, 0.0, 0.15])

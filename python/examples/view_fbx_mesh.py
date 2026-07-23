@@ -62,12 +62,12 @@ class FBXMeshViewer(ke.App):
         self._configure_lighting()
         self._configure_camera()
         self.meshes = asset.FBXLoader.load_meshes(self.fbx_file, self.scale)
-        scene.Prim.define_manipulation_group(self.get_scene(), FBX_ROOT_PATH)
+        scene.Prim.define_manipulation_group(self.scene.native, FBX_ROOT_PATH)
 
         if self.show_ground:
             self.scene.add_mesh(
                 "/ground",
-                scene.Prim.create_plane_data(4.0, self.up_axis),
+                ke.geometry.create_plane_data(4.0, self.up_axis),
                 self.ground_shader,
             )
 
@@ -104,7 +104,7 @@ class FBXMeshViewer(ke.App):
                     # FBX does not reliably describe alpha semantics. Atlas
                     # textures in these formats commonly use binary cutouts;
                     # Mask keeps depth writes and clips their empty texels.
-                    view.set_alpha_mode(ke.AlphaMode.Mask, 0.5)
+                    view.set_alpha_mode(ke.render.AlphaMode.Mask, 0.5)
                 textured_count += 1
             if diffuse_texture is not None and normal_texture is not None:
                 view.set_texture(normal_texture, 5)

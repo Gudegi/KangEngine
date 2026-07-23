@@ -1,0 +1,270 @@
+#include "skin_visual_bridge.hpp"
+
+#include "asset/fbx_loader.hpp"
+#include "animation/skeleton_math.hpp"
+#include "animation/skinning.hpp"
+#include "engine/core/app/app.hpp"
+#include "engine/graphics/backend/base/graphics_device.hpp"
+#include "engine/scene/component/render_component.hpp"
+#include "engine/scene/component/scene_render_system.hpp"
+#include "engine/scene/native/prim.hpp"
+#include "engine/scene/prim_path.hpp"
+#include "engine/scene/scene_backend.hpp"
+
+#include <algorithm>
+#include <array>
+#include <filesystem>
+#include <stdexcept>
+
+namespace KE {
+namespace Bridge {
+namespace {
+
+glm::vec4 diffuseColorFromMaterial(const Asset::FBXMeshMetadata& mesh,
+                                   glm::vec4 fallback) {
+    const int idx = mesh.primaryMaterialIndex;
+    if (idx < 0 || idx >= static_cast<int>(mesh.materials.size()))
+        return fallback;
+    const auto& color = mesh.materials[static_cast<size_t>(idx)].diffuseColor;
+    return glm::vec4(color[0], color[1], color[2], color[3]);
+}
+
+std::string diffuseTexturePathFromMaterial(const Asset::FBXMeshMetadata& mesh) {
+    const int idx = mesh.primaryMaterialIndex;
+    if (idx < 0 || idx >= static_cast<int>(mesh.materials.size()))
+        return {};
+    const auto& material = mesh.materials[static_cast<size_t>(idx)];
+    return material.hasDiffuseTexture ? material.diffuseTexturePath : "";
+}
+
+std::string normalTexturePathFromMaterial(const Asset::FBXMeshMetadata& mesh) {
+    const int idx = mesh.primaryMaterialIndex;
+    if (idx < 0 || idx >= static_cast<int>(mesh.materials.size()))
+        return {};
+    const auto& material = mesh.materials[static_cast<size_t>(idx)];
+    return material.hasNormalTexture ? material.normalTexturePath : "";
+}
+
+void validateBoneSlots(const SkinVisualBridge::MeshBinding& mesh,
+                       size_t motionNodeCount) {
+    if (mesh.boneNames.size() != mesh.boneNodeIndices.size() ||
+        mesh.boneNames.size() != mesh.inverseBindMatrices.size()) {
+        throw std::runtime_error(
+            "SkinVisualBridge bone slot data size mismatch for mesh " +
+            mesh.name);
+    }
+
+    for (size_t slot = 0; slot < mesh.boneNodeIndices.size(); ++slot) {
+        const int node = mesh.boneNodeIndices[slot];
+        if (node < 0 || node >= static_cast<int>(motionNodeCount)) {
+            const std::string boneName = slot < mesh.boneNames.size()
+                                             ? mesh.boneNames[slot]
+                                             : std::to_string(slot);
+            throw std::runtime_error(
+                "SkinVisualBridge bone '" + boneName +
+                "' maps outside the current motion skeleton");
+        }
+    }
+}
+
+} // namespace
+
+SkinVisualBridge
+SkinVisualBridge::fromFBX(App* app, Backend::Shader* shader,
+                                const std::string& fbxPath,
+                                const std::string& primBasePath, int clipIndex,
+                                float fps, float scale, bool useMaterials) {
+    return fromFBXWithBind(app, shader, fbxPath, fbxPath, primBasePath,
+                           clipIndex, fps, scale, useMaterials);
+}
+
+SkinVisualBridge SkinVisualBridge::fromFBXWithBind(
+    App* app, Backend::Shader* shader, const std::string& motionFbxPath,
+    const std::string& bindFbxPath, const std::string& primBasePath,
+    int clipIndex, float fps, float scale, bool useMaterials) {
+    if (!app)
+        throw std::runtime_error(
+            "SkinVisualBridge::fromFBX requires App");
+    if (!shader)
+        throw std::runtime_error(
+            "SkinVisualBridge::fromFBX requires Shader");
+
+    SkinVisualBridge bridge;
+    bridge._app = app;
+    Asset::FBXCharacterData character =
+        (motionFbxPath == bindFbxPath)
+            ? Asset::FBXLoader::loadCharacter(motionFbxPath, clipIndex, fps,
+                                              scale)
+            : Asset::FBXLoader::loadCharacterWithBind(
+                  motionFbxPath, bindFbxPath, clipIndex, fps, scale);
+    bridge._motion = std::move(character.motion);
+    Scene::defineSkeletonTree(app->getScene(), primBasePath + "/skeleton_tree",
+                              bridge._motion.skeletonTree());
+    std::vector<Asset::FBXSkinnedMeshInfo>& meshes = character.skinnedMeshes;
+    bridge._meshes.reserve(meshes.size());
+
+    static const glm::vec4 palette[] = {
+        glm::vec4(0.82f, 0.78f, 0.68f, 1.0f),
+        glm::vec4(0.42f, 0.58f, 0.92f, 1.0f),
+        glm::vec4(0.88f, 0.45f, 0.34f, 1.0f),
+        glm::vec4(0.55f, 0.78f, 0.48f, 1.0f),
+    };
+
+    const std::array<unsigned char, 4> whitePixel = {255, 255, 255, 255};
+    Backend::TextureDesc whiteDesc;
+    whiteDesc.width = 1;
+    whiteDesc.height = 1;
+    whiteDesc.channels = 4;
+    whiteDesc.data = whitePixel.data();
+    whiteDesc.name = "fbx_white_fallback";
+    bridge._fallbackWhiteTexture =
+        app->getRenderer().device()->createTexture(whiteDesc);
+    shader->use();
+    shader->setInt("uTexture", 0);
+
+    for (int i = 0; i < static_cast<int>(meshes.size()); ++i) {
+        auto& imported = meshes[static_cast<size_t>(i)];
+        const std::string safeName = Scene::PrimPath::safeToken(
+            imported.metadata.name, "mesh_" + std::to_string(i));
+        const std::string path =
+            primBasePath + "/" + std::to_string(i) + "_" + safeName;
+        const glm::vec4 fallbackColor =
+            palette[static_cast<size_t>(i) %
+                    (sizeof(palette) / sizeof(palette[0]))];
+        const glm::vec4 color =
+            useMaterials
+                ? diffuseColorFromMaterial(imported.metadata, fallbackColor)
+                : fallbackColor;
+
+        MeshBinding binding;
+        binding.name = imported.metadata.name;
+        binding.boneNames = imported.boneNames;
+        binding.boneNodeIndices = imported.skinnedMeshData.boneNodeIndices;
+        binding.inverseBindMatrices =
+            imported.skinnedMeshData.inverseBindMatrices;
+        validateBoneSlots(binding, bridge._motion.skeletonTree().numJoints());
+        binding.boneMatrices.assign(binding.inverseBindMatrices.size(),
+                                    glm::mat4(1.0f));
+        binding.baseColor = color;
+
+        App::MeshPrimResult result = app->addSkinnedMeshPrim(
+            shader, path, std::move(imported.skinnedMeshData), glm::vec3(0.0f),
+            color, true);
+        binding.prim = result.prim;
+        binding.component =
+            binding.prim ? binding.prim->getRenderComponent() : nullptr;
+
+        const std::string texturePath =
+            useMaterials ? diffuseTexturePathFromMaterial(imported.metadata)
+                         : "";
+        Backend::Texture* diffuseTexture = bridge._fallbackWhiteTexture.get();
+        if (!texturePath.empty() && std::filesystem::exists(texturePath)) {
+            bridge._textures.push_back(
+                app->getRenderer().device()->createTexture(texturePath, true));
+            diffuseTexture = bridge._textures.back().get();
+        }
+        const std::string normalTexturePath =
+            useMaterials ? normalTexturePathFromMaterial(imported.metadata)
+                         : "";
+        Backend::Texture* normalTexture = nullptr;
+        if (!normalTexturePath.empty() &&
+            std::filesystem::exists(normalTexturePath)) {
+            bridge._textures.push_back(
+                app->getRenderer().device()->createTexture(normalTexturePath,
+                                                           true));
+            normalTexture = bridge._textures.back().get();
+        }
+        if (binding.component && diffuseTexture)
+            app->getSceneRenderSystem().setTexture(*binding.component,
+                                                   diffuseTexture, 0);
+        if (binding.component && normalTexture)
+            app->getSceneRenderSystem().setTexture(*binding.component,
+                                                   normalTexture, 5);
+
+        bridge._meshes.push_back(std::move(binding));
+    }
+
+    bridge.applyTime(0.0f);
+    return bridge;
+}
+
+Animation::SkeletonState SkinVisualBridge::applyTime(float time,
+                                                           bool loop) {
+    const Animation::SkeletonState state = _motion.sample(time, loop);
+    return applyState(state);
+}
+
+Animation::SkeletonState SkinVisualBridge::applyPose(
+    const Eigen::Vector3f& rootTranslation,
+    const std::vector<Eigen::Quaternionf>& localRotations) {
+    if (static_cast<int>(localRotations.size()) != _motion.numJoints()) {
+        throw std::runtime_error(
+            "SkinVisualBridge::applyPose local rotation count does not "
+            "match motion skeleton joint count");
+    }
+
+    Animation::SkeletonState state = _motion.frame(0);
+    state.setRootTranslation(rootTranslation);
+    for (int i = 0; i < static_cast<int>(localRotations.size()); ++i) {
+        Eigen::Quaternionf q = localRotations[static_cast<size_t>(i)];
+        if (q.norm() <= 1e-6f)
+            q = Eigen::Quaternionf::Identity();
+        else
+            q.normalize();
+        state.setRotation(i, q);
+    }
+    return applyState(state);
+}
+
+Animation::SkeletonState
+SkinVisualBridge::applyState(const Animation::SkeletonState& state) {
+    if (!_app)
+        return state;
+
+    state.computeGlobalTransformsInto(_globalTransforms);
+
+    _globalMatrices.resize(_globalTransforms.size());
+    for (size_t i = 0; i < _globalTransforms.size(); ++i)
+        _globalMatrices[i] = Animation::transformToMat4(_globalTransforms[i]);
+
+    for (MeshBinding& mesh : _meshes) {
+        Animation::Skinning::computeSkinningMatricesInto(
+            mesh.boneNodeIndices, mesh.inverseBindMatrices, _globalMatrices,
+            mesh.boneMatrices);
+
+        if (mesh.component)
+            _app->getSceneRenderSystem().updateSkinning(*mesh.component,
+                                                        mesh.boneMatrices);
+    }
+
+    return state;
+}
+
+void SkinVisualBridge::setVisible(bool visible) {
+    const float alpha = visible ? 1.0f : 0.0f;
+    for (MeshBinding& mesh : _meshes) {
+        if (!mesh.prim)
+            continue;
+        glm::vec4 color = mesh.baseColor;
+        color.a = alpha;
+        mesh.prim->setDisplayColorAlpha(color);
+    }
+}
+
+void SkinVisualBridge::setColor(const glm::vec4& color) {
+    for (MeshBinding& mesh : _meshes) {
+        mesh.baseColor = color;
+        if (mesh.prim)
+            mesh.prim->setDisplayColorAlpha(color);
+    }
+}
+
+void SkinVisualBridge::setCastsShadow(bool castsShadow) {
+    for (const MeshBinding& mesh : _meshes) {
+        if (mesh.component)
+            mesh.component->setCastsShadow(castsShadow);
+    }
+}
+
+} // namespace Bridge
+} // namespace KE

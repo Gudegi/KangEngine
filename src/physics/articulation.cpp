@@ -58,9 +58,9 @@ void applyContactOffsets(PxShape* shape, float contactOffset,
     shape->setContactOffset(std::max(contactOffset, restOffset + 1e-4f));
 }
 
-Animation::CollisionGeom makeFallbackBoxGeom(const PxVec3& halfExtents) {
-    Animation::CollisionGeom geom;
-    geom.type = Animation::CollisionGeom::Type::Box;
+Character::CollisionGeomDesc makeFallbackBoxGeom(const PxVec3& halfExtents) {
+    Character::CollisionGeomDesc geom;
+    geom.type = Character::CollisionGeomDesc::Type::Box;
     geom.name = "__fallback_box";
     geom.size[0] = halfExtents.x;
     geom.size[1] = halfExtents.y;
@@ -72,14 +72,14 @@ Animation::CollisionGeom makeFallbackBoxGeom(const PxVec3& halfExtents) {
 // Creates and attaches PhysX shapes for each MJCF collision geom on the link.
 // Cylinders are approximated as capsules (PhysX has no native cylinder shape).
 void attachCollisionShapes(PxArticulationLink* link, PhysicsWorld& physics,
-                           const Animation::CollisionGeom* geoms,
+                           const Character::CollisionGeomDesc* geoms,
                            std::size_t count, float contactOffset,
                            float restOffset,
                            const std::vector<
-                               Animation::CollisionMaterialOverride>& overrides,
+                               Physics::CollisionMaterialOverride>& overrides,
                            std::shared_ptr<const Animation::SkeletonTree> tree,
                            int bodyIndex) {
-    using Type = Animation::CollisionGeom::Type;
+    using Type = Character::CollisionGeomDesc::Type;
     for (std::size_t i = 0; i < count; ++i) {
         const auto& g = geoms[i];
         const auto material =
@@ -128,10 +128,10 @@ void attachCollisionShapes(PxArticulationLink* link, PhysicsWorld& physics,
 
 // Convenience overload accepting a vector of geoms.
 void attachCollisionShapes(PxArticulationLink* link, PhysicsWorld& physics,
-                           const std::vector<Animation::CollisionGeom>& geoms,
+                           const std::vector<Character::CollisionGeomDesc>& geoms,
                            float contactOffset, float restOffset,
                            const std::vector<
-                               Animation::CollisionMaterialOverride>& overrides,
+                               Physics::CollisionMaterialOverride>& overrides,
                            std::shared_ptr<const Animation::SkeletonTree> tree,
                            int bodyIndex) {
     attachCollisionShapes(link, physics, geoms.data(), geoms.size(),
@@ -141,7 +141,7 @@ void attachCollisionShapes(PxArticulationLink* link, PhysicsWorld& physics,
 // Applies MJCF inertial properties (mass, COM, diag inertia) to a link.
 // Falls back to uniform mass distribution if the link has no inertial entry.
 void applyInertial(PxArticulationLink* link,
-                   const Animation::InertialMap& inertials, int idx,
+                   const Character::InertialDescMap& inertials, int idx,
                    float fallbackMass = 1.f) {
     auto it = inertials.find(idx);
     if (it == inertials.end()) {
@@ -475,8 +475,8 @@ float Articulation::calcMass() const {
 
 Articulation Articulation::build(
     PhysicsWorld& physics, std::shared_ptr<const Animation::SkeletonTree> tree,
-    const Animation::CollisionGeomMap& colGeoms,
-    const Animation::JointMap& joints, const Animation::InertialMap& inertials,
+    const Character::CollisionGeomDescMap& colGeoms,
+    const Character::JointDescMap& joints, const Character::InertialDescMap& inertials,
     const ArticulationConfig& cfg) {
     // Compute rest-pose global transforms — no copy, shared_ptr passed
     // directly.
@@ -796,7 +796,7 @@ void Articulation::setJointForces(const std::vector<float>& forces) {
 }
 
 int Articulation::setCollisionMaterial(
-    PhysicsWorld& physics, const Animation::PhysicsMaterialDesc& material) {
+    PhysicsWorld& physics, const Physics::PhysicsMaterialDesc& material) {
     if (!physics.getPhysics() || !_artic)
         return 0;
 
@@ -823,7 +823,7 @@ int Articulation::setCollisionMaterial(
 
 int Articulation::setCollisionMaterialOverrides(
     PhysicsWorld& physics,
-    const std::vector<Animation::CollisionMaterialOverride>& overrides) {
+    const std::vector<Physics::CollisionMaterialOverride>& overrides) {
     if (!physics.getPhysics() || !_artic)
         return 0;
 

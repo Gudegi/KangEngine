@@ -17,7 +17,7 @@ def main():
     scene = ke.scene.create_backend(ke.scene.BackendType.Native)
 
     camera_prim = scene.define_prim("/cameras/main", ke.scene.PrimType.Camera)
-    camera_prim.add_translate_op(ke.vec3(1.0, 2.0, 3.0))
+    camera_prim.set_local_translation(ke.vec3(1.0, 2.0, 3.0))
     component = camera_prim.add_camera_component()
     if component is None or not component.attached:
         raise AssertionError("add_camera_component did not attach CameraComponent")

@@ -10,7 +10,7 @@ import kangengine as ke
 
 
 def main():
-    world = ke.KangSimWorld(num_envs=2, sim_device="cuda", add_ground=False)
+    world = ke.sim.KangSimWorld(num_envs=2, sim_device="cuda", add_ground=False)
     try:
         mjcf_path = (
             Path(ke.__file__).resolve().parent
@@ -207,7 +207,7 @@ def main():
         command_qvel[0] = -0.375
         command_qf[0] = 0.5
 
-        world.set_cmd([1], 0, command_qpos, mode=ke.ControlMode.POS)
+        world.set_cmd([1], 0, command_qpos, mode=ke.sim.ControlMode.POS)
         world.apply_commands()
         target_pos = world.get_gpu_articulation_target_joint_positions()
         torch.cuda.synchronize(0)
@@ -219,7 +219,7 @@ def main():
             err_msg="KangSimWorld GPU articulation POS command mismatch",
         )
 
-        world.set_cmd([1], 0, command_qvel, mode=ke.ControlMode.VEL)
+        world.set_cmd([1], 0, command_qvel, mode=ke.sim.ControlMode.VEL)
         world.apply_commands()
         target_vel = world.get_gpu_articulation_target_joint_velocities()
         torch.cuda.synchronize(0)
@@ -231,7 +231,7 @@ def main():
             err_msg="KangSimWorld GPU articulation VEL command mismatch",
         )
 
-        world.set_cmd([1], 0, command_qf, mode=ke.ControlMode.TORQUE)
+        world.set_cmd([1], 0, command_qf, mode=ke.sim.ControlMode.TORQUE)
         world.apply_commands()
         qf = world.get_gpu_articulation_joint_forces()
         torch.cuda.synchronize(0)
@@ -254,7 +254,7 @@ def main():
             reset_after_command_qvel,
         )
         world.apply_resets()
-        if world.commands[(1, 0)].mode != ke.ControlMode.NONE:
+        if world.commands[(1, 0)].mode != ke.sim.ControlMode.NONE:
             raise AssertionError("GPU reset did not clear stale articulation command")
         qpos = world.get_gpu_articulation_joint_positions()
         target_pos = world.get_gpu_articulation_target_joint_positions()

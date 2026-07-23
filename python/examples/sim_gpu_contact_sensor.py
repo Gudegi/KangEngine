@@ -82,7 +82,7 @@ class GpuContactSensorDemo:
         physics_config = ke.physics.PhysicsConfig.z_up()
         physics_config.enable_contact_reports = False  # Turn off CPU contact report callback
         physics_config.restitution = 0.3
-        self.world = ke.KangSimWorld(
+        self.world = ke.sim.KangSimWorld(
             num_envs=args.num_envs,
             physics_config=physics_config,
             sim_device=self.device,
@@ -229,7 +229,7 @@ class GpuContactSensorViewer(ke.App):
         self.add_ground(scale=16.0, shader=self.shaders.ground)
         self.set_camera_view([3.5, -5.5, 3.4], [2.0, 1.2, 0.8])
 
-        self.visual = ke.KangWorldVisualBridge(self, self.demo.world)
+        self.visual = ke.visual.sim.SimWorldVisualizer(self, self.demo.world)
         rigid_xml = contact_asset(self.args)
         group_colors = env_group_colors(self.args.num_envs)
         self.visual.add(

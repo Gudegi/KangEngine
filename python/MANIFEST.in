@@ -1,2 +1,5 @@
 recursive-include kangengine/assets *
+prune kangengine/assets/external
 include kangengine/_kangengine.so
+recursive-include kangengine *.pyi
+include kangengine/py.typed

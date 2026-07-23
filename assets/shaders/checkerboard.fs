@@ -38,6 +38,15 @@ float checker(vec2 uv) {
     return mod(floor(uv.x) + floor(uv.y), 2.0);
 }
 
+float checkerAA(vec2 uv) {
+    vec2 fw = fwidth(uv);
+    vec2 grid = abs(fract(uv - 0.5) - 0.5) / fw;
+    vec2 line = clamp(grid, 0.0, 1.0);
+    float rawChecker = mod(floor(uv.x) + floor(uv.y), 2.0);
+    // blend
+    return mix(0.5, rawChecker, min(line.x, line.y));
+}
+
 float getGrid(vec2 uv, float spacing, float thickness) {
     vec2 localCoord = fract(uv / spacing); // map to [0.0, 1.0] per spacing
     vec2 dist = min(localCoord, 1.0 - localCoord); // find the closest distance to grid line
@@ -46,10 +55,19 @@ float getGrid(vec2 uv, float spacing, float thickness) {
     return max(lines.x, lines.y);
 }
 
+float getGridAA(vec2 uv, float spacing, float thickness) {
+    vec2 coord = uv / spacing;
+    vec2 grid = abs(fract(coord - 0.5) - 0.5);
+    vec2 dcoord = fwidth(coord);
+    vec2 line = smoothstep(thickness + dcoord, thickness - dcoord, grid);
+    
+    // X, Y선 통합 및 가시성 알파 보정
+    return clamp(line.x + line.y, 0.0, 1.0);
+}
+
 void main() {
-    float t = checker(TexCoord);
+    float t = checkerAA(TexCoord);
     vec4 col = mix(checkerColor1, checkerColor2, t);
-    // vec4 col = vec4(1.0, 1.0, 1.0, 1.0);
     
     vec3 N = normalize(Normal);
     vec3 L = normalize(lightDir.xyz);
@@ -60,9 +78,9 @@ void main() {
     vec4 finalCheckerColor = vec4(col.rgb * light * ShadowCascadeTint(), col.a);
 
     if (uShowGrid) {
-        vec4 finalGridColor = vec4(gridColor.rgb * light * ShadowCascadeTint(), gridColor.a);
+        vec4 finalGridColor = vec4(gridColor.rgb, gridColor.a);
         // thikness line per 1.0M 
-        float gridMask = getGrid(TexCoord, 1.0, 0.005);
+        float gridMask = getGridAA(TexCoord, 1.0, 0.005);
         FragColor = mix(finalCheckerColor, finalGridColor, gridMask);
     }
     else {

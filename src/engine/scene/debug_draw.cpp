@@ -186,9 +186,9 @@ std::vector<Prim*> DebugDraw::logLines(SceneBackend* scene,
         auto* prim = scene->definePrim(basePath + "/" + std::to_string(i),
                                        PrimType::Mesh);
         prim->setMeshData(meshData);
-        prim->addTranslateOp(center);
-        prim->addRotateQuaternionOp(rotationFromYTo(dir));
-        prim->addScaleOp(glm::vec3(1.0f, len, 1.0f));
+        prim->setLocalTranslation(center);
+        prim->setLocalRotation(rotationFromYTo(dir));
+        prim->setLocalScale(glm::vec3(1.0f, len, 1.0f));
         prim->setDisplayColorAlpha(pickColor(colors, i));
         result.push_back(prim);
     }
@@ -224,9 +224,9 @@ std::vector<Prim*> DebugDraw::logArrows(SceneBackend* scene,
         auto* prim = scene->definePrim(basePath + "/" + std::to_string(i),
                                        PrimType::Mesh);
         prim->setMeshData(meshData);
-        prim->addTranslateOp(starts[i]);
-        prim->addRotateQuaternionOp(rotationFromYTo(diff / len));
-        prim->addScaleOp(glm::vec3(1.0f, len, 1.0f));
+        prim->setLocalTranslation(starts[i]);
+        prim->setLocalRotation(rotationFromYTo(diff / len));
+        prim->setLocalScale(glm::vec3(1.0f, len, 1.0f));
         prim->setDisplayColorAlpha(pickColor(colors, i));
         result.push_back(prim);
     }

@@ -21,11 +21,13 @@ using namespace physx;
 namespace KE {
 
 class Articulation;
-namespace Animation {
-struct CollisionMaterialOverride;
+namespace Character {
 struct CharacterData;
+} // namespace Character
+namespace Physics {
+struct CollisionMaterialOverride;
 struct PhysicsMaterialDesc;
-} // namespace Animation
+} // namespace Physics
 
 struct PhysicsGpuDynamicsConfig {
     uint64_t tempBufferCapacity = 64ull * 1024 * 1024;
@@ -116,7 +118,7 @@ class PhysicsWorld {
     std::unique_ptr<ContactReportCallback> _contactCallback;
 
     physx::PxMaterial*
-    materialForDesc(const Animation::PhysicsMaterialDesc& material);
+    materialForDesc(const Physics::PhysicsMaterialDesc& material);
 
   public:
     PhysicsWorld(PhysicsConfig config);
@@ -144,7 +146,7 @@ class PhysicsWorld {
     physx::PxShape*
     createExclusiveShape(physx::PxRigidActor& actor,
                          const physx::PxGeometry& geometry,
-                         const Animation::PhysicsMaterialDesc& material);
+                         const Physics::PhysicsMaterialDesc& material);
 
     void addBox(float x, float y, float z);
     physx::PxRigidStatic*
@@ -154,7 +156,7 @@ class PhysicsWorld {
     physx::PxRigidStatic*
     createStaticHeightField(const float* heights, int rows, int cols,
                             float horizontalScale,
-                            const Animation::PhysicsMaterialDesc& material,
+                            const Physics::PhysicsMaterialDesc& material,
                             UpAxis upAxis = UpAxis::Y, bool center = true,
                             bool registerAsGround = true);
 
@@ -169,21 +171,20 @@ class PhysicsWorld {
         float density = 1.0f);
 
     physx::PxRigidDynamic* createDynamicRigid(
-        // TODO: CharacterData's naming is not good.
-        const Animation::CharacterData& data, const glm::vec3& pos,
+        const Character::CharacterData& data, const glm::vec3& pos,
         const glm::quat& rot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
         float density = 1.0f, PxU32 collisionGroup = 0,
         float contactOffset = 0.02f, float restOffset = 0.0f,
-        const std::vector<Animation::CollisionMaterialOverride>&
+        const std::vector<Physics::CollisionMaterialOverride>&
             materialOverrides = {});
 
     int
     setRigidCollisionMaterial(physx::PxRigidDynamic& rigid,
-                              const Animation::PhysicsMaterialDesc& material);
+                              const Physics::PhysicsMaterialDesc& material);
 
     int setRigidCollisionMaterialOverrides(
-        physx::PxRigidDynamic& rigid, const Animation::CharacterData& data,
-        const std::vector<Animation::CollisionMaterialOverride>& overrides);
+        physx::PxRigidDynamic& rigid, const Character::CharacterData& data,
+        const std::vector<Physics::CollisionMaterialOverride>& overrides);
 
     void fecthData();
 
@@ -214,7 +215,7 @@ class PhysicsWorld {
     PxPhysics* getPhysics() { return _physics; }
     PxMaterial* getMaterial() { return _material; }
     PxMaterial*
-    getMaterialForDesc(const Animation::PhysicsMaterialDesc& material) {
+    getMaterialForDesc(const Physics::PhysicsMaterialDesc& material) {
         return materialForDesc(material);
     }
     PxScene* getScene() { return _scene; }

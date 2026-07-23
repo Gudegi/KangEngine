@@ -1,6 +1,6 @@
 ///
 /// Animation System Python Bindings
-/// Skeleton animation bindings plus asset importer bindings.
+/// Skeleton animation bindings.
 ///
 
 #include <pybind11/pybind11.h>
@@ -9,28 +9,22 @@
 #include <glm/gtc/quaternion.hpp>
 #include "py_array_view.hpp"
 
-#include "animation/character_description.hpp"
-#include "asset/bvh_loader.hpp"
-#include "asset/fbx_loader.hpp"
-#include "asset/heightmap_loader.hpp"
-#include "asset/mesh_loader.hpp"
-#include "asset/mjcf_loader.hpp"
-#include "asset/usd_loader.hpp"
+#include "character/character_description.hpp"
 #include "animation/skeleton_math.hpp"
 #include "animation/skeleton_motion.hpp"
 #include "animation/skeleton_state.hpp"
 #include "animation/skeleton_tree.hpp"
 #include "animation/skinning.hpp"
-#include "bridge/skeleton_bridge.hpp"
-#include "bridge/skeleton_visual_bridge.hpp"
+#include "bridge/articulation_visual_bridge.hpp"
+#include "bridge/skeletal_visual_bridge.hpp"
 #include "engine/core/app/app.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/scene_backend.hpp"
 
 namespace py = pybind11;
 using namespace KE;
-using namespace KE::Asset;
 using namespace KE::Animation;
+using namespace KE::Character;
 using namespace KE::Bridge;
 
 namespace {
@@ -61,25 +55,6 @@ std::vector<Eigen::Quaternionf> eigenQuatXyzwArray(const FloatArray& array,
         result.emplace_back(q[3], q[0], q[1], q[2]);
     }
     return result;
-}
-
-PhysicsMaterialDesc physicsMaterialFromPy(py::handle obj, const char* name) {
-    if (py::isinstance<PhysicsMaterialDesc>(obj))
-        return obj.cast<PhysicsMaterialDesc>();
-
-    if (auto values = fixedFloatArray<3>(obj, name)) {
-        return PhysicsMaterialDesc{(*values)[0], (*values)[1], (*values)[2]};
-    }
-
-    if (py::isinstance<py::sequence>(obj) && py::len(obj) == 3) {
-        auto seq = obj.cast<py::sequence>();
-        return PhysicsMaterialDesc{seq[0].cast<float>(), seq[1].cast<float>(),
-                                   seq[2].cast<float>()};
-    }
-
-    throw py::value_error(std::string(name) +
-                          " expects PhysicsMaterialDesc or 3 values "
-                          "[static_friction, dynamic_friction, restitution]");
 }
 
 py::array_t<int>
@@ -300,134 +275,6 @@ std::vector<Eigen::Matrix4f> eigenMat4ArrayFromPy(const FloatArray& array,
 void bind_animation(py::module& m) {
     py::module anim = m.def_submodule(
         "animation", "Skeleton animation, skinning, and visualization APIs.");
-    py::module asset =
-        m.def_submodule("asset", "Asset importers and loader result types.");
-
-    py::class_<ObjMaterialInfo>(
-        asset, "ObjMaterialInfo",
-        "Material metadata imported from an OBJ/MTL pair.")
-        .def_readonly("name", &ObjMaterialInfo::name)
-        .def_readonly("ambient_color", &ObjMaterialInfo::ambientColor)
-        .def_readonly("diffuse_color", &ObjMaterialInfo::diffuseColor)
-        .def_readonly("specular_color", &ObjMaterialInfo::specularColor)
-        .def_readonly("shininess", &ObjMaterialInfo::shininess)
-        .def_readonly("diffuse_texture_path",
-                      &ObjMaterialInfo::diffuseTexturePath)
-        .def_readonly("specular_texture_path",
-                      &ObjMaterialInfo::specularTexturePath)
-        .def_readonly("alpha_texture_path", &ObjMaterialInfo::alphaTexturePath)
-        .def_readonly("normal_texture_path",
-                      &ObjMaterialInfo::normalTexturePath)
-        .def_readonly("has_diffuse_texture",
-                      &ObjMaterialInfo::hasDiffuseTexture)
-        .def_readonly("has_specular_texture",
-                      &ObjMaterialInfo::hasSpecularTexture)
-        .def_readonly("has_alpha_texture", &ObjMaterialInfo::hasAlphaTexture)
-        .def_readonly("has_normal_texture", &ObjMaterialInfo::hasNormalTexture);
-
-    py::class_<ObjMeshSubsetInfo>(
-        asset, "ObjMeshSubsetInfo",
-        "OBJ submesh containing faces that share one material.")
-        .def_readonly("name", &ObjMeshSubsetInfo::name)
-        .def_readonly("material_index", &ObjMeshSubsetInfo::materialIndex)
-        .def_property_readonly(
-            "mesh_data",
-            [](const ObjMeshSubsetInfo& self) {
-                return std::make_shared<KE::Scene::MeshData>(self.meshData);
-            },
-            "Static mesh payload for this material subset.");
-
-    py::class_<ObjMeshInfo>(
-        asset, "ObjMeshInfo",
-        "OBJ mesh payload plus material metadata imported from MTL.")
-        .def_property_readonly(
-            "mesh_data",
-            [](const ObjMeshInfo& self) {
-                return std::make_shared<KE::Scene::MeshData>(self.meshData);
-            },
-            "Static mesh payload.")
-        .def_readonly("materials", &ObjMeshInfo::materials)
-        .def_readonly("subsets", &ObjMeshInfo::subsets)
-        .def_readonly("primary_material_index",
-                      &ObjMeshInfo::primaryMaterialIndex)
-        .def_property_readonly(
-            "material_count",
-            [](const ObjMeshInfo& self) { return self.materials.size(); })
-        .def_property_readonly("subset_count", [](const ObjMeshInfo& self) {
-            return self.subsets.size();
-        });
-
-    asset.def(
-        "load_obj",
-        [](const std::string& path) {
-            return std::make_shared<KE::Scene::MeshData>(
-                KE::Asset::loadObj(path));
-        },
-        py::arg("path"),
-        "Load an OBJ file and return scene.MeshData. MTL is parsed internally; "
-        "use load_obj_with_materials() when material metadata is needed.");
-
-    asset.def(
-        "load_obj_with_materials",
-        [](const std::string& path) {
-            return KE::Asset::loadObjWithMaterials(path);
-        },
-        py::arg("path"),
-        "Load an OBJ file and return mesh data plus MTL material metadata.");
-
-    asset.def(
-        "load_stl",
-        [](const std::string& path) {
-            return std::make_shared<KE::Scene::MeshData>(
-                KE::Asset::loadStl(path));
-        },
-        py::arg("path"), "Load an STL file and return scene.MeshData.");
-
-    asset.def(
-        "load_heightmap_terrain",
-        [](const std::string& path, KE::UpAxis upAxis, float horizontalScale,
-           float heightScale, float heightOffset, int sampleStride) {
-            KE::Asset::HeightmapTerrainOptions options;
-            options.upAxis = upAxis;
-            options.horizontalScale = horizontalScale;
-            options.heightScale = heightScale;
-            options.heightOffset = heightOffset;
-            options.sampleStride = sampleStride;
-            return std::make_shared<KE::Scene::MeshData>(
-                KE::Asset::HeightmapLoader::loadHeightMapTerrain(path,
-                                                                 options));
-        },
-        py::arg("path"), py::arg("up_axis") = KE::UpAxis::Y,
-        py::arg("horizontal_scale") = 1.0f, py::arg("height_scale") = 64.0f,
-        py::arg("height_offset") = -16.0f, py::arg("sample_stride") = 1,
-        "Load a grayscale/RGB heightmap image and build a terrain MeshData.");
-
-    asset.def(
-        "height_field_to_mesh",
-        [](const FloatArray& heights, KE::UpAxis upAxis, float horizontalScale,
-           bool center) {
-            py::buffer_info info = heights.request();
-            if (info.ndim != 2)
-                throw py::value_error(
-                    "height_field_to_mesh expected shape [rows, cols]");
-            const int rows = static_cast<int>(info.shape[0]);
-            const int cols = static_cast<int>(info.shape[1]);
-            if (rows < 2 || cols < 2)
-                throw py::value_error("height_field_to_mesh requires at least "
-                                      "a 2x2 height field");
-
-            KE::Asset::HeightFieldMeshOptions options;
-            options.upAxis = upAxis;
-            options.horizontalScale = horizontalScale;
-            options.center = center;
-            return std::make_shared<KE::Scene::MeshData>(
-                KE::Asset::heightFieldToMesh(
-                    static_cast<const float*>(info.ptr), rows, cols, options));
-        },
-        py::arg("heights"), py::arg("up_axis") = KE::UpAxis::Y,
-        py::arg("horizontal_scale") = 1.0f, py::arg("center") = true,
-        "Convert a 2D float height field array [rows, cols] into "
-        "scene.MeshData.");
 
     anim.def(
         "cpu_skin",
@@ -508,703 +355,6 @@ void bind_animation(py::module& m) {
         py::arg("bone_node_indices"), py::arg("inverse_bind_matrices"),
         py::arg("current_global_matrices"), py::arg("output"),
         "Compute skinning matrices into an existing output array.");
-
-    // Joint (from character_description.hpp)
-    py::class_<Joint>(anim, "Joint",
-                      "Joint metadata imported from robot/character assets.")
-        .def_readonly("name", &Joint::name, "Joint name.")
-        .def_readonly("lo_limit", &Joint::loLimit, "Lower joint limit.")
-        .def_readonly("hi_limit", &Joint::hiLimit, "Upper joint limit.")
-        .def_property_readonly(
-            "axis", [](const Joint& j) { return toGlm(j.axis); },
-            "Joint axis.");
-
-    py::enum_<Site::Type>(anim, "SiteType", "MJCF site geometry type.")
-        .value("Sphere", Site::Type::Sphere)
-        .value("Capsule", Site::Type::Capsule)
-        .value("Box", Site::Type::Box)
-        .export_values();
-
-    // Site
-    py::class_<Site>(anim, "Site",
-                     "Imported MJCF site attached to a character body.")
-        .def_readonly("type", &Site::type, "Site geometry type.")
-        .def_readonly("name", &Site::name, "Site name.")
-        .def_readonly("body_index", &Site::bodyIndex,
-                      "Index of the body this site belongs to.")
-        .def_property_readonly(
-            "pos", [](const Site& s) { return toGlm(s.pos); },
-            "Local site position.")
-        .def_property_readonly(
-            "quat", [](const Site& s) { return toGlm(s.quat); },
-            "Local site orientation.")
-        .def_property_readonly(
-            "size", [](const Site& s) { return toGlm(s.size); },
-            "Site size parameters.")
-        .def_property_readonly(
-            "rgba",
-            [](const Site& s) {
-                return glm::vec4(s.rgba.x(), s.rgba.y(), s.rgba.z(),
-                                 s.rgba.w());
-            },
-            "Site display color.")
-        .def_readonly("has_zaxis", &Site::hasZAxis,
-                      "Whether this site has an explicit z-axis.")
-        .def_property_readonly(
-            "zaxis", [](const Site& s) { return toGlm(s.zaxis); },
-            "Explicit site z-axis if present.");
-
-    // MeshInfo
-    py::class_<MeshInfo>(anim, "MeshInfo",
-                         "Visual mesh reference imported from an MJCF asset.")
-        .def_readonly("body_name", &MeshInfo::bodyName, "Owning body name.")
-        .def_readonly("mesh_file", &MeshInfo::meshFile, "Mesh file path.")
-        .def_readonly("body_index", &MeshInfo::bodyIndex, "Owning body index.")
-        .def_property_readonly(
-            "pos", [](const MeshInfo& m) { return toGlm(m.pos); },
-            "Local mesh position.")
-        .def_property_readonly(
-            "quat",
-            [](const MeshInfo& m) {
-                return glm::quat(m.quat.w(), m.quat.x(), m.quat.y(),
-                                 m.quat.z());
-            },
-            "Local mesh orientation.")
-        .def_property_readonly(
-            "rgba",
-            [](const MeshInfo& m) {
-                return glm::vec4(m.rgba.x(), m.rgba.y(), m.rgba.z(),
-                                 m.rgba.w());
-            },
-            "Mesh display color.");
-
-    py::enum_<CollisionGeom::Type>(
-        anim, "CollisionGeomType",
-        "Collision geometry type imported from character assets.")
-        .value("Capsule", CollisionGeom::Type::Capsule)
-        .value("Cylinder", CollisionGeom::Type::Cylinder)
-        .value("Sphere", CollisionGeom::Type::Sphere)
-        .value("Box", CollisionGeom::Type::Box)
-        .export_values();
-
-    py::class_<PhysicsMaterialDesc>(
-        anim, "PhysicsMaterialDesc",
-        "PhysX-style material factors derived from imported collision data.")
-        .def(py::init<>(), "Create default material [1, 1, 0].")
-        .def(py::init<float, float, float>(), py::arg("static_friction") = 1.f,
-             py::arg("dynamic_friction") = 1.f, py::arg("restitution") = 0.f,
-             "Create a material from scalar PhysX material factors.")
-        .def(py::init([](py::handle values) {
-                 return physicsMaterialFromPy(values, "PhysicsMaterialDesc");
-             }),
-             py::arg("values"),
-             "Create from [static_friction, dynamic_friction, restitution]. "
-             "Accepts list/tuple, NumPy array, or CPU torch tensor.")
-        .def_readwrite("static_friction", &PhysicsMaterialDesc::staticFriction,
-                       "PhysX static friction coefficient.")
-        .def_readwrite("dynamic_friction",
-                       &PhysicsMaterialDesc::dynamicFriction,
-                       "PhysX dynamic friction coefficient.")
-        .def_readwrite("restitution", &PhysicsMaterialDesc::restitution,
-                       "PhysX restitution coefficient.")
-        .def(
-            "as_tuple",
-            [](const PhysicsMaterialDesc& m) {
-                return py::make_tuple(m.staticFriction, m.dynamicFriction,
-                                      m.restitution);
-            },
-            "Return (static_friction, dynamic_friction, restitution).")
-        .def("__repr__", [](const PhysicsMaterialDesc& m) {
-            return "PhysicsMaterialDesc(static_friction=" +
-                   std::to_string(m.staticFriction) +
-                   ", dynamic_friction=" + std::to_string(m.dynamicFriction) +
-                   ", restitution=" + std::to_string(m.restitution) + ")";
-        });
-
-    py::class_<CollisionMaterialOverride>(
-        anim, "CollisionMaterialOverride",
-        "Build-time collision material override matched by body/geom name or "
-        "index. Later overrides win.")
-        .def(py::init<>(), "Create an empty/global override descriptor.")
-        .def(py::init([](py::handle material) {
-                 CollisionMaterialOverride entry;
-                 entry.material = physicsMaterialFromPy(material, "material");
-                 return entry;
-             }),
-             py::arg("material"),
-             "Create a global material override for every collision geom.")
-        .def_static(
-            "all_geoms",
-            [](py::handle material) {
-                CollisionMaterialOverride entry;
-                entry.material = physicsMaterialFromPy(material, "material");
-                return entry;
-            },
-            py::arg("material"),
-            "Override every collision geom in the built actor/articulation.")
-        .def_static(
-            "for_body",
-            [](const std::string& bodyName, py::handle material) {
-                CollisionMaterialOverride entry;
-                entry.bodyName = bodyName;
-                entry.material = physicsMaterialFromPy(material, "material");
-                return entry;
-            },
-            py::arg("body_name"), py::arg("material"),
-            "Override every collision geom on a named body.")
-        .def_static(
-            "for_geom",
-            [](const std::string& bodyName, const std::string& geomName,
-               py::handle material) {
-                CollisionMaterialOverride entry;
-                entry.bodyName = bodyName;
-                entry.geomName = geomName;
-                entry.material = physicsMaterialFromPy(material, "material");
-                return entry;
-            },
-            py::arg("body_name"), py::arg("geom_name"), py::arg("material"),
-            "Override one named collision geom on a named body.")
-        .def_static(
-            "for_indices",
-            [](int bodyIndex, int geomIndex, py::handle material) {
-                CollisionMaterialOverride entry;
-                entry.bodyIndex = bodyIndex;
-                entry.geomIndex = geomIndex;
-                entry.material = physicsMaterialFromPy(material, "material");
-                return entry;
-            },
-            py::arg("body_index"), py::arg("geom_index"), py::arg("material"),
-            "Override by imported body index and collision geom index.")
-        .def_readwrite("body_index", &CollisionMaterialOverride::bodyIndex,
-                       "Matched body index, or -1 for name/all matching.")
-        .def_readwrite("body_name", &CollisionMaterialOverride::bodyName,
-                       "Matched body name, or empty for all bodies.")
-        .def_readwrite("geom_index", &CollisionMaterialOverride::geomIndex,
-                       "Matched geom index inside the body, or -1.")
-        .def_readwrite("geom_name", &CollisionMaterialOverride::geomName,
-                       "Matched geom name, or empty for all geoms.")
-        .def_readwrite("material", &CollisionMaterialOverride::material,
-                       "Override material.")
-        .def("__repr__", [](const CollisionMaterialOverride& entry) {
-            return "CollisionMaterialOverride(body_index=" +
-                   std::to_string(entry.bodyIndex) + ", body_name='" +
-                   entry.bodyName +
-                   "', geom_index=" + std::to_string(entry.geomIndex) +
-                   ", geom_name='" + entry.geomName + "', material=" +
-                   py::repr(py::cast(entry.material)).cast<std::string>() + ")";
-        });
-
-    anim.def(
-        "mjcf_friction_to_physx",
-        [](const std::vector<float>& friction) {
-            return mjcfFrictionToPhysX(friction);
-        },
-        py::arg("friction"),
-        "Map MJCF geom friction values to KangEngine's PhysX material "
-        "descriptor.");
-
-    py::class_<CollisionGeom>(anim, "CollisionGeom",
-                              "Collision geometry attached to a body.")
-        .def_readonly("type", &CollisionGeom::type, "Collision geometry type.")
-        .def_readonly("name", &CollisionGeom::name,
-                      "Imported MJCF geom name, if present.")
-        .def_property_readonly(
-            "pos", [](const CollisionGeom& g) { return toGlm(g.pos); },
-            "Local collision position.")
-        .def_property_readonly(
-            "quat", [](const CollisionGeom& g) { return toGlm(g.quat); },
-            "Local collision orientation.")
-        .def_property_readonly(
-            "size",
-            [](const CollisionGeom& g) {
-                return std::vector<float>{g.size[0], g.size[1], g.size[2]};
-            },
-            "Collision size parameters.")
-        .def_readonly("has_from_to", &CollisionGeom::hasFromTo,
-                      "Whether capsule-style from/to endpoints are present.")
-        .def_property_readonly(
-            "from_pos", [](const CollisionGeom& g) { return toGlm(g.from); },
-            "Collision endpoint start position.")
-        .def_property_readonly(
-            "to_pos", [](const CollisionGeom& g) { return toGlm(g.to); },
-            "Collision endpoint end position.")
-        .def_readonly("friction", &CollisionGeom::friction,
-                      "Imported MuJoCo sliding friction value.")
-        .def_readonly("physics_material", &CollisionGeom::physicsMaterial,
-                      "PhysX-style material factors derived from this geom.")
-        .def_readonly("condim", &CollisionGeom::condim,
-                      "Imported contact dimensionality.")
-        .def_readonly("margin", &CollisionGeom::margin,
-                      "Imported collision margin.")
-        .def_readonly("is_fallback", &CollisionGeom::isFallback,
-                      "Whether KangEngine synthesized this fallback shape.");
-
-    // CharacterData — aggregate returned by asset importers.
-    py::class_<CharacterData>(anim, "CharacterData",
-                              "Imported character description with skeleton, "
-                              "meshes, joints, and sites.")
-        .def_readonly("skeleton_tree", &CharacterData::skeletonTree,
-                      "Imported skeleton hierarchy.")
-        .def_readonly("mesh_infos", &CharacterData::meshInfos,
-                      "Visual mesh references.")
-        .def_readonly("mesh_dir", &CharacterData::meshDir,
-                      "Directory used to resolve mesh files.")
-        .def_readonly("sites", &CharacterData::sites, "Imported site markers.")
-        // joints: return dict[int, list[Joint]]
-        .def_property_readonly(
-            "joints",
-            [](const CharacterData& d) {
-                py::dict result;
-                for (const auto& [idx, jvec] : d.joints)
-                    result[py::int_(idx)] = jvec;
-                return result;
-            },
-            "Joint metadata keyed by body index.")
-        .def_property_readonly(
-            "collision_geoms",
-            [](const CharacterData& d) {
-                py::dict result;
-                for (const auto& [idx, geoms] : d.collisionGeoms)
-                    result[py::int_(idx)] = geoms;
-                return result;
-            },
-            "Collision geometry keyed by body index.");
-
-    py::class_<ImportDiagnostics>(
-        asset, "ImportDiagnostics",
-        "Warnings collected while importing an asset.")
-        .def_readonly("warnings", &ImportDiagnostics::warnings,
-                      "Human-readable importer warnings.");
-
-    py::class_<MJCFImportResult>(asset, "MJCFImportResult",
-                                 "Parsed MJCF character plus diagnostics.")
-        .def_readonly("character", &MJCFImportResult::character,
-                      "Imported character data.")
-        .def_readonly("diagnostics", &MJCFImportResult::diagnostics,
-                      "Importer diagnostics.");
-
-    py::class_<MJCFLoader>(asset, "MJCFLoader",
-                           "Loader for MJCF/XML robot character assets.")
-        .def_static("parse", &MJCFLoader::parse, py::arg("mjcf_path"),
-                    py::arg("scale") = 1.0f, py::arg("order") = "DFS",
-                    "Parse MJCF and return character data with diagnostics.")
-        .def_static("load", &MJCFLoader::load, py::arg("mjcf_path"),
-                    py::arg("scale") = 1.0f, py::arg("order") = "DFS",
-                    "Load MJCF and return character data.");
-
-    py::class_<BVHImportResult>(asset, "BVHImportResult",
-                                "Parsed BVH skeleton motion plus diagnostics.")
-        .def_readonly("motion", &BVHImportResult::motion,
-                      "Imported skeleton motion.")
-        .def_readonly("diagnostics", &BVHImportResult::diagnostics,
-                      "Importer diagnostics.")
-        .def_readonly("frame_count", &BVHImportResult::frameCount,
-                      "Number of motion frames.")
-        .def_readonly("frame_time", &BVHImportResult::frameTime,
-                      "Seconds per source frame.")
-        .def_readonly("frame_rate", &BVHImportResult::frameRate,
-                      "Source frame rate in Hz.");
-
-    py::class_<BVHLoader>(asset, "BVHLoader",
-                          "Loader for BVH skeleton and motion files.")
-        .def_static("load_skeleton", &BVHLoader::loadSkeleton,
-                    py::arg("bvh_path"), py::arg("scale") = 1.0f,
-                    "Load only the skeleton hierarchy from a BVH file.")
-        .def_static("load_motion", &BVHLoader::loadMotion, py::arg("bvh_path"),
-                    py::arg("scale") = 1.0f,
-                    "Load skeleton motion from a BVH file.")
-        .def_static("parse", &BVHLoader::parse, py::arg("bvh_path"),
-                    py::arg("scale") = 1.0f,
-                    "Parse BVH and return motion plus diagnostics.");
-
-    py::class_<FBXAnimationClipInfo>(
-        asset, "FBXAnimationClipInfo",
-        "Animation clip metadata discovered in an FBX file.")
-        .def_readonly("name", &FBXAnimationClipInfo::name, "Clip name.")
-        .def_readonly("start_time", &FBXAnimationClipInfo::startTime,
-                      "Clip start time in seconds.")
-        .def_readonly("end_time", &FBXAnimationClipInfo::endTime,
-                      "Clip end time in seconds.")
-        .def_readonly("frame_rate", &FBXAnimationClipInfo::frameRate,
-                      "Clip source frame rate in Hz.");
-
-    py::class_<FBXMaterialInfo>(asset, "FBXMaterialInfo",
-                                "Material metadata imported from an FBX file.")
-        .def_readonly("name", &FBXMaterialInfo::name, "Material name.")
-        .def_property_readonly(
-            "diffuse_color",
-            [](const FBXMaterialInfo& self) {
-                return py::make_tuple(
-                    self.diffuseColor[0], self.diffuseColor[1],
-                    self.diffuseColor[2], self.diffuseColor[3]);
-            },
-            "Diffuse color as RGBA.")
-        .def_readonly("diffuse_texture_path",
-                      &FBXMaterialInfo::diffuseTexturePath,
-                      "Resolved diffuse texture path.")
-        .def_readonly("normal_texture_path",
-                      &FBXMaterialInfo::normalTexturePath,
-                      "Resolved normal texture path.")
-        .def_readonly("has_diffuse_texture",
-                      &FBXMaterialInfo::hasDiffuseTexture,
-                      "Whether a diffuse texture is referenced.")
-        .def_readonly("has_embedded_diffuse_texture",
-                      &FBXMaterialInfo::hasEmbeddedDiffuseTexture,
-                      "Whether the diffuse texture was embedded in the FBX.")
-        .def_readonly("has_normal_texture", &FBXMaterialInfo::hasNormalTexture,
-                      "Whether a normal texture is referenced.")
-        .def_readonly("has_embedded_normal_texture",
-                      &FBXMaterialInfo::hasEmbeddedNormalTexture,
-                      "Whether the normal texture was embedded in the FBX.");
-
-    py::class_<FBXMeshMetadata, std::shared_ptr<FBXMeshMetadata>>(
-        asset, "FBXMeshMetadata",
-        "Summary metadata for a mesh imported from FBX.")
-        .def_readonly("name", &FBXMeshMetadata::name, "Mesh name.")
-        .def_readonly("vertex_count", &FBXMeshMetadata::vertexCount,
-                      "Number of vertices.")
-        .def_readonly("index_count", &FBXMeshMetadata::indexCount,
-                      "Number of indices.")
-        .def_readonly("material_count", &FBXMeshMetadata::materialCount,
-                      "Number of assigned materials.")
-        .def_readonly("primary_material_index",
-                      &FBXMeshMetadata::primaryMaterialIndex,
-                      "Primary material index.")
-        .def_readonly("has_normals", &FBXMeshMetadata::hasNormals,
-                      "Whether normals are present.")
-        .def_readonly("has_uvs", &FBXMeshMetadata::hasUVs,
-                      "Whether UV coordinates are present.")
-        .def_readonly("has_skin", &FBXMeshMetadata::hasSkin,
-                      "Whether skinning data is present.")
-        .def_readonly("skin_cluster_names", &FBXMeshMetadata::skinClusterNames,
-                      "Names of skin clusters affecting this mesh.")
-        .def_readonly("materials", &FBXMeshMetadata::materials,
-                      "Material metadata assigned to this mesh.");
-
-    py::class_<FBXStaticMeshInfo, std::shared_ptr<FBXStaticMeshInfo>>(
-        asset, "FBXMeshInfo", "Static mesh payload imported from an FBX file.")
-        .def_property_readonly(
-            "metadata",
-            [](const FBXStaticMeshInfo& self) { return self.metadata; })
-        .def_property_readonly(
-            "name",
-            [](const FBXStaticMeshInfo& self) { return self.metadata.name; })
-        .def_property_readonly("vertex_count",
-                               [](const FBXStaticMeshInfo& self) {
-                                   return self.metadata.vertexCount;
-                               })
-        .def_property_readonly("index_count",
-                               [](const FBXStaticMeshInfo& self) {
-                                   return self.metadata.indexCount;
-                               })
-        .def_property_readonly("material_count",
-                               [](const FBXStaticMeshInfo& self) {
-                                   return self.metadata.materialCount;
-                               })
-        .def_property_readonly("primary_material_index",
-                               [](const FBXStaticMeshInfo& self) {
-                                   return self.metadata.primaryMaterialIndex;
-                               })
-        .def_property_readonly("has_normals",
-                               [](const FBXStaticMeshInfo& self) {
-                                   return self.metadata.hasNormals;
-                               })
-        .def_property_readonly(
-            "has_uvs",
-            [](const FBXStaticMeshInfo& self) { return self.metadata.hasUVs; })
-        .def_property_readonly(
-            "has_skin",
-            [](const FBXStaticMeshInfo& self) { return self.metadata.hasSkin; })
-        .def_property_readonly("skin_cluster_names",
-                               [](const FBXStaticMeshInfo& self) {
-                                   return self.metadata.skinClusterNames;
-                               })
-        .def_property_readonly("materials",
-                               [](const FBXStaticMeshInfo& self) {
-                                   return self.metadata.materials;
-                               })
-        .def_property_readonly("mesh_data",
-                               [](std::shared_ptr<FBXStaticMeshInfo> self) {
-                                   return std::shared_ptr<KE::Scene::MeshData>(
-                                       self, &self->meshData);
-                               });
-
-    py::class_<FBXDebug::SkinClusterInfo>(asset, "FBXSkinClusterInfo")
-        .def_readonly("mesh_name", &FBXDebug::SkinClusterInfo::meshName)
-        .def_readonly("cluster_name", &FBXDebug::SkinClusterInfo::clusterName)
-        .def_readonly("link_name", &FBXDebug::SkinClusterInfo::linkName)
-        .def_readonly("weight_count", &FBXDebug::SkinClusterInfo::weightCount)
-        .def_readonly("index_count", &FBXDebug::SkinClusterInfo::indexCount)
-        .def_readonly("min_index", &FBXDebug::SkinClusterInfo::minIndex)
-        .def_readonly("max_index", &FBXDebug::SkinClusterInfo::maxIndex)
-        .def_readonly("min_weight", &FBXDebug::SkinClusterInfo::minWeight)
-        .def_readonly("max_weight", &FBXDebug::SkinClusterInfo::maxWeight)
-        .def_readonly("weight_sum", &FBXDebug::SkinClusterInfo::weightSum)
-        .def_readonly("transform_translation",
-                      &FBXDebug::SkinClusterInfo::transformTranslation)
-        .def_readonly("transform_link_translation",
-                      &FBXDebug::SkinClusterInfo::transformLinkTranslation);
-
-    py::class_<FBXSkinnedMeshInfo, std::shared_ptr<FBXSkinnedMeshInfo>>(
-        asset, "FBXSkinnedMeshInfo",
-        "Skinned mesh payload imported from an FBX file.")
-        .def_property_readonly(
-            "metadata",
-            [](const FBXSkinnedMeshInfo& self) { return self.metadata; })
-        .def_property_readonly(
-            "name",
-            [](const FBXSkinnedMeshInfo& self) { return self.metadata.name; })
-        .def_property_readonly("vertex_count",
-                               [](const FBXSkinnedMeshInfo& self) {
-                                   return self.metadata.vertexCount;
-                               })
-        .def_property_readonly("index_count",
-                               [](const FBXSkinnedMeshInfo& self) {
-                                   return self.metadata.indexCount;
-                               })
-        .def_property_readonly("material_count",
-                               [](const FBXSkinnedMeshInfo& self) {
-                                   return self.metadata.materialCount;
-                               })
-        .def_property_readonly("primary_material_index",
-                               [](const FBXSkinnedMeshInfo& self) {
-                                   return self.metadata.primaryMaterialIndex;
-                               })
-        .def_property_readonly("materials",
-                               [](const FBXSkinnedMeshInfo& self) {
-                                   return self.metadata.materials;
-                               })
-        .def_property_readonly("has_normals",
-                               [](const FBXSkinnedMeshInfo& self) {
-                                   return self.metadata.hasNormals;
-                               })
-        .def_property_readonly(
-            "has_uvs",
-            [](const FBXSkinnedMeshInfo& self) { return self.metadata.hasUVs; })
-        .def_property_readonly("has_skin",
-                               [](const FBXSkinnedMeshInfo& self) {
-                                   return self.metadata.hasSkin;
-                               })
-        .def_property_readonly("skin_cluster_names",
-                               [](const FBXSkinnedMeshInfo& self) {
-                                   return self.metadata.skinClusterNames;
-                               })
-        .def_property_readonly("mesh_data",
-                               [](std::shared_ptr<FBXSkinnedMeshInfo> self) {
-                                   return std::shared_ptr<KE::Scene::MeshData>(
-                                       self, &self->skinnedMeshData.mesh);
-                               })
-        .def_property_readonly(
-            "skinned_mesh_data",
-            [](std::shared_ptr<FBXSkinnedMeshInfo> self) {
-                return std::shared_ptr<KE::Scene::SkinnedMeshData>(
-                    self, &self->skinnedMeshData);
-            })
-        .def_property_readonly("vertices",
-                               [](const FBXSkinnedMeshInfo& self) {
-                                   return floatArrayFromVec3Vector(
-                                       self.skinnedMeshData.mesh.vertices);
-                               })
-        .def_property_readonly("normals",
-                               [](const FBXSkinnedMeshInfo& self) {
-                                   return floatArrayFromVec3Vector(
-                                       self.skinnedMeshData.mesh.normals);
-                               })
-        .def_property_readonly("bone_indices",
-                               [](const FBXSkinnedMeshInfo& self) {
-                                   return intArrayFromVec4Vector(
-                                       self.skinnedMeshData.boneIndices);
-                               })
-        .def_property_readonly("bone_weights",
-                               [](const FBXSkinnedMeshInfo& self) {
-                                   return floatArrayFromVec4Vector(
-                                       self.skinnedMeshData.boneWeights);
-                               })
-        .def_readonly("bone_names", &FBXSkinnedMeshInfo::boneNames)
-        .def_property_readonly("bone_node_indices",
-                               [](const FBXSkinnedMeshInfo& self) {
-                                   return self.skinnedMeshData.boneNodeIndices;
-                               })
-        .def_property_readonly("bind_bone_matrices",
-                               [](const FBXSkinnedMeshInfo& self) {
-                                   return floatArrayFromMat4Vector(
-                                       self.bindBoneMatrices);
-                               })
-        .def_property_readonly(
-            "inverse_bind_matrices",
-            [](const FBXSkinnedMeshInfo& self) {
-                return floatArrayFromMat4Vector(
-                    self.skinnedMeshData.inverseBindMatrices);
-            })
-        .def_property_readonly("bind_mesh_matrices",
-                               [](const FBXSkinnedMeshInfo& self) {
-                                   return floatArrayFromMat4Vector(
-                                       self.bindMeshMatrices);
-                               })
-        .def_readonly("overweight_vertex_count",
-                      &FBXSkinnedMeshInfo::overweightVertexCount)
-        .def_readonly("unweighted_vertex_count",
-                      &FBXSkinnedMeshInfo::unweightedVertexCount)
-        .def_readonly("mismatched_cluster_count",
-                      &FBXSkinnedMeshInfo::mismatchedClusterCount);
-
-    py::class_<FBXCharacterData>(
-        asset, "FBXCharacterData",
-        "FBX character import result with motion and skinned meshes.")
-        .def_readonly("motion", &FBXCharacterData::motion,
-                      "Imported skeleton motion.")
-        .def_property_readonly(
-            "skinned_meshes",
-            [](const FBXCharacterData& self) {
-                py::list result;
-                for (const auto& mesh : self.skinnedMeshes) {
-                    result.append(std::make_shared<FBXSkinnedMeshInfo>(mesh));
-                }
-                return result;
-            },
-            "Imported skinned meshes.");
-
-    py::class_<FBXImportResult>(asset, "FBXImportResult",
-                                "Parsed FBX character, clips, and diagnostics.")
-        .def_readonly("character", &FBXImportResult::character,
-                      "Imported FBX character data.")
-        .def_property_readonly(
-            "motion",
-            [](const FBXImportResult& self) { return self.character.motion; },
-            "Imported skeleton motion.")
-        .def_property_readonly(
-            "skinned_meshes",
-            [](const FBXImportResult& self) {
-                py::list result;
-                for (const auto& mesh : self.character.skinnedMeshes) {
-                    result.append(std::make_shared<FBXSkinnedMeshInfo>(mesh));
-                }
-                return result;
-            },
-            "Imported skinned meshes.")
-        .def_readonly("clips", &FBXImportResult::clips,
-                      "Animation clips discovered in the FBX.")
-        .def_readonly("diagnostics", &FBXImportResult::diagnostics,
-                      "Importer diagnostics.");
-
-    py::class_<FBXLoader>(asset, "FBXLoader",
-                          "Loader for FBX skeletons, motions, and meshes.")
-        .def_static("load_skeleton", &FBXLoader::loadSkeleton,
-                    py::arg("fbx_path"), py::arg("scale") = 0.01f,
-                    "Load only the skeleton hierarchy from an FBX file.")
-        .def_static("load_animation_clip_infos",
-                    &FBXLoader::loadAnimationClipInfos, py::arg("fbx_path"),
-                    "List animation clips available in an FBX file.")
-        .def_static("load_motion", &FBXLoader::loadMotion, py::arg("fbx_path"),
-                    py::arg("clip_index") = -1, py::arg("fps") = -1.0f,
-                    py::arg("scale") = 0.01f,
-                    "Load skeleton motion from an FBX file.")
-        .def_static(
-            "load_meshes",
-            [](const std::string& fbxPath, float scale) {
-                py::list result;
-                for (auto& mesh : FBXLoader::loadMeshes(fbxPath, scale)) {
-                    result.append(
-                        std::make_shared<FBXStaticMeshInfo>(std::move(mesh)));
-                }
-                return result;
-            },
-            py::arg("fbx_path"), py::arg("scale") = 0.01f,
-            "Load static meshes from an FBX file.")
-        .def_static(
-            "parse", &FBXLoader::parse, py::arg("fbx_path"),
-            py::arg("clip_index") = -1, py::arg("fps") = -1.0f,
-            py::arg("scale") = 0.01f,
-            "Parse an FBX file and return character data plus diagnostics.")
-        .def_static("parse_with_bind", &FBXLoader::parseWithBind,
-                    py::arg("motion_fbx_path"), py::arg("bind_fbx_path"),
-                    py::arg("clip_index") = -1, py::arg("fps") = -1.0f,
-                    py::arg("scale") = 0.01f,
-                    "Parse FBX motion with a separate bind-pose FBX file.")
-        .def_static("load_character", &FBXLoader::loadCharacter,
-                    py::arg("fbx_path"), py::arg("clip_index") = -1,
-                    py::arg("fps") = -1.0f, py::arg("scale") = 0.01f,
-                    "Load FBX character data without diagnostics.")
-        .def_static("load_character_with_bind",
-                    &FBXLoader::loadCharacterWithBind,
-                    py::arg("motion_fbx_path"), py::arg("bind_fbx_path"),
-                    py::arg("clip_index") = -1, py::arg("fps") = -1.0f,
-                    py::arg("scale") = 0.01f,
-                    "Load FBX character data using a separate bind-pose file.")
-        .def_static(
-            "load_skinned_meshes",
-            [](const std::string& fbxPath, float scale) {
-                py::list result;
-                for (auto& mesh :
-                     FBXLoader::loadSkinnedMeshes(fbxPath, scale)) {
-                    result.append(
-                        std::make_shared<FBXSkinnedMeshInfo>(std::move(mesh)));
-                }
-                return result;
-            },
-            py::arg("fbx_path"), py::arg("scale") = 0.01f,
-            "Load skinned meshes from an FBX file.");
-
-    py::module_ fbxDebug = asset.def_submodule(
-        "FBXDebug", "FBX debug and importer inspection helpers.");
-    fbxDebug.def("load_skin_cluster_infos", &FBXDebug::loadSkinClusterInfos,
-                 py::arg("fbx_path"), py::arg("scale") = 0.01f,
-                 "Load FBX skin cluster diagnostics.");
-
-    py::class_<USDMeshInfo, std::shared_ptr<USDMeshInfo>>(
-        asset, "USDMeshInfo", "Mesh payload imported from a USD scene.")
-        .def_readonly("prim_path", &USDMeshInfo::primPath, "USD prim path.")
-        .def_readonly("name", &USDMeshInfo::name, "Mesh name.")
-        .def_readonly("material_path", &USDMeshInfo::materialPath,
-                      "USD material path if found.")
-        .def_readonly("diffuse_texture_path", &USDMeshInfo::diffuseTexturePath,
-                      "Resolved diffuse texture path.")
-        .def_readonly("normal_texture_path", &USDMeshInfo::normalTexturePath,
-                      "Resolved normal texture path.")
-        .def_property_readonly("mesh_data",
-                               [](std::shared_ptr<USDMeshInfo> self) {
-                                   return std::shared_ptr<KE::Scene::MeshData>(
-                                       self, &self->meshData);
-                               })
-        .def_property_readonly("vertex_count",
-                               [](const USDMeshInfo& self) {
-                                   return self.meshData.vertices.size();
-                               })
-        .def_property_readonly("index_count", [](const USDMeshInfo& self) {
-            return self.meshData.indices.size();
-        });
-
-    py::class_<USDImportResult>(asset, "USDImportResult",
-                                "Parsed USD meshes plus diagnostics.")
-        .def_property_readonly(
-            "meshes",
-            [](const USDImportResult& self) {
-                py::list result;
-                for (const auto& mesh : self.meshes) {
-                    result.append(std::make_shared<USDMeshInfo>(mesh));
-                }
-                return result;
-            },
-            "Meshes imported from the USD scene.")
-        .def_readonly("diagnostics", &USDImportResult::diagnostics,
-                      "Importer diagnostics.");
-
-    py::class_<USDLoader>(asset, "USDLoader", "Loader for USD mesh scenes.")
-        .def_static("parse", &USDLoader::parse, py::arg("usd_path"),
-                    py::arg("scale") = 1.0f,
-                    "Parse USD and return meshes plus diagnostics.")
-        .def_static(
-            "load_meshes",
-            [](const std::string& usdPath, float scale) {
-                py::list result;
-                for (auto& mesh : USDLoader::loadMeshes(usdPath, scale)) {
-                    result.append(
-                        std::make_shared<USDMeshInfo>(std::move(mesh)));
-                }
-                return result;
-            },
-            py::arg("usd_path"), py::arg("scale") = 1.0f,
-            "Load mesh payloads from a USD file.");
 
     // SkeletonTree (read-only after construction)
     py::class_<SkeletonTree, std::shared_ptr<SkeletonTree>>(
@@ -1405,28 +555,28 @@ void bind_animation(py::module& m) {
         .def("print_global_positions", &SkeletonState::printGlobalPositions,
              "Print global joint positions for debugging.");
 
-    // SkeletonBridge
-    py::class_<SkeletonBridge>(
-        anim, "SkeletonBridge",
-        "Bridge that maps a skeleton pose onto scene prim transforms.")
+    // ArticulationVisual / ArticulationVisualAsset
+    py::class_<ArticulationVisualBridge>(
+        anim, "ArticulationVisual",
+        "Viewer-side articulated rigid-link visual object.")
         .def_static(
             "from_mjcf",
             [](const std::string& mjcfPath, Scene::SceneBackend* scene,
                const std::string& primBasePath, float scale,
                const std::string& order, const std::string& meshAssetBasePath) {
-                return SkeletonBridge::fromMJCF(mjcfPath, scene, primBasePath,
+                return ArticulationVisualBridge::fromMJCF(mjcfPath, scene, primBasePath,
                                                 scale, order,
                                                 meshAssetBasePath);
             },
             py::arg("mjcf_path"), py::arg("scene"),
             py::arg("prim_base_path") = "/robot", py::arg("scale") = 1.0f,
             py::arg("order") = "DFS", py::arg("mesh_asset_base_path") = "",
-            "Create a skeleton bridge and scene prims from an MJCF file.")
-        .def("apply_pose", &SkeletonBridge::applyPose,
-             "Apply the bridge's current SkeletonState to scene prims.")
+            "Create an articulation visual and scene prims from an MJCF file.")
+        .def("apply_pose", &ArticulationVisualBridge::applyPose,
+             "Apply the current skeleton/body state to scene prims.")
         .def(
             "set_joint_rotation",
-            [](SkeletonBridge& self, int idx, const FloatArray& q) {
+            [](ArticulationVisualBridge& self, int idx, const FloatArray& q) {
                 self.setJointRotation(idx,
                                       eigenQuatXyzwFromArray(q, "rotation"));
             },
@@ -1434,130 +584,130 @@ void bind_animation(py::module& m) {
             "Set a joint rotation from an XYZW array.")
         .def(
             "set_joint_rotation",
-            [](SkeletonBridge& self, int idx, const glm::quat& q) {
+            [](ArticulationVisualBridge& self, int idx, const glm::quat& q) {
                 self.setJointRotation(idx, fromGlm(q));
             },
             py::arg("index"), py::arg("rotation"),
             "Set a joint rotation from a quaternion.")
         .def(
             "set_root_translation",
-            [](SkeletonBridge& self, const FloatArray& t) {
+            [](ArticulationVisualBridge& self, const FloatArray& t) {
                 self.setRootTranslation(
                     eigenVec3FromArray(t, "root_translation"));
             },
             py::arg("translation"), "Set the root translation from an array.")
         .def(
             "set_root_translation",
-            [](SkeletonBridge& self, const glm::vec3& t) {
+            [](ArticulationVisualBridge& self, const glm::vec3& t) {
                 self.setRootTranslation(fromGlm(t));
             },
             py::arg("translation"), "Set the root translation from a vec3.")
-        .def("reset_to_zero_pose", &SkeletonBridge::resetToZeroPose,
+        .def("reset_to_zero_pose", &ArticulationVisualBridge::resetToZeroPose,
              "Reset all joint rotations and root translation to zero pose.")
         .def(
             "skeleton",
-            [](SkeletonBridge& self) -> const SkeletonTree& {
+            [](ArticulationVisualBridge& self) -> const SkeletonTree& {
                 return self.fk().skeleton();
             },
             py::return_value_policy::reference_internal,
             "Return the bridged skeleton tree.")
         .def(
             "state",
-            [](SkeletonBridge& self) -> SkeletonState& {
+            [](ArticulationVisualBridge& self) -> SkeletonState& {
                 return self.fk().state();
             },
             py::return_value_policy::reference_internal,
             "Return the mutable current skeleton state.")
-        .def("body_prim", &SkeletonBridge::bodyPrim, py::arg("index"),
+        .def("body_prim", &ArticulationVisualBridge::bodyPrim, py::arg("index"),
              py::return_value_policy::reference,
              "Return the scene prim for a body index.")
-        .def("body_prims", &SkeletonBridge::bodyPrims,
+        .def("body_prims", &ArticulationVisualBridge::bodyPrims,
              py::return_value_policy::reference_internal,
              "Return all body scene prims.")
-        .def("render_prims", &SkeletonBridge::renderPrims,
+        .def("render_prims", &ArticulationVisualBridge::renderPrims,
              py::return_value_policy::reference_internal,
              "Return actual renderable mesh prims.")
-        .def("render_prim_body_indices", &SkeletonBridge::renderPrimBodyIndices,
+        .def("render_prim_body_indices", &ArticulationVisualBridge::renderPrimBodyIndices,
              py::return_value_policy::reference_internal,
              "Return body index for each render prim.")
-        .def("num_bodies", &SkeletonBridge::numBodies,
+        .def("num_bodies", &ArticulationVisualBridge::numBodies,
              "Return the number of bridged bodies.");
 
-    py::class_<SkeletonBridgeAsset>(
-        anim, "SkeletonBridgeAsset",
-        "Reusable skeleton bridge asset that can instantiate scene prims.")
-        .def_static("from_mjcf", &SkeletonBridgeAsset::fromMJCF,
+    py::class_<ArticulationVisualBridgeAsset>(
+        anim, "ArticulationVisualAsset",
+        "Reusable articulated rigid-link visual asset that can instantiate scene prims.")
+        .def_static("from_mjcf", &ArticulationVisualBridgeAsset::fromMJCF,
                     py::arg("mjcf_path"), py::arg("scale") = 1.0f,
                     py::arg("order") = "DFS",
                     "Load reusable bridge asset data from an MJCF file.")
-        .def("define_mesh_assets", &SkeletonBridgeAsset::defineMeshAssets,
+        .def("define_mesh_assets", &ArticulationVisualBridgeAsset::defineMeshAssets,
              py::arg("scene"), py::arg("mesh_asset_base_path"),
              py::arg("split_visual_geoms") = false,
              "Define shared mesh asset prims in a scene.")
-        .def("instantiate", &SkeletonBridgeAsset::instantiate, py::arg("scene"),
+        .def("instantiate", &ArticulationVisualBridgeAsset::instantiate, py::arg("scene"),
              py::arg("prim_base_path") = "/robot",
              py::arg("mesh_asset_base_path") = "",
              py::arg("split_visual_geoms") = false,
              "Instantiate this asset into a scene.")
-        .def("num_bodies", &SkeletonBridgeAsset::numBodies,
+        .def("num_bodies", &ArticulationVisualBridgeAsset::numBodies,
              "Return the number of bodies in this asset.");
 
-    py::class_<SkeletonVisualConfig>(
-        anim, "SkeletonVisualConfig",
-        "Style settings for SkeletonVisualBridge line/joint rendering.")
+    py::class_<SkeletalVisualConfig>(
+        anim, "SkeletalVisualConfig",
+        "Style settings for SkeletalVisual line/joint rendering.")
         .def(py::init<>(), "Create default skeleton visual settings.")
-        .def_readwrite("bone_color", &SkeletonVisualConfig::boneColor,
+        .def_readwrite("bone_color", &SkeletalVisualConfig::boneColor,
                        "RGBA color for bones.")
-        .def_readwrite("joint_color", &SkeletonVisualConfig::jointColor,
+        .def_readwrite("joint_color", &SkeletalVisualConfig::jointColor,
                        "RGBA color for joints.")
-        .def_readwrite("bone_radius", &SkeletonVisualConfig::boneRadius,
+        .def_readwrite("bone_radius", &SkeletalVisualConfig::boneRadius,
                        "Radius used for bone line geometry.")
-        .def_readwrite("joint_radius", &SkeletonVisualConfig::jointRadius,
+        .def_readwrite("joint_radius", &SkeletalVisualConfig::jointRadius,
                        "Radius used for joint point geometry.")
-        .def_readwrite("segments", &SkeletonVisualConfig::segments,
+        .def_readwrite("segments", &SkeletalVisualConfig::segments,
                        "Segment count for generated round geometry.")
-        .def_readwrite("visible", &SkeletonVisualConfig::visible,
+        .def_readwrite("visible", &SkeletalVisualConfig::visible,
                        "Initial visibility state.")
-        .def_readwrite("show_joints", &SkeletonVisualConfig::showJoints,
+        .def_readwrite("show_joints", &SkeletalVisualConfig::showJoints,
                        "Whether joint markers should be visible.");
 
-    py::class_<SkeletonVisualBridge>(
-        anim, "SkeletonVisualBridge",
+    py::class_<SkeletalVisualBridge>(
+        anim, "SkeletalVisual",
         "Instanced line/point renderer for skeleton poses and motion clips.")
-        .def(py::init<>(), "Create an empty skeleton visual bridge.")
+        .def(py::init<>(), "Create an empty skeletal visual.")
         .def_static(
             "define",
             [](App* app, Backend::Shader* shader, const std::string& basePath,
-               const SkeletonState& state, const SkeletonVisualConfig& config) {
-                return SkeletonVisualBridge::define(app, shader, basePath,
+               const SkeletonState& state, const SkeletalVisualConfig& config) {
+                return SkeletalVisualBridge::define(app, shader, basePath,
                                                     state, config);
             },
             py::arg("app"), py::arg("shader"), py::arg("base_path"),
-            py::arg("state"), py::arg("config") = SkeletonVisualConfig{},
+            py::arg("state"), py::arg("config") = SkeletalVisualConfig{},
             "Create skeleton visuals from a SkeletonState.")
         .def_static(
             "define",
             [](App* app, Backend::Shader* shader, const std::string& basePath,
                const SkeletonMotion& motion, float time, bool loop,
-               const SkeletonVisualConfig& config) {
-                return SkeletonVisualBridge::define(app, shader, basePath,
+               const SkeletalVisualConfig& config) {
+                return SkeletalVisualBridge::define(app, shader, basePath,
                                                     motion, time, loop, config);
             },
             py::arg("app"), py::arg("shader"), py::arg("base_path"),
             py::arg("motion"), py::arg("time") = 0.0f, py::arg("loop") = true,
-            py::arg("config") = SkeletonVisualConfig{},
+            py::arg("config") = SkeletalVisualConfig{},
             "Create skeleton visuals by sampling a SkeletonMotion.")
-        .def("apply_state", &SkeletonVisualBridge::applyState, py::arg("state"),
+        .def("apply_state", &SkeletalVisualBridge::applyState, py::arg("state"),
              "Update visuals from a SkeletonState.")
-        .def("apply_motion", &SkeletonVisualBridge::applyMotion,
+        .def("apply_motion", &SkeletalVisualBridge::applyMotion,
              py::arg("motion"), py::arg("time"), py::arg("loop") = true,
              "Update visuals by sampling a SkeletonMotion.")
-        .def("set_visible", &SkeletonVisualBridge::setVisible,
+        .def("set_visible", &SkeletalVisualBridge::setVisible,
              py::arg("visible"), "Set visibility for all skeleton visuals.")
-        .def("set_show_joints", &SkeletonVisualBridge::setShowJoints,
+        .def("set_show_joints", &SkeletalVisualBridge::setShowJoints,
              py::arg("show_joints"), "Show or hide joint markers.")
-        .def("bone_handle", &SkeletonVisualBridge::boneHandle,
+        .def("bone_handle", &SkeletalVisualBridge::boneHandle,
              "Return the renderable handle used for bones.")
-        .def("joint_handle", &SkeletonVisualBridge::jointHandle,
+        .def("joint_handle", &SkeletalVisualBridge::jointHandle,
              "Return the renderable handle used for joints.");
 }

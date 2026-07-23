@@ -1,8 +1,8 @@
 .PHONY: build build_all build_cuda build_current build_debug build_release build_relWithDebInfo \
         build_usd build_usd_debug build_python build_python_debug \
-        build_python_cuda build_usd_python build_usd_python_debug \
+        build_python_cuda build_usd_python build_usd_python_debug wheel wheel_cuda \
         validate_physx_gpu validate_physx_gpu_cpp validate_sim_visual_batch \
-        validate_render_component \
+        validate_python_api validate_render_component validate_wheel validate_wheel_cuda \
         docs docs_clean \
         run run2 run_debug run_release run_relWithDebInfo \
         clean_all clean_debug clean_release clean_relWithDebInfo
@@ -13,6 +13,7 @@ DEBUG_DIR := $(BUILD_DIR)/debug
 REL_DIR := $(BUILD_DIR)/relWithDebInfo
 EXECUTABLE := KangEngine
 PYTHON ?= python/.venv/bin/python
+UV ?= uv
 UNAME_S := $(shell uname -s)
 DEFAULT_CMAKE_FLAGS := -DUSE_CUDA_INTEROP=OFF
 CUDA_TOOLKIT_ROOT ?= /usr/local/cuda
@@ -75,13 +76,13 @@ build_usd_debug:
 
 # Python builds
 build_python:
-	$(call do_build,vcpkg,$(RELEASE_DIR),-DIS_PYTHON_LIB=ON)
+	$(call do_build,vcpkg,$(RELEASE_DIR),-DUSE_USD=OFF -DIS_PYTHON_LIB=ON)
 
 build_python_debug:
 	$(call do_build,vcpkg-debug,$(DEBUG_DIR),-DIS_PYTHON_LIB=ON)
 
 build_python_cuda:
-	$(call do_cuda_build,vcpkg,$(RELEASE_DIR),-DIS_PYTHON_LIB=ON)
+	$(call do_cuda_build,vcpkg,$(RELEASE_DIR),-DUSE_USD=OFF -DIS_PYTHON_LIB=ON)
 
 validate_physx_gpu: build_python_cuda
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/physics_gpu_system_smoke.py
@@ -96,12 +97,53 @@ validate_physx_gpu_cpp: build_cuda
 validate_sim_visual_batch: build_python
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/sim_visual_batch_smoke.py
 
+validate_python_api: build_python
+	PYTHONPYCACHEPREFIX=/tmp/kangengine-pycache $(PYTHON) -m py_compile \
+		python/kangengine/__init__.py \
+		python/kangengine/app/__init__.py \
+		python/kangengine/app/application.py \
+		python/kangengine/material/__init__.py \
+		python/kangengine/material/materials.py \
+		python/kangengine/physics/__init__.py \
+		python/kangengine/physics/wrappers.py \
+		python/kangengine/render/__init__.py \
+		python/kangengine/sim/__init__.py \
+		python/kangengine/sim/world.py \
+		python/kangengine/sim/sensor.py \
+		python/kangengine/terrain/__init__.py \
+		python/kangengine/terrain/heightfield.py \
+		python/kangengine/motion_module/__init__.py \
+		python/kangengine/motion_module/editor.py \
+		python/kangengine/motion_module/modules.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/public_api_surface_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/public_stub_surface_smoke.py
+
+# TODO: USD support
+# macOS
+wheel: build_python
+	$(PYTHON) python/scripts/validate_wheel.py --python $(PYTHON) --uv $(UV) \
+		--expect-no-usd --build-only --output-dir python/dist
+# Linux + cuda(13.0)
+wheel_cuda: build_python_cuda
+	$(PYTHON) python/scripts/validate_wheel.py --python $(PYTHON) --uv $(UV) \
+		--expect-no-usd --build-only --output-dir python/dist
+
+validate_wheel: build_python
+	$(PYTHON) python/scripts/validate_wheel.py --python $(PYTHON) --uv $(UV) \
+		--expect-no-usd
+
+validate_wheel_cuda: build_python_cuda
+	$(PYTHON) python/scripts/validate_wheel.py --python $(PYTHON) --uv $(UV) \
+		--expect-no-usd
+
 validate_render_component: build_python
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/obj_material_loader_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/scene_add_obj_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/mjcf_visual_rgba_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/mjcf_visual_duplicate_mesh_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/articulation_binding_component_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/debug_draw_transform_smoke.py
+	PYTHONPATH=python $(PYTHON) python/examples/smoke/quaternion_binding_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/transform_component_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/mesh_component_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/resource_component_smoke.py
@@ -120,10 +162,10 @@ build_usd_python_debug:
 
 # Documentation
 docs:
-	uv run --project python --extra docs sphinx-build -b html _private/sphinx_docs _private/sphinx_docs/_build/html
+	uv run --project python --extra docs sphinx-build -b html docs/sphinx docs/sphinx/_build/html
 
 docs_clean:
-	rm -rf _private/sphinx_docs/_build
+	rm -rf docs/sphinx/_build
 
 # Run commands
 run: run_release

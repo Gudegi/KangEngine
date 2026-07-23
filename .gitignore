@@ -64,8 +64,10 @@ references
 *.pyc
 *.egg-info
 python/kangengine/assets
+python/dist/
 assets/external/
 docs/_build/
+docs/sphinx/_build/
 _private
 tmp
 python/examples/smoke_test

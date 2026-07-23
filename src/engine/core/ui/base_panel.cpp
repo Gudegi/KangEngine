@@ -25,6 +25,7 @@
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <type_traits>
+#include <unordered_set>
 #include <vector>
 
 namespace KE {
@@ -292,7 +293,7 @@ Scene::Prim* addCameraPrim(App* app) {
     if (!prim)
         return nullptr;
 
-    prim->addTranslateOp(app->getCamera().getCameraPos());
+    prim->setLocalTranslation(app->getCamera().getCameraPos());
     setCameraWorldOrientation(*prim, app->getCamera().getCameraLookDir(),
                               app->getCamera().getCameraUpDir());
     prim->addCameraComponent();
@@ -1319,6 +1320,15 @@ void InspectorPanel::buildPanel() {
     }
 
     ImGui::SeparatorText("Attributes");
+    std::unordered_set<std::string> activeXformOps;
+    if (prim->hasAttribute(Scene::XformTokens::opOrder)) {
+        const auto& order = prim->getAttribute<std::vector<std::string>>(
+            Scene::XformTokens::opOrder);
+        activeXformOps.insert(order.begin(), order.end());
+    } else {
+        for (const Scene::Token& token : Scene::XformTokens::defaultOpOrder)
+            activeXformOps.insert(token.str());
+    }
     std::vector<std::pair<Scene::Token, Scene::AttributeValue>> attributes;
     attributes.reserve(prim->getAttributes().size());
     for (const auto& [token, value] : prim->getAttributes())
@@ -1343,7 +1353,14 @@ void InspectorPanel::buildPanel() {
             ImGui::PushID(static_cast<int>(token.id()));
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);
-            ImGui::TextWrapped("%s", token.str().c_str());
+            const bool inactiveXform =
+                Scene::XformTokens::isXformAttribute(token) &&
+                token != Scene::XformTokens::opOrder &&
+                activeXformOps.count(token.str()) == 0;
+            if (inactiveXform)
+                ImGui::TextDisabled("%s  (inactive)", token.str().c_str());
+            else
+                ImGui::TextWrapped("%s", token.str().c_str());
             ImGui::TableSetColumnIndex(1);
             const bool editable =
                 !external && !Scene::XformTokens::isXformAttribute(token);

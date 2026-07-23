@@ -345,10 +345,17 @@ class Prim {
     void setLocalTranslation(glm::vec3 trans);
     void setLocalScale(glm::vec3 scale);
     void setLocalRotation(glm::quat quat);
+    void setLocalRotationAxisAngle(glm::vec3 axis, float angleRadians);
     void setLocalMatrix(const glm::mat4& matrix);
     void setWorldTranslation(glm::vec3 trans);
     void setWorldRotation(glm::quat quat);
+    void setWorldRotationAxisAngle(glm::vec3 axis, float angleRadians);
     void setWorldMatrix(const glm::mat4& matrix);
+
+    glm::vec3 getLocalTranslation();
+    glm::quat getLocalRotation();
+    glm::vec3 getWorldTranslation();
+    glm::quat getWorldRotation();
 
     void addTranslateOp(glm::vec3 trans) { setLocalTranslation(trans); }
     void addScaleOp(glm::vec3 scale) { setLocalScale(scale); }

@@ -29,6 +29,8 @@ using namespace KE;
 // Forward declarations for submodule bindings
 void bind_scene(py::module& m);
 void bind_animation(py::module& m);
+void bind_character(py::module& m);
+void bind_asset(py::module& m);
 void bind_sim(py::module& m);
 void bind_physics(py::module& m);
 void bind_physics_gpu(py::module& m);
@@ -479,6 +481,8 @@ PYBIND11_MODULE(_kangengine, m) {
 
     bind_scene(m);
     bind_animation(m);
+    bind_character(m);
+    bind_asset(m);
     bind_imgui(m);
     bind_keys(m);
     // bind_physics is called after GLM types are registered (uses glm defaults)
@@ -737,6 +741,14 @@ PYBIND11_MODULE(_kangengine, m) {
         .def("set_color", &Backend::Shader::setColor, py::arg("name"),
              py::arg("r"), py::arg("g"), py::arg("b"), py::arg("a"),
              "Set a color uniform from RGBA components.")
+        .def(
+            "set_color",
+            [](Backend::Shader& self, const std::string& name,
+               const glm::vec4& value) {
+                self.setColor(name, value.r, value.g, value.b, value.a);
+            },
+            py::arg("name"), py::arg("value"),
+            "Set a color uniform from an RGBA vector.")
         .def("set_vec2",
              py::overload_cast<const std::string&, const glm::vec2&>(
                  &Backend::Shader::setVec2),
@@ -785,7 +797,11 @@ PYBIND11_MODULE(_kangengine, m) {
         .def("get_width", &Backend::Texture::getWidth,
              "Return the texture width in pixels.")
         .def("get_height", &Backend::Texture::getHeight,
-             "Return the texture height in pixels.");
+             "Return the texture height in pixels.")
+        .def_property_readonly("width", &Backend::Texture::getWidth,
+                               "Texture width in pixels.")
+        .def_property_readonly("height", &Backend::Texture::getHeight,
+                               "Texture height in pixels.");
 
     py::enum_<Backend::TextureWrap>(
         m, "TextureWrap", "Backend-neutral texture coordinate wrapping mode.")
@@ -1149,15 +1165,15 @@ py::class_<glm::vec3>(m, "vec3")
 
     py::implicitly_convertible<py::object, glm::vec4>();
 
-    py::class_<glm::quat>(m, "quat", py::buffer_protocol())
+    py::class_<glm::quat>(m, "quat")
         .def(py::init<float, float, float, float>(), py::arg("w"), py::arg("x"),
              py::arg("y"), py::arg("z"))
         .def(py::init([](py::object obj) {
-            // Buffer protocol (GLM quat memory layout: x, y, z, w)
+            // Python quaternion values consistently use wxyz order,
+            // independent of GLM's internal memory layout.
             if (auto values = fixedFloatArray<4>(obj, "quat"))
-                // GLM stores as x,y,z,w but constructor is w,x,y,z.
-                return glm::quat((*values)[3], (*values)[0], (*values)[1],
-                                 (*values)[2]);
+                return glm::quat((*values)[0], (*values)[1], (*values)[2],
+                                 (*values)[3]);
             // Attribute access
             if (py::hasattr(obj, "w") && py::hasattr(obj, "x") &&
                 py::hasattr(obj, "y") && py::hasattr(obj, "z")) {
@@ -1168,18 +1184,80 @@ py::class_<glm::vec3>(m, "vec3")
             // Sequence
             if (py::isinstance<py::sequence>(obj) && py::len(obj) == 4) {
                 auto seq = obj.cast<py::sequence>();
-                // PyGLM quat: (w, x, y, z) order
                 return glm::quat(seq[0].cast<float>(), seq[1].cast<float>(),
                                  seq[2].cast<float>(), seq[3].cast<float>());
             }
             throw std::runtime_error("Cannot convert to quat");
         }))
-        .def_buffer([](glm::quat& q) -> py::buffer_info {
-            // GLM quat memory layout: x, y, z, w (연속 메모리)
-            return py::buffer_info(&q.x, sizeof(float),
-                                   py::format_descriptor<float>::format(), 1,
-                                   {4}, {sizeof(float)});
-        })
+        .def_static(
+            "from_wxyz",
+            [](py::object obj) {
+                auto values = fixedFloatArray<4>(obj, "wxyz quaternion");
+                if (!values && py::len_hint(obj) == 4) {
+                    values = std::array<float, 4>{
+                        obj[py::int_(0)].cast<float>(),
+                        obj[py::int_(1)].cast<float>(),
+                        obj[py::int_(2)].cast<float>(),
+                        obj[py::int_(3)].cast<float>()};
+                }
+                if (!values)
+                    throw py::value_error(
+                        "wxyz quaternion expected exactly 4 values");
+                return glm::quat((*values)[0], (*values)[1], (*values)[2],
+                                 (*values)[3]);
+            },
+            py::arg("values"), "Create a quaternion from wxyz values.")
+        .def_static(
+            "from_xyzw",
+            [](py::object obj) {
+                auto values = fixedFloatArray<4>(obj, "xyzw quaternion");
+                if (!values && py::len_hint(obj) == 4) {
+                    values = std::array<float, 4>{
+                        obj[py::int_(0)].cast<float>(),
+                        obj[py::int_(1)].cast<float>(),
+                        obj[py::int_(2)].cast<float>(),
+                        obj[py::int_(3)].cast<float>()};
+                }
+                if (!values)
+                    throw py::value_error(
+                        "xyzw quaternion expected exactly 4 values");
+                return glm::quat((*values)[3], (*values)[0], (*values)[1],
+                                 (*values)[2]);
+            },
+            py::arg("values"), "Create a quaternion from xyzw values.")
+        .def("to_wxyz", [](const glm::quat& q) {
+            py::array_t<float> result(4);
+            auto values = result.mutable_unchecked<1>();
+            values(0) = q.w;
+            values(1) = q.x;
+            values(2) = q.y;
+            values(3) = q.z;
+            return result;
+        }, "Return a copied wxyz NumPy array.")
+        .def("to_xyzw", [](const glm::quat& q) {
+            py::array_t<float> result(4);
+            auto values = result.mutable_unchecked<1>();
+            values(0) = q.x;
+            values(1) = q.y;
+            values(2) = q.z;
+            values(3) = q.w;
+            return result;
+        }, "Return a copied xyzw NumPy array.")
+        .def(
+            "__array__",
+            [](const glm::quat& q, py::object dtype, py::object) -> py::object {
+                py::array_t<float> result(4);
+                auto values = result.mutable_unchecked<1>();
+                values(0) = q.w;
+                values(1) = q.x;
+                values(2) = q.y;
+                values(3) = q.z;
+                if (!dtype.is_none())
+                    return result.attr("astype")(dtype, py::arg("copy") = false);
+                return result;
+            },
+            py::arg("dtype") = py::none(), py::arg("copy") = py::none(),
+            "Return a copied wxyz NumPy array.")
         .def_readwrite("w", &glm::quat::w)
         .def_readwrite("x", &glm::quat::x)
         .def_readwrite("y", &glm::quat::y)
@@ -1780,9 +1858,9 @@ py::class_<glm::vec3>(m, "vec3")
         .def("get_scene", &App::getScene, py::return_value_policy::reference,
              "Return the active scene backend.");
 
-    py::class_<Bridge::SkinnedCharacterBridge,
-               std::unique_ptr<Bridge::SkinnedCharacterBridge>>(
-        m, "SkinnedCharacterBridge")
+    py::class_<Bridge::SkinVisualBridge,
+               std::unique_ptr<Bridge::SkinVisualBridge>>(
+        m, "SkinVisual")
         .def_static(
             "from_fbx",
             [](App* app, Backend::Shader* shader, const std::string& fbxPath,
@@ -1791,8 +1869,8 @@ py::class_<glm::vec3>(m, "vec3")
                float scale, bool useMaterials) {
                 const std::string& resolvedBindPath =
                     bindFbxPath.has_value() ? bindFbxPath.value() : fbxPath;
-                return std::make_unique<Bridge::SkinnedCharacterBridge>(
-                    Bridge::SkinnedCharacterBridge::fromFBXWithBind(
+                return std::make_unique<Bridge::SkinVisualBridge>(
+                    Bridge::SkinVisualBridge::fromFBXWithBind(
                         app, shader, fbxPath, resolvedBindPath, primBasePath,
                         clipIndex, fps, scale, useMaterials));
             },
@@ -1801,11 +1879,11 @@ py::class_<glm::vec3>(m, "vec3")
             py::arg("prim_base_path") = "/fbx_character",
             py::arg("clip_index") = -1, py::arg("fps") = -1.0f,
             py::arg("scale") = 0.01f, py::arg("use_materials") = true)
-        .def("apply_time", &Bridge::SkinnedCharacterBridge::applyTime,
+        .def("apply_time", &Bridge::SkinVisualBridge::applyTime,
              py::arg("time"), py::arg("loop") = true)
         .def(
             "apply_pose",
-            [](Bridge::SkinnedCharacterBridge& self,
+            [](Bridge::SkinVisualBridge& self,
                py::array_t<float, py::array::c_style | py::array::forcecast>
                    rootTranslation,
                py::array_t<float, py::array::c_style | py::array::forcecast>
@@ -1838,16 +1916,16 @@ py::class_<glm::vec3>(m, "vec3")
                     Eigen::Vector3f(root[0], root[1], root[2]), rotations);
             },
             py::arg("root_translation"), py::arg("local_rotations_wxyz"))
-        .def("set_visible", &Bridge::SkinnedCharacterBridge::setVisible,
+        .def("set_visible", &Bridge::SkinVisualBridge::setVisible,
              py::arg("visible"))
-        .def("set_color", &Bridge::SkinnedCharacterBridge::setColor,
+        .def("set_color", &Bridge::SkinVisualBridge::setColor,
              py::arg("color"))
         .def("set_casts_shadow",
-             &Bridge::SkinnedCharacterBridge::setCastsShadow,
+             &Bridge::SkinVisualBridge::setCastsShadow,
              py::arg("casts_shadow"))
-        .def("motion", &Bridge::SkinnedCharacterBridge::motion,
+        .def("motion", &Bridge::SkinVisualBridge::motion,
              py::return_value_policy::reference_internal)
-        .def("num_meshes", [](const Bridge::SkinnedCharacterBridge& self) {
+        .def("num_meshes", [](const Bridge::SkinVisualBridge& self) {
             return self.meshes().size();
         });
 }

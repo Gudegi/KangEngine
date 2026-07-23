@@ -18,8 +18,10 @@ def package_asset_path(*parts: str) -> str:
 
 def default_mjcf_path() -> Path:
     # return Path(package_asset_path("characters", "kw", "kw.xml"))
-    return Path(package_asset_path("external", "unitree_mujoco", "unitree_robots", "g1", "g1_23dof.xml"))
+    # return Path(package_asset_path("external", "unitree_mujoco", "unitree_robots", "g1", "g1_23dof.xml"))
     # return Path(package_asset_path("external", "unitree_mujoco", "unitree_robots", "h2", "h2_mujoco.xml"))
+    return Path("/Users/asaid/Dev/KangEngine/references/MimicKit/data/assets/g1/g1.xml")
+    # return Path("/Users/asaid/Dev/KangEngine/references/MimicKit/data/assets/go2/go2.xml")
 
 
 class MjcfDofControlApp(ke.App):
@@ -34,7 +36,7 @@ class MjcfDofControlApp(ke.App):
     # override color for the whole articulation.
     visual_color = None  # np.array([1,1,1, 1.0])
     ground_size = 10.0
-    root_pos = (0.0, 0.0, 0.0)
+    root_pos = (0.0, 0.0, 1.5)
     root_rot_xyzw = (0.0, 0.0, 0.0, 1.0)
     fixed_base = False
     order = "DFS"
@@ -93,7 +95,9 @@ class MjcfDofControlApp(ke.App):
         self._clear_drag_force_arrow()
 
         self.configure_camera()
-        self.create_shaders()
+        self.standard_materials = self.create_standard_materials()
+        # DebugDraw is a low-level renderer path and still consumes a Shader.
+        self.debug_shader = self.standard_materials.common.get_shader()
         self.create_world()
         self.load_articulation()
         self._reset()
@@ -103,45 +107,27 @@ class MjcfDofControlApp(ke.App):
         self.get_camera().set_camera_pos(ke.vec3(*self.camera_pos))
         self.get_camera().set_target_pos(ke.vec3(*self.camera_target))
 
-    def create_shaders(self):
-        device = self.get_renderer().device()
-        vs = package_asset_path("shaders", "common.vs")
-        fs = package_asset_path("shaders", "common.fs")
-        checker_fs = package_asset_path("shaders", "checkerboard.fs")
-
-        self.robot_shader = device.create_shader_from_file(vs, fs)
-        self.ground_shader = device.create_shader_from_file(vs, checker_fs)
-        for shader in (self.robot_shader, self.ground_shader):
-            shader.use()
-            shader.set_uniform_block_binding("cameraUBO", 0)
-            shader.set_uniform_block_binding("lightUBO", 1)
-            shader.set_uniform_block_binding("shadowUBO", 2)
-
-        self.ground_shader.use()
-        self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
-        self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
-
     def create_world(self):
-        self.world = ke.KangSimWorld(
+        self.world = ke.sim.KangSimWorld(
             num_envs=1,
             sim_dt=float(self.sim_dt),
             add_ground=True,
         )
-        self.visual = ke.KangWorldVisualBridge(self, self.world)
+        self.visual = ke.visual.sim.SimWorldVisualizer(self, self.world)
 
         self.ground_view = self.scene.add_ground(
             "/ground",
             scale=float(self.ground_size),
-            shader=self.ground_shader,
+            material=self.standard_materials.ground,
         )
 
     def load_articulation(self):
         data = self.world.load_mjcf(self.mjcf_path, order=self.order)
         self.obj_id = 0
         config = (
-            ke.ArticulationConfig.fixed_base()
+            ke.physics.ArticulationConfig.fixed_base()
             if self.fixed_base
-            else ke.ArticulationConfig.free_base()
+            else ke.physics.ArticulationConfig.free_base()
         )
         self.robot = self.world.add_articulation(
             data,
@@ -157,7 +143,7 @@ class MjcfDofControlApp(ke.App):
             self.mjcf_path,
             prim_base_path=self.prim_base_path,
             order=self.order,
-            shader=self.robot_shader,
+            material=self.standard_materials.common,
             collision_base_path=f"{self.prim_base_path}_collision",
             show_collision=self.show_collision,
             color=(
@@ -206,7 +192,7 @@ class MjcfDofControlApp(ke.App):
             None,
             self.obj_id,
             self.targets,
-            mode=ke.ControlMode.POS,
+            mode=ke.sim.ControlMode.POS,
             kp=self.kp,
             kd=self.kd,
         )
@@ -250,7 +236,7 @@ class MjcfDofControlApp(ke.App):
             None,
             self.obj_id,
             self.targets,
-            mode=ke.ControlMode.POS,
+            mode=ke.sim.ControlMode.POS,
             kp=self.kp,
             kd=self.kd,
         )
@@ -454,7 +440,7 @@ class MjcfDofControlApp(ke.App):
         if self.contact_force_view is None:
             self.contact_force_view = self.scene.log_arrows(
                 "/debug/contact_forces",
-                self.robot_shader,
+                self.debug_shader,
                 starts,
                 ends,
                 colors,

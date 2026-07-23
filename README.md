@@ -25,7 +25,7 @@ KangEngine is built for quick iteration around character motion, robot assets, a
 - **OS:** macOS on Apple Silicon (Tahoe tested) or Linux (Ubuntu 24.04 tested)
 - **Build:** C++17, CMake, vcpkg, PhysX 5.1/5.8
 - **Python:** 3.12 for bindings and examples
-- **Graphics & GPU:** OpenGL 4.1+ compatible GPU (NVIDIA GPU required only for experimental PhysX GPU/CUDA workflows)
+- **Graphics & GPU:** OpenGL 4.1+ compatible GPU (NVIDIA GPU required only for PhysX GPU/CUDA workflows)
 
 ## What It Does
 
@@ -48,48 +48,25 @@ make run2
 Build and install the Python package:
 
 ```bash
-cd python
-uv venv .venv --python 3.12
-source .venv/bin/activate
-cd ..
+uv venv python/.venv --python 3.12
+source python/.venv/bin/activate
 make build_python
-cd python
-uv pip install -e .
+uv pip install -e ./python
 ```
 
 Run a Python motion viewer:
 
 ```bash
-python examples/view_bvh_character.py
+python ./python/examples/view_bvh_character.py
 ```
 
 Run a Python PhysX example:
 
 ```bash
-python examples/sim_world_minimal.py
+python ./python/examples/sim_world_minimal.py
 ```
 
 See [Build Guide](docs/BUILD.md) for platform setup, PhysX, USD, and Python binding details.
-
-## Example Catalog
-
-| Area | Example | What it shows |
-|---|---|---|
-| Motion | `python/examples/view_bvh_character.py` | BVH loading, skeleton visualization, motion sequencer |
-| Motion | `python/examples/view_fbx_character2.py` | FBX character viewing with motion editor modules |
-| Assets | `python/examples/view_fbx_mesh.py` | FBX static mesh import and scene manipulation |
-| Assets | `python/examples/view_usd_scene.py` | USD scene traversal and material loading |
-| Physics | `python/examples/sim_world_minimal.py` | Minimal `KangSimWorld` simulation and viewer sync |
-| Physics | `python/examples/sim_world_multi_env.py` | Batched multi-env simulation with tensor state reads |
-| Physics | `python/examples/sim_gpu_root_state_batch.py` | Headless PhysX GPU batched rigid root-state apply/readback |
-| Physics | `python/examples/physx_ragdoll.py` | Free-base articulated ragdoll simulation |
-| Physics | `python/examples/mjcf_dof_control.py` | MJCF loading and DOF control |
-| Tracking | `python/examples/physx_h1_motion_tracking.py` | H1 PhysX articulation tracking a reference motion |
-| Physics | `examples/physics/physx_h1_instancing.cpp` | High-throughput ExternalBuffer visual sync |
-| Physics | `examples/physics/xpbd_cloth.cpp` | XPBD cloth simulation test |
-| Debug | `examples/debug_camera_frustum.cpp` | Camera frustum and renderer AABB debug tools |
-
-See [Examples](docs/EXAMPLES.md) for a longer list.
 
 ## Feature Overview
 
@@ -106,7 +83,7 @@ See [Examples](docs/EXAMPLES.md) for a longer list.
 - FBX: skeletons, animation clips, static meshes, and skinned meshes.
 - BVH: skeleton hierarchy, frame time, root motion, and local joint rotations.
 - MJCF: articulated characters, collision geometry, joints, and inertials.
-- USD: mesh traversal, material subsets, and diffuse texture loading.
+- USD (optional development build): mesh traversal, material subsets, and diffuse texture loading. Distributed wheels do not currently include USD support.
 - OBJ/STL static mesh import.
 
 ### Simulation & Animation
@@ -134,24 +111,21 @@ See [Simulation API](docs/SIMULATION_API.md) for the recommended `KangSimWorld` 
 
 This project is evolving quickly. While the main workflows are stable, some internal and high-level APIs are under active development and subject to change.
 
-TODO:
+Planned work:
 
-- WebGPU backend.
-- MJCF sensor grouping and full contact-wrench semantics.
-- PBR rendering.
+- WebGPU backend implementation beyond the current placeholder.
 
 ## RL With MimicKit
 
 KangEngine can be used as a backend engine of [MimicKit](https://github.com/xbpeng/MimicKit) through KangEngine's Python package. Use the `backend_kangengine` branch of MimicKit and keep MimicKit in a separate Python environment.
 
-**Limitation**: KangEngine supports both MimicKit policy inference and RL training, but the most stable workflows still use the CPU PhysX path. Linux PhysX 5.8 rigid/articulation state and apply paths, CUDA/OpenGL visual sync, and normal contact impulse/force sensors are validated. Tangential friction and full contact-wrench sensors are not yet exposed.
+**Note:** GPU contact sensors provide contact count, contact state, and
+accumulated normal impulse and force. Tangential friction impulse and a full
+six-axis contact wrench are not currently exposed as sensor outputs.
 
-<table align="center">
-  <tr>
-    <td width="50%" align="center"><img src="images/Mimickit_kangengine_1.png" alt="MimicKit running with KangEngine" style="width:100%; height:260px; object-fit:cover;"></td>
-    <td width="50%" align="center"><img src="images/Mimickit_kangengine_2.png" alt="MimicKit policy visualization with KangEngine" style="width:100%; height:260px; object-fit:cover;"></td>
-  </tr>
-</table>
+<p align="center">
+  <img src="images/Mimickit_kangengine_1.png" alt="MimicKit running with KangEngine" style="width:70%;">
+</p>
 
 <details>
 <summary>MimicKit setup and run commands</summary>
@@ -180,8 +154,7 @@ KangEngine can be used as a backend engine of [MimicKit](https://github.com/xbpe
 4. Install KangEngine's Python package into the MimicKit environment.
 
     ```bash
-    cd python
-    uv pip install -e .
+    uv pip install -e ./python
     ```
 
 5. Install MimicKit dependencies.
@@ -217,6 +190,19 @@ KangEngine can be used as a backend engine of [MimicKit](https://github.com/xbpe
       --model_file data/models/amp_humanoid_spinkick_model.pt
     ```
 
+8. Train an AMP policy with KangEngine.
+
+    ```bash
+    python mimickit/run.py \
+      --mode train \
+      --num_envs 4096 \
+      --engine_config data/engines/kangengine_engine.yaml \
+      --env_config data/envs/amp_humanoid_env.yaml \
+      --agent_config data/agents/amp_humanoid_agent.yaml \
+      --visualize false \
+      --out_dir output/
+    ```
+
 For reference, the MimicKit KangEngine backend uses an engine config like this:
 
 ```yaml
@@ -237,15 +223,11 @@ The `backend_kangengine` branch already includes `data/engines/kangengine_engine
 
 KangEngine is inspired by and built upon ideas from these excellent projects:
 
-**Frameworks & Learning Workflows**
 - [MimicKit](https://github.com/xbpeng/MimicKit): Motion imitation and RL experiment structure.
 - [Isaac Lab](https://github.com/isaac-sim/IsaacLab): Robot learning workflows and simulation tooling.
 - [Newton](https://github.com/newton-physics/newton): Robotics API shape and GPU simulation design.
-
-**Animation & Motion Editing**
+- [SAPIEN](https://github.com/haosulab/SAPIEN): Robotics simulation and GPU simulation design.
 - [GenoViewPython](https://github.com/orangeduck/GenoViewPython): Skeletal animation and motion-debug visualization.
 - [AI4AnimationPy](https://github.com/facebookresearch/ai4animationpy): Motion modules and animation-engine structure.
-
-**Core Backends**
 - [NVIDIA PhysX](https://github.com/NVIDIA-Omniverse/PhysX): Rigid body and articulation simulation.
-- [OpenUSD](https://github.com/PixarAnimationStudios/OpenUSD): Scene description and asset loading.
+- [OpenUSD](https://github.com/PixarAnimationStudios/OpenUSD): Prim/path concepts and optional USD asset interchange.

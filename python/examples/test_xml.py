@@ -9,7 +9,7 @@ import numpy as np
 from pathlib import Path
 
 import kangengine as ke
-from kangengine import scene, animation
+from kangengine import scene, visual
 
 
 # ---------------------------------------------------------------------------
@@ -70,8 +70,8 @@ class RobotViewer(ke.App):
 
         # Robot
         mjcf = asset_path("external", "retargetted", "unitree_h1", "unitree_h1.xml")
-        self.robot = animation.SkeletonBridge.from_mjcf(
-            mjcf, self.get_scene(), "/robot", 1.0, "BFS"
+        self.robot = visual.ArticulationVisual.from_mjcf(
+            mjcf, self.scene.native, "/robot", 1.0, "BFS"
         )
         for prim in self.robot.body_prims():
             self.scene.add_renderable(prim, self.robot_shader)

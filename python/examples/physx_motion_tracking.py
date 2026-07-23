@@ -13,7 +13,7 @@ from pathlib import Path
 import numpy as np
 
 import kangengine as ke
-from kangengine import animation, asset, imgui, keys, scene
+from kangengine import asset, imgui, keys, scene, visual
 from kangengine.utils.math import quat_wxyz_to_xyzw, quat_wxyz_twist_angle
 
 from view_motion import default_char_file, default_motion_file, load_motion
@@ -63,11 +63,9 @@ class KwMotionTrackingApp(ke.App):
         self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
         self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
 
-        self.sim_world = ke.KangSimWorld(add_ground=True)
+        self.sim_world = ke.sim.KangSimWorld(add_ground=True)
 
-        ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
-        ground.set_mesh_data(scene.Prim.create_plane_data(100.0, ke.UpAxis.Z))
-        self.scene.add_renderable(ground, self.ground_shader)
+        self.scene.add_ground(scale=100.0, shader=self.ground_shader)
 
         mjcf_data = asset.MJCFLoader.load(self.char_file, order=self.order)
         sim_record = self.sim_world.add_articulation(
@@ -75,12 +73,12 @@ class KwMotionTrackingApp(ke.App):
             env_id=0,
             obj_id=0,
             name="kw",
-            config=ke.ArticulationConfig.free_base(),
+            config=ke.physics.ArticulationConfig.free_base(),
         )
         self.articulation = sim_record.articulation
         self.num_dofs = self.articulation.num_dofs()
 
-        self.visual_bridge = ke.KangWorldVisualBridge(self, self.sim_world)
+        self.visual_bridge = ke.visual.sim.SimWorldVisualizer(self, self.sim_world)
         self.visual_bridge.add_articulation_scene_graph(
             0,
             0,
@@ -92,9 +90,9 @@ class KwMotionTrackingApp(ke.App):
             show_collision=self.show_collision,
         )
 
-        self.ghost = animation.SkeletonBridge.from_mjcf(
+        self.ghost = visual.ArticulationVisual.from_mjcf(
             self.char_file,
-            self.get_scene(),
+            self.scene.native,
             "/ghost",
             1.0,
             self.order,
@@ -166,7 +164,7 @@ class KwMotionTrackingApp(ke.App):
         targets = self._motion_dof_targets(self.local_rot[0])
         if len(targets) == self.num_dofs:
             self.sim_world.set_dof_state(None, 0, targets)
-            self.sim_world.set_cmd(None, 0, targets, ke.ControlMode.POS, self.kp, self.kd)
+            self.sim_world.set_cmd(None, 0, targets, ke.sim.ControlMode.POS, self.kp, self.kd)
         self.sim_world.step(substeps=0, apply_commands=False)
         self.visual_bridge.sync()
 
@@ -192,7 +190,7 @@ class KwMotionTrackingApp(ke.App):
 
         targets = self._motion_dof_targets(self.local_rot[idx])
         if len(targets) == self.num_dofs:
-            self.sim_world.set_cmd(None, 0, targets, ke.ControlMode.POS, self.kp, self.kd)
+            self.sim_world.set_cmd(None, 0, targets, ke.sim.ControlMode.POS, self.kp, self.kd)
 
         self.sim_world.step()
         self.visual_bridge.sync()
@@ -236,6 +234,7 @@ class KwMotionTrackingApp(ke.App):
 
 
 def main():
+    physics = getattr(ke, "physics", None)
     missing = [
         name
         for name in (
@@ -245,7 +244,7 @@ def main():
             "Articulation",
             "PhysicsBridge",
         )
-        if not hasattr(ke, name)
+        if physics is None or not hasattr(physics, name)
     ]
     if missing:
         raise RuntimeError(

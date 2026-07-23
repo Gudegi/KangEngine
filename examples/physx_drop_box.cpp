@@ -213,8 +213,8 @@ class MyApp : public App {
         lightPrim = getScene()->definePrim("/light", Scene::PrimType::Mesh);
         lightPrim->setMeshData(std::make_shared<Scene::MeshData>(
             Scene::Prim::createSphereData(1.0f, 12, 11)));
-        lightPrim->addTranslateOp(lightPos);
-        lightPrim->addScaleOp(glm::vec3(size));
+        lightPrim->setLocalTranslation(lightPos);
+        lightPrim->setLocalScale(glm::vec3(size));
         addRenderable(lightShader.get(), lightPrim);
 
         // Ground plane

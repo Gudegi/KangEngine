@@ -40,7 +40,7 @@ class BloomViewer(ke.App):
         self.set_light_color(ke.vec3(1.0, 0.94, 0.84))
         self.set_light_intensity(0.45)
         self.set_light_ambient(ke.vec3(0.035, 0.04, 0.05))
-        self.set_tone_map(ke.ToneMapMode.AcesNarkowicz, self.exposure)
+        self.set_tone_map(ke.render.ToneMapMode.AcesNarkowicz, self.exposure)
         self._apply_bloom()
 
         self.set_camera_view([0.0, -5.2, 2.4], [0.0, 0.0, 0.9])
@@ -50,11 +50,11 @@ class BloomViewer(ke.App):
     def _add_sphere(self, path, pos, radius, color):
         view = self.scene.add_mesh(
             path,
-            scene.Prim.create_sphere_data(radius, 32, 16),
+            ke.geometry.create_sphere_data(radius, 32, 16),
             self.shaders.common,
             color=ke.vec4(*color),
         )
-        view.prim.add_translate_op(ke.vec3(*pos))
+        view.prim.set_local_translation(ke.vec3(*pos))
         return view
 
     def _add_glow_sphere(self, path, pos, radius, color):
@@ -91,7 +91,7 @@ class BloomViewer(ke.App):
 
         changed, self.exposure = imgui.slider_float("exposure", self.exposure, 0.1, 3.0)
         if changed:
-            self.set_tone_map(ke.ToneMapMode.AcesNarkowicz, self.exposure)
+            self.set_tone_map(ke.render.ToneMapMode.AcesNarkowicz, self.exposure)
 
         imgui.text("Bright spheres use HDR colors above 1.0.")
         imgui.end()

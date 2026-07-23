@@ -28,9 +28,9 @@
 
 #include "asset/mjcf_loader.hpp"
 #include "bridge/physics_bridge.hpp"
-#include "bridge/skeleton_bridge.hpp"
-#include "bridge/skeleton_visual_bridge.hpp"
-#include "bridge/skinned_character_bridge.hpp"
+#include "bridge/articulation_visual_bridge.hpp"
+#include "bridge/skeletal_visual_bridge.hpp"
+#include "bridge/skin_visual_bridge.hpp"
 
 #ifdef KANGENGINE_USE_PHYSX
 #include "physics/physics.hpp"

@@ -178,8 +178,8 @@ class MyApp : public App {
             // 색상과 초기 변환 설정
             stlPrim->setAttribute("primvars:displaycolorAlpha",
                                   glm::vec4(0.8f, 0.4f, 0.1f, 1.0f));
-            stlPrim->addScaleOp(glm::vec3(10.f));
-            stlPrim->addTranslateOp(glm::vec3(0.0f, 1.0f, 0.0f));
+            stlPrim->setLocalScale(glm::vec3(10.f));
+            stlPrim->setLocalTranslation(glm::vec3(0.0f, 1.0f, 0.0f));
 
             getSceneRenderSystem().addRenderable(*stlPrim, meshShader.get());
         } catch (const std::exception& e) {
@@ -203,8 +203,8 @@ class MyApp : public App {
 
             objPrim->setAttribute("primvars:displaycolorAlpha",
                                   glm::vec4(0.2f, 0.6f, 0.9f, 1.0f));
-            objPrim->addScaleOp(glm::vec3(1.f));
-            objPrim->addTranslateOp(
+            objPrim->setLocalScale(glm::vec3(1.f));
+            objPrim->setLocalTranslation(
                 glm::vec3(2.0f, 1.0f, 0.0f)); // STL 옆에 배치
 
             getSceneRenderSystem().addRenderable(*objPrim, meshShader.get());

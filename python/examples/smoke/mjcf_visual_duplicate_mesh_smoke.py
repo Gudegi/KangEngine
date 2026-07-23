@@ -72,7 +72,7 @@ def main():
             )
 
         scene = ke.scene.create_backend(ke.scene.BackendType.Native)
-        asset = ke.animation.SkeletonBridgeAsset.from_mjcf(str(mjcf))
+        asset = ke.visual.ArticulationVisualAsset.from_mjcf(str(mjcf))
         bridge = asset.instantiate(scene, "/robot", "", True)
         render_prims = list(bridge.render_prims())
         if len(render_prims) != 1:

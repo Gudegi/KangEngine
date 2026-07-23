@@ -86,6 +86,7 @@ class SO101DofControlApp(MjcfDofControlApp):
     camera_pos = (0.55, -0.75, 0.45)
     camera_target = (-0.08, 0.0, 0.12)
     ground_size = 2.0
+    root_pos = (0.0, 0.0, 0.0)
     fixed_base = True
     default_kp = 120.0
     default_kd = 8.0
@@ -252,7 +253,7 @@ class SO101DofControlApp(MjcfDofControlApp):
             None,
             self.obj_id,
             self.targets,
-            mode=ke.ControlMode.POS,
+            mode=ke.sim.ControlMode.POS,
             kp=self.kp,
             kd=self.kd,
         )
@@ -273,11 +274,11 @@ class SO101DofControlApp(MjcfDofControlApp):
         self.targets[dof_idx] = float(lo + alpha * (hi - lo))
 
     def _create_target_ball(self):
-        self.target_ball_prim = self.get_scene().define_prim(
+        self.target_ball_prim = self.scene.define_prim(
             "/ik_target_ball", ke.scene.PrimType.Mesh
         )
         self.target_ball_prim.set_mesh_data(
-            ke.scene.Prim.create_sphere_data(float(self.target_ball_radius), 32, 16)
+            ke.geometry.create_sphere_data(float(self.target_ball_radius), 32, 16)
         )
         self.target_ball_prim.set_display_color_alpha(ke.vec4(0.95, 0.18, 0.12, 1.0))
         self._sync_target_ball_prim()

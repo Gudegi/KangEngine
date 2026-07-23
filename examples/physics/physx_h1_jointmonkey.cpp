@@ -12,7 +12,7 @@
 ///
 
 #include "bridge/physics_bridge.hpp"
-#include "bridge/skeleton_bridge.hpp"
+#include "bridge/articulation_visual_bridge.hpp"
 #include "animation/skeleton_math.hpp"
 #include "kangEngine.hpp"
 #include "engine/graphics/material/colors.hpp"
@@ -158,7 +158,7 @@ class H1PhysicsApp : public App {
 
     glm::vec3 lightPos = {0.f, -2.f, 4.f};
 
-    SkeletonBridge robot;
+    ArticulationVisualBridge robot;
     PhysicsWorld physics{PhysicsConfig::zUp()};
     Articulation artic;
     Bridge::PhysicsBridge physicsBridge;
@@ -196,7 +196,7 @@ class H1PhysicsApp : public App {
         const std::string mjcfPath =
             KE::getAssetPath("external/retargetted/unitree_h1/unitree_h1.xml");
         const auto mjcfData = MJCFLoader::load(mjcfPath);
-        robot = SkeletonBridge::fromData(mjcfData, getScene());
+        robot = ArticulationVisualBridge::fromData(mjcfData, getScene());
         for (auto* prim : robot.bodyPrims())
             addRenderable(stlShader.get(), prim);
 

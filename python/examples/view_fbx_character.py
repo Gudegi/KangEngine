@@ -93,9 +93,7 @@ class FbxCharacterViewer(ke.App):
         self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
         self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
 
-        ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
-        ground.set_mesh_data(scene.Prim.create_plane_data(20.0, self.up_axis))
-        self.scene.add_renderable(ground, self.ground_shader)
+        self.scene.add_ground(scale=20.0, shader=self.ground_shader)
 
         camera = self.get_camera()
         camera.set_camera_pos(ke.vec3(0.0, 1.45, 3.2))
@@ -181,7 +179,7 @@ class FbxCharacterViewer(ke.App):
         ]
         for idx, mesh in enumerate(self.meshes):
             name = prim_safe_name(mesh.name, f"mesh_{idx}")
-            prim = self.get_scene().define_prim(
+            prim = self.scene.define_prim(
                 f"/fbx_character/{idx}_{name}",
                 scene.PrimType.Mesh,
             )

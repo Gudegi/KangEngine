@@ -49,30 +49,30 @@ class PhongTextureViewer(ke.App):
             diffuse_map=texture,
         )
 
-        mesh = scene.Prim.create_plane_data(1.8, ke.UpAxis.Z)
+        mesh_data = ke.geometry.create_plane_data(1.8, ke.UpAxis.Z)
         left = self.scene.add_mesh(
             "/phong_texture/white_diffuse",
-            mesh,
+            mesh_data,
             white,
             color=ke.vec4(1.0, 1.0, 1.0, 1.0),
         )
-        left.prim.add_translate_op(ke.vec3(-1.15, 0.0, 0.0))
-        left.set_alpha_mode(ke.AlphaMode.Blend)
+        left.prim.set_local_translation(ke.vec3(-1.15, 0.0, 0.0))
+        left.set_alpha_mode(ke.render.AlphaMode.Blend)
 
         right = self.scene.add_mesh(
             "/phong_texture/red_tint",
-            mesh,
+            mesh_data,
             tinted,
             color=ke.vec4(1.0, 1.0, 1.0, 1.0),
         )
-        right.prim.add_translate_op(ke.vec3(1.15, 0.0, 0.0))
-        right.set_alpha_mode(ke.AlphaMode.Blend)
+        right.prim.set_local_translation(ke.vec3(1.15, 0.0, 0.0))
+        right.set_alpha_mode(ke.render.AlphaMode.Blend)
 
         self.set_light_direction(ke.vec3(0.0, 0.0, 1.0))
         self.set_light_color(ke.vec3(1.0, 1.0, 1.0))
         self.set_light_intensity(1.0)
         self.set_light_ambient(ke.vec3(0.35, 0.35, 0.35))
-        self.set_tone_map(ke.ToneMapMode.Off, 1.0)
+        self.set_tone_map(ke.render.ToneMapMode.Off, 1.0)
         self.set_bloom(False)
         self.set_camera_view([0.0, 0.0, 4.0], [0.0, 0.0, 0.0])
         self.set_camera_move_speed(1.0)

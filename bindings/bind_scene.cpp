@@ -27,6 +27,7 @@
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/native/token.hpp"
 #include "engine/graphics/material/material.hpp"
+#include "geometry/primitive_mesh.hpp"
 #include "py_array_view.hpp"
 
 #ifdef KANGENGINE_USE_USD
@@ -40,6 +41,8 @@ namespace py = pybind11;
 void bind_scene(py::module& m) {
     py::module scene = m.def_submodule(
         "scene", "Scene graph, prim, mesh, and debug drawing APIs.");
+    py::module geometry = m.def_submodule(
+        "geometry", "Geometry algorithms and procedural mesh factories.");
 
     // Token class
     py::class_<KE::Scene::Token>(
@@ -191,6 +194,10 @@ void bind_scene(py::module& m) {
         .def("set_local_rotation",
              &KE::Scene::TransformComponent::setLocalRotation,
              py::arg("rotation"), "Set local rotation.")
+        .def("set_local_rotation_axis_angle",
+             &KE::Scene::TransformComponent::setLocalRotationAxisAngle,
+             py::arg("axis"), py::arg("angle_radians"),
+             "Set local rotation from an axis and an angle in radians.")
         .def("set_local_matrix", &KE::Scene::TransformComponent::setLocalMatrix,
              py::arg("matrix"), "Set the local transform matrix.")
         .def("set_world_translation",
@@ -199,8 +206,24 @@ void bind_scene(py::module& m) {
         .def("set_world_rotation",
              &KE::Scene::TransformComponent::setWorldRotation,
              py::arg("rotation"), "Set world rotation.")
+        .def("set_world_rotation_axis_angle",
+             &KE::Scene::TransformComponent::setWorldRotationAxisAngle,
+             py::arg("axis"), py::arg("angle_radians"),
+             "Set world rotation from an axis and an angle in radians.")
         .def("set_world_matrix", &KE::Scene::TransformComponent::setWorldMatrix,
              py::arg("matrix"), "Set the world transform matrix.")
+        .def("get_local_translation",
+             &KE::Scene::TransformComponent::getLocalTranslation,
+             "Return the effective parent-relative translation.")
+        .def("get_local_rotation",
+             &KE::Scene::TransformComponent::getLocalRotation,
+             "Return the effective parent-relative quaternion rotation.")
+        .def("get_world_translation",
+             &KE::Scene::TransformComponent::getWorldTranslation,
+             "Return the effective world-space translation.")
+        .def("get_world_rotation",
+             &KE::Scene::TransformComponent::getWorldRotation,
+             "Return the effective world-space quaternion rotation.")
         .def("compute_local_matrix",
              &KE::Scene::TransformComponent::computeLocalMatrix,
              "Return the cached/computed local matrix.")
@@ -878,14 +901,14 @@ void bind_scene(py::module& m) {
             "create_square_data",
             [](float scale) {
                 return std::make_shared<KE::Scene::MeshData>(
-                    KE::Scene::Prim::createSquareData(scale));
+                    KE::Geometry::createCube(scale));
             },
             py::arg("scale") = 1.0f, "Create square mesh data.")
         .def_static(
             "create_plane_data",
             [](float scale, KE::UpAxis upAxis) {
                 return std::make_shared<KE::Scene::MeshData>(
-                    KE::Scene::Prim::createPlaneData(scale, upAxis));
+                    KE::Geometry::createPlane(scale, upAxis));
             },
             py::arg("scale"), py::arg("up_axis") = KE::UpAxis::Y,
             "Create plane mesh data.")
@@ -893,8 +916,8 @@ void bind_scene(py::module& m) {
             "create_sphere_data",
             [](float radius, int numLongitudes, int numLatitudes) {
                 return std::make_shared<KE::Scene::MeshData>(
-                    KE::Scene::Prim::createSphereData(radius, numLongitudes,
-                                                      numLatitudes));
+                    KE::Geometry::createSphere(radius, numLongitudes,
+                                               numLatitudes));
             },
             py::arg("radius"), py::arg("num_longitudes"),
             py::arg("num_latitudes"), "Create sphere mesh data.")
@@ -902,8 +925,7 @@ void bind_scene(py::module& m) {
             "create_rectangle_data",
             [](float xScale, float yScale, float zScale) {
                 return std::make_shared<KE::Scene::MeshData>(
-                    KE::Scene::Prim::createRectangleData(xScale, yScale,
-                                                         zScale));
+                    KE::Geometry::createBox(xScale, yScale, zScale));
             },
             py::arg("x_scale"), py::arg("y_scale"), py::arg("z_scale"),
             "Create box/rectangle mesh data.")
@@ -911,8 +933,8 @@ void bind_scene(py::module& m) {
             "create_cylinder_data",
             [](float radius, float length, KE::UpAxis upAxis, int segments) {
                 return std::make_shared<KE::Scene::MeshData>(
-                    KE::Scene::Prim::createCylinderData(radius, length, upAxis,
-                                                        segments));
+                    KE::Geometry::createCylinder(radius, length, upAxis,
+                                                 segments));
             },
             py::arg("radius"), py::arg("length"),
             py::arg("up_axis") = KE::UpAxis::Y, py::arg("segments") = 32,
@@ -921,8 +943,8 @@ void bind_scene(py::module& m) {
             "create_capsule_data",
             [](float radius, float height, KE::UpAxis upAxis, int segments) {
                 return std::make_shared<KE::Scene::MeshData>(
-                    KE::Scene::Prim::createCapsuleData(radius, height, upAxis,
-                                                       segments));
+                    KE::Geometry::createCapsule(radius, height, upAxis,
+                                                segments));
             },
             py::arg("radius"), py::arg("height"),
             py::arg("up_axis") = KE::UpAxis::Y, py::arg("segments") = 32,
@@ -938,14 +960,30 @@ void bind_scene(py::module& m) {
              py::arg("scale"), "Set local scale.")
         .def("set_local_rotation", &KE::Scene::Prim::setLocalRotation,
              py::arg("rotation"), "Set local quaternion rotation.")
+        .def("set_local_rotation_axis_angle",
+             &KE::Scene::Prim::setLocalRotationAxisAngle, py::arg("axis"),
+             py::arg("angle_radians"),
+             "Set local rotation from an axis and an angle in radians.")
         .def("set_local_matrix", &KE::Scene::Prim::setLocalMatrix,
              py::arg("matrix"), "Set local transform matrix.")
         .def("set_world_translation", &KE::Scene::Prim::setWorldTranslation,
              py::arg("translation"), "Set world translation.")
         .def("set_world_rotation", &KE::Scene::Prim::setWorldRotation,
              py::arg("rotation"), "Set world quaternion rotation.")
+        .def("set_world_rotation_axis_angle",
+             &KE::Scene::Prim::setWorldRotationAxisAngle, py::arg("axis"),
+             py::arg("angle_radians"),
+             "Set world rotation from an axis and an angle in radians.")
         .def("set_world_matrix", &KE::Scene::Prim::setWorldMatrix,
              py::arg("matrix"), "Set world transform matrix.")
+        .def("get_local_translation", &KE::Scene::Prim::getLocalTranslation,
+             "Return the effective parent-relative translation.")
+        .def("get_local_rotation", &KE::Scene::Prim::getLocalRotation,
+             "Return the effective parent-relative quaternion rotation.")
+        .def("get_world_translation", &KE::Scene::Prim::getWorldTranslation,
+             "Return the effective world-space translation.")
+        .def("get_world_rotation", &KE::Scene::Prim::getWorldRotation,
+             "Return the effective world-space quaternion rotation.")
         .def("add_translate_op", &KE::Scene::Prim::addTranslateOp,
              py::arg("translation"),
              "Compatibility alias for local translation.")
@@ -1110,6 +1148,62 @@ void bind_scene(py::module& m) {
         .def_readwrite("indices", &KE::Scene::MeshData::indices,
                        "Triangle index buffer.");
 
+    auto meshResult = [](KE::Scene::MeshData data) {
+        return std::make_shared<KE::Scene::MeshData>(std::move(data));
+    };
+    geometry.def("create_cube_data", [meshResult](float scale) {
+        return meshResult(KE::Geometry::createCube(scale));
+    }, py::arg("scale") = 1.0f, "Create a cube mesh payload.");
+    geometry.def("create_plane_data", [meshResult](float scale, KE::UpAxis upAxis) {
+        return meshResult(KE::Geometry::createPlane(scale, upAxis));
+    }, py::arg("scale"), py::arg("up_axis") = KE::UpAxis::Y,
+       "Create a plane mesh payload.");
+    geometry.def("create_sphere_data",
+                 [meshResult](float radius, int longitudes, int latitudes) {
+        return meshResult(
+            KE::Geometry::createSphere(radius, longitudes, latitudes));
+    }, py::arg("radius"), py::arg("num_longitudes"),
+       py::arg("num_latitudes"), "Create a UV sphere mesh payload.");
+    geometry.def("create_box_data",
+                 [meshResult](float x, float y, float z) {
+        return meshResult(KE::Geometry::createBox(x, y, z));
+    }, py::arg("x_scale"), py::arg("y_scale"), py::arg("z_scale"),
+       "Create a box mesh payload with independent axis lengths.");
+    geometry.def("create_cylinder_data",
+                 [meshResult](float radius, float length, KE::UpAxis upAxis,
+                              int segments) {
+        return meshResult(
+            KE::Geometry::createCylinder(radius, length, upAxis, segments));
+    }, py::arg("radius"), py::arg("length"),
+       py::arg("up_axis") = KE::UpAxis::Y, py::arg("segments") = 32,
+       "Create a cylinder mesh payload.");
+    geometry.def("create_arrow_data",
+                 [meshResult](float baseRadius, float baseHeight,
+                              KE::UpAxis upAxis, float capRadius,
+                              float capHeight, int segments) {
+        return meshResult(KE::Geometry::createArrow(
+            baseRadius, baseHeight, upAxis, capRadius, capHeight, segments));
+    }, py::arg("base_radius"), py::arg("base_height"),
+       py::arg("up_axis") = KE::UpAxis::Y, py::arg("cap_radius") = -1.0f,
+       py::arg("cap_height") = -1.0f, py::arg("segments") = 32,
+       "Create an arrow mesh payload.");
+    geometry.def("create_capsule_data",
+                 [meshResult](float radius, float height, KE::UpAxis upAxis,
+                              int segments) {
+        return meshResult(
+            KE::Geometry::createCapsule(radius, height, upAxis, segments));
+    }, py::arg("radius"), py::arg("height"),
+       py::arg("up_axis") = KE::UpAxis::Y, py::arg("segments") = 32,
+       "Create a capsule mesh payload.");
+    geometry.def("create_cone_data",
+                 [meshResult](float radius, float height, KE::UpAxis upAxis,
+                              int segments) {
+        return meshResult(
+            KE::Geometry::createCone(radius, height, upAxis, segments));
+    }, py::arg("radius"), py::arg("height"),
+       py::arg("up_axis") = KE::UpAxis::Y, py::arg("segments") = 32,
+       "Create a cone mesh payload.");
+
     py::class_<KE::Scene::SkinnedMeshData,
                std::shared_ptr<KE::Scene::SkinnedMeshData>>(
         scene, "SkinnedMeshData",
@@ -1128,6 +1222,29 @@ void bind_scene(py::module& m) {
     py::class_<KE::Scene::DebugDraw>(
         scene, "DebugDraw",
         "Helpers for creating debug lines, arrows, and coordinate axes.")
+        .def_static(
+            "make_arrow_transform",
+            [](const glm::vec3& start, const glm::vec3& end) -> py::object {
+                glm::mat4 transform(1.0f);
+                if (!KE::Scene::DebugDraw::makeArrowTransform(start, end,
+                                                              transform))
+                    return py::none();
+                return py::cast(transform);
+            },
+            py::arg("start"), py::arg("end"),
+            "Return the arrow transform, or None for a zero-length arrow.")
+        .def_static(
+            "make_line_transform",
+            [](const glm::vec3& start, const glm::vec3& end) -> py::object {
+                glm::mat4 transform(1.0f);
+                if (!KE::Scene::DebugDraw::makeLineTransform(start, end,
+                                                             transform))
+                    return py::none();
+                return py::cast(transform);
+            },
+            py::arg("start"), py::arg("end"),
+            "Return the centered line transform, or None for a zero-length "
+            "line.")
         .def_static(
             "log_component_lines",
             [](KE::App* app, KE::Backend::Shader* shader,

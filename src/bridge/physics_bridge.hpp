@@ -27,7 +27,7 @@ namespace KE {
 class Articulation; // forward declaration
 
 namespace Bridge {
-class SkeletonBridge; // forward declaration
+class ArticulationVisualBridge; // forward declaration
 } // namespace Bridge
 
 namespace Scene {
@@ -43,7 +43,8 @@ class PhysicsBridge {
 
     // Small-scene compatibility path. Batched simulation visuals use
     // SimVisualBatch and ExternalBuffer directly.
-    void add(const Articulation& artic, const SkeletonBridge& skelBridge);
+    void add(const Articulation& artic,
+             const ArticulationVisualBridge& articulationVisual);
 
     // Create one Prim per collision geom. Returns Prims for addRenderable().
     // visibleByDefault=false: debug overlay (invisible until toggled)

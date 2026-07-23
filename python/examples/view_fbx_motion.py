@@ -48,7 +48,7 @@ class FbxMotionViewer(ke.App):
             fps=self.fps,
             scale=self.scale,
         )
-        self.editor = ke.MotionEditor(self.motion)
+        self.editor = ke.motion_module.MotionEditor(self.motion)
         self.parents = self.motion.parent_indices()
         self.names = self.motion.node_names()
 
@@ -71,7 +71,7 @@ class FbxMotionViewer(ke.App):
         self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
 
         self.editor.add_module(
-            ke.RootTrajectoryModule(
+            ke.motion_module.RootTrajectoryModule(
                 self,
                 "/debug/fbx_motion_root_trajectory",
                 line_width=2.0,
@@ -79,7 +79,7 @@ class FbxMotionViewer(ke.App):
             )
         )
         self.editor.add_module(
-            ke.TrackingModule(
+            ke.motion_module.TrackingModule(
                 self,
                 "/debug/fbx_motion_tracking",
                 line_width=2.0,
@@ -87,16 +87,14 @@ class FbxMotionViewer(ke.App):
             )
         )
         self.editor.add_module(
-            ke.ContactModule(
+            ke.motion_module.ContactModule(
                 self,
                 "/debug/fbx_motion_contacts",
                 point_size=11.0,
             )
         )
 
-        ground = self.get_scene().define_prim("/ground", scene.PrimType.Mesh)
-        ground.set_mesh_data(scene.Prim.create_plane_data(20.0, self.up_axis))
-        self.scene.add_renderable(ground, self.ground_shader)
+        self.scene.add_ground(scale=20.0, shader=self.ground_shader)
 
         camera = self.get_camera()
         camera.set_camera_pos(ke.vec3(0.0, 1.6, 3.8))

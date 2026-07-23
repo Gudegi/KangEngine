@@ -13,7 +13,18 @@ def log_debug_axes(
     alpha: float = 0.95,
     hidden: bool = False,
 ) -> None:
-    """Draw RGB transform axes using the native debug renderer."""
+    """Compatibility wrapper for ``app.debug_overlay.axes(...)``."""
+    if hasattr(app, "debug_overlay"):
+        app.debug_overlay.axes(
+            path,
+            origin,
+            rotation,
+            length=length,
+            width=width,
+            hidden=hidden,
+        )
+        return
+
     origin = np.asarray(origin, dtype=np.float32).reshape(3)
     rotation = np.asarray(rotation, dtype=np.float32).reshape(3, 3)
     _ = alpha

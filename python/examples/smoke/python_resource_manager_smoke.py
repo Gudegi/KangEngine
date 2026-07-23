@@ -22,7 +22,7 @@ def main():
     app._register_material_resource = App._register_material_resource.__get__(app)
     app._register_shader_resource = App._register_shader_resource.__get__(app)
 
-    material = ke.PhongMaterial()
+    material = ke.material.PhongMaterial()
     handle = app._register_material_resource(material)
     prim = app.resources.resource_prim(handle)
     if prim is None or prim.get_type() != ke.scene.PrimType.Resource:

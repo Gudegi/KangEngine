@@ -18,12 +18,12 @@ def main():
     component.double_sided = True
     component.casts_shadow = False
     component.visible = False
-    component.transform_source = ke.TransformSource.ExternalBuffer
+    component.transform_source = ke.render.TransformSource.ExternalBuffer
 
     assert component.double_sided
     assert not component.casts_shadow
     assert not component.visible
-    assert component.transform_source == ke.TransformSource.ExternalBuffer
+    assert component.transform_source == ke.render.TransformSource.ExternalBuffer
     assert not prim.is_visible()
     assert component.version > initial_version
 

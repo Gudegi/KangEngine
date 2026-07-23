@@ -12,7 +12,7 @@ namespace Scene {
 //
 // This component intentionally does not own PhysX handles, FK state, or body
 // prim pointers. Runtime ownership currently stays in KangSimWorld /
-// SkeletonBridge / PhysicsBridge. The component marks the root Prim as the
+// ArticulationVisualBridge / PhysicsBridge. The component marks the root Prim as the
 // stable scene identity for that articulation and stores lightweight import /
 // instancing metadata that inspectors and future systems can use.
 class ArticulationComponent : public ComponentBase {
