@@ -1,0 +1,119 @@
+:root {
+  --kangengine-accent: #325546;
+  --kangengine-accent-hover: #274237;
+  --kangengine-accent-soft: rgba(50, 85, 70, 0.1);
+  --color-brand-primary: #325546;
+  --color-brand-content: #325546;
+  --color-link: var(--color-foreground-primary);
+  --color-link--visited: var(--color-foreground-primary);
+  --color-link--hover: #274237;
+  --color-sidebar-link-text: var(--color-foreground-primary);
+  --color-sidebar-link-text--top-level: var(--color-foreground-primary);
+  --color-sidebar-caption-text: var(--color-foreground-secondary);
+  --color-sidebar-item-background--hover: var(--kangengine-accent-soft);
+  --color-sidebar-item-background--current: var(--kangengine-accent-soft);
+  --color-toc-item-text: var(--color-foreground-primary);
+  --color-toc-item-text--active: var(--kangengine-accent);
+  --color-inline-code-background: rgba(50, 85, 70, 0.08);
+}
+
+a,
+a:visited {
+  color: var(--color-foreground-primary);
+  text-decoration-color: color-mix(in srgb, currentColor 32%, transparent);
+}
+
+a:hover,
+a:focus-visible,
+a:active {
+  color: var(--color-brand-content);
+  text-decoration-color: var(--color-brand-content);
+}
+
+.sidebar-tree .reference,
+.sidebar-tree .reference:visited,
+.toc-tree a.reference,
+.toc-tree a.reference:visited {
+  color: var(--color-foreground-primary);
+}
+
+.sidebar-tree .reference:hover,
+.sidebar-tree .reference:focus-visible,
+.sidebar-tree .reference:active,
+.sidebar-tree .current > .reference,
+.sidebar-tree .current-page > .reference,
+.sidebar-tree li.current > a.reference,
+.sidebar-tree li.current-page > a.reference,
+.toc-tree a.reference:hover,
+.toc-tree a.reference:focus-visible,
+.toc-tree a.reference:active,
+.toc-tree li.scroll-current > a.reference {
+  color: var(--kangengine-accent);
+}
+
+.sidebar-tree .reference:hover,
+.sidebar-tree .reference:focus-visible,
+.sidebar-tree .current > .reference {
+  background: var(--kangengine-accent-soft);
+}
+
+.sidebar-tree label:hover .icon,
+.sidebar-tree .current > label .icon,
+.sidebar-tree .current-page > label .icon {
+  color: var(--kangengine-accent);
+}
+
+.toc-tree {
+  border-left-color: color-mix(in srgb, var(--kangengine-accent) 22%, var(--color-background-border));
+}
+
+.toc-tree li.kangengine-toc-fold {
+  position: relative;
+}
+
+.toc-tree .kangengine-toc-toggle {
+  position: absolute;
+  top: 0.1rem;
+  right: 0;
+  width: 1.35rem;
+  height: 1.35rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.2rem;
+  color: var(--color-foreground-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.toc-tree .kangengine-toc-toggle::before {
+  content: "›";
+  display: block;
+  font-size: 1.15rem;
+  line-height: 1.2;
+  transform: rotate(0deg);
+  transition: transform 120ms ease;
+}
+
+.toc-tree .kangengine-toc-toggle[aria-expanded="true"]::before {
+  transform: rotate(90deg);
+}
+
+.toc-tree .kangengine-toc-toggle:hover,
+.toc-tree .kangengine-toc-toggle:focus-visible {
+  color: var(--kangengine-accent);
+  background: var(--kangengine-accent-soft);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --kangengine-accent: #9bc6b4;
+    --kangengine-accent-hover: #b8d8cb;
+    --kangengine-accent-soft: rgba(127, 179, 156, 0.14);
+    --color-brand-primary: #7fb39c;
+    --color-brand-content: #9bc6b4;
+    --color-link: var(--color-foreground-primary);
+    --color-link--visited: var(--color-foreground-primary);
+    --color-link--hover: #b8d8cb;
+    --color-inline-code-background: rgba(127, 179, 156, 0.16);
+  }
+}

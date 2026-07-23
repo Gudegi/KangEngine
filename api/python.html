@@ -1,0 +1,1943 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="ke.scene" href="scene.html"><link rel="prev" title="API Reference" href="index.html">
+
+    <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
+        <title>kangengine - KangEngine Docs</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=a7642cbd" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">KangEngine Docs</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  <span class="sidebar-brand-text">KangEngine Docs</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Guide</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../guide/index.html">User Guide</a><input aria-label="Toggle navigation of User Guide" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../guide/API_OVERVIEW.html">API Overview</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/getting_started/index.html">Getting Started</a><input aria-label="Toggle navigation of Getting Started" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/getting_started/INSTALLATION.html">Installation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/getting_started/VERIFY_INSTALLATION.html">Verify Installation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/getting_started/HELLO_APP.html">Hello App</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/getting_started/FIRST_SCENE.html">First Scene</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/getting_started/FIRST_SIMULATION.html">First Simulation</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/scene_rendering/INDEX.html">Scene and Rendering</a><input aria-label="Toggle navigation of Scene and Rendering" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MJCF_ARTICULATION.html">Load an MJCF Articulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/DOF_CONTROL.html">Control DOFs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VIEWER_SYNC.html">Viewer Synchronization</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/motion_animation/INDEX.html">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="simple">
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/advanced/INDEX.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/advanced/BUILD_FROM_SOURCE.html">Build Guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/advanced/RUNTIME_ARCHITECTURE.html">Runtime Architecture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">kangengine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scene.html">ke.scene</a></li>
+<li class="toctree-l2"><a class="reference internal" href="geometry.html">ke.geometry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="asset.html">ke.asset</a></li>
+<li class="toctree-l2"><a class="reference internal" href="animation.html">ke.animation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="character.html">ke.character</a></li>
+<li class="toctree-l2"><a class="reference internal" href="motion.html">ke.motion_module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="material.html">ke.material</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rendering.html">ke.render</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html">ke.physics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simulation.html">ke.sim</a></li>
+<li class="toctree-l2"><a class="reference internal" href="terrain.html">ke.terrain</a></li>
+<li class="toctree-l2"><a class="reference internal" href="visual.html">ke.visual</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html">ke.utils</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../examples/index.html">Examples</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/api/python.md.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="kangengine">
+<h1>kangengine<a class="headerlink" href="#kangengine" title="Link to this heading">¶</a></h1>
+<p>KangEngine’s Python API is split into two layers:</p>
+<ul class="simple">
+<li><p>Native bindings exposed through public package paths, such as <code class="docutils literal notranslate"><span class="pre">ke.App</span></code>,
+<code class="docutils literal notranslate"><span class="pre">ke.render.Renderer</span></code>, <code class="docutils literal notranslate"><span class="pre">ke.scene.Prim</span></code>, <code class="docutils literal notranslate"><span class="pre">ke.asset.FBXLoader</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">ke.physics.PhysicsWorld</span></code>.</p></li>
+<li><p>Pure Python workflow helpers, such as <code class="docutils literal notranslate"><span class="pre">ke.sim.KangSimWorld</span></code>,
+<code class="docutils literal notranslate"><span class="pre">ke.visual.sim.SimWorldVisualizer</span></code>, <code class="docutils literal notranslate"><span class="pre">ke.motion_module.MotionEditor</span></code>, and
+utility modules.</p></li>
+</ul>
+<p>Use the API Reference navigation to jump to a specific area.</p>
+<section id="application">
+<h2>Application<a class="headerlink" href="#application" title="Link to this heading">¶</a></h2>
+<p>Application lifecycle, camera access, and viewport interaction.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.App">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.</span></span><span class="sig-name descname"><span class="pre">App</span></span><a class="headerlink" href="#kangengine.App" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">App</span></code></p>
+<p>Base class for Python KangEngine apps.</p>
+<p>This mirrors the C++ App lifecycle:</p>
+<ul class="simple">
+<li><p><cite>setup()</cite> runs once before the loop starts.</p></li>
+<li><p><cite>preRender()</cite> runs before scene rendering each frame.</p></li>
+<li><p><cite>render()</cite> runs while the ImGui frame is active.</p></li>
+<li><p><cite>postRender()</cite> runs after UI rendering and buffer swap setup.</p></li>
+</ul>
+<p>The C++ implementation still handles the default camera controls:
+WASD/mouse navigation, H to hide UI, Escape to close, framebuffer updates,
+and the built-in scene/performance panels.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.add_ground">
+<span class="sig-name descname"><span class="pre">add_ground</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/ground'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">shader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.add_ground" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>)</p></li>
+<li><p><strong>scale</strong> (<em>float</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.add_mesh">
+<span class="sig-name descname"><span class="pre">add_mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">shader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uri</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.add_mesh" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.add_obj">
+<span class="sig-name descname"><span class="pre">add_obj</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj_path</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.add_obj" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.add_skinned_mesh">
+<span class="sig-name descname"><span class="pre">add_skinned_mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">material</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skinned_mesh_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transform_source</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.add_skinned_mesh" title="Link to this definition">¶</a></dt>
+<dd><p>Register a skinned mesh prim and return a RenderablePrimView.</p>
+<p>Prefer a Material. Shader input remains accepted for compatibility.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.as_vec3">
+<span class="sig-name descname"><span class="pre">as_vec3</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.as_vec3" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.cleanup">
+<span class="sig-name descname"><span class="pre">cleanup</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.cleanup" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.configure_checker_shader">
+<span class="sig-name descname"><span class="pre">configure_checker_shader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shader</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.configure_checker_shader" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.create_asset_shader">
+<span class="sig-name descname"><span class="pre">create_asset_shader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vertex_shader</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fragment_shader</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.create_asset_shader" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>vertex_shader</strong> (<em>str</em>)</p></li>
+<li><p><strong>fragment_shader</strong> (<em>str</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.create_pbr_material">
+<span class="sig-name descname"><span class="pre">create_pbr_material</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">preset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">shader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metallic</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">roughness</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emissive_color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emissive_strength</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_color_texture</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normal_texture</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metallic_roughness_texture</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metallic_texture</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">roughness_texture</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ao_texture</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">orm_texture</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emissive_texture</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.create_pbr_material" title="Link to this definition">¶</a></dt>
+<dd><p>Create and retain a PBR material instance.</p>
+<p>Material identity is intentionally per instance: sharing one material
+shares its parameters, while separate materials can use the same shader
+with different factors/textures.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="material.html#kangengine.material.PBRMaterial" title="kangengine.material.PBRMaterial"><code class="xref py py-class docutils literal notranslate"><span class="pre">PBRMaterial</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.create_phong_material">
+<span class="sig-name descname"><span class="pre">create_phong_material</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">preset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">shader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ambient</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diffuse</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">specular</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shininess</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diffuse_map</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">specular_map</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha_map</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normal_map</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.create_phong_material" title="Link to this definition">¶</a></dt>
+<dd><p>Create and retain a Phong material instance.</p>
+<p>Each call returns a distinct material, so two meshes can share the same
+shader while carrying different colors/textures and batching keys.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="material.html#kangengine.material.PhongMaterial" title="kangengine.material.PhongMaterial"><code class="xref py py-class docutils literal notranslate"><span class="pre">PhongMaterial</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.create_standard_materials">
+<span class="sig-name descname"><span class="pre">create_standard_materials</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">force</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.create_standard_materials" title="Link to this definition">¶</a></dt>
+<dd><p>Create or return the cached standard material bundle.</p>
+<p>The bundle contains shared defaults for common scene and visualization
+work. Use create_phong_material() or create_pbr_material() when an
+object needs independently mutable surface parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>force</strong> (<em>bool</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.create_standard_shaders">
+<span class="sig-name descname"><span class="pre">create_standard_shaders</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">force</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.create_standard_shaders" title="Link to this definition">¶</a></dt>
+<dd><p>Create or return the cached standard shader bundle.</p>
+<p>This intentionally stays lazy: pure compute/headless apps do not pay for
+shader creation, while offscreen render/headless apps can call this
+after initialize() once a graphics context exists.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>force</strong> (<em>bool</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.create_vertex_color_material">
+<span class="sig-name descname"><span class="pre">create_vertex_color_material</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">shader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.create_vertex_color_material" title="Link to this definition">¶</a></dt>
+<dd><p>Create and retain a material for display/vertex-color shaders.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="material.html#kangengine.material.VertexColorMaterial" title="kangengine.material.VertexColorMaterial"><code class="xref py py-class docutils literal notranslate"><span class="pre">VertexColorMaterial</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.get_native_scene">
+<span class="sig-name descname"><span class="pre">get_native_scene</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.get_native_scene" title="Link to this definition">¶</a></dt>
+<dd><p>Return the native SceneBackend escape hatch.</p>
+<p>Public Python code should prefer self.scene for authored scene workflows.
+Use this only when a C++ or pybind API explicitly requires SceneBackend.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.get_renderer">
+<span class="sig-name descname"><span class="pre">get_renderer</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.get_renderer" title="Link to this definition">¶</a></dt>
+<dd><p>Return the native renderer exposed through <code class="docutils literal notranslate"><span class="pre">ke.render</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.get_scene">
+<span class="sig-name descname"><span class="pre">get_scene</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.get_scene" title="Link to this definition">¶</a></dt>
+<dd><p>Return the Python-friendly SceneContext facade.</p>
+<p>This mirrors the <code class="docutils literal notranslate"><span class="pre">app.scene</span></code> property. Use get_native_scene() or
+scene.native only when a C++ or pybind API explicitly requires the
+native SceneBackend.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.initialize">
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.App" title="kangengine.App"><span class="pre">kangengine.App</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hideUi</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upAxis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.UpAxis</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;UpAxis.Y:</span> <span class="pre">1&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">graphicsBackendType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.BackendType</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;BackendType.OpenGL:</span> <span class="pre">0&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sceneBackendType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.scene.BackendType</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;BackendType.Native:</span> <span class="pre">0&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">headless</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.App.initialize" title="Link to this definition">¶</a></dt>
+<dd><p>Initialize the window, renderer, input, and scene backend.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.is_key_down">
+<span class="sig-name descname"><span class="pre">is_key_down</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.is_key_down" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.load_texture">
+<span class="sig-name descname"><span class="pre">load_texture</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">flip</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.load_texture" title="Link to this definition">¶</a></dt>
+<dd><p>Load and retain a GPU texture, cached by normalized path.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="rendering.html#kangengine.render.Texture" title="kangengine.render.Texture"><code class="xref py py-class docutils literal notranslate"><span class="pre">Texture</span></code></a></span></p>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>flip</strong> (<em>bool</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.package_asset_path">
+<span class="sig-name descname"><span class="pre">package_asset_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">parts</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.package_asset_path" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>parts</strong> (<em>str</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.postRender">
+<span class="sig-name descname"><span class="pre">postRender</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.App" title="kangengine.App"><span class="pre">kangengine.App</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.App.postRender" title="Link to this definition">¶</a></dt>
+<dd><p>User override called after each frame is rendered.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.preRender">
+<span class="sig-name descname"><span class="pre">preRender</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.App" title="kangengine.App"><span class="pre">kangengine.App</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.App.preRender" title="Link to this definition">¶</a></dt>
+<dd><p>User override called before each frame is rendered.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.render">
+<span class="sig-name descname"><span class="pre">render</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.App" title="kangengine.App"><span class="pre">kangengine.App</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.App.render" title="Link to this definition">¶</a></dt>
+<dd><p>User override called during each frame render.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.set_camera_view">
+<span class="sig-name descname"><span class="pre">set_camera_view</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">position</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.set_camera_view" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.set_render_hz">
+<span class="sig-name descname"><span class="pre">set_render_hz</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hz</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.set_render_hz" title="Link to this definition">¶</a></dt>
+<dd><p>Set the target render/update frequency in Hz.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>hz</strong> (<em>float</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.set_texture_uniform">
+<span class="sig-name descname"><span class="pre">set_texture_uniform</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shader</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'uTexture'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.set_texture_uniform" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>unit</strong> (<em>int</em>)</p></li>
+<li><p><strong>name</strong> (<em>str</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.setup">
+<span class="sig-name descname"><span class="pre">setup</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.App" title="kangengine.App"><span class="pre">kangengine.App</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.App.setup" title="Link to this definition">¶</a></dt>
+<dd><p>User override called once after initialization.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.should_close_shortcut_pressed">
+<span class="sig-name descname"><span class="pre">should_close_shortcut_pressed</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.should_close_shortcut_pressed" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.start">
+<span class="sig-name descname"><span class="pre">start</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.App" title="kangengine.App"><span class="pre">kangengine.App</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.App.start" title="Link to this definition">¶</a></dt>
+<dd><p>Enter the application render loop.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.was_key_pressed">
+<span class="sig-name descname"><span class="pre">was_key_pressed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.was_key_pressed" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.was_key_released">
+<span class="sig-name descname"><span class="pre">was_key_released</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.was_key_released" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.SceneContext">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.</span></span><span class="sig-name descname"><span class="pre">SceneContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">app</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.SceneContext" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Scene-facing facade connected to the owning App renderer.</p>
+<p>Use this for common add/remove workflows. It keeps renderer handles inside
+the app-facing layer while preserving access to the underlying scene backend
+for lower-level operations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>app</strong> (<a class="reference internal" href="#kangengine.App" title="kangengine.App"><em>App</em></a>)</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.SceneContext.add_ground">
+<span class="sig-name descname"><span class="pre">add_ground</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/ground'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">shader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.SceneContext.add_ground" title="Link to this definition">¶</a></dt>
+<dd><p>Add a checkerboard ground plane.</p>
+<p><code class="docutils literal notranslate"><span class="pre">material</span></code> is the canonical surface input. <code class="docutils literal notranslate"><span class="pre">shader</span></code> remains as a
+compatibility keyword for older callers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>)</p></li>
+<li><p><strong>scale</strong> (<em>float</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.SceneContext.add_mesh">
+<span class="sig-name descname"><span class="pre">add_mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">material</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transform_source</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uri</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.SceneContext.add_mesh" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.SceneContext.add_obj">
+<span class="sig-name descname"><span class="pre">add_obj</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj_path</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">transform_source</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">double_sided</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.SceneContext.add_obj" title="Link to this definition">¶</a></dt>
+<dd><p>Load an OBJ/MTL file and add material-subset mesh prims.</p>
+<p>Multi-material OBJ files become one Xform root with one renderable child
+per material subset. Single-material OBJ files still use the same code
+path, which keeps resource registration and material creation
+consistent.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.SceneContext.add_renderable">
+<span class="sig-name descname"><span class="pre">add_renderable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">material</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transform_source</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.SceneContext.add_renderable" title="Link to this definition">¶</a></dt>
+<dd><p>Register a scene prim as renderable through RenderComponent.</p>
+<p>This is the preferred public path for authored scene objects. It
+returns a RenderablePrimView facade instead of exposing the native
+renderer handle. Pass a Material for material-first rendering; raw
+Shader objects are still accepted as a compatibility path and are
+wrapped internally by the native SceneRenderSystem.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.SceneContext.define_prim">
+<span class="sig-name descname"><span class="pre">define_prim</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prim_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.SceneContext.define_prim" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.SceneContext.get_prim_at_path">
+<span class="sig-name descname"><span class="pre">get_prim_at_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.SceneContext.get_prim_at_path" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.SceneContext.get_root_prim">
+<span class="sig-name descname"><span class="pre">get_root_prim</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.SceneContext.get_root_prim" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.SceneContext.log_arrows">
+<span class="sig-name descname"><span class="pre">log_arrows</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shader</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">starts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ends</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radius</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.02</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">segments</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">12</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.SceneContext.log_arrows" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>)</p></li>
+<li><p><strong>radius</strong> (<em>float</em>)</p></li>
+<li><p><strong>segments</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.SceneContext.log_lines">
+<span class="sig-name descname"><span class="pre">log_lines</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shader</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">starts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ends</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radius</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.005</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">segments</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.SceneContext.log_lines" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>)</p></li>
+<li><p><strong>radius</strong> (<em>float</em>)</p></li>
+<li><p><strong>segments</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.SceneContext.native">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">native</span></span><a class="headerlink" href="#kangengine.SceneContext.native" title="Link to this definition">¶</a></dt>
+<dd><p>Return the native SceneBackend escape hatch.</p>
+<p>Prefer SceneContext helpers such as add_mesh(), add_ground(), and
+define_prim() for authored scene objects. Use native only when a C++ or
+pybind API explicitly requires SceneBackend.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.SceneContext.remove_prim">
+<span class="sig-name descname"><span class="pre">remove_prim</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path_or_prim</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.SceneContext.remove_prim" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.DebugGeometry">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.</span></span><span class="sig-name descname"><span class="pre">DebugGeometry</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scene_context</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.DebugGeometry" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Mesh-based debug geometry owned by the SceneGraph.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>scene_context</strong> (<a class="reference internal" href="#kangengine.SceneContext" title="kangengine.SceneContext"><em>SceneContext</em></a>)</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.DebugGeometry.add_arrows">
+<span class="sig-name descname"><span class="pre">add_arrows</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">starts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ends</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radius</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.02</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">segments</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">12</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.DebugGeometry.add_arrows" title="Link to this definition">¶</a></dt>
+<dd><p>Add instanced arrow meshes and return a DebugPrimitiveView.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>)</p></li>
+<li><p><strong>radius</strong> (<em>float</em>)</p></li>
+<li><p><strong>segments</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.DebugGeometry.add_axes">
+<span class="sig-name descname"><span class="pre">add_axes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">origin</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rotation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radius</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.005</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">segments</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.DebugGeometry.add_axes" title="Link to this definition">¶</a></dt>
+<dd><p>Add RGB axis meshes and return a DebugPrimitiveView.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>)</p></li>
+<li><p><strong>length</strong> (<em>float</em>)</p></li>
+<li><p><strong>radius</strong> (<em>float</em>)</p></li>
+<li><p><strong>segments</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.DebugGeometry.add_lines">
+<span class="sig-name descname"><span class="pre">add_lines</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">starts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ends</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radius</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.005</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">segments</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.DebugGeometry.add_lines" title="Link to this definition">¶</a></dt>
+<dd><p>Add instanced line meshes and return a DebugPrimitiveView.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>)</p></li>
+<li><p><strong>radius</strong> (<em>float</em>)</p></li>
+<li><p><strong>segments</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.DebugOverlay">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.</span></span><span class="sig-name descname"><span class="pre">DebugOverlay</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">app</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.DebugOverlay" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>OpenGL debug overlay that does not create SceneGraph prims.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>app</strong> (<a class="reference internal" href="#kangengine.App" title="kangengine.App"><em>App</em></a>)</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.DebugOverlay.axes">
+<span class="sig-name descname"><span class="pre">axes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">origin</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rotation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hidden</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.DebugOverlay.axes" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>)</p></li>
+<li><p><strong>length</strong> (<em>float</em>)</p></li>
+<li><p><strong>width</strong> (<em>float</em>)</p></li>
+<li><p><strong>hidden</strong> (<em>bool</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.DebugOverlay.clear">
+<span class="sig-name descname"><span class="pre">clear</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.DebugOverlay.clear" title="Link to this definition">¶</a></dt>
+<dd><p>Clear both line/axis and point overlay batches at a path.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.DebugOverlay.clear_lines">
+<span class="sig-name descname"><span class="pre">clear_lines</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.DebugOverlay.clear_lines" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.DebugOverlay.clear_points">
+<span class="sig-name descname"><span class="pre">clear_points</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.DebugOverlay.clear_points" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.DebugOverlay.lines">
+<span class="sig-name descname"><span class="pre">lines</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">starts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ends</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hidden</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.DebugOverlay.lines" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>)</p></li>
+<li><p><strong>width</strong> (<em>float</em>)</p></li>
+<li><p><strong>hidden</strong> (<em>bool</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.DebugOverlay.points">
+<span class="sig-name descname"><span class="pre">points</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hidden</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.DebugOverlay.points" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>)</p></li>
+<li><p><strong>size</strong> (<em>float</em>)</p></li>
+<li><p><strong>hidden</strong> (<em>bool</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.</span></span><span class="sig-name descname"><span class="pre">RenderablePrimView</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">app</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">component</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>User-facing view for one scene prim and its renderer resources.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>app</strong> (<a class="reference internal" href="#kangengine.App" title="kangengine.App"><em>App</em></a>)</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.compute_local_matrix">
+<span class="sig-name descname"><span class="pre">compute_local_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.compute_local_matrix" title="Link to this definition">¶</a></dt>
+<dd><p>Compute the effective parent-relative transform matrix.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.compute_world_matrix">
+<span class="sig-name descname"><span class="pre">compute_world_matrix</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.compute_world_matrix" title="Link to this definition">¶</a></dt>
+<dd><p>Compute the effective world-space transform matrix.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.get_base_color">
+<span class="sig-name descname"><span class="pre">get_base_color</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.get_base_color" title="Link to this definition">¶</a></dt>
+<dd><p>Return the per-instance base-color multiplier.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.get_local_rotation">
+<span class="sig-name descname"><span class="pre">get_local_rotation</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.get_local_rotation" title="Link to this definition">¶</a></dt>
+<dd><p>Return the effective parent-relative quaternion rotation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.get_local_translation">
+<span class="sig-name descname"><span class="pre">get_local_translation</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.get_local_translation" title="Link to this definition">¶</a></dt>
+<dd><p>Return the effective parent-relative translation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.get_world_rotation">
+<span class="sig-name descname"><span class="pre">get_world_rotation</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.get_world_rotation" title="Link to this definition">¶</a></dt>
+<dd><p>Return the effective world-space quaternion rotation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.get_world_translation">
+<span class="sig-name descname"><span class="pre">get_world_translation</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.get_world_translation" title="Link to this definition">¶</a></dt>
+<dd><p>Return the effective world-space translation.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.path">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">path</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#kangengine.RenderablePrimView.path" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.remove">
+<span class="sig-name descname"><span class="pre">remove</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.remove" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.set_alpha_mode">
+<span class="sig-name descname"><span class="pre">set_alpha_mode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mode</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cutoff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.set_alpha_mode" title="Link to this definition">¶</a></dt>
+<dd><p>Choose opaque, cutout-mask, or blended alpha rendering.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>cutoff</strong> (<em>float</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.set_base_color">
+<span class="sig-name descname"><span class="pre">set_base_color</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">color</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.set_base_color" title="Link to this definition">¶</a></dt>
+<dd><p>Set the per-instance base-color multiplier for this renderable.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.set_casts_shadow">
+<span class="sig-name descname"><span class="pre">set_casts_shadow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">enabled</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.set_casts_shadow" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>enabled</strong> (<em>bool</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.set_double_sided">
+<span class="sig-name descname"><span class="pre">set_double_sided</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">enabled</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.set_double_sided" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>enabled</strong> (<em>bool</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.set_local_matrix">
+<span class="sig-name descname"><span class="pre">set_local_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">matrix</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.set_local_matrix" title="Link to this definition">¶</a></dt>
+<dd><p>Set the parent-relative transform matrix.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.set_local_rotation">
+<span class="sig-name descname"><span class="pre">set_local_rotation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rotation</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.set_local_rotation" title="Link to this definition">¶</a></dt>
+<dd><p>Set the parent-relative quaternion rotation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.set_local_rotation_axis_angle">
+<span class="sig-name descname"><span class="pre">set_local_rotation_axis_angle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">axis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">angle_radians</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.set_local_rotation_axis_angle" title="Link to this definition">¶</a></dt>
+<dd><p>Set parent-relative rotation from an axis and angle in radians.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>angle_radians</strong> (<em>float</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.set_local_scale">
+<span class="sig-name descname"><span class="pre">set_local_scale</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scale</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.set_local_scale" title="Link to this definition">¶</a></dt>
+<dd><p>Set the parent-relative scale.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.set_local_translation">
+<span class="sig-name descname"><span class="pre">set_local_translation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">translation</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.set_local_translation" title="Link to this definition">¶</a></dt>
+<dd><p>Set the parent-relative translation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.set_material">
+<span class="sig-name descname"><span class="pre">set_material</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">material</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.set_material" title="Link to this definition">¶</a></dt>
+<dd><p>Replace this renderable’s material and move it to the right batch.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.set_texture">
+<span class="sig-name descname"><span class="pre">set_texture</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">texture</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">role_or_slot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;TextureRole.BaseColor:</span> <span class="pre">0&gt;</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.set_texture" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.set_transform_buffer">
+<span class="sig-name descname"><span class="pre">set_transform_buffer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">transforms</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">sim_device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sync_policy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.set_transform_buffer" title="Link to this definition">¶</a></dt>
+<dd><p>Set the <code class="docutils literal notranslate"><span class="pre">[N,</span> <span class="pre">4,</span> <span class="pre">4]</span></code> buffer of an ExternalBuffer renderable.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.set_visible">
+<span class="sig-name descname"><span class="pre">set_visible</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">visible</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.set_visible" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>visible</strong> (<em>bool</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.set_world_matrix">
+<span class="sig-name descname"><span class="pre">set_world_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">matrix</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.set_world_matrix" title="Link to this definition">¶</a></dt>
+<dd><p>Set the transform matrix in world space.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.set_world_rotation">
+<span class="sig-name descname"><span class="pre">set_world_rotation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rotation</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.set_world_rotation" title="Link to this definition">¶</a></dt>
+<dd><p>Set quaternion rotation in world space.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.set_world_rotation_axis_angle">
+<span class="sig-name descname"><span class="pre">set_world_rotation_axis_angle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">axis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">angle_radians</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.set_world_rotation_axis_angle" title="Link to this definition">¶</a></dt>
+<dd><p>Set world rotation from an axis and angle in radians.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>angle_radians</strong> (<em>float</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.set_world_translation">
+<span class="sig-name descname"><span class="pre">set_world_translation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">translation</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.set_world_translation" title="Link to this definition">¶</a></dt>
+<dd><p>Set translation in world space.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.update_geometry">
+<span class="sig-name descname"><span class="pre">update_geometry</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">positions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normals</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.update_geometry" title="Link to this definition">¶</a></dt>
+<dd><p>Update dynamic vertex positions and optional normals.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.RenderablePrimView.update_skinning">
+<span class="sig-name descname"><span class="pre">update_skinning</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bone_matrices</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.RenderablePrimView.update_skinning" title="Link to this definition">¶</a></dt>
+<dd><p>Update skinned bone matrices for this renderable.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.Camera">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.</span></span><span class="sig-name descname"><span class="pre">Camera</span></span><a class="headerlink" href="#kangengine.Camera" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
+<p>View camera used by KangEngine applications.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.Camera.get_camera_look_dir">
+<span class="sig-name descname"><span class="pre">get_camera_look_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.Camera" title="kangengine.Camera"><span class="pre">kangengine.Camera</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">kangengine.vec3</span></span></span><a class="headerlink" href="#kangengine.Camera.get_camera_look_dir" title="Link to this definition">¶</a></dt>
+<dd><p>Return the normalized forward/look direction.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.Camera.get_camera_pos">
+<span class="sig-name descname"><span class="pre">get_camera_pos</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.Camera" title="kangengine.Camera"><span class="pre">kangengine.Camera</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">kangengine.vec3</span></span></span><a class="headerlink" href="#kangengine.Camera.get_camera_pos" title="Link to this definition">¶</a></dt>
+<dd><p>Return the camera position.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.Camera.get_camera_right_dir">
+<span class="sig-name descname"><span class="pre">get_camera_right_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.Camera" title="kangengine.Camera"><span class="pre">kangengine.Camera</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">kangengine.vec3</span></span></span><a class="headerlink" href="#kangengine.Camera.get_camera_right_dir" title="Link to this definition">¶</a></dt>
+<dd><p>Return the normalized right direction.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.Camera.get_camera_up_dir">
+<span class="sig-name descname"><span class="pre">get_camera_up_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.Camera" title="kangengine.Camera"><span class="pre">kangengine.Camera</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">kangengine.vec3</span></span></span><a class="headerlink" href="#kangengine.Camera.get_camera_up_dir" title="Link to this definition">¶</a></dt>
+<dd><p>Return the normalized up direction.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.Camera.get_far_plane">
+<span class="sig-name descname"><span class="pre">get_far_plane</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.Camera" title="kangengine.Camera"><span class="pre">kangengine.Camera</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#kangengine.Camera.get_far_plane" title="Link to this definition">¶</a></dt>
+<dd><p>Return the far clipping distance.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.Camera.get_fov">
+<span class="sig-name descname"><span class="pre">get_fov</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.Camera" title="kangengine.Camera"><span class="pre">kangengine.Camera</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#kangengine.Camera.get_fov" title="Link to this definition">¶</a></dt>
+<dd><p>Return the vertical field of view in degrees.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.Camera.get_near_plane">
+<span class="sig-name descname"><span class="pre">get_near_plane</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.Camera" title="kangengine.Camera"><span class="pre">kangengine.Camera</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#kangengine.Camera.get_near_plane" title="Link to this definition">¶</a></dt>
+<dd><p>Return the near clipping distance.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.Camera.get_target_pos">
+<span class="sig-name descname"><span class="pre">get_target_pos</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.Camera" title="kangengine.Camera"><span class="pre">kangengine.Camera</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">kangengine.vec3</span></span></span><a class="headerlink" href="#kangengine.Camera.get_target_pos" title="Link to this definition">¶</a></dt>
+<dd><p>Return the current camera target point.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.Camera.set_camera_pos">
+<span class="sig-name descname"><span class="pre">set_camera_pos</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.Camera" title="kangengine.Camera"><span class="pre">kangengine.Camera</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">camera_pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.vec3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.Camera.set_camera_pos" title="Link to this definition">¶</a></dt>
+<dd><p>Set the camera position.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.Camera.set_far_plane">
+<span class="sig-name descname"><span class="pre">set_far_plane</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.Camera" title="kangengine.Camera"><span class="pre">kangengine.Camera</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">distance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.Camera.set_far_plane" title="Link to this definition">¶</a></dt>
+<dd><p>Set the far clipping distance.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.Camera.set_fov">
+<span class="sig-name descname"><span class="pre">set_fov</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.Camera" title="kangengine.Camera"><span class="pre">kangengine.Camera</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">fov</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.Camera.set_fov" title="Link to this definition">¶</a></dt>
+<dd><p>Set the vertical field of view in degrees.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.Camera.set_near_plane">
+<span class="sig-name descname"><span class="pre">set_near_plane</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.Camera" title="kangengine.Camera"><span class="pre">kangengine.Camera</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">distance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.Camera.set_near_plane" title="Link to this definition">¶</a></dt>
+<dd><p>Set the near clipping distance.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.Camera.set_target_pos">
+<span class="sig-name descname"><span class="pre">set_target_pos</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.Camera" title="kangengine.Camera"><span class="pre">kangengine.Camera</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.vec3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.Camera.set_target_pos" title="Link to this definition">¶</a></dt>
+<dd><p>Set the camera target point.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.RayPickResult">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.</span></span><span class="sig-name descname"><span class="pre">RayPickResult</span></span><a class="headerlink" href="#kangengine.RayPickResult" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.RayPickResult.distance">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">distance</span></span><a class="headerlink" href="#kangengine.RayPickResult.distance" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.RayPickResult.handle">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">handle</span></span><a class="headerlink" href="#kangengine.RayPickResult.handle" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.RayPickResult.hit">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">hit</span></span><a class="headerlink" href="#kangengine.RayPickResult.hit" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.RayPickResult.instance_index">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">instance_index</span></span><a class="headerlink" href="#kangengine.RayPickResult.instance_index" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.RayPickResult.position">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">position</span></span><a class="headerlink" href="#kangengine.RayPickResult.position" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.RayPickResult.prim">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">prim</span></span><a class="headerlink" href="#kangengine.RayPickResult.prim" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.RayPickResult.transform_source">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">transform_source</span></span><a class="headerlink" href="#kangengine.RayPickResult.transform_source" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<section id="ke-imgui">
+<h3>ke.imgui<a class="headerlink" href="#ke-imgui" title="Link to this heading">¶</a></h3>
+<p>Small Dear ImGui binding for application panels and controls. Access these
+functions through <code class="docutils literal notranslate"><span class="pre">ke.imgui</span></code>.</p>
+<p id="module-kangengine.imgui">Small Dear ImGui wrapper for Python apps</p>
+<section id="window-flags">
+<h4>Window flags<a class="headerlink" href="#window-flags" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-given docutils container">
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 70.0%" />
+<col style="width: 30.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Value</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_NoBackground</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">128</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_NoMove</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">4</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_NoResize</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">2</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_NoScrollbar</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">8</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_NoTitleBar</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">1</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_None</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">0</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.begin">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">begin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flags</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#kangengine.imgui.begin" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.begin_child">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">begin_child</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">border</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#kangengine.imgui.begin_child" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.button">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">button</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#kangengine.imgui.button" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.checkbox">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">checkbox</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><a class="headerlink" href="#kangengine.imgui.checkbox" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.end">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">end</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.imgui.end" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.end_child">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">end_child</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.imgui.end_child" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.main_viewport_work_rect">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">main_viewport_work_rect</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><a class="headerlink" href="#kangengine.imgui.main_viewport_work_rect" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.motion_sequencer">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">motion_sequencer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">current_frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_min</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_max</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">first_frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expanded</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">selected_entry</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">item_label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'Motion'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fit_to_content</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><a class="headerlink" href="#kangengine.imgui.motion_sequencer" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.motion_sequencer_resizable">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">motion_sequencer_resizable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">current_frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_min</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_max</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">first_frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expanded</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">selected_entry</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">item_label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'Motion'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fit_to_content</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">legend_width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">200.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><a class="headerlink" href="#kangengine.imgui.motion_sequencer_resizable" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.progress_bar">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">progress_bar</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fraction</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overlay</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.imgui.progress_bar" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.same_line">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">same_line</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.imgui.same_line" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.separator">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">separator</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.imgui.separator" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.set_next_window_pos">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">set_next_window_pos</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.imgui.set_next_window_pos" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.set_next_window_size">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">set_next_window_size</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.imgui.set_next_window_size" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.slider_float">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">slider_float</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><a class="headerlink" href="#kangengine.imgui.slider_float" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.text">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.imgui.text" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.text_disabled">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">text_disabled</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arg0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.imgui.text_disabled" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="ke-keys">
+<h3>ke.keys<a class="headerlink" href="#ke-keys" title="Link to this heading">¶</a></h3>
+<p>Keyboard constants accepted by the <code class="docutils literal notranslate"><span class="pre">App</span></code> input helpers. Access them through
+<code class="docutils literal notranslate"><span class="pre">ke.keys</span></code>, for example <code class="docutils literal notranslate"><span class="pre">ke.keys.ESCAPE</span></code>, <code class="docutils literal notranslate"><span class="pre">ke.keys.SPACE</span></code>, or <code class="docutils literal notranslate"><span class="pre">ke.keys.A</span></code>.</p>
+<p id="module-kangengine.keys">GLFW keyboard key constants</p>
+<section id="key-constants">
+<h4>Key constants<a class="headerlink" href="#key-constants" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-given docutils container">
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 70.0%" />
+<col style="width: 30.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Value</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.A</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">65</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.APOSTROPHE</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">39</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.B</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">66</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.BACKSLASH</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">92</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.BACKSPACE</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">259</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.C</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">67</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.CAPS_LOCK</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">280</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.COMMA</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">44</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.D</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">68</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.DELETE</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">261</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.DOWN</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">264</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.E</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">69</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.END</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">269</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.ENTER</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">257</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.EQUAL</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">61</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.ESCAPE</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">256</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">70</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F1</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">290</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F10</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">299</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F11</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">300</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F12</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">301</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F13</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">302</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F14</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">303</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F15</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">304</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F16</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">305</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F17</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">306</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F18</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">307</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F19</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">308</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F2</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">291</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F20</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">309</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F21</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">310</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F22</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">311</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F23</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">312</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F24</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">313</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F25</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">314</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F3</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">292</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F4</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">293</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F5</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">294</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F6</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">295</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F7</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">296</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F8</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">297</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.F9</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">298</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.G</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">71</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.GRAVE_ACCENT</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">96</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.H</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">72</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.HOME</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">268</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.I</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">73</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.INSERT</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">260</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.J</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">74</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.K</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">75</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.KP_0</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">320</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.KP_1</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">321</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.KP_2</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">322</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.KP_3</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">323</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.KP_4</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">324</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.KP_5</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">325</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.KP_6</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">326</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.KP_7</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">327</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.KP_8</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">328</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.KP_9</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">329</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.KP_ADD</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">334</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.KP_DECIMAL</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">330</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.KP_DIVIDE</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">331</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.KP_ENTER</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">335</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.KP_EQUAL</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">336</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.KP_MULTIPLY</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">332</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.KP_SUBTRACT</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">333</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.L</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">76</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.LEFT</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">263</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.LEFT_ALT</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">342</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.LEFT_BRACKET</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">91</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.LEFT_CONTROL</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">341</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.LEFT_SHIFT</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">340</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.LEFT_SUPER</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">343</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.M</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">77</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.MENU</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">348</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.MINUS</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">45</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.N</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">78</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.NUM_0</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">48</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.NUM_1</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">49</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.NUM_2</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">50</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.NUM_3</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">51</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.NUM_4</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">52</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.NUM_5</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">53</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.NUM_6</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">54</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.NUM_7</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">55</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.NUM_8</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">56</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.NUM_9</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">57</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.NUM_LOCK</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">282</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.O</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">79</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.P</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">80</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.PAGE_DOWN</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">267</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.PAGE_UP</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">266</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.PAUSE</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">284</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.PERIOD</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">46</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.PRINT_SCREEN</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">283</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.Q</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">81</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.R</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">82</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.RIGHT</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">262</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.RIGHT_ALT</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">346</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.RIGHT_BRACKET</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">93</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.RIGHT_CONTROL</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">345</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.RIGHT_SHIFT</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">344</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.RIGHT_SUPER</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">347</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.S</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">83</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.SCROLL_LOCK</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">281</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.SEMICOLON</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">59</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.SLASH</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">47</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.SPACE</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">32</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.T</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">84</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.TAB</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">258</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.U</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">85</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.UP</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">265</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.V</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">86</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.W</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">87</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.WORLD_1</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">161</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.WORLD_2</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">162</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.X</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">88</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.Y</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">89</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.keys.Z</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">90</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</section>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="scene.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">ke.scene</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="index.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">API Reference</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2026, KangEngine contributors
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">kangengine</a><ul>
+<li><a class="reference internal" href="#application">Application</a><ul>
+<li><a class="reference internal" href="#kangengine.App"><code class="docutils literal notranslate"><span class="pre">App</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.App.add_ground"><code class="docutils literal notranslate"><span class="pre">App.add_ground()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.add_mesh"><code class="docutils literal notranslate"><span class="pre">App.add_mesh()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.add_obj"><code class="docutils literal notranslate"><span class="pre">App.add_obj()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.add_skinned_mesh"><code class="docutils literal notranslate"><span class="pre">App.add_skinned_mesh()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.as_vec3"><code class="docutils literal notranslate"><span class="pre">App.as_vec3()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.cleanup"><code class="docutils literal notranslate"><span class="pre">App.cleanup()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.configure_checker_shader"><code class="docutils literal notranslate"><span class="pre">App.configure_checker_shader()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.create_asset_shader"><code class="docutils literal notranslate"><span class="pre">App.create_asset_shader()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.create_pbr_material"><code class="docutils literal notranslate"><span class="pre">App.create_pbr_material()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.create_phong_material"><code class="docutils literal notranslate"><span class="pre">App.create_phong_material()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.create_standard_materials"><code class="docutils literal notranslate"><span class="pre">App.create_standard_materials()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.create_standard_shaders"><code class="docutils literal notranslate"><span class="pre">App.create_standard_shaders()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.create_vertex_color_material"><code class="docutils literal notranslate"><span class="pre">App.create_vertex_color_material()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.get_native_scene"><code class="docutils literal notranslate"><span class="pre">App.get_native_scene()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.get_renderer"><code class="docutils literal notranslate"><span class="pre">App.get_renderer()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.get_scene"><code class="docutils literal notranslate"><span class="pre">App.get_scene()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.initialize"><code class="docutils literal notranslate"><span class="pre">App.initialize()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.is_key_down"><code class="docutils literal notranslate"><span class="pre">App.is_key_down()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.load_texture"><code class="docutils literal notranslate"><span class="pre">App.load_texture()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.package_asset_path"><code class="docutils literal notranslate"><span class="pre">App.package_asset_path()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.postRender"><code class="docutils literal notranslate"><span class="pre">App.postRender()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.preRender"><code class="docutils literal notranslate"><span class="pre">App.preRender()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.render"><code class="docutils literal notranslate"><span class="pre">App.render()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.set_camera_view"><code class="docutils literal notranslate"><span class="pre">App.set_camera_view()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.set_render_hz"><code class="docutils literal notranslate"><span class="pre">App.set_render_hz()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.set_texture_uniform"><code class="docutils literal notranslate"><span class="pre">App.set_texture_uniform()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.setup"><code class="docutils literal notranslate"><span class="pre">App.setup()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.should_close_shortcut_pressed"><code class="docutils literal notranslate"><span class="pre">App.should_close_shortcut_pressed()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.start"><code class="docutils literal notranslate"><span class="pre">App.start()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.was_key_pressed"><code class="docutils literal notranslate"><span class="pre">App.was_key_pressed()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.was_key_released"><code class="docutils literal notranslate"><span class="pre">App.was_key_released()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.SceneContext"><code class="docutils literal notranslate"><span class="pre">SceneContext</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.SceneContext.add_ground"><code class="docutils literal notranslate"><span class="pre">SceneContext.add_ground()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.SceneContext.add_mesh"><code class="docutils literal notranslate"><span class="pre">SceneContext.add_mesh()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.SceneContext.add_obj"><code class="docutils literal notranslate"><span class="pre">SceneContext.add_obj()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.SceneContext.add_renderable"><code class="docutils literal notranslate"><span class="pre">SceneContext.add_renderable()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.SceneContext.define_prim"><code class="docutils literal notranslate"><span class="pre">SceneContext.define_prim()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.SceneContext.get_prim_at_path"><code class="docutils literal notranslate"><span class="pre">SceneContext.get_prim_at_path()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.SceneContext.get_root_prim"><code class="docutils literal notranslate"><span class="pre">SceneContext.get_root_prim()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.SceneContext.log_arrows"><code class="docutils literal notranslate"><span class="pre">SceneContext.log_arrows()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.SceneContext.log_lines"><code class="docutils literal notranslate"><span class="pre">SceneContext.log_lines()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.SceneContext.native"><code class="docutils literal notranslate"><span class="pre">SceneContext.native</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.SceneContext.remove_prim"><code class="docutils literal notranslate"><span class="pre">SceneContext.remove_prim()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.DebugGeometry"><code class="docutils literal notranslate"><span class="pre">DebugGeometry</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.DebugGeometry.add_arrows"><code class="docutils literal notranslate"><span class="pre">DebugGeometry.add_arrows()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.DebugGeometry.add_axes"><code class="docutils literal notranslate"><span class="pre">DebugGeometry.add_axes()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.DebugGeometry.add_lines"><code class="docutils literal notranslate"><span class="pre">DebugGeometry.add_lines()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.DebugOverlay"><code class="docutils literal notranslate"><span class="pre">DebugOverlay</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.DebugOverlay.axes"><code class="docutils literal notranslate"><span class="pre">DebugOverlay.axes()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.DebugOverlay.clear"><code class="docutils literal notranslate"><span class="pre">DebugOverlay.clear()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.DebugOverlay.clear_lines"><code class="docutils literal notranslate"><span class="pre">DebugOverlay.clear_lines()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.DebugOverlay.clear_points"><code class="docutils literal notranslate"><span class="pre">DebugOverlay.clear_points()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.DebugOverlay.lines"><code class="docutils literal notranslate"><span class="pre">DebugOverlay.lines()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.DebugOverlay.points"><code class="docutils literal notranslate"><span class="pre">DebugOverlay.points()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.compute_local_matrix"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.compute_local_matrix()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.compute_world_matrix"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.compute_world_matrix()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.get_base_color"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.get_base_color()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.get_local_rotation"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.get_local_rotation()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.get_local_translation"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.get_local_translation()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.get_world_rotation"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.get_world_rotation()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.get_world_translation"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.get_world_translation()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.path"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.path</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.remove"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.remove()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.set_alpha_mode"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_alpha_mode()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.set_base_color"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_base_color()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.set_casts_shadow"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_casts_shadow()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.set_double_sided"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_double_sided()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.set_local_matrix"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_local_matrix()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.set_local_rotation"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_local_rotation()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.set_local_rotation_axis_angle"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_local_rotation_axis_angle()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.set_local_scale"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_local_scale()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.set_local_translation"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_local_translation()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.set_material"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_material()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.set_texture"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_texture()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.set_transform_buffer"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_transform_buffer()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.set_visible"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_visible()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.set_world_matrix"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_world_matrix()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.set_world_rotation"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_world_rotation()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.set_world_rotation_axis_angle"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_world_rotation_axis_angle()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.set_world_translation"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.set_world_translation()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.update_geometry"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.update_geometry()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RenderablePrimView.update_skinning"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView.update_skinning()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.Camera"><code class="docutils literal notranslate"><span class="pre">Camera</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.Camera.get_camera_look_dir"><code class="docutils literal notranslate"><span class="pre">Camera.get_camera_look_dir()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.Camera.get_camera_pos"><code class="docutils literal notranslate"><span class="pre">Camera.get_camera_pos()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.Camera.get_camera_right_dir"><code class="docutils literal notranslate"><span class="pre">Camera.get_camera_right_dir()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.Camera.get_camera_up_dir"><code class="docutils literal notranslate"><span class="pre">Camera.get_camera_up_dir()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.Camera.get_far_plane"><code class="docutils literal notranslate"><span class="pre">Camera.get_far_plane()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.Camera.get_fov"><code class="docutils literal notranslate"><span class="pre">Camera.get_fov()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.Camera.get_near_plane"><code class="docutils literal notranslate"><span class="pre">Camera.get_near_plane()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.Camera.get_target_pos"><code class="docutils literal notranslate"><span class="pre">Camera.get_target_pos()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.Camera.set_camera_pos"><code class="docutils literal notranslate"><span class="pre">Camera.set_camera_pos()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.Camera.set_far_plane"><code class="docutils literal notranslate"><span class="pre">Camera.set_far_plane()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.Camera.set_fov"><code class="docutils literal notranslate"><span class="pre">Camera.set_fov()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.Camera.set_near_plane"><code class="docutils literal notranslate"><span class="pre">Camera.set_near_plane()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.Camera.set_target_pos"><code class="docutils literal notranslate"><span class="pre">Camera.set_target_pos()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.RayPickResult"><code class="docutils literal notranslate"><span class="pre">RayPickResult</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.RayPickResult.distance"><code class="docutils literal notranslate"><span class="pre">RayPickResult.distance</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RayPickResult.handle"><code class="docutils literal notranslate"><span class="pre">RayPickResult.handle</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RayPickResult.hit"><code class="docutils literal notranslate"><span class="pre">RayPickResult.hit</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RayPickResult.instance_index"><code class="docutils literal notranslate"><span class="pre">RayPickResult.instance_index</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RayPickResult.position"><code class="docutils literal notranslate"><span class="pre">RayPickResult.position</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RayPickResult.prim"><code class="docutils literal notranslate"><span class="pre">RayPickResult.prim</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.RayPickResult.transform_source"><code class="docutils literal notranslate"><span class="pre">RayPickResult.transform_source</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#ke-imgui">ke.imgui</a><ul>
+<li><a class="reference internal" href="#window-flags">Window flags</a></li>
+<li><a class="reference internal" href="#kangengine.imgui.begin"><code class="docutils literal notranslate"><span class="pre">begin()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.begin_child"><code class="docutils literal notranslate"><span class="pre">begin_child()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.button"><code class="docutils literal notranslate"><span class="pre">button()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.checkbox"><code class="docutils literal notranslate"><span class="pre">checkbox()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.end"><code class="docutils literal notranslate"><span class="pre">end()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.end_child"><code class="docutils literal notranslate"><span class="pre">end_child()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.main_viewport_work_rect"><code class="docutils literal notranslate"><span class="pre">main_viewport_work_rect()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.motion_sequencer"><code class="docutils literal notranslate"><span class="pre">motion_sequencer()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.motion_sequencer_resizable"><code class="docutils literal notranslate"><span class="pre">motion_sequencer_resizable()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.progress_bar"><code class="docutils literal notranslate"><span class="pre">progress_bar()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.same_line"><code class="docutils literal notranslate"><span class="pre">same_line()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.separator"><code class="docutils literal notranslate"><span class="pre">separator()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.set_next_window_pos"><code class="docutils literal notranslate"><span class="pre">set_next_window_pos()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.set_next_window_size"><code class="docutils literal notranslate"><span class="pre">set_next_window_size()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.slider_float"><code class="docutils literal notranslate"><span class="pre">slider_float()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.text"><code class="docutils literal notranslate"><span class="pre">text()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.text_disabled"><code class="docutils literal notranslate"><span class="pre">text_disabled()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#ke-keys">ke.keys</a><ul>
+<li><a class="reference internal" href="#key-constants">Key constants</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=fd10adb8"></script>
+    <script src="../_static/kangengine-toc.js?v=14c0e558"></script>
+    </body>
+</html>

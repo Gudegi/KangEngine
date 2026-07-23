@@ -1,0 +1,1058 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="ke.render" href="rendering.html"><link rel="prev" title="ke.motion_module" href="motion.html">
+
+    <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
+        <title>ke.material - KangEngine Docs</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=a7642cbd" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">KangEngine Docs</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  <span class="sidebar-brand-text">KangEngine Docs</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Guide</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../guide/index.html">User Guide</a><input aria-label="Toggle navigation of User Guide" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../guide/API_OVERVIEW.html">API Overview</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/getting_started/index.html">Getting Started</a><input aria-label="Toggle navigation of Getting Started" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/getting_started/INSTALLATION.html">Installation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/getting_started/VERIFY_INSTALLATION.html">Verify Installation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/getting_started/HELLO_APP.html">Hello App</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/getting_started/FIRST_SCENE.html">First Scene</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/getting_started/FIRST_SIMULATION.html">First Simulation</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/scene_rendering/INDEX.html">Scene and Rendering</a><input aria-label="Toggle navigation of Scene and Rendering" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MJCF_ARTICULATION.html">Load an MJCF Articulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/DOF_CONTROL.html">Control DOFs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VIEWER_SYNC.html">Viewer Synchronization</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/motion_animation/INDEX.html">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="simple">
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/advanced/INDEX.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/advanced/BUILD_FROM_SOURCE.html">Build Guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/advanced/RUNTIME_ARCHITECTURE.html">Runtime Architecture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="python.html">kangengine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scene.html">ke.scene</a></li>
+<li class="toctree-l2"><a class="reference internal" href="geometry.html">ke.geometry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="asset.html">ke.asset</a></li>
+<li class="toctree-l2"><a class="reference internal" href="animation.html">ke.animation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="character.html">ke.character</a></li>
+<li class="toctree-l2"><a class="reference internal" href="motion.html">ke.motion_module</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">ke.material</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rendering.html">ke.render</a></li>
+<li class="toctree-l2"><a class="reference internal" href="physics.html">ke.physics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simulation.html">ke.sim</a></li>
+<li class="toctree-l2"><a class="reference internal" href="terrain.html">ke.terrain</a></li>
+<li class="toctree-l2"><a class="reference internal" href="visual.html">ke.visual</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html">ke.utils</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../examples/index.html">Examples</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/api/material.md.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="ke-material">
+<h1>ke.material<a class="headerlink" href="#ke-material" title="Link to this heading">¶</a></h1>
+<p>Python-friendly surface material authoring and renderer material presets.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.material.Material">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.material.</span></span><span class="sig-name descname"><span class="pre">Material</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">native</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">shader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.Material" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">NativeWrapper</span></code></p>
+<p>Base wrapper for renderer materials.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>native</strong> (<em>Any</em><em> | </em><em>None</em>)</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.Material.get_shader">
+<span class="sig-name descname"><span class="pre">get_shader</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.Material.get_shader" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.Material.set_shader">
+<span class="sig-name descname"><span class="pre">set_shader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shader</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.Material.set_shader" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.Material.shader">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">shader</span></span><a class="headerlink" href="#kangengine.material.Material.shader" title="Link to this definition">¶</a></dt>
+<dd><p>Shader used by this material.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.material.VertexColorMaterial">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.material.</span></span><span class="sig-name descname"><span class="pre">VertexColorMaterial</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">native</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.VertexColorMaterial" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#kangengine.material.Material" title="kangengine.material.Material"><code class="xref py py-class docutils literal notranslate"><span class="pre">Material</span></code></a></p>
+<p>Material for vertex/display-color shaders.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>native</strong> (<em>Any</em><em> | </em><em>None</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterial">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.material.</span></span><span class="sig-name descname"><span class="pre">PhongMaterial</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">native</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PhongMaterial" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#kangengine.material.Material" title="kangengine.material.Material"><code class="xref py py-class docutils literal notranslate"><span class="pre">Material</span></code></a></p>
+<p>Phong material wrapper with optional preset initialization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>native</strong> (<em>Any</em><em> | </em><em>None</em>)</p>
+</dd>
+</dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterial.alpha_map">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">alpha_map</span></span><a class="headerlink" href="#kangengine.material.PhongMaterial.alpha_map" title="Link to this definition">¶</a></dt>
+<dd><p>Optional alpha mask texture, such as OBJ <code class="docutils literal notranslate"><span class="pre">map_d</span></code>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterial.ambient">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">ambient</span></span><a class="headerlink" href="#kangengine.material.PhongMaterial.ambient" title="Link to this definition">¶</a></dt>
+<dd><p>Ambient RGB factor.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterial.diffuse">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">diffuse</span></span><a class="headerlink" href="#kangengine.material.PhongMaterial.diffuse" title="Link to this definition">¶</a></dt>
+<dd><p>Diffuse RGB factor.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterial.diffuse_map">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">diffuse_map</span></span><a class="headerlink" href="#kangengine.material.PhongMaterial.diffuse_map" title="Link to this definition">¶</a></dt>
+<dd><p>Optional diffuse texture.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterial.load_from_preset">
+<span class="sig-name descname"><span class="pre">load_from_preset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">preset</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PhongMaterial.load_from_preset" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterial.normal_map">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">normal_map</span></span><a class="headerlink" href="#kangengine.material.PhongMaterial.normal_map" title="Link to this definition">¶</a></dt>
+<dd><p>Optional tangent-space normal map.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterial.set_alpha_map">
+<span class="sig-name descname"><span class="pre">set_alpha_map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">texture</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PhongMaterial.set_alpha_map" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterial.set_ambient">
+<span class="sig-name descname"><span class="pre">set_ambient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ambient</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PhongMaterial.set_ambient" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterial.set_diffuse">
+<span class="sig-name descname"><span class="pre">set_diffuse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">diffuse</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PhongMaterial.set_diffuse" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterial.set_diffuse_map">
+<span class="sig-name descname"><span class="pre">set_diffuse_map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">texture</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PhongMaterial.set_diffuse_map" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterial.set_normal_map">
+<span class="sig-name descname"><span class="pre">set_normal_map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">texture</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PhongMaterial.set_normal_map" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterial.set_shininess">
+<span class="sig-name descname"><span class="pre">set_shininess</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shininess</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PhongMaterial.set_shininess" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>shininess</strong> (<em>float</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterial.set_specular">
+<span class="sig-name descname"><span class="pre">set_specular</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">specular</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PhongMaterial.set_specular" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterial.set_specular_map">
+<span class="sig-name descname"><span class="pre">set_specular_map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">texture</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PhongMaterial.set_specular_map" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterial.shininess">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">shininess</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kangengine.material.PhongMaterial.shininess" title="Link to this definition">¶</a></dt>
+<dd><p>Specular highlight exponent.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterial.specular">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">specular</span></span><a class="headerlink" href="#kangengine.material.PhongMaterial.specular" title="Link to this definition">¶</a></dt>
+<dd><p>Specular RGB factor.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterial.specular_map">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">specular_map</span></span><a class="headerlink" href="#kangengine.material.PhongMaterial.specular_map" title="Link to this definition">¶</a></dt>
+<dd><p>Optional specular texture.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.material.</span></span><span class="sig-name descname"><span class="pre">PBRMaterial</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">native</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PBRMaterial" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#kangengine.material.Material" title="kangengine.material.Material"><code class="xref py py-class docutils literal notranslate"><span class="pre">Material</span></code></a></p>
+<p>PBR material wrapper with optional preset initialization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>native</strong> (<em>Any</em><em> | </em><em>None</em>)</p>
+</dd>
+</dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.ao_texture">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">ao_texture</span></span><a class="headerlink" href="#kangengine.material.PBRMaterial.ao_texture" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.base_color">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">base_color</span></span><a class="headerlink" href="#kangengine.material.PBRMaterial.base_color" title="Link to this definition">¶</a></dt>
+<dd><p>Base color factor as RGBA.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.base_color_texture">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">base_color_texture</span></span><a class="headerlink" href="#kangengine.material.PBRMaterial.base_color_texture" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.emissive_color">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">emissive_color</span></span><a class="headerlink" href="#kangengine.material.PBRMaterial.emissive_color" title="Link to this definition">¶</a></dt>
+<dd><p>Emissive RGB color factor.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.emissive_strength">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">emissive_strength</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kangengine.material.PBRMaterial.emissive_strength" title="Link to this definition">¶</a></dt>
+<dd><p>Multiplier for emissive_color.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.emissive_texture">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">emissive_texture</span></span><a class="headerlink" href="#kangengine.material.PBRMaterial.emissive_texture" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.load_from_preset">
+<span class="sig-name descname"><span class="pre">load_from_preset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">preset</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PBRMaterial.load_from_preset" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.metallic">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">metallic</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kangengine.material.PBRMaterial.metallic" title="Link to this definition">¶</a></dt>
+<dd><p>Metallic factor.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.metallic_roughness_texture">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">metallic_roughness_texture</span></span><a class="headerlink" href="#kangengine.material.PBRMaterial.metallic_roughness_texture" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.metallic_texture">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">metallic_texture</span></span><a class="headerlink" href="#kangengine.material.PBRMaterial.metallic_texture" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.normal_texture">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">normal_texture</span></span><a class="headerlink" href="#kangengine.material.PBRMaterial.normal_texture" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.orm_texture">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">orm_texture</span></span><a class="headerlink" href="#kangengine.material.PBRMaterial.orm_texture" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.roughness">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">roughness</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kangengine.material.PBRMaterial.roughness" title="Link to this definition">¶</a></dt>
+<dd><p>Roughness factor.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.roughness_texture">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">roughness_texture</span></span><a class="headerlink" href="#kangengine.material.PBRMaterial.roughness_texture" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.set_ao_texture">
+<span class="sig-name descname"><span class="pre">set_ao_texture</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">texture</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PBRMaterial.set_ao_texture" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.set_base_color">
+<span class="sig-name descname"><span class="pre">set_base_color</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base_color</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PBRMaterial.set_base_color" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.set_base_color_texture">
+<span class="sig-name descname"><span class="pre">set_base_color_texture</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">texture</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PBRMaterial.set_base_color_texture" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.set_emissive_color">
+<span class="sig-name descname"><span class="pre">set_emissive_color</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emissive_color</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PBRMaterial.set_emissive_color" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.set_emissive_strength">
+<span class="sig-name descname"><span class="pre">set_emissive_strength</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emissive_strength</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PBRMaterial.set_emissive_strength" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>emissive_strength</strong> (<em>float</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.set_emissive_texture">
+<span class="sig-name descname"><span class="pre">set_emissive_texture</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">texture</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PBRMaterial.set_emissive_texture" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.set_metallic">
+<span class="sig-name descname"><span class="pre">set_metallic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">metallic</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PBRMaterial.set_metallic" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>metallic</strong> (<em>float</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.set_metallic_roughness_texture">
+<span class="sig-name descname"><span class="pre">set_metallic_roughness_texture</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">texture</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PBRMaterial.set_metallic_roughness_texture" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.set_metallic_texture">
+<span class="sig-name descname"><span class="pre">set_metallic_texture</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">texture</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PBRMaterial.set_metallic_texture" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.set_normal_texture">
+<span class="sig-name descname"><span class="pre">set_normal_texture</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">texture</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PBRMaterial.set_normal_texture" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.set_orm_texture">
+<span class="sig-name descname"><span class="pre">set_orm_texture</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">texture</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PBRMaterial.set_orm_texture" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.set_roughness">
+<span class="sig-name descname"><span class="pre">set_roughness</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">roughness</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PBRMaterial.set_roughness" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>roughness</strong> (<em>float</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterial.set_roughness_texture">
+<span class="sig-name descname"><span class="pre">set_roughness_texture</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">texture</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PBRMaterial.set_roughness_texture" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.material.</span></span><span class="sig-name descname"><span class="pre">PhongMaterialType</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
+<p>Built-in blin-phong based material presets.</p>
+<p>Members:</p>
+<blockquote>
+<div><p>EMERALD</p>
+<p>JADE</p>
+<p>OBSIDIAN</p>
+<p>PEARL</p>
+<p>RUBY</p>
+<p>TURQUOISE</p>
+<p>BRASS</p>
+<p>BRONZE</p>
+<p>CHROME</p>
+<p>COPPER</p>
+<p>GOLD</p>
+<p>SILVER</p>
+<p>BLACK_PLASTIC</p>
+<p>CYAN_PLASTIC</p>
+<p>GREEN_PLASTIC</p>
+<p>RED_PLASTIC</p>
+<p>WHITE_PLASTIC</p>
+<p>YELLOW_PLASTIC</p>
+<p>BLACK_RUBBER</p>
+<p>CYAN_RUBBER</p>
+<p>GREEN_RUBBER</p>
+<p>RED_RUBBER</p>
+<p>WHITE_RUBBER</p>
+<p>YELLOW_RUBBER</p>
+</div></blockquote>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType.BLACK_PLASTIC">
+<span class="sig-name descname"><span class="pre">BLACK_PLASTIC</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PhongMaterialType.BLACK_PLASTIC:</span> <span class="pre">12&gt;</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType.BLACK_PLASTIC" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType.BLACK_RUBBER">
+<span class="sig-name descname"><span class="pre">BLACK_RUBBER</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PhongMaterialType.BLACK_RUBBER:</span> <span class="pre">18&gt;</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType.BLACK_RUBBER" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType.BRASS">
+<span class="sig-name descname"><span class="pre">BRASS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PhongMaterialType.BRASS:</span> <span class="pre">6&gt;</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType.BRASS" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType.BRONZE">
+<span class="sig-name descname"><span class="pre">BRONZE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PhongMaterialType.BRONZE:</span> <span class="pre">7&gt;</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType.BRONZE" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType.CHROME">
+<span class="sig-name descname"><span class="pre">CHROME</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PhongMaterialType.CHROME:</span> <span class="pre">8&gt;</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType.CHROME" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType.COPPER">
+<span class="sig-name descname"><span class="pre">COPPER</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PhongMaterialType.COPPER:</span> <span class="pre">9&gt;</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType.COPPER" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType.CYAN_PLASTIC">
+<span class="sig-name descname"><span class="pre">CYAN_PLASTIC</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PhongMaterialType.CYAN_PLASTIC:</span> <span class="pre">13&gt;</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType.CYAN_PLASTIC" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType.CYAN_RUBBER">
+<span class="sig-name descname"><span class="pre">CYAN_RUBBER</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PhongMaterialType.CYAN_RUBBER:</span> <span class="pre">19&gt;</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType.CYAN_RUBBER" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType.EMERALD">
+<span class="sig-name descname"><span class="pre">EMERALD</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PhongMaterialType.EMERALD:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType.EMERALD" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType.GOLD">
+<span class="sig-name descname"><span class="pre">GOLD</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PhongMaterialType.GOLD:</span> <span class="pre">10&gt;</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType.GOLD" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType.GREEN_PLASTIC">
+<span class="sig-name descname"><span class="pre">GREEN_PLASTIC</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PhongMaterialType.GREEN_PLASTIC:</span> <span class="pre">14&gt;</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType.GREEN_PLASTIC" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType.GREEN_RUBBER">
+<span class="sig-name descname"><span class="pre">GREEN_RUBBER</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PhongMaterialType.GREEN_RUBBER:</span> <span class="pre">20&gt;</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType.GREEN_RUBBER" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType.JADE">
+<span class="sig-name descname"><span class="pre">JADE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PhongMaterialType.JADE:</span> <span class="pre">1&gt;</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType.JADE" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType.OBSIDIAN">
+<span class="sig-name descname"><span class="pre">OBSIDIAN</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PhongMaterialType.OBSIDIAN:</span> <span class="pre">2&gt;</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType.OBSIDIAN" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType.PEARL">
+<span class="sig-name descname"><span class="pre">PEARL</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PhongMaterialType.PEARL:</span> <span class="pre">3&gt;</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType.PEARL" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType.RED_PLASTIC">
+<span class="sig-name descname"><span class="pre">RED_PLASTIC</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PhongMaterialType.RED_PLASTIC:</span> <span class="pre">15&gt;</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType.RED_PLASTIC" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType.RED_RUBBER">
+<span class="sig-name descname"><span class="pre">RED_RUBBER</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PhongMaterialType.RED_RUBBER:</span> <span class="pre">21&gt;</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType.RED_RUBBER" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType.RUBY">
+<span class="sig-name descname"><span class="pre">RUBY</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PhongMaterialType.RUBY:</span> <span class="pre">4&gt;</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType.RUBY" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType.SILVER">
+<span class="sig-name descname"><span class="pre">SILVER</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PhongMaterialType.SILVER:</span> <span class="pre">11&gt;</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType.SILVER" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType.TURQUOISE">
+<span class="sig-name descname"><span class="pre">TURQUOISE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PhongMaterialType.TURQUOISE:</span> <span class="pre">5&gt;</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType.TURQUOISE" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType.WHITE_PLASTIC">
+<span class="sig-name descname"><span class="pre">WHITE_PLASTIC</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PhongMaterialType.WHITE_PLASTIC:</span> <span class="pre">16&gt;</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType.WHITE_PLASTIC" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType.WHITE_RUBBER">
+<span class="sig-name descname"><span class="pre">WHITE_RUBBER</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PhongMaterialType.WHITE_RUBBER:</span> <span class="pre">22&gt;</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType.WHITE_RUBBER" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType.YELLOW_PLASTIC">
+<span class="sig-name descname"><span class="pre">YELLOW_PLASTIC</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PhongMaterialType.YELLOW_PLASTIC:</span> <span class="pre">17&gt;</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType.YELLOW_PLASTIC" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType.YELLOW_RUBBER">
+<span class="sig-name descname"><span class="pre">YELLOW_RUBBER</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PhongMaterialType.YELLOW_RUBBER:</span> <span class="pre">23&gt;</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType.YELLOW_RUBBER" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">PhongMaterialType.name</span> <span class="pre">-&gt;</span> <span class="pre">str</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.PhongMaterialType.value">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">value</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType.value" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterialType">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.material.</span></span><span class="sig-name descname"><span class="pre">PBRMaterialType</span></span><a class="headerlink" href="#kangengine.material.PBRMaterialType" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
+<p>Built-in physically based material presets.</p>
+<p>Members:</p>
+<blockquote>
+<div><p>GRAY_CARD</p>
+<p>WHITE_PLASTIC</p>
+<p>BLACK_PLASTIC</p>
+<p>BLACK_RUBBER</p>
+<p>CHARCOAL</p>
+<p>CARROT</p>
+<p>CONCRETE</p>
+<p>RED_BRICK</p>
+<p>ALUMINUM</p>
+<p>CHROME</p>
+<p>COPPER</p>
+<p>GOLD</p>
+<p>EMISSIVE_BLUE</p>
+</div></blockquote>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterialType.ALUMINUM">
+<span class="sig-name descname"><span class="pre">ALUMINUM</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PBRMaterialType.ALUMINUM:</span> <span class="pre">8&gt;</span></span><a class="headerlink" href="#kangengine.material.PBRMaterialType.ALUMINUM" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterialType.BLACK_PLASTIC">
+<span class="sig-name descname"><span class="pre">BLACK_PLASTIC</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PBRMaterialType.BLACK_PLASTIC:</span> <span class="pre">2&gt;</span></span><a class="headerlink" href="#kangengine.material.PBRMaterialType.BLACK_PLASTIC" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterialType.BLACK_RUBBER">
+<span class="sig-name descname"><span class="pre">BLACK_RUBBER</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PBRMaterialType.BLACK_RUBBER:</span> <span class="pre">3&gt;</span></span><a class="headerlink" href="#kangengine.material.PBRMaterialType.BLACK_RUBBER" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterialType.CARROT">
+<span class="sig-name descname"><span class="pre">CARROT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PBRMaterialType.CARROT:</span> <span class="pre">5&gt;</span></span><a class="headerlink" href="#kangengine.material.PBRMaterialType.CARROT" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterialType.CHARCOAL">
+<span class="sig-name descname"><span class="pre">CHARCOAL</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PBRMaterialType.CHARCOAL:</span> <span class="pre">4&gt;</span></span><a class="headerlink" href="#kangengine.material.PBRMaterialType.CHARCOAL" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterialType.CHROME">
+<span class="sig-name descname"><span class="pre">CHROME</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PBRMaterialType.CHROME:</span> <span class="pre">9&gt;</span></span><a class="headerlink" href="#kangengine.material.PBRMaterialType.CHROME" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterialType.CONCRETE">
+<span class="sig-name descname"><span class="pre">CONCRETE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PBRMaterialType.CONCRETE:</span> <span class="pre">6&gt;</span></span><a class="headerlink" href="#kangengine.material.PBRMaterialType.CONCRETE" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterialType.COPPER">
+<span class="sig-name descname"><span class="pre">COPPER</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PBRMaterialType.COPPER:</span> <span class="pre">10&gt;</span></span><a class="headerlink" href="#kangengine.material.PBRMaterialType.COPPER" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterialType.EMISSIVE_BLUE">
+<span class="sig-name descname"><span class="pre">EMISSIVE_BLUE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PBRMaterialType.EMISSIVE_BLUE:</span> <span class="pre">12&gt;</span></span><a class="headerlink" href="#kangengine.material.PBRMaterialType.EMISSIVE_BLUE" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterialType.GOLD">
+<span class="sig-name descname"><span class="pre">GOLD</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PBRMaterialType.GOLD:</span> <span class="pre">11&gt;</span></span><a class="headerlink" href="#kangengine.material.PBRMaterialType.GOLD" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterialType.GRAY_CARD">
+<span class="sig-name descname"><span class="pre">GRAY_CARD</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PBRMaterialType.GRAY_CARD:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.material.PBRMaterialType.GRAY_CARD" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterialType.RED_BRICK">
+<span class="sig-name descname"><span class="pre">RED_BRICK</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PBRMaterialType.RED_BRICK:</span> <span class="pre">7&gt;</span></span><a class="headerlink" href="#kangengine.material.PBRMaterialType.RED_BRICK" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterialType.WHITE_PLASTIC">
+<span class="sig-name descname"><span class="pre">WHITE_PLASTIC</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;PBRMaterialType.WHITE_PLASTIC:</span> <span class="pre">1&gt;</span></span><a class="headerlink" href="#kangengine.material.PBRMaterialType.WHITE_PLASTIC" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">PBRMaterialType.name</span> <span class="pre">-&gt;</span> <span class="pre">str</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.material.PBRMaterialType.value">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">value</span></span><a class="headerlink" href="#kangengine.material.PBRMaterialType.value" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="rendering.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">ke.render</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="motion.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">ke.motion_module</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2026, KangEngine contributors
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">ke.material</a><ul>
+<li><a class="reference internal" href="#kangengine.material.Material"><code class="docutils literal notranslate"><span class="pre">Material</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.material.Material.get_shader"><code class="docutils literal notranslate"><span class="pre">Material.get_shader()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.Material.set_shader"><code class="docutils literal notranslate"><span class="pre">Material.set_shader()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.Material.shader"><code class="docutils literal notranslate"><span class="pre">Material.shader</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.material.VertexColorMaterial"><code class="docutils literal notranslate"><span class="pre">VertexColorMaterial</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterial"><code class="docutils literal notranslate"><span class="pre">PhongMaterial</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterial.alpha_map"><code class="docutils literal notranslate"><span class="pre">PhongMaterial.alpha_map</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterial.ambient"><code class="docutils literal notranslate"><span class="pre">PhongMaterial.ambient</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterial.diffuse"><code class="docutils literal notranslate"><span class="pre">PhongMaterial.diffuse</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterial.diffuse_map"><code class="docutils literal notranslate"><span class="pre">PhongMaterial.diffuse_map</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterial.load_from_preset"><code class="docutils literal notranslate"><span class="pre">PhongMaterial.load_from_preset()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterial.normal_map"><code class="docutils literal notranslate"><span class="pre">PhongMaterial.normal_map</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterial.set_alpha_map"><code class="docutils literal notranslate"><span class="pre">PhongMaterial.set_alpha_map()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterial.set_ambient"><code class="docutils literal notranslate"><span class="pre">PhongMaterial.set_ambient()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterial.set_diffuse"><code class="docutils literal notranslate"><span class="pre">PhongMaterial.set_diffuse()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterial.set_diffuse_map"><code class="docutils literal notranslate"><span class="pre">PhongMaterial.set_diffuse_map()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterial.set_normal_map"><code class="docutils literal notranslate"><span class="pre">PhongMaterial.set_normal_map()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterial.set_shininess"><code class="docutils literal notranslate"><span class="pre">PhongMaterial.set_shininess()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterial.set_specular"><code class="docutils literal notranslate"><span class="pre">PhongMaterial.set_specular()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterial.set_specular_map"><code class="docutils literal notranslate"><span class="pre">PhongMaterial.set_specular_map()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterial.shininess"><code class="docutils literal notranslate"><span class="pre">PhongMaterial.shininess</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterial.specular"><code class="docutils literal notranslate"><span class="pre">PhongMaterial.specular</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterial.specular_map"><code class="docutils literal notranslate"><span class="pre">PhongMaterial.specular_map</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial"><code class="docutils literal notranslate"><span class="pre">PBRMaterial</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.ao_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.ao_texture</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.base_color"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.base_color</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.base_color_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.base_color_texture</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.emissive_color"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.emissive_color</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.emissive_strength"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.emissive_strength</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.emissive_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.emissive_texture</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.load_from_preset"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.load_from_preset()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.metallic"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.metallic</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.metallic_roughness_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.metallic_roughness_texture</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.metallic_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.metallic_texture</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.normal_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.normal_texture</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.orm_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.orm_texture</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.roughness"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.roughness</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.roughness_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.roughness_texture</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.set_ao_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.set_ao_texture()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.set_base_color"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.set_base_color()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.set_base_color_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.set_base_color_texture()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.set_emissive_color"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.set_emissive_color()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.set_emissive_strength"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.set_emissive_strength()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.set_emissive_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.set_emissive_texture()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.set_metallic"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.set_metallic()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.set_metallic_roughness_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.set_metallic_roughness_texture()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.set_metallic_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.set_metallic_texture()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.set_normal_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.set_normal_texture()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.set_orm_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.set_orm_texture()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.set_roughness"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.set_roughness()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterial.set_roughness_texture"><code class="docutils literal notranslate"><span class="pre">PBRMaterial.set_roughness_texture()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType.BLACK_PLASTIC"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType.BLACK_PLASTIC</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType.BLACK_RUBBER"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType.BLACK_RUBBER</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType.BRASS"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType.BRASS</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType.BRONZE"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType.BRONZE</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType.CHROME"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType.CHROME</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType.COPPER"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType.COPPER</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType.CYAN_PLASTIC"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType.CYAN_PLASTIC</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType.CYAN_RUBBER"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType.CYAN_RUBBER</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType.EMERALD"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType.EMERALD</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType.GOLD"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType.GOLD</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType.GREEN_PLASTIC"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType.GREEN_PLASTIC</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType.GREEN_RUBBER"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType.GREEN_RUBBER</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType.JADE"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType.JADE</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType.OBSIDIAN"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType.OBSIDIAN</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType.PEARL"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType.PEARL</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType.RED_PLASTIC"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType.RED_PLASTIC</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType.RED_RUBBER"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType.RED_RUBBER</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType.RUBY"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType.RUBY</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType.SILVER"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType.SILVER</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType.TURQUOISE"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType.TURQUOISE</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType.WHITE_PLASTIC"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType.WHITE_PLASTIC</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType.WHITE_RUBBER"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType.WHITE_RUBBER</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType.YELLOW_PLASTIC"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType.YELLOW_PLASTIC</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType.YELLOW_RUBBER"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType.YELLOW_RUBBER</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PhongMaterialType.value"><code class="docutils literal notranslate"><span class="pre">PhongMaterialType.value</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterialType"><code class="docutils literal notranslate"><span class="pre">PBRMaterialType</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterialType.ALUMINUM"><code class="docutils literal notranslate"><span class="pre">PBRMaterialType.ALUMINUM</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterialType.BLACK_PLASTIC"><code class="docutils literal notranslate"><span class="pre">PBRMaterialType.BLACK_PLASTIC</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterialType.BLACK_RUBBER"><code class="docutils literal notranslate"><span class="pre">PBRMaterialType.BLACK_RUBBER</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterialType.CARROT"><code class="docutils literal notranslate"><span class="pre">PBRMaterialType.CARROT</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterialType.CHARCOAL"><code class="docutils literal notranslate"><span class="pre">PBRMaterialType.CHARCOAL</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterialType.CHROME"><code class="docutils literal notranslate"><span class="pre">PBRMaterialType.CHROME</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterialType.CONCRETE"><code class="docutils literal notranslate"><span class="pre">PBRMaterialType.CONCRETE</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterialType.COPPER"><code class="docutils literal notranslate"><span class="pre">PBRMaterialType.COPPER</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterialType.EMISSIVE_BLUE"><code class="docutils literal notranslate"><span class="pre">PBRMaterialType.EMISSIVE_BLUE</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterialType.GOLD"><code class="docutils literal notranslate"><span class="pre">PBRMaterialType.GOLD</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterialType.GRAY_CARD"><code class="docutils literal notranslate"><span class="pre">PBRMaterialType.GRAY_CARD</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterialType.RED_BRICK"><code class="docutils literal notranslate"><span class="pre">PBRMaterialType.RED_BRICK</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterialType.WHITE_PLASTIC"><code class="docutils literal notranslate"><span class="pre">PBRMaterialType.WHITE_PLASTIC</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.material.PBRMaterialType.value"><code class="docutils literal notranslate"><span class="pre">PBRMaterialType.value</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=fd10adb8"></script>
+    <script src="../_static/kangengine-toc.js?v=14c0e558"></script>
+    </body>
+</html>
