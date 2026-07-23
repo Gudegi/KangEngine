@@ -39,6 +39,31 @@ def _texture_path_candidate(path) -> Path:
     return candidate
 
 
+def _rotation_matrix(rotation):
+    """Return a float32 3x3 matrix from a matrix or wxyz quaternion."""
+    import numpy as np
+
+    if rotation is None:
+        return np.eye(3, dtype=np.float32)
+    value = rotation.to_wxyz() if hasattr(rotation, "to_wxyz") else rotation
+    array = np.asarray(value, dtype=np.float32)
+    if array.shape == (3, 3):
+        return array
+    w, x, y, z = array.reshape(4)
+    norm = float(w * w + x * x + y * y + z * z)
+    if norm <= 1.0e-12:
+        raise ValueError("rotation quaternion must be non-zero")
+    scale = 2.0 / norm
+    return np.array(
+        [
+            [1.0 - scale * (y * y + z * z), scale * (x * y - z * w), scale * (x * z + y * w)],
+            [scale * (x * y + z * w), 1.0 - scale * (x * x + z * z), scale * (y * z - x * w)],
+            [scale * (x * z - y * w), scale * (y * z + x * w), 1.0 - scale * (x * x + y * y)],
+        ],
+        dtype=np.float32,
+    )
+
+
 class RenderablePrimView:
     """User-facing view for one scene prim and its renderer resources."""
 
@@ -54,6 +79,97 @@ class RenderablePrimView:
     @property
     def path(self) -> str:
         return self.prim.get_path()
+
+    def _require_scene_graph_transform(self):
+        if self.component.transform_source != render_api.TransformSource.SceneGraph:
+            raise RuntimeError(
+                f"{self.path} uses an external transform buffer; "
+                "Prim local/world transforms do not drive this renderable"
+            )
+
+    def set_local_translation(self, translation):
+        """Set the parent-relative translation."""
+        self._require_scene_graph_transform()
+        self.prim.set_local_translation(translation)
+        return self
+
+    def set_local_rotation(self, rotation):
+        """Set the parent-relative quaternion rotation."""
+        self._require_scene_graph_transform()
+        self.prim.set_local_rotation(rotation)
+        return self
+
+    def set_local_rotation_axis_angle(self, axis, angle_radians: float):
+        """Set parent-relative rotation from an axis and angle in radians."""
+        self._require_scene_graph_transform()
+        self.prim.set_local_rotation_axis_angle(axis, angle_radians)
+        return self
+
+    def set_local_scale(self, scale):
+        """Set the parent-relative scale."""
+        self._require_scene_graph_transform()
+        self.prim.set_local_scale(scale)
+        return self
+
+    def set_local_matrix(self, matrix):
+        """Set the parent-relative transform matrix."""
+        self._require_scene_graph_transform()
+        self.prim.set_local_matrix(matrix)
+        return self
+
+    def set_world_translation(self, translation):
+        """Set translation in world space."""
+        self._require_scene_graph_transform()
+        self.prim.set_world_translation(translation)
+        return self
+
+    def set_world_rotation(self, rotation):
+        """Set quaternion rotation in world space."""
+        self._require_scene_graph_transform()
+        self.prim.set_world_rotation(rotation)
+        return self
+
+    def set_world_rotation_axis_angle(self, axis, angle_radians: float):
+        """Set world rotation from an axis and angle in radians."""
+        self._require_scene_graph_transform()
+        self.prim.set_world_rotation_axis_angle(axis, angle_radians)
+        return self
+
+    def set_world_matrix(self, matrix):
+        """Set the transform matrix in world space."""
+        self._require_scene_graph_transform()
+        self.prim.set_world_matrix(matrix)
+        return self
+
+    def get_local_translation(self):
+        """Return the effective parent-relative translation."""
+        self._require_scene_graph_transform()
+        return self.prim.get_local_translation()
+
+    def get_local_rotation(self):
+        """Return the effective parent-relative quaternion rotation."""
+        self._require_scene_graph_transform()
+        return self.prim.get_local_rotation()
+
+    def get_world_translation(self):
+        """Return the effective world-space translation."""
+        self._require_scene_graph_transform()
+        return self.prim.get_world_translation()
+
+    def get_world_rotation(self):
+        """Return the effective world-space quaternion rotation."""
+        self._require_scene_graph_transform()
+        return self.prim.get_world_rotation()
+
+    def compute_local_matrix(self):
+        """Compute the effective parent-relative transform matrix."""
+        self._require_scene_graph_transform()
+        return self.prim.compute_local_matrix()
+
+    def compute_world_matrix(self):
+        """Compute the effective world-space transform matrix."""
+        self._require_scene_graph_transform()
+        return self.prim.compute_world_matrix()
 
     def set_visible(self, visible: bool):
         self.component.visible = bool(visible)
@@ -177,6 +293,152 @@ class ObjImportView:
         return len(self.views)
 
 
+class DebugGeometry:
+    """Mesh-based debug geometry owned by the SceneGraph."""
+
+    def __init__(self, scene_context: "SceneContext"):
+        self._scene = scene_context
+
+    def add_lines(
+        self,
+        path: str,
+        starts,
+        ends,
+        colors=None,
+        *,
+        material=None,
+        radius: float = 0.005,
+        segments: int = 8,
+    ):
+        """Add instanced line meshes and return a DebugPrimitiveView."""
+        if material is None:
+            material = self._scene._app.create_standard_materials().debug
+        shader = getattr(material, "shader", material)
+        return self._scene.log_lines(
+            path, shader, starts, ends, colors, radius, segments
+        )
+
+    def add_arrows(
+        self,
+        path: str,
+        starts,
+        ends,
+        colors=None,
+        *,
+        material=None,
+        radius: float = 0.02,
+        segments: int = 12,
+    ):
+        """Add instanced arrow meshes and return a DebugPrimitiveView."""
+        if material is None:
+            material = self._scene._app.create_standard_materials().debug
+        shader = getattr(material, "shader", material)
+        return self._scene.log_arrows(
+            path, shader, starts, ends, colors, radius, segments
+        )
+
+    def add_axes(
+        self,
+        path: str,
+        origin,
+        rotation=None,
+        *,
+        length: float = 1.0,
+        material=None,
+        radius: float = 0.005,
+        segments: int = 8,
+    ):
+        """Add RGB axis meshes and return a DebugPrimitiveView."""
+        import numpy as np
+
+        origin = np.asarray(origin, dtype=np.float32).reshape(3)
+        basis = _rotation_matrix(rotation)
+        starts = np.repeat(origin[None, :], 3, axis=0)
+        # Rotation columns are the world-space directions of local X/Y/Z.
+        ends = starts + basis.T * float(length)
+        colors = np.array(
+            [
+                [1.0, 0.0, 0.0, 1.0],
+                [0.0, 1.0, 0.0, 1.0],
+                [0.0, 0.0, 1.0, 1.0],
+            ],
+            dtype=np.float32,
+        )
+        return self.add_lines(
+            path,
+            starts,
+            ends,
+            colors,
+            material=material,
+            radius=radius,
+            segments=segments,
+        )
+
+
+class DebugOverlay:
+    """OpenGL debug overlay that does not create SceneGraph prims."""
+
+    def __init__(self, app: "App"):
+        self._app = app
+
+    def lines(
+        self,
+        path: str,
+        starts,
+        ends,
+        colors=None,
+        *,
+        width: float = 1.0,
+        hidden: bool = False,
+    ):
+        self._app.log_debug_lines(path, starts, ends, colors, width, hidden)
+        return self
+
+    def points(
+        self,
+        path: str,
+        points,
+        colors=None,
+        *,
+        size: float = 6.0,
+        hidden: bool = False,
+    ):
+        self._app.log_debug_points(path, points, colors, size, hidden)
+        return self
+
+    def axes(
+        self,
+        path: str,
+        origin,
+        rotation=None,
+        *,
+        length: float = 1.0,
+        width: float = 1.0,
+        hidden: bool = False,
+    ):
+        import numpy as np
+
+        transform = np.eye(4, dtype=np.float32)
+        transform[:3, :3] = _rotation_matrix(rotation)
+        transform[:3, 3] = np.asarray(origin, dtype=np.float32).reshape(3)
+        self._app.log_debug_axes(path, transform, length, width, hidden)
+        return self
+
+    def clear_lines(self, path: str):
+        self._app.clear_debug_lines(path)
+        return self
+
+    def clear_points(self, path: str):
+        self._app.clear_debug_points(path)
+        return self
+
+    def clear(self, path: str):
+        """Clear both line/axis and point overlay batches at a path."""
+        self._app.clear_debug_lines(path)
+        self._app.clear_debug_points(path)
+        return self
+
+
 class SceneContext:
     """Scene-facing facade connected to the owning App renderer.
 
@@ -187,6 +449,7 @@ class SceneContext:
 
     def __init__(self, app: "App"):
         self._app = app
+        self.debug_geometry = DebugGeometry(self)
 
     @property
     def native(self):
@@ -425,6 +688,7 @@ class App(_NativeApp):
         self.scene_backend_type = scene.BackendType.Native
         self.headless = False
         self.scene = SceneContext(self)
+        self.debug_overlay = DebugOverlay(self)
         self.resources = self.get_scene_resource_manager()
         self._resource_handles_by_object_id = {}
         self._resource_counter = 0

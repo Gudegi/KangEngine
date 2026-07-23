@@ -145,10 +145,12 @@ void MeshInstancer::addPrim(Scene::Prim* prim) { _prims.push_back(prim); }
 
 void MeshInstancer::removePrim(Scene::Prim* prim) {
     _prims.erase(std::remove(_prims.begin(), _prims.end(), prim), _prims.end());
-    if (!_prims.empty() ||
-        (!_hasExternalBufferDesc && !_hasDirectCudaTransforms))
+    if (!_prims.empty())
         return;
 
+    // Direct instance transforms are batch-owned rather than Prim-owned.
+    // Clear them when the final owner Prim is removed; otherwise component-
+    // backed debug geometry remains visible after its SceneGraph Prim is gone.
     _externalBufferDesc = ExternalBufferDesc{};
     _hasExternalBufferDesc = false;
     _externalBufferLoaded = false;

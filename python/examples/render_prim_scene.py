@@ -12,8 +12,7 @@ class MyApp(ke.App):
     def setup(self):
         self.standard_materials = self.create_standard_materials()
 
-        ke.utils.log_debug_axes(
-            self,
+        self.debug_overlay.axes(
             "/debug/box_axes",  # is not shown in the scene graph.
             origin=np.array([0.0, 1.0, 0.0]),
             rotation=np.eye(3),
@@ -31,8 +30,8 @@ class MyApp(ke.App):
             self.standard_materials.common,
             color=ke.vec4(0.8, 0.3, 0.02, 1.0),
         )
-        box.prim.set_local_translation(ke.vec3(0.0, 2.0, 0.0))
-        box.prim.set_local_rotation_axis_angle(
+        box.set_local_translation(ke.vec3(0.0, 2.0, 0.0))
+        box.set_local_rotation_axis_angle(
             ke.vec3(0.0, 1.0, 0.0), np.deg2rad(25.0)
         )
 
@@ -43,15 +42,13 @@ class MyApp(ke.App):
             self.standard_materials.common,
             color=ke.vec4(0.3, 0.3, 0.02, 1.0),
         )
-        box2.prim.set_local_translation(ke.vec3(0.0, 1.5, 0.0))
-        box2.prim.set_local_rotation(np.array([0.924, 0, 0, 0.383]))
-        box2.prim.set_local_scale(ke.vec3(0.5, 0.5, 0.5))
+        box2.set_local_translation(ke.vec3(0.0, 1.5, 0.0))
+        box2.set_local_rotation(np.array([0.924, 0, 0, 0.383]))
+        box2.set_local_scale(ke.vec3(0.5, 0.5, 0.5))
 
-        w_trans = box2.prim.get_world_translation()
-        w_ori = box2.prim.get_world_rotation()
-        ke.scene.DebugDraw.log_coordinate_axes(
-            self,
-            self.standard_materials.common.shader,
+        w_trans = box2.get_world_translation()
+        w_ori = box2.get_world_rotation()
+        self.scene.debug_geometry.add_axes(
             "/debug/box2_axes",
             w_trans,
             w_ori,
@@ -59,13 +56,15 @@ class MyApp(ke.App):
             radius=0.01,
             segments=8,
         )
+        # self.scene.remove_prim("/debug/box2_axes")
 
-        print(box2.prim.get_local_translation())
-        print(box2.prim.get_local_rotation())
-        print(box2.prim.get_local_rotation().to_wxyz())
-        print(box2.prim.get_local_rotation().to_xyzw())
-        print(box2.prim.get_world_translation())
+        print(box2.get_local_translation())
+        print(box2.get_local_rotation())
+        print(box2.get_local_rotation().to_wxyz())
+        print(box2.get_local_rotation().to_xyzw())
+        print(box2.get_world_translation())
         print(np.array(w_ori))
+        # box2.remove()
 
         # Sphere
         sphere = self.scene.add_mesh(
@@ -74,7 +73,7 @@ class MyApp(ke.App):
             self.standard_materials.common,
             color=ke.vec4(0.2, 0.4, 0.9, 1.0),
         )
-        sphere.prim.set_local_translation(ke.vec3(2.5, 0.5, 0.0))
+        sphere.set_local_translation(ke.vec3(2.5, 0.5, 0.0))
 
         self.check_error()
 

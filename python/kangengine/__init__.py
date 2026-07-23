@@ -22,7 +22,7 @@ from . import (
     terrain,
     visual,
 )
-from .app import App, RenderablePrimView, SceneContext
+from .app import App, DebugGeometry, DebugOverlay, RenderablePrimView, SceneContext
 from .utils import (
     COMMON,
     DEFAULT_PROFILE_ORDER,
@@ -116,6 +116,8 @@ WebGPU = _ke.WebGPU
 
 __all__ = [
     "App",
+    "DebugGeometry",
+    "DebugOverlay",
     "RenderablePrimView",
     "SceneContext",
     "JointMapper",

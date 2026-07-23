@@ -21,6 +21,30 @@ def main() -> None:
     assert "NativeApp" not in ke.app.__all__
     assert ke.SceneContext is app_application.SceneContext
     assert ke.SceneContext.__module__ == "kangengine"
+    assert ke.DebugGeometry is app_application.DebugGeometry
+    assert ke.DebugGeometry.__module__ == "kangengine"
+    assert ke.DebugOverlay is app_application.DebugOverlay
+    assert ke.DebugOverlay.__module__ == "kangengine"
+    assert ke.RenderablePrimView is app_application.RenderablePrimView
+    assert ke.RenderablePrimView.__module__ == "kangengine"
+    for method_name in (
+        "set_local_translation",
+        "set_local_rotation",
+        "set_local_rotation_axis_angle",
+        "set_local_scale",
+        "set_local_matrix",
+        "set_world_translation",
+        "set_world_rotation",
+        "set_world_rotation_axis_angle",
+        "set_world_matrix",
+        "get_local_translation",
+        "get_local_rotation",
+        "get_world_translation",
+        "get_world_rotation",
+        "compute_local_matrix",
+        "compute_world_matrix",
+    ):
+        assert hasattr(ke.RenderablePrimView, method_name)
 
     # Low-level render objects are the pybind types themselves, re-exported
     # under the stable public package path.
