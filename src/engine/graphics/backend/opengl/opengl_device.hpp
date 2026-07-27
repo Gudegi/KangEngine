@@ -237,6 +237,8 @@ class OpenGLDevice : public GraphicsDevice {
                                          const void* data = nullptr) override;
     std::unique_ptr<Shader> createShader(const ShaderDesc& desc) override;
     std::unique_ptr<Texture> createTexture(const TextureDesc& desc) override;
+    std::unique_ptr<Texture> createTexture(const TextureDesc& desc,
+                                           const SamplerDesc& sampler) override;
     std::unique_ptr<VertexArray> createVertexArray() override;
 
     // Convenience shader creation methods (KE::Shader compatible)

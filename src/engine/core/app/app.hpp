@@ -215,8 +215,9 @@ class App {
     void clearSelection() { _interaction.clearSelection(); }
     void renderSceneToFramebuffer(Camera& camera, Backend::Framebuffer* target,
                                   int width, int height, bool clear = true);
-    Backend::Texture* renderActiveSceneCameraPreview(int width, int height,
-                                                     float aspectOverride = 0.0f);
+    Backend::Texture*
+    renderActiveSceneCameraPreview(int width, int height,
+                                   float aspectOverride = 0.0f);
     bool writeActiveSceneCameraPreviewPNG(int width, int height,
                                           float aspectOverride = 0.0f);
 
@@ -371,6 +372,7 @@ class App {
                                           const float* rowMajorMatrices,
                                           size_t count);
 
+    // Debug Renderer //
     void logDebugLines(const std::string& path,
                        const std::vector<glm::vec3>& starts,
                        const std::vector<glm::vec3>& ends,
@@ -389,6 +391,24 @@ class App {
                         const std::vector<glm::vec4>& colors = {},
                         float size = 6.0f, bool hidden = false);
     void clearDebugPoints(const std::string& path);
+    ///////
+
+    // Text Renderer //
+    void setWorldText(const std::string& path, const WorldTextDesc& desc);
+    void setWorldTextString(const std::string& path, std::string text);
+    void setWorldTextPosition(const std::string& path,
+                              const glm::vec3& position);
+    void setWorldTextHidden(const std::string& path, bool hidden);
+    void removeWorldText(const std::string& path);
+    void clearWorldText();
+    void setScreenText(const std::string& path, const ScreenTextDesc& desc);
+    void setScreenTextString(const std::string& path, std::string text);
+    void setScreenTextPosition(const std::string& path,
+                               const glm::vec2& position);
+    void setScreenTextHidden(const std::string& path, bool hidden);
+    void removeScreenText(const std::string& path);
+    void clearScreenText();
+    ///////
 
     void setSkybox(const std::string& path);
     void setSkybox(const std::vector<std::string>& paths);

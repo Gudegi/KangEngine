@@ -743,6 +743,12 @@ std::unique_ptr<Texture> OpenGLDevice::createTexture(const TextureDesc& desc) {
     return std::make_unique<OpenGLTexture>(desc);
 }
 
+std::unique_ptr<Texture>
+OpenGLDevice::createTexture(const TextureDesc& desc,
+                            const SamplerDesc& sampler) {
+    return std::make_unique<OpenGLTexture>(desc, sampler);
+}
+
 std::unique_ptr<VertexArray> OpenGLDevice::createVertexArray() {
     return std::make_unique<OpenGLVertexArray>();
 }

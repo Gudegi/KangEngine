@@ -1,6 +1,7 @@
 #include "engine/scene/debug_draw.hpp"
-#include "kangEngine.hpp"
 #include "engine/graphics/material/colors.hpp"
+#include "geometry/primitive_mesh.hpp"
+#include "kangEngine.hpp"
 #include <imgui.h>
 #include <memory>
 #include <string>
@@ -64,7 +65,7 @@ class PrimShowcaseApp : public App {
             MeshPrimDesc desc;
             desc.shader = groundShader.get();
             desc.path = "/ground";
-            desc.meshData = Prim::createPlaneData(20.f, _upAxis);
+            desc.meshData = Geometry::createPlane(20.f, _upAxis);
             addMeshPrim(std::move(desc));
         }
 
@@ -82,13 +83,13 @@ class PrimShowcaseApp : public App {
             desc.color = color;
             desc.doubleSided = doubleSided;
             auto result = addMeshPrim(std::move(desc));
-            if (result.prim)
+            if (result.prim && !label.empty())
                 entries.push_back({result.prim, label});
         };
 
-        auto prims =
-            Prim::defineCoordinateAxes(getScene(), "/shapes/coordinate_axes",
-                                       1.8f, 0.04f, 16, upPos(0.f, 0.f, 0.02f));
+        auto prims = DebugDraw::logCoordinateAxes(
+            getScene(), "/shapes/coordinate_axes", upPos(0.f, 0.f, 0.02f),
+            glm::quat(1.f, 0.f, 0.f, 0.f), 1.8f, 0.04f, 16);
         for (auto* p : prims)
             getSceneRenderSystem().addRenderable(*p, phongShader.get());
         if (!prims.empty())
@@ -173,7 +174,7 @@ class PrimShowcaseApp : public App {
         // Row y=0 — basic shapes
         glm::quat squareOri = {0.9238795, 0.3826834, 0, 0};
         glm::vec3 squarePos = {-6.f, -3.f, 1.01f};
-        add("/shapes/square", Prim::createSquareData(1.f),
+        add("/shapes/square", Geometry::createCube(1.f),
             upPos(squarePos.x, squarePos.y, squarePos.z),
             {0.95f, 0.35f, 0.35f, 1.f}, "Square",
             upQuat(squareOri.w, squareOri.x, squareOri.y, squareOri.z));
@@ -183,79 +184,79 @@ class PrimShowcaseApp : public App {
             upQuat(squareOri.w, squareOri.x, squareOri.y, squareOri.z), 1.8f,
             0.01f);
 
-        add("/shapes/sphere", Prim::createSphereData(0.7f, 32, 16),
+        add("/shapes/sphere", Geometry::createSphere(0.7f, 32, 16),
             upPos(-3.f, -3.f, 0.7f), {0.35f, 0.65f, 0.95f, 1.f}, "Sphere");
 
-        add("/shapes/rectangle", Prim::createRectangleData(1.2f, 0.7f, 0.5f),
+        add("/shapes/rectangle", Geometry::createBox(1.2f, 0.7f, 0.5f),
             upPos(0.f, -3.f, 0.5f), {0.95f, 0.80f, 0.20f, 1.f}, "Rectangle");
 
         // Row y=0 — planes (Y / Z / X)
-        add("/shapes/plane_y", Prim::createPlaneData(1.2f, UpAxis::Y),
+        add("/shapes/plane_y", Geometry::createPlane(1.2f, UpAxis::Y),
             upPos(3.f, -3.f, 0.01f), {0.95f, 0.70f, 0.70f, 1.f}, "Plane (Y-up)",
             {1.0f, 0.0f, 0.0f, 0.0f}, true);
 
-        add("/shapes/plane_z", Prim::createPlaneData(1.2f, UpAxis::Z),
+        add("/shapes/plane_z", Geometry::createPlane(1.2f, UpAxis::Z),
             upPos(6.f, -3.f, 0.01f), {0.40f, 0.85f, 0.55f, 1.f}, "Plane (Z-up)",
             {1.0f, 0.0f, 0.0f, 0.0f}, true);
 
-        add("/shapes/plane_x", Prim::createPlaneData(1.2f, UpAxis::X),
+        add("/shapes/plane_x", Geometry::createPlane(1.2f, UpAxis::X),
             upPos(-6.f, 0.f, 0.6f), {0.55f, 0.55f, 0.95f, 1.f}, "Plane (X-up)",
             {1.0f, 0.0f, 0.0f, 0.0f}, true);
 
         // Row y=5 — cylinders (Y / Z / X)
-        add("/shapes/cylinder_y", Prim::createCylinderData(0.35f, 1.2f),
+        add("/shapes/cylinder_y", Geometry::createCylinder(0.35f, 1.2f),
             upPos(-3.f, 0.f, 0.35f), {0.70f, 0.35f, 0.90f, 1.f},
             "Cylinder (Y-up, lying)");
 
         add("/shapes/cylinder_z",
-            Prim::createCylinderData(0.35f, 1.2f, UpAxis::Z),
+            Geometry::createCylinder(0.35f, 1.2f, UpAxis::Z),
             upPos(3.f, 0.f, 0.6f), {0.25f, 0.85f, 0.85f, 1.f},
             "Cylinder (Z-up, standing)");
 
         add("/shapes/cylinder_x",
-            Prim::createCylinderData(0.35f, 1.2f, UpAxis::X),
+            Geometry::createCylinder(0.35f, 1.2f, UpAxis::X),
             upPos(6.f, 0.f, 0.35f), {0.90f, 0.55f, 0.25f, 1.f},
             "Cylinder (X-up, sideways)");
 
         // Row y=10 — arrows (Y / Z / X)
-        add("/shapes/arrow_y", Prim::createArrowData(0.15f, 1.4f),
+        add("/shapes/arrow_y", Geometry::createArrow(0.15f, 1.4f),
             upPos(-6.f, 3.f, 0.f), {0.95f, 0.55f, 0.15f, 1.f},
             "Arrow (Y-up, horizontal)");
 
-        add("/shapes/arrow_z", Prim::createArrowData(0.15f, 1.4f, UpAxis::Z),
+        add("/shapes/arrow_z", Geometry::createArrow(0.15f, 1.4f, UpAxis::Z),
             upPos(-3.f, 3.f, 0.f), {0.55f, 0.95f, 0.15f, 1.f},
             "Arrow (Z-up, pointing up)");
 
-        add("/shapes/arrow_x", Prim::createArrowData(0.15f, 1.4f, UpAxis::X),
+        add("/shapes/arrow_x", Geometry::createArrow(0.15f, 1.4f, UpAxis::X),
             upPos(0.f, 3.f, 0.f), {0.15f, 0.55f, 0.95f, 1.f},
             "Arrow (X-up, sideways)");
 
         add("/shapes/arrow_custom",
-            Prim::createArrowData(0.20f, 1.0f, UpAxis::Z, 0.35f, 0.5f),
+            Geometry::createArrow(0.20f, 1.0f, UpAxis::Z, 0.35f, 0.5f),
             upPos(3.f, 3.f, 0.f), {0.95f, 0.35f, 0.75f, 1.f},
             "Arrow (Z-up, fat cap)");
 
         // Row y=15 — capsules (Y / Z / X)
-        add("/shapes/capsule_y", Prim::createCapsuleData(0.35f, 1.0f),
+        add("/shapes/capsule_y", Geometry::createCapsule(0.35f, 1.0f),
             upPos(6.f, 3.f, 0.35f), {0.60f, 0.90f, 0.50f, 1.f},
             "Capsule (Y-up, lying)");
 
         add("/shapes/capsule_z",
-            Prim::createCapsuleData(0.35f, 1.0f, UpAxis::Z),
+            Geometry::createCapsule(0.35f, 1.0f, UpAxis::Z),
             upPos(-6.f, 6.f, 0.85f), {0.40f, 0.60f, 0.95f, 1.f},
             "Capsule (Z-up, standing)");
 
         add("/shapes/capsule_x",
-            Prim::createCapsuleData(0.35f, 1.0f, UpAxis::X),
+            Geometry::createCapsule(0.35f, 1.0f, UpAxis::X),
             upPos(-3.f, 6.f, 0.35f), {0.95f, 0.55f, 0.30f, 1.f},
             "Capsule (X-up, sideways)");
 
         // Row y=15 — cones (Y / Z / X)
-        add("/shapes/cone_y", Prim::createConeData(0.40f, 1.2f),
+        add("/shapes/cone_y", Geometry::createCone(0.40f, 1.2f),
             upPos(0.f, 6.f, 0.f), {0.95f, 0.80f, 0.25f, 1.f},
             "Cone (Y-up, horizontal)");
 
-        add("/shapes/cone_z", Prim::createConeData(0.40f, 1.2f, UpAxis::Z),
+        add("/shapes/cone_z", Geometry::createCone(0.40f, 1.2f, UpAxis::Z),
             upPos(3.f, 6.f, 0.f), {0.30f, 0.90f, 0.70f, 1.f},
             "Cone (Z-up, pointing up)");
 
@@ -266,13 +267,12 @@ class PrimShowcaseApp : public App {
                 upPos(6.6f, 5.6f, 0.f),  upPos(5.7f, 6.2f, 0.8f),
                 upPos(6.3f, 6.2f, 0.8f),
             };
-            auto prims =
-                Prim::definePoints(getScene(), "/shapes/points", pts, 0.12f,
-                                   {0.95f, 0.35f, 0.55f, 1.f}, 12);
-            for (auto* p : prims)
-                getSceneRenderSystem().addRenderable(*p, phongShader.get());
-            if (!prims.empty())
-                entries.push_back({prims[0], "Points (5 spheres, instanced)"});
+            for (size_t i = 0; i < pts.size(); ++i) {
+                add("/shapes/points/" + std::to_string(i),
+                    Geometry::createSphere(0.12f, 12, 8), pts[i],
+                    {0.95f, 0.35f, 0.55f, 1.f},
+                    i == 0 ? "Points (5 sphere prims)" : "");
+            }
         }
         {
             std::vector<glm::vec3> verts = {
@@ -282,14 +282,21 @@ class PrimShowcaseApp : public App {
                 upPos(4.8f, 4.2f, 1.f),  upPos(4.8f, 4.2f, 0.f),
                 upPos(5.4f, 4.2f, 0.5f), upPos(5.4f, 4.2f, 1.2f),
             };
-            std::vector<unsigned int> lineIdx = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+            std::vector<glm::vec3> starts;
+            std::vector<glm::vec3> ends;
+            starts.reserve(verts.size() / 2);
+            ends.reserve(verts.size() / 2);
+            for (size_t i = 0; i + 1 < verts.size(); i += 2) {
+                starts.push_back(verts[i]);
+                ends.push_back(verts[i + 1]);
+            }
             auto prims =
-                Prim::defineLines(getScene(), "/shapes/lines", verts, lineIdx,
-                                  0.04f, {0.35f, 0.75f, 0.95f, 1.f}, 8);
+                DebugDraw::logLines(getScene(), "/shapes/lines", starts, ends,
+                                    {{0.35f, 0.75f, 0.95f, 1.f}}, 0.04f, 8);
             for (auto* p : prims)
                 getSceneRenderSystem().addRenderable(*p, phongShader.get());
             if (!prims.empty())
-                entries.push_back({prims[0], "Lines (5 capsules, instanced)"});
+                entries.push_back({prims[0], "Lines (5 capsule prims)"});
         }
 
         checkError();
@@ -299,7 +306,7 @@ class PrimShowcaseApp : public App {
     void render() override {
         // ImGui panel
         ImGui::Begin("Prim Showcase");
-        ImGui::Text("All Prim::create*() functions");
+        ImGui::Text("Geometry::create*() primitive meshes");
         ImGui::Separator();
         for (auto& e : entries) {
             auto pos = e.prim->getAttribute<glm::vec3>("xformOp:translate");

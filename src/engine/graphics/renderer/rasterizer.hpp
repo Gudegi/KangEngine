@@ -3,6 +3,7 @@
 
 #include "engine/graphics/renderer/render_pipeline.hpp"
 #include "engine/graphics/renderer/debug_renderer.hpp"
+#include "engine/graphics/renderer/text_renderer.hpp"
 #include "engine/graphics/renderer/mesh_instancer.hpp"
 #include "engine/graphics/renderer/renderer_types.hpp"
 #include "engine/graphics/renderer/light.hpp"
@@ -83,6 +84,9 @@ class Rasterizer : public RenderPipeline {
     void registerPrimSource(Scene::Prim* prim, TransformSource source);
     void unregisterPrimSource(Scene::Prim* prim, TransformSource source);
     DebugRenderer _debugRenderer;
+    TextRenderer _textRenderer;
+    int _viewportWidth = 1;
+    int _viewportHeight = 1;
 
     std::unique_ptr<Backend::Buffer> _cameraUBO;
     std::unique_ptr<Backend::Buffer> _lightUBO;
@@ -295,6 +299,24 @@ class Rasterizer : public RenderPipeline {
                         const std::vector<glm::vec4>& colors = {},
                         float size = 6.0f, bool hidden = false);
     void clearDebugPoints(const std::string& path);
+    void setWorldText(const std::string& path, const WorldTextDesc& desc);
+    void setWorldTextString(const std::string& path, std::string text);
+    void setWorldTextPosition(const std::string& path,
+                              const glm::vec3& position);
+    void setWorldTextHidden(const std::string& path, bool hidden);
+    void removeWorldText(const std::string& path);
+    void clearWorldText();
+    void setScreenText(const std::string& path, const ScreenTextDesc& desc);
+    void setScreenTextString(const std::string& path, std::string text);
+    void setScreenTextPosition(const std::string& path,
+                               const glm::vec2& position);
+    void setScreenTextHidden(const std::string& path, bool hidden);
+    void removeScreenText(const std::string& path);
+    void clearScreenText();
+    void setViewportSize(int width, int height) {
+        _viewportWidth = std::max(width, 1);
+        _viewportHeight = std::max(height, 1);
+    }
 
     void setSkybox(const std::string& path, UpAxis upAxis = UpAxis::Y) {
         _graphicsDevice->setSkybox(path, upAxis);

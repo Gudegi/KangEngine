@@ -19,6 +19,12 @@ Graphics resources, renderer controls, materials, and color helpers.
 
 .. autoclass:: AlphaMode
 
+.. autoclass:: TextAlignment
+
+.. autoclass:: TextDepthMode
+
+.. autoclass:: ScreenAnchor
+
 .. currentmodule:: kangengine
 
 .. autoclass:: Color

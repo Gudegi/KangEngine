@@ -6,7 +6,9 @@ from .application import (
     DebugGeometry,
     DebugOverlay,
     RenderablePrimView,
+    ScreenText,
     SceneContext,
+    WorldText,
 )
 
 __all__ = [
@@ -14,10 +16,20 @@ __all__ = [
     "DebugGeometry",
     "DebugOverlay",
     "RenderablePrimView",
+    "ScreenText",
     "SceneContext",
+    "WorldText",
 ]
 
-for _type in (App, DebugGeometry, DebugOverlay, RenderablePrimView, SceneContext):
+for _type in (
+    App,
+    DebugGeometry,
+    DebugOverlay,
+    RenderablePrimView,
+    ScreenText,
+    SceneContext,
+    WorldText,
+):
     set_public_module(_type, "kangengine")
 
 del _type

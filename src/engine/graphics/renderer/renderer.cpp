@@ -22,6 +22,8 @@ void Renderer::bind(Backend::GraphicsDevice* device, Rasterizer* rasterizer,
 void Renderer::setViewportSize(int width, int height) {
     _viewportWidth = width;
     _viewportHeight = height;
+    if (_rasterizer)
+        _rasterizer->setViewportSize(width, height);
 }
 
 void Renderer::setBackgroundShader(Backend::Shader* shader) {
@@ -138,6 +140,7 @@ void Renderer::renderSceneToFramebuffer(Camera& camera,
 
     applyBackgroundSettings();
     _rasterizer->updateFrameData(view, proj);
+    _rasterizer->setViewportSize(width, height);
     target->bind();
     _device->setViewport(0, 0, width, height);
     if (clear) {
@@ -150,6 +153,7 @@ void Renderer::renderSceneToFramebuffer(Camera& camera,
     target->unbind();
     if (_viewportWidth > 0 && _viewportHeight > 0)
         _device->setViewport(0, 0, _viewportWidth, _viewportHeight);
+    _rasterizer->setViewportSize(_viewportWidth, _viewportHeight);
 }
 
 RenderableHandle Renderer::addRenderable(Material* material, Scene::Prim* prim,

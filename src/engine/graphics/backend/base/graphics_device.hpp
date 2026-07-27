@@ -178,6 +178,10 @@ class GraphicsDevice {
     virtual void bindUniformBuffer(Buffer* buffer, int slot) = 0;
     virtual std::unique_ptr<Shader> createShader(const ShaderDesc& desc) = 0;
     virtual std::unique_ptr<Texture> createTexture(const TextureDesc& desc) = 0;
+    virtual std::unique_ptr<Texture> createTexture(const TextureDesc& desc,
+                                                   const SamplerDesc&) {
+        return createTexture(desc);
+    }
     virtual std::unique_ptr<VertexArray> createVertexArray() = 0;
 
     // Legacy shader convenience path for OpenGL/debug shaders.
@@ -210,12 +214,11 @@ class GraphicsDevice {
     // Short-lived CUDA access to backend buffers. The buffers must be
     // unmapped before graphics commands consume them.
     virtual bool mapCudaBuffers(const std::vector<Buffer*>&,
-                                std::vector<Sim::GpuArrayView>&, size_t,
-                                size_t, int, uint64_t) {
+                                std::vector<Sim::GpuArrayView>&, size_t, size_t,
+                                int, uint64_t) {
         return false;
     }
-    virtual void unmapCudaBuffers(const std::vector<Buffer*>&, int,
-                                  uint64_t) {
+    virtual void unmapCudaBuffers(const std::vector<Buffer*>&, int, uint64_t) {
         throw std::runtime_error(
             "CUDA buffer unmap is unsupported by this graphics backend");
     }

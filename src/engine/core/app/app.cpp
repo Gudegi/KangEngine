@@ -365,6 +365,7 @@ Backend::Texture* App::renderActiveSceneCameraPreview(int width, int height,
     _rasterizer->updateFrameData(view, proj);
     _sceneCameraPreviewFramebuffer->bind();
     _graphicsDevice->setViewport(0, 0, width, height);
+    _rasterizer->setViewportSize(width, height);
     const glm::vec4& color = settings.background.backgroundColor;
     _graphicsDevice->clear(color.r, color.g, color.b, color.a);
     _rasterizer->render(view, proj);
@@ -373,6 +374,7 @@ Backend::Texture* App::renderActiveSceneCameraPreview(int width, int height,
     _sceneCameraPreviewFramebuffer->unbind();
 
     _graphicsDevice->setViewport(0, 0, _width, _height);
+    _rasterizer->setViewportSize(_width, _height);
     if (_sceneCameraPreviewPostProcessor) {
         if (_sceneCameraPreviewPostWidth != width ||
             _sceneCameraPreviewPostHeight != height) {
@@ -1219,6 +1221,68 @@ void App::logDebugPoints(const std::string& path,
 void App::clearDebugPoints(const std::string& path) {
     if (_rasterizer)
         _rasterizer->clearDebugPoints(path);
+}
+
+void App::setWorldText(const std::string& path, const WorldTextDesc& desc) {
+    if (_rasterizer)
+        _rasterizer->setWorldText(path, desc);
+}
+
+void App::setWorldTextString(const std::string& path, std::string text) {
+    if (_rasterizer)
+        _rasterizer->setWorldTextString(path, std::move(text));
+}
+
+void App::setWorldTextPosition(const std::string& path,
+                               const glm::vec3& position) {
+    if (_rasterizer)
+        _rasterizer->setWorldTextPosition(path, position);
+}
+
+void App::setWorldTextHidden(const std::string& path, bool hidden) {
+    if (_rasterizer)
+        _rasterizer->setWorldTextHidden(path, hidden);
+}
+
+void App::removeWorldText(const std::string& path) {
+    if (_rasterizer)
+        _rasterizer->removeWorldText(path);
+}
+
+void App::clearWorldText() {
+    if (_rasterizer)
+        _rasterizer->clearWorldText();
+}
+
+void App::setScreenText(const std::string& path, const ScreenTextDesc& desc) {
+    if (_rasterizer)
+        _rasterizer->setScreenText(path, desc);
+}
+
+void App::setScreenTextString(const std::string& path, std::string text) {
+    if (_rasterizer)
+        _rasterizer->setScreenTextString(path, std::move(text));
+}
+
+void App::setScreenTextPosition(const std::string& path,
+                                const glm::vec2& position) {
+    if (_rasterizer)
+        _rasterizer->setScreenTextPosition(path, position);
+}
+
+void App::setScreenTextHidden(const std::string& path, bool hidden) {
+    if (_rasterizer)
+        _rasterizer->setScreenTextHidden(path, hidden);
+}
+
+void App::removeScreenText(const std::string& path) {
+    if (_rasterizer)
+        _rasterizer->removeScreenText(path);
+}
+
+void App::clearScreenText() {
+    if (_rasterizer)
+        _rasterizer->clearScreenText();
 }
 
 void App::setSkybox(const std::string& path) {

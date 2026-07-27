@@ -6,6 +6,7 @@ assets, and interactive tools.
 - [Materials and Textures](MATERIALS_TEXTURES.md)
 - [Load Assets](LOAD_ASSETS.md)
 - [Camera and Viewer](CAMERA_VIEWER.md)
+- [Debug Visualization and Text Rendering](DEBUG_VISUALIZATION.md)
 
 Most application code should use `app.scene` and prim-backed views. Use
 `ke.render` directly only for custom shaders, textures, buffers, or renderer

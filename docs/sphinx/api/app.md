@@ -13,6 +13,10 @@ Application lifecycle, camera access, and viewport interaction.
 
 .. autoclass:: DebugOverlay
 
+.. autoclass:: WorldText
+
+.. autoclass:: ScreenText
+
 .. autoclass:: RenderablePrimView
 
 .. autoclass:: Camera

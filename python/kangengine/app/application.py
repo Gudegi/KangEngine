@@ -12,6 +12,7 @@ from types import SimpleNamespace
 
 from .._core import _ke
 from .._public import unwrap_native
+from .. import geometry as geometry_api
 from .. import material as material_api
 from .. import render as render_api
 
@@ -62,6 +63,39 @@ def _rotation_matrix(rotation):
         ],
         dtype=np.float32,
     )
+
+
+def _sphere_instance_data(centers, radii, colors):
+    import numpy as np
+
+    centers = np.asarray(centers, dtype=np.float32).reshape(-1, 3)
+    if len(centers) == 0:
+        raise ValueError("centers must contain at least one position")
+    radii = np.asarray(radii, dtype=np.float32)
+    if radii.ndim == 0:
+        radii = np.full(len(centers), float(radii), dtype=np.float32)
+    else:
+        radii = radii.reshape(-1)
+        if len(radii) != len(centers):
+            raise ValueError("radii must be scalar or match centers length")
+    if colors is None:
+        colors = np.ones((len(centers), 4), dtype=np.float32)
+    else:
+        colors = np.asarray(colors, dtype=np.float32).reshape(-1, 4)
+        if len(colors) == 1 and len(centers) > 1:
+            colors = np.repeat(colors, len(centers), axis=0)
+        elif len(colors) != len(centers):
+            raise ValueError("colors must have length 1 or match centers")
+
+    transforms = np.repeat(
+        np.eye(4, dtype=np.float32)[None, :, :], len(centers), axis=0
+    )
+    transforms[:, 0, 0] = radii
+    transforms[:, 1, 1] = radii
+    transforms[:, 2, 2] = radii
+    # Native instance matrices use GLM's column-major memory layout.
+    transforms[:, 3, :3] = centers
+    return transforms, colors
 
 
 class RenderablePrimView:
@@ -277,6 +311,11 @@ class DebugPrimitiveView(RenderablePrimView):
         )
         return self
 
+    def update_spheres(self, centers, radii=0.5, colors=None):
+        """Update instanced sphere positions, radii, and colors."""
+        transforms, colors = _sphere_instance_data(centers, radii, colors)
+        return self.update_instances(transforms, colors)
+
 
 class ObjImportView:
     """Result returned by SceneContext.add_obj()."""
@@ -374,6 +413,30 @@ class DebugGeometry:
             segments=segments,
         )
 
+    def add_spheres(
+        self,
+        path: str,
+        centers,
+        radii=0.5,
+        colors=None,
+        *,
+        material=None,
+        segments: int = 16,
+        rings: int = 12,
+    ):
+        """Add instanced solid spheres and return a DebugPrimitiveView."""
+        transforms, colors = _sphere_instance_data(centers, radii, colors)
+        if material is None:
+            material = self._scene._app.create_standard_materials().debug
+        view = self._scene.add_mesh(
+            path,
+            geometry_api.create_sphere_data(1.0, segments, rings),
+            material,
+        )
+        view._render_system.update_instances(view.component, transforms, colors)
+        view.set_casts_shadow(False)
+        return DebugPrimitiveView(self._scene._app, view.prim, view.component)
+
 
 class DebugOverlay:
     """OpenGL debug overlay that does not create SceneGraph prims."""
@@ -436,6 +499,136 @@ class DebugOverlay:
         """Clear both line/axis and point overlay batches at a path."""
         self._app.clear_debug_lines(path)
         self._app.clear_debug_points(path)
+        return self
+
+
+class WorldText:
+    """Persistent screen-aligned text anchored at world-space positions."""
+
+    def __init__(self, app: "App"):
+        self._app = app
+
+    def set(
+        self,
+        path: str,
+        text: str,
+        position,
+        *,
+        color=None,
+        pixel_size: float = 18.0,
+        alignment=None,
+        depth_test: bool = True,
+        hidden: bool = False,
+    ):
+        if color is None:
+            color = _ke.vec4(1.0, 1.0, 1.0, 1.0)
+        if alignment is None:
+            alignment = render_api.TextAlignment.Center
+        depth_mode = (
+            render_api.TextDepthMode.DepthTested
+            if depth_test
+            else render_api.TextDepthMode.Overlay
+        )
+        self._app.set_world_text(
+            path,
+            text,
+            position,
+            color,
+            float(pixel_size),
+            alignment,
+            depth_mode,
+            bool(hidden),
+        )
+        return self
+
+    def set_text(self, path: str, text: str):
+        self._app.set_world_text_string(path, text)
+        return self
+
+    def set_position(self, path: str, position):
+        self._app.set_world_text_position(path, position)
+        return self
+
+    def set_hidden(self, path: str, hidden: bool):
+        self._app.set_world_text_hidden(path, bool(hidden))
+        return self
+
+    def remove(self, path: str):
+        self._app.remove_world_text(path)
+        return self
+
+    def clear(self):
+        self._app.clear_world_text()
+        return self
+
+
+class ScreenText:
+    """Persistent text positioned in viewport pixel(screen) coordinates."""
+
+    def __init__(self, app: "App"):
+        self._app = app
+
+    def set(
+        self,
+        path: str,
+        text: str,
+        position,
+        *,
+        color=None,
+        pixel_size: float = 18.0,
+        alignment=None,
+        anchor=None,
+        hidden: bool = False,
+    ):
+        if color is None:
+            color = _ke.vec4(1.0, 1.0, 1.0, 1.0)
+        if anchor is None:
+            anchor = render_api.ScreenAnchor.TopLeft
+        if alignment is None:
+            if anchor in (
+                render_api.ScreenAnchor.TopCenter,
+                render_api.ScreenAnchor.Center,
+                render_api.ScreenAnchor.BottomCenter,
+            ):
+                alignment = render_api.TextAlignment.Center
+            elif anchor in (
+                render_api.ScreenAnchor.TopRight,
+                render_api.ScreenAnchor.CenterRight,
+                render_api.ScreenAnchor.BottomRight,
+            ):
+                alignment = render_api.TextAlignment.Right
+            else:
+                alignment = render_api.TextAlignment.Left
+        self._app.set_screen_text(
+            path,
+            text,
+            position,
+            color,
+            float(pixel_size),
+            alignment,
+            anchor,
+            bool(hidden),
+        )
+        return self
+
+    def set_text(self, path: str, text: str):
+        self._app.set_screen_text_string(path, text)
+        return self
+
+    def set_position(self, path: str, position):
+        self._app.set_screen_text_position(path, position)
+        return self
+
+    def set_hidden(self, path: str, hidden: bool):
+        self._app.set_screen_text_hidden(path, bool(hidden))
+        return self
+
+    def remove(self, path: str):
+        self._app.remove_screen_text(path)
+        return self
+
+    def clear(self):
+        self._app.clear_screen_text()
         return self
 
 
@@ -689,6 +882,8 @@ class App(_NativeApp):
         self.headless = False
         self.scene = SceneContext(self)
         self.debug_overlay = DebugOverlay(self)
+        self.world_text = WorldText(self)
+        self.screen_text = ScreenText(self)
         self.resources = self.get_scene_resource_manager()
         self._resource_handles_by_object_id = {}
         self._resource_counter = 0

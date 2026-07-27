@@ -17,6 +17,9 @@ TextureRole = set_public_module(_ke.TextureRole, __name__)
 AlphaMode = set_public_module(_ke.AlphaMode, __name__)
 ToneMapMode = set_public_module(_ke.ToneMapMode, __name__)
 TransformSource = set_public_module(_ke.TransformSource, __name__)
+TextAlignment = set_public_module(_ke.TextAlignment, __name__)
+TextDepthMode = set_public_module(_ke.TextDepthMode, __name__)
+ScreenAnchor = set_public_module(_ke.ScreenAnchor, __name__)
 ExternalBufferFormat = set_public_module(_ke.ExternalBufferFormat, __name__)
 ExternalSyncPolicy = set_public_module(_ke.ExternalSyncPolicy, __name__)
 ExternalBufferDesc = set_public_module(_ke.ExternalBufferDesc, __name__)
@@ -40,11 +43,14 @@ __all__ = [
     "GraphicsDevice",
     "Renderer",
     "SamplerDesc",
+    "ScreenAnchor",
     "Shader",
     "Texture",
     "TextureFilter",
     "TextureRole",
     "TextureWrap",
+    "TextAlignment",
+    "TextDepthMode",
     "ToneMapMode",
     "TransformSource",
 ]

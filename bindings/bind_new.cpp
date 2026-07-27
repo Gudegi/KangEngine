@@ -424,6 +424,26 @@ PYBIND11_MODULE(_kangengine, m) {
         .value("Blend", AlphaMode::Blend)
         .export_values();
 
+    py::enum_<TextAlignment>(m, "TextAlignment")
+        .value("Left", TextAlignment::Left)
+        .value("Center", TextAlignment::Center)
+        .value("Right", TextAlignment::Right);
+
+    py::enum_<TextDepthMode>(m, "TextDepthMode")
+        .value("DepthTested", TextDepthMode::DepthTested)
+        .value("Overlay", TextDepthMode::Overlay);
+
+    py::enum_<ScreenAnchor>(m, "ScreenAnchor")
+        .value("TopLeft", ScreenAnchor::TopLeft)
+        .value("TopCenter", ScreenAnchor::TopCenter)
+        .value("TopRight", ScreenAnchor::TopRight)
+        .value("CenterLeft", ScreenAnchor::CenterLeft)
+        .value("Center", ScreenAnchor::Center)
+        .value("CenterRight", ScreenAnchor::CenterRight)
+        .value("BottomLeft", ScreenAnchor::BottomLeft)
+        .value("BottomCenter", ScreenAnchor::BottomCenter)
+        .value("BottomRight", ScreenAnchor::BottomRight);
+
     py::enum_<PhongMaterialType>(m, "PhongMaterialType",
                                  "Built-in blin-phong based material presets.")
         .value("EMERALD", PhongMaterialType::EMERALD)
@@ -582,14 +602,15 @@ PYBIND11_MODULE(_kangengine, m) {
         .def_static("get", &ColorLibrary::get, py::arg("type"));
 
     py::class_<Material>(m, "Material", "Base class for renderer materials.")
-        .def("set_shader",
-             [](Material& self, Backend::Shader* shader) -> Material& {
-                 self.setShader(shader);
-                 return self;
-             },
-             py::arg("shader"), py::return_value_policy::reference_internal,
-             "Attach the shader used when this material is bound and return "
-             "this material.")
+        .def(
+            "set_shader",
+            [](Material& self, Backend::Shader* shader) -> Material& {
+                self.setShader(shader);
+                return self;
+            },
+            py::arg("shader"), py::return_value_policy::reference_internal,
+            "Attach the shader used when this material is bound and return "
+            "this material.")
         .def("get_shader", &Material::getShader,
              py::return_value_policy::reference,
              "Return the shader currently attached to this material.");
@@ -608,15 +629,15 @@ PYBIND11_MODULE(_kangengine, m) {
         .def(py::init<>(), "Create a Phong material with default factors.")
         .def(py::init<Backend::Shader*>(), py::arg("shader"),
              "Create a Phong material attached to a shader.")
-        .def("load_from_preset",
-             [](PhongMaterial& self, PhongMaterialType type)
-                 -> PhongMaterial& {
-                 self.loadFromPreset(type);
-                 return self;
-             },
-             py::arg("type"), py::return_value_policy::reference_internal,
-             "Load material factors from a built-in Phong preset and return "
-             "this material.")
+        .def(
+            "load_from_preset",
+            [](PhongMaterial& self, PhongMaterialType type) -> PhongMaterial& {
+                self.loadFromPreset(type);
+                return self;
+            },
+            py::arg("type"), py::return_value_policy::reference_internal,
+            "Load material factors from a built-in Phong preset and return "
+            "this material.")
         .def("set_ambient", &PhongMaterial::setAmbient, py::arg("ambient"),
              py::return_value_policy::reference_internal)
         .def("set_diffuse", &PhongMaterial::setDiffuse, py::arg("diffuse"),
@@ -624,16 +645,15 @@ PYBIND11_MODULE(_kangengine, m) {
         .def("set_specular", &PhongMaterial::setSpecular, py::arg("specular"),
              py::return_value_policy::reference_internal)
         .def("set_shininess", &PhongMaterial::setShininess,
-             py::arg("shininess"),
-             py::return_value_policy::reference_internal)
+             py::arg("shininess"), py::return_value_policy::reference_internal)
         .def("set_diffuse_map", &PhongMaterial::setDiffuseMap,
              py::arg("texture"), py::return_value_policy::reference_internal)
         .def("set_specular_map", &PhongMaterial::setSpecularMap,
              py::arg("texture"), py::return_value_policy::reference_internal)
-        .def("set_alpha_map", &PhongMaterial::setAlphaMap,
-             py::arg("texture"), py::return_value_policy::reference_internal)
-        .def("set_normal_map", &PhongMaterial::setNormalMap,
-             py::arg("texture"), py::return_value_policy::reference_internal)
+        .def("set_alpha_map", &PhongMaterial::setAlphaMap, py::arg("texture"),
+             py::return_value_policy::reference_internal)
+        .def("set_normal_map", &PhongMaterial::setNormalMap, py::arg("texture"),
+             py::return_value_policy::reference_internal)
         .def_readwrite("ambient", &PhongMaterial::ambient,
                        "Ambient RGB factor.")
         .def_readwrite("diffuse", &PhongMaterial::diffuse,
@@ -657,21 +677,20 @@ PYBIND11_MODULE(_kangengine, m) {
         .def(py::init<>(), "Create a PBR material with default factors.")
         .def(py::init<Backend::Shader*>(), py::arg("shader"),
              "Create a PBR material attached to a shader.")
-        .def("load_from_preset",
-             [](PBRMaterial& self, PBRMaterialType type) -> PBRMaterial& {
-                 self.loadFromPreset(type);
-                 return self;
-             },
-             py::arg("type"), py::return_value_policy::reference_internal,
-             "Load material factors from a built-in PBR preset and return "
-             "this material.")
+        .def(
+            "load_from_preset",
+            [](PBRMaterial& self, PBRMaterialType type) -> PBRMaterial& {
+                self.loadFromPreset(type);
+                return self;
+            },
+            py::arg("type"), py::return_value_policy::reference_internal,
+            "Load material factors from a built-in PBR preset and return "
+            "this material.")
         .def("set_base_color", &PBRMaterial::setBaseColor,
-             py::arg("base_color"),
-             py::return_value_policy::reference_internal)
+             py::arg("base_color"), py::return_value_policy::reference_internal)
         .def("set_metallic", &PBRMaterial::setMetallic, py::arg("metallic"),
              py::return_value_policy::reference_internal)
-        .def("set_roughness", &PBRMaterial::setRoughness,
-             py::arg("roughness"),
+        .def("set_roughness", &PBRMaterial::setRoughness, py::arg("roughness"),
              py::return_value_policy::reference_internal)
         .def("set_emissive_color", &PBRMaterial::setEmissiveColor,
              py::arg("emissive_color"),
@@ -692,8 +711,8 @@ PYBIND11_MODULE(_kangengine, m) {
              py::arg("texture"), py::return_value_policy::reference_internal)
         .def("set_ao_texture", &PBRMaterial::setAoTexture, py::arg("texture"),
              py::return_value_policy::reference_internal)
-        .def("set_orm_texture", &PBRMaterial::setOrmTexture,
-             py::arg("texture"), py::return_value_policy::reference_internal)
+        .def("set_orm_texture", &PBRMaterial::setOrmTexture, py::arg("texture"),
+             py::return_value_policy::reference_internal)
         .def("set_emissive_texture", &PBRMaterial::setEmissiveTexture,
              py::arg("texture"), py::return_value_policy::reference_internal)
         .def_readwrite("base_color", &PBRMaterial::baseColor,
@@ -1194,11 +1213,11 @@ py::class_<glm::vec3>(m, "vec3")
             [](py::object obj) {
                 auto values = fixedFloatArray<4>(obj, "wxyz quaternion");
                 if (!values && py::len_hint(obj) == 4) {
-                    values = std::array<float, 4>{
-                        obj[py::int_(0)].cast<float>(),
-                        obj[py::int_(1)].cast<float>(),
-                        obj[py::int_(2)].cast<float>(),
-                        obj[py::int_(3)].cast<float>()};
+                    values =
+                        std::array<float, 4>{obj[py::int_(0)].cast<float>(),
+                                             obj[py::int_(1)].cast<float>(),
+                                             obj[py::int_(2)].cast<float>(),
+                                             obj[py::int_(3)].cast<float>()};
                 }
                 if (!values)
                     throw py::value_error(
@@ -1212,11 +1231,11 @@ py::class_<glm::vec3>(m, "vec3")
             [](py::object obj) {
                 auto values = fixedFloatArray<4>(obj, "xyzw quaternion");
                 if (!values && py::len_hint(obj) == 4) {
-                    values = std::array<float, 4>{
-                        obj[py::int_(0)].cast<float>(),
-                        obj[py::int_(1)].cast<float>(),
-                        obj[py::int_(2)].cast<float>(),
-                        obj[py::int_(3)].cast<float>()};
+                    values =
+                        std::array<float, 4>{obj[py::int_(0)].cast<float>(),
+                                             obj[py::int_(1)].cast<float>(),
+                                             obj[py::int_(2)].cast<float>(),
+                                             obj[py::int_(3)].cast<float>()};
                 }
                 if (!values)
                     throw py::value_error(
@@ -1225,24 +1244,30 @@ py::class_<glm::vec3>(m, "vec3")
                                  (*values)[2]);
             },
             py::arg("values"), "Create a quaternion from xyzw values.")
-        .def("to_wxyz", [](const glm::quat& q) {
-            py::array_t<float> result(4);
-            auto values = result.mutable_unchecked<1>();
-            values(0) = q.w;
-            values(1) = q.x;
-            values(2) = q.y;
-            values(3) = q.z;
-            return result;
-        }, "Return a copied wxyz NumPy array.")
-        .def("to_xyzw", [](const glm::quat& q) {
-            py::array_t<float> result(4);
-            auto values = result.mutable_unchecked<1>();
-            values(0) = q.x;
-            values(1) = q.y;
-            values(2) = q.z;
-            values(3) = q.w;
-            return result;
-        }, "Return a copied xyzw NumPy array.")
+        .def(
+            "to_wxyz",
+            [](const glm::quat& q) {
+                py::array_t<float> result(4);
+                auto values = result.mutable_unchecked<1>();
+                values(0) = q.w;
+                values(1) = q.x;
+                values(2) = q.y;
+                values(3) = q.z;
+                return result;
+            },
+            "Return a copied wxyz NumPy array.")
+        .def(
+            "to_xyzw",
+            [](const glm::quat& q) {
+                py::array_t<float> result(4);
+                auto values = result.mutable_unchecked<1>();
+                values(0) = q.x;
+                values(1) = q.y;
+                values(2) = q.z;
+                values(3) = q.w;
+                return result;
+            },
+            "Return a copied xyzw NumPy array.")
         .def(
             "__array__",
             [](const glm::quat& q, py::object dtype, py::object) -> py::object {
@@ -1253,7 +1278,8 @@ py::class_<glm::vec3>(m, "vec3")
                 values(2) = q.y;
                 values(3) = q.z;
                 if (!dtype.is_none())
-                    return result.attr("astype")(dtype, py::arg("copy") = false);
+                    return result.attr("astype")(dtype,
+                                                 py::arg("copy") = false);
                 return result;
             },
             py::arg("dtype") = py::none(), py::arg("copy") = py::none(),
@@ -1262,6 +1288,12 @@ py::class_<glm::vec3>(m, "vec3")
         .def_readwrite("x", &glm::quat::x)
         .def_readwrite("y", &glm::quat::y)
         .def_readwrite("z", &glm::quat::z)
+        .def(
+            "__mul__",
+            [](const glm::quat& rotation, const glm::vec3& vector) {
+                return rotation * vector;
+            },
+            py::arg("vector"), "Rotate a vec3 by this quaternion.")
         .def("__repr__", [](const glm::quat& q) {
             return "quat(w=" + std::to_string(q.w) +
                    ", x=" + std::to_string(q.x) + ", y=" + std::to_string(q.y) +
@@ -1782,6 +1814,75 @@ py::class_<glm::vec3>(m, "vec3")
             "Draw persistent debug points at a debug path.")
         .def("clear_debug_points", &App::clearDebugPoints, py::arg("path"),
              "Clear debug points stored at a debug path.")
+        .def(
+            "set_world_text",
+            [](App& self, const std::string& path, const std::string& text,
+               const glm::vec3& position, const glm::vec4& color,
+               float pixelSize, TextAlignment alignment,
+               TextDepthMode depthMode, bool hidden) {
+                WorldTextDesc desc;
+                desc.text = text;
+                desc.position = position;
+                desc.color = color;
+                desc.pixelSize = pixelSize;
+                desc.alignment = alignment;
+                desc.depthMode = depthMode;
+                desc.hidden = hidden;
+                self.setWorldText(path, desc);
+            },
+            py::arg("path"), py::arg("text"), py::arg("position"),
+            py::arg("color") = glm::vec4(1.0f), py::arg("pixel_size") = 18.0f,
+            py::arg("alignment") = TextAlignment::Center,
+            py::arg("depth_mode") = TextDepthMode::DepthTested,
+            py::arg("hidden") = false,
+            "Create or replace screen-aligned text at a world position.")
+        .def("set_world_text_string", &App::setWorldTextString, py::arg("path"),
+             py::arg("text"),
+             "Update the string of an existing world-text entry.")
+        .def("set_world_text_position", &App::setWorldTextPosition,
+             py::arg("path"), py::arg("position"),
+             "Update the position of an existing world-text entry.")
+        .def("set_world_text_hidden", &App::setWorldTextHidden, py::arg("path"),
+             py::arg("hidden"), "Show or hide an existing world-text entry.")
+        .def("remove_world_text", &App::removeWorldText, py::arg("path"),
+             "Remove one world-text entry.")
+        .def("clear_world_text", &App::clearWorldText,
+             "Remove every world-text entry.")
+        .def(
+            "set_screen_text",
+            [](App& self, const std::string& path, const std::string& text,
+               const glm::vec2& position, const glm::vec4& color,
+               float pixelSize, TextAlignment alignment, ScreenAnchor anchor,
+               bool hidden) {
+                ScreenTextDesc desc;
+                desc.text = text;
+                desc.position = position;
+                desc.color = color;
+                desc.pixelSize = pixelSize;
+                desc.alignment = alignment;
+                desc.anchor = anchor;
+                desc.hidden = hidden;
+                self.setScreenText(path, desc);
+            },
+            py::arg("path"), py::arg("text"), py::arg("position"),
+            py::arg("color") = glm::vec4(1.0f), py::arg("pixel_size") = 18.0f,
+            py::arg("alignment") = TextAlignment::Left,
+            py::arg("anchor") = ScreenAnchor::TopLeft,
+            py::arg("hidden") = false,
+            "Create or replace text anchored in viewport pixel coordinates.")
+        .def("set_screen_text_string", &App::setScreenTextString,
+             py::arg("path"), py::arg("text"),
+             "Update the string of an existing screen-text entry.")
+        .def("set_screen_text_position", &App::setScreenTextPosition,
+             py::arg("path"), py::arg("position"),
+             "Update the pixel offset of an existing screen-text entry.")
+        .def("set_screen_text_hidden", &App::setScreenTextHidden,
+             py::arg("path"), py::arg("hidden"),
+             "Show or hide an existing screen-text entry.")
+        .def("remove_screen_text", &App::removeScreenText, py::arg("path"),
+             "Remove one screen-text entry.")
+        .def("clear_screen_text", &App::clearScreenText,
+             "Remove every screen-text entry.")
         .def("set_light_direction", &App::setLightDirection,
              py::arg("direction"), "Set the main directional light direction.")
         .def("set_light_color", &App::setLightColor, py::arg("color"),
@@ -1859,8 +1960,7 @@ py::class_<glm::vec3>(m, "vec3")
              "Return the active scene backend.");
 
     py::class_<Bridge::SkinVisualBridge,
-               std::unique_ptr<Bridge::SkinVisualBridge>>(
-        m, "SkinVisual")
+               std::unique_ptr<Bridge::SkinVisualBridge>>(m, "SkinVisual")
         .def_static(
             "from_fbx",
             [](App* app, Backend::Shader* shader, const std::string& fbxPath,
@@ -1918,10 +2018,8 @@ py::class_<glm::vec3>(m, "vec3")
             py::arg("root_translation"), py::arg("local_rotations_wxyz"))
         .def("set_visible", &Bridge::SkinVisualBridge::setVisible,
              py::arg("visible"))
-        .def("set_color", &Bridge::SkinVisualBridge::setColor,
-             py::arg("color"))
-        .def("set_casts_shadow",
-             &Bridge::SkinVisualBridge::setCastsShadow,
+        .def("set_color", &Bridge::SkinVisualBridge::setColor, py::arg("color"))
+        .def("set_casts_shadow", &Bridge::SkinVisualBridge::setCastsShadow,
              py::arg("casts_shadow"))
         .def("motion", &Bridge::SkinVisualBridge::motion,
              py::return_value_policy::reference_internal)

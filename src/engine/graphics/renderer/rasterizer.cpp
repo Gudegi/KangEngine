@@ -93,6 +93,9 @@ Rasterizer::Rasterizer(Backend::GraphicsDevice* graphicsDevice) {
         KE::getAssetPath("shaders/skinned_selection_mask.vs"),
         KE::getAssetPath("shaders/selection_mask.fs"));
     _debugRenderer.init(_graphicsDevice);
+    _textRenderer.init(
+        _graphicsDevice,
+        FontAtlasData::loadAscii(KE::getAssetPath("fonts/godoFont/GodoM.ttf")));
     updateShadowUBO(0.0f);
 }
 
@@ -441,6 +444,56 @@ void Rasterizer::clearDebugPoints(const std::string& path) {
     _debugRenderer.clearPoints(path);
 }
 
+void Rasterizer::setWorldText(const std::string& path,
+                              const WorldTextDesc& desc) {
+    _textRenderer.setWorldText(path, desc);
+}
+
+void Rasterizer::setWorldTextString(const std::string& path,
+                                    std::string text) {
+    _textRenderer.setWorldString(path, std::move(text));
+}
+
+void Rasterizer::setWorldTextPosition(const std::string& path,
+                                      const glm::vec3& position) {
+    _textRenderer.setWorldPosition(path, position);
+}
+
+void Rasterizer::setWorldTextHidden(const std::string& path, bool hidden) {
+    _textRenderer.setWorldHidden(path, hidden);
+}
+
+void Rasterizer::removeWorldText(const std::string& path) {
+    _textRenderer.removeWorldText(path);
+}
+
+void Rasterizer::clearWorldText() { _textRenderer.clearWorldText(); }
+
+void Rasterizer::setScreenText(const std::string& path,
+                               const ScreenTextDesc& desc) {
+    _textRenderer.setScreenText(path, desc);
+}
+
+void Rasterizer::setScreenTextString(const std::string& path,
+                                     std::string text) {
+    _textRenderer.setScreenString(path, std::move(text));
+}
+
+void Rasterizer::setScreenTextPosition(const std::string& path,
+                                       const glm::vec2& position) {
+    _textRenderer.setScreenPosition(path, position);
+}
+
+void Rasterizer::setScreenTextHidden(const std::string& path, bool hidden) {
+    _textRenderer.setScreenHidden(path, hidden);
+}
+
+void Rasterizer::removeScreenText(const std::string& path) {
+    _textRenderer.removeScreenText(path);
+}
+
+void Rasterizer::clearScreenText() { _textRenderer.clearScreenText(); }
+
 void Rasterizer::updateDebugRenderAABB() {
     constexpr const char* path = "/renderer/aabb";
     if (!_debugRenderAABB) {
@@ -572,6 +625,7 @@ void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
     renderSkyboxPass(view, proj);
     renderTransparentPass(shadowTexture);
     renderDebugOverlayPass();
+    _textRenderer.render(_viewportWidth, _viewportHeight);
 }
 
 Backend::Texture* Rasterizer::activeShadowTexture() const {

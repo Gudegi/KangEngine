@@ -22,7 +22,15 @@ from . import (
     terrain,
     visual,
 )
-from .app import App, DebugGeometry, DebugOverlay, RenderablePrimView, SceneContext
+from .app import (
+    App,
+    DebugGeometry,
+    DebugOverlay,
+    RenderablePrimView,
+    ScreenText,
+    SceneContext,
+    WorldText,
+)
 from .utils import (
     COMMON,
     DEFAULT_PROFILE_ORDER,
@@ -91,7 +99,6 @@ ColorLibrary = _set_public_module(_ke.ColorLibrary, __name__)
 ColorType = _set_public_module(_ke.ColorType, __name__)
 Color = _set_public_module(_ke.Color, __name__)
 MotionSequencerPanel = _set_public_module(_ke.MotionSequencerPanel, __name__)
-
 # GLM-style math types and helpers exposed by the C++ extension.
 vec3 = _set_public_module(_ke.vec3, __name__)
 vec2 = _set_public_module(_ke.vec2, __name__)
@@ -119,7 +126,9 @@ __all__ = [
     "DebugGeometry",
     "DebugOverlay",
     "RenderablePrimView",
+    "ScreenText",
     "SceneContext",
+    "WorldText",
     "JointMapper",
     "JointSemantic",
     "COMMON",
