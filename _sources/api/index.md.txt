@@ -105,6 +105,8 @@ Materials are documented separately under the `ke.material` domain.
 
     DebugGeometry
     DebugOverlay
+    WorldText
+    ScreenText
 
 .. currentmodule:: kangengine.sim
 

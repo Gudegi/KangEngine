@@ -208,6 +208,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/DEBUG_VISUALIZATION.html">Debug Visualization and Text Rendering</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -785,6 +786,21 @@ pybind API explicitly requires SceneBackend.</p>
 </dl>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.DebugGeometry.add_spheres">
+<span class="sig-name descname"><span class="pre">add_spheres</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">centers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radii</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">segments</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">16</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">12</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.DebugGeometry.add_spheres" title="Link to this definition">¶</a></dt>
+<dd><p>Add instanced solid spheres and return a DebugPrimitiveView.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>)</p></li>
+<li><p><strong>segments</strong> (<em>int</em>)</p></li>
+<li><p><strong>rings</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
@@ -866,6 +882,163 @@ pybind API explicitly requires SceneBackend.</p>
 <li><p><strong>path</strong> (<em>str</em>)</p></li>
 <li><p><strong>size</strong> (<em>float</em>)</p></li>
 <li><p><strong>hidden</strong> (<em>bool</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.WorldText">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.</span></span><span class="sig-name descname"><span class="pre">WorldText</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">app</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.WorldText" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Persistent screen-aligned text anchored at world-space positions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>app</strong> (<a class="reference internal" href="#kangengine.App" title="kangengine.App"><em>App</em></a>)</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.WorldText.clear">
+<span class="sig-name descname"><span class="pre">clear</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.WorldText.clear" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.WorldText.remove">
+<span class="sig-name descname"><span class="pre">remove</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.WorldText.remove" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.WorldText.set">
+<span class="sig-name descname"><span class="pre">set</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">position</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pixel_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">18.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alignment</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depth_test</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hidden</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.WorldText.set" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>)</p></li>
+<li><p><strong>text</strong> (<em>str</em>)</p></li>
+<li><p><strong>pixel_size</strong> (<em>float</em>)</p></li>
+<li><p><strong>depth_test</strong> (<em>bool</em>)</p></li>
+<li><p><strong>hidden</strong> (<em>bool</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.WorldText.set_hidden">
+<span class="sig-name descname"><span class="pre">set_hidden</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hidden</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.WorldText.set_hidden" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>)</p></li>
+<li><p><strong>hidden</strong> (<em>bool</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.WorldText.set_position">
+<span class="sig-name descname"><span class="pre">set_position</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">position</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.WorldText.set_position" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.WorldText.set_text">
+<span class="sig-name descname"><span class="pre">set_text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.WorldText.set_text" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>)</p></li>
+<li><p><strong>text</strong> (<em>str</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.ScreenText">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.</span></span><span class="sig-name descname"><span class="pre">ScreenText</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">app</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.ScreenText" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Persistent text positioned in viewport pixel(screen) coordinates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>app</strong> (<a class="reference internal" href="#kangengine.App" title="kangengine.App"><em>App</em></a>)</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.ScreenText.clear">
+<span class="sig-name descname"><span class="pre">clear</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.ScreenText.clear" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.ScreenText.remove">
+<span class="sig-name descname"><span class="pre">remove</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.ScreenText.remove" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.ScreenText.set">
+<span class="sig-name descname"><span class="pre">set</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">position</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pixel_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">18.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alignment</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">anchor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hidden</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.ScreenText.set" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>)</p></li>
+<li><p><strong>text</strong> (<em>str</em>)</p></li>
+<li><p><strong>pixel_size</strong> (<em>float</em>)</p></li>
+<li><p><strong>hidden</strong> (<em>bool</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.ScreenText.set_hidden">
+<span class="sig-name descname"><span class="pre">set_hidden</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hidden</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.ScreenText.set_hidden" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>)</p></li>
+<li><p><strong>hidden</strong> (<em>bool</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.ScreenText.set_position">
+<span class="sig-name descname"><span class="pre">set_position</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">position</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.ScreenText.set_position" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.ScreenText.set_text">
+<span class="sig-name descname"><span class="pre">set_text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.ScreenText.set_text" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>)</p></li>
+<li><p><strong>text</strong> (<em>str</em>)</p></li>
 </ul>
 </dd>
 </dl>
@@ -1826,6 +1999,7 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <li><a class="reference internal" href="#kangengine.DebugGeometry.add_arrows"><code class="docutils literal notranslate"><span class="pre">DebugGeometry.add_arrows()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.DebugGeometry.add_axes"><code class="docutils literal notranslate"><span class="pre">DebugGeometry.add_axes()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.DebugGeometry.add_lines"><code class="docutils literal notranslate"><span class="pre">DebugGeometry.add_lines()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.DebugGeometry.add_spheres"><code class="docutils literal notranslate"><span class="pre">DebugGeometry.add_spheres()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.DebugOverlay"><code class="docutils literal notranslate"><span class="pre">DebugOverlay</span></code></a><ul>
@@ -1835,6 +2009,24 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <li><a class="reference internal" href="#kangengine.DebugOverlay.clear_points"><code class="docutils literal notranslate"><span class="pre">DebugOverlay.clear_points()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.DebugOverlay.lines"><code class="docutils literal notranslate"><span class="pre">DebugOverlay.lines()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.DebugOverlay.points"><code class="docutils literal notranslate"><span class="pre">DebugOverlay.points()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.WorldText"><code class="docutils literal notranslate"><span class="pre">WorldText</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.WorldText.clear"><code class="docutils literal notranslate"><span class="pre">WorldText.clear()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.WorldText.remove"><code class="docutils literal notranslate"><span class="pre">WorldText.remove()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.WorldText.set"><code class="docutils literal notranslate"><span class="pre">WorldText.set()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.WorldText.set_hidden"><code class="docutils literal notranslate"><span class="pre">WorldText.set_hidden()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.WorldText.set_position"><code class="docutils literal notranslate"><span class="pre">WorldText.set_position()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.WorldText.set_text"><code class="docutils literal notranslate"><span class="pre">WorldText.set_text()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.ScreenText"><code class="docutils literal notranslate"><span class="pre">ScreenText</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.ScreenText.clear"><code class="docutils literal notranslate"><span class="pre">ScreenText.clear()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.ScreenText.remove"><code class="docutils literal notranslate"><span class="pre">ScreenText.remove()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.ScreenText.set"><code class="docutils literal notranslate"><span class="pre">ScreenText.set()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.ScreenText.set_hidden"><code class="docutils literal notranslate"><span class="pre">ScreenText.set_hidden()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.ScreenText.set_position"><code class="docutils literal notranslate"><span class="pre">ScreenText.set_position()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.ScreenText.set_text"><code class="docutils literal notranslate"><span class="pre">ScreenText.set_text()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.RenderablePrimView"><code class="docutils literal notranslate"><span class="pre">RenderablePrimView</span></code></a><ul>

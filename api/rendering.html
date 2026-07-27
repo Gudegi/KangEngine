@@ -208,6 +208,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/DEBUG_VISUALIZATION.html">Debug Visualization and Text Rendering</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -316,7 +317,7 @@
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.render.GraphicsDevice.create_texture">
-<span class="sig-name descname"><span class="pre">create_texture</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.GraphicsDevice</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flip</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sampler</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.SamplerDesc</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;kangengine.SamplerDesc</span> <span class="pre">object</span> <span class="pre">at</span> <span class="pre">0x7a8032424ab0&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">kangengine.Texture</span></span></span><a class="headerlink" href="#kangengine.render.GraphicsDevice.create_texture" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">create_texture</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.GraphicsDevice</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flip</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sampler</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.SamplerDesc</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;kangengine.SamplerDesc</span> <span class="pre">object</span> <span class="pre">at</span> <span class="pre">0x10a7d54f0&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">kangengine.Texture</span></span></span><a class="headerlink" href="#kangengine.render.GraphicsDevice.create_texture" title="Link to this definition">¶</a></dt>
 <dd><p>Load a texture from an image file.</p>
 </dd></dl>
 
@@ -745,6 +746,141 @@
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="kangengine.render.TextAlignment">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.render.</span></span><span class="sig-name descname"><span class="pre">TextAlignment</span></span><a class="headerlink" href="#kangengine.render.TextAlignment" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
+<p>Members:</p>
+<p>Left</p>
+<p>Center</p>
+<p>Right</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.TextAlignment.Center">
+<span class="sig-name descname"><span class="pre">Center</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextAlignment.Center:</span> <span class="pre">1&gt;</span></span><a class="headerlink" href="#kangengine.render.TextAlignment.Center" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.TextAlignment.Left">
+<span class="sig-name descname"><span class="pre">Left</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextAlignment.Left:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.render.TextAlignment.Left" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.TextAlignment.Right">
+<span class="sig-name descname"><span class="pre">Right</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextAlignment.Right:</span> <span class="pre">2&gt;</span></span><a class="headerlink" href="#kangengine.render.TextAlignment.Right" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">TextAlignment.name</span> <span class="pre">-&gt;</span> <span class="pre">str</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.render.TextAlignment.value">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">value</span></span><a class="headerlink" href="#kangengine.render.TextAlignment.value" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.render.TextDepthMode">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.render.</span></span><span class="sig-name descname"><span class="pre">TextDepthMode</span></span><a class="headerlink" href="#kangengine.render.TextDepthMode" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
+<p>Members:</p>
+<p>DepthTested</p>
+<p>Overlay</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.TextDepthMode.DepthTested">
+<span class="sig-name descname"><span class="pre">DepthTested</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextDepthMode.DepthTested:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.render.TextDepthMode.DepthTested" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.TextDepthMode.Overlay">
+<span class="sig-name descname"><span class="pre">Overlay</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextDepthMode.Overlay:</span> <span class="pre">1&gt;</span></span><a class="headerlink" href="#kangengine.render.TextDepthMode.Overlay" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">TextDepthMode.name</span> <span class="pre">-&gt;</span> <span class="pre">str</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.render.TextDepthMode.value">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">value</span></span><a class="headerlink" href="#kangengine.render.TextDepthMode.value" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.render.</span></span><span class="sig-name descname"><span class="pre">ScreenAnchor</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
+<p>Members:</p>
+<p>TopLeft</p>
+<p>TopCenter</p>
+<p>TopRight</p>
+<p>CenterLeft</p>
+<p>Center</p>
+<p>CenterRight</p>
+<p>BottomLeft</p>
+<p>BottomCenter</p>
+<p>BottomRight</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.BottomCenter">
+<span class="sig-name descname"><span class="pre">BottomCenter</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.BottomCenter:</span> <span class="pre">7&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.BottomCenter" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.BottomLeft">
+<span class="sig-name descname"><span class="pre">BottomLeft</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.BottomLeft:</span> <span class="pre">6&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.BottomLeft" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.BottomRight">
+<span class="sig-name descname"><span class="pre">BottomRight</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.BottomRight:</span> <span class="pre">8&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.BottomRight" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.Center">
+<span class="sig-name descname"><span class="pre">Center</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.Center:</span> <span class="pre">4&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.Center" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.CenterLeft">
+<span class="sig-name descname"><span class="pre">CenterLeft</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.CenterLeft:</span> <span class="pre">3&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.CenterLeft" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.CenterRight">
+<span class="sig-name descname"><span class="pre">CenterRight</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.CenterRight:</span> <span class="pre">5&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.CenterRight" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.TopCenter">
+<span class="sig-name descname"><span class="pre">TopCenter</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.TopCenter:</span> <span class="pre">1&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.TopCenter" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.TopLeft">
+<span class="sig-name descname"><span class="pre">TopLeft</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.TopLeft:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.TopLeft" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.TopRight">
+<span class="sig-name descname"><span class="pre">TopRight</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.TopRight:</span> <span class="pre">2&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.TopRight" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">ScreenAnchor.name</span> <span class="pre">-&gt;</span> <span class="pre">str</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.value">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">value</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.value" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="kangengine.Color">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.</span></span><span class="sig-name descname"><span class="pre">Color</span></span><a class="headerlink" href="#kangengine.Color" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
@@ -916,6 +1052,32 @@
 <li><a class="reference internal" href="#kangengine.render.AlphaMode.Mask"><code class="docutils literal notranslate"><span class="pre">AlphaMode.Mask</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.AlphaMode.Opaque"><code class="docutils literal notranslate"><span class="pre">AlphaMode.Opaque</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.AlphaMode.value"><code class="docutils literal notranslate"><span class="pre">AlphaMode.value</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.render.TextAlignment"><code class="docutils literal notranslate"><span class="pre">TextAlignment</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.render.TextAlignment.Center"><code class="docutils literal notranslate"><span class="pre">TextAlignment.Center</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.TextAlignment.Left"><code class="docutils literal notranslate"><span class="pre">TextAlignment.Left</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.TextAlignment.Right"><code class="docutils literal notranslate"><span class="pre">TextAlignment.Right</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.TextAlignment.value"><code class="docutils literal notranslate"><span class="pre">TextAlignment.value</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.render.TextDepthMode"><code class="docutils literal notranslate"><span class="pre">TextDepthMode</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.render.TextDepthMode.DepthTested"><code class="docutils literal notranslate"><span class="pre">TextDepthMode.DepthTested</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.TextDepthMode.Overlay"><code class="docutils literal notranslate"><span class="pre">TextDepthMode.Overlay</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.TextDepthMode.value"><code class="docutils literal notranslate"><span class="pre">TextDepthMode.value</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.render.ScreenAnchor"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.BottomCenter"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.BottomCenter</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.BottomLeft"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.BottomLeft</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.BottomRight"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.BottomRight</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.Center"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.Center</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.CenterLeft"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.CenterLeft</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.CenterRight"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.CenterRight</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.TopCenter"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.TopCenter</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.TopLeft"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.TopLeft</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.TopRight"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.TopRight</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.value"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.value</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.Color"><code class="docutils literal notranslate"><span class="pre">Color</span></code></a><ul>

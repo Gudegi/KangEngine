@@ -208,6 +208,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/DEBUG_VISUALIZATION.html">Debug Visualization and Text Rendering</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -381,7 +382,7 @@ is intentionally separate from <code class="docutils literal notranslate"><span 
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.add_rigid">
-<span class="sig-name descname"><span class="pre">add_rigid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rot_xyzw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">density</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collision_group</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contact_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.02</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rest_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.add_rigid" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">add_rigid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rot_xyzw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">density</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collision_group</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contact_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.02</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rest_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kinematic</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.add_rigid" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimRigid</span></code></span></p>
@@ -392,6 +393,27 @@ is intentionally separate from <code class="docutils literal notranslate"><span 
 <li><p><strong>obj_id</strong> (<em>int</em>)</p></li>
 <li><p><strong>name</strong> (<em>str</em>)</p></li>
 <li><p><strong>density</strong> (<em>float</em>)</p></li>
+<li><p><strong>collision_group</strong> (<em>int</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>contact_offset</strong> (<em>float</em>)</p></li>
+<li><p><strong>rest_offset</strong> (<em>float</em>)</p></li>
+<li><p><strong>kinematic</strong> (<em>bool</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.add_static_rigid">
+<span class="sig-name descname"><span class="pre">add_static_rigid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rot_xyzw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collision_group</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contact_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.02</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rest_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.add_static_rigid" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimRigid</span></code></span></p>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>env_id</strong> (<em>int</em>)</p></li>
+<li><p><strong>obj_id</strong> (<em>int</em>)</p></li>
+<li><p><strong>name</strong> (<em>str</em>)</p></li>
 <li><p><strong>collision_group</strong> (<em>int</em><em> | </em><em>None</em>)</p></li>
 <li><p><strong>contact_offset</strong> (<em>float</em>)</p></li>
 <li><p><strong>rest_offset</strong> (<em>float</em>)</p></li>
@@ -924,6 +946,32 @@ high-level setter.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.set_gpu_dof_state_batch">
+<span class="sig-name descname"><span class="pre">set_gpu_dof_state_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.set_gpu_dof_state_batch" title="Link to this definition">¶</a></dt>
+<dd><p>Queue CUDA DOF position/velocity pairs as one batch.</p>
+<p><code class="docutils literal notranslate"><span class="pre">state</span></code> must be a contiguous <code class="docutils literal notranslate"><span class="pre">float32</span></code> CUDA tensor shaped
+<code class="docutils literal notranslate"><span class="pre">[N,</span> <span class="pre">num_dofs,</span> <span class="pre">2]</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>obj_id</strong> (<em>int</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.set_gpu_root_state_batch">
+<span class="sig-name descname"><span class="pre">set_gpu_root_state_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.set_gpu_root_state_batch" title="Link to this definition">¶</a></dt>
+<dd><p>Queue CUDA root states without creating per-environment reset objects.</p>
+<p><code class="docutils literal notranslate"><span class="pre">state</span></code> must be a contiguous <code class="docutils literal notranslate"><span class="pre">float32</span></code> CUDA tensor shaped <code class="docutils literal notranslate"><span class="pre">[N,</span> <span class="pre">13]</span></code>
+with position, xyzw rotation, linear velocity, and angular velocity.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>obj_id</strong> (<em>int</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.set_root_state">
 <span class="sig-name descname"><span class="pre">set_root_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rot_xyzw</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">linear_velocity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">angular_velocity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">immediate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.set_root_state" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
@@ -1287,6 +1335,7 @@ MimicKit-style body APIs, while PhysX still simulates one rigid actor.</p>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.add_force_sensor"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.add_force_sensor()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.add_mjcf_articulation"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.add_mjcf_articulation()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.add_rigid"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.add_rigid()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.add_static_rigid"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.add_static_rigid()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.apply_body_forces"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.apply_body_forces()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.apply_commands"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.apply_commands()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.apply_resets"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.apply_resets()</span></code></a></li>
@@ -1333,6 +1382,8 @@ MimicKit-style body APIs, while PhysX still simulates one rigid actor.</p>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.set_body_force_at_position"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.set_body_force_at_position()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.set_cmd"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.set_cmd()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.set_dof_state"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.set_dof_state()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.set_gpu_dof_state_batch"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.set_gpu_dof_state_batch()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.set_gpu_root_state_batch"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.set_gpu_root_state_batch()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.set_root_state"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.set_root_state()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.step"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.step()</span></code></a></li>
 </ul>
