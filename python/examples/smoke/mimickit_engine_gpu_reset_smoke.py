@@ -43,6 +43,29 @@ def main():
         engine.initialize_sim()
 
         reset_ids = torch.tensor([1], dtype=torch.long, device=device)
+        reset_root_pos = torch.tensor(
+            [[0.25, -0.5, 1.25]], dtype=torch.float32, device=device
+        )
+        reset_root_rot = torch.tensor(
+            [[0.0, 0.0, 0.0, 1.0]], dtype=torch.float32, device=device
+        )
+        engine.set_root_pos(reset_ids, 0, reset_root_pos)
+        engine.set_root_rot(reset_ids, 0, reset_root_rot)
+        engine.set_root_vel(reset_ids, 0, 0.0)
+        engine.set_root_ang_vel(reset_ids, 0, torch.zeros_like(reset_root_pos))
+        engine.set_dof_vel(reset_ids, 0, 0.0)
+        if not torch.allclose(
+            engine.get_root_pos(0)[reset_ids],
+            reset_root_pos,
+            atol=1e-6,
+            rtol=0.0,
+        ):
+            raise AssertionError("staged root position was not visible before step")
+        if not torch.equal(
+            engine.get_root_vel(0)[reset_ids], torch.zeros_like(reset_root_pos)
+        ):
+            raise AssertionError("scalar root velocity did not broadcast on CUDA")
+
         num_bodies = engine.get_obj_num_bodies(0)
         reset_body_pos = torch.tensor(
             [0.25, -0.5, 1.25], dtype=torch.float32, device=device

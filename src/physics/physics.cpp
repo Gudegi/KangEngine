@@ -538,8 +538,7 @@ PxRigidDynamic* PhysicsWorld::createDynamicRigid(
     const Character::CharacterData& data, const glm::vec3& pos,
     const glm::quat& rot, float density, PxU32 collisionGroup,
     float contactOffset, float restOffset,
-    const std::vector<Physics::CollisionMaterialOverride>&
-        materialOverrides) {
+    const std::vector<Physics::CollisionMaterialOverride>& materialOverrides) {
     PxTransform pose(PxVec3(pos.x, pos.y, pos.z),
                      PxQuat(rot.x, rot.y, rot.z, rot.w));
     PxRigidDynamic* actor = _physics->createRigidDynamic(pose);
@@ -624,6 +623,99 @@ PxRigidDynamic* PhysicsWorld::createDynamicRigid(
     }
 
     PxRigidBodyExt::updateMassAndInertia(*actor, density);
+    setRigidCollisionFilterData(actor, collisionGroup);
+    _scene->addActor(*actor);
+    return actor;
+}
+
+PxRigidStatic* PhysicsWorld::createStaticRigid(
+    const Character::CharacterData& data, const glm::vec3& pos,
+    const glm::quat& rot, PxU32 collisionGroup, float contactOffset,
+    float restOffset,
+    const std::vector<Physics::CollisionMaterialOverride>& materialOverrides) {
+    PxTransform pose(PxVec3(pos.x, pos.y, pos.z),
+                     PxQuat(rot.x, rot.y, rot.z, rot.w));
+    PxRigidStatic* actor = _physics->createRigidStatic(pose);
+    if (!actor)
+        return nullptr;
+
+    const std::vector<Character::CollisionGeomDesc>* geoms = nullptr;
+    int sourceBodyIndex = -1;
+    auto rootIt = data.collisionGeoms.find(0);
+    if (rootIt != data.collisionGeoms.end() && !rootIt->second.empty()) {
+        geoms = &rootIt->second;
+        sourceBodyIndex = 0;
+    } else {
+        for (const auto& [bodyIdx, bodyGeoms] : data.collisionGeoms) {
+            if (!bodyGeoms.empty()) {
+                geoms = &bodyGeoms;
+                sourceBodyIndex = bodyIdx;
+                break;
+            }
+        }
+    }
+
+    if (!geoms) {
+        Character::CollisionGeomDesc fallbackGeom;
+        fallbackGeom.name = "__fallback_sphere";
+        const auto material = resolveCollisionMaterial(
+            fallbackGeom, materialOverrides, data.skeletonTree, -1, 0);
+        PxShape* shape =
+            createExclusiveShape(*actor, PxSphereGeometry(0.1f), material);
+        applyRigidContactOffsets(shape, contactOffset, restOffset);
+    } else {
+        using Type = Character::CollisionGeomDesc::Type;
+        for (std::size_t i = 0; i < geoms->size(); ++i) {
+            const auto& g = (*geoms)[i];
+            const auto material = resolveCollisionMaterial(
+                g, materialOverrides, data.skeletonTree, sourceBodyIndex,
+                static_cast<int>(i));
+
+            PxShape* shape = nullptr;
+            PxTransform localPose(PxIdentity);
+            switch (g.type) {
+            case Type::Capsule:
+            case Type::Cylinder: {
+                const float radius = g.size[0];
+                if (g.hasFromTo) {
+                    const float halfH = (g.to - g.from).norm() * 0.5f;
+                    shape = createExclusiveShape(
+                        *actor, PxCapsuleGeometry(radius, halfH), material);
+                    localPose = rigidFromToPose(g.from, g.to);
+                } else {
+                    shape = createExclusiveShape(
+                        *actor, PxCapsuleGeometry(radius, g.size[1]), material);
+                    localPose =
+                        PxTransform(PxVec3(g.pos.x(), g.pos.y(), g.pos.z()),
+                                    rigidMjcfShapeRot(g.quat));
+                }
+                break;
+            }
+            case Type::Sphere:
+                shape = createExclusiveShape(
+                    *actor, PxSphereGeometry(g.size[0]), material);
+                localPose =
+                    PxTransform(PxVec3(g.pos.x(), g.pos.y(), g.pos.z()));
+                break;
+            case Type::Box:
+                shape = createExclusiveShape(
+                    *actor, PxBoxGeometry(g.size[0], g.size[1], g.size[2]),
+                    material);
+                localPose = PxTransform(
+                    PxVec3(g.pos.x(), g.pos.y(), g.pos.z()),
+                    PxQuat(g.quat.x(), g.quat.y(), g.quat.z(), g.quat.w()));
+                break;
+            }
+
+            if (shape) {
+                shape->setLocalPose(localPose);
+                applyRigidContactOffsets(
+                    shape, g.margin >= 0.f ? g.margin : contactOffset,
+                    restOffset);
+            }
+        }
+    }
+
     setRigidCollisionFilterData(actor, collisionGroup);
     _scene->addActor(*actor);
     return actor;

@@ -664,6 +664,9 @@ class SimWorldVisualizer:
             )
         elif all((eid, obj_id) in self.world.rigids for eid in env_ids):
             add_batch = self._add_gpu_rigid if use_gpu else self._add_cpu_external_rigid
+        elif all((eid, obj_id) in self.world.static_rigids for eid in env_ids):
+            # Static actors have no PhysX GPU state row.
+            add_batch = self._add_cpu_external_rigid
         else:
             raise KeyError(
                 f"simulation handle obj_id={obj_id} does not match registered objects"

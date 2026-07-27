@@ -40,8 +40,7 @@ KE::Physics::PhysicsMaterialDesc physicsMaterialFromPy(py::handle obj,
     if (py::isinstance<py::sequence>(obj) && py::len(obj) == 3) {
         auto seq = obj.cast<py::sequence>();
         return KE::Physics::PhysicsMaterialDesc{
-            seq[0].cast<float>(), seq[1].cast<float>(),
-            seq[2].cast<float>()};
+            seq[0].cast<float>(), seq[1].cast<float>(), seq[2].cast<float>()};
     }
 
     throw py::value_error(std::string(name) +
@@ -72,8 +71,7 @@ void bind_physics(py::module& m) {
                        &PhysicsGpuDynamicsConfig::maxRigidContactCount)
         .def_readwrite("max_rigid_patch_count",
                        &PhysicsGpuDynamicsConfig::maxRigidPatchCount)
-        .def_readwrite("heap_capacity",
-                       &PhysicsGpuDynamicsConfig::heapCapacity)
+        .def_readwrite("heap_capacity", &PhysicsGpuDynamicsConfig::heapCapacity)
         .def_readwrite("found_lost_pairs_capacity",
                        &PhysicsGpuDynamicsConfig::foundLostPairsCapacity)
         .def_readwrite("collision_stack_size",
@@ -101,8 +99,7 @@ void bind_physics(py::module& m) {
             [](PhysicsConfig& c, float value) { c.friction[1] = value; },
             "Default material dynamic friction.")
         .def_property(
-            "restitution",
-            [](const PhysicsConfig& c) { return c.friction[2]; },
+            "restitution", [](const PhysicsConfig& c) { return c.friction[2]; },
             [](PhysicsConfig& c, float value) { c.friction[2] = value; },
             "Default material restitution.")
         .def_readwrite("enable_gpu", &PhysicsConfig::enableGPU,
@@ -146,8 +143,8 @@ void bind_physics(py::module& m) {
                    std::to_string(material.staticFriction) +
                    ", dynamic_friction=" +
                    std::to_string(material.dynamicFriction) +
-                   ", restitution=" +
-                   std::to_string(material.restitution) + ")";
+                   ", restitution=" + std::to_string(material.restitution) +
+                   ")";
         });
 
     py::class_<CollisionMaterialOverride>(
@@ -238,41 +235,49 @@ void bind_physics(py::module& m) {
                       "World-space contact position.")
         .def_readonly("normal", &ContactPoint::normal,
                       "World-space contact normal.")
-        .def_readonly("impulse", &ContactPoint::impulse,
-                      "Contact impulse.")
+        .def_readonly("impulse", &ContactPoint::impulse, "Contact impulse.")
         .def_readonly("separation", &ContactPoint::separation,
                       "Contact separation distance.");
 
     py::class_<PxRigidDynamic, std::unique_ptr<PxRigidDynamic, py::nodelete>>(
-        m, "RigidDynamic",
-        "PhysX dynamic rigid body owned by a PhysicsWorld.")
-        .def("get_root_position",
-             [](const PxRigidDynamic& self) {
-                 PxTransform pose = self.getGlobalPose();
-                 return floatArrayFromVector({pose.p.x, pose.p.y, pose.p.z});
-             },
-             "Return root position as [x, y, z].")
-        .def("get_root_rotation",
-             [](const PxRigidDynamic& self) {
-                 PxTransform pose = self.getGlobalPose();
-                 return floatArrayFromVector(
-                     {pose.q.x, pose.q.y, pose.q.z, pose.q.w});
-             },
-             "Return root rotation as XYZW quaternion.")
-        .def("get_root_linear_velocity",
-             [](const PxRigidDynamic& self) {
-                 PxVec3 v = self.getLinearVelocity();
-                 return floatArrayFromVector({v.x, v.y, v.z});
-             },
-             "Return root linear velocity.")
-        .def("get_root_angular_velocity",
-             [](const PxRigidDynamic& self) {
-                 PxVec3 v = self.getAngularVelocity();
-                 return floatArrayFromVector({v.x, v.y, v.z});
-             },
-             "Return root angular velocity.")
-        .def("get_mass", &PxRigidDynamic::getMass,
-             "Return rigid body mass.")
+        m, "RigidDynamic", "PhysX dynamic rigid body owned by a PhysicsWorld.")
+        .def(
+            "get_root_position",
+            [](const PxRigidDynamic& self) {
+                PxTransform pose = self.getGlobalPose();
+                return floatArrayFromVector({pose.p.x, pose.p.y, pose.p.z});
+            },
+            "Return root position as [x, y, z].")
+        .def(
+            "get_root_rotation",
+            [](const PxRigidDynamic& self) {
+                PxTransform pose = self.getGlobalPose();
+                return floatArrayFromVector(
+                    {pose.q.x, pose.q.y, pose.q.z, pose.q.w});
+            },
+            "Return root rotation as XYZW quaternion.")
+        .def(
+            "get_root_linear_velocity",
+            [](const PxRigidDynamic& self) {
+                PxVec3 v = self.getLinearVelocity();
+                return floatArrayFromVector({v.x, v.y, v.z});
+            },
+            "Return root linear velocity.")
+        .def(
+            "get_root_angular_velocity",
+            [](const PxRigidDynamic& self) {
+                PxVec3 v = self.getAngularVelocity();
+                return floatArrayFromVector({v.x, v.y, v.z});
+            },
+            "Return root angular velocity.")
+        .def("get_mass", &PxRigidDynamic::getMass, "Return rigid body mass.")
+        .def(
+            "set_kinematic",
+            [](PxRigidDynamic& self, bool enabled) {
+                self.setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, enabled);
+            },
+            py::arg("enabled") = true,
+            "Enable or disable kinematic rigid-body behavior.")
         .def("release", &PxRigidDynamic::release,
              "Release the underlying PhysX actor.")
         .def(
@@ -331,51 +336,82 @@ void bind_physics(py::module& m) {
             py::arg("linear_velocity") = std::vector<float>{0.f, 0.f, 0.f},
             py::arg("angular_velocity") = std::vector<float>{0.f, 0.f, 0.f},
             "Set root pose and velocities from Python sequences.")
-        .def("add_force",
-             [](PxRigidDynamic& self, const FloatArray& force) {
-                 auto f = vec3ArrayView(force, "force");
-                 if (f.count != 1)
-                     throw py::value_error("add_force expects force[3]");
-                 self.addForce(PxVec3(f.data[0], f.data[1], f.data[2]));
-             },
-             py::arg("force"), "Apply a world-space force from a numpy array.")
-        .def("add_force",
-             [](PxRigidDynamic& self, const std::vector<float>& force) {
-                 if (force.size() != 3)
-                     throw std::runtime_error("add_force expects force[3]");
-                 self.addForce(PxVec3(force[0], force[1], force[2]));
-             },
-             py::arg("force"), "Apply a world-space force.")
-        .def("add_force_at_position",
-             [](PxRigidDynamic& self, const FloatArray& force,
-                const FloatArray& position) {
-                 auto f = vec3ArrayView(force, "force");
-                 auto p = vec3ArrayView(position, "position");
-                 if (f.count != 1 || p.count != 1) {
-                     throw py::value_error(
-                         "add_force_at_position expects force[3] and "
-                         "position[3]");
-                 }
-                 PxRigidBodyExt::addForceAtPos(
-                     self, PxVec3(f.data[0], f.data[1], f.data[2]),
-                     PxVec3(p.data[0], p.data[1], p.data[2]));
-             },
-             py::arg("force"), py::arg("position"),
-             "Apply a world-space force at a world-space position.")
-        .def("add_force_at_position",
-             [](PxRigidDynamic& self, const std::vector<float>& force,
-                const std::vector<float>& position) {
-                 if (force.size() != 3 || position.size() != 3) {
-                     throw std::runtime_error(
-                         "add_force_at_position expects force[3] and "
-                         "position[3]");
-                 }
-                 PxRigidBodyExt::addForceAtPos(
-                     self, PxVec3(force[0], force[1], force[2]),
-                     PxVec3(position[0], position[1], position[2]));
-             },
-             py::arg("force"), py::arg("position"),
-             "Apply a world-space force at a world-space position.");
+        .def(
+            "add_force",
+            [](PxRigidDynamic& self, const FloatArray& force) {
+                auto f = vec3ArrayView(force, "force");
+                if (f.count != 1)
+                    throw py::value_error("add_force expects force[3]");
+                self.addForce(PxVec3(f.data[0], f.data[1], f.data[2]));
+            },
+            py::arg("force"), "Apply a world-space force from a numpy array.")
+        .def(
+            "add_force",
+            [](PxRigidDynamic& self, const std::vector<float>& force) {
+                if (force.size() != 3)
+                    throw std::runtime_error("add_force expects force[3]");
+                self.addForce(PxVec3(force[0], force[1], force[2]));
+            },
+            py::arg("force"), "Apply a world-space force.")
+        .def(
+            "add_force_at_position",
+            [](PxRigidDynamic& self, const FloatArray& force,
+               const FloatArray& position) {
+                auto f = vec3ArrayView(force, "force");
+                auto p = vec3ArrayView(position, "position");
+                if (f.count != 1 || p.count != 1) {
+                    throw py::value_error(
+                        "add_force_at_position expects force[3] and "
+                        "position[3]");
+                }
+                PxRigidBodyExt::addForceAtPos(
+                    self, PxVec3(f.data[0], f.data[1], f.data[2]),
+                    PxVec3(p.data[0], p.data[1], p.data[2]));
+            },
+            py::arg("force"), py::arg("position"),
+            "Apply a world-space force at a world-space position.")
+        .def(
+            "add_force_at_position",
+            [](PxRigidDynamic& self, const std::vector<float>& force,
+               const std::vector<float>& position) {
+                if (force.size() != 3 || position.size() != 3) {
+                    throw std::runtime_error(
+                        "add_force_at_position expects force[3] and "
+                        "position[3]");
+                }
+                PxRigidBodyExt::addForceAtPos(
+                    self, PxVec3(force[0], force[1], force[2]),
+                    PxVec3(position[0], position[1], position[2]));
+            },
+            py::arg("force"), py::arg("position"),
+            "Apply a world-space force at a world-space position.");
+
+    py::class_<PxRigidStatic, std::unique_ptr<PxRigidStatic, py::nodelete>>(
+        m, "RigidStatic", "PhysX static rigid body owned by a PhysicsWorld.")
+        .def("get_root_position",
+             [](const PxRigidStatic& self) {
+                 const PxTransform pose = self.getGlobalPose();
+                 return floatArrayFromVector({pose.p.x, pose.p.y, pose.p.z});
+             })
+        .def("get_root_rotation",
+             [](const PxRigidStatic& self) {
+                 const PxTransform pose = self.getGlobalPose();
+                 return floatArrayFromVector(
+                     {pose.q.x, pose.q.y, pose.q.z, pose.q.w});
+             })
+        .def(
+            "set_root_pose",
+            [](PxRigidStatic& self, const std::vector<float>& pos,
+               const std::vector<float>& rotXyzw) {
+                if (pos.size() != 3 || rotXyzw.size() != 4)
+                    throw py::value_error(
+                        "set_root_pose expects pos[3], rot_xyzw[4]");
+                self.setGlobalPose(PxTransform(
+                    PxVec3(pos[0], pos[1], pos[2]),
+                    PxQuat(rotXyzw[0], rotXyzw[1], rotXyzw[2], rotXyzw[3])));
+            },
+            py::arg("pos"), py::arg("rot_xyzw"))
+        .def("release", &PxRigidStatic::release);
 
     // PhysicsWorld (non-copyable, non-movable — Python must keep it alive)
     py::class_<PhysicsWorld>(
@@ -405,8 +441,8 @@ void bind_physics(py::module& m) {
         .def(
             "add_static_box",
             [](PhysicsWorld& self, const std::vector<float>& halfExtents,
-               const std::vector<float>& pos,
-               const std::vector<float>& rotXyzw, bool registerAsGround) {
+               const std::vector<float>& pos, const std::vector<float>& rotXyzw,
+               bool registerAsGround) {
                 if (halfExtents.size() != 3 || pos.size() != 3 ||
                     rotXyzw.size() != 4) {
                     throw py::value_error(
@@ -416,8 +452,7 @@ void bind_physics(py::module& m) {
                 self.createStaticBox(
                     glm::vec3(halfExtents[0], halfExtents[1], halfExtents[2]),
                     glm::vec3(pos[0], pos[1], pos[2]),
-                    glm::quat(rotXyzw[3], rotXyzw[0], rotXyzw[1],
-                              rotXyzw[2]),
+                    glm::quat(rotXyzw[3], rotXyzw[0], rotXyzw[1], rotXyzw[2]),
                     registerAsGround);
             },
             py::arg("half_extents"), py::arg("pos"),
@@ -441,9 +476,8 @@ void bind_physics(py::module& m) {
                            upAxis, center, registerAsGround) != nullptr;
             },
             py::arg("heights"), py::arg("rows"), py::arg("cols"),
-            py::arg("horizontal_scale") = 1.0f,
-            py::arg("up_axis") = UpAxis::Y, py::arg("center") = true,
-            py::arg("register_as_ground") = true,
+            py::arg("horizontal_scale") = 1.0f, py::arg("up_axis") = UpAxis::Y,
+            py::arg("center") = true, py::arg("register_as_ground") = true,
             py::arg("material") = PhysicsMaterialDesc{},
             "Create a static PhysX heightfield collider from a row-major "
             "float height grid. The shape is registered as ground by default.")
@@ -469,19 +503,17 @@ void bind_physics(py::module& m) {
                            registerAsGround) != nullptr;
             },
             py::arg("path"), py::arg("up_axis") = UpAxis::Y,
-            py::arg("horizontal_scale") = 1.0f,
-            py::arg("height_scale") = 64.0f,
-            py::arg("height_offset") = -16.0f,
-            py::arg("sample_stride") = 1, py::arg("center") = true,
-            py::arg("register_as_ground") = true,
+            py::arg("horizontal_scale") = 1.0f, py::arg("height_scale") = 64.0f,
+            py::arg("height_offset") = -16.0f, py::arg("sample_stride") = 1,
+            py::arg("center") = true, py::arg("register_as_ground") = true,
             py::arg("material") = PhysicsMaterialDesc{},
             "Load a heightmap image and create a static PhysX heightfield "
             "collider using the same sampling options as the render terrain.")
         .def(
             "create_dynamic_box",
             [](PhysicsWorld& self, const std::vector<float>& halfExtents,
-               const std::vector<float>& pos,
-               const std::vector<float>& rotXyzw, float density) {
+               const std::vector<float>& pos, const std::vector<float>& rotXyzw,
+               float density) {
                 if (halfExtents.size() != 3 || pos.size() != 3 ||
                     rotXyzw.size() != 4) {
                     throw py::value_error(
@@ -491,19 +523,16 @@ void bind_physics(py::module& m) {
                 return self.createDynamicBox(
                     glm::vec3(halfExtents[0], halfExtents[1], halfExtents[2]),
                     glm::vec3(pos[0], pos[1], pos[2]),
-                    glm::quat(rotXyzw[3], rotXyzw[0], rotXyzw[1],
-                              rotXyzw[2]),
+                    glm::quat(rotXyzw[3], rotXyzw[0], rotXyzw[1], rotXyzw[2]),
                     density);
             },
             py::arg("half_extents"), py::arg("pos"),
             py::arg("rot_xyzw") = std::vector<float>{0.f, 0.f, 0.f, 1.f},
-            py::arg("density") = 1.0f,
-            py::return_value_policy::reference,
+            py::arg("density") = 1.0f, py::return_value_policy::reference,
             "Create a dynamic box for low-level physics tests and tools.")
         .def(
             "create_dynamic_sphere",
-            [](PhysicsWorld& self, float radius,
-               const std::vector<float>& pos,
+            [](PhysicsWorld& self, float radius, const std::vector<float>& pos,
                const std::vector<float>& rotXyzw, float density) {
                 if (pos.size() != 3 || rotXyzw.size() != 4) {
                     throw py::value_error(
@@ -512,14 +541,12 @@ void bind_physics(py::module& m) {
                 }
                 return self.createDynamicSphere(
                     radius, glm::vec3(pos[0], pos[1], pos[2]),
-                    glm::quat(rotXyzw[3], rotXyzw[0], rotXyzw[1],
-                              rotXyzw[2]),
+                    glm::quat(rotXyzw[3], rotXyzw[0], rotXyzw[1], rotXyzw[2]),
                     density);
             },
             py::arg("radius"), py::arg("pos"),
             py::arg("rot_xyzw") = std::vector<float>{0.f, 0.f, 0.f, 1.f},
-            py::arg("density") = 1.0f,
-            py::return_value_policy::reference,
+            py::arg("density") = 1.0f, py::return_value_policy::reference,
             "Create a dynamic sphere for low-level physics tests and tools.")
         .def(
             "get_contact_forces",
@@ -555,19 +582,16 @@ void bind_physics(py::module& m) {
             },
             py::arg("rigid"),
             "Return net ground contact force on a rigid body.")
-        .def(
-            "set_rigid_collision_material",
-            &PhysicsWorld::setRigidCollisionMaterial, py::arg("rigid"),
-            py::arg("material"),
-            "Replace all collision shape materials on an existing rigid body. "
-            "Returns the number of updated shapes.")
-        .def(
-            "set_rigid_collision_material_overrides",
-            &PhysicsWorld::setRigidCollisionMaterialOverrides,
-            py::arg("rigid"), py::arg("data"),
-            py::arg("material_overrides"),
-            "Apply named/indexed material overrides to an existing rigid body "
-            "created from character data. Returns updated shape count.")
+        .def("set_rigid_collision_material",
+             &PhysicsWorld::setRigidCollisionMaterial, py::arg("rigid"),
+             py::arg("material"),
+             "Replace all collision shape materials on an existing rigid body. "
+             "Returns the number of updated shapes.")
+        .def("set_rigid_collision_material_overrides",
+             &PhysicsWorld::setRigidCollisionMaterialOverrides,
+             py::arg("rigid"), py::arg("data"), py::arg("material_overrides"),
+             "Apply named/indexed material overrides to an existing rigid body "
+             "created from character data. Returns updated shape count.")
         .def(
             "create_dynamic_rigid",
             [](PhysicsWorld& self, const CharacterData& data,
@@ -594,6 +618,32 @@ void bind_physics(py::module& m) {
                 std::vector<CollisionMaterialOverride>{},
             py::return_value_policy::reference,
             "Create a dynamic rigid body from imported character data.")
+        .def(
+            "create_static_rigid",
+            [](PhysicsWorld& self, const CharacterData& data,
+               const std::vector<float>& pos,
+               const std::vector<float>& rot_xyzw, PxU32 collisionGroup,
+               float contactOffset, float restOffset,
+               const std::vector<CollisionMaterialOverride>&
+                   materialOverrides) {
+                if (pos.size() != 3 || rot_xyzw.size() != 4)
+                    throw py::value_error(
+                        "create_static_rigid expects pos[3], rot_xyzw[4]");
+                return self.createStaticRigid(
+                    data, glm::vec3(pos[0], pos[1], pos[2]),
+                    glm::quat(rot_xyzw[3], rot_xyzw[0], rot_xyzw[1],
+                              rot_xyzw[2]),
+                    collisionGroup, contactOffset, restOffset,
+                    materialOverrides);
+            },
+            py::arg("data"), py::arg("pos"),
+            py::arg("rot_xyzw") = std::vector<float>{0.f, 0.f, 0.f, 1.f},
+            py::arg("collision_group") = 0, py::arg("contact_offset") = 0.02f,
+            py::arg("rest_offset") = 0.0f,
+            py::arg("material_overrides") =
+                std::vector<CollisionMaterialOverride>{},
+            py::return_value_policy::reference,
+            "Create a static rigid body from imported character data.")
         .def(
             "create_dynamic_rigid",
             [](PhysicsWorld& self, const CharacterData& data,
@@ -625,9 +675,8 @@ void bind_physics(py::module& m) {
              "Set simulation timestep in seconds.");
 
     // ArticulationConfig
-    py::class_<ArticulationConfig>(
-        physics, "ArticulationConfig",
-        "PhysX articulation construction settings.")
+    py::class_<ArticulationConfig>(physics, "ArticulationConfig",
+                                   "PhysX articulation construction settings.")
         .def(py::init<>(), "Create default articulation configuration.")
         .def_static("fixed_base", &ArticulationConfig::fixedBase,
                     "Create configuration for a fixed-base articulation.")
@@ -687,9 +736,9 @@ void bind_physics(py::module& m) {
                        "Enable continuous collision detection.");
 
     // Articulation (non-copyable)
-    py::class_<Articulation>(
-        physics, "Articulation",
-        "PhysX articulated character or robot built from imported character data.")
+    py::class_<Articulation>(physics, "Articulation",
+                             "PhysX articulated character or robot built from "
+                             "imported character data.")
         .def(py::init<>(), "Create an empty articulation handle.")
         .def_static(
             "build",
@@ -700,8 +749,7 @@ void bind_physics(py::module& m) {
                                            data.inertials, cfg);
             },
             py::arg("physics"), py::arg("data"),
-            py::arg("cfg") = ArticulationConfig{},
-            py::keep_alive<0, 1>(),
+            py::arg("cfg") = ArticulationConfig{}, py::keep_alive<0, 1>(),
             "Build an articulation in a PhysicsWorld from character data.")
         .def("num_links", &Articulation::numLinks,
              "Return the number of links.")
@@ -709,84 +757,96 @@ void bind_physics(py::module& m) {
              "Return the number of controllable DOFs.")
         .def("release", &Articulation::release,
              "Release the underlying PhysX articulation.")
-        .def("get_root_position",
-             [](const Articulation& self) {
-                 return floatArrayFromVector(self.getRootPositionFlat());
-             },
-             "Return root position as [x, y, z].")
-        .def("get_root_rotation",
-             [](const Articulation& self) {
-                 return floatArrayFromVector(self.getRootRotationFlat());
-             },
-             "Return root rotation as XYZW quaternion.")
-        .def("get_root_linear_velocity",
-             [](const Articulation& self) {
-                 return floatArrayFromVector(self.getRootLinearVelocityFlat());
-             },
-             "Return root linear velocity.")
-        .def("get_root_angular_velocity",
-             [](const Articulation& self) {
-                 return floatArrayFromVector(self.getRootAngularVelocityFlat());
-             },
-             "Return root angular velocity.")
-        .def("get_link_positions",
-             [](const Articulation& self) {
-                 return floatArrayFromVector(self.getLinkPositionsFlat());
-             },
-             "Return flat per-link positions.")
-        .def("get_link_rotations",
-             [](const Articulation& self) {
-                 return floatArrayFromVector(self.getLinkRotationsFlat());
-             },
-             "Return flat per-link XYZW rotations.")
-        .def("get_link_linear_velocities",
-             [](const Articulation& self) {
-                 return floatArrayFromVector(
-                     self.getLinkLinearVelocitiesFlat());
-             },
-             "Return flat per-link linear velocities.")
-        .def("get_link_angular_velocities",
-             [](const Articulation& self) {
-                 return floatArrayFromVector(
-                     self.getLinkAngularVelocitiesFlat());
-             },
-             "Return flat per-link angular velocities.")
+        .def(
+            "get_root_position",
+            [](const Articulation& self) {
+                return floatArrayFromVector(self.getRootPositionFlat());
+            },
+            "Return root position as [x, y, z].")
+        .def(
+            "get_root_rotation",
+            [](const Articulation& self) {
+                return floatArrayFromVector(self.getRootRotationFlat());
+            },
+            "Return root rotation as XYZW quaternion.")
+        .def(
+            "get_root_linear_velocity",
+            [](const Articulation& self) {
+                return floatArrayFromVector(self.getRootLinearVelocityFlat());
+            },
+            "Return root linear velocity.")
+        .def(
+            "get_root_angular_velocity",
+            [](const Articulation& self) {
+                return floatArrayFromVector(self.getRootAngularVelocityFlat());
+            },
+            "Return root angular velocity.")
+        .def(
+            "get_link_positions",
+            [](const Articulation& self) {
+                return floatArrayFromVector(self.getLinkPositionsFlat());
+            },
+            "Return flat per-link positions.")
+        .def(
+            "get_link_rotations",
+            [](const Articulation& self) {
+                return floatArrayFromVector(self.getLinkRotationsFlat());
+            },
+            "Return flat per-link XYZW rotations.")
+        .def(
+            "get_link_linear_velocities",
+            [](const Articulation& self) {
+                return floatArrayFromVector(self.getLinkLinearVelocitiesFlat());
+            },
+            "Return flat per-link linear velocities.")
+        .def(
+            "get_link_angular_velocities",
+            [](const Articulation& self) {
+                return floatArrayFromVector(
+                    self.getLinkAngularVelocitiesFlat());
+            },
+            "Return flat per-link angular velocities.")
         .def("get_link_indices", &Articulation::getLinkIndices,
              "Return PhysX low-level link indices in visual link order.")
-        .def("get_dof_positions",
-             [](const Articulation& self) {
-                 return floatArrayFromVector(self.getDofPositions());
-             },
-             "Return DOF positions.")
-        .def("get_dof_velocities",
-             [](const Articulation& self) {
-                 return floatArrayFromVector(self.getDofVelocities());
-             },
-             "Return DOF velocities.")
-        .def("get_dof_forces",
-             [](const Articulation& self) {
-                 return floatArrayFromVector(self.getDofForces());
-             },
-             "Return measured/applied DOF forces.")
-        .def("get_dof_names", &Articulation::getDofNames,
-             "Return DOF names.")
+        .def(
+            "get_dof_positions",
+            [](const Articulation& self) {
+                return floatArrayFromVector(self.getDofPositions());
+            },
+            "Return DOF positions.")
+        .def(
+            "get_dof_velocities",
+            [](const Articulation& self) {
+                return floatArrayFromVector(self.getDofVelocities());
+            },
+            "Return DOF velocities.")
+        .def(
+            "get_dof_forces",
+            [](const Articulation& self) {
+                return floatArrayFromVector(self.getDofForces());
+            },
+            "Return measured/applied DOF forces.")
+        .def("get_dof_names", &Articulation::getDofNames, "Return DOF names.")
         .def("get_dof_gpu_indices", &Articulation::getDofGpuIndices,
              "Return logical DOF -> PhysX low-level GPU DOF indices.")
-        .def("get_dof_limits",
-             [](const Articulation& self) {
-                 return floatArrayFromVec2Vector(self.getDofLimits());
-             },
-             "Return DOF lower/upper limits.")
-        .def("get_dof_effort_limits",
-             [](const Articulation& self) {
-                 return floatArrayFromVector(self.getDofEffortLimits());
-             },
-             "Return imported DOF effort limits.")
-        .def("get_link_masses",
-             [](const Articulation& self) {
-                 return floatArrayFromVector(self.getLinkMasses());
-             },
-             "Return per-link masses.")
+        .def(
+            "get_dof_limits",
+            [](const Articulation& self) {
+                return floatArrayFromVec2Vector(self.getDofLimits());
+            },
+            "Return DOF lower/upper limits.")
+        .def(
+            "get_dof_effort_limits",
+            [](const Articulation& self) {
+                return floatArrayFromVector(self.getDofEffortLimits());
+            },
+            "Return imported DOF effort limits.")
+        .def(
+            "get_link_masses",
+            [](const Articulation& self) {
+                return floatArrayFromVector(self.getLinkMasses());
+            },
+            "Return per-link masses.")
         .def("calc_mass", &Articulation::calcMass,
              "Return total articulation mass.")
         .def(
@@ -925,11 +985,12 @@ void bind_physics(py::module& m) {
              "Return per-DOF proportional gains.")
         .def("get_kds", &Articulation::getKDs,
              "Return per-DOF derivative gains.")
-        .def("get_effort_limits",
-             [](const Articulation& self) {
-                 return floatArrayFromVector(self.getEffortLimits());
-             },
-             "Return current per-DOF effort limits.")
+        .def(
+            "get_effort_limits",
+            [](const Articulation& self) {
+                return floatArrayFromVector(self.getEffortLimits());
+            },
+            "Return current per-DOF effort limits.")
         .def(
             "reset_root",
             [](Articulation& self, const glm::vec3& pos, const glm::quat& rot) {
@@ -937,8 +998,7 @@ void bind_physics(py::module& m) {
                                            PxQuat(rot.x, rot.y, rot.z, rot.w)));
             },
             py::arg("pos") = glm::vec3(0.f),
-            py::arg("rot") = glm::quat(1.f, 0.f, 0.f, 0.f),
-            "Reset root pose.")
+            py::arg("rot") = glm::quat(1.f, 0.f, 0.f, 0.f), "Reset root pose.")
         .def(
             "set_root_state",
             [](Articulation& self, const FloatArray& pos,
@@ -1003,12 +1063,15 @@ void bind_physics(py::module& m) {
         .def("set_dof_state", &Articulation::setDofState, py::arg("positions"),
              py::arg("velocities"), "Set DOF positions and velocities.")
         // joints: dict[int, list[JointDesc]]
-        .def("joints", [](const Articulation& self) {
-            py::dict result;
-            for (const auto& [idx, jvec] : self.joints())
-                result[py::int_(idx)] = jvec;
-            return result;
-        }, "Return imported joint metadata keyed by body index.");
+        .def(
+            "joints",
+            [](const Articulation& self) {
+                py::dict result;
+                for (const auto& [idx, jvec] : self.joints())
+                    result[py::int_(idx)] = jvec;
+                return result;
+            },
+            "Return imported joint metadata keyed by body index.");
 
     // PhysicsBridge
     py::class_<PhysicsBridge>(
@@ -1016,8 +1079,8 @@ void bind_physics(py::module& m) {
         "Syncs PhysX articulation state into KangEngine scene/render visuals.")
         .def(py::init<>(), "Create a scene-graph physics bridge.")
         .def("add", &PhysicsBridge::add, py::arg("artic"),
-             py::arg("skel_bridge"),
-             py::keep_alive<1, 2>(), py::keep_alive<1, 3>(),
+             py::arg("skel_bridge"), py::keep_alive<1, 2>(),
+             py::keep_alive<1, 3>(),
              "Connect an articulation to an ArticulationVisualBridge.")
         .def("sync", &PhysicsBridge::sync,
              "Copy latest physics transforms into connected visuals.")
@@ -1034,8 +1097,8 @@ void bind_physics(py::module& m) {
             py::arg("artic"), py::arg("scene"),
             py::arg("base_path") = "/collision",
             py::arg("visible_by_default") = false,
-            py::return_value_policy::reference,
-            py::keep_alive<1, 2>(), py::keep_alive<1, 3>(),
+            py::return_value_policy::reference, py::keep_alive<1, 2>(),
+            py::keep_alive<1, 3>(),
             "Create scene prims that visualize articulation collision shapes.");
 #endif
 }

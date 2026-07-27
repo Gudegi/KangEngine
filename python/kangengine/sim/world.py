@@ -392,12 +392,24 @@ class SimRigid:
 
     @property
     def num_bodies(self) -> int:
+        if (
+            self.world is not None
+            and self.key in getattr(self.world, "static_rigids", {})
+            and self.source_data is not None
+        ):
+            return len(rigid_shape_specs(self.source_data))
         if self.world is not None:
             return int(self.world.state.record(self.env_id, self.obj_id).cache.num_bodies)
         return 1
 
     @property
     def body_names(self) -> list[str]:
+        if (
+            self.world is not None
+            and self.key in getattr(self.world, "static_rigids", {})
+            and self.source_data is not None
+        ):
+            return [spec.name for spec in rigid_shape_specs(self.source_data)]
         if self.world is None:
             return [f"body_{i}" for i in range(self.num_bodies)]
         cache = self.world.state.record(self.env_id, self.obj_id).cache
@@ -735,7 +747,8 @@ class SimRigidBatch:
 
     @property
     def records(self) -> tuple[SimRigid, ...]:
-        return tuple(self.world.rigids[(eid, self.obj_id)] for eid in self.env_ids)
+        records = self.world.rigids | self.world.static_rigids
+        return tuple(records[(eid, self.obj_id)] for eid in self.env_ids)
 
     @property
     def first(self) -> SimRigid:
@@ -907,6 +920,24 @@ class ResetBuffer:
         return self.root is not None or self.dof is not None
 
 
+@dataclass(slots=True)
+class GpuRootStateResetBatch:
+    """One object's CUDA root states for a set of environments."""
+
+    env_ids: tuple[int, ...]
+    obj_id: int
+    state: object
+
+
+@dataclass(slots=True)
+class GpuDofStateResetBatch:
+    """One articulation's CUDA DOF states for a set of environments."""
+
+    env_ids: tuple[int, ...]
+    obj_id: int
+    state: object
+
+
 class KangSimWorld:
     """Owns a PhysX world, registered objects, commands, and world state.
 
@@ -964,12 +995,15 @@ class KangSimWorld:
         )
         self.articulations: dict[tuple[int, int], SimArticulation] = {}
         self.rigids: dict[tuple[int, int], SimRigid] = {}
+        self.static_rigids: dict[tuple[int, int], SimRigid] = {}
         self.commands: dict[tuple[int, int], CommandBuffer] = {}
         self.batch_commands: dict[int, BatchCommandBuffer] = {}
         self.resets: dict[tuple[int, int], ResetBuffer] = {}
         self.body_forces: dict[tuple[int, int], np.ndarray] = {}
         self.body_force_positions: dict[tuple[int, int], np.ndarray] = {}
         self._pending_reset_keys: set[tuple[int, int]] = set()
+        self._gpu_root_reset_batches: list[GpuRootStateResetBatch] = []
+        self._gpu_dof_reset_batches: list[GpuDofStateResetBatch] = []
         self._active_body_force_keys: set[tuple[int, int]] = set()
         self._mjcf_cache: dict[tuple[str, float, str], object] = {}
         self._mjcf_load_count = 0
@@ -983,7 +1017,8 @@ class KangSimWorld:
         self._articulation_gpu_index_tensors: dict[
             tuple[tuple[int, int], ...], object
         ] = {}
-        self._articulation_gpu_row_tensors: dict[tuple[tuple[int, int], ...], object] = {}
+        self._articulation_gpu_row_tensors: dict[int, object] = {}
+        self._rigid_gpu_row_tensors: dict[int, object] = {}
         self.sensors: dict[str, object] = {}
         self._contact_sensor_batch = None
         self._released = False
@@ -1071,7 +1106,7 @@ class KangSimWorld:
             config.collision_group = int(env_id) + 1
         self._require_gpu_runtime_uninitialized("add_articulation")
         key = (int(env_id), int(obj_id))
-        if key in self.articulations or key in self.rigids:
+        if key in self.articulations or key in self.rigids or key in self.static_rigids:
             raise ValueError(f"object already registered at env={key[0]}, obj={key[1]}")
 
         try:
@@ -1106,10 +1141,11 @@ class KangSimWorld:
         collision_group: int | None = None,
         contact_offset: float = 0.02,
         rest_offset: float = 0.0,
+        kinematic: bool = False,
     ) -> SimRigid:
         self._require_gpu_runtime_uninitialized("add_rigid")
         key = (int(env_id), int(obj_id))
-        if key in self.articulations or key in self.rigids:
+        if key in self.articulations or key in self.rigids or key in self.static_rigids:
             raise ValueError(f"object already registered at env={key[0]}, obj={key[1]}")
         if pos is None:
             pos = np.zeros(3, dtype=np.float32)
@@ -1126,6 +1162,8 @@ class KangSimWorld:
             float(contact_offset),
             float(rest_offset),
         )
+        if kinematic:
+            rigid.set_kinematic(True)
         shape_specs = rigid_shape_specs(data)
         body_names = [spec.name for spec in shape_specs]
         local_pos = np.stack([spec.local_pos for spec in shape_specs], axis=0)
@@ -1148,6 +1186,40 @@ class KangSimWorld:
         self.body_force_positions[key] = np.full(
             (len(body_names), 3), np.nan, dtype=np.float32
         )
+        return record
+
+    def add_static_rigid(
+        self,
+        data,
+        env_id: int = 0,
+        obj_id: int = 0,
+        name: str = "",
+        pos=None,
+        rot_xyzw=None,
+        collision_group: int | None = None,
+        contact_offset: float = 0.02,
+        rest_offset: float = 0.0,
+    ) -> SimRigid:
+        self._require_gpu_runtime_uninitialized("add_static_rigid")
+        key = (int(env_id), int(obj_id))
+        if key in self.articulations or key in self.rigids or key in self.static_rigids:
+            raise ValueError(f"object already registered at env={key[0]}, obj={key[1]}")
+        if pos is None:
+            pos = np.zeros(3, dtype=np.float32)
+        if rot_xyzw is None:
+            rot_xyzw = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32)
+        if collision_group is None:
+            collision_group = key[0] + 1
+        rigid = self.physics.create_static_rigid(
+            data,
+            _as_cpu_numpy(pos).reshape(3).tolist(),
+            _as_cpu_numpy(rot_xyzw).reshape(4).tolist(),
+            int(collision_group),
+            float(contact_offset),
+            float(rest_offset),
+        )
+        record = SimRigid(key[0], key[1], str(name), rigid, self, data)
+        self.static_rigids[key] = record
         return record
 
     def add_mjcf_articulation(
@@ -1175,7 +1247,7 @@ class KangSimWorld:
     def get_rigid(self, env_id: int = 0, obj_id: int = 0) -> SimRigid:
         key = (int(env_id), int(obj_id))
         try:
-            return self.rigids[key]
+            return (self.rigids | self.static_rigids)[key]
         except KeyError as exc:
             raise KeyError(f"no rigid registered at env={key[0]}, obj={key[1]}") from exc
 
@@ -1187,6 +1259,8 @@ class KangSimWorld:
             return self.articulations[key]
         if key in self.rigids:
             return self.rigids[key]
+        if key in self.static_rigids:
+            return self.static_rigids[key]
         raise KeyError(f"no object registered at env={key[0]}, obj={key[1]}")
 
     def get_articulation_batch(
@@ -1208,9 +1282,10 @@ class KangSimWorld:
         name: str | None = None,
     ) -> SimRigidBatch:
         obj_id = int(obj_id)
-        selected_env_ids = self._object_env_ids(self.rigids, obj_id, env_ids)
+        records = self.rigids | self.static_rigids
+        selected_env_ids = self._object_env_ids(records, obj_id, env_ids)
         if name is None:
-            name = self.rigids[(selected_env_ids[0], obj_id)].name
+            name = records[(selected_env_ids[0], obj_id)].name
         return SimRigidBatch(self, obj_id, selected_env_ids, str(name))
 
     def get_object_batch(
@@ -1222,7 +1297,9 @@ class KangSimWorld:
         obj_id = int(obj_id)
         if any(key[1] == obj_id for key in self.articulations):
             return self.get_articulation_batch(env_ids, obj_id, name)
-        if any(key[1] == obj_id for key in self.rigids):
+        if any(key[1] == obj_id for key in self.rigids) or any(
+            key[1] == obj_id for key in self.static_rigids
+        ):
             return self.get_rigid_batch(env_ids, obj_id, name)
         raise KeyError(f"no object registered with obj_id={obj_id}")
 
@@ -1862,10 +1939,18 @@ class KangSimWorld:
             )
 
     def apply_resets(self):
-        if not self._pending_reset_keys:
+        if (
+            not self._pending_reset_keys
+            and not self._gpu_root_reset_batches
+            and not self._gpu_dof_reset_batches
+        ):
             return False
         pending_keys = list(self._pending_reset_keys)
         self._pending_reset_keys.clear()
+        gpu_root_batches = self._gpu_root_reset_batches
+        gpu_dof_batches = self._gpu_dof_reset_batches
+        self._gpu_root_reset_batches = []
+        self._gpu_dof_reset_batches = []
         gpu_rigid_root_resets: list[tuple[tuple[int, int], RootStateReset]] = []
         gpu_articulation_root_resets: list[
             tuple[tuple[int, int], RootStateReset]
@@ -1919,6 +2004,12 @@ class KangSimWorld:
         if gpu_articulation_dof_resets:
             self._apply_gpu_articulation_dof_resets(gpu_articulation_dof_resets)
             self.state.mark_stale()
+        if gpu_root_batches:
+            self._apply_gpu_root_reset_batches(gpu_root_batches)
+            self.state.mark_stale()
+        if gpu_dof_batches:
+            self._apply_gpu_dof_reset_batches(gpu_dof_batches)
+            self.state.mark_stale()
         gpu_articulation_reset_keys = tuple(
             dict.fromkeys(
                 [key for key, _ in gpu_articulation_root_resets]
@@ -1933,6 +2024,8 @@ class KangSimWorld:
             gpu_rigid_root_resets
             or gpu_articulation_root_resets
             or gpu_articulation_dof_resets
+            or gpu_root_batches
+            or gpu_dof_batches
         ):
             self._clear_gpu_contact_data_after_reset()
             return True
@@ -2060,6 +2153,102 @@ class KangSimWorld:
         gpu_system.apply_articulation_joint_positions(index_view)
         gpu_system.apply_articulation_joint_velocities(index_view)
         gpu_system.update_articulation_kinematics()
+
+    def _apply_gpu_root_reset_batches(
+        self, batches: list[GpuRootStateResetBatch]
+    ):
+        gpu_system = self.gpu_system
+        link_state = None
+        rigid_state = None
+        articulation_changed = False
+
+        for batch in batches:
+            self._clear_batch_body_forces(batch.env_ids, batch.obj_id)
+            first_key = (batch.env_ids[0], batch.obj_id)
+            if first_key in self.articulations:
+                if link_state is None:
+                    link_state = gpu_system.articulation_link_data().torch()
+                rows = self._articulation_gpu_rows_for_obj(
+                    batch.obj_id, batch.env_ids, device=link_state.device
+                )
+                root_link = int(
+                    self.articulations[first_key].articulation.get_link_indices()[0]
+                )
+                link_state[rows, root_link, :] = batch.state
+                index_view = self._gpu_row_index_view(
+                    rows, "kangsimworld_articulation_root_reset_batch_indices"
+                )
+                gpu_system.apply_articulation_root_pose(index_view)
+                gpu_system.apply_articulation_root_vel(index_view)
+                gpu_system.clear_articulation_commands(index_view)
+                articulation_changed = True
+            else:
+                if rigid_state is None:
+                    rigid_state = gpu_system.rigid_data().torch()
+                rows = self._rigid_gpu_rows_for_obj(
+                    batch.obj_id, batch.env_ids, device=rigid_state.device
+                )
+                rigid_state[rows, :] = batch.state
+                index_view = self._gpu_row_index_view(
+                    rows, "kangsimworld_rigid_root_reset_batch_indices"
+                )
+                gpu_system.apply_rigid_data(index_view)
+                gpu_system.clear_rigid_commands(index_view)
+
+        if articulation_changed:
+            gpu_system.update_articulation_kinematics()
+
+    def _apply_gpu_dof_reset_batches(
+        self, batches: list[GpuDofStateResetBatch]
+    ):
+        gpu_system = self.gpu_system
+        qpos = gpu_system.articulation_joint_positions().torch()
+        qvel = gpu_system.articulation_joint_velocities().torch()
+        device = qpos.device
+
+        for batch in batches:
+            self._clear_batch_body_forces(batch.env_ids, batch.obj_id)
+            rows = self._articulation_gpu_rows_for_obj(
+                batch.obj_id, batch.env_ids, device=device
+            )
+            first_key = (batch.env_ids[0], batch.obj_id)
+            dof_indices = self._articulation_gpu_dof_indices(
+                first_key, device=device
+            )
+            dof_count = batch.state.shape[1]
+            cols = dof_indices[:dof_count]
+            qpos[rows[:, None], cols[None, :]] = batch.state[..., 0]
+            qvel[rows[:, None], cols[None, :]] = batch.state[..., 1]
+            index_view = self._gpu_row_index_view(
+                rows, "kangsimworld_articulation_dof_reset_batch_indices"
+            )
+            gpu_system.apply_articulation_joint_positions(index_view)
+            gpu_system.apply_articulation_joint_velocities(index_view)
+            gpu_system.clear_articulation_commands(index_view)
+
+        if batches:
+            gpu_system.update_articulation_kinematics()
+
+    def _clear_batch_body_forces(
+        self, env_ids: tuple[int, ...], obj_id: int
+    ):
+        if not self._active_body_force_keys:
+            return
+        reset_envs = set(env_ids)
+        active = tuple(
+            key
+            for key in self._active_body_force_keys
+            if key[1] == obj_id and key[0] in reset_envs
+        )
+        for key in active:
+            self._clear_body_force_for_key(key)
+
+    def _gpu_row_index_view(self, rows, name: str):
+        from ..utils import to_gpu_array_view
+
+        torch = _torch()
+        indices = rows.to(dtype=torch.int32).contiguous()
+        return to_gpu_array_view(indices, dtype=torch.int32, name=name)
 
     def _clear_gpu_rigid_commands_after_reset(
         self, keys: tuple[tuple[int, int], ...]
@@ -2247,7 +2436,8 @@ class KangSimWorld:
         return self.articulations[(int(env_id), int(obj_id))].articulation
 
     def rigid(self, env_id: int = 0, obj_id: int = 0):
-        return self.rigids[(int(env_id), int(obj_id))].rigid
+        key = (int(env_id), int(obj_id))
+        return (self.rigids | self.static_rigids)[key].rigid
 
     def init_gpu_system(
         self, cuda_device_id: int | None = None, stream_handle: int | None = None
@@ -2294,6 +2484,7 @@ class KangSimWorld:
         self._rigid_gpu_index_tensors.clear()
         self._articulation_gpu_index_tensors.clear()
         self._articulation_gpu_row_tensors.clear()
+        self._rigid_gpu_row_tensors.clear()
         return gpu_system
 
     @property
@@ -2432,17 +2623,37 @@ class KangSimWorld:
 
     def _articulation_gpu_rows_for_obj(self, obj_id: int, env_ids, *, device):
         torch = _torch()
+        oid = int(obj_id)
+        all_rows = self._articulation_gpu_row_tensors.get(oid)
+        if all_rows is None or all_rows.device != device:
+            all_rows = torch.tensor(
+                [
+                    self.articulation_gpu_row(env_id, oid)
+                    for env_id in range(self.num_envs)
+                ],
+                dtype=torch.long,
+                device=device,
+            )
+            self._articulation_gpu_row_tensors[oid] = all_rows
+        index = torch.as_tensor(env_ids, dtype=torch.long, device=device)
+        return all_rows.index_select(0, index)
 
-        keys = tuple((int(env_id), int(obj_id)) for env_id in env_ids)
-        tensor = self._articulation_gpu_row_tensors.get(keys)
-        if tensor is None or tensor.device != device:
-            rows = [
-                self.articulation_gpu_row(env_id, obj_id)
-                for env_id, obj_id in keys
-            ]
-            tensor = torch.tensor(rows, dtype=torch.long, device=device)
-            self._articulation_gpu_row_tensors[keys] = tensor
-        return tensor
+    def _rigid_gpu_rows_for_obj(self, obj_id: int, env_ids, *, device):
+        torch = _torch()
+        oid = int(obj_id)
+        all_rows = self._rigid_gpu_row_tensors.get(oid)
+        if all_rows is None or all_rows.device != device:
+            all_rows = torch.tensor(
+                [
+                    self.rigid_gpu_row(env_id, oid)
+                    for env_id in range(self.num_envs)
+                ],
+                dtype=torch.long,
+                device=device,
+            )
+            self._rigid_gpu_row_tensors[oid] = all_rows
+        index = torch.as_tensor(env_ids, dtype=torch.long, device=device)
+        return all_rows.index_select(0, index)
 
     def _articulation_gpu_dof_indices(self, key, *, device):
         return self.state.record(key[0], key[1]).cache.dof_gpu_indices.to(device)
@@ -2453,6 +2664,95 @@ class KangSimWorld:
                 f"KangSimWorld.{operation}() cannot be called after "
                 "init_gpu_system(); register objects before initializing GPU "
                 "mirrors"
+            )
+
+    def set_gpu_root_state_batch(self, env_ids, obj_id: int, state):
+        """Queue CUDA root states without creating per-environment reset objects.
+
+        ``state`` must be a contiguous ``float32`` CUDA tensor shaped ``[N, 13]``
+        with position, xyzw rotation, linear velocity, and angular velocity.
+        """
+        ids = self._gpu_reset_env_ids(env_ids)
+        oid = int(obj_id)
+        self._validate_gpu_reset_object(ids, oid, allow_rigid=True)
+        first_key = (ids[0], oid)
+        device_id = int(
+            self.gpu_system.articulation_link_data().device_id
+            if first_key in self.articulations
+            else self.gpu_system.rigid_data().device_id
+        )
+        self._validate_gpu_reset_tensor(
+            state, (len(ids), 13), "root state", device_id
+        )
+        self._gpu_root_reset_batches.append(
+            GpuRootStateResetBatch(ids, oid, state)
+        )
+
+    def set_gpu_dof_state_batch(self, env_ids, obj_id: int, state):
+        """Queue CUDA DOF position/velocity pairs as one batch.
+
+        ``state`` must be a contiguous ``float32`` CUDA tensor shaped
+        ``[N, num_dofs, 2]``.
+        """
+        ids = self._gpu_reset_env_ids(env_ids)
+        oid = int(obj_id)
+        self._validate_gpu_reset_object(ids, oid, allow_rigid=False)
+        dof_count = self.articulations[(ids[0], oid)].articulation.num_dofs()
+        device_id = int(
+            self.gpu_system.articulation_joint_positions().device_id
+        )
+        self._validate_gpu_reset_tensor(
+            state, (len(ids), int(dof_count), 2), "DOF state", device_id
+        )
+        self._gpu_dof_reset_batches.append(
+            GpuDofStateResetBatch(ids, oid, state)
+        )
+
+    def _gpu_reset_env_ids(self, env_ids) -> tuple[int, ...]:
+        ids = tuple(int(env_id) for env_id in env_ids)
+        if not ids:
+            raise ValueError("GPU reset batch requires at least one environment")
+        if min(ids) < 0 or max(ids) >= self.num_envs:
+            raise IndexError(
+                f"GPU reset environment ids must be in [0, {self.num_envs})"
+            )
+        return ids
+
+    def _validate_gpu_reset_object(
+        self, env_ids: tuple[int, ...], obj_id: int, *, allow_rigid: bool
+    ):
+        if self._gpu_system is None:
+            raise RuntimeError(
+                "GPU reset batches require init_gpu_system()"
+            )
+        first_key = (env_ids[0], obj_id)
+        valid = first_key in self.articulations or (
+            allow_rigid and first_key in self.rigids
+        )
+        if not valid:
+            kind = "articulation or rigid" if allow_rigid else "articulation"
+            raise KeyError(f"no {kind} registered at env={env_ids[0]}, obj={obj_id}")
+
+    def _validate_gpu_reset_tensor(
+        self, value, shape, name: str, device_id: int
+    ):
+        torch = _torch()
+        if not torch.is_tensor(value) or value.device.type != "cuda":
+            raise TypeError(f"GPU reset {name} must be a CUDA tensor")
+        if value.dtype != torch.float32:
+            raise TypeError(f"GPU reset {name} must have dtype=torch.float32")
+        if not value.is_contiguous():
+            raise ValueError(f"GPU reset {name} must be contiguous")
+        if tuple(value.shape) != tuple(shape):
+            raise ValueError(
+                f"GPU reset {name} expected shape {list(shape)}, "
+                f"got {list(value.shape)}"
+            )
+        value_device = value.device.index if value.device.index is not None else 0
+        if value_device != device_id:
+            raise ValueError(
+                f"GPU reset {name} is on cuda:{value_device}, "
+                f"expected cuda:{device_id}"
             )
 
     def set_root_state(
@@ -2760,13 +3060,19 @@ class KangSimWorld:
         self._articulation_gpu_rows.clear()
         self._articulation_gpu_index_tensors.clear()
         self._articulation_gpu_row_tensors.clear()
+        self._rigid_gpu_row_tensors.clear()
+        self._gpu_root_reset_batches.clear()
+        self._gpu_dof_reset_batches.clear()
         self.batch_commands.clear()
         for record in self.articulations.values():
             record.articulation.release()
         for record in self.rigids.values():
             record.rigid.release()
+        for record in self.static_rigids.values():
+            record.rigid.release()
         self.articulations.clear()
         self.rigids.clear()
+        self.static_rigids.clear()
         self.commands.clear()
         self.resets.clear()
         self.body_forces.clear()

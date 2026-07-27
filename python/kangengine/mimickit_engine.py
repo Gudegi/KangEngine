@@ -20,7 +20,7 @@ import torch
 
 from ._core import _ke
 from .app import App
-from .rigid import rigid_body_names
+from .rigid import expand_rigid_body_state, rigid_body_names, rigid_shape_specs
 from .sim import ControlMode, KangSimWorld
 from .utils import preset_rgba
 from .utils.env_utils import EnvIdLike, env_id_list
@@ -84,7 +84,8 @@ class KangEngineObject:
     body_names: list[str]
     is_visual: bool
     num_dofs: int
-    fix_root: bool
+    fixed_base: bool
+    is_static: bool
     start_pos: np.ndarray
     start_rot: np.ndarray
     color: object | None = None
@@ -102,18 +103,10 @@ class _BodyVelocityOverrideBuffers:
 
 @dataclass(slots=True)
 class _PendingStateBuffers:
-    root_pos: torch.Tensor
-    root_rot: torch.Tensor
-    root_vel: torch.Tensor
-    root_ang_vel: torch.Tensor
-    root_pos_mask: np.ndarray
-    root_rot_mask: np.ndarray
-    root_vel_mask: np.ndarray
-    root_ang_vel_mask: np.ndarray
-    dof_pos: torch.Tensor
-    dof_vel: torch.Tensor
-    dof_pos_mask: np.ndarray
-    dof_vel_mask: np.ndarray
+    root_state: torch.Tensor
+    root_dirty: np.ndarray
+    dof_state: torch.Tensor
+    dof_dirty: np.ndarray
     dof_widths: np.ndarray
 
 
@@ -472,6 +465,8 @@ class KangEngineEngine(_BaseEngine):
             raise NotImplementedError(
                 "only articulated and rigid MJCF objects are supported yet"
             )
+        fixed_base = is_articulated and bool(fix_root)
+        is_static = is_rigid and bool(fix_root)
 
         env_id = int(env_id)
         obj_id = len(self._objects[env_id])
@@ -496,7 +491,11 @@ class KangEngineEngine(_BaseEngine):
         if not is_visual and is_articulated:
             if _ArticulationConfig is None:
                 raise RuntimeError("ArticulationConfig not available: build with USE_PHYSX=ON")
-            cfg = _ke.physics.ArticulationConfig.fixed_base() if fix_root else _ke.physics.ArticulationConfig.free_base()
+            cfg = (
+                _ke.physics.ArticulationConfig.fixed_base()
+                if fixed_base
+                else _ke.physics.ArticulationConfig.free_base()
+            )
             if "enable_self_collisions" in self._config:
                 enable_self_collisions = _parse_bool(
                     self._config["enable_self_collisions"]
@@ -507,17 +506,28 @@ class KangEngineEngine(_BaseEngine):
             self._world.add_articulation(data, env_id, obj_id, name, cfg)
             self._apply_drive_config(env_id, obj_id)
         elif not is_visual and is_rigid:
-            self._world.add_rigid(
-                data,
-                env_id,
-                obj_id,
-                name,
-                pos=self._world_pos(env_id, start_pos),
-                rot_xyzw=start_rot,
-                density=float(self._config.get("rigid_density", 1.0)),
-                contact_offset=float(self._config.get("contact_offset", 0.02)),
-                rest_offset=float(self._config.get("rest_offset", 0.0)),
-            )
+            rigid_kwargs = {
+                "pos": self._world_pos(env_id, start_pos),
+                "rot_xyzw": start_rot,
+                "contact_offset": float(self._config.get("contact_offset", 0.02)),
+                "rest_offset": float(self._config.get("rest_offset", 0.0)),
+            }
+            if is_static:
+                self._world.add_static_rigid(
+                    data, env_id, obj_id, name, **rigid_kwargs
+                )
+            else:
+                self._world.add_rigid(
+                    data,
+                    env_id,
+                    obj_id,
+                    name,
+                    density=float(self._config.get("rigid_density", 1.0)),
+                    kinematic=_parse_bool(
+                        self._config.get("rigid_kinematic", False)
+                    ),
+                    **rigid_kwargs,
+                )
         obj = KangEngineObject(
             env_id,
             obj_id,
@@ -528,12 +538,13 @@ class KangEngineEngine(_BaseEngine):
             body_names,
             bool(is_visual),
             int(num_dofs),
-            bool(fix_root),
+            fixed_base,
+            is_static,
             start_pos,
             start_rot,
         )
         self._objects[env_id].append(obj)
-        if not is_visual:
+        if not is_visual and not is_static:
             # Separate envs before the first GPU step to avoid pair explosion.
             self._world.set_root_state(
                 env_id,
@@ -558,7 +569,7 @@ class KangEngineEngine(_BaseEngine):
         self._validate_envs()
         for env_objs in self._objects:
             for obj in env_objs:
-                if obj.is_visual:
+                if obj.is_visual or self._is_static_obj(obj.obj_id):
                     continue
                 # Apply env offsets before GPU broadphase initialization.
                 self._world.set_root_state(
@@ -581,7 +592,7 @@ class KangEngineEngine(_BaseEngine):
             return
         for obj_id in range(self.get_objs_per_env()):
             first = self._objects[0][obj_id]
-            if first.is_visual:
+            if first.is_visual or self._is_static_obj(obj_id):
                 continue
             obj_type_name = str(getattr(first.obj_type, "name", first.obj_type)).lower()
             if obj_type_name == "articulated":
@@ -652,6 +663,7 @@ class KangEngineEngine(_BaseEngine):
         )
 
     def step(self):
+        self._flush_staged_state()
         self._world.step(
             substeps=self._sim_steps,
             refresh=not self._use_gpu_logical_state(),
@@ -670,6 +682,7 @@ class KangEngineEngine(_BaseEngine):
             base_render(self)
         if self._viewer.should_close():
             sys.exit(0)
+        self._flush_staged_state()
         self._world.step(substeps=0, apply_commands=False)
         self._clear_state_pending_overrides()
         self._viewer.sync()
@@ -846,6 +859,9 @@ class KangEngineEngine(_BaseEngine):
         )
 
     def get_contact_forces(self, obj_id):
+        if self._is_static_obj(obj_id):
+            shape = (self._num_envs, self.get_obj_num_bodies(obj_id), 3)
+            return self._out(torch.zeros(shape, device=self._device))
         return self._out(self._world.state.get_contact_forces(obj_id))
 
     def get_ground_contact_forces(self, obj_id):
@@ -860,6 +876,9 @@ class KangEngineEngine(_BaseEngine):
                 body_indices, dtype=torch.long, device=forces.device
             )
             return self._out(forces.index_select(1, index))
+        if self._is_static_obj(obj_id):
+            shape = (self._num_envs, self.get_obj_num_bodies(obj_id), 3)
+            return self._out(torch.zeros(shape, device=self._device))
         return self._out(self._world.state.get_ground_contact_forces(obj_id))
 
     def set_root_pos(self, env_id: EnvIdLike, obj_id: int, root_pos: ArrayLike) -> None:
@@ -869,10 +888,9 @@ class KangEngineEngine(_BaseEngine):
             )
             self._apply_visual_root_overrides(obj_id)
             return
-        root_rot = self._root_component(None, obj_id, "rot")
-        root_vel = self._root_component(None, obj_id, "vel")
-        root_ang_vel = self._root_component(None, obj_id, "ang_vel")
-        self._set_root_state(env_id, obj_id, root_pos, root_rot, root_vel, root_ang_vel)
+        if self._is_static_obj(obj_id):
+            return
+        self._stage_root_component(env_id, obj_id, "pos", root_pos)
 
     def set_root_rot(self, env_id: EnvIdLike, obj_id: int, root_rot: ArrayLike) -> None:
         if self._is_visual_obj(obj_id):
@@ -881,40 +899,31 @@ class KangEngineEngine(_BaseEngine):
             )
             self._apply_visual_root_overrides(obj_id)
             return
-        root_pos = self._root_component(None, obj_id, "pos")
-        root_vel = self._root_component(None, obj_id, "vel")
-        root_ang_vel = self._root_component(None, obj_id, "ang_vel")
-        self._set_root_state(env_id, obj_id, root_pos, root_rot, root_vel, root_ang_vel)
+        if self._is_static_obj(obj_id):
+            return
+        self._stage_root_component(env_id, obj_id, "rot", root_rot)
 
     def set_root_vel(self, env_id: EnvIdLike, obj_id: int, root_vel: ArrayLike) -> None:
-        if self._is_visual_obj(obj_id):
+        if self._is_visual_obj(obj_id) or self._is_static_obj(obj_id):
             return
-        root_pos = self._root_component(None, obj_id, "pos")
-        root_rot = self._root_component(None, obj_id, "rot")
-        ang_vel = self._root_component(None, obj_id, "ang_vel")
-        self._set_root_state(env_id, obj_id, root_pos, root_rot, root_vel, ang_vel)
+        self._stage_root_component(env_id, obj_id, "vel", root_vel)
 
     def set_root_ang_vel(
         self, env_id: EnvIdLike, obj_id: int, root_ang_vel: ArrayLike
     ) -> None:
-        if self._is_visual_obj(obj_id):
+        if self._is_visual_obj(obj_id) or self._is_static_obj(obj_id):
             return
-        root_pos = self._root_component(None, obj_id, "pos")
-        root_rot = self._root_component(None, obj_id, "rot")
-        root_vel = self._root_component(None, obj_id, "vel")
-        self._set_root_state(env_id, obj_id, root_pos, root_rot, root_vel, root_ang_vel)
+        self._stage_root_component(env_id, obj_id, "ang_vel", root_ang_vel)
 
     def set_dof_pos(self, env_id: EnvIdLike, obj_id: int, dof_pos: ArrayLike) -> None:
         if self._is_visual_obj(obj_id):
             return
-        dof_vel = self._dof_component(None, obj_id, "vel")
-        self._set_dof_state(env_id, obj_id, dof_pos, dof_vel)
+        self._stage_dof_component(env_id, obj_id, "pos", dof_pos)
 
     def set_dof_vel(self, env_id: EnvIdLike, obj_id: int, dof_vel: ArrayLike) -> None:
         if self._is_visual_obj(obj_id):
             return
-        dof_pos = self._dof_component(None, obj_id, "pos")
-        self._set_dof_state(env_id, obj_id, dof_pos, dof_vel)
+        self._stage_dof_component(env_id, obj_id, "vel", dof_vel)
 
     def set_body_vel(self, env_id: EnvIdLike, obj_id: int, body_vel: ArrayLike) -> None:
         self._set_body_velocity_override(
@@ -1025,12 +1034,12 @@ class KangEngineEngine(_BaseEngine):
         return self._objects[0][obj_id].obj_type
 
     def get_obj_num_dofs(self, obj_id):
-        if self._is_visual_obj(obj_id):
+        if self._is_visual_obj(obj_id) or self._is_static_obj(obj_id):
             return self._objects[0][obj_id].num_dofs
         return self._world.state.get_obj_num_dofs(obj_id)
 
     def get_obj_num_bodies(self, obj_id):
-        if self._is_visual_obj(obj_id):
+        if self._is_visual_obj(obj_id) or self._is_static_obj(obj_id):
             return len(self._objects[0][obj_id].body_names)
         return self._world.state.get_obj_num_bodies(obj_id)
 
@@ -1041,12 +1050,12 @@ class KangEngineEngine(_BaseEngine):
         return self.get_obj_body_names(obj_id).index(body_name)
 
     def get_obj_torque_limits(self, env_id, obj_id):
-        if self._is_visual_obj(obj_id):
+        if self._is_visual_obj(obj_id) or self._is_static_obj(obj_id):
             return np.full(self.get_obj_num_dofs(obj_id), np.inf, dtype=np.float32)
         return self._as_numpy(self._world.state.get_obj_effort_limits(obj_id))
 
     def get_obj_dof_limits(self, env_id, obj_id):
-        if self._is_visual_obj(obj_id):
+        if self._is_visual_obj(obj_id) or self._is_static_obj(obj_id):
             n = self.get_obj_num_dofs(obj_id)
             return -np.full(n, np.inf, dtype=np.float32), np.full(
                 n, np.inf, dtype=np.float32
@@ -1056,13 +1065,15 @@ class KangEngineEngine(_BaseEngine):
         return limits[:, 0], limits[:, 1]
 
     def get_obj_pd_gains(self, env_id, obj_id):
-        if self._is_visual_obj(obj_id):
+        if self._is_visual_obj(obj_id) or self._is_static_obj(obj_id):
             n = self.get_obj_num_dofs(obj_id)
             return np.zeros(n, dtype=np.float32), np.zeros(n, dtype=np.float32)
         kp, kd = self._world.state.get_obj_pd_gains(obj_id)
         return self._as_numpy(kp), self._as_numpy(kd)
 
     def calc_obj_mass(self, env_id, obj_id):
+        if self._is_static_obj(obj_id):
+            return float("inf")
         return self._world.state.calc_obj_mass(int(env_id), int(obj_id))
 
     def get_control_mode(self):
@@ -1188,114 +1199,63 @@ class KangEngineEngine(_BaseEngine):
             )
         return arr.astype(np.float32, copy=True)
 
-    def _root_component(
-        self, env_id: EnvIdLike, obj_id: int, component: RootComponent
-    ) -> ArrayLike:
-        pending_values, pending_mask = self._root_pending_storage(component)
-        if self._is_single_env_id(env_id):
-            eid = int(env_id)
-            oid = int(obj_id)
-            if pending_mask is not None and pending_mask[eid, oid]:
-                value = pending_values[eid, oid]
-                if component == "pos":
-                    offset = self._env_offsets_torch[eid].to(
-                        device=value.device, dtype=value.dtype
-                    )
-                    return value - offset
-                return value
-
-        state_getters = {
-            "pos": self.get_root_pos,
-            "rot": self.get_root_rot,
-            "vel": self.get_root_vel,
-            "ang_vel": self.get_root_ang_vel,
-        }
-        values = state_getters[component](obj_id)
-        if not self._is_single_env_id(env_id):
-            oid = int(obj_id)
-            if pending_mask is None:
-                return values
-            mask = pending_mask[:, oid]
-            if not bool(np.any(mask)):
-                return values
-            out = self._to_tensor(values).clone()
-            tensor_mask = torch.as_tensor(mask, dtype=torch.bool, device=out.device)
-            pending = pending_values[:, oid].to(device=out.device, dtype=out.dtype)
-            if component == "pos":
-                offsets = self._env_offsets_torch.to(
-                    device=out.device, dtype=out.dtype
-                )
-                out[tensor_mask] = pending[tensor_mask] - offsets[tensor_mask]
-            else:
-                out[tensor_mask] = pending[tensor_mask]
-            return self._out(out)
-        return values[int(env_id)]
-
-    def _dof_component(
-        self, env_id: EnvIdLike, obj_id: int, component: DofComponent
-    ) -> ArrayLike:
-        pending_values, pending_mask = self._dof_pending_storage(component)
-        width = self.get_obj_num_dofs(obj_id)
-        if self._is_single_env_id(env_id):
-            eid = int(env_id)
-            oid = int(obj_id)
-            if pending_mask is not None and pending_mask[eid, oid]:
-                return pending_values[eid, oid, :width]
-
-        values = self.get_dof_pos(obj_id) if component == "pos" else self.get_dof_vel(obj_id)
-        if not self._is_single_env_id(env_id):
-            oid = int(obj_id)
-            if pending_mask is None:
-                return values
-            mask = pending_mask[:, oid]
-            if not bool(np.any(mask)):
-                return values
-            out = self._to_tensor(values).clone()
-            tensor_mask = torch.as_tensor(mask, dtype=torch.bool, device=out.device)
-            pending = pending_values[:, oid, :width].to(device=out.device, dtype=out.dtype)
-            out[tensor_mask] = pending[tensor_mask]
-            return self._out(out)
-        return values[int(env_id)]
-
     def _use_gpu_logical_state(self) -> bool:
         return getattr(self._world.state, "canonical_source", "cpu") == "gpu"
 
     def _state_root_pos(self, obj_id: int):
+        if self._is_static_obj(obj_id):
+            return self._static_root_batch(obj_id, rotation=False)
         if self._use_gpu_logical_state():
             return self._world.state.gpu.get_root_pos(obj_id, fetch=False)
         return self._world.state.get_root_pos(obj_id)
 
     def _state_root_rot(self, obj_id: int):
+        if self._is_static_obj(obj_id):
+            return self._static_root_batch(obj_id, rotation=True)
         if self._use_gpu_logical_state():
             return self._world.state.gpu.get_root_rot(obj_id, fetch=False)
         return self._world.state.get_root_rot(obj_id)
 
     def _state_root_vel(self, obj_id: int):
+        if self._is_static_obj(obj_id):
+            return torch.zeros((self._num_envs, 3), device=self._device)
         if self._use_gpu_logical_state():
             return self._world.state.gpu.get_root_vel(obj_id, fetch=False)
         return self._world.state.get_root_vel(obj_id)
 
     def _state_root_ang_vel(self, obj_id: int):
+        if self._is_static_obj(obj_id):
+            return torch.zeros((self._num_envs, 3), device=self._device)
         if self._use_gpu_logical_state():
             return self._world.state.gpu.get_root_ang_vel(obj_id, fetch=False)
         return self._world.state.get_root_ang_vel(obj_id)
 
     def _state_body_pos(self, obj_id: int):
+        if self._is_static_obj(obj_id):
+            return self._static_body_pose_batch(obj_id, rotation=False)
         if self._use_gpu_logical_state():
             return self._world.state.gpu.get_body_pos(obj_id, fetch=False)
         return self._world.state.get_body_pos(obj_id)
 
     def _state_body_rot(self, obj_id: int):
+        if self._is_static_obj(obj_id):
+            return self._static_body_pose_batch(obj_id, rotation=True)
         if self._use_gpu_logical_state():
             return self._world.state.gpu.get_body_rot(obj_id, fetch=False)
         return self._world.state.get_body_rot(obj_id)
 
     def _state_body_vel(self, obj_id: int):
+        if self._is_static_obj(obj_id):
+            shape = (self._num_envs, self.get_obj_num_bodies(obj_id), 3)
+            return torch.zeros(shape, device=self._device)
         if self._use_gpu_logical_state():
             return self._world.state.gpu.get_body_vel(obj_id, fetch=False)
         return self._world.state.get_body_vel(obj_id)
 
     def _state_body_ang_vel(self, obj_id: int):
+        if self._is_static_obj(obj_id):
+            shape = (self._num_envs, self.get_obj_num_bodies(obj_id), 3)
+            return torch.zeros(shape, device=self._device)
         if self._use_gpu_logical_state():
             return self._world.state.gpu.get_body_ang_vel(obj_id, fetch=False)
         return self._world.state.get_body_ang_vel(obj_id)
@@ -1321,11 +1281,10 @@ class KangEngineEngine(_BaseEngine):
         component: RootComponent,
         values: ArrayLike,
     ) -> ArrayLike:
-        pending_values, pending_mask = self._root_pending_storage(component)
-        if pending_mask is None:
-            return values
+        buffers = self._require_pending_state()
+        pending_values = self._root_pending_storage(component)
         oid = int(obj_id)
-        mask = pending_mask[:, oid]
+        mask = buffers.root_dirty[:, oid]
         if not bool(np.any(mask)):
             return values
         out = self._to_tensor(values).clone()
@@ -1340,12 +1299,11 @@ class KangEngineEngine(_BaseEngine):
         component: DofComponent,
         values: ArrayLike,
     ) -> ArrayLike:
-        pending_values, pending_mask = self._dof_pending_storage(component)
-        if pending_mask is None:
-            return values
+        buffers = self._require_pending_state()
+        pending_values = self._dof_pending_storage(component)
         oid = int(obj_id)
         width = self.get_obj_num_dofs(obj_id)
-        mask = pending_mask[:, oid]
+        mask = buffers.dof_dirty[:, oid]
         if not bool(np.any(mask)):
             return values
         out = self._to_tensor(values).clone()
@@ -1353,58 +1311,6 @@ class KangEngineEngine(_BaseEngine):
         pending = pending_values[:, oid, :width].to(device=out.device, dtype=out.dtype)
         out[tensor_mask] = pending[tensor_mask]
         return out
-
-    def _set_root_state(
-        self,
-        env_id: EnvIdLike,
-        obj_id: int,
-        root_pos: ArrayLike,
-        root_rot: ArrayLike,
-        root_vel: ArrayLike | None = None,
-        root_ang_vel: ArrayLike | None = None,
-    ) -> None:
-        env_ids = self._env_ids(env_id)
-        pos = self._world_pos_batch_for_env_ids(root_pos, env_ids)
-        rot = self._select_flat_batch_value(root_rot, env_ids, 4)
-        vel = (
-            None
-            if root_vel is None
-            else self._select_flat_batch_value(root_vel, env_ids, 3)
-        )
-        ang_vel = (
-            None
-            if root_ang_vel is None
-            else self._select_flat_batch_value(root_ang_vel, env_ids, 3)
-        )
-        self._world.set_root_state(env_ids, obj_id, pos, rot, vel, ang_vel)
-
-        self._set_root_pending_batch(env_ids, obj_id, "pos", pos, 3)
-        self._set_root_pending_batch(env_ids, obj_id, "rot", rot, 4)
-        if vel is not None:
-            self._set_root_pending_batch(env_ids, obj_id, "vel", vel, 3)
-        if ang_vel is not None:
-            self._set_root_pending_batch(env_ids, obj_id, "ang_vel", ang_vel, 3)
-
-    def _set_dof_state(
-        self,
-        env_id: EnvIdLike,
-        obj_id: int,
-        dof_pos: ArrayLike,
-        dof_vel: ArrayLike | None = None,
-    ) -> None:
-        width = self.get_obj_num_dofs(obj_id)
-        env_ids = self._env_ids(env_id)
-        pos = self._select_flat_batch_value(dof_pos, env_ids, width)
-        vel = (
-            None
-            if dof_vel is None
-            else self._select_flat_batch_value(dof_vel, env_ids, width)
-        )
-        self._world.set_dof_state(env_ids, obj_id, pos, vel)
-
-        self._set_dof_pending_batch(env_ids, obj_id, "pos", pos, width)
-        if vel is not None:
-            self._set_dof_pending_batch(env_ids, obj_id, "vel", vel, width)
 
     def _set_visual_body_override(
         self,
@@ -1532,49 +1438,36 @@ class KangEngineEngine(_BaseEngine):
             )
             max_dofs = int(np.max(dof_widths)) if dof_widths.size else 0
 
-        root_shape3 = (self._num_envs, objs_per_env, 3)
-        root_shape4 = (self._num_envs, objs_per_env, 4)
         root_mask_shape = (self._num_envs, objs_per_env)
-        dof_shape = (self._num_envs, objs_per_env, max_dofs)
         self._pending_state = _PendingStateBuffers(
-            root_pos=torch.zeros(root_shape3, dtype=torch.float32, device=self._device),
-            root_rot=torch.zeros(root_shape4, dtype=torch.float32, device=self._device),
-            root_vel=torch.zeros(root_shape3, dtype=torch.float32, device=self._device),
-            root_ang_vel=torch.zeros(root_shape3, dtype=torch.float32, device=self._device),
-            root_pos_mask=np.zeros(root_mask_shape, dtype=bool),
-            root_rot_mask=np.zeros(root_mask_shape, dtype=bool),
-            root_vel_mask=np.zeros(root_mask_shape, dtype=bool),
-            root_ang_vel_mask=np.zeros(root_mask_shape, dtype=bool),
-            dof_pos=torch.zeros(dof_shape, dtype=torch.float32, device=self._device),
-            dof_vel=torch.zeros(dof_shape, dtype=torch.float32, device=self._device),
-            dof_pos_mask=np.zeros(root_mask_shape, dtype=bool),
-            dof_vel_mask=np.zeros(root_mask_shape, dtype=bool),
+            root_state=torch.zeros(
+                (self._num_envs, objs_per_env, 13),
+                dtype=torch.float32,
+                device=self._device,
+            ),
+            root_dirty=np.zeros(root_mask_shape, dtype=bool),
+            dof_state=torch.zeros(
+                (self._num_envs, objs_per_env, max_dofs, 2),
+                dtype=torch.float32,
+                device=self._device,
+            ),
+            dof_dirty=np.zeros(root_mask_shape, dtype=bool),
             dof_widths=dof_widths,
         )
 
-    def _root_pending_storage(
-        self, component: RootComponent
-    ) -> tuple[torch.Tensor, np.ndarray]:
-        buffers = self._require_pending_state()
-        if component == "pos":
-            return buffers.root_pos, buffers.root_pos_mask
-        if component == "rot":
-            return buffers.root_rot, buffers.root_rot_mask
-        if component == "vel":
-            return buffers.root_vel, buffers.root_vel_mask
-        if component == "ang_vel":
-            return buffers.root_ang_vel, buffers.root_ang_vel_mask
-        raise ValueError(f"unsupported root component: {component}")
+    def _root_pending_storage(self, component: RootComponent) -> torch.Tensor:
+        state = self._require_pending_state().root_state
+        slices = {
+            "pos": slice(0, 3),
+            "rot": slice(3, 7),
+            "vel": slice(7, 10),
+            "ang_vel": slice(10, 13),
+        }
+        return state[..., slices[component]]
 
-    def _dof_pending_storage(
-        self, component: DofComponent
-    ) -> tuple[torch.Tensor, np.ndarray]:
-        buffers = self._require_pending_state()
-        if component == "pos":
-            return buffers.dof_pos, buffers.dof_pos_mask
-        if component == "vel":
-            return buffers.dof_vel, buffers.dof_vel_mask
-        raise ValueError(f"unsupported dof component: {component}")
+    def _dof_pending_storage(self, component: DofComponent) -> torch.Tensor:
+        state = self._require_pending_state().dof_state
+        return state[..., 0 if component == "pos" else 1]
 
     def _require_pending_state(self) -> _PendingStateBuffers:
         if self._pending_state is None:
@@ -1584,67 +1477,142 @@ class KangEngineEngine(_BaseEngine):
             )
         return self._pending_state
 
-    def _set_root_pending_value(
-        self, env_id: int, obj_id: int, component: RootComponent, value: ArrayLike
-    ) -> None:
-        values, mask = self._root_pending_storage(component)
-        values[int(env_id), int(obj_id)] = self._to_tensor(value, device=values.device)
-        mask[int(env_id), int(obj_id)] = True
-
-    def _set_root_pending_batch(
+    def _stage_root_component(
         self,
-        env_ids: list[int],
+        env_id: EnvIdLike,
         obj_id: int,
         component: RootComponent,
         value: ArrayLike,
-        width: int,
     ) -> None:
-        values, mask = self._root_pending_storage(component)
-        env_index = np.asarray(env_ids, dtype=np.int64)
-        env_tensor = torch.as_tensor(env_index, dtype=torch.long, device=values.device)
-        selected = self._to_tensor(value, device=values.device).reshape(len(env_ids), width)
-        values[env_tensor, int(obj_id)] = selected
-        mask[env_index, int(obj_id)] = True
-
-    def _set_dof_pending_value(
-        self,
-        env_id: int,
-        obj_id: int,
-        component: DofComponent,
-        value: ArrayLike,
-        width: int,
-    ) -> None:
-        values, mask = self._dof_pending_storage(component)
-        eid = int(env_id)
+        buffers = self._require_pending_state()
+        env_ids = self._env_ids(env_id)
         oid = int(obj_id)
-        values[eid, oid, :width] = self._to_tensor(value, device=values.device).reshape(width)
-        mask[eid, oid] = True
+        self._seed_staged_root(env_ids, oid)
 
-    def _set_dof_pending_batch(
+        width = 4 if component == "rot" else 3
+        selected = (
+            self._world_pos_batch_for_env_ids(value, env_ids)
+            if component == "pos"
+            else self._select_flat_batch_value(value, env_ids, width)
+        )
+        target = self._root_pending_storage(component)
+        env_tensor = torch.as_tensor(env_ids, dtype=torch.long, device=target.device)
+        target[env_tensor, oid] = torch.as_tensor(
+            selected, dtype=target.dtype, device=target.device
+        ).reshape(len(env_ids), width)
+        buffers.root_dirty[np.asarray(env_ids, dtype=np.int64), oid] = True
+
+    def _stage_dof_component(
         self,
-        env_ids: list[int],
+        env_id: EnvIdLike,
         obj_id: int,
         component: DofComponent,
         value: ArrayLike,
-        width: int,
     ) -> None:
-        values, mask = self._dof_pending_storage(component)
-        env_index = np.asarray(env_ids, dtype=np.int64)
-        env_tensor = torch.as_tensor(env_index, dtype=torch.long, device=values.device)
-        selected = self._to_tensor(value, device=values.device).reshape(len(env_ids), width)
-        values[env_tensor, int(obj_id), :width] = selected
-        mask[env_index, int(obj_id)] = True
+        buffers = self._require_pending_state()
+        env_ids = self._env_ids(env_id)
+        oid = int(obj_id)
+        width = int(buffers.dof_widths[oid])
+        self._seed_staged_dof(env_ids, oid, width)
+
+        target = self._dof_pending_storage(component)
+        selected = self._select_flat_batch_value(value, env_ids, width)
+        env_tensor = torch.as_tensor(env_ids, dtype=torch.long, device=target.device)
+        target[env_tensor, oid, :width] = torch.as_tensor(
+            selected, dtype=target.dtype, device=target.device
+        ).reshape(len(env_ids), width)
+        buffers.dof_dirty[np.asarray(env_ids, dtype=np.int64), oid] = True
+
+    def _seed_staged_root(self, env_ids: list[int], obj_id: int) -> None:
+        buffers = self._require_pending_state()
+        missing = [eid for eid in env_ids if not buffers.root_dirty[eid, obj_id]]
+        if not missing:
+            return
+        dst_index = torch.as_tensor(
+            missing, dtype=torch.long, device=buffers.root_state.device
+        )
+        for target, current in (
+            (self._root_pending_storage("pos"), self._state_root_pos(obj_id)),
+            (self._root_pending_storage("rot"), self._state_root_rot(obj_id)),
+            (self._root_pending_storage("vel"), self._state_root_vel(obj_id)),
+            (
+                self._root_pending_storage("ang_vel"),
+                self._state_root_ang_vel(obj_id),
+            ),
+        ):
+            source = torch.as_tensor(
+                current, dtype=target.dtype, device=target.device
+            )
+            target[dst_index, obj_id] = source[dst_index]
+
+    def _seed_staged_dof(
+        self, env_ids: list[int], obj_id: int, width: int
+    ) -> None:
+        buffers = self._require_pending_state()
+        missing = [eid for eid in env_ids if not buffers.dof_dirty[eid, obj_id]]
+        if not missing:
+            return
+        dst_index = torch.as_tensor(
+            missing, dtype=torch.long, device=buffers.dof_state.device
+        )
+        for target, current in (
+            (self._dof_pending_storage("pos"), self._state_dof_pos(obj_id)),
+            (self._dof_pending_storage("vel"), self._state_dof_vel(obj_id)),
+        ):
+            source = torch.as_tensor(
+                current, dtype=target.dtype, device=target.device
+            )
+            target[dst_index, obj_id, :width] = source[dst_index, :width]
+
+    def _flush_staged_state(self) -> None:
+        """Queue completed root/DOF resets once, just before the physics step.
+
+        Staging combines those writes so each dirty object is submitted as one CPU or GPU batch.
+        """
+        buffers = self._pending_state
+        if buffers is None:
+            return
+        for obj_id in np.flatnonzero(np.any(buffers.root_dirty, axis=0)):
+            env_ids = np.flatnonzero(buffers.root_dirty[:, obj_id]).tolist()
+            index = torch.as_tensor(
+                env_ids, dtype=torch.long, device=buffers.root_state.device
+            )
+            state = buffers.root_state[index, obj_id].contiguous()
+            if state.device.type == "cuda":
+                self._world.set_gpu_root_state_batch(env_ids, int(obj_id), state)
+            else:
+                self._world.set_root_state(
+                    env_ids,
+                    int(obj_id),
+                    state[:, 0:3].contiguous(),
+                    state[:, 3:7].contiguous(),
+                    state[:, 7:10].contiguous(),
+                    state[:, 10:13].contiguous(),
+                )
+
+        for obj_id in np.flatnonzero(np.any(buffers.dof_dirty, axis=0)):
+            env_ids = np.flatnonzero(buffers.dof_dirty[:, obj_id]).tolist()
+            width = int(buffers.dof_widths[obj_id])
+            index = torch.as_tensor(
+                env_ids, dtype=torch.long, device=buffers.dof_state.device
+            )
+            state = buffers.dof_state[index, obj_id, :width].contiguous()
+            if state.device.type == "cuda":
+                self._world.set_gpu_dof_state_batch(env_ids, int(obj_id), state)
+            else:
+                self._world.set_dof_state(
+                    env_ids,
+                    int(obj_id),
+                    state[..., 0].contiguous(),
+                    state[..., 1].contiguous(),
+                )
 
     def _clear_state_pending_overrides(self) -> None:
         buffers = self._pending_state
         if buffers is None:
             return
-        buffers.root_pos_mask[:, :] = False
-        buffers.root_rot_mask[:, :] = False
-        buffers.root_vel_mask[:, :] = False
-        buffers.root_ang_vel_mask[:, :] = False
-        buffers.dof_pos_mask[:, :] = False
-        buffers.dof_vel_mask[:, :] = False
+        buffers.root_dirty[:, :] = False
+        buffers.dof_dirty[:, :] = False
 
     def _visual_root_batch(self, storage, obj_id, width):
         default = (
@@ -1835,6 +1803,43 @@ class KangEngineEngine(_BaseEngine):
     def _is_visual_obj(self, obj_id):
         obj_id = int(obj_id)
         return bool(self._objects and self._objects[0][obj_id].is_visual)
+
+    def _is_static_obj(self, obj_id):
+        obj_id = int(obj_id)
+        if not self._objects:
+            return False
+        obj = self._objects[0][obj_id]
+        return not obj.is_visual and obj.is_static
+
+    def _static_root_batch(self, obj_id, *, rotation):
+        getter = "get_root_rotation" if rotation else "get_root_position"
+        values = [
+            np.asarray(
+                getattr(self._world.rigid(env_id, obj_id), getter)(),
+                dtype=np.float32,
+            )
+            for env_id in range(self._num_envs)
+        ]
+        return torch.as_tensor(np.stack(values), device=self._device)
+
+    def _static_body_pose_batch(self, obj_id, *, rotation):
+        specs = rigid_shape_specs(self._objects[0][obj_id].data)
+        local_pos = np.stack([spec.local_pos for spec in specs], axis=0)
+        local_rot = np.stack([spec.local_rot for spec in specs], axis=0)
+        positions = []
+        rotations = []
+        for env_id in range(self._num_envs):
+            rigid = self._world.rigid(env_id, obj_id)
+            body_pos, body_rot = expand_rigid_body_state(
+                np.asarray(rigid.get_root_position(), dtype=np.float32),
+                np.asarray(rigid.get_root_rotation(), dtype=np.float32),
+                local_pos,
+                local_rot,
+            )
+            positions.append(body_pos)
+            rotations.append(body_rot)
+        values = rotations if rotation else positions
+        return torch.as_tensor(np.stack(values), device=self._device)
 
     def _select_flat_batch_value(
         self,
@@ -2163,9 +2168,6 @@ class KangEngineEngine(_BaseEngine):
 
     def _env_ids(self, env_id: EnvIdLike) -> list[int]:
         return env_id_list(env_id, self._num_envs)
-
-    def _is_single_env_id(self, env_id: EnvIdLike) -> bool:
-        return isinstance(env_id, (int, np.integer))
 
     def _as_numpy(self, value: ArrayLike) -> np.ndarray:
         return as_cpu_numpy(value)

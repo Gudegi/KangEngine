@@ -153,12 +153,10 @@ class PhysicsWorld {
     createStaticBox(const glm::vec3& halfExtents, const glm::vec3& pos,
                     const glm::quat& rot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
                     bool registerAsGround = true);
-    physx::PxRigidStatic*
-    createStaticHeightField(const float* heights, int rows, int cols,
-                            float horizontalScale,
-                            const Physics::PhysicsMaterialDesc& material,
-                            UpAxis upAxis = UpAxis::Y, bool center = true,
-                            bool registerAsGround = true);
+    physx::PxRigidStatic* createStaticHeightField(
+        const float* heights, int rows, int cols, float horizontalScale,
+        const Physics::PhysicsMaterialDesc& material, UpAxis upAxis = UpAxis::Y,
+        bool center = true, bool registerAsGround = true);
 
     physx::PxRigidDynamic*
     createDynamicBox(const glm::vec3& halfExtents, const glm::vec3& pos,
@@ -170,17 +168,26 @@ class PhysicsWorld {
         const glm::quat& rot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
         float density = 1.0f);
 
-    physx::PxRigidDynamic* createDynamicRigid(
-        const Character::CharacterData& data, const glm::vec3& pos,
-        const glm::quat& rot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-        float density = 1.0f, PxU32 collisionGroup = 0,
-        float contactOffset = 0.02f, float restOffset = 0.0f,
-        const std::vector<Physics::CollisionMaterialOverride>&
-            materialOverrides = {});
+    physx::PxRigidDynamic*
+    createDynamicRigid(const Character::CharacterData& data,
+                       const glm::vec3& pos,
+                       const glm::quat& rot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+                       float density = 1.0f, PxU32 collisionGroup = 0,
+                       float contactOffset = 0.02f, float restOffset = 0.0f,
+                       const std::vector<Physics::CollisionMaterialOverride>&
+                           materialOverrides = {});
 
-    int
-    setRigidCollisionMaterial(physx::PxRigidDynamic& rigid,
-                              const Physics::PhysicsMaterialDesc& material);
+    physx::PxRigidStatic*
+    createStaticRigid(const Character::CharacterData& data,
+                      const glm::vec3& pos,
+                      const glm::quat& rot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+                      PxU32 collisionGroup = 0, float contactOffset = 0.02f,
+                      float restOffset = 0.0f,
+                      const std::vector<Physics::CollisionMaterialOverride>&
+                          materialOverrides = {});
+
+    int setRigidCollisionMaterial(physx::PxRigidDynamic& rigid,
+                                  const Physics::PhysicsMaterialDesc& material);
 
     int setRigidCollisionMaterialOverrides(
         physx::PxRigidDynamic& rigid, const Character::CharacterData& data,
