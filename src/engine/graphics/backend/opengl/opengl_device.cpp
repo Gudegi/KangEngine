@@ -135,8 +135,8 @@ cudaGraphicsResource* OpenGLBuffer::cudaResource() {
     return _cudaResource;
 }
 
-bool OpenGLBuffer::setExternalData(const Sim::GpuArrayView& view,
-                                   size_t count, size_t elementSize,
+bool OpenGLBuffer::setExternalData(const Sim::GpuArrayView& view, size_t count,
+                                   size_t elementSize,
                                    size_t sourceStrideBytes) {
     if (!view.isCuda())
         return false;
@@ -169,8 +169,7 @@ bool OpenGLBuffer::setExternalData(const Sim::GpuArrayView& view,
         &destination, &mappedSize, _cudaResource);
     if (mappedResult != cudaSuccess) {
         cudaGraphicsUnmapResources(1, &_cudaResource, stream);
-        checkCudaInterop(mappedResult,
-                         "cudaGraphicsResourceGetMappedPointer");
+        checkCudaInterop(mappedResult, "cudaGraphicsResourceGetMappedPointer");
     }
     if (count * elementSize > mappedSize) {
         cudaGraphicsUnmapResources(1, &_cudaResource, stream);
@@ -180,9 +179,9 @@ bool OpenGLBuffer::setExternalData(const Sim::GpuArrayView& view,
 
     const size_t sourcePitch =
         sourceStrideBytes == 0 ? elementSize : sourceStrideBytes;
-    cudaError_t copyResult = cudaMemcpy2DAsync(
-        destination, elementSize, view.data, sourcePitch, elementSize, count,
-        cudaMemcpyDeviceToDevice, stream);
+    cudaError_t copyResult =
+        cudaMemcpy2DAsync(destination, elementSize, view.data, sourcePitch,
+                          elementSize, count, cudaMemcpyDeviceToDevice, stream);
     if (copyResult != cudaSuccess) {
         cudaGraphicsUnmapResources(1, &_cudaResource, stream);
         checkCudaInterop(copyResult, "cudaMemcpy2DAsync");
@@ -195,10 +194,10 @@ bool OpenGLBuffer::setExternalData(const Sim::GpuArrayView& view,
     return true;
 }
 
-bool OpenGLDevice::mapCudaBuffers(
-    const std::vector<Buffer*>& buffers,
-    std::vector<Sim::GpuArrayView>& views, size_t count, size_t elementSize,
-    int deviceId, uint64_t streamHandle) {
+bool OpenGLDevice::mapCudaBuffers(const std::vector<Buffer*>& buffers,
+                                  std::vector<Sim::GpuArrayView>& views,
+                                  size_t count, size_t elementSize,
+                                  int deviceId, uint64_t streamHandle) {
     views.clear();
     if (buffers.empty())
         return true;
@@ -221,19 +220,18 @@ bool OpenGLDevice::mapCudaBuffers(
     }
 
     auto stream = reinterpret_cast<cudaStream_t>(streamHandle);
-    checkCudaInterop(cudaGraphicsMapResources(
-                         static_cast<int>(resources.size()), resources.data(),
-                         stream),
-                     "cudaGraphicsMapResources(batch)");
+    checkCudaInterop(
+        cudaGraphicsMapResources(static_cast<int>(resources.size()),
+                                 resources.data(), stream),
+        "cudaGraphicsMapResources(batch)");
     try {
         views.reserve(resources.size());
         for (auto* resource : resources) {
             void* pointer = nullptr;
             size_t mappedSize = 0;
-            checkCudaInterop(
-                cudaGraphicsResourceGetMappedPointer(&pointer, &mappedSize,
-                                                     resource),
-                "cudaGraphicsResourceGetMappedPointer(batch)");
+            checkCudaInterop(cudaGraphicsResourceGetMappedPointer(
+                                 &pointer, &mappedSize, resource),
+                             "cudaGraphicsResourceGetMappedPointer(batch)");
             if (count * elementSize > mappedSize)
                 throw std::runtime_error(
                     "mapped OpenGL transform buffer is too small");
@@ -280,10 +278,10 @@ void OpenGLDevice::unmapCudaBuffers(const std::vector<Buffer*>& buffers,
         resources.push_back(glBuffer->cudaResource());
     }
     auto stream = reinterpret_cast<cudaStream_t>(streamHandle);
-    checkCudaInterop(cudaGraphicsUnmapResources(
-                         static_cast<int>(resources.size()), resources.data(),
-                         stream),
-                     "cudaGraphicsUnmapResources(batch)");
+    checkCudaInterop(
+        cudaGraphicsUnmapResources(static_cast<int>(resources.size()),
+                                   resources.data(), stream),
+        "cudaGraphicsUnmapResources(batch)");
     if (deviceId >= 0 && deviceId != previousDevice)
         checkCudaInterop(cudaSetDevice(previousDevice), "cudaSetDevice");
 }
@@ -1164,7 +1162,9 @@ std::vector<uint8_t> OpenGLFramebuffer::readColorPixels(bool flipY) {
     // TODO: more efficient color formats control for all system.
     glReadPixels(0, 0, _desc.width, _desc.height, GL_RGB, GL_UNSIGNED_BYTE,
                  raw.data());
+    // restore GL state
     glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+    glPixelStorei(GL_PACK_ALIGNMENT, 4);
 
     for (int y = 0; y < _desc.height; ++y) {
         const int srcY = flipY ? (_desc.height - 1 - y) : y;

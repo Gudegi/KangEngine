@@ -1,4 +1,7 @@
-{
+{   
+    "cmake.configureSettings": {
+        "CMAKE_TOOLCHAIN_FILE": "${HOME}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+    },
     "python.defaultInterpreterPath": "${workspaceFolder}/python/.venv/bin/python",
     "files.associations": {
         "functional": "cpp",
