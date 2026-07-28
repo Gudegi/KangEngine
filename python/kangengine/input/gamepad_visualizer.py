@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from .._core import _ke
+from ..utils.color import preset_rgba
 
 
 class GamepadVisualizer:
@@ -12,18 +13,8 @@ class GamepadVisualizer:
 
     _ASPECT_RATIO = 0.75
     _PADDING = 16.0
+    _VIEWPORT_WIDTH_RATIO = 0.16
 
-    _BUTTONS = {
-        "a": (0.725, 0.450),
-        "b": (0.775, 0.383),
-        "x": (0.675, 0.383),
-        "y": (0.725, 0.317),
-        "back": (0.450, 0.367),
-        "start": (0.550, 0.367),
-        "guide": (0.500, 0.300),
-        "left_thumb": (0.325, 0.400),
-        "right_thumb": (0.625, 0.533),
-    }
     _ROUND_CUTOUTS = {
         "left_thumb": ((0.325, 0.400), 0.05625),
         "right_thumb": ((0.625, 0.533), 0.05625),
@@ -41,6 +32,14 @@ class GamepadVisualizer:
         "dpad_down": (0.38125, 0.55833, 0.41875, 0.63333),
         "dpad_left": (0.34375, 0.53333, 0.40000, 0.58333),
     }
+    _DPAD_CROSS = (
+        (0.34375, 0.53333, 0.45625, 0.58333),
+        (0.38125, 0.48333, 0.41875, 0.63333),
+    )
+    _TRIGGERS = (
+        (0.2425, 0.1675, "left_trigger"),
+        (0.5875, 0.1700, "right_trigger"),
+    )
     _BUMPERS = {
         "left_bumper": (
             (0.2425, 0.2183), (0.2750, 0.2000), (0.3125, 0.1883),
@@ -66,25 +65,24 @@ class GamepadVisualizer:
         offset=(20.0, 20.0),
         opacity: float = 1.0,
     ):
-        self._app = app
         self.gamepad = app.input.gamepad(gamepad_index)
         self.width = 0.0 if width is None else float(width)
         self._responsive = width is None
         self.opacity = min(1.0, max(0.0, float(opacity)))
-        self._active_glow = self._preset(
-            _ke.ColorType.SKY_BLUE, 0.18 * self.opacity
+        self._active_glow = _ke.vec4(
+            *preset_rgba(_ke.ColorType.SKY_BLUE, 0.18 * self.opacity)
         )
-        self._active = self._preset(
-            _ke.ColorType.SKY_BLUE, 0.98 * self.opacity
+        self._active = _ke.vec4(
+            *preset_rgba(_ke.ColorType.SKY_BLUE, 0.98 * self.opacity)
         )
-        self._stick = self._preset(
-            _ke.ColorType.PASTEL_SKY, 0.98 * self.opacity
+        self._stick = _ke.vec4(
+            *preset_rgba(_ke.ColorType.PASTEL_SKY, 0.98 * self.opacity)
         )
-        self._inactive = self._preset(
-            _ke.ColorType.SLATE_GRAY, self.opacity
+        self._inactive = _ke.vec4(
+            *preset_rgba(_ke.ColorType.SLATE_GRAY, self.opacity)
         )
-        self._stick_cap = self._preset(
-            _ke.ColorType.DARK_GRAY, self.opacity
+        self._stick_cap = _ke.vec4(
+            *preset_rgba(_ke.ColorType.DARK_GRAY, self.opacity)
         )
         self.anchor = (
             _ke.ScreenAnchor.BottomLeft if anchor is None else anchor
@@ -97,11 +95,14 @@ class GamepadVisualizer:
             / "gemini-xbox_gamepad.png"
         )
         self._texture = app.load_texture(asset, flip=True)
-
-    @staticmethod
-    def _preset(color_type, alpha):
-        color = _ke.ColorLibrary.get(color_type)
-        return _ke.vec4(color.r, color.g, color.b, alpha)
+        self._window_name = f"Gamepad Visualizer##{id(self)}"
+        self._window_flags = (
+            _ke.imgui.WindowFlags_NoTitleBar
+            | _ke.imgui.WindowFlags_NoBackground
+            | _ke.imgui.WindowFlags_NoResize
+            | _ke.imgui.WindowFlags_NoMove
+            | _ke.imgui.WindowFlags_NoScrollbar
+        )
 
     @property
     def height(self) -> float:
@@ -163,12 +164,13 @@ class GamepadVisualizer:
             self._active if active else self._inactive,
         )
 
-    def draw(self):
+    def draw(self, state=None):
         """Draw the visualizer once in the current ImGui frame."""
-        state = self.gamepad.state()
+        if state is None:
+            state = self.gamepad.state()
         viewport = _ke.imgui.main_viewport_work_rect()
         if self._responsive:
-            self.width = min(320.0, max(150.0, viewport[2] * 0.08))
+            self.width = viewport[2] * self._VIEWPORT_WIDTH_RATIO
         window_width = self.width + self._PADDING
         window_height = self.height + self._PADDING
         window_x, window_y = self._window_position(
@@ -178,16 +180,7 @@ class GamepadVisualizer:
         )
         _ke.imgui.set_next_window_pos(window_x, window_y)
         _ke.imgui.set_next_window_size(window_width, window_height)
-        flags = (
-            _ke.imgui.WindowFlags_NoTitleBar
-            | _ke.imgui.WindowFlags_NoBackground
-            | _ke.imgui.WindowFlags_NoResize
-            | _ke.imgui.WindowFlags_NoMove
-            | _ke.imgui.WindowFlags_NoScrollbar
-        )
-        if not _ke.imgui.begin(
-            f"Gamepad Visualizer##{id(self)}", flags
-        ):
+        if not _ke.imgui.begin(self._window_name, self._window_flags):
             _ke.imgui.end()
             return
 
@@ -206,10 +199,7 @@ class GamepadVisualizer:
                 self._inactive,
             )
 
-        for x1, y1, x2, y2 in (
-            (0.34375, 0.53333, 0.45625, 0.58333),
-            (0.38125, 0.48333, 0.41875, 0.63333),
-        ):
+        for x1, y1, x2, y2 in self._DPAD_CROSS:
             _ke.imgui.draw_rect_filled(
                 image_x + x1 * self.width,
                 image_y + y1 * self.height,
@@ -231,10 +221,14 @@ class GamepadVisualizer:
             )
 
         if state.connected:
-            for name, uv in self._BUTTONS.items():
+            for name, (uv, radius_ratio) in self._ROUND_CUTOUTS.items():
                 if getattr(state, name):
-                    radius = self._ROUND_CUTOUTS[name][1] * self.width
-                    self._point(image_x, image_y, uv, radius)
+                    self._point(
+                        image_x,
+                        image_y,
+                        uv,
+                        radius_ratio * self.width,
+                    )
 
             for name, (x1, y1, x2, y2) in self._DPAD_AREAS.items():
                 if getattr(state, name):
@@ -272,10 +266,8 @@ class GamepadVisualizer:
                 self._stick,
             )
 
-            for start, length, value in (
-                (0.2425, 0.1675, (state.left_trigger + 1.0) * 0.5),
-                (0.5875, 0.1700, (state.right_trigger + 1.0) * 0.5),
-            ):
+            for start, length, name in self._TRIGGERS:
+                value = (getattr(state, name) + 1.0) * 0.5
                 _ke.imgui.draw_line(
                     image_x + start * self.width,
                     image_y + 0.16 * self.height,

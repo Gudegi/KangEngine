@@ -9,7 +9,8 @@ class GamepadVisualizerApp(ke.App):
         self.orbit_camera = True
         self.attach_camera = True
         self.gamepad = self.input.gamepad()
-        self.gamepad_visualizer = ke.input.GamepadVisualizer(self)
+        self.gamepad_visualizer = ke.input.GamepadVisualizer(self, width=400, anchor=ke.render.ScreenAnchor.BottomCenter)
+        self.gamepad_state = self.gamepad.state()
         self.standard_materials = self.create_standard_materials()
         self.scene.add_ground("/ground", scale=20.0)
 
@@ -41,7 +42,11 @@ class GamepadVisualizerApp(ke.App):
             camera.set_target_pos(self.sphere_pos)
 
     def preRender(self):
-        joystick = self.gamepad.get_left_joystick(camera_relative=True)
+        self.gamepad_state = self.gamepad.state()
+        joystick = self.gamepad.get_left_joystick(
+            camera_relative=True,
+            state=self.gamepad_state,
+        )
         if joystick is not None:
             direction, strength = joystick
             distance = 3.0 * strength * min(self.get_delta_time(), 0.1)
@@ -55,7 +60,10 @@ class GamepadVisualizerApp(ke.App):
             camera.set_target_pos(camera.get_target_pos() + delta)
         self.previous_sphere_pos = self.sphere_pos.copy()
 
-        look = self.gamepad.get_right_joystick(orbit=self.orbit_camera)
+        look = self.gamepad.get_right_joystick(
+            orbit=self.orbit_camera,
+            state=self.gamepad_state,
+        )
         if look is not None:
             yaw_pitch, strength = look
             self._rotate_camera(yaw_pitch * strength)
@@ -96,7 +104,7 @@ class GamepadVisualizerApp(ke.App):
             camera.set_target_pos(camera_pos + offset)
 
     def render(self):
-        self.gamepad_visualizer.draw()
+        self.gamepad_visualizer.draw(self.gamepad_state)
         if ke.imgui.begin("Gamepad Camera"):
             _, self.orbit_camera = ke.imgui.checkbox(
                 "Orbit camera", self.orbit_camera

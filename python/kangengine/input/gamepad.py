@@ -54,9 +54,11 @@ class Gamepad:
         *,
         camera_relative: bool = False,
         drift_threshold: float = 0.1,
+        state: GamepadState | None = None,
     ):
         """Return ``(direction, strength)`` above the drift threshold."""
-        state = self.state()
+        if state is None:
+            state = self.state()
         magnitude = math.hypot(state.left_x, state.left_y)
         drift_threshold = min(
             0.99, max(0.0, float(drift_threshold))
@@ -104,9 +106,11 @@ class Gamepad:
         *,
         orbit: bool = False,
         drift_threshold: float = 0.1,
+        state: GamepadState | None = None,
     ):
         """Return ``(yaw_pitch, strength)`` for look or orbit controls."""
-        state = self.state()
+        if state is None:
+            state = self.state()
         magnitude = math.hypot(state.right_x, state.right_y)
         drift_threshold = min(
             0.99, max(0.0, float(drift_threshold))
