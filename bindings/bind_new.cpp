@@ -137,6 +137,80 @@ void bind_imgui(py::module& m) {
     });
     imgui.def("separator", []() { ImGui::Separator(); });
     imgui.def("same_line", []() { ImGui::SameLine(); });
+    imgui.def("cursor_screen_pos", []() {
+        const ImVec2 pos = ImGui::GetCursorScreenPos();
+        return py::make_tuple(pos.x, pos.y);
+    });
+    imgui.def(
+        "image",
+        [](Backend::Texture* texture, float width, float height,
+           float opacity) {
+            if (!texture)
+                return;
+            ImGui::Image(
+                static_cast<ImTextureID>(texture->getNativeHandle()),
+                ImVec2(width, height), ImVec2(0.0f, 1.0f),
+                ImVec2(1.0f, 0.0f),
+                ImVec4(1.0f, 1.0f, 1.0f,
+                       std::clamp(opacity, 0.0f, 1.0f)),
+                ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+        },
+        py::arg("texture"), py::arg("width"), py::arg("height"),
+        py::arg("opacity") = 1.0f);
+    imgui.def(
+        "draw_circle_filled",
+        [](float x, float y, float radius, const glm::vec4& color) {
+            ImGui::GetWindowDrawList()->AddCircleFilled(
+                ImVec2(x, y), radius,
+                ImGui::ColorConvertFloat4ToU32(
+                    ImVec4(color.r, color.g, color.b, color.a)));
+        },
+        py::arg("x"), py::arg("y"), py::arg("radius"), py::arg("color"));
+    imgui.def(
+        "draw_rect_filled",
+        [](float x1, float y1, float x2, float y2,
+           const glm::vec4& color) {
+            ImGui::GetWindowDrawList()->AddRectFilled(
+                ImVec2(x1, y1), ImVec2(x2, y2),
+                ImGui::ColorConvertFloat4ToU32(
+                    ImVec4(color.r, color.g, color.b, color.a)));
+        },
+        py::arg("x1"), py::arg("y1"), py::arg("x2"), py::arg("y2"),
+        py::arg("color"));
+    imgui.def(
+        "draw_convex_polygon_filled",
+        [](const py::sequence& points, const glm::vec4& color) {
+            std::vector<ImVec2> vertices;
+            vertices.reserve(points.size());
+            for (const py::handle item : points) {
+                const auto point =
+                    py::reinterpret_borrow<py::sequence>(item);
+                if (point.size() != 2)
+                    throw py::value_error(
+                        "Each polygon point must contain x and y.");
+                vertices.emplace_back(point[0].cast<float>(),
+                                      point[1].cast<float>());
+            }
+            if (vertices.size() >= 3) {
+                ImGui::GetWindowDrawList()->AddConvexPolyFilled(
+                    vertices.data(), static_cast<int>(vertices.size()),
+                    ImGui::ColorConvertFloat4ToU32(
+                        ImVec4(color.r, color.g, color.b, color.a)));
+            }
+        },
+        py::arg("points"), py::arg("color"));
+    imgui.def(
+        "draw_line",
+        [](float x1, float y1, float x2, float y2, const glm::vec4& color,
+           float thickness) {
+            ImGui::GetWindowDrawList()->AddLine(
+                ImVec2(x1, y1), ImVec2(x2, y2),
+                ImGui::ColorConvertFloat4ToU32(
+                    ImVec4(color.r, color.g, color.b, color.a)),
+                thickness);
+        },
+        py::arg("x1"), py::arg("y1"), py::arg("x2"), py::arg("y2"),
+        py::arg("color"), py::arg("thickness") = 1.0f);
     imgui.def("main_viewport_work_rect", []() {
         const ImGuiViewport* viewport = ImGui::GetMainViewport();
         return py::make_tuple(viewport->WorkPos.x, viewport->WorkPos.y,
@@ -1936,6 +2010,147 @@ py::class_<glm::vec3>(m, "vec3")
                 return glfwGetKey(self.getWindow(), key) == GLFW_PRESS;
             },
             py::arg("key"), "Return true while a keyboard key is pressed.")
+        .def(
+            "_is_gamepad_connected",
+            [](App&, int index) {
+                if (index < 0 || index > GLFW_JOYSTICK_LAST)
+                    return false;
+                int mappedIndex = 0;
+                for (int joystick = GLFW_JOYSTICK_1;
+                     joystick <= GLFW_JOYSTICK_LAST; ++joystick) {
+                    if (glfwJoystickIsGamepad(joystick) != GLFW_TRUE)
+                        continue;
+                    int axisCount = 0;
+                    const float* axes =
+                        glfwGetJoystickAxes(joystick, &axisCount);
+                    if (axisCount >= 4 && axes[0] <= -0.999f &&
+                        axes[1] <= -0.999f && axes[2] <= -0.999f &&
+                        axes[3] <= -0.999f)
+                        continue;
+                    if (mappedIndex++ == index)
+                        return true;
+                }
+                return false;
+            },
+            py::arg("index") = 0,
+            "Return whether a GLFW-mapped gamepad is connected.")
+        .def(
+            "_list_joysticks",
+            [](App&) {
+                py::list result;
+                for (int joystick = GLFW_JOYSTICK_1;
+                     joystick <= GLFW_JOYSTICK_LAST; ++joystick) {
+                    if (glfwJoystickPresent(joystick) != GLFW_TRUE)
+                        continue;
+                    py::dict info;
+                    const char* name = glfwGetJoystickName(joystick);
+                    const char* guid = glfwGetJoystickGUID(joystick);
+                    info["index"] = joystick - GLFW_JOYSTICK_1;
+                    info["name"] = name ? name : "";
+                    info["guid"] = guid ? guid : "";
+                    info["mapped"] =
+                        glfwJoystickIsGamepad(joystick) == GLFW_TRUE;
+                    int axisCount = 0;
+                    const float* axes =
+                        glfwGetJoystickAxes(joystick, &axisCount);
+                    py::list axisValues;
+                    for (int axis = 0; axis < axisCount; ++axis)
+                        axisValues.append(axes[axis]);
+                    info["axes"] = std::move(axisValues);
+
+                    int buttonCount = 0;
+                    const unsigned char* buttons =
+                        glfwGetJoystickButtons(joystick, &buttonCount);
+                    py::list buttonValues;
+                    for (int button = 0; button < buttonCount; ++button)
+                        buttonValues.append(buttons[button] == GLFW_PRESS);
+                    info["buttons"] = std::move(buttonValues);
+                    result.append(std::move(info));
+                }
+                return result;
+            },
+            "List raw GLFW joysticks and whether each has a gamepad mapping.")
+        .def(
+            "_get_gamepad_state",
+            [](App&, int index) -> py::dict {
+                py::dict result;
+                result["connected"] = false;
+                result["name"] = "";
+                if (index < 0 || index > GLFW_JOYSTICK_LAST)
+                    return result;
+                int joystick = -1;
+                int mappedIndex = 0;
+                for (int candidate = GLFW_JOYSTICK_1;
+                     candidate <= GLFW_JOYSTICK_LAST; ++candidate) {
+                    if (glfwJoystickIsGamepad(candidate) != GLFW_TRUE)
+                        continue;
+                    int axisCount = 0;
+                    const float* axes =
+                        glfwGetJoystickAxes(candidate, &axisCount);
+                    if (axisCount >= 4 && axes[0] <= -0.999f &&
+                        axes[1] <= -0.999f && axes[2] <= -0.999f &&
+                        axes[3] <= -0.999f)
+                        continue;
+                    if (mappedIndex++ == index) {
+                        joystick = candidate;
+                        break;
+                    }
+                }
+                if (joystick < 0)
+                    return result;
+                GLFWgamepadstate state{};
+                if (glfwGetGamepadState(joystick, &state) != GLFW_TRUE)
+                    return result;
+
+                const char* name = glfwGetGamepadName(joystick);
+                result["connected"] = true;
+                result["name"] = name ? name : "";
+                result["a"] =
+                    state.buttons[GLFW_GAMEPAD_BUTTON_A] == GLFW_PRESS;
+                result["b"] =
+                    state.buttons[GLFW_GAMEPAD_BUTTON_B] == GLFW_PRESS;
+                result["x"] =
+                    state.buttons[GLFW_GAMEPAD_BUTTON_X] == GLFW_PRESS;
+                result["y"] =
+                    state.buttons[GLFW_GAMEPAD_BUTTON_Y] == GLFW_PRESS;
+                result["left_bumper"] =
+                    state.buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER] ==
+                    GLFW_PRESS;
+                result["right_bumper"] =
+                    state.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER] ==
+                    GLFW_PRESS;
+                result["back"] =
+                    state.buttons[GLFW_GAMEPAD_BUTTON_BACK] == GLFW_PRESS;
+                result["start"] =
+                    state.buttons[GLFW_GAMEPAD_BUTTON_START] == GLFW_PRESS;
+                result["guide"] =
+                    state.buttons[GLFW_GAMEPAD_BUTTON_GUIDE] == GLFW_PRESS;
+                result["left_thumb"] =
+                    state.buttons[GLFW_GAMEPAD_BUTTON_LEFT_THUMB] ==
+                    GLFW_PRESS;
+                result["right_thumb"] =
+                    state.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_THUMB] ==
+                    GLFW_PRESS;
+                result["dpad_up"] =
+                    state.buttons[GLFW_GAMEPAD_BUTTON_DPAD_UP] == GLFW_PRESS;
+                result["dpad_right"] =
+                    state.buttons[GLFW_GAMEPAD_BUTTON_DPAD_RIGHT] == GLFW_PRESS;
+                result["dpad_down"] =
+                    state.buttons[GLFW_GAMEPAD_BUTTON_DPAD_DOWN] == GLFW_PRESS;
+                result["dpad_left"] =
+                    state.buttons[GLFW_GAMEPAD_BUTTON_DPAD_LEFT] == GLFW_PRESS;
+                result["left_x"] = state.axes[GLFW_GAMEPAD_AXIS_LEFT_X];
+                result["left_y"] = state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y];
+                result["right_x"] = state.axes[GLFW_GAMEPAD_AXIS_RIGHT_X];
+                result["right_y"] = state.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y];
+                result["left_trigger"] =
+                    state.axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER];
+                result["right_trigger"] =
+                    state.axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER];
+                return result;
+            },
+            py::arg("index") = 0,
+            "Poll one GLFW-mapped gamepad and return its current state.")
         .def("get_camera", &App::getCamera, py::return_value_policy::reference,
              "Return the application camera.")
         .def("set_active_scene_camera", &App::setActiveSceneCamera,

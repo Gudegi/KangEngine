@@ -13,6 +13,7 @@ from types import SimpleNamespace
 from .._core import _ke
 from .._public import unwrap_native
 from .. import geometry as geometry_api
+from .. import input as input_api
 from .. import material as material_api
 from .. import render as render_api
 
@@ -881,6 +882,7 @@ class App(_NativeApp):
         self.scene_backend_type = scene.BackendType.Native
         self.headless = False
         self.scene = SceneContext(self)
+        self.input = input_api.Input(self)
         self.debug_overlay = DebugOverlay(self)
         self.world_text = WorldText(self)
         self.screen_text = ScreenText(self)

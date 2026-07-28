@@ -1,6 +1,8 @@
 #include "window.hpp"
 #include "engine/core/app/app.hpp"
+#include "utils/asset_path.hpp"
 #include <fmt/base.h>
+#include <fstream>
 
 namespace KE {
 
@@ -51,6 +53,16 @@ void Window::initGlfw() {
     glfwInitHint(GLFW_COCOA_CHDIR_RESOURCES, GLFW_FALSE);
 #endif
     glfwInit();
+    std::ifstream mappingFile(getAssetPath("gamepad/gamecontrollerdb.txt"));
+    if (mappingFile) {
+        const std::string mappings{
+            std::istreambuf_iterator<char>(mappingFile),
+            std::istreambuf_iterator<char>()};
+        if (!mappings.empty() &&
+            glfwUpdateGamepadMappings(mappings.c_str()) != GLFW_TRUE) {
+            fmt::println(stderr, "Failed to load gamepad mappings");
+        }
+    }
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
