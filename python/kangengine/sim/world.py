@@ -1807,12 +1807,31 @@ class KangSimWorld:
                 raise NotImplementedError(
                     f"control mode '{buffer.mode.value}' is not implemented yet"
                 )
+        self._fetch_gpu_explicit_pd_state(gpu_full_batch_commands, gpu_per_env_commands)
         if gpu_full_batch_commands:
             self._apply_gpu_articulation_full_batch_commands(
                 gpu_full_batch_commands
             )
         if gpu_per_env_commands:
             self._apply_gpu_articulation_per_env_commands(gpu_per_env_commands)
+
+    def _fetch_gpu_explicit_pd_state(
+        self,
+        full_batch_commands: list[BatchCommandBuffer],
+        per_env_commands: list[tuple[tuple[int, int], CommandBuffer]],
+    ):
+        """Fetch current GPU joint state once before explicit-PD evaluation."""
+        uses_explicit_pd = any(
+            command.mode == ControlMode.PD_EXPLICIT
+            for command in full_batch_commands
+        ) or any(
+            command.mode == ControlMode.PD_EXPLICIT
+            for _, command in per_env_commands
+        )
+        if not uses_explicit_pd:
+            return
+        self.gpu_system.fetch_articulation_joint_positions()
+        self.gpu_system.fetch_articulation_joint_velocities()
 
     def _apply_gpu_articulation_full_batch_commands(
         self, commands: list[BatchCommandBuffer]
