@@ -213,6 +213,7 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/MJCF_ARTICULATION.html">Load an MJCF Articulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
@@ -326,10 +327,15 @@ Python application subclasses it and implements lifecycle callbacks.</p>
 Python methods use snake_case.</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">setup()</span></code>: create resources and scene objects once.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">preRender()</span></code>: update simulation or animation before drawing.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">preUpdate()</span></code>: process input and other once-per-rendered-frame state.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">fixedUpdate(fixed_dt)</span></code>: run zero or more fixed control/physics updates.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">preRender()</span></code>: synchronize the latest state and prepare visuals.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">render()</span></code>: build ImGui panels or other per-frame UI.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">postRender()</span></code>: perform work after drawing.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">cleanup()</span></code>: release explicitly owned simulation resources.</p></li>
 </ul>
+<p>See <a class="reference internal" href="../simulation/FIXED_TIMESTEP.html"><span class="std std-doc">Fixed Timestep and Rendering</span></a> before
+adding physics to an application.</p>
 <p>The complete scene example used by the next page is
 <code class="docutils literal notranslate"><span class="pre">python/examples/render_prim_scene.py</span></code>.</p>
 <p>Next: <a class="reference internal" href="FIRST_SCENE.html"><span class="std std-doc">First Scene</span></a>.</p>

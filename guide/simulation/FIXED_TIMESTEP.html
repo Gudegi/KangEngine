@@ -3,10 +3,10 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Motion and Animation" href="../motion_animation/INDEX.html"><link rel="prev" title="Contact Sensors" href="CONTACT_SENSORS.html">
+<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Simulation Run Modes" href="RUN_MODES.html"><link rel="prev" title="Rigid Bodies" href="RIGID_BODIES.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
-        <title>Viewer Synchronization - KangEngine Docs</title>
+        <title>Fixed Timestep and Rendering - KangEngine Docs</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
@@ -174,7 +174,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
       </label>
     </div>
@@ -213,13 +213,14 @@
 </li>
 <li class="toctree-l2 current has-children"><a class="reference internal" href="INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" checked="" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="RIGID_BODIES.html">Rigid Bodies</a></li>
-<li class="toctree-l3"><a class="reference internal" href="FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
+<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Fixed Timestep and Rendering</a></li>
+<li class="toctree-l3"><a class="reference internal" href="RUN_MODES.html">Simulation Run Modes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="MJCF_ARTICULATION.html">Load an MJCF Articulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="MULTI_ENV.html">Multi-Environment Simulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="CONTACT_SENSORS.html">Contact Sensors</a></li>
-<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Viewer Synchronization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="VIEWER_SYNC.html">Viewer Synchronization</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../motion_animation/INDEX.html">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="simple">
@@ -278,7 +279,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="../../_sources/guide/simulation/VIEWER_SYNC.md.txt" title="View this page">
+  <a class="muted-link" href="../../_sources/guide/simulation/FIXED_TIMESTEP.md.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -291,47 +292,192 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="viewer-synchronization">
-<h1>Viewer Synchronization<a class="headerlink" href="#viewer-synchronization" title="Link to this heading">¶</a></h1>
-<p>Simulation state and scene state are separate. <code class="docutils literal notranslate"><span class="pre">SimWorldVisualizer</span></code> creates the
-render representation and synchronizes it after simulation steps.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">visual</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">SimWorldVisualizer</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">world</span><span class="p">)</span>
-<span class="n">visual_batch</span> <span class="o">=</span> <span class="n">visual</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
-    <span class="n">rigid_batch</span><span class="p">,</span>
-    <span class="n">rigid_xml</span><span class="p">,</span>
-    <span class="n">prim_base_path</span><span class="o">=</span><span class="s2">&quot;/rigids&quot;</span><span class="p">,</span>
-    <span class="n">material</span><span class="o">=</span><span class="n">material</span><span class="p">,</span>
-<span class="p">)</span>
+          <section id="fixed-timestep-and-rendering">
+<h1>Fixed Timestep and Rendering<a class="headerlink" href="#fixed-timestep-and-rendering" title="Link to this heading">¶</a></h1>
+<p>KangEngine separates wall-clock scheduling, fixed simulation updates, and
+render preparation. A simulation <code class="docutils literal notranslate"><span class="pre">App</span></code> should use this lifecycle:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>rendered frame
+├─ preUpdate()             input and per-frame state changes
+├─ fixedUpdate(fixed_dt)   zero or more control/physics updates
+├─ preRender()             copy the latest state to visuals
+├─ render()                ImGui and other drawing
+└─ postRender()            frame completion
+</pre></div>
+</div>
+<p>Configure the render, physics, and fixed-update rates together in <code class="docutils literal notranslate"><span class="pre">setup()</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">timing</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">configure_timing</span><span class="p">(</span>
+        <span class="n">ke</span><span class="o">.</span><span class="n">SimulationTimingConfig</span><span class="p">(</span>
+            <span class="n">render_hz</span><span class="o">=</span><span class="mf">60.0</span><span class="p">,</span>
+            <span class="n">physics_hz</span><span class="o">=</span><span class="mf">120.0</span><span class="p">,</span>
+            <span class="n">fixed_update_hz</span><span class="o">=</span><span class="mf">60.0</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">set_simulation_hotkeys_enabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
 
-<span class="k">def</span><span class="w"> </span><span class="nf">fixedUpdate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fixed_dt</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">world</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">KangSimWorld</span><span class="p">(</span>
+        <span class="n">sim_dt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timing</span><span class="o">.</span><span class="n">physics_dt</span><span class="p">,</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+<p>Rates are the writable source of truth. <code class="docutils literal notranslate"><span class="pre">physics_dt</span></code>, <code class="docutils literal notranslate"><span class="pre">sim_dt</span></code>, <code class="docutils literal notranslate"><span class="pre">fixed_dt</span></code>,
+and <code class="docutils literal notranslate"><span class="pre">decimation</span></code> are derived properties, so contradictory Hz and dt settings
+cannot be supplied. General App loops may use fractional ratios because
+<code class="docutils literal notranslate"><span class="pre">world.advance()</span></code> retains fractional time. Decimation-based RL environments
+validate their integer decimation in their environment configuration.</p>
+<section id="app-timing-vs-runner-policy">
+<h2>App timing VS runner policy<a class="headerlink" href="#app-timing-vs-runner-policy" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">SimulationTimingConfig</span></code> and <code class="docutils literal notranslate"><span class="pre">SimulationRunConfig</span></code> configure different loop
+owners:</p>
+<ul class="simple">
+<li><p>A native <code class="docutils literal notranslate"><span class="pre">App</span></code> passes <code class="docutils literal notranslate"><span class="pre">SimulationTimingConfig</span></code> to <code class="docutils literal notranslate"><span class="pre">configure_timing()</span></code>.
+<code class="docutils literal notranslate"><span class="pre">App.start()</span></code> then schedules <code class="docutils literal notranslate"><span class="pre">fixedUpdate()</span></code> with its internal
+<code class="docutils literal notranslate"><span class="pre">FixedStepClock</span></code>. It does not accept or use <code class="docutils literal notranslate"><span class="pre">SimulationRunConfig</span></code>.</p></li>
+<li><p>An externally stepped runner, such as KELab, uses its timing configuration
+to determine <code class="docutils literal notranslate"><span class="pre">step_dt</span></code> and uses <code class="docutils literal notranslate"><span class="pre">SimulationRunConfig</span></code> independently to
+choose rendering and wall-clock pacing.</p></li>
+</ul>
+<p>The connection in an external loop is the duration passed to the pacer:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">timing</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">SimulationTimingConfig</span><span class="p">(</span>
+    <span class="n">physics_hz</span><span class="o">=</span><span class="mf">120.0</span><span class="p">,</span>
+    <span class="n">fixed_update_hz</span><span class="o">=</span><span class="mf">60.0</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">run_config</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">SimulationRunConfig</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;paced&quot;</span><span class="p">)</span>
+<span class="n">pacer</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">SimulationPacer</span><span class="p">(</span><span class="n">run_config</span><span class="p">)</span>
+
+<span class="n">world</span><span class="o">.</span><span class="n">advance</span><span class="p">(</span><span class="n">timing</span><span class="o">.</span><span class="n">fixed_dt</span><span class="p">)</span>
+<span class="n">pacer</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">timing</span><span class="o">.</span><span class="n">fixed_dt</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">HEADLESS_FAST</span></code> disables rendering and wall-clock synchronization. <code class="docutils literal notranslate"><span class="pre">PACED</span></code>
+waits only when an externally stepped simulation is ahead of wall time.
+See <a class="reference internal" href="RUN_MODES.html"><span class="std std-doc">Simulation Run Modes</span></a> for KELab defaults and rendering
+behavior.</p>
+<p>Advance <code class="docutils literal notranslate"><span class="pre">KangSimWorld</span></code> by the callback duration instead of hard-coding a
+physics substep count:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">fixedUpdate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fixed_dt</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">world</span><span class="o">.</span><span class="n">advance</span><span class="p">(</span><span class="n">fixed_dt</span><span class="p">)</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">preRender</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">visual.add(...)</span></code> is the normal path for many simulated bodies and uses
-ExternalBuffer-backed batches. For editor interaction, collision inspection,
-or a small authored robot, use the explicit scene-graph helpers:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">visual</span><span class="o">.</span><span class="n">add_articulation_scene_graph</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
-<span class="n">visual</span><span class="o">.</span><span class="n">add_rigid_scene_graph</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<p><code class="docutils literal notranslate"><span class="pre">world.advance()</span></code> does not change the PhysX timestep. It converts the requested
+duration into whole <code class="docutils literal notranslate"><span class="pre">world.sim_dt</span></code> steps and retains any fractional remainder.
+For example, a 120 Hz world performs two physics steps during one 60 Hz fixed
+update and four during one 30 Hz fixed update.</p>
+<p>Do not advance physics from <code class="docutils literal notranslate"><span class="pre">preRender()</span></code>. That couples simulation speed to
+render frequency. Pure animation viewers may still update an interpolated
+visual pose once per rendered frame because they do not integrate physics.</p>
+</section>
+<section id="playback-controls">
+<h2>Playback controls<a class="headerlink" href="#playback-controls" title="Link to this heading">¶</a></h2>
+<p>Default simulation controls are opt-in:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="bp">self</span><span class="o">.</span><span class="n">set_simulation_hotkeys_enabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Use one representation deliberately: ExternalBuffer for throughput,
-SceneGraph for inspectable prims and interaction.</p>
-<p>Keep physics in <code class="docutils literal notranslate"><span class="pre">fixedUpdate()</span></code> and synchronization in <code class="docutils literal notranslate"><span class="pre">preRender()</span></code> so slow
-rendering cannot change the physics rate.</p>
-<p>Examples:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">python/examples/sim_world_minimal.py</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">python/examples/sim_world_multi_env.py</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">python/examples/mjcf_dof_control.py</span></code></p></li>
+<li><p>Enter or keypad Enter toggles play/pause.</p></li>
+<li><p>Space pauses a running simulation.</p></li>
+<li><p>Space advances one fixed update when already paused.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">is_simulation_paused()</span></code> returns the authoritative state.</p></li>
 </ul>
+<p>The same key meanings are used by KELab and its MimicKit-style viewer.</p>
+</section>
+<section id="slow-frames-and-catch-up">
+<h2>Slow frames and catch-up<a class="headerlink" href="#slow-frames-and-catch-up" title="Link to this heading">¶</a></h2>
+<p>The fixed-step clock accumulates elapsed wall time. If a rendered frame is
+late, the next frame may call <code class="docutils literal notranslate"><span class="pre">fixedUpdate()</span></code> multiple times. Configure its
+safety limits with the same timing object:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">timing</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">SimulationTimingConfig</span><span class="p">(</span>
+    <span class="n">max_catch_up_steps</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+    <span class="n">max_frame_delta</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Work beyond that limit is discarded instead of retained as an ever-growing
+backlog. <code class="docutils literal notranslate"><span class="pre">get_dropped_wall_time()</span></code> reports the total discarded time. A single
+wall-clock delta is also clamped to 0.25 seconds, so a debugger stop or a
+dragged window does not create an unbounded recovery burst.</p>
+<p>At 60 Hz, the default limit can recover up to 133.3 ms of simulation per
+rendered frame. At 120 Hz it covers 66.7 ms. The setting is a workload bound,
+not a promise that simulation time always matches wall time.</p>
+<p>The default of eight is intended for interactive applications:</p>
+<ul class="simple">
+<li><p>short and moderate stalls recover without changing simulation speed;</p></li>
+<li><p>severe sustained stalls slow simulation relative to wall time;</p></li>
+<li><p>physics work remains bounded, preventing a catch-up spiral.</p></li>
+</ul>
+<p>For offline reinforcement learning or deterministic rollouts, do not schedule
+environment steps from wall time. Drive environment or world steps explicitly.</p>
+</section>
+<section id="gpu-stress-test">
+<h2>GPU stress test<a class="headerlink" href="#gpu-stress-test" title="Link to this heading">¶</a></h2>
+<p>Build the CUDA-enabled Python module and run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span>build_python_cuda
+
+python/.venv/bin/python<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>python/examples/smoke/fixed_update_gpu_stress.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--num-envs<span class="w"> </span><span class="m">64</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--frames<span class="w"> </span><span class="m">12</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--stall-ms<span class="w"> </span><span class="m">200</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--max-catch-up-steps<span class="w"> </span><span class="m">8</span>
+</pre></div>
+</div>
+<p>The test uses a PhysX GPU world and deliberately blocks <code class="docutils literal notranslate"><span class="pre">preRender()</span></code> to model
+slow rendering. It verifies that per-frame updates never exceed the configured
+limit and that GPU simulation time equals the number of executed fixed
+updates.</p>
+<p>Measurements on an RTX 4090, with a 60 Hz fixed update and 120 Hz physics:</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head text-right"><p>Render delay</p></th>
+<th class="head text-right"><p>Catch-up limit</p></th>
+<th class="head text-right"><p>Fixed updates</p></th>
+<th class="head text-right"><p>Dropped wall time</p></th>
+<th class="head text-right"><p>Simulated time</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td class="text-right"><p>50 ms × 19</p></td>
+<td class="text-right"><p>8</p></td>
+<td class="text-right"><p>61</p></td>
+<td class="text-right"><p>0.000 s</p></td>
+<td class="text-right"><p>1.017 s</p></td>
+</tr>
+<tr class="row-odd"><td class="text-right"><p>200 ms × 11</p></td>
+<td class="text-right"><p>4</p></td>
+<td class="text-right"><p>44</p></td>
+<td class="text-right"><p>1.500 s</p></td>
+<td class="text-right"><p>0.733 s</p></td>
+</tr>
+<tr class="row-even"><td class="text-right"><p>200 ms × 11</p></td>
+<td class="text-right"><p>8</p></td>
+<td class="text-right"><p>88</p></td>
+<td class="text-right"><p>~0.8 s</p></td>
+<td class="text-right"><p>1.467 s</p></td>
+</tr>
+<tr class="row-odd"><td class="text-right"><p>200 ms × 11</p></td>
+<td class="text-right"><p>16</p></td>
+<td class="text-right"><p>139</p></td>
+<td class="text-right"><p>0.000 s</p></td>
+<td class="text-right"><p>2.317 s</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>With a 200 ms stall, limit 8 executed exactly eight fixed updates on every
+delayed frame. Limit 16 followed wall time but required 12–13 updates per
+frame. This supports keeping eight as the safe default while allowing
+applications to raise it when wall-time tracking matters more than
+responsiveness.</p>
+</section>
 </section>
 
         </article>
@@ -339,23 +485,23 @@ rendering cannot change the physics rate.</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="../motion_animation/INDEX.html">
+          <a class="next-page" href="RUN_MODES.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Motion and Animation</div>
+                <div class="title">Simulation Run Modes</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="CONTACT_SENSORS.html">
+          <a class="prev-page" href="RIGID_BODIES.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">Contact Sensors</div>
+                <div class="title">Rigid Bodies</div>
                 
               </div>
             </a>
@@ -377,8 +523,30 @@ rendering cannot change the physics rate.</p>
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Fixed Timestep and Rendering</a><ul>
+<li><a class="reference internal" href="#app-timing-vs-runner-policy">App timing VS runner policy</a></li>
+<li><a class="reference internal" href="#playback-controls">Playback controls</a></li>
+<li><a class="reference internal" href="#slow-frames-and-catch-up">Slow frames and catch-up</a></li>
+<li><a class="reference internal" href="#gpu-stress-test">GPU stress test</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>

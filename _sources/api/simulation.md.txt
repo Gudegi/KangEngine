@@ -8,6 +8,18 @@ High-level Python simulation helpers built on the low-level PhysX bindings.
 
 .. autoclass:: KangSimWorld
 
+.. autoclass:: SimulationTimingConfig
+   :members:
+
+.. autoclass:: SimulationRunMode
+   :members:
+
+.. autoclass:: SimulationRunConfig
+   :members:
+
+.. autoclass:: SimulationPacer
+   :members:
+
 .. autoclass:: ControlMode
 
 .. autoclass:: SimDevice

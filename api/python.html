@@ -213,6 +213,8 @@
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RUN_MODES.html">Simulation Run Modes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MJCF_ARTICULATION.html">Load an MJCF Articulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
@@ -318,6 +320,8 @@ utility modules.</p></li>
 <p>This mirrors the C++ App lifecycle:</p>
 <ul class="simple">
 <li><p><cite>setup()</cite> runs once before the loop starts.</p></li>
+<li><p><cite>preUpdate()</cite> handles per-frame input before simulation updates.</p></li>
+<li><p><cite>fixedUpdate(dt)</cite> runs zero or more fixed updates per rendered frame.</p></li>
 <li><p><cite>preRender()</cite> runs before scene rendering each frame.</p></li>
 <li><p><cite>render()</cite> runs while the ImGui frame is active.</p></li>
 <li><p><cite>postRender()</cite> runs after UI rendering and buffer swap setup.</p></li>
@@ -325,6 +329,8 @@ utility modules.</p></li>
 <p>The C++ implementation still handles the default camera controls:
 WASD/mouse navigation, H to hide UI, Escape to close, framebuffer updates,
 and the built-in scene/performance panels.</p>
+<p>Fixed-step simulations may opt into Enter play/pause and Space
+pause/single-step controls with <cite>set_simulation_hotkeys_enabled(True)</cite>.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.App.add_ground">
 <span class="sig-name descname"><span class="pre">add_ground</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/ground'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">shader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.add_ground" title="Link to this definition">¶</a></dt>
@@ -379,6 +385,12 @@ and the built-in scene/performance panels.</p>
 <dt class="sig sig-object py" id="kangengine.App.configure_checker_shader">
 <span class="sig-name descname"><span class="pre">configure_checker_shader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shader</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.configure_checker_shader" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.configure_timing">
+<span class="sig-name descname"><span class="pre">configure_timing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.configure_timing" title="Link to this definition">¶</a></dt>
+<dd><p>Apply a SimulationTimingConfig to this application loop.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.App.create_asset_shader">
@@ -460,6 +472,12 @@ after initialize() once a graphics context exists.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.fixedUpdate">
+<span class="sig-name descname"><span class="pre">fixedUpdate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.App" title="kangengine.App"><span class="pre">kangengine.App</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">fixed_dt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.App.fixedUpdate" title="Link to this definition">¶</a></dt>
+<dd><p>User override called zero or more times at a fixed timestep.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.App.get_native_scene">
 <span class="sig-name descname"><span class="pre">get_native_scene</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.get_native_scene" title="Link to this definition">¶</a></dt>
 <dd><p>Return the native SceneBackend escape hatch.</p>
@@ -533,6 +551,12 @@ native SceneBackend.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.preUpdate">
+<span class="sig-name descname"><span class="pre">preUpdate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.App" title="kangengine.App"><span class="pre">kangengine.App</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.App.preUpdate" title="Link to this definition">¶</a></dt>
+<dd><p>User override called once before fixed updates each frame.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.App.render">
 <span class="sig-name descname"><span class="pre">render</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.App" title="kangengine.App"><span class="pre">kangengine.App</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.App.render" title="Link to this definition">¶</a></dt>
 <dd><p>User override called during each frame render.</p>
@@ -593,6 +617,95 @@ native SceneBackend.</p>
 <dt class="sig sig-object py" id="kangengine.App.was_key_released">
 <span class="sig-name descname"><span class="pre">was_key_released</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.was_key_released" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.SimulationTimingConfig">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.</span></span><span class="sig-name descname"><span class="pre">SimulationTimingConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">render_hz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">60.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_hz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">120.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fixed_update_hz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">60.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_catch_up_steps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_frame_delta</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.25</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.SimulationTimingConfig" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Rates and safety limits for an App-driven simulation loop.</p>
+<p>Rates are the writable source of truth. Time intervals are derived to
+avoid contradictory <code class="docutils literal notranslate"><span class="pre">hz</span></code> and <code class="docutils literal notranslate"><span class="pre">dt</span></code> settings.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>render_hz</strong> (<em>float</em>)</p></li>
+<li><p><strong>physics_hz</strong> (<em>float</em>)</p></li>
+<li><p><strong>fixed_update_hz</strong> (<em>float</em>)</p></li>
+<li><p><strong>max_catch_up_steps</strong> (<em>int</em>)</p></li>
+<li><p><strong>max_frame_delta</strong> (<em>float</em>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.SimulationTimingConfig.render_hz">
+<span class="sig-name descname"><span class="pre">render_hz</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kangengine.SimulationTimingConfig.render_hz" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.SimulationTimingConfig.physics_hz">
+<span class="sig-name descname"><span class="pre">physics_hz</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kangengine.SimulationTimingConfig.physics_hz" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.SimulationTimingConfig.fixed_update_hz">
+<span class="sig-name descname"><span class="pre">fixed_update_hz</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kangengine.SimulationTimingConfig.fixed_update_hz" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.SimulationTimingConfig.max_catch_up_steps">
+<span class="sig-name descname"><span class="pre">max_catch_up_steps</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kangengine.SimulationTimingConfig.max_catch_up_steps" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.SimulationTimingConfig.max_frame_delta">
+<span class="sig-name descname"><span class="pre">max_frame_delta</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kangengine.SimulationTimingConfig.max_frame_delta" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.SimulationTimingConfig.decimation">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">decimation</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kangengine.SimulationTimingConfig.decimation" title="Link to this definition">¶</a></dt>
+<dd><p>Physics substeps represented by one fixed update.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.SimulationTimingConfig.fixed_dt">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">fixed_dt</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kangengine.SimulationTimingConfig.fixed_dt" title="Link to this definition">¶</a></dt>
+<dd><p>Duration in seconds of one App fixed update.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.SimulationTimingConfig.from_dt">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_dt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fixed_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">render_hz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">60.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_catch_up_steps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_frame_delta</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.25</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.SimulationTimingConfig.from_dt" title="Link to this definition">¶</a></dt>
+<dd><p>Create a config at a boundary that already expresses time in dt.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="simulation.html#kangengine.sim.SimulationTimingConfig" title="kangengine.sim.SimulationTimingConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimulationTimingConfig</span></code></a></span></p>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>physics_dt</strong> (<em>float</em>)</p></li>
+<li><p><strong>fixed_dt</strong> (<em>float</em>)</p></li>
+<li><p><strong>render_hz</strong> (<em>float</em>)</p></li>
+<li><p><strong>max_catch_up_steps</strong> (<em>int</em>)</p></li>
+<li><p><strong>max_frame_delta</strong> (<em>float</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.SimulationTimingConfig.physics_dt">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">physics_dt</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kangengine.SimulationTimingConfig.physics_dt" title="Link to this definition">¶</a></dt>
+<dd><p>Duration in seconds of one physics substep.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.SimulationTimingConfig.sim_dt">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">sim_dt</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kangengine.SimulationTimingConfig.sim_dt" title="Link to this definition">¶</a></dt>
+<dd><p>Compatibility alias for <a class="reference internal" href="#kangengine.SimulationTimingConfig.physics_dt" title="kangengine.SimulationTimingConfig.physics_dt"><code class="xref py py-attr docutils literal notranslate"><span class="pre">physics_dt</span></code></a>.</p>
+</dd></dl>
 
 </dd></dl>
 
@@ -1438,6 +1551,31 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <dd></dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.cursor_screen_pos">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">cursor_screen_pos</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><a class="headerlink" href="#kangengine.imgui.cursor_screen_pos" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.draw_circle_filled">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">draw_circle_filled</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">glm::vec&lt;4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">(glm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">:qualifier)0&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.imgui.draw_circle_filled" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.draw_convex_polygon_filled">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">draw_convex_polygon_filled</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">points</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Sequence</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">glm::vec&lt;4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">(glm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">:qualifier)0&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.imgui.draw_convex_polygon_filled" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.draw_line">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">draw_line</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">glm::vec&lt;4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">(glm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">:qualifier)0&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thickness</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.imgui.draw_line" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.draw_rect_filled">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">draw_rect_filled</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">glm::vec&lt;4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">(glm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">:qualifier)0&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.imgui.draw_rect_filled" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="kangengine.imgui.end">
 <span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">end</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.imgui.end" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
@@ -1445,6 +1583,11 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.imgui.end_child">
 <span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">end_child</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.imgui.end_child" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.image">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">texture</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">KE::Backend::Texture</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">opacity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.imgui.image" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py function">
@@ -1955,12 +2098,14 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <li><a class="reference internal" href="#kangengine.App.as_vec3"><code class="docutils literal notranslate"><span class="pre">App.as_vec3()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.cleanup"><code class="docutils literal notranslate"><span class="pre">App.cleanup()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.configure_checker_shader"><code class="docutils literal notranslate"><span class="pre">App.configure_checker_shader()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.configure_timing"><code class="docutils literal notranslate"><span class="pre">App.configure_timing()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.create_asset_shader"><code class="docutils literal notranslate"><span class="pre">App.create_asset_shader()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.create_pbr_material"><code class="docutils literal notranslate"><span class="pre">App.create_pbr_material()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.create_phong_material"><code class="docutils literal notranslate"><span class="pre">App.create_phong_material()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.create_standard_materials"><code class="docutils literal notranslate"><span class="pre">App.create_standard_materials()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.create_standard_shaders"><code class="docutils literal notranslate"><span class="pre">App.create_standard_shaders()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.create_vertex_color_material"><code class="docutils literal notranslate"><span class="pre">App.create_vertex_color_material()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.fixedUpdate"><code class="docutils literal notranslate"><span class="pre">App.fixedUpdate()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.get_native_scene"><code class="docutils literal notranslate"><span class="pre">App.get_native_scene()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.get_renderer"><code class="docutils literal notranslate"><span class="pre">App.get_renderer()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.get_scene"><code class="docutils literal notranslate"><span class="pre">App.get_scene()</span></code></a></li>
@@ -1970,6 +2115,7 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <li><a class="reference internal" href="#kangengine.App.package_asset_path"><code class="docutils literal notranslate"><span class="pre">App.package_asset_path()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.postRender"><code class="docutils literal notranslate"><span class="pre">App.postRender()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.preRender"><code class="docutils literal notranslate"><span class="pre">App.preRender()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.preUpdate"><code class="docutils literal notranslate"><span class="pre">App.preUpdate()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.render"><code class="docutils literal notranslate"><span class="pre">App.render()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.set_camera_view"><code class="docutils literal notranslate"><span class="pre">App.set_camera_view()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.set_render_hz"><code class="docutils literal notranslate"><span class="pre">App.set_render_hz()</span></code></a></li>
@@ -1979,6 +2125,19 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <li><a class="reference internal" href="#kangengine.App.start"><code class="docutils literal notranslate"><span class="pre">App.start()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.was_key_pressed"><code class="docutils literal notranslate"><span class="pre">App.was_key_pressed()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.was_key_released"><code class="docutils literal notranslate"><span class="pre">App.was_key_released()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.SimulationTimingConfig"><code class="docutils literal notranslate"><span class="pre">SimulationTimingConfig</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.SimulationTimingConfig.render_hz"><code class="docutils literal notranslate"><span class="pre">SimulationTimingConfig.render_hz</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.SimulationTimingConfig.physics_hz"><code class="docutils literal notranslate"><span class="pre">SimulationTimingConfig.physics_hz</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.SimulationTimingConfig.fixed_update_hz"><code class="docutils literal notranslate"><span class="pre">SimulationTimingConfig.fixed_update_hz</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.SimulationTimingConfig.max_catch_up_steps"><code class="docutils literal notranslate"><span class="pre">SimulationTimingConfig.max_catch_up_steps</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.SimulationTimingConfig.max_frame_delta"><code class="docutils literal notranslate"><span class="pre">SimulationTimingConfig.max_frame_delta</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.SimulationTimingConfig.decimation"><code class="docutils literal notranslate"><span class="pre">SimulationTimingConfig.decimation</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.SimulationTimingConfig.fixed_dt"><code class="docutils literal notranslate"><span class="pre">SimulationTimingConfig.fixed_dt</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.SimulationTimingConfig.from_dt"><code class="docutils literal notranslate"><span class="pre">SimulationTimingConfig.from_dt()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.SimulationTimingConfig.physics_dt"><code class="docutils literal notranslate"><span class="pre">SimulationTimingConfig.physics_dt</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.SimulationTimingConfig.sim_dt"><code class="docutils literal notranslate"><span class="pre">SimulationTimingConfig.sim_dt</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.SceneContext"><code class="docutils literal notranslate"><span class="pre">SceneContext</span></code></a><ul>
@@ -2092,8 +2251,14 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <li><a class="reference internal" href="#kangengine.imgui.begin_child"><code class="docutils literal notranslate"><span class="pre">begin_child()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.button"><code class="docutils literal notranslate"><span class="pre">button()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.checkbox"><code class="docutils literal notranslate"><span class="pre">checkbox()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.cursor_screen_pos"><code class="docutils literal notranslate"><span class="pre">cursor_screen_pos()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.draw_circle_filled"><code class="docutils literal notranslate"><span class="pre">draw_circle_filled()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.draw_convex_polygon_filled"><code class="docutils literal notranslate"><span class="pre">draw_convex_polygon_filled()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.draw_line"><code class="docutils literal notranslate"><span class="pre">draw_line()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.draw_rect_filled"><code class="docutils literal notranslate"><span class="pre">draw_rect_filled()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.end"><code class="docutils literal notranslate"><span class="pre">end()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.end_child"><code class="docutils literal notranslate"><span class="pre">end_child()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.image"><code class="docutils literal notranslate"><span class="pre">image()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.main_viewport_work_rect"><code class="docutils literal notranslate"><span class="pre">main_viewport_work_rect()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.motion_sequencer"><code class="docutils literal notranslate"><span class="pre">motion_sequencer()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.motion_sequencer_resizable"><code class="docutils literal notranslate"><span class="pre">motion_sequencer_resizable()</span></code></a></li>
