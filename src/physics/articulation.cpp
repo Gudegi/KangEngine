@@ -37,8 +37,8 @@ struct MultiAxisFrame {
 // MJCF instead authors each hinge axis in body-local space. Build a common
 // right-handed frame so arbitrary signed/rotated orthogonal axes (for example
 // nv_humanoid's diagonal shoulder axes) remain distinct PhysX DOFs.
-MultiAxisFrame makeMultiAxisFrame(
-    const std::vector<Character::JointDesc>& joints) {
+MultiAxisFrame
+makeMultiAxisFrame(const std::vector<Character::JointDesc>& joints) {
     if (joints.size() < 2 || joints.size() > 3)
         throw std::runtime_error(
             "multi-axis articulation joints require two or three axes");
@@ -47,7 +47,8 @@ MultiAxisFrame makeMultiAxisFrame(
     authoredAxes.reserve(joints.size());
     for (const auto& joint : joints) {
         if (joint.axis.squaredNorm() < 1e-12f)
-            throw std::runtime_error("articulation joint axis must be non-zero");
+            throw std::runtime_error(
+                "articulation joint axis must be non-zero");
         authoredAxes.push_back(joint.axis.normalized());
     }
     for (size_t i = 0; i < authoredAxes.size(); ++i) {
@@ -135,20 +136,17 @@ Character::CollisionGeomDesc makeFallbackBoxGeom(const PxVec3& halfExtents) {
 
 // Creates and attaches PhysX shapes for each MJCF collision geom on the link.
 // Cylinders are approximated as capsules (PhysX has no native cylinder shape).
-void attachCollisionShapes(PxArticulationLink* link, PhysicsWorld& physics,
-                           const Character::CollisionGeomDesc* geoms,
-                           std::size_t count, float contactOffset,
-                           float restOffset,
-                           const std::vector<
-                               Physics::CollisionMaterialOverride>& overrides,
-                           std::shared_ptr<const Animation::SkeletonTree> tree,
-                           int bodyIndex) {
+void attachCollisionShapes(
+    PxArticulationLink* link, PhysicsWorld& physics,
+    const Character::CollisionGeomDesc* geoms, std::size_t count,
+    float contactOffset, float restOffset,
+    const std::vector<Physics::CollisionMaterialOverride>& overrides,
+    std::shared_ptr<const Animation::SkeletonTree> tree, int bodyIndex) {
     using Type = Character::CollisionGeomDesc::Type;
     for (std::size_t i = 0; i < count; ++i) {
         const auto& g = geoms[i];
-        const auto material =
-            resolveCollisionMaterial(g, overrides, tree, bodyIndex,
-                                     static_cast<int>(i));
+        const auto material = resolveCollisionMaterial(
+            g, overrides, tree, bodyIndex, static_cast<int>(i));
         PxShape* shape = nullptr;
         PxTransform localPose(PxIdentity);
         switch (g.type) {
@@ -191,15 +189,15 @@ void attachCollisionShapes(PxArticulationLink* link, PhysicsWorld& physics,
 }
 
 // Convenience overload accepting a vector of geoms.
-void attachCollisionShapes(PxArticulationLink* link, PhysicsWorld& physics,
-                           const std::vector<Character::CollisionGeomDesc>& geoms,
-                           float contactOffset, float restOffset,
-                           const std::vector<
-                               Physics::CollisionMaterialOverride>& overrides,
-                           std::shared_ptr<const Animation::SkeletonTree> tree,
-                           int bodyIndex) {
+void attachCollisionShapes(
+    PxArticulationLink* link, PhysicsWorld& physics,
+    const std::vector<Character::CollisionGeomDesc>& geoms, float contactOffset,
+    float restOffset,
+    const std::vector<Physics::CollisionMaterialOverride>& overrides,
+    std::shared_ptr<const Animation::SkeletonTree> tree, int bodyIndex) {
     attachCollisionShapes(link, physics, geoms.data(), geoms.size(),
-                          contactOffset, restOffset, overrides, tree, bodyIndex);
+                          contactOffset, restOffset, overrides, tree,
+                          bodyIndex);
 }
 
 // Applies MJCF inertial properties (mass, COM, diag inertia) to a link.
@@ -254,11 +252,9 @@ void setCollisionFilterData(PxRigidActor* actor, PxU32 collisionGroup) {
 
 // Move semantics
 Articulation::Articulation(Articulation&& o) noexcept
-    : _artic(o._artic), _aggregate(o._aggregate),
-      _links(std::move(o._links)),
-      _template(std::move(o._template)),
-      _KPs(std::move(o._KPs)), _KDs(std::move(o._KDs)),
-      _effortLimits(std::move(o._effortLimits)),
+    : _artic(o._artic), _aggregate(o._aggregate), _links(std::move(o._links)),
+      _template(std::move(o._template)), _KPs(std::move(o._KPs)),
+      _KDs(std::move(o._KDs)), _effortLimits(std::move(o._effortLimits)),
       _appliedForces(std::move(o._appliedForces)) {
     o._artic = nullptr;
     o._aggregate = nullptr;
@@ -481,11 +477,11 @@ std::vector<std::string> Articulation::getDofNames() const {
     return out;
 }
 
-std::vector<int> Articulation::getDofGpuIndices() const {
-    // PhysX Direct GPU API stores articulation DOFs in low-level link index
-    // order, then in PxArticulationAxis enum order within each inbound joint.
-    // KangEngine exposes DOFs in logical/skeleton order, so return a scatter
-    // map: logical DOF index -> PhysX GPU buffer column.
+std::vector<int> Articulation::getDofPhysxIndices() const {
+    // PhysX articulation caches and Direct GPU buffers store DOFs in
+    // low-level link index order, then in PxArticulationAxis enum order
+    // within each inbound joint. KangEngine exposes DOFs in logical/skeleton
+    // order, so return a scatter map: logical DOF index -> PhysX DOF index.
     if (!_template)
         return {};
     std::vector<int> order(_template->_dofs.size());
@@ -507,6 +503,10 @@ std::vector<int> Articulation::getDofGpuIndices() const {
         result[static_cast<size_t>(order[gpuIndex])] =
             static_cast<int>(gpuIndex);
     return result;
+}
+
+std::vector<int> Articulation::getDofGpuIndices() const {
+    return getDofPhysxIndices();
 }
 
 std::vector<std::array<float, 2>> Articulation::getDofLimits() const {
@@ -570,10 +570,10 @@ std::shared_ptr<ArticulationTemplate> ArticulationTemplate::create(
     result->_bodyNames.reserve(static_cast<size_t>(n));
     for (int i = 0; i < n; ++i) {
         const auto& transform = globals[static_cast<size_t>(i)];
-        result->_restTransforms.emplace_back(
-            PxVec3(transform.translation.x(), transform.translation.y(),
-                   transform.translation.z()),
-            toPxQuat(transform.rotation));
+        result->_restTransforms.emplace_back(PxVec3(transform.translation.x(),
+                                                    transform.translation.y(),
+                                                    transform.translation.z()),
+                                             toPxQuat(transform.rotation));
         result->_bodyNames.push_back(result->_tree->nodeName(i));
 
         auto jit = result->_joints.find(i);
@@ -583,9 +583,9 @@ std::shared_ptr<ArticulationTemplate> ArticulationTemplate::create(
             const auto& jd = jit->second[0];
             result->_jointFrames[static_cast<size_t>(i)] =
                 axisAlignQuat(jd.axis);
-            result->_dofs.push_back(
-                {i, jd.name, PxArticulationAxis::eTWIST, jd.loLimit,
-                 jd.hiLimit, jd.kp, jd.kd, jd.effortLimit});
+            result->_dofs.push_back({i, jd.name, PxArticulationAxis::eTWIST,
+                                     jd.loLimit, jd.hiLimit, jd.kp, jd.kd,
+                                     jd.effortLimit});
             continue;
         }
 
@@ -602,28 +602,29 @@ std::shared_ptr<ArticulationTemplate> ArticulationTemplate::create(
     for (int i = 0; i < n; ++i) {
         auto it = result->_colGeoms.find(i);
         if (it != result->_colGeoms.end() && it->second.empty())
-            it->second.push_back(makeFallbackBoxGeom(
-                i == 0 ? cfg.rootBoxHalf : cfg.linkBoxHalf));
+            it->second.push_back(makeFallbackBoxGeom(i == 0 ? cfg.rootBoxHalf
+                                                            : cfg.linkBoxHalf));
     }
     return result;
 }
 
-Articulation Articulation::build(
-    PhysicsWorld& physics, std::shared_ptr<const Animation::SkeletonTree> tree,
-    const Character::CollisionGeomDescMap& colGeoms,
-    const Character::JointDescMap& joints,
-    const Character::InertialDescMap& inertials,
-    const ArticulationConfig& cfg) {
+Articulation
+Articulation::build(PhysicsWorld& physics,
+                    std::shared_ptr<const Animation::SkeletonTree> tree,
+                    const Character::CollisionGeomDescMap& colGeoms,
+                    const Character::JointDescMap& joints,
+                    const Character::InertialDescMap& inertials,
+                    const ArticulationConfig& cfg) {
     return build(physics,
                  ArticulationTemplate::create(std::move(tree), colGeoms, joints,
                                               inertials, cfg),
                  cfg);
 }
 
-Articulation Articulation::build(
-    PhysicsWorld& physics,
-    std::shared_ptr<ArticulationTemplate> articulationTemplate,
-    const ArticulationConfig& cfg) {
+Articulation
+Articulation::build(PhysicsWorld& physics,
+                    std::shared_ptr<ArticulationTemplate> articulationTemplate,
+                    const ArticulationConfig& cfg) {
     if (!articulationTemplate)
         throw std::runtime_error("Articulation::build requires a template");
 
@@ -712,8 +713,8 @@ Articulation Articulation::build(
                 if (dof.linkIndex != i)
                     continue;
                 joint->setMotion(dof.axis, PxArticulationMotion::eLIMITED);
-                PhysXCompat::setArticulationLimit(
-                    *joint, dof.axis, dof.loLimit, dof.hiLimit);
+                PhysXCompat::setArticulationLimit(*joint, dof.axis, dof.loLimit,
+                                                  dof.hiLimit);
             }
         }
     }
@@ -901,8 +902,16 @@ void Articulation::setJointForces(const std::vector<float>& forces) {
 
     PxArticulationCache* cache = _artic->createCache();
     _artic->zeroCache(*cache);
-    for (int i = 0; i < n; ++i)
-        cache->jointForce[i] = forces[i];
+    const std::vector<int> physxDofIndices = getDofPhysxIndices();
+    for (int logicalIndex = 0; logicalIndex < n; ++logicalIndex) {
+        const int physxIndex =
+            physxDofIndices[static_cast<size_t>(logicalIndex)];
+        if (physxIndex < 0 || physxIndex >= n)
+            throw std::runtime_error(
+                "setJointForces: invalid logical-to-PhysX DOF mapping");
+        cache->jointForce[physxIndex] =
+            forces[static_cast<size_t>(logicalIndex)];
+    }
     _artic->applyCache(*cache, PxArticulationCacheFlag::eFORCE);
     cache->release();
 

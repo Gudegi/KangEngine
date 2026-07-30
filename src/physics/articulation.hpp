@@ -113,6 +113,7 @@ class Articulation {
     std::vector<float> _appliedForces;
 
     void syncDriveParams();
+    std::vector<int> getDofPhysxIndices() const;
 
   public:
     Articulation() = default;
