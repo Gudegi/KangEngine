@@ -65,7 +65,14 @@ class MultiEnvSimWorldApp(ke.App):
         self.friction_switch_time = float(friction_switch_time)
 
     def setup(self):
-        self.paused = False
+        self.timing = self.configure_timing(
+            ke.SimulationTimingConfig(
+                render_hz=0.0,
+                physics_hz=120.0,
+                fixed_update_hz=60.0,
+            )
+        )
+        self.set_simulation_hotkeys_enabled(True)
         self.sim_time = 0.0
         self.material_update_count = 0
         self.runtime_material_applied = False
@@ -91,7 +98,7 @@ class MultiEnvSimWorldApp(ke.App):
 
         self.world = ke.sim.KangSimWorld(
             num_envs=self.num_envs,
-            sim_dt=1.0 / 120.0,
+            sim_dt=self.timing.physics_dt,
             add_ground=False,
         )
         self.world.physics.add_static_box(
@@ -170,16 +177,13 @@ class MultiEnvSimWorldApp(ke.App):
         self.world.step(substeps=0, apply_commands=False)
         self.visual.sync()
 
-    def preRender(self):
-        if self.was_key_pressed(keys.SPACE):
-            self.paused = not self.paused
+    def preUpdate(self):
         if self.was_key_pressed(keys.R):
             self._reset()
-        if self.paused:
-            return
 
-        self.world.step(substeps=2)
-        self.sim_time += self.world.sim_dt * 2
+    def fixedUpdate(self, fixed_dt):
+        self.world.advance(fixed_dt)
+        self.sim_time += fixed_dt
         if (
             not self.runtime_material_applied
             and self.sim_time >= self.friction_switch_time
@@ -193,6 +197,8 @@ class MultiEnvSimWorldApp(ke.App):
                 f"envs={self.high_friction_envs}, "
                 f"total_updated_shapes={self.material_update_count}"
             )
+
+    def preRender(self):
         self.visual.sync()
         self.check_error()
 
@@ -208,9 +214,10 @@ class MultiEnvSimWorldApp(ke.App):
 
         imgui.begin("Multi-Env Sim World")
         imgui.text("KangSimWorld batched state example")
-        imgui.text("Space: pause/resume    R: reset")
+        imgui.text("Enter: play/pause    Space: pause/step    R: reset")
         imgui.separator()
-        imgui.text(f"State: {'paused' if self.paused else 'running'}")
+        state = "paused" if self.is_simulation_paused() else "running"
+        imgui.text(f"State: {state}")
         imgui.text(f"Envs: {self.num_envs}")
         imgui.text(f"root_pos shape: {tuple(root_pos.shape)}")
         imgui.text("height min/mean/max:")

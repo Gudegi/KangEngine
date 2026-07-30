@@ -50,7 +50,14 @@ class MjcfDofControlApp(ke.App):
         self.mjcf_path = str(Path(mjcf_path).expanduser().resolve())
 
     def setup(self):
-        self.paused = False
+        self.timing = self.configure_timing(
+            ke.SimulationTimingConfig.from_dt(
+                physics_dt=self.sim_dt,
+                fixed_dt=self.sim_dt * self.step_substeps,
+                render_hz=60.0,
+            )
+        )
+        self.set_simulation_hotkeys_enabled(True)
         self.elapsed = 0.0
         self.kp = float(self.default_kp)
         self.kd = float(self.default_kd)
@@ -105,7 +112,7 @@ class MjcfDofControlApp(ke.App):
     def create_world(self):
         self.world = ke.sim.KangSimWorld(
             num_envs=1,
-            sim_dt=float(self.sim_dt),
+            sim_dt=self.timing.physics_dt,
             add_ground=True,
         )
         self.visual = ke.visual.sim.SimWorldVisualizer(self, self.world)
@@ -212,18 +219,14 @@ class MjcfDofControlApp(ke.App):
             return -math.pi, math.pi
         return float(lo), float(hi)
 
-    def preRender(self):
-        if self.was_key_pressed(keys.SPACE):
-            self.paused = not self.paused
+    def preUpdate(self):
         if self.was_key_pressed(keys.R):
             self._reset()
         if self.was_key_pressed(keys.Q):
             self.animate = not self.animate
 
-        if self.paused:
-            return
-
-        self.elapsed += 1.0 / 60.0
+    def fixedUpdate(self, fixed_dt):
+        self.elapsed += fixed_dt
         if self.animate:
             self.targets[:] = self._animated_targets()
 
@@ -235,7 +238,9 @@ class MjcfDofControlApp(ke.App):
             kp=self.kp,
             kd=self.kd,
         )
-        self.world.step(substeps=int(self.step_substeps))
+        self.world.advance(fixed_dt)
+
+    def preRender(self):
         self.visual.sync()
         self._update_contact_force_arrows()
         self._update_drag_force_arrow()
@@ -489,8 +494,9 @@ class MjcfDofControlApp(ke.App):
 
     def render(self):
         imgui.begin(self.window_title)
-        imgui.text(f"State: {'paused' if self.paused else 'running'}")
-        imgui.text("Space: pause/resume    R: reset    Q: auto motion")
+        state = "paused" if self.is_simulation_paused() else "running"
+        imgui.text(f"State: {state}")
+        imgui.text("Enter: play/pause    Space: pause/step    R: reset    Q: auto motion")
         imgui.text(f"Links: {self.robot.num_links()}  DOFs: {self.num_dofs}")
         imgui.text(Path(self.mjcf_path).name)
         imgui.separator()

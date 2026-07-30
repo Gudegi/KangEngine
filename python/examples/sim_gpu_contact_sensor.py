@@ -220,11 +220,19 @@ class GpuContactSensorViewer(ke.App):
         self.args = args
 
     def setup(self):
-        self.paused = False
+        self._skip_fixed_updates_this_frame = False
         self.show_contact_debug = True
         self.contact_marker_view = None
         self.force_arrow_view = None
         self.demo = GpuContactSensorDemo(self.args).setup()
+        self.timing = self.configure_timing(
+            ke.SimulationTimingConfig.from_dt(
+                physics_dt=self.demo.world.sim_dt,
+                fixed_dt=self.demo.world.sim_dt * self.args.substeps,
+                render_hz=60.0,
+            )
+        )
+        self.set_simulation_hotkeys_enabled(True)
         self.shaders = self.create_standard_shaders()
         self.add_ground(scale=16.0, shader=self.shaders.ground)
         self.set_camera_view([3.5, -5.5, 3.4], [2.0, 1.2, 0.8])
@@ -248,21 +256,21 @@ class GpuContactSensorViewer(ke.App):
         )
         self.check_error()
 
-    def preRender(self):
-        if self.was_key_pressed(keys.SPACE):
-            self.paused = not self.paused
+    def preUpdate(self):
         if self.was_key_pressed(keys.C):
             self.show_contact_debug = not self.show_contact_debug
         if self.was_key_pressed(keys.R):
             self.demo.reset()
-            self.visual.sync()
-            self._update_contact_debug()
-            self.check_error()
-            return
-        if not self.paused:
+            self._skip_fixed_updates_this_frame = True
+
+    def fixedUpdate(self, fixed_dt):
+        if not self._skip_fixed_updates_this_frame:
             self.demo.step(self.args.substeps)
-            self.visual.sync()
+
+    def preRender(self):
+        self.visual.sync()
         self._update_contact_debug()
+        self._skip_fixed_updates_this_frame = False
         self.check_error()
 
     def _clear_contact_debug(self):
@@ -380,14 +388,18 @@ class GpuContactSensorViewer(ke.App):
         max_force = float(torch.linalg.vector_norm(force, dim=1).max().item())
 
         imgui.begin("GPU Contact Sensor")
-        imgui.text(f"State: {'paused' if self.paused else 'running'}")
+        state = "paused" if self.is_simulation_paused() else "running"
+        imgui.text(f"State: {state}")
         imgui.text(f"Envs: {self.args.num_envs}")
         imgui.text(f"Contacts: {hit_count}/{self.args.num_envs}")
         imgui.text(f"Max normal force: {max_force:.2f}")
         imgui.text(f"Peak normal force: {self.demo.peak_force:.2f}")
         imgui.text(f"Contact debug: {'on' if self.show_contact_debug else 'off'}")
         imgui.separator()
-        imgui.text("Space: pause/resume    R: reset    C: contact debug")
+        imgui.text(
+            "Enter: play/pause    Space: pause/step    "
+            "R: reset    C: contact debug"
+        )
         imgui.end()
 
     def cleanup(self):

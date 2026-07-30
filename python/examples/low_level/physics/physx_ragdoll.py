@@ -22,7 +22,6 @@ class RagdollApp(ke.App):
         self.spawn_height_offset = 1.5
         self.kp = 0.0
         self.kd = 5.0
-        self.paused = False
         self.show_collision = False
 
         device = self.get_renderer().device()
@@ -43,7 +42,16 @@ class RagdollApp(ke.App):
         self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
         self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
 
-        self.physics = ke.physics.PhysicsWorld(ke.physics.PhysicsConfig.z_up())
+        physics_config = ke.physics.PhysicsConfig.z_up()
+        self.physics = ke.physics.PhysicsWorld(physics_config)
+        self.timing = self.configure_timing(
+            ke.SimulationTimingConfig.from_dt(
+                physics_dt=physics_config.dt,
+                fixed_dt=physics_config.dt,
+                render_hz=60.0,
+            )
+        )
+        self.set_simulation_hotkeys_enabled(True)
         self.physics.add_default_ground()
 
         self.scene.add_ground(scale=100.0, shader=self.ground_shader)
@@ -97,29 +105,26 @@ class RagdollApp(ke.App):
             ke.quat(1.0, 0.0, 0.0, 0.0),
         )
 
-    def preRender(self):
-        if self.was_key_pressed(keys.SPACE):
-            self.paused = not self.paused
-
+    def preUpdate(self):
         if self.was_key_pressed(keys.R):
             self.reset()
 
-        if self.paused:
-            return
-
+    def fixedUpdate(self, fixed_dt):
         self.articulation.set_drive_targets(self.targets, self.kp, self.kd)
         self.physics.step()
+
+    def preRender(self):
         self.physics_bridge.sync()
         self.check_error()
 
     def render(self):
         num_links = self.articulation.num_links()
         num_dofs = self.articulation.num_dofs()
-        state = "PAUSED" if self.paused else "running"
+        state = "PAUSED" if self.is_simulation_paused() else "running"
 
         imgui.begin("H1 Ragdoll")
         imgui.text(f"Bodies: {num_links}  DOFs: {num_dofs}  |  {state}")
-        imgui.text("Space: pause/resume    R: reset")
+        imgui.text("Enter: play/pause    Space: pause/step    R: reset")
         imgui.separator()
 
         mode = "Pure ragdoll (kp=0)" if self.kp < 1.0 else "Active ragdoll (kp>0)"

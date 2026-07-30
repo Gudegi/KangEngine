@@ -7,6 +7,9 @@ Application lifecycle, camera access, and viewport interaction.
 
 .. autoclass:: App
 
+.. autoclass:: SimulationTimingConfig
+   :members:
+
 .. autoclass:: SceneContext
 
 .. autoclass:: DebugGeometry

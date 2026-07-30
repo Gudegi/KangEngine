@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -1011,6 +1012,7 @@ class KangSimWorld:
         self._mjcf_load_count = 0
         self.sim_time = 0.0
         self.sim_dt = float(physics_config.dt)
+        self._advance_time_remainder = 0.0
         self._uses_gpu_sim = uses_gpu_sim
         self._gpu_system = None
         self._rigid_gpu_rows: dict[tuple[int, int], int] = {}
@@ -2484,6 +2486,58 @@ class KangSimWorld:
         if refresh:
             self.state.refresh()
         return self.state
+
+    def advance(
+        self,
+        duration: float,
+        refresh: bool = True,
+        apply_commands: bool = True,
+    ):
+        """Advance by a requested amount of simulation time using fixed steps.
+
+        ``duration`` never changes the PhysX timestep. The method converts it
+        into as many whole ``sim_dt`` steps as are currently due and retains
+        any fractional remainder for the next call. This is useful from an app
+        ``fixedUpdate(fixed_dt)`` callback whose control frequency may differ
+        from the world's physics frequency.
+
+        For example, a 120 Hz world advances 2 substeps for ``1 / 60`` seconds
+        and 4 substeps for ``1 / 30`` seconds. Durations smaller than
+        ``sim_dt`` may execute no physics until enough time accumulates.
+
+        Args:
+            duration: Requested simulation duration in seconds.
+            refresh: Forwarded to :meth:`step` when at least one physics step
+                is due.
+            apply_commands: Forwarded to :meth:`step` when at least one physics
+                step is due.
+
+        Returns:
+            The current ``world.state``.
+        """
+        duration_seconds = float(duration)
+        if not math.isfinite(duration_seconds) or duration_seconds < 0.0:
+            raise ValueError("duration must be a finite non-negative value")
+        if duration_seconds == 0.0:
+            return self.state
+
+        accumulated = self._advance_time_remainder + duration_seconds
+        step_ratio = accumulated / self.sim_dt
+        nearest_steps = round(step_ratio)
+        if math.isclose(step_ratio, nearest_steps, rel_tol=1.0e-6, abs_tol=1.0e-9):
+            substeps = int(nearest_steps)
+        else:
+            substeps = int(math.floor(step_ratio))
+        self._advance_time_remainder = accumulated - substeps * self.sim_dt
+        if self._advance_time_remainder < 0.0:
+            self._advance_time_remainder = 0.0
+        if substeps == 0:
+            return self.state
+        return self.step(
+            substeps=substeps,
+            refresh=refresh,
+            apply_commands=apply_commands,
+        )
 
     def refresh(self):
         """Refresh and return ``world.state``.

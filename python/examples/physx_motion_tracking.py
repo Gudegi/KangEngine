@@ -37,8 +37,15 @@ class KwMotionTrackingApp(ke.App):
 
     def setup(self):
         self.root_pos, self.local_rot, self.fps = load_motion(Path(self.motion_file))
+        self.timing = self.configure_timing(
+            ke.SimulationTimingConfig(
+                render_hz=60.0,
+                physics_hz=60.0,
+                fixed_update_hz=float(self.fps),
+            )
+        )
+        self.set_simulation_hotkeys_enabled(True)
         self.frame_idx = 0
-        self.paused = False
         self.kp = 200.0
         self.kd = 10.0
         self.track_root = True
@@ -63,7 +70,10 @@ class KwMotionTrackingApp(ke.App):
         self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
         self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
 
-        self.sim_world = ke.sim.KangSimWorld(add_ground=True)
+        self.sim_world = ke.sim.KangSimWorld(
+            sim_dt=self.timing.physics_dt,
+            add_ground=True,
+        )
 
         self.scene.add_ground(scale=100.0, shader=self.ground_shader)
 
@@ -168,15 +178,11 @@ class KwMotionTrackingApp(ke.App):
         self.sim_world.step(substeps=0, apply_commands=False)
         self.visual_bridge.sync()
 
-    def preRender(self):
-        if self.was_key_pressed(keys.SPACE):
-            self.paused = not self.paused
+    def preUpdate(self):
         if self.was_key_pressed(keys.R):
             self._reset()
 
-        if self.paused:
-            return
-
+    def fixedUpdate(self, fixed_dt):
         idx = self.frame_idx
         self._apply_ghost(idx)
 
@@ -192,21 +198,23 @@ class KwMotionTrackingApp(ke.App):
         if len(targets) == self.num_dofs:
             self.sim_world.set_cmd(None, 0, targets, ke.sim.ControlMode.POS, self.kp, self.kd)
 
-        self.sim_world.step()
-        self.visual_bridge.sync()
+        self.sim_world.advance(fixed_dt)
 
         self.frame_idx = (self.frame_idx + 1) % self.root_pos.shape[0]
+
+    def preRender(self):
+        self.visual_bridge.sync()
         self.check_error()
 
     def render(self):
-        state = "PAUSED" if self.paused else "running"
+        state = "PAUSED" if self.is_simulation_paused() else "running"
         imgui.begin("KW Motion Tracking")
         imgui.text(
             f"Links: {self.articulation.num_links()}  "
             f"DOFs: {self.num_dofs}  |  {state}"
         )
         imgui.text(f"Frame: {self.frame_idx} / {self.root_pos.shape[0] - 1}")
-        imgui.text("Space: pause/resume    R: reset")
+        imgui.text("Enter: play/pause    Space: pause/step    R: reset")
         imgui.separator()
         _, self.kp = imgui.slider_float("kp (stiffness)", self.kp, 0.0, 1000.0)
         _, self.kd = imgui.slider_float("kd (damping)", self.kd, 0.0, 100.0)

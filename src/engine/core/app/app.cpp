@@ -163,7 +163,7 @@ struct App::IO {
 
 struct App::RenderVariable {
     float deltaTime = 0.0f;
-    float lastFrameTime = 0.0f;
+    double lastFrameTime = 0.0;
 };
 
 App::App()
@@ -290,12 +290,20 @@ void App::start() {
     }
 
     setup();
+    _renderVariable->lastFrameTime = 0.0;
+    _fixedStepClock.reset();
     GLFWwindow* window = _window.getGlfwWindow();
     while (!glfwWindowShouldClose(window)) {
-        float currentFrame = static_cast<float>(glfwGetTime());
-        float deltaTime = currentFrame - _renderVariable->lastFrameTime;
-        if (deltaTime < _renderHz) {
-            float remaining = _renderHz - deltaTime;
+        const double currentFrame = glfwGetTime();
+        const double deltaTime =
+            _renderVariable->lastFrameTime > 0.0
+                ? currentFrame - _renderVariable->lastFrameTime
+                : 0.0;
+        const float renderInterval =
+            (_renderHz > 0.0f) ? (1.0f / _renderHz) : 0.0f;
+        if (_renderVariable->lastFrameTime > 0.0 && renderInterval > 0.0f &&
+            deltaTime < renderInterval) {
+            const double remaining = renderInterval - deltaTime;
             if (remaining > 0.002f) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(
                     static_cast<int>((remaining - 0.001f) * 1000)));
@@ -449,6 +457,9 @@ bool App::writeActiveSceneCameraPreviewPNG(int width, int height,
 }
 
 void App::renderFrameOnce() {
+    // TODO: Split frame orchestration into runFrame(). FixedStepClock and
+    // update callbacks belong there; renderFrameOnce() should become a
+    // render-only path without advancing simulation.
     auto smoothMetric = [](float& metric, double valueSeconds) {
         const float valueMs = static_cast<float>(valueSeconds * 1000.0);
         metric = metric <= 0.0f ? valueMs : metric * 0.9f + valueMs * 0.1f;
@@ -459,11 +470,23 @@ void App::renderFrameOnce() {
     if (window == nullptr || glfwWindowShouldClose(window))
         return;
 
-    float currentFrame = static_cast<float>(glfwGetTime());
-    _renderVariable->deltaTime = currentFrame - _renderVariable->lastFrameTime;
+    const double currentFrame = glfwGetTime();
+    const double frameDelta =
+        _renderVariable->lastFrameTime > 0.0
+            ? currentFrame - _renderVariable->lastFrameTime
+            : 0.0;
+    _renderVariable->deltaTime = static_cast<float>(frameDelta);
     _renderVariable->lastFrameTime = currentFrame;
 
     processInput();
+    processSimulationHotkeys();
+    const double updateStart = glfwGetTime();
+    this->preUpdate();
+    const int fixedUpdateCount = _fixedStepClock.advance(frameDelta);
+    const double fixedDt = _fixedStepClock.getStepInterval();
+    for (int i = 0; i < fixedUpdateCount; ++i)
+        this->fixedUpdate(fixedDt);
+
     const bool useSceneCameraForMainView =
         (_hideUI || _panelManager.getLayoutMode() != UILayoutMode::Editor) &&
         syncActiveSceneCameraView();
@@ -486,7 +509,6 @@ void App::renderFrameOnce() {
         _panelManager.preRender();
     }
 
-    const double updateStart = glfwGetTime();
     this->preRender();
     renderSelectedLightOverlay();
     renderSelectedCameraOverlay();
@@ -614,6 +636,71 @@ bool App::getVSync() const { return _window.getVSync(); }
 
 void App::setRenderHz(float renderHz) {
     _renderHz = (renderHz > 0.0f) ? renderHz : 0.0f;
+}
+
+void App::setFixedUpdateHz(double updateHz) {
+    _fixedStepClock.setStepHz(updateHz);
+}
+
+double App::getFixedUpdateHz() const { return _fixedStepClock.getStepHz(); }
+
+void App::setMaxCatchUpSteps(int count) {
+    _fixedStepClock.setMaxCatchUpSteps(count);
+}
+
+int App::getMaxCatchUpSteps() const {
+    return _fixedStepClock.getMaxCatchUpSteps();
+}
+
+void App::setMaxFrameDelta(double seconds) {
+    _fixedStepClock.setMaxFrameDelta(seconds);
+}
+
+double App::getMaxFrameDelta() const {
+    return _fixedStepClock.getMaxFrameDelta();
+}
+
+void App::setSimulationPaused(bool paused) {
+    _fixedStepClock.setPaused(paused);
+}
+
+bool App::isSimulationPaused() const { return _fixedStepClock.isPaused(); }
+
+void App::requestSimulationStep() { _fixedStepClock.requestSingleStep(); }
+
+void App::setSimulationHotkeysEnabled(bool enabled) {
+    _simulationHotkeysEnabled = enabled;
+    _simulationPauseKeyWasDown = false;
+    _simulationStepKeyWasDown = false;
+}
+
+void App::processSimulationHotkeys() {
+    if (!_simulationHotkeysEnabled)
+        return;
+
+    GLFWwindow* window = getWindow();
+    if (window == nullptr)
+        return;
+
+    const bool pauseKeyDown =
+        glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS ||
+        glfwGetKey(window, GLFW_KEY_KP_ENTER) == GLFW_PRESS;
+    if (pauseKeyDown && !_simulationPauseKeyWasDown)
+        setSimulationPaused(!isSimulationPaused());
+    _simulationPauseKeyWasDown = pauseKeyDown;
+
+    const bool stepKeyDown = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+    if (stepKeyDown && !_simulationStepKeyWasDown) {
+        if (isSimulationPaused())
+            requestSimulationStep();
+        else
+            setSimulationPaused(true);
+    }
+    _simulationStepKeyWasDown = stepKeyDown;
+}
+
+double App::getDroppedWallTime() const {
+    return _fixedStepClock.getDroppedWallTime();
 }
 
 std::vector<uint8_t> App::readRgbPixels(bool flipY) {

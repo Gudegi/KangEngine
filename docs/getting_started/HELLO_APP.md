@@ -33,9 +33,15 @@ Lifecycle callback names retain their C++ virtual spelling, while normal
 Python methods use snake_case.
 
 - `setup()`: create resources and scene objects once.
-- `preRender()`: update simulation or animation before drawing.
+- `preUpdate()`: process input and other once-per-rendered-frame state.
+- `fixedUpdate(fixed_dt)`: run zero or more fixed control/physics updates.
+- `preRender()`: synchronize the latest state and prepare visuals.
 - `render()`: build ImGui panels or other per-frame UI.
+- `postRender()`: perform work after drawing.
 - `cleanup()`: release explicitly owned simulation resources.
+
+See [Fixed Timestep and Rendering](../simulation/FIXED_TIMESTEP.md) before
+adding physics to an application.
 
 The complete scene example used by the next page is
 `python/examples/render_prim_scene.py`.

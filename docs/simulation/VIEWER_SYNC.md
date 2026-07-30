@@ -12,8 +12,11 @@ visual_batch = visual.add(
     material=material,
 )
 
-world.step(substeps=2)
-visual.sync()
+def fixedUpdate(self, fixed_dt):
+    self.world.advance(fixed_dt)
+
+def preRender(self):
+    self.visual.sync()
 ```
 
 `visual.add(...)` is the normal path for many simulated bodies and uses
@@ -27,6 +30,9 @@ visual.add_rigid_scene_graph(...)
 
 Use one representation deliberately: ExternalBuffer for throughput,
 SceneGraph for inspectable prims and interaction.
+
+Keep physics in `fixedUpdate()` and synchronization in `preRender()` so slow
+rendering cannot change the physics rate.
 
 Examples:
 

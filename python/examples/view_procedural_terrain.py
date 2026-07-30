@@ -41,7 +41,6 @@ class ProceduralTerrainViewer(ke.App):
         self.seed = int(seed)
         self.collision_test = bool(collision_test)
         self.test_bodies_per_type = int(test_bodies_per_type)
-        self.paused = False
 
     def setup(self):
         self.shaders = self.create_standard_shaders()
@@ -75,7 +74,16 @@ class ProceduralTerrainViewer(ke.App):
         self.collision_added = False
         self.test_bodies = []
         if self.collision_test:
-            self.physics = ke.physics.PhysicsWorld(ke.physics.PhysicsConfig.y_up())
+            physics_config = ke.physics.PhysicsConfig.y_up()
+            self.physics = ke.physics.PhysicsWorld(physics_config)
+            self.timing = self.configure_timing(
+                ke.SimulationTimingConfig.from_dt(
+                    physics_dt=physics_config.dt,
+                    fixed_dt=physics_config.dt,
+                    render_hz=60.0,
+                )
+            )
+            self.set_simulation_hotkeys_enabled(True)
             heights = np.ascontiguousarray(self.grid.height_meters(), dtype=np.float32)
             self.collision_added = self.physics.add_heightfield(
                 heights.reshape(-1),
@@ -101,14 +109,17 @@ class ProceduralTerrainViewer(ke.App):
             f"test_bodies={len(self.test_bodies)}"
         )
 
-    def preRender(self):
+    def preUpdate(self):
         if self.was_key_pressed(keys.R):
             self._reset_collision_test_bodies()
 
-        if not self.physics or self.paused:
-            return
-        self.physics.step()
-        self._sync_collision_test_bodies()
+    def fixedUpdate(self, fixed_dt):
+        if self.physics:
+            self.physics.step()
+
+    def preRender(self):
+        if self.physics:
+            self._sync_collision_test_bodies()
 
     def render(self):
         imgui.begin("Procedural Terrain")
@@ -126,7 +137,11 @@ class ProceduralTerrainViewer(ke.App):
         )
         imgui.text(f"test bodies: {len(self.test_bodies)}")
         if self.test_bodies:
-            _, self.paused = imgui.checkbox("pause physics", self.paused)
+            paused = self.is_simulation_paused()
+            changed, paused = imgui.checkbox("pause physics", paused)
+            if changed:
+                self.set_simulation_paused(paused)
+            imgui.text("Enter: play/pause    Space: pause/step")
             if imgui.button("reset test bodies"):
                 self._reset_collision_test_bodies()
         imgui.end()

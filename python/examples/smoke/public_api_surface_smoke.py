@@ -10,6 +10,8 @@ from kangengine.motion_module import editor as motion_editor
 from kangengine.motion_module import modules as motion_modules
 from kangengine.physics import wrappers as physics_wrappers
 from kangengine.sim import sensor as sim_sensor
+from kangengine.sim import run_mode as sim_run_mode
+from kangengine.sim import timing as sim_timing
 from kangengine.sim import world as sim_world
 from kangengine.terrain import heightfield as terrain_heightfield
 
@@ -82,6 +84,13 @@ def main() -> None:
     assert ke.physics.PhysicsWorld is physics_wrappers.PhysicsWorld
     assert ke.physics.PhysicsWorld.__module__ == "kangengine.physics"
     assert ke.sim.KangSimWorld is sim_world.KangSimWorld
+    assert ke.SimulationTimingConfig is sim_timing.SimulationTimingConfig
+    assert ke.sim.SimulationTimingConfig is sim_timing.SimulationTimingConfig
+    assert ke.SimulationTimingConfig.__module__ == "kangengine.sim"
+    assert ke.SimulationRunMode is sim_run_mode.SimulationRunMode
+    assert ke.SimulationRunConfig is sim_run_mode.SimulationRunConfig
+    assert ke.SimulationPacer is sim_run_mode.SimulationPacer
+    assert ke.sim.SimulationRunMode is sim_run_mode.SimulationRunMode
     assert ke.sim.KangSimWorld.__module__ == "kangengine.sim"
     assert ke.sim.ControlMode.__module__ == "kangengine.sim"
     assert ke.sim.ContactSensor is sim_sensor.ContactSensor

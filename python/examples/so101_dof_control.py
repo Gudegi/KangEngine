@@ -257,7 +257,7 @@ class SO101DofControlApp(MjcfDofControlApp):
             kp=self.kp,
             kd=self.kd,
         )
-        if self.paused:
+        if self.is_simulation_paused():
             self.world.set_dof_state(None, self.obj_id, self.targets)
             self.world.step(substeps=0)
             self.visual.sync()

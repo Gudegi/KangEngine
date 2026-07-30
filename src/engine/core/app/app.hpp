@@ -23,6 +23,7 @@
 #include "utils/asset_path.hpp"
 #include "geometry/ray.hpp"
 #include "engine/core/app/interaction_controller.hpp"
+#include "engine/core/app/fixed_step_clock.hpp"
 #include "engine/core/window/window.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/graphics/backend/graphics_factory.hpp"
@@ -129,6 +130,7 @@ class App {
                           glm::mat4& outTransform) const;
     bool setPickTransform(const RayPickResult& result,
                           const glm::mat4& transform);
+    void processSimulationHotkeys();
 
   public:
     void initialize(
@@ -226,7 +228,9 @@ class App {
     void renderFrameOnce();
     bool shouldClose();
     void requestClose();
-    virtual void setup() {}      // 처음에 사용
+    virtual void setup() {}     // 처음에 사용
+    virtual void preUpdate() {} // input/state changes before fixed updates
+    virtual void fixedUpdate(double fixedDt) {}
     virtual void preRender() {}  // 루프 안에서 사용됨. 렌더 전에 사용
     virtual void render() {}     // overrideable 실제 렌더링
     virtual void postRender() {} // 렌더링 이후 마무리
@@ -250,11 +254,29 @@ class App {
     bool getVSync() const;
     void setRenderHz(float renderHz);
     float getRenderHz() const { return _renderHz; }
+    void setFixedUpdateHz(double updateHz);
+    double getFixedUpdateHz() const;
+    void setMaxCatchUpSteps(int count);
+    int getMaxCatchUpSteps() const;
+    void setMaxFrameDelta(double seconds);
+    double getMaxFrameDelta() const;
+    void setSimulationPaused(bool paused);
+    bool isSimulationPaused() const;
+    void requestSimulationStep();
+    void setSimulationHotkeysEnabled(bool enabled);
+    bool getSimulationHotkeysEnabled() const {
+        return _simulationHotkeysEnabled;
+    }
+    double getDroppedWallTime() const;
     void setCameraMoveSpeed(float speed);
     float getCameraMoveSpeed() const { return _cameraMoveSpeed; }
 
   private:
-    float _renderHz = 0;
+    float _renderHz = 0.0f;
+    FixedStepClock _fixedStepClock;
+    bool _simulationHotkeysEnabled = false;
+    bool _simulationPauseKeyWasDown = false;
+    bool _simulationStepKeyWasDown = false;
     float _measuredRenderFPS = 0.0f;
     float _frameCPUTimeMs = 0.0f;
     float _updateCPUTimeMs = 0.0f;

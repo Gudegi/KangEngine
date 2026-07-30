@@ -356,7 +356,6 @@ class MixedGpuBatchViewer(ke.App):
         self.args = args
 
     def setup(self):
-        self.paused = False
         self.shaders = self.create_standard_shaders()
         self.add_ground(scale=16.0, shader=self.shaders.ground)
         self.set_camera_view([6.0, -9.0, 5.5], [4.0, 1.5, 0.8])
@@ -370,6 +369,14 @@ class MixedGpuBatchViewer(ke.App):
             self.rotations,
             self.zeros3,
         ) = create_simulation(self.args.num_envs, self.args.cuda_device)
+        self.timing = self.configure_timing(
+            ke.SimulationTimingConfig.from_dt(
+                physics_dt=self.world.sim_dt,
+                fixed_dt=self.world.sim_dt * self.args.substeps,
+                render_hz=60.0,
+            )
+        )
+        self.set_simulation_hotkeys_enabled(True)
         (
             self.device,
             self.targets,
@@ -412,9 +419,7 @@ class MixedGpuBatchViewer(ke.App):
         )
         self.check_error()
 
-    def preRender(self):
-        if self.was_key_pressed(keys.SPACE):
-            self.paused = not self.paused
+    def preUpdate(self):
         if self.was_key_pressed(keys.R):
             reset_scene(
                 self.world,
@@ -426,9 +431,8 @@ class MixedGpuBatchViewer(ke.App):
                 self.zeros3,
                 self.targets,
             )
-        if self.paused:
-            return
 
+    def fixedUpdate(self, fixed_dt):
         step_with_random_position_control(
             self.world,
             self.robots,
@@ -443,18 +447,21 @@ class MixedGpuBatchViewer(ke.App):
             self.args.control_mode,
             substeps=self.args.substeps,
         )
+
+    def preRender(self):
         self.visual.sync()
         self.check_error()
 
     def render(self):
         imgui.begin("Mixed GPU Simulation")
-        imgui.text(f"State: {'paused' if self.paused else 'running'}")
+        state = "paused" if self.is_simulation_paused() else "running"
+        imgui.text(f"State: {state}")
         imgui.text(f"Rigid instances: {self.balls.num_envs}")
         imgui.text(f"Articulation instances: {self.robots.num_envs}")
         imgui.text(f"Links per articulation: {self.robots.num_bodies}")
         imgui.text(f"PhysX GPU -> CUDA {self.args.control_mode} -> ExternalBuffer")
         imgui.separator()
-        imgui.text("Space: pause/resume    R: reset scene")
+        imgui.text("Enter: play/pause    Space: pause/step    R: reset scene")
         imgui.end()
 
     def cleanup(self):

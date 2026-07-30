@@ -41,6 +41,10 @@ class PyApp : public App {
     using App::App;
 
     void setup() override { PYBIND11_OVERRIDE_PURE(void, App, setup); }
+    void preUpdate() override { PYBIND11_OVERRIDE(void, App, preUpdate); }
+    void fixedUpdate(double fixedDt) override {
+        PYBIND11_OVERRIDE(void, App, fixedUpdate, fixedDt);
+    }
     void preRender() override { PYBIND11_OVERRIDE_PURE(void, App, preRender); }
     void render() override { PYBIND11_OVERRIDE_PURE(void, App, render); }
     void postRender() override {
@@ -149,10 +153,8 @@ void bind_imgui(py::module& m) {
                 return;
             ImGui::Image(
                 static_cast<ImTextureID>(texture->getNativeHandle()),
-                ImVec2(width, height), ImVec2(0.0f, 1.0f),
-                ImVec2(1.0f, 0.0f),
-                ImVec4(1.0f, 1.0f, 1.0f,
-                       std::clamp(opacity, 0.0f, 1.0f)),
+                ImVec2(width, height), ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f),
+                ImVec4(1.0f, 1.0f, 1.0f, std::clamp(opacity, 0.0f, 1.0f)),
                 ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
         },
         py::arg("texture"), py::arg("width"), py::arg("height"),
@@ -168,8 +170,7 @@ void bind_imgui(py::module& m) {
         py::arg("x"), py::arg("y"), py::arg("radius"), py::arg("color"));
     imgui.def(
         "draw_rect_filled",
-        [](float x1, float y1, float x2, float y2,
-           const glm::vec4& color) {
+        [](float x1, float y1, float x2, float y2, const glm::vec4& color) {
             ImGui::GetWindowDrawList()->AddRectFilled(
                 ImVec2(x1, y1), ImVec2(x2, y2),
                 ImGui::ColorConvertFloat4ToU32(
@@ -183,8 +184,7 @@ void bind_imgui(py::module& m) {
             std::vector<ImVec2> vertices;
             vertices.reserve(points.size());
             for (const py::handle item : points) {
-                const auto point =
-                    py::reinterpret_borrow<py::sequence>(item);
+                const auto point = py::reinterpret_borrow<py::sequence>(item);
                 if (point.size() != 2)
                     throw py::value_error(
                         "Each polygon point must contain x and y.");
@@ -1536,6 +1536,27 @@ py::class_<glm::vec3>(m, "vec3")
         .def("set_far_plane", &Camera::setFarPlane, py::arg("distance"),
              "Set the far clipping distance.");
 
+    py::class_<FixedStepClock>(
+        m, "FixedStepClock",
+        "Wall-clock accumulator that schedules bounded fixed updates.")
+        .def(py::init<>())
+        .def("set_step_hz", &FixedStepClock::setStepHz, py::arg("step_hz"))
+        .def("get_step_hz", &FixedStepClock::getStepHz)
+        .def("get_step_interval", &FixedStepClock::getStepInterval)
+        .def("set_max_catch_up_steps", &FixedStepClock::setMaxCatchUpSteps,
+             py::arg("count"))
+        .def("get_max_catch_up_steps", &FixedStepClock::getMaxCatchUpSteps)
+        .def("set_max_frame_delta", &FixedStepClock::setMaxFrameDelta,
+             py::arg("seconds"))
+        .def("get_max_frame_delta", &FixedStepClock::getMaxFrameDelta)
+        .def("set_paused", &FixedStepClock::setPaused, py::arg("paused"))
+        .def("is_paused", &FixedStepClock::isPaused)
+        .def("request_single_step", &FixedStepClock::requestSingleStep)
+        .def("advance", &FixedStepClock::advance, py::arg("wall_delta_seconds"))
+        .def("reset", &FixedStepClock::reset)
+        .def("get_accumulator", &FixedStepClock::getAccumulator)
+        .def("get_dropped_wall_time", &FixedStepClock::getDroppedWallTime);
+
     // App class with trampoline for Python overrides
     py::class_<App, PyApp>(
         m, "App",
@@ -1550,10 +1571,32 @@ py::class_<glm::vec3>(m, "vec3")
              "Initialize the window, renderer, input, and scene backend.")
         .def("set_render_hz", &App::setRenderHz, py::arg("render_hz"),
              "Set the target render/update frequency in Hz.")
+        .def("set_vsync", &App::setVSync, py::arg("enabled"),
+             "Enable or disable vertical synchronization.")
+        .def("get_vsync", &App::getVSync)
         .def("get_delta_time", &App::getDeltaTime,
              "Return elapsed seconds between recent frames.")
         .def("get_render_hz", &App::getRenderHz,
              "Return the target render/update frequency in Hz.")
+        .def("set_fixed_update_hz", &App::setFixedUpdateHz,
+             py::arg("update_hz"),
+             "Enable fixed updates at the requested wall-clock frequency.")
+        .def("get_fixed_update_hz", &App::getFixedUpdateHz)
+        .def("set_max_catch_up_steps", &App::setMaxCatchUpSteps,
+             py::arg("count"))
+        .def("get_max_catch_up_steps", &App::getMaxCatchUpSteps)
+        .def("set_max_frame_delta", &App::setMaxFrameDelta, py::arg("seconds"))
+        .def("get_max_frame_delta", &App::getMaxFrameDelta)
+        .def("set_simulation_paused", &App::setSimulationPaused,
+             py::arg("paused"))
+        .def("is_simulation_paused", &App::isSimulationPaused)
+        .def("request_simulation_step", &App::requestSimulationStep)
+        .def("set_simulation_hotkeys_enabled",
+             &App::setSimulationHotkeysEnabled, py::arg("enabled"),
+             "Enable Enter play/pause and Space pause/single-step shortcuts.")
+        .def("get_simulation_hotkeys_enabled",
+             &App::getSimulationHotkeysEnabled)
+        .def("get_dropped_wall_time", &App::getDroppedWallTime)
         .def(
             "get_ui_scale",
             [](const App& self) { return self.getUiScale().value(); },
@@ -1595,8 +1638,14 @@ py::class_<glm::vec3>(m, "vec3")
              "Write the current framebuffer to a PNG file.")
         .def("should_close", &App::shouldClose,
              "Return true when the application window should close.")
+        .def("request_close", &App::requestClose,
+             "Request a clean exit from the application loop.")
         .def("setup", &App::setup,
              "User override called once after initialization.")
+        .def("preUpdate", &App::preUpdate,
+             "User override called once before fixed updates each frame.")
+        .def("fixedUpdate", &App::fixedUpdate, py::arg("fixed_dt"),
+             "User override called zero or more times at a fixed timestep.")
         .def("preRender", &App::preRender,
              "User override called before each frame is rendered.")
         .def("render", &App::render,
@@ -2126,8 +2175,7 @@ py::class_<glm::vec3>(m, "vec3")
                 result["guide"] =
                     state.buttons[GLFW_GAMEPAD_BUTTON_GUIDE] == GLFW_PRESS;
                 result["left_thumb"] =
-                    state.buttons[GLFW_GAMEPAD_BUTTON_LEFT_THUMB] ==
-                    GLFW_PRESS;
+                    state.buttons[GLFW_GAMEPAD_BUTTON_LEFT_THUMB] == GLFW_PRESS;
                 result["right_thumb"] =
                     state.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_THUMB] ==
                     GLFW_PRESS;

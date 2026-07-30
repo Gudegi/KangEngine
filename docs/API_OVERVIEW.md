@@ -20,6 +20,7 @@ guide for runnable workflows; use the API Reference for exact signatures.
 | Load FBX, BVH, MJCF, OBJ, or optional USD | `ke.asset` |
 | Configure appearance | `ke.material` |
 | Run Python simulation | `ke.sim.KangSimWorld` |
+| Configure render, physics, and fixed-update rates | `ke.SimulationTimingConfig` |
 | Display simulation state | `ke.visual.sim.SimWorldVisualizer` |
 | Inspect or edit motion | `ke.motion_module` |
 | Use low-level renderer objects | `ke.render` |

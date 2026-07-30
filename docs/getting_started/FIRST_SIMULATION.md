@@ -5,9 +5,17 @@ visual representation.
 
 ```python
 self.standard_materials = self.create_standard_materials()
+self.timing = self.configure_timing(
+    ke.SimulationTimingConfig(
+        render_hz=60.0,
+        physics_hz=120.0,
+        fixed_update_hz=60.0,
+    )
+)
+self.set_simulation_hotkeys_enabled(True)
 self.world = ke.sim.KangSimWorld(
     num_envs=1,
-    sim_dt=1.0 / 120.0,
+    sim_dt=self.timing.physics_dt,
     add_ground=True,
 )
 self.visual = ke.visual.sim.SimWorldVisualizer(self, self.world)
@@ -25,11 +33,14 @@ self.ball = self.world.add_rigid(
 self.visual.add(self.ball, ball_xml, material=self.standard_materials.common)
 ```
 
-Advance and display the simulation once per frame:
+Advance at the fixed simulation rate and display the latest state once per
+rendered frame:
 
 ```python
+def fixedUpdate(self, fixed_dt):
+    self.world.advance(fixed_dt)
+
 def preRender(self):
-    self.world.step(substeps=2)
     self.visual.sync()
 ```
 
@@ -49,9 +60,10 @@ python ./python/examples/sim_world_minimal.py --width 1280 --height 720
 
 </details>
 
-Expected result: the ball falls onto the ground. Press Space to pause and `R`
-to reset it.
+Expected result: the ball falls onto the ground. Enter toggles play/pause,
+Space pauses or advances one step, and `R` resets it.
 
 ![A rigid-body ball](../images/getting_started/first_simulation.png)
 
-Next: [Simulation](../simulation/INDEX.md).
+Next: [Fixed Timestep and Rendering](../simulation/FIXED_TIMESTEP.md) or
+[Simulation](../simulation/INDEX.md).

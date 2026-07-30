@@ -19,14 +19,25 @@ def package_asset_path(*parts: str) -> str:
 
 class MinimalSimWorldApp(ke.App):
     def setup(self):
-        self.paused = False
         self.spawn_pos = [0.0, 0.0, 1.8]
+        self.timing = self.configure_timing(
+            ke.SimulationTimingConfig(
+                render_hz=60.0,
+                physics_hz=120.0,
+                fixed_update_hz=60.0,
+            )
+        )
+        self.set_simulation_hotkeys_enabled(True)
 
         self.standard_materials = self.create_standard_materials()
         self.add_ground()
         self.set_camera_view([3.0, -4.0, 2.2], [0.0, 0.0, 0.7])
 
-        self.world = ke.sim.KangSimWorld(num_envs=1, sim_dt=1.0 / 120.0, add_ground=True)
+        self.world = ke.sim.KangSimWorld(
+            num_envs=1,
+            sim_dt=self.timing.physics_dt,
+            add_ground=True,
+        )
         self.visual = ke.visual.sim.SimWorldVisualizer(self, self.world)
 
         self.ball_xml = package_asset_path("objects", "ball.xml")
@@ -62,15 +73,14 @@ class MinimalSimWorldApp(ke.App):
         self.world.step(substeps=0, apply_commands=False)
         self.visual.sync()
 
-    def preRender(self):
-        if self.was_key_pressed(keys.SPACE):
-            self.paused = not self.paused
+    def preUpdate(self):
         if self.was_key_pressed(keys.R):
             self._reset()
-        if self.paused:
-            return
 
-        self.world.step(substeps=2)
+    def fixedUpdate(self, fixed_dt):
+        self.world.advance(fixed_dt)
+
+    def preRender(self):
         self.visual.sync()
         self.check_error()
 
@@ -79,9 +89,10 @@ class MinimalSimWorldApp(ke.App):
 
         imgui.begin("Minimal Sim World")
         imgui.text("KangSimWorld + SimWorldVisualizer")
-        imgui.text("Space: pause/resume    R: reset")
+        imgui.text("Enter: play/pause    Space: pause/step    R: reset")
         imgui.separator()
-        imgui.text(f"State: {'paused' if self.paused else 'running'}")
+        state = "paused" if self.is_simulation_paused() else "running"
+        imgui.text(f"State: {state}")
         imgui.text(f"Ball root: {pos[0]: .2f}, {pos[1]: .2f}, {pos[2]: .2f}")
         imgui.end()
 

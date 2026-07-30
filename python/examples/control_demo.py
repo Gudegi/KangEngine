@@ -21,7 +21,14 @@ def asset_path(*parts: str) -> str:
 
 class ControlDemo(ke.App):
     def setup(self):
-        self.paused = False
+        self.timing = self.configure_timing(
+            ke.SimulationTimingConfig(
+                render_hz=60.0,
+                physics_hz=120.0,
+                fixed_update_hz=60.0,
+            )
+        )
+        self.set_simulation_hotkeys_enabled(True)
         self.elapsed = 0.0
         self.kp = 180.0
         self.kd = 12.0
@@ -58,7 +65,11 @@ class ControlDemo(ke.App):
             "checkerColor2", ke.vec4([0.77, 0.93, 0.78, 1.0])
         )
 
-        self.world = ke.sim.KangSimWorld(num_envs=1, sim_dt=1.0 / 120.0, add_ground=True)
+        self.world = ke.sim.KangSimWorld(
+            num_envs=1,
+            sim_dt=self.timing.physics_dt,
+            add_ground=True,
+        )
         self.visual = ke.visual.sim.SimWorldVisualizer(self, self.world)
 
         self.scene.add_ground(scale=100.0, shader=self.ground_shader)
@@ -147,27 +158,14 @@ class ControlDemo(ke.App):
             targets[dof_id] = self.drive_amp * math.sin(phase)
         return targets
 
-    def preRender(self):
-        if self.force_arrow_visible and self.force_time_left <= 0.0:
-            self.force_arrow_view.update_arrows(
-                self.empty_vec3,
-                self.empty_vec3,
-                self.empty_vec4,
-            )
-            self.force_arrow_visible = False
-
-        if self.was_key_pressed(keys.SPACE):
-            self.paused = not self.paused
+    def preUpdate(self):
         if self.was_key_pressed(keys.R):
             self._reset()
         if self.was_key_pressed(keys.F):
             self.force_time_left = self.force_duration
 
-        if self.paused:
-            return
-
-        dt = 1.0 / 60.0
-        self.elapsed += dt
+    def fixedUpdate(self, fixed_dt):
+        self.elapsed += fixed_dt
         self.world.set_cmd(
             None,
             0,
@@ -181,11 +179,21 @@ class ControlDemo(ke.App):
             obj_id = self.ball_obj_id
             # obj_id = self.robot_obj_id
             self.world.set_body_force(None, obj_id, 0, self.force_vector)
-            self._log_force_arrow(self.force_vector, obj_id)
-            self.force_time_left = max(0.0, self.force_time_left - dt)
+            self.force_time_left = max(0.0, self.force_time_left - fixed_dt)
 
-        self.world.step(substeps=2)
+        self.world.advance(fixed_dt)
+
+    def preRender(self):
         self.visual.sync()
+        if self.force_time_left > 0.0:
+            self._log_force_arrow(self.force_vector, self.ball_obj_id)
+        elif self.force_arrow_visible:
+            self.force_arrow_view.update_arrows(
+                self.empty_vec3,
+                self.empty_vec3,
+                self.empty_vec4,
+            )
+            self.force_arrow_visible = False
         self.check_error()
 
     def _log_force_arrow(self, force, obj_id):
@@ -224,8 +232,9 @@ class ControlDemo(ke.App):
 
         imgui.begin("Control Demo")
         imgui.text("Native KangEngine Python API")
-        imgui.text(f"State: {'paused' if self.paused else 'running'}")
-        imgui.text("Space: pause/resume    R: reset    F: kick ball")
+        state = "paused" if self.is_simulation_paused() else "running"
+        imgui.text(f"State: {state}")
+        imgui.text("Enter: play/pause    Space: pause/step    R: reset    F: kick ball")
         imgui.separator()
         _, self.kp = imgui.slider_float("kp", self.kp, 0.0, 600.0)
         _, self.kd = imgui.slider_float("kd", self.kd, 0.0, 80.0)

@@ -53,7 +53,6 @@ class HeightmapTerrainViewer(ke.App):
         self.collision_test = bool(collision_test)
         self.test_radius = float(test_radius)
         self.title = title or f"Heightmap Terrain: {self.heightmap_path.name}"
-        self.paused = False
 
     def setup(self):
         self.shaders = self.create_standard_shaders()
@@ -92,6 +91,14 @@ class HeightmapTerrainViewer(ke.App):
                 else ke.physics.PhysicsConfig.y_up()
             )
             self.physics = ke.physics.PhysicsWorld(config)
+            self.timing = self.configure_timing(
+                ke.SimulationTimingConfig.from_dt(
+                    physics_dt=config.dt,
+                    fixed_dt=config.dt,
+                    render_hz=60.0,
+                )
+            )
+            self.set_simulation_hotkeys_enabled(True)
             self.collision_added = self.physics.add_heightmap_collision(
                 str(self.heightmap_path),
                 up_axis=self.up_axis,
@@ -115,11 +122,13 @@ class HeightmapTerrainViewer(ke.App):
             f"collision={'yes' if self.collision_added else 'no'}"
         )
 
+    def fixedUpdate(self, fixed_dt):
+        if self.physics:
+            self.physics.step()
+
     def preRender(self):
-        if not self.physics or self.paused:
-            return
-        self.physics.step()
-        self._sync_collision_test_sphere()
+        if self.physics:
+            self._sync_collision_test_sphere()
 
     def render(self):
         imgui.begin(self.title)
@@ -133,7 +142,11 @@ class HeightmapTerrainViewer(ke.App):
         imgui.text(f"heightfield collision: {'on' if self.collision_added else 'off'}")
         if self.test_actor is not None:
             imgui.text("collision test sphere: active")
-            changed, self.paused = imgui.checkbox("pause physics", self.paused)
+            paused = self.is_simulation_paused()
+            changed, paused = imgui.checkbox("pause physics", paused)
+            if changed:
+                self.set_simulation_paused(paused)
+            imgui.text("Enter: play/pause    Space: pause/step")
             if imgui.button("reset sphere"):
                 self._reset_collision_test_sphere()
         if self.bounds_min is not None:

@@ -48,3 +48,10 @@ kangengine = [
 
 [tool.setuptools.exclude-package-data]
 kangengine = ["assets/external/**/*"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.format]
+docstring-code-format = true

@@ -47,6 +47,10 @@ from .utils import (
 # TODO: Keep Torch-heavy modules lazy until CUDA context interop is explicit.
 # This avoids accidental Torch CUDA initialization before PhysX GPU setup.
 _LAZY_IMPORTS = {
+    "SimulationPacer": (".sim.run_mode", "SimulationPacer"),
+    "SimulationRunConfig": (".sim.run_mode", "SimulationRunConfig"),
+    "SimulationRunMode": (".sim.run_mode", "SimulationRunMode"),
+    "SimulationTimingConfig": (".sim.timing", "SimulationTimingConfig"),
     "KangEngineEngine": (".mimickit_engine", "KangEngineEngine"),
     "build_mimickit_engine": (".mimickit_engine", "build_engine"),
     "install_mimickit_engine_builder": (
@@ -62,6 +66,8 @@ _LAZY_MODULES = {
 if _TYPE_CHECKING:
     from . import motion_module as motion_module
     from . import sim as sim
+    from .sim.run_mode import SimulationPacer, SimulationRunConfig, SimulationRunMode
+    from .sim.timing import SimulationTimingConfig
     from .mimickit_engine import (
         KangEngineEngine,
         build_engine as build_mimickit_engine,
@@ -100,6 +106,7 @@ ColorLibrary = _set_public_module(_ke.ColorLibrary, __name__)
 ColorType = _set_public_module(_ke.ColorType, __name__)
 Color = _set_public_module(_ke.Color, __name__)
 MotionSequencerPanel = _set_public_module(_ke.MotionSequencerPanel, __name__)
+FixedStepClock = _set_public_module(_ke.FixedStepClock, __name__)
 # GLM-style math types and helpers exposed by the C++ extension.
 vec3 = _set_public_module(_ke.vec3, __name__)
 vec2 = _set_public_module(_ke.vec2, __name__)
@@ -181,6 +188,11 @@ __all__ = [
     "ColorType",
     "Color",
     "MotionSequencerPanel",
+    "FixedStepClock",
+    "SimulationPacer",
+    "SimulationRunConfig",
+    "SimulationRunMode",
+    "SimulationTimingConfig",
     "preset_rgba",
 ]
 

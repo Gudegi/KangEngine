@@ -2,8 +2,10 @@
 
 from .._public import set_public_module
 from .cloner import GridCloner
+from .run_mode import SimulationPacer, SimulationRunConfig, SimulationRunMode
 from .runtime import ArticulationStateView, SimulationRuntime
 from .sensor import ContactSensor, ContactSensorData, ForceSensor
+from .timing import SimulationTimingConfig
 from .world import (
     ControlMode,
     KangSimWorld,
@@ -22,7 +24,11 @@ __all__ = [
     "ForceSensor",
     "GridCloner",
     "KangSimWorld",
+    "SimulationPacer",
+    "SimulationRunConfig",
+    "SimulationRunMode",
     "SimulationRuntime",
+    "SimulationTimingConfig",
     "SimArticulation",
     "SimArticulationBatch",
     "SimDevice",
@@ -38,7 +44,11 @@ for _type in (
     ForceSensor,
     GridCloner,
     KangSimWorld,
+    SimulationPacer,
+    SimulationRunConfig,
+    SimulationRunMode,
     SimulationRuntime,
+    SimulationTimingConfig,
     SimArticulation,
     SimArticulationBatch,
     SimDevice,

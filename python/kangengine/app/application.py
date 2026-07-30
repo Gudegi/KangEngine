@@ -856,6 +856,8 @@ class App(_NativeApp):
     This mirrors the C++ App lifecycle:
 
     - `setup()` runs once before the loop starts.
+    - `preUpdate()` handles per-frame input before simulation updates.
+    - `fixedUpdate(dt)` runs zero or more fixed updates per rendered frame.
     - `preRender()` runs before scene rendering each frame.
     - `render()` runs while the ImGui frame is active.
     - `postRender()` runs after UI rendering and buffer swap setup.
@@ -863,6 +865,9 @@ class App(_NativeApp):
     The C++ implementation still handles the default camera controls:
     WASD/mouse navigation, H to hide UI, Escape to close, framebuffer updates,
     and the built-in scene/performance panels.
+
+    Fixed-step simulations may opt into Enter play/pause and Space
+    pause/single-step controls with `set_simulation_hotkeys_enabled(True)`.
     """
 
     def __init__(self):
@@ -871,6 +876,7 @@ class App(_NativeApp):
         self.width = 1920
         self.height = 1080
         self.hide_ui = False
+        self.timing_config = None
         # Lazily populated after the native graphics device/context exists.
         # Pure compute/headless apps can leave this as None.
         self.shaders = None
@@ -1435,10 +1441,29 @@ class App(_NativeApp):
 
     def set_render_hz(self, hz: float):
         return super().set_render_hz(float(hz))
-    
+
+    def configure_timing(self, config):
+        """Apply a SimulationTimingConfig to this application loop."""
+        from ..sim.timing import SimulationTimingConfig
+
+        if not isinstance(config, SimulationTimingConfig):
+            raise TypeError("config must be a SimulationTimingConfig")
+        self.set_render_hz(config.render_hz)
+        self.set_fixed_update_hz(config.fixed_update_hz)
+        self.set_max_catch_up_steps(config.max_catch_up_steps)
+        self.set_max_frame_delta(config.max_frame_delta)
+        self.timing_config = config
+        return config
+
     #################################################################
 
     def setup(self):
+        pass
+
+    def preUpdate(self):
+        pass
+
+    def fixedUpdate(self, fixed_dt):
         pass
 
     def preRender(self):
