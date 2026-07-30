@@ -1179,6 +1179,7 @@ class KangWorldState:
             self.backend = GPUStateBackend(
                 self.num_envs, self.device, gpu_system_provider
             )
+            # TODO: Remove this compatibility snapshot, use only GPU-direct state access.
             self.snapshot = StateSnapshotBackend(
                 self.num_envs,
                 self.device,

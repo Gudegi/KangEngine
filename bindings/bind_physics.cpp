@@ -74,8 +74,16 @@ void bind_physics(py::module& m) {
         .def_readwrite("heap_capacity", &PhysicsGpuDynamicsConfig::heapCapacity)
         .def_readwrite("found_lost_pairs_capacity",
                        &PhysicsGpuDynamicsConfig::foundLostPairsCapacity)
+        .def_readwrite(
+            "found_lost_aggregate_pairs_capacity",
+            &PhysicsGpuDynamicsConfig::foundLostAggregatePairsCapacity)
+        .def_readwrite(
+            "total_aggregate_pairs_capacity",
+            &PhysicsGpuDynamicsConfig::totalAggregatePairsCapacity)
         .def_readwrite("collision_stack_size",
-                       &PhysicsGpuDynamicsConfig::collisionStackSize);
+                       &PhysicsGpuDynamicsConfig::collisionStackSize)
+        .def_readwrite("max_num_partitions",
+                       &PhysicsGpuDynamicsConfig::maxNumPartitions);
 
     // PhysicsConfig
     py::class_<PhysicsConfig>(
@@ -108,7 +116,27 @@ void bind_physics(py::module& m) {
                        "GPU dynamics memory capacities used at scene creation.")
         .def_readwrite("enable_contact_reports",
                        &PhysicsConfig::enableContactReports,
-                       "Enable contact collection during simulation.");
+                       "Enable contact collection during simulation.")
+        .def_readwrite(
+            "cpu_dispatcher_threads",
+            &PhysicsConfig::cpuDispatcherThreads,
+            "Worker threads used by the PhysX CPU dispatcher.")
+        .def_property(
+            "solver_type",
+            [](const PhysicsConfig& c) {
+                return c.solverType == PxSolverType::ePGS ? 0 : 1;
+            },
+            [](PhysicsConfig& c, int value) {
+                if (value == 0) {
+                    c.solverType = PxSolverType::ePGS;
+                } else if (value == 1) {
+                    c.solverType = PxSolverType::eTGS;
+                } else {
+                    throw py::value_error(
+                        "solver_type must be 0 (PGS) or 1 (TGS)");
+                }
+            },
+            "Solver type: 0 for PGS, 1 for TGS.");
 
     py::class_<PhysicsMaterialDesc>(
         physics, "PhysicsMaterialDesc",
@@ -687,9 +715,26 @@ void bind_physics(py::module& m) {
         .def_readwrite("disable_self_collision",
                        &ArticulationConfig::disableSelfCollision,
                        "Disable self collision between articulation links.")
-        .def_readwrite("solver_iterations",
-                       &ArticulationConfig::solverIterations,
-                       "Solver iteration count.")
+        .def_readwrite(
+            "use_aggregate", &ArticulationConfig::useAggregate,
+            "Group articulation links into one PhysX broadphase aggregate.")
+        .def_property(
+            "solver_iterations",
+            [](const ArticulationConfig& c) {
+                return c.solverPositionIterations;
+            },
+            [](ArticulationConfig& c, int value) {
+                c.solverPositionIterations = value;
+            },
+            "Compatibility alias for solver_position_iteration_count.")
+        .def_readwrite(
+            "solver_position_iteration_count",
+            &ArticulationConfig::solverPositionIterations,
+            "Position solver iteration count.")
+        .def_readwrite(
+            "solver_velocity_iteration_count",
+            &ArticulationConfig::solverVelocityIterations,
+            "Velocity solver iteration count.")
         .def_readwrite("collision_group", &ArticulationConfig::collisionGroup,
                        "Collision group bit used for created actors.")
         .def_readwrite("root_linear_damping",
@@ -735,6 +780,24 @@ void bind_physics(py::module& m) {
         .def_readwrite("enable_ccd", &ArticulationConfig::enableCCD,
                        "Enable continuous collision detection.");
 
+    py::class_<ArticulationTemplate, std::shared_ptr<ArticulationTemplate>>(
+        physics, "ArticulationTemplate",
+        "Immutable articulation metadata shared by many PhysX instances.")
+        .def_static(
+            "create",
+            [](const CharacterData& data, const ArticulationConfig& cfg) {
+                return ArticulationTemplate::create(
+                    data.skeletonTree, data.collisionGeoms, data.joints,
+                    data.inertials, cfg);
+            },
+            py::arg("data"), py::arg("cfg") = ArticulationConfig{},
+            "Precompute shared skeleton, rest transforms, collision metadata, "
+            "and DOF metadata.")
+        .def("num_links", &ArticulationTemplate::numLinks)
+        .def("num_dofs", &ArticulationTemplate::numDofs)
+        .def_property_readonly("body_names",
+                               &ArticulationTemplate::bodyNames);
+
     // Articulation (non-copyable)
     py::class_<Articulation>(physics, "Articulation",
                              "PhysX articulated character or robot built from "
@@ -751,6 +814,19 @@ void bind_physics(py::module& m) {
             py::arg("physics"), py::arg("data"),
             py::arg("cfg") = ArticulationConfig{}, py::keep_alive<0, 1>(),
             "Build an articulation in a PhysicsWorld from character data.")
+        .def_static(
+            "build_from_template",
+            [](PhysicsWorld& physics,
+               std::shared_ptr<ArticulationTemplate> template_,
+               const ArticulationConfig& cfg) {
+                return Articulation::build(physics, std::move(template_), cfg);
+            },
+            py::arg("physics"), py::arg("template"),
+            py::arg("cfg") = ArticulationConfig{}, py::keep_alive<0, 1>(),
+            "Build one PhysX articulation from shared immutable metadata.")
+        .def_property_readonly(
+            "template", &Articulation::articulationTemplate,
+            "Shared immutable template used to build this instance.")
         .def("num_links", &Articulation::numLinks,
              "Return the number of links.")
         .def("num_dofs", &Articulation::numDofs,

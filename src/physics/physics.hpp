@@ -35,7 +35,10 @@ struct PhysicsGpuDynamicsConfig {
     uint32_t maxRigidPatchCount = 512u * 1024;
     uint32_t heapCapacity = 256u * 1024 * 1024;
     uint32_t foundLostPairsCapacity = 4u * 1024 * 1024;
+    uint32_t foundLostAggregatePairsCapacity = 32u * 1024 * 1024;
+    uint32_t totalAggregatePairsCapacity = 2u * 1024 * 1024;
     uint32_t collisionStackSize = 256u * 1024 * 1024;
+    uint32_t maxNumPartitions = 8;
 };
 
 struct PhysicsConfig {
@@ -45,6 +48,7 @@ struct PhysicsConfig {
     float friction[3] = {1.0f, 1.0f, 0.0f};
     PxSimulationFilterShader filterShader = PxDefaultSimulationFilterShader;
     bool enableContactReports = true;
+    uint32_t cpuDispatcherThreads = 4;
     // PxSolverType::Enum solverType = PxSolverType::ePGS;
     PxSolverType::Enum solverType = PxSolverType::eTGS;
     PhysicsGpuDynamicsConfig gpuDynamics;

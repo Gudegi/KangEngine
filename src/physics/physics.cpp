@@ -270,7 +270,7 @@ PhysicsWorld::PhysicsWorld(PhysicsConfig config) {
 
     PxSceneDesc sceneDesc(_physics->getTolerancesScale());
     sceneDesc.gravity = _gravity;
-    _dispatcher = PxDefaultCpuDispatcherCreate(4);
+    _dispatcher = PxDefaultCpuDispatcherCreate(config.cpuDispatcherThreads);
     sceneDesc.cpuDispatcher = _dispatcher;
     sceneDesc.filterShader = config.filterShader;
     if (config.filterShader == PxDefaultSimulationFilterShader)
@@ -316,8 +316,13 @@ PhysicsWorld::PhysicsWorld(PhysicsConfig config) {
                 config.gpuDynamics.heapCapacity;
             sceneDesc.gpuDynamicsConfig.foundLostPairsCapacity =
                 config.gpuDynamics.foundLostPairsCapacity;
+            sceneDesc.gpuDynamicsConfig.foundLostAggregatePairsCapacity =
+                config.gpuDynamics.foundLostAggregatePairsCapacity;
+            sceneDesc.gpuDynamicsConfig.totalAggregatePairsCapacity =
+                config.gpuDynamics.totalAggregatePairsCapacity;
             sceneDesc.gpuDynamicsConfig.collisionStackSize =
                 config.gpuDynamics.collisionStackSize;
+            sceneDesc.gpuMaxNumPartitions = config.gpuDynamics.maxNumPartitions;
 #ifdef KANGENGINE_HAS_PHYSX_DIRECT_GPU_API
             sceneDesc.flags |= PxSceneFlag::eENABLE_DIRECT_GPU_API;
 #endif

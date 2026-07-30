@@ -24,14 +24,6 @@ def asset_path(*parts: str) -> str:
     return str(Path(ke.__file__).resolve().parent / "assets" / Path(*parts))
 
 
-def env_origins(num_envs: int) -> torch.Tensor:
-    env_ids = torch.arange(num_envs, dtype=torch.float32)
-    origins = torch.zeros((num_envs, 3), dtype=torch.float32)
-    origins[:, 0] = torch.remainder(env_ids, 5.0) * 2.2
-    origins[:, 1] = torch.floor(env_ids / 5.0) * 3.0
-    return origins
-
-
 def identity_quaternions(count: int) -> torch.Tensor:
     rotations = torch.zeros((count, 4), dtype=torch.float32)
     rotations[:, 3] = 1.0
@@ -79,51 +71,40 @@ def create_simulation(num_envs: int, cuda_device: int):
             asset_path("characters", "kw", "kw5.xml"), order="DFS"
         )
         robot_config = ke.physics.ArticulationConfig.free_base()
-
-        for env_id in range(num_envs):
-            world.add_rigid(
-                ball_data,
-                env_id=env_id,
-                obj_id=RIGID_OBJ_ID,
-                name="ball",
-                density=600.0,
-            )
-            world.add_articulation(
-                robot_data,
-                env_id=env_id,
-                obj_id=ROBOT_OBJ_ID,
-                name="kw5",
-                config=robot_config,
-            )
-
-        balls = world.get_rigid_batch(obj_id=RIGID_OBJ_ID)
-        robots = world.get_articulation_batch(obj_id=ROBOT_OBJ_ID)
-        origins = env_origins(num_envs)
-        rotations = identity_quaternions(num_envs)
+        cloner = ke.sim.GridCloner(
+            world,
+            spacing=(2.2, 3.0),
+            columns=5,
+        )
         zeros3 = torch.zeros((num_envs, 3), dtype=torch.float32)
+        ball_velocity = zeros3.clone()
+        ball_velocity[:, 1] = -1.0
+        balls = cloner.add_rigid(
+            ball_data,
+            obj_id=RIGID_OBJ_ID,
+            name="ball",
+            density=600.0,
+            initial_root_pos=(0.0, 1.0, 1.5),
+            initial_linear_velocity=ball_velocity,
+            initial_angular_velocity=zeros3,
+        )
+        robots = cloner.add_articulation(
+            robot_data,
+            obj_id=ROBOT_OBJ_ID,
+            name="kw5",
+            config=robot_config,
+            initial_root_pos=(0.0, 0.0, 1.0),
+            initial_linear_velocity=zeros3,
+            initial_angular_velocity=zeros3,
+        )
+        origins = cloner.env_origins.cpu()
+        rotations = identity_quaternions(num_envs)
 
         ball_positions = origins + torch.tensor(
             [0.0, 1.0, 1.5], dtype=torch.float32
         )
-        ball_velocity = zeros3.clone()
-        ball_velocity[:, 1] = -1.0
         robot_positions = origins + torch.tensor(
             [0.0, 0.0, 1.0], dtype=torch.float32
-        )
-
-        balls.set_root_state(
-            None,
-            ball_positions,
-            rotations,
-            linear_velocity=ball_velocity,
-            angular_velocity=zeros3,
-        )
-        robots.set_root_state(
-            None,
-            robot_positions,
-            rotations,
-            linear_velocity=zeros3,
-            angular_velocity=zeros3,
         )
         robots.set_dof_state(
             None,

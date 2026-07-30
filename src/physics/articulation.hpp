@@ -13,7 +13,9 @@ namespace KE {
 struct ArticulationConfig {
     bool fixBase = true;
     bool disableSelfCollision = true;
-    int solverIterations = 16;
+    bool useAggregate = false;
+    int solverPositionIterations = 16;
+    int solverVelocityIterations = 1;
 
     float defaultRootMass = 8.f;
     float defaultLinkMass = 1.5f;
@@ -47,7 +49,8 @@ struct ArticulationConfig {
         ArticulationConfig config;
         config.fixBase = false;
         config.disableSelfCollision = true;
-        config.solverIterations = 32;
+        config.solverPositionIterations = 32;
+        config.solverVelocityIterations = 1;
         config.rootLinearDamping = 0.02f;
         config.rootAngularDamping = 0.1f;
         config.linkLinearDamping = 0.1f;
@@ -58,8 +61,8 @@ struct ArticulationConfig {
     }
 };
 
-class Articulation {
-  private:
+class ArticulationTemplate {
+  public:
     struct DofInfo {
         int linkIndex = -1;
         std::string name;
@@ -71,12 +74,39 @@ class Articulation {
         float effortLimit = PX_MAX_F32;
     };
 
-    PxArticulationReducedCoordinate* _artic = nullptr;
-    std::vector<PxArticulationLink*> _links;
-    std::vector<std::string> _bodyNames;
-    Character::JointDescMap _joints; // body index -> joints (empty = fixed)
+  private:
+    std::shared_ptr<const Animation::SkeletonTree> _tree;
+    Character::JointDescMap _joints;
     Character::CollisionGeomDescMap _colGeoms;
+    Character::InertialDescMap _inertials;
+    std::vector<PxTransform> _restTransforms;
+    // Orientation of each inbound joint frame. Multi-axis MJCF joints need a
+    // shared frame whose PhysX twist/swing axes match the authored axes.
+    std::vector<PxQuat> _jointFrames;
+    std::vector<std::string> _bodyNames;
     std::vector<DofInfo> _dofs;
+
+    friend class Articulation;
+
+  public:
+    static std::shared_ptr<ArticulationTemplate>
+    create(std::shared_ptr<const Animation::SkeletonTree> tree,
+           const Character::CollisionGeomDescMap& colGeoms,
+           const Character::JointDescMap& joints,
+           const Character::InertialDescMap& inertials,
+           const ArticulationConfig& cfg = {});
+
+    int numLinks() const { return static_cast<int>(_bodyNames.size()); }
+    int numDofs() const { return static_cast<int>(_dofs.size()); }
+    const std::vector<std::string>& bodyNames() const { return _bodyNames; }
+};
+
+class Articulation {
+  private:
+    PxArticulationReducedCoordinate* _artic = nullptr;
+    PxAggregate* _aggregate = nullptr;
+    std::vector<PxArticulationLink*> _links;
+    std::shared_ptr<ArticulationTemplate> _template;
     std::vector<float> _KPs;
     std::vector<float> _KDs;
     std::vector<float> _effortLimits;
@@ -99,6 +129,10 @@ class Articulation {
           const Character::CollisionGeomDescMap& colGeoms,
           const Character::JointDescMap& joints,
           const Character::InertialDescMap& inertials,
+          const ArticulationConfig& cfg = {});
+    static Articulation
+    build(PhysicsWorld& physics,
+          std::shared_ptr<ArticulationTemplate> articulationTemplate,
           const ArticulationConfig& cfg = {});
 
     void release();
@@ -129,16 +163,28 @@ class Articulation {
     PxArticulationLink* link(int i) const { return _links[i]; }
     int numLinks() const { return static_cast<int>(_links.size()); }
     PxArticulationReducedCoordinate* raw() { return _artic; }
-    const Character::JointDescMap& joints() const { return _joints; }
-    int numDofs() const { return static_cast<int>(_dofs.size()); }
+    const Character::JointDescMap& joints() const {
+        static const Character::JointDescMap empty;
+        return _template ? _template->_joints : empty;
+    }
+    int numDofs() const { return _template ? _template->numDofs() : 0; }
+    std::shared_ptr<ArticulationTemplate> articulationTemplate() const {
+        return _template;
+    }
 
     // Data accessors for PhysicsBridge
     const std::vector<PxArticulationLink*>& links() const { return _links; }
     const Character::CollisionGeomDescMap& colGeoms() const {
-        return _colGeoms;
+        static const Character::CollisionGeomDescMap empty;
+        return _template ? _template->_colGeoms : empty;
     }
-    const std::vector<std::string>& bodyNames() const { return _bodyNames; }
-    const std::string& bodyName(int index) const { return _bodyNames[index]; }
+    const std::vector<std::string>& bodyNames() const {
+        static const std::vector<std::string> empty;
+        return _template ? _template->_bodyNames : empty;
+    }
+    const std::string& bodyName(int index) const {
+        return _template->_bodyNames[index];
+    }
 
     // State queries for Python/Model-State integration.
     // Flat arrays use xyz for vectors and xyzw for quaternions.

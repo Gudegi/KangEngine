@@ -4,15 +4,26 @@ from collections.abc import Callable, Sequence
 from typing import Any
 
 
-class PhysicsGpuDynamicsConfig: ...
+class PhysicsGpuDynamicsConfig:
+    temp_buffer_capacity: int
+    max_rigid_contact_count: int
+    max_rigid_patch_count: int
+    heap_capacity: int
+    found_lost_pairs_capacity: int
+    found_lost_aggregate_pairs_capacity: int
+    total_aggregate_pairs_capacity: int
+    collision_stack_size: int
+    max_num_partitions: int
 class PhysicsConfig:
     dt: float
+    solver_type: int
     static_friction: float
     dynamic_friction: float
     restitution: float
     enable_gpu: bool
     gpu_dynamics: PhysicsGpuDynamicsConfig
     enable_contact_reports: bool
+    cpu_dispatcher_threads: int
     def __init__(self) -> None: ...
     @staticmethod
     def y_up() -> PhysicsConfig: ...
@@ -188,7 +199,27 @@ class PhysicsWorld:
     def set_dt(self, dt: float) -> None: ...
 
 
-class ArticulationConfig: ...
+class ArticulationConfig:
+    fix_base: bool
+    disable_self_collision: bool
+    use_aggregate: bool
+    solver_iterations: int
+    solver_position_iteration_count: int
+    solver_velocity_iteration_count: int
+    collision_group: int
+    root_linear_damping: float
+    root_angular_damping: float
+    link_linear_damping: float
+    link_angular_damping: float
+    max_angular_velocity: float
+    contact_offset: float
+    rest_offset: float
+    enable_ccd: bool
+    def __init__(self) -> None: ...
+    @staticmethod
+    def fixed_base() -> ArticulationConfig: ...
+    @staticmethod
+    def free_base() -> ArticulationConfig: ...
 class Articulation:
     native: NativeArticulation
     def __init__(self, native_articulation: Any | None = None) -> None: ...

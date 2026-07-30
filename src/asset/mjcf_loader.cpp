@@ -9,6 +9,7 @@
 #include <queue>
 #include <sstream>
 #include <stdexcept>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -524,14 +525,16 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
     auto* root = doc.RootElement();
 
     // 1. Compiler options
-    float degToRad = 1.f;
+    // MJCF's default compiler angle unit is degrees. Only an explicit
+    // angle="radian" leaves joint ranges unscaled.
+    float degToRad = static_cast<float>(M_PI) / 180.f;
     bool inertiafromgeom = false;
     if (auto* compiler = root->FirstChildElement("compiler")) {
         _data.meshDir =
             resolveMeshDir(mjcfPath, compiler->Attribute("meshdir"));
         const char* angle = compiler->Attribute("angle");
-        if (angle && std::string(angle) == "degree")
-            degToRad = static_cast<float>(M_PI) / 180.f;
+        if (angle && std::string_view(angle) == "radian")
+            degToRad = 1.f;
         const char* ifg = compiler->Attribute("inertiafromgeom");
         if (ifg && std::string(ifg) == "true")
             inertiafromgeom = true;
@@ -684,6 +687,13 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
             // Joints for this body
             for (auto* jElem = elem->FirstChildElement("joint"); jElem;
                  jElem = jElem->NextSiblingElement("joint")) {
+                // A root <joint type="free"> is equivalent to <freejoint>.
+                // The articulation's floating base represents it, so it must
+                // not also be emitted as a revolute articulation DOF.
+                const char* jointType = jElem->Attribute("type");
+                if (jointType && std::string_view(jointType) == "free")
+                    continue;
+
                 JointDesc jd;
                 jd.name =
                     jElem->Attribute("name") ? jElem->Attribute("name") : "";
