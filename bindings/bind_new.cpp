@@ -20,6 +20,7 @@
 #include <GLFW/glfw3.h>
 #include <imgui.h>
 #include <algorithm>
+#include <cstring>
 #include <iomanip>
 #include <optional>
 
@@ -49,6 +50,10 @@ class PyApp : public App {
     void render() override { PYBIND11_OVERRIDE_PURE(void, App, render); }
     void postRender() override {
         PYBIND11_OVERRIDE_PURE(void, App, postRender);
+    }
+    void onFrameRenderedInternal() override {
+        PYBIND11_OVERRIDE_NAME(void, App, "_on_frame_rendered_internal",
+                               onFrameRenderedInternal);
     }
     void onRayPicked(const RayPickResult& result) override {
         PYBIND11_OVERRIDE(void, App, onRayPicked, result);
@@ -1578,6 +1583,11 @@ py::class_<glm::vec3>(m, "vec3")
              "Return elapsed seconds between recent frames.")
         .def("get_render_hz", &App::getRenderHz,
              "Return the target render/update frequency in Hz.")
+        .def("set_frame_capture_active", &App::setFrameCaptureActive,
+             py::arg("active"))
+        .def("get_frame_capture_active", &App::getFrameCaptureActive)
+        .def("consume_video_recording_toggle_requested",
+             &App::consumeVideoRecordingToggleRequested)
         .def("set_fixed_update_hz", &App::setFixedUpdateHz,
              py::arg("update_hz"),
              "Enable fixed updates at the requested wall-clock frequency.")
@@ -1614,25 +1624,30 @@ py::class_<glm::vec3>(m, "vec3")
                 const int width = self.getWidth();
                 const int height = self.getHeight();
                 py::array_t<uint8_t> out({height, width, 3});
-                auto view = out.mutable_unchecked<3>();
 
                 std::vector<uint8_t> pixels = self.readRgbPixels(flipY);
                 if (pixels.size() != static_cast<std::size_t>(width) *
                                          static_cast<std::size_t>(height) * 3)
                     return out;
-                for (int y = 0; y < height; ++y) {
-                    for (int x = 0; x < width; ++x) {
-                        const std::size_t src =
-                            (static_cast<std::size_t>(y) * width + x) * 3;
-                        view(y, x, 0) = pixels[src + 0];
-                        view(y, x, 1) = pixels[src + 1];
-                        view(y, x, 2) = pixels[src + 2];
-                    }
-                }
+                std::memcpy(out.mutable_data(), pixels.data(), pixels.size());
                 return out;
             },
             py::arg("flip_y") = true,
             "Read the current framebuffer as a uint8 RGB numpy array.")
+        .def(
+            "read_rgb_pixels_resized",
+            [](App& self, int width, int height, bool flipY) {
+                py::array_t<uint8_t> out({height, width, 3});
+                std::vector<uint8_t> pixels =
+                    self.readRgbPixelsResized(width, height, flipY);
+                if (pixels.size() != static_cast<std::size_t>(width) *
+                                         static_cast<std::size_t>(height) * 3)
+                    return out;
+                std::memcpy(out.mutable_data(), pixels.data(), pixels.size());
+                return out;
+            },
+            py::arg("width"), py::arg("height"), py::arg("flip_y") = true,
+            "Scale the current framebuffer on the GPU and return uint8 RGB.")
         .def("write_pixels_png", &App::writePixelsPNG, py::arg("path"),
              py::arg("flip_y") = true,
              "Write the current framebuffer to a PNG file.")

@@ -159,6 +159,8 @@ class OpenGLFramebuffer : public Framebuffer {
     GLuint _msaaDepthRbo = 0; // GL_DEPTH_COMPONENT32
 
     FramebufferDesc _desc;
+    // TODO: Add ping-pong PBO readback
+    std::unique_ptr<OpenGLFramebuffer> _scaledReadbackFramebuffer;
 
   public:
     OpenGLFramebuffer(const FramebufferDesc& desc);
@@ -177,6 +179,8 @@ class OpenGLFramebuffer : public Framebuffer {
     // Final blit: _fbo -> default framebuffer (screen)
     void blitToScreen(int scrWidth, int scrHeight) override;
     std::vector<uint8_t> readColorPixels(bool flipY = true) override;
+    std::vector<uint8_t> readColorPixelsResized(int width, int height,
+                                                bool flipY = true) override;
 };
 
 class OpenGLDevice : public GraphicsDevice {

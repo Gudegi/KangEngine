@@ -77,6 +77,8 @@ class App {
     bool _hideUI, _renderWireframe;
     bool _initialized = false;
     bool _screenshotRequested = false;
+    bool _videoRecordingToggleRequested = false;
+    bool _frameCaptureActive = false;
     bool _mousePickRequested = false;
     uint64_t _frameIndex = 0;
     float _cameraMoveSpeed = 15.0f;
@@ -118,6 +120,7 @@ class App {
     bool syncActiveSceneCameraView();
     void registerCallbacks();
     bool writeScreenshotFrame();
+    void renderRecordingIndicator();
     void renderSelectionGizmo();
     void renderSelectionGizmo(Camera& camera, const ImVec2& rectMin,
                               const ImVec2& rectSize, ImDrawList* drawList);
@@ -234,6 +237,8 @@ class App {
     virtual void preRender() {}  // 루프 안에서 사용됨. 렌더 전에 사용
     virtual void render() {}     // overrideable 실제 렌더링
     virtual void postRender() {} // 렌더링 이후 마무리
+    // Internal Python service hook. It is skipped while frame capture is idle.
+    virtual void onFrameRenderedInternal() {}
     virtual void onRayPicked(const RayPickResult& result) {}
     virtual void onRayPickHover(const RayPickResult& result) {}
     virtual void onForceDragBegin(const RayPickResult& result,
@@ -254,6 +259,13 @@ class App {
     bool getVSync() const;
     void setRenderHz(float renderHz);
     float getRenderHz() const { return _renderHz; }
+    void setFrameCaptureActive(bool active) { _frameCaptureActive = active; }
+    bool getFrameCaptureActive() const { return _frameCaptureActive; }
+    bool consumeVideoRecordingToggleRequested() {
+        const bool requested = _videoRecordingToggleRequested;
+        _videoRecordingToggleRequested = false;
+        return requested;
+    }
     void setFixedUpdateHz(double updateHz);
     double getFixedUpdateHz() const;
     void setMaxCatchUpSteps(int count);
@@ -473,6 +485,8 @@ class App {
 
     // Record
     std::vector<uint8_t> readRgbPixels(bool flipY = true);
+    std::vector<uint8_t>
+    readRgbPixelsResized(int width, int height, bool flipY = true);
     bool writePixelsPNG(const std::string& path, bool flipY = true);
 };
 

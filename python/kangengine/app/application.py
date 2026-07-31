@@ -16,6 +16,7 @@ from .. import geometry as geometry_api
 from .. import input as input_api
 from .. import material as material_api
 from .. import render as render_api
+from ..recording import VideoCaptureController
 
 keys = _ke.keys
 scene = _ke.scene
@@ -877,6 +878,8 @@ class App(_NativeApp):
         self.height = 1080
         self.hide_ui = False
         self.timing_config = None
+        self.run_config = None
+        self._video_capture = VideoCaptureController()
         # Lazily populated after the native graphics device/context exists.
         # Pure compute/headless apps can leave this as None.
         self.shaders = None
@@ -1455,6 +1458,60 @@ class App(_NativeApp):
         self.timing_config = config
         return config
 
+    def configure_run(self, config):
+        """Apply the rendering policy used by App-owned services."""
+        from ..sim.run_mode import SimulationRunConfig
+
+        if not isinstance(config, SimulationRunConfig):
+            raise TypeError("config must be a SimulationRunConfig")
+        self.run_config = config
+        self._video_capture.configure(run_mode=config.mode)
+        return config
+
+    def set_video_recording_dir(self, output_dir):
+        self._video_capture.configure(run_mode=self._recording_run_mode(), output_dir=output_dir)
+        return self
+
+    def set_video_recording_fps(self, fps: float):
+        self._video_capture.configure(run_mode=self._recording_run_mode(), fps=fps)
+        return self
+
+    def set_video_recording_resolution(self, width: int | None, height: int | None = None):
+        """Set the recording resolution cap, or pass None for native size."""
+        self._video_capture.set_max_resolution(width, height)
+        return self
+
+    def start_video_recording(self, output_path=None, fps: float | None = None):
+        """Start framebuffer recording using the configured run mode."""
+        self._video_capture.configure(run_mode=self._recording_run_mode())
+        return self._video_capture.start(self, output_path, fps)
+
+    def stop_video_recording(self):
+        """Stop framebuffer recording and finalize the output file."""
+        return self._video_capture.stop(self)
+
+    def toggle_video_recording(self):
+        """Toggle framebuffer recording, matching the Shift+T shortcut."""
+        if self._video_capture.is_recording:
+            return self._video_capture.stop(self)
+        self._video_capture.configure(run_mode=self._recording_run_mode())
+        return self._video_capture.start(self)
+
+    def is_video_recording(self) -> bool:
+        return self._video_capture.is_recording
+
+    def get_video_recording_path(self):
+        return self._video_capture.output_path
+
+    def _on_frame_rendered_internal(self):
+        """Internal native-loop callback; application subclasses should not override it."""
+        self._video_capture.on_frame_rendered(self)
+
+    def _recording_run_mode(self):
+        if self.run_config is not None:
+            return self.run_config.mode
+        return "offscreen_fast" if self.headless else "paced"
+
     #################################################################
 
     def setup(self):
@@ -1482,7 +1539,10 @@ class App(_NativeApp):
         try:
             return super().start()
         finally:
-            self.cleanup()
+            try:
+                self.cleanup()
+            finally:
+                self._video_capture.close(self)
 
     def initialize(
         self,
@@ -1519,6 +1579,11 @@ class App(_NativeApp):
         # Native initialize() recreates the SceneBackend. Keep the resource
         # registry mirrored into the live scene used by ScenePanel/rendering.
         self.resources.bind_scene(self.get_native_scene())
+        if self.run_config is None:
+            from ..sim.run_mode import SimulationRunConfig, SimulationRunMode
+
+            mode = SimulationRunMode.OFFSCREEN_FAST if self.headless else SimulationRunMode.PACED
+            self.configure_run(SimulationRunConfig(mode=mode))
         return result
 
     def is_key_down(self, key):

@@ -603,11 +603,16 @@ void App::renderFrameOnce() {
     // default framebuffer
     if (!_hideUI) {
         _panelManager.render();
+        renderRecordingIndicator();
         if (_panelManager.getLayoutMode() != UILayoutMode::Editor)
             renderSelectionGizmo();
         _panelManager.postRender();
     }
     this->postRender();
+    if (_videoRecordingToggleRequested || _frameCaptureActive) {
+        this->onFrameRenderedInternal();
+        _videoRecordingToggleRequested = false;
+    }
     const double renderEnd = glfwGetTime();
 
     glfwSwapBuffers(window);
@@ -711,6 +716,16 @@ std::vector<uint8_t> App::readRgbPixels(bool flipY) {
     return _framebuffer->readColorPixels(flipY);
 }
 
+std::vector<uint8_t> App::readRgbPixelsResized(int width, int height,
+                                               bool flipY) {
+    Backend::Framebuffer* source = _lastPresentedFramebuffer
+                                       ? _lastPresentedFramebuffer
+                                       : _framebuffer.get();
+    if (!source)
+        return {};
+    return source->readColorPixelsResized(width, height, flipY);
+}
+
 bool App::writePixelsPNG(const std::string& path, bool flipY) {
     auto pixels = this->readRgbPixels(flipY);
     if (pixels.empty())
@@ -749,6 +764,24 @@ bool App::writeScreenshotFrame() {
     else
         fmt::print("Failed to save screenshot: {}\n", outPath.string());
     return ok;
+}
+
+void App::renderRecordingIndicator() {
+    if (!_frameCaptureActive)
+        return;
+
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    const ImVec2 position(viewport->WorkPos.x + viewport->WorkSize.x - 18.0f,
+                          viewport->WorkPos.y + 18.0f);
+    ImGui::SetNextWindowPos(position, ImGuiCond_Always, ImVec2(1.0f, 0.0f));
+    ImGui::SetNextWindowBgAlpha(0.55f);
+    constexpr ImGuiWindowFlags flags =
+        ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
+        ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing |
+        ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoInputs;
+    if (ImGui::Begin("##RecordingIndicator", nullptr, flags))
+        ImGui::TextColored(ImVec4(1.0f, 0.15f, 0.1f, 1.0f), "REC");
+    ImGui::End();
 }
 
 float App::getDeltaTime() const { return _renderVariable->deltaTime; }
@@ -1495,14 +1528,19 @@ void App::processInput() {
         _hideUI = !_hideUI;
     _io->isHKeyPressed = hPressed;
 
-    bool screenshotPressed = glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS;
-    if (screenshotPressed && !_io->isScreenshotKeyPressed)
-        _screenshotRequested = true;
-    _io->isScreenshotKeyPressed = screenshotPressed;
-
     bool shiftPressed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
                         glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
     _io->isSHIFTKeyPressed = shiftPressed;
+
+    bool screenshotPressed = glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS;
+    if (screenshotPressed && !_io->isScreenshotKeyPressed) {
+        if (shiftPressed)
+            _videoRecordingToggleRequested = true;
+        else
+            _screenshotRequested = true;
+    }
+    _io->isScreenshotKeyPressed = screenshotPressed;
+
     if (!shiftPressed) {
         _io->isPickMode = false;
     }

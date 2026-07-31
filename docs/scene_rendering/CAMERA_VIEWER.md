@@ -24,4 +24,9 @@ Use `ke.keys` in lifecycle callbacks for keyboard interaction and `ke.imgui`
 for small panels. See `python/examples/sim_world_minimal.py` for pause/reset
 controls and a state panel.
 
+Viewer capture shortcuts:
+
+- `T`: save one screenshot.
+- `Shift+T`: start or stop video recording.
+
 ![Viewer and ImGui panels](../images/scene_rendering/camera_viewer.png)

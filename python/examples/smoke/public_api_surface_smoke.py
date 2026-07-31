@@ -9,6 +9,7 @@ from kangengine.material import materials
 from kangengine.motion_module import editor as motion_editor
 from kangengine.motion_module import modules as motion_modules
 from kangengine.physics import wrappers as physics_wrappers
+from kangengine.recording import VideoCaptureController, VideoRecorder
 from kangengine.sim import sensor as sim_sensor
 from kangengine.sim import run_mode as sim_run_mode
 from kangengine.sim import timing as sim_timing
@@ -19,6 +20,7 @@ from kangengine.terrain import heightfield as terrain_heightfield
 def main() -> None:
     assert ke.App is app_application.App
     assert ke.App.__module__ == "kangengine"
+    assert hasattr(ke.App, "set_video_recording_resolution")
     assert not hasattr(ke, "NativeApp")
     assert "NativeApp" not in ke.app.__all__
     assert ke.SceneContext is app_application.SceneContext
@@ -83,6 +85,9 @@ def main() -> None:
     assert importlib.util.find_spec("kangengine.motion_modules") is None
     assert ke.physics.PhysicsWorld is physics_wrappers.PhysicsWorld
     assert ke.physics.PhysicsWorld.__module__ == "kangengine.physics"
+    assert ke.recording.VideoRecorder is VideoRecorder
+    assert VideoRecorder.__module__ == "kangengine.recording.video_recorder"
+    assert ke.recording.VideoCaptureController is VideoCaptureController
     assert ke.sim.KangSimWorld is sim_world.KangSimWorld
     assert ke.SimulationTimingConfig is sim_timing.SimulationTimingConfig
     assert ke.sim.SimulationTimingConfig is sim_timing.SimulationTimingConfig

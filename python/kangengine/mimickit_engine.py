@@ -10,8 +10,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 import os
-from pathlib import Path
-import tempfile
 import sys
 from typing import Any, Literal, TypeAlias
 
@@ -20,6 +18,7 @@ import torch
 
 from ._core import _ke
 from .app import App
+from .recording import VideoRecorder
 from .rigid import expand_rigid_body_state, rigid_body_names, rigid_shape_specs
 from .sim import ControlMode, KangSimWorld
 from .utils import preset_rgba
@@ -127,94 +126,6 @@ def _parse_bool(value):
     if isinstance(value, bool):
         return value
     return str(value).strip().lower() in ("1", "true", "yes", "on")
-
-
-class _FrameRecorder:
-    """MimicKit-compatible RGB recorder.
-
-    Frames are always mirrored to binary PPM files for easy debugging.  The
-    in-memory frame list follows MimicKit's Video API closely enough for
-    diagnostics/loggers to call ``save(path)`` and produce an mp4/gif.
-    """
-
-    def __init__(self, out_dir, fps=30):
-        if out_dir is None:
-            out_dir = tempfile.mkdtemp(prefix="kangengine_frames_")
-        self.out_dir = Path(out_dir)
-        self.out_dir.mkdir(parents=True, exist_ok=True)
-        self._fps = int(fps)
-        self.frame_count = 0
-        self._frames = []
-        self._active = False
-
-    def clear(self):
-        self.frame_count = 0
-        self._frames = []
-        return
-
-    def start(self):
-        self.clear()
-        self._active = True
-
-    def stop(self):
-        self._active = False
-
-    def is_active(self):
-        return self._active
-
-    def add_frame(self, frame):
-        return self.write(frame, force=True)
-
-    def write(self, rgb, force=False):
-        if not self._active:
-            if not force:
-                return None
-        arr = np.asarray(rgb, dtype=np.uint8)
-        if arr.ndim != 3 or arr.shape[-1] != 3:
-            raise ValueError(f"expected RGB frame with shape [H, W, 3], got {arr.shape}")
-        self._frames.append(arr.copy())
-        path = self.out_dir / f"frame_{self.frame_count:06d}.ppm"
-        height, width, _ = arr.shape
-        with path.open("wb") as f:
-            f.write(f"P6\n{width} {height}\n255\n".encode("ascii"))
-            f.write(np.ascontiguousarray(arr).tobytes())
-        self.frame_count += 1
-        return path
-
-    def get_fps(self):
-        return self._fps
-
-    def get_num_frames(self):
-        return len(self._frames)
-
-    def get_resolution(self):
-        if not self._frames:
-            return (0, 0)
-        frame = self._frames[0]
-        return (frame.shape[0], frame.shape[1])
-
-    def get_frames(self):
-        return self._frames
-
-    def save(self, file_path):
-        if not self._frames:
-            return
-        path = Path(file_path)
-        suffix = path.suffix.lower()
-        try:
-            from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
-        except Exception as exc:
-            raise RuntimeError(
-                "Saving KangEngine MimicKit recordings requires moviepy. "
-                "Install kangengine[mimickit-video] or kangengine[mimickit-full]."
-            ) from exc
-
-        clip = ImageSequenceClip(self._frames, fps=self._fps)
-        if suffix == ".gif":
-            clip.write_gif(str(path), logger=None)
-        else:
-            clip.write_videofile(str(path), logger=None)
-        return
 
 
 class _KangEngineViewer(App):
@@ -407,7 +318,12 @@ class KangEngineEngine(_BaseEngine):
         )
         self._record_video_saved = False
         self._recorder = (
-            _FrameRecorder(record_dir, fps=record_fps)
+            VideoRecorder(
+                self._record_video_file,
+                fps=record_fps,
+                retain_frames=True,
+                frame_dir=record_dir,
+            )
             if self._record_video
             else None
         )
@@ -733,6 +649,7 @@ class KangEngineEngine(_BaseEngine):
 
     def start_video_recording(self):
         if self._recorder is not None:
+            self._record_video_saved = False
             self._recorder.start()
 
     def stop_video_recording(self):
@@ -745,7 +662,9 @@ class KangEngineEngine(_BaseEngine):
         return self._recorder
 
     def get_record_dir(self):
-        return "" if self._recorder is None else str(self._recorder.out_dir)
+        if self._recorder is None or self._recorder.out_dir is None:
+            return ""
+        return str(self._recorder.out_dir)
 
     def _save_video_recording(self):
         if (

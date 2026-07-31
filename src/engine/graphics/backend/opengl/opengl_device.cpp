@@ -1182,6 +1182,36 @@ std::vector<uint8_t> OpenGLFramebuffer::readColorPixels(bool flipY) {
     return pixels;
 }
 
+// TODO: Add ping-pong PBO readback
+std::vector<uint8_t>
+OpenGLFramebuffer::readColorPixelsResized(int width, int height, bool flipY) {
+    if (width <= 0 || height <= 0)
+        throw std::invalid_argument(
+            "readback width and height must be positive");
+    if (width == _desc.width && height == _desc.height)
+        return readColorPixels(flipY);
+
+    if (!_scaledReadbackFramebuffer) {
+        FramebufferDesc desc;
+        desc.width = width;
+        desc.height = height;
+        desc.colorFormat = FramebufferColorFormat::RGBA8;
+        _scaledReadbackFramebuffer = std::make_unique<OpenGLFramebuffer>(desc);
+    } else {
+        Texture* color = _scaledReadbackFramebuffer->getColorTexture();
+        if (!color || color->getWidth() != width ||
+            color->getHeight() != height)
+            _scaledReadbackFramebuffer->resize(width, height);
+    }
+
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, _fbo);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, _scaledReadbackFramebuffer->_fbo);
+    glBlitFramebuffer(0, 0, _desc.width, _desc.height, 0, 0, width, height,
+                      GL_COLOR_BUFFER_BIT, GL_LINEAR);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    return _scaledReadbackFramebuffer->readColorPixels(flipY);
+}
+
 Texture* OpenGLFramebuffer::getColorTexture() { return _colorTexObj.get(); }
 Texture* OpenGLFramebuffer::getDepthTexture() { return _depthTexObj.get(); }
 Texture* OpenGLFramebuffer::getStencilTexture() { return nullptr; }
