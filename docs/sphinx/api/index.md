@@ -1,7 +1,22 @@
 # API Reference
 
-This section contains KangEngine's Python API reference, split between the
-native pybind11 surface and higher-level pure Python workflow helpers.
+This section contains KangEngine's public Python API. Examples conventionally
+use `import kangengine as ke`; `ke` is only a local alias for the `kangengine`
+package, not a separate package or API layer.
+
+The public API exposes native pybind11 types and pure Python helpers side by
+side under the documented `ke.*` paths. Their implementation origin does not
+affect how they are imported or called. Underscored implementation modules are
+internal and may change without notice.
+
+<span class="api-origin api-origin-native">[native]</span> identifies compiled
+pybind11 APIs. <span class="api-origin api-origin-python">[python]</span>
+identifies Python workflow helpers. Meaningful public inheritance is still shown;
+implementation-only base classes are omitted.
+
+Application-wide entry points and common app helpers live directly under `ke`,
+while specialized APIs are grouped by domain under modules such as `ke.scene`,
+`ke.physics`, and `ke.material`.
 
 ```{toctree}
 :hidden:
@@ -22,9 +37,24 @@ visual
 utils
 ```
 
-The reference follows the public `kangengine` and `ke.*` package roots directly.
+## Application
 
-## Native Runtime
+```{eval-rst}
+.. currentmodule:: kangengine
+
+.. autosummary::
+    :nosignatures:
+
+    App
+    DebugGeometry
+    DebugOverlay
+    WorldText
+    ScreenText
+```
+
+## Rendering And Materials
+
+### Rendering
 
 ```{eval-rst}
 .. currentmodule:: kangengine.render
@@ -32,15 +62,29 @@ The reference follows the public `kangengine` and `ke.*` package roots directly.
 .. autosummary::
     :nosignatures:
 
+    Renderer
     GraphicsDevice
     Shader
     Texture
-
 ```
 
-Materials are documented separately under the `ke.material` domain.
+### Materials
+
+```{eval-rst}
+.. currentmodule:: kangengine.material
+
+.. autosummary::
+    :nosignatures:
+
+    Material
+    VertexColorMaterial
+    PhongMaterial
+    PBRMaterial
+```
 
 ## Scene And Assets
+
+### Scene
 
 ```{eval-rst}
 .. currentmodule:: kangengine.scene
@@ -52,7 +96,11 @@ Materials are documented separately under the `ke.material` domain.
     MeshData
     SkinnedMeshData
     SceneBackend
+```
 
+### Assets
+
+```{eval-rst}
 .. currentmodule:: kangengine.asset
 
 .. autosummary::
@@ -64,7 +112,9 @@ Materials are documented separately under the `ke.material` domain.
     USDLoader
 ```
 
-## Animation And Physics
+## Animation And Visuals
+
+### Animation
 
 ```{eval-rst}
 .. currentmodule:: kangengine.animation
@@ -75,7 +125,11 @@ Materials are documented separately under the `ke.material` domain.
     SkeletonTree
     SkeletonMotion
     SkeletonState
+```
 
+### Visual Bridges
+
+```{eval-rst}
 .. currentmodule:: kangengine.visual
 
 .. autosummary::
@@ -83,7 +137,13 @@ Materials are documented separately under the `ke.material` domain.
 
     ArticulationVisual
     SkeletalVisual
+```
 
+## Physics And Simulation
+
+### Physics
+
+```{eval-rst}
 .. currentmodule:: kangengine.physics
 
 .. autosummary::
@@ -95,26 +155,33 @@ Materials are documented separately under the `ke.material` domain.
     PhysicsGpuSystem
 ```
 
-## Python Workflow Layer
+### Simulation
 
 ```{eval-rst}
-.. currentmodule:: kangengine
-
-.. autosummary::
-    :nosignatures:
-
-    DebugGeometry
-    DebugOverlay
-    WorldText
-    ScreenText
-
 .. currentmodule:: kangengine.sim
 
 .. autosummary::
     :nosignatures:
 
     KangSimWorld
+```
 
+### Simulation Visualization
+
+```{eval-rst}
+.. currentmodule:: kangengine.visual.sim
+
+.. autosummary::
+    :nosignatures:
+
+    SimWorldVisualizer
+```
+
+## Motion And Utilities
+
+### Motion
+
+```{eval-rst}
 .. currentmodule:: kangengine.motion_module
 
 .. autosummary::
@@ -123,18 +190,15 @@ Materials are documented separately under the `ke.material` domain.
     MotionEditor
     MotionPlayer
     MotionModule
+```
 
-.. currentmodule:: kangengine
+### Joint Mapping
+
+```{eval-rst}
+.. currentmodule:: kangengine.utils
 
 .. autosummary::
     :nosignatures:
 
     JointMapper
-
-.. currentmodule:: kangengine.visual.sim
-
-.. autosummary::
-    :nosignatures:
-
-    SimWorldVisualizer
 ```

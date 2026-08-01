@@ -52,6 +52,8 @@ def _transform_from_translation_rotation(translation, rotation_deg) -> np.ndarra
 
 
 class MotionModule:
+    """Base interface for optional MotionEditor processing and visualization."""
+
     def __init__(self, name: str):
         self.name = name
         self.enabled = True
@@ -68,6 +70,7 @@ class MotionModule:
 
 
 class RootTrajectoryModule(MotionModule):
+    """Visualize root positions, directions, and velocities around the playhead."""
     def __init__(
         self,
         app,
@@ -325,6 +328,7 @@ class RootTrajectoryModule(MotionModule):
 
 
 class TrackingModule(MotionModule):
+    """Visualize selected joint trajectories and velocities around the playhead."""
     def __init__(
         self,
         app,
@@ -585,6 +589,7 @@ class TrackingModule(MotionModule):
 
 
 class ContactModule(MotionModule):
+    """Estimate and visualize foot contacts from motion samples."""
     def __init__(
         self,
         app,

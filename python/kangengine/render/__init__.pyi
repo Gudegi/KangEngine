@@ -31,6 +31,26 @@ class ToneMapMode(Enum):
     AcesNarkowicz: ToneMapMode
     AcesFitted: ToneMapMode
 
+class TextAlignment(Enum):
+    Left: TextAlignment
+    Center: TextAlignment
+    Right: TextAlignment
+
+class TextDepthMode(Enum):
+    DepthTested: TextDepthMode
+    Overlay: TextDepthMode
+
+class ScreenAnchor(Enum):
+    TopLeft: ScreenAnchor
+    TopCenter: ScreenAnchor
+    TopRight: ScreenAnchor
+    CenterLeft: ScreenAnchor
+    Center: ScreenAnchor
+    CenterRight: ScreenAnchor
+    BottomLeft: ScreenAnchor
+    BottomCenter: ScreenAnchor
+    BottomRight: ScreenAnchor
+
 class TransformSource(Enum):
     SceneGraph: TransformSource
     ExternalBuffer: TransformSource
@@ -53,7 +73,16 @@ class ExternalBufferDesc:
     count: int
     stride_bytes: int
     sync_policy: ExternalSyncPolicy
-    def __init__(self) -> None: ...
+    def __init__(
+        self,
+        *,
+        view: Any = ...,
+        format: ExternalBufferFormat = ExternalBufferFormat.MAT4,
+        count: int = 0,
+        stride_bytes: int = 0,
+        sync_policy: ExternalSyncPolicy = ExternalSyncPolicy.NONE,
+    ) -> None: ...
+    def __repr__(self) -> str: ...
 
 class TextureWrap(Enum):
     Repeat: TextureWrap
@@ -70,7 +99,15 @@ class SamplerDesc:
     wrap_v: TextureWrap
     min_filter: TextureFilter
     mag_filter: TextureFilter
-    def __init__(self) -> None: ...
+    def __init__(
+        self,
+        *,
+        wrap_u: TextureWrap = TextureWrap.Repeat,
+        wrap_v: TextureWrap = TextureWrap.Repeat,
+        min_filter: TextureFilter = TextureFilter.LinearMipmapLinear,
+        mag_filter: TextureFilter = TextureFilter.Linear,
+    ) -> None: ...
+    def __repr__(self) -> str: ...
 
 class Shader:
     def use(self) -> None: ...

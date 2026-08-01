@@ -2,6 +2,22 @@
 
 Python motion sampling, editor panels, and debug visualization modules.
 
+## API overview
+
+```{eval-rst}
+.. currentmodule:: kangengine.motion_module
+
+.. autosummary::
+   :nosignatures:
+
+   MotionEditor
+   MotionPlayer
+   MotionModule
+   RootTrajectoryModule
+   TrackingModule
+   ContactModule
+```
+
 ```{eval-rst}
 .. currentmodule:: kangengine.motion_module
 

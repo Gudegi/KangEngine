@@ -13,6 +13,20 @@ class PhysicsGpuDynamicsConfig:
     total_aggregate_pairs_capacity: int
     collision_stack_size: int
     max_num_partitions: int
+    def __init__(
+        self,
+        *,
+        temp_buffer_capacity: int = 67108864,
+        max_rigid_contact_count: int = 4194304,
+        max_rigid_patch_count: int = 524288,
+        heap_capacity: int = 268435456,
+        found_lost_pairs_capacity: int = 4194304,
+        found_lost_aggregate_pairs_capacity: int = 33554432,
+        total_aggregate_pairs_capacity: int = 2097152,
+        collision_stack_size: int = 268435456,
+        max_num_partitions: int = 8,
+    ) -> None: ...
+    def __repr__(self) -> str: ...
 
 class PhysicsConfig:
     dt: float
@@ -24,7 +38,20 @@ class PhysicsConfig:
     gpu_dynamics: PhysicsGpuDynamicsConfig
     enable_contact_reports: bool
     cpu_dispatcher_threads: int
-    def __init__(self) -> None: ...
+    def __init__(
+        self,
+        *,
+        dt: float = 0.0166666667,
+        solver_type: int = 1,
+        static_friction: float = 1.0,
+        dynamic_friction: float = 1.0,
+        restitution: float = 0.0,
+        enable_gpu: bool = False,
+        gpu_dynamics: PhysicsGpuDynamicsConfig = ...,
+        enable_contact_reports: bool = True,
+        cpu_dispatcher_threads: int = 4,
+    ) -> None: ...
+    def __repr__(self) -> str: ...
     @staticmethod
     def y_up() -> PhysicsConfig: ...
     @staticmethod
@@ -220,7 +247,27 @@ class ArticulationConfig:
     contact_offset: float
     rest_offset: float
     enable_ccd: bool
-    def __init__(self) -> None: ...
+    material_overrides: list[CollisionMaterialOverride]
+    def __init__(
+        self,
+        *,
+        fix_base: bool = True,
+        disable_self_collision: bool = True,
+        use_aggregate: bool = False,
+        solver_position_iteration_count: int = 16,
+        solver_velocity_iteration_count: int = 1,
+        collision_group: int = 0,
+        root_linear_damping: float = 0.0,
+        root_angular_damping: float = 0.05,
+        link_linear_damping: float = 0.0,
+        link_angular_damping: float = 0.05,
+        max_angular_velocity: float = 100.0,
+        contact_offset: float = 0.02,
+        rest_offset: float = 0.0,
+        material_overrides: Sequence[CollisionMaterialOverride] = ...,
+        enable_ccd: bool = False,
+    ) -> None: ...
+    def __repr__(self) -> str: ...
     @staticmethod
     def fixed_base() -> ArticulationConfig: ...
     @staticmethod
@@ -263,7 +310,19 @@ class PhysicsBridge:
         visible_by_default: bool = False,
     ) -> Any: ...
 
-class GpuPhysicsConfig: ...
+class GpuPhysicsConfig:
+    cuda_device_id: int
+    max_contact_pairs: int
+    max_contact_points: int
+    def __init__(
+        self,
+        *,
+        cuda_device_id: int = 0,
+        max_contact_pairs: int = 65536,
+        max_contact_points: int = 262144,
+    ) -> None: ...
+    def __repr__(self) -> str: ...
+
 class PhysicsGpuStateViews: ...
 
 class PhysicsGpuSystem:

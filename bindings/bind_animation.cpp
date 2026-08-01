@@ -564,9 +564,9 @@ void bind_animation(py::module& m) {
             [](const std::string& mjcfPath, Scene::SceneBackend* scene,
                const std::string& primBasePath, float scale,
                const std::string& order, const std::string& meshAssetBasePath) {
-                return ArticulationVisualBridge::fromMJCF(mjcfPath, scene, primBasePath,
-                                                scale, order,
-                                                meshAssetBasePath);
+                return ArticulationVisualBridge::fromMJCF(
+                    mjcfPath, scene, primBasePath, scale, order,
+                    meshAssetBasePath);
             },
             py::arg("mjcf_path"), py::arg("scene"),
             py::arg("prim_base_path") = "/robot", py::arg("scale") = 1.0f,
@@ -627,7 +627,8 @@ void bind_animation(py::module& m) {
         .def("render_prims", &ArticulationVisualBridge::renderPrims,
              py::return_value_policy::reference_internal,
              "Return actual renderable mesh prims.")
-        .def("render_prim_body_indices", &ArticulationVisualBridge::renderPrimBodyIndices,
+        .def("render_prim_body_indices",
+             &ArticulationVisualBridge::renderPrimBodyIndices,
              py::return_value_policy::reference_internal,
              "Return body index for each render prim.")
         .def("num_bodies", &ArticulationVisualBridge::numBodies,
@@ -635,17 +636,19 @@ void bind_animation(py::module& m) {
 
     py::class_<ArticulationVisualBridgeAsset>(
         anim, "ArticulationVisualAsset",
-        "Reusable articulated rigid-link visual asset that can instantiate scene prims.")
+        "Reusable articulated rigid-link visual asset that can instantiate "
+        "scene prims.")
         .def_static("from_mjcf", &ArticulationVisualBridgeAsset::fromMJCF,
                     py::arg("mjcf_path"), py::arg("scale") = 1.0f,
                     py::arg("order") = "DFS",
                     "Load reusable bridge asset data from an MJCF file.")
-        .def("define_mesh_assets", &ArticulationVisualBridgeAsset::defineMeshAssets,
-             py::arg("scene"), py::arg("mesh_asset_base_path"),
+        .def("define_mesh_assets",
+             &ArticulationVisualBridgeAsset::defineMeshAssets, py::arg("scene"),
+             py::arg("mesh_asset_base_path"),
              py::arg("split_visual_geoms") = false,
              "Define shared mesh asset prims in a scene.")
-        .def("instantiate", &ArticulationVisualBridgeAsset::instantiate, py::arg("scene"),
-             py::arg("prim_base_path") = "/robot",
+        .def("instantiate", &ArticulationVisualBridgeAsset::instantiate,
+             py::arg("scene"), py::arg("prim_base_path") = "/robot",
              py::arg("mesh_asset_base_path") = "",
              py::arg("split_visual_geoms") = false,
              "Instantiate this asset into a scene.")
@@ -655,7 +658,30 @@ void bind_animation(py::module& m) {
     py::class_<SkeletalVisualConfig>(
         anim, "SkeletalVisualConfig",
         "Style settings for SkeletalVisual line/joint rendering.")
-        .def(py::init<>(), "Create default skeleton visual settings.")
+        .def(py::init([](const std::optional<glm::vec4>& boneColor,
+                         const std::optional<glm::vec4>& jointColor,
+                         float boneRadius, float jointRadius, int segments,
+                         bool visible, bool showJoints) {
+                 SkeletalVisualConfig config;
+                 if (boneColor)
+                     config.boneColor = *boneColor;
+                 if (jointColor)
+                     config.jointColor = *jointColor;
+                 config.boneRadius = boneRadius;
+                 config.jointRadius = jointRadius;
+                 config.segments = segments;
+                 config.visible = visible;
+                 config.showJoints = showJoints;
+                 return config;
+             }),
+             py::kw_only(), py::arg("bone_color") = py::none(),
+             py::arg("joint_color") = py::none(),
+             py::arg("bone_radius") = SkeletalVisualConfig{}.boneRadius,
+             py::arg("joint_radius") = SkeletalVisualConfig{}.jointRadius,
+             py::arg("segments") = SkeletalVisualConfig{}.segments,
+             py::arg("visible") = SkeletalVisualConfig{}.visible,
+             py::arg("show_joints") = SkeletalVisualConfig{}.showJoints,
+             "Create skeleton visual settings from keyword fields.")
         .def_readwrite("bone_color", &SkeletalVisualConfig::boneColor,
                        "RGBA color for bones.")
         .def_readwrite("joint_color", &SkeletalVisualConfig::jointColor,
@@ -669,7 +695,20 @@ void bind_animation(py::module& m) {
         .def_readwrite("visible", &SkeletalVisualConfig::visible,
                        "Initial visibility state.")
         .def_readwrite("show_joints", &SkeletalVisualConfig::showJoints,
-                       "Whether joint markers should be visible.");
+                       "Whether joint markers should be visible.")
+        .def("__repr__", [](const SkeletalVisualConfig& config) {
+            return py::str(
+                       "SkeletalVisualConfig(bone_color=({:g}, {:g}, {:g}, "
+                       "{:g}), joint_color=({:g}, {:g}, {:g}, {:g}), "
+                       "bone_radius={:g}, joint_radius={:g}, segments={!r}, "
+                       "visible={!r}, show_joints={!r})")
+                .attr("format")(
+                    config.boneColor.x, config.boneColor.y, config.boneColor.z,
+                    config.boneColor.w, config.jointColor.x,
+                    config.jointColor.y, config.jointColor.z,
+                    config.jointColor.w, config.boneRadius, config.jointRadius,
+                    config.segments, config.visible, config.showJoints);
+        });
 
     py::class_<SkeletalVisualBridge>(
         anim, "SkeletalVisual",

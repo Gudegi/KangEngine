@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import importlib
+import inspect
 import os
 import sys
 from pathlib import Path
 
+from docutils import nodes
 
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON_DIR = ROOT / "python"
@@ -62,6 +65,9 @@ copybutton_prompt_is_regexp = True
 autosummary_generate = False
 autodoc_member_order = "bysource"
 autodoc_typehints = "description"
+python_maximum_signature_line_length = 88
+python_trailing_comma_in_multi_line_signatures = True
+python_use_unqualified_type_names = True
 autodoc_default_options = {
     "members": True,
     "undoc-members": False,
@@ -77,6 +83,10 @@ _PUBLIC_SIGNATURE_REPLACEMENTS = (
     ("kangengine._kangengine.animation.", "kangengine.animation."),
     ("kangengine._core._ke.scene.", "kangengine.scene."),
     ("kangengine._kangengine.scene.", "kangengine.scene."),
+    ("typing.SupportsFloat", "float"),
+    ("typing.SupportsInt", "int"),
+    ("SupportsFloat", "float"),
+    ("SupportsInt", "int"),
     ("kangengine._core._ke.asset.", "kangengine.asset."),
     ("kangengine._kangengine.asset.", "kangengine.asset."),
     ("kangengine._core._ke.physics.", "kangengine.physics."),
@@ -95,7 +105,16 @@ def _public_signature(text: str | None) -> str | None:
 
 
 def process_signature(app, what, name, obj, options, signature, return_annotation):
-    return _public_signature(signature), _public_signature(return_annotation)
+    signature = _public_signature(signature)
+    return_annotation = _public_signature(return_annotation)
+
+    if name.endswith(".__init__") and signature:
+        first_comma = signature.find(",")
+        if signature.startswith("(self:") and first_comma >= 0:
+            signature = "(" + signature[first_comma + 1 :].lstrip()
+        return_annotation = None
+
+    return signature, return_annotation
 
 
 def process_docstring(app, what, name, obj, options, lines):
@@ -140,6 +159,55 @@ def process_docstring(app, what, name, obj, options, lines):
         )
 
 
+def process_bases(app, name, obj, options, bases):
+    bases[:] = [
+        base
+        for base in bases
+        if base is not object and getattr(base, "__module__", "") != "pybind11_builtins"
+    ]
+
+
+def _documented_object(signature):
+    module_name = signature.get("module")
+    fullname = signature.get("fullname")
+    if not module_name or not fullname:
+        return None
+
+    try:
+        obj = importlib.import_module(module_name)
+        for part in fullname.split("."):
+            obj = getattr(obj, part)
+        return obj
+    except (AttributeError, ImportError):
+        return None
+
+
+def process_object_description(app, domain, objtype, contentnode):
+    if domain != "py" or objtype not in {"class", "function"}:
+        return
+    for child in tuple(contentnode.children):
+        if isinstance(child, nodes.paragraph) and child.astext() == "Bases:":
+            contentnode.remove(child)
+
+    description = contentnode.parent
+    if not description.children:
+        return
+    signature = description.children[0]
+    obj = _documented_object(signature)
+    if obj is None:
+        return
+
+    is_native = inspect.isbuiltin(obj) or type(obj).__module__ == "pybind11_builtins"
+    kind = "native" if is_native else "python"
+    signature += nodes.inline(
+        "",
+        f"[{kind}]",
+        classes=["api-origin", f"api-origin-{kind}"],
+    )
+
+
 def setup(app):
     app.connect("autodoc-process-signature", process_signature)
+    app.connect("autodoc-process-bases", process_bases)
+    app.connect("object-description-transform", process_object_description)
     app.connect("autodoc-process-docstring", process_docstring)

@@ -260,6 +260,8 @@ class MotionCameraFollower:
 
 @dataclass
 class MotionPlayer:
+    """Track playback time and select frames from a sampled motion."""
+
     duration: float
     fps: float
     num_frames: int
@@ -319,6 +321,8 @@ class MotionPlayer:
 
 
 class MotionEditor:
+    """Motion playback, sequencer UI, and pluggable motion modules."""
+
     def __init__(
         self,
         motion,

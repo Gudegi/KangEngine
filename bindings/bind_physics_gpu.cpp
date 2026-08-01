@@ -25,51 +25,94 @@ void bind_physics_gpu(py::module& m) {
     py::class_<GpuPhysicsConfig>(
         physics, "GpuPhysicsConfig",
         "Configuration for explicit GPU physics state synchronization.")
-        .def(py::init<>())
-        .def_readwrite("cuda_device_id", &GpuPhysicsConfig::cudaDeviceId)
-        .def_readwrite("max_contact_pairs",
-                       &GpuPhysicsConfig::maxContactPairs)
+        .def(py::init([](int cuda_device_id, uint32_t max_contact_pairs,
+                         uint32_t max_contact_points) {
+                 GpuPhysicsConfig config;
+                 config.cudaDeviceId = cuda_device_id;
+                 config.maxContactPairs = max_contact_pairs;
+                 config.maxContactPoints = max_contact_points;
+                 return config;
+             }),
+             py::kw_only(),
+             py::arg("cuda_device_id") = GpuPhysicsConfig{}.cudaDeviceId,
+             py::arg("max_contact_pairs") = GpuPhysicsConfig{}.maxContactPairs,
+             py::arg("max_contact_points") =
+                 GpuPhysicsConfig{}.maxContactPoints,
+             "Create GPU synchronization configuration from keyword arguments.")
+        .def_readwrite("cuda_device_id", &GpuPhysicsConfig::cudaDeviceId,
+                       "CUDA device ordinal used by GPU physics.")
+        .def_readwrite("max_contact_pairs", &GpuPhysicsConfig::maxContactPairs,
+                       "Maximum mirrored contact pair count.")
         .def_readwrite("max_contact_points",
-                       &GpuPhysicsConfig::maxContactPoints);
+                       &GpuPhysicsConfig::maxContactPoints,
+                       "Maximum mirrored contact point count.")
+        .def("__repr__", [](const GpuPhysicsConfig& config) {
+            return py::str("GpuPhysicsConfig(cuda_device_id={!r}, "
+                           "max_contact_pairs={!r}, max_contact_points={!r})")
+                .attr("format")(config.cudaDeviceId, config.maxContactPairs,
+                                config.maxContactPoints);
+        });
 
     py::class_<PhysicsGpuStateViews>(
         physics, "PhysicsGpuStateViews",
-        "GPU buffer views used by PhysicsGpuSystem.")
+        "Backend-owned GPU state and command-buffer views. State buffers are "
+        "refreshed by the corresponding fetch methods; command buffers are "
+        "submitted by apply methods. The views become invalid when their "
+        "PhysicsGpuSystem is released.")
         .def(py::init<>())
-        .def_readwrite("rigid_data", &PhysicsGpuStateViews::rigidData)
-        .def_readwrite("rigid_force", &PhysicsGpuStateViews::rigidForce)
-        .def_readwrite("rigid_torque", &PhysicsGpuStateViews::rigidTorque)
+        .def_readwrite("rigid_data", &PhysicsGpuStateViews::rigidData,
+                       "Rigid pose and velocity state refreshed by "
+                       "fetch_rigid_data().")
+        .def_readwrite("rigid_force", &PhysicsGpuStateViews::rigidForce,
+                       "Rigid force command buffer submitted by "
+                       "apply_rigid_force().")
+        .def_readwrite("rigid_torque", &PhysicsGpuStateViews::rigidTorque,
+                       "Rigid torque command buffer submitted by "
+                       "apply_rigid_torque().")
         .def_readwrite("articulation_link_data",
-                       &PhysicsGpuStateViews::articulationLinkData)
+                       &PhysicsGpuStateViews::articulationLinkData,
+                       "Articulation link pose and velocity state.")
         .def_readwrite("articulation_joint_positions",
-                       &PhysicsGpuStateViews::articulationJointPositions)
+                       &PhysicsGpuStateViews::articulationJointPositions,
+                       "Articulation joint-position state.")
         .def_readwrite("articulation_joint_velocities",
-                       &PhysicsGpuStateViews::articulationJointVelocities)
+                       &PhysicsGpuStateViews::articulationJointVelocities,
+                       "Articulation joint-velocity state.")
         .def_readwrite("articulation_joint_accelerations",
-                       &PhysicsGpuStateViews::articulationJointAccelerations)
+                       &PhysicsGpuStateViews::articulationJointAccelerations,
+                       "Articulation joint-acceleration state.")
         .def_readwrite("articulation_joint_forces",
-                       &PhysicsGpuStateViews::articulationJointForces)
-        .def_readwrite(
-            "articulation_target_joint_positions",
-            &PhysicsGpuStateViews::articulationTargetJointPositions)
-        .def_readwrite(
-            "articulation_target_joint_velocities",
-            &PhysicsGpuStateViews::articulationTargetJointVelocities)
+                       &PhysicsGpuStateViews::articulationJointForces,
+                       "Articulation joint-force state.")
+        .def_readwrite("articulation_target_joint_positions",
+                       &PhysicsGpuStateViews::articulationTargetJointPositions,
+                       "Joint-position target command buffer.")
+        .def_readwrite("articulation_target_joint_velocities",
+                       &PhysicsGpuStateViews::articulationTargetJointVelocities,
+                       "Joint-velocity target command buffer.")
         .def_readwrite(
             "articulation_link_incoming_joint_forces",
-            &PhysicsGpuStateViews::articulationLinkIncomingJointForces)
-        .def_readwrite("contact_pairs", &PhysicsGpuStateViews::contactPairs)
+            &PhysicsGpuStateViews::articulationLinkIncomingJointForces,
+            "Incoming joint-force state for articulation links.")
+        .def_readwrite("contact_pairs", &PhysicsGpuStateViews::contactPairs,
+                       "Packed contact-pair state buffer.")
         .def_readwrite("contact_pair_count",
-                       &PhysicsGpuStateViews::contactPairCount)
+                       &PhysicsGpuStateViews::contactPairCount,
+                       "Number of valid packed contact pairs.")
         .def_readwrite("contact_pair_headers",
-                       &PhysicsGpuStateViews::contactPairHeaders)
+                       &PhysicsGpuStateViews::contactPairHeaders,
+                       "Headers describing packed contact-pair ranges.")
         .def_readwrite("contact_pair_body_refs",
-                       &PhysicsGpuStateViews::contactPairBodyRefs)
-        .def_readwrite("contact_points", &PhysicsGpuStateViews::contactPoints)
+                       &PhysicsGpuStateViews::contactPairBodyRefs,
+                       "Body references for packed contact pairs.")
+        .def_readwrite("contact_points", &PhysicsGpuStateViews::contactPoints,
+                       "Packed contact-point state buffer.")
         .def_readwrite("contact_point_count",
-                       &PhysicsGpuStateViews::contactPointCount)
+                       &PhysicsGpuStateViews::contactPointCount,
+                       "Number of valid packed contact points.")
         .def_readwrite("contact_point_pair_indices",
-                       &PhysicsGpuStateViews::contactPointPairIndices);
+                       &PhysicsGpuStateViews::contactPointPairIndices,
+                       "Contact-pair index for each packed contact point.");
 
     py::class_<PhysicsGpuSystem>(
         physics, "PhysicsGpuSystem",
@@ -100,14 +143,11 @@ void bind_physics_gpu(py::module& m) {
         .def("articulation_link_count",
              &PhysicsGpuSystem::articulationLinkCount,
              py::arg("articulation_row"))
-        .def("articulation_dof_count",
-             &PhysicsGpuSystem::articulationDofCount,
+        .def("articulation_dof_count", &PhysicsGpuSystem::articulationDofCount,
              py::arg("articulation_row"))
         .def("articulation_count", &PhysicsGpuSystem::articulationCount)
-        .def("articulation_max_links",
-             &PhysicsGpuSystem::articulationMaxLinks)
-        .def("articulation_max_dofs",
-             &PhysicsGpuSystem::articulationMaxDofs)
+        .def("articulation_max_links", &PhysicsGpuSystem::articulationMaxLinks)
+        .def("articulation_max_dofs", &PhysicsGpuSystem::articulationMaxDofs)
         .def("step_start", &PhysicsGpuSystem::stepStart)
         .def("step_finish", &PhysicsGpuSystem::stepFinish)
         .def("rigid_data", &PhysicsGpuSystem::rigidData,
@@ -116,8 +156,7 @@ void bind_physics_gpu(py::module& m) {
              py::return_value_policy::reference_internal)
         .def("rigid_torque", &PhysicsGpuSystem::rigidTorque,
              py::return_value_policy::reference_internal)
-        .def("articulation_link_data",
-             &PhysicsGpuSystem::articulationLinkData,
+        .def("articulation_link_data", &PhysicsGpuSystem::articulationLinkData,
              py::return_value_policy::reference_internal)
         .def("articulation_joint_positions",
              &PhysicsGpuSystem::articulationJointPositions,
@@ -216,15 +255,15 @@ void bind_physics_gpu(py::module& m) {
                  &PhysicsGpuSystem::views),
              py::return_value_policy::reference_internal);
 #ifdef KANGENGINE_USE_CUDA
-    physics.def("aggregate_contact_sensors_cuda",
-          &PhysicsGpuKernels::aggregateContactSensorsCUDA,
-          py::arg("contact_pair_body_refs"), py::arg("contact_pair_count"),
-          py::arg("contact_points"), py::arg("contact_point_count"),
-          py::arg("contact_point_pair_indices"),
-          py::arg("sensor_descriptors"), py::arg("row_to_environment"),
-          py::arg("body_to_slot"), py::arg("contact_count"),
-          py::arg("in_contact"), py::arg("net_impulse"),
-          "Aggregate contact-pair body refs into batched sensor outputs.");
+    physics.def(
+        "aggregate_contact_sensors_cuda",
+        &PhysicsGpuKernels::aggregateContactSensorsCUDA,
+        py::arg("contact_pair_body_refs"), py::arg("contact_pair_count"),
+        py::arg("contact_points"), py::arg("contact_point_count"),
+        py::arg("contact_point_pair_indices"), py::arg("sensor_descriptors"),
+        py::arg("row_to_environment"), py::arg("body_to_slot"),
+        py::arg("contact_count"), py::arg("in_contact"), py::arg("net_impulse"),
+        "Aggregate contact-pair body refs into batched sensor outputs.");
 #endif
 #else
     (void)m;

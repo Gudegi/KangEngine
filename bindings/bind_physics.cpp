@@ -64,32 +64,135 @@ void bind_physics(py::module& m) {
     py::class_<PhysicsGpuDynamicsConfig>(
         physics, "PhysicsGpuDynamicsConfig",
         "PhysX GPU dynamics buffer capacities used during scene creation.")
-        .def(py::init<>())
+        .def(py::init([](uint64_t temp_buffer_capacity,
+                         uint32_t max_rigid_contact_count,
+                         uint32_t max_rigid_patch_count, uint32_t heap_capacity,
+                         uint32_t found_lost_pairs_capacity,
+                         uint32_t found_lost_aggregate_pairs_capacity,
+                         uint32_t total_aggregate_pairs_capacity,
+                         uint32_t collision_stack_size,
+                         uint32_t max_num_partitions) {
+                 PhysicsGpuDynamicsConfig config;
+                 config.tempBufferCapacity = temp_buffer_capacity;
+                 config.maxRigidContactCount = max_rigid_contact_count;
+                 config.maxRigidPatchCount = max_rigid_patch_count;
+                 config.heapCapacity = heap_capacity;
+                 config.foundLostPairsCapacity = found_lost_pairs_capacity;
+                 config.foundLostAggregatePairsCapacity =
+                     found_lost_aggregate_pairs_capacity;
+                 config.totalAggregatePairsCapacity =
+                     total_aggregate_pairs_capacity;
+                 config.collisionStackSize = collision_stack_size;
+                 config.maxNumPartitions = max_num_partitions;
+                 return config;
+             }),
+             py::kw_only(),
+             py::arg("temp_buffer_capacity") =
+                 PhysicsGpuDynamicsConfig{}.tempBufferCapacity,
+             py::arg("max_rigid_contact_count") =
+                 PhysicsGpuDynamicsConfig{}.maxRigidContactCount,
+             py::arg("max_rigid_patch_count") =
+                 PhysicsGpuDynamicsConfig{}.maxRigidPatchCount,
+             py::arg("heap_capacity") = PhysicsGpuDynamicsConfig{}.heapCapacity,
+             py::arg("found_lost_pairs_capacity") =
+                 PhysicsGpuDynamicsConfig{}.foundLostPairsCapacity,
+             py::arg("found_lost_aggregate_pairs_capacity") =
+                 PhysicsGpuDynamicsConfig{}.foundLostAggregatePairsCapacity,
+             py::arg("total_aggregate_pairs_capacity") =
+                 PhysicsGpuDynamicsConfig{}.totalAggregatePairsCapacity,
+             py::arg("collision_stack_size") =
+                 PhysicsGpuDynamicsConfig{}.collisionStackSize,
+             py::arg("max_num_partitions") =
+                 PhysicsGpuDynamicsConfig{}.maxNumPartitions,
+             "Create GPU dynamics capacities from keyword arguments.")
         .def_readwrite("temp_buffer_capacity",
-                       &PhysicsGpuDynamicsConfig::tempBufferCapacity)
+                       &PhysicsGpuDynamicsConfig::tempBufferCapacity,
+                       "Temporary GPU buffer capacity in bytes.")
         .def_readwrite("max_rigid_contact_count",
-                       &PhysicsGpuDynamicsConfig::maxRigidContactCount)
+                       &PhysicsGpuDynamicsConfig::maxRigidContactCount,
+                       "Maximum rigid contact count.")
         .def_readwrite("max_rigid_patch_count",
-                       &PhysicsGpuDynamicsConfig::maxRigidPatchCount)
-        .def_readwrite("heap_capacity", &PhysicsGpuDynamicsConfig::heapCapacity)
+                       &PhysicsGpuDynamicsConfig::maxRigidPatchCount,
+                       "Maximum rigid contact patch count.")
+        .def_readwrite("heap_capacity", &PhysicsGpuDynamicsConfig::heapCapacity,
+                       "GPU dynamics heap capacity in bytes.")
         .def_readwrite("found_lost_pairs_capacity",
-                       &PhysicsGpuDynamicsConfig::foundLostPairsCapacity)
+                       &PhysicsGpuDynamicsConfig::foundLostPairsCapacity,
+                       "Capacity for found and lost rigid pairs.")
         .def_readwrite(
             "found_lost_aggregate_pairs_capacity",
-            &PhysicsGpuDynamicsConfig::foundLostAggregatePairsCapacity)
-        .def_readwrite(
-            "total_aggregate_pairs_capacity",
-            &PhysicsGpuDynamicsConfig::totalAggregatePairsCapacity)
+            &PhysicsGpuDynamicsConfig::foundLostAggregatePairsCapacity,
+            "Capacity for found and lost aggregate pairs.")
+        .def_readwrite("total_aggregate_pairs_capacity",
+                       &PhysicsGpuDynamicsConfig::totalAggregatePairsCapacity,
+                       "Capacity for all aggregate pairs.")
         .def_readwrite("collision_stack_size",
-                       &PhysicsGpuDynamicsConfig::collisionStackSize)
+                       &PhysicsGpuDynamicsConfig::collisionStackSize,
+                       "GPU collision stack size in bytes.")
         .def_readwrite("max_num_partitions",
-                       &PhysicsGpuDynamicsConfig::maxNumPartitions);
+                       &PhysicsGpuDynamicsConfig::maxNumPartitions,
+                       "Maximum GPU dynamics partition count.")
+        .def("__repr__", [](const PhysicsGpuDynamicsConfig& config) {
+            return py::str(
+                       "PhysicsGpuDynamicsConfig("
+                       "temp_buffer_capacity={!r}, "
+                       "max_rigid_contact_count={!r}, "
+                       "max_rigid_patch_count={!r}, heap_capacity={!r}, "
+                       "found_lost_pairs_capacity={!r}, "
+                       "found_lost_aggregate_pairs_capacity={!r}, "
+                       "total_aggregate_pairs_capacity={!r}, "
+                       "collision_stack_size={!r}, max_num_partitions={!r})")
+                .attr("format")(
+                    config.tempBufferCapacity, config.maxRigidContactCount,
+                    config.maxRigidPatchCount, config.heapCapacity,
+                    config.foundLostPairsCapacity,
+                    config.foundLostAggregatePairsCapacity,
+                    config.totalAggregatePairsCapacity,
+                    config.collisionStackSize, config.maxNumPartitions);
+        });
 
     // PhysicsConfig
     py::class_<PhysicsConfig>(
         physics, "PhysicsConfig",
         "PhysX world configuration including timestep, up axis, and reporting.")
-        .def(py::init<>(), "Create default physics configuration.")
+        .def(py::init([](float dt, int solver_type, float static_friction,
+                         float dynamic_friction, float restitution,
+                         bool enable_gpu,
+                         const PhysicsGpuDynamicsConfig& gpu_dynamics,
+                         bool enable_contact_reports,
+                         uint32_t cpu_dispatcher_threads) {
+                 PhysicsConfig config;
+                 config.dt = dt;
+                 if (solver_type == 0) {
+                     config.solverType = PxSolverType::ePGS;
+                 } else if (solver_type == 1) {
+                     config.solverType = PxSolverType::eTGS;
+                 } else {
+                     throw py::value_error(
+                         "solver_type must be 0 (PGS) or 1 (TGS)");
+                 }
+                 config.friction[0] = static_friction;
+                 config.friction[1] = dynamic_friction;
+                 config.friction[2] = restitution;
+                 config.enableGPU = enable_gpu;
+                 config.gpuDynamics = gpu_dynamics;
+                 config.enableContactReports = enable_contact_reports;
+                 config.cpuDispatcherThreads = cpu_dispatcher_threads;
+                 return config;
+             }),
+             py::kw_only(), py::arg_v("dt", PhysicsConfig{}.dt, "1.0 / 60.0"),
+             py::arg("solver_type") = 1,
+             py::arg("static_friction") = PhysicsConfig{}.friction[0],
+             py::arg("dynamic_friction") = PhysicsConfig{}.friction[1],
+             py::arg("restitution") = PhysicsConfig{}.friction[2],
+             py::arg("enable_gpu") = PhysicsConfig{}.enableGPU,
+             py::arg_v("gpu_dynamics", PhysicsConfig{}.gpuDynamics,
+                       "PhysicsGpuDynamicsConfig()"),
+             py::arg("enable_contact_reports") =
+                 PhysicsConfig{}.enableContactReports,
+             py::arg("cpu_dispatcher_threads") =
+                 PhysicsConfig{}.cpuDispatcherThreads,
+             "Create physics configuration from keyword arguments.")
         .def_static("y_up", &PhysicsConfig::yUp,
                     "Create configuration for a Y-up world.")
         .def_static("z_up", &PhysicsConfig::zUp,
@@ -117,10 +220,9 @@ void bind_physics(py::module& m) {
         .def_readwrite("enable_contact_reports",
                        &PhysicsConfig::enableContactReports,
                        "Enable contact collection during simulation.")
-        .def_readwrite(
-            "cpu_dispatcher_threads",
-            &PhysicsConfig::cpuDispatcherThreads,
-            "Worker threads used by the PhysX CPU dispatcher.")
+        .def_readwrite("cpu_dispatcher_threads",
+                       &PhysicsConfig::cpuDispatcherThreads,
+                       "Worker threads used by the PhysX CPU dispatcher.")
         .def_property(
             "solver_type",
             [](const PhysicsConfig& c) {
@@ -136,7 +238,21 @@ void bind_physics(py::module& m) {
                         "solver_type must be 0 (PGS) or 1 (TGS)");
                 }
             },
-            "Solver type: 0 for PGS, 1 for TGS.");
+            "Solver type: 0 for PGS, 1 for TGS.")
+        .def("__repr__", [](const PhysicsConfig& config) {
+            const int solver_type =
+                config.solverType == PxSolverType::ePGS ? 0 : 1;
+            return py::str("PhysicsConfig(dt={:g}, solver_type={!r}, "
+                           "static_friction={:g}, dynamic_friction={:g}, "
+                           "restitution={:g}, enable_gpu={!r}, "
+                           "gpu_dynamics={!r}, enable_contact_reports={!r}, "
+                           "cpu_dispatcher_threads={!r})")
+                .attr("format")(config.dt, solver_type, config.friction[0],
+                                config.friction[1], config.friction[2],
+                                config.enableGPU, config.gpuDynamics,
+                                config.enableContactReports,
+                                config.cpuDispatcherThreads);
+        });
 
     py::class_<PhysicsMaterialDesc>(
         physics, "PhysicsMaterialDesc",
@@ -705,7 +821,62 @@ void bind_physics(py::module& m) {
     // ArticulationConfig
     py::class_<ArticulationConfig>(physics, "ArticulationConfig",
                                    "PhysX articulation construction settings.")
-        .def(py::init<>(), "Create default articulation configuration.")
+        .def(
+            py::init([](bool fix_base, bool disable_self_collision,
+                        bool use_aggregate, int solver_position_iteration_count,
+                        int solver_velocity_iteration_count,
+                        uint32_t collision_group, float root_linear_damping,
+                        float root_angular_damping, float link_linear_damping,
+                        float link_angular_damping, float max_angular_velocity,
+                        float contact_offset, float rest_offset,
+                        const std::vector<CollisionMaterialOverride>&
+                            material_overrides,
+                        bool enable_ccd) {
+                ArticulationConfig config;
+                config.fixBase = fix_base;
+                config.disableSelfCollision = disable_self_collision;
+                config.useAggregate = use_aggregate;
+                config.solverPositionIterations =
+                    solver_position_iteration_count;
+                config.solverVelocityIterations =
+                    solver_velocity_iteration_count;
+                config.collisionGroup = collision_group;
+                config.rootLinearDamping = root_linear_damping;
+                config.rootAngularDamping = root_angular_damping;
+                config.linkLinearDamping = link_linear_damping;
+                config.linkAngularDamping = link_angular_damping;
+                config.maxAngularVelocity = max_angular_velocity;
+                config.contactOffset = contact_offset;
+                config.restOffset = rest_offset;
+                config.materialOverrides = material_overrides;
+                config.enableCCD = enable_ccd;
+                return config;
+            }),
+            py::kw_only(), py::arg("fix_base") = ArticulationConfig{}.fixBase,
+            py::arg("disable_self_collision") =
+                ArticulationConfig{}.disableSelfCollision,
+            py::arg("use_aggregate") = ArticulationConfig{}.useAggregate,
+            py::arg("solver_position_iteration_count") =
+                ArticulationConfig{}.solverPositionIterations,
+            py::arg("solver_velocity_iteration_count") =
+                ArticulationConfig{}.solverVelocityIterations,
+            py::arg("collision_group") = ArticulationConfig{}.collisionGroup,
+            py::arg("root_linear_damping") =
+                ArticulationConfig{}.rootLinearDamping,
+            py::arg("root_angular_damping") =
+                ArticulationConfig{}.rootAngularDamping,
+            py::arg("link_linear_damping") =
+                ArticulationConfig{}.linkLinearDamping,
+            py::arg("link_angular_damping") =
+                ArticulationConfig{}.linkAngularDamping,
+            py::arg("max_angular_velocity") =
+                ArticulationConfig{}.maxAngularVelocity,
+            py::arg("contact_offset") = ArticulationConfig{}.contactOffset,
+            py::arg("rest_offset") = ArticulationConfig{}.restOffset,
+            py::arg("material_overrides") =
+                ArticulationConfig{}.materialOverrides,
+            py::arg("enable_ccd") = ArticulationConfig{}.enableCCD,
+            "Create articulation configuration from keyword arguments.")
         .def_static("fixed_base", &ArticulationConfig::fixedBase,
                     "Create configuration for a fixed-base articulation.")
         .def_static("free_base", &ArticulationConfig::freeBase,
@@ -727,14 +898,12 @@ void bind_physics(py::module& m) {
                 c.solverPositionIterations = value;
             },
             "Compatibility alias for solver_position_iteration_count.")
-        .def_readwrite(
-            "solver_position_iteration_count",
-            &ArticulationConfig::solverPositionIterations,
-            "Position solver iteration count.")
-        .def_readwrite(
-            "solver_velocity_iteration_count",
-            &ArticulationConfig::solverVelocityIterations,
-            "Velocity solver iteration count.")
+        .def_readwrite("solver_position_iteration_count",
+                       &ArticulationConfig::solverPositionIterations,
+                       "Position solver iteration count.")
+        .def_readwrite("solver_velocity_iteration_count",
+                       &ArticulationConfig::solverVelocityIterations,
+                       "Velocity solver iteration count.")
         .def_readwrite("collision_group", &ArticulationConfig::collisionGroup,
                        "Collision group bit used for created actors.")
         .def_readwrite("root_linear_damping",
@@ -778,7 +947,29 @@ void bind_physics(py::module& m) {
             py::return_value_policy::reference_internal,
             "Remove all collision material overrides.")
         .def_readwrite("enable_ccd", &ArticulationConfig::enableCCD,
-                       "Enable continuous collision detection.");
+                       "Enable continuous collision detection.")
+        .def("__repr__", [](const ArticulationConfig& config) {
+            return py::str(
+                       "ArticulationConfig(fix_base={!r}, "
+                       "disable_self_collision={!r}, use_aggregate={!r}, "
+                       "solver_position_iteration_count={!r}, "
+                       "solver_velocity_iteration_count={!r}, "
+                       "collision_group={!r}, root_linear_damping={:g}, "
+                       "root_angular_damping={:g}, link_linear_damping={:g}, "
+                       "link_angular_damping={:g}, "
+                       "max_angular_velocity={:g}, contact_offset={:g}, "
+                       "rest_offset={:g}, material_overrides={!r}, "
+                       "enable_ccd={!r})")
+                .attr("format")(
+                    config.fixBase, config.disableSelfCollision,
+                    config.useAggregate, config.solverPositionIterations,
+                    config.solverVelocityIterations, config.collisionGroup,
+                    config.rootLinearDamping, config.rootAngularDamping,
+                    config.linkLinearDamping, config.linkAngularDamping,
+                    config.maxAngularVelocity, config.contactOffset,
+                    config.restOffset, config.materialOverrides,
+                    config.enableCCD);
+        });
 
     py::class_<ArticulationTemplate, std::shared_ptr<ArticulationTemplate>>(
         physics, "ArticulationTemplate",
@@ -795,8 +986,7 @@ void bind_physics(py::module& m) {
             "and DOF metadata.")
         .def("num_links", &ArticulationTemplate::numLinks)
         .def("num_dofs", &ArticulationTemplate::numDofs)
-        .def_property_readonly("body_names",
-                               &ArticulationTemplate::bodyNames);
+        .def_property_readonly("body_names", &ArticulationTemplate::bodyNames);
 
     // Articulation (non-copyable)
     py::class_<Articulation>(physics, "Articulation",

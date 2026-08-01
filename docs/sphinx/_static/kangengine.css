@@ -17,6 +17,40 @@
   --color-inline-code-background: rgba(50, 85, 70, 0.08);
 }
 
+body {
+  --color-api-name: #255a92;
+  --color-api-pre-name: #255a92;
+}
+
+article .sig-name,
+article .sig-prename {
+  color: #255a92;
+}
+
+.api-origin {
+  display: inline-block;
+  margin-left: 0.6rem;
+  padding: 0.08rem 0.38rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-family: var(--font-stack);
+  font-size: 0.68em;
+  font-weight: 600;
+  line-height: 1.35;
+  text-indent: 0;
+  vertical-align: middle;
+}
+
+.api-origin-native {
+  color: #255a92;
+  background: color-mix(in srgb, #255a92 10%, transparent);
+}
+
+.api-origin-python {
+  color: var(--kangengine-accent);
+  background: var(--kangengine-accent-soft);
+}
+
 a,
 a:visited {
   color: var(--color-foreground-primary);
@@ -40,26 +74,26 @@ a:active {
 .sidebar-tree .reference:hover,
 .sidebar-tree .reference:focus-visible,
 .sidebar-tree .reference:active,
-.sidebar-tree .current > .reference,
-.sidebar-tree .current-page > .reference,
-.sidebar-tree li.current > a.reference,
-.sidebar-tree li.current-page > a.reference,
+.sidebar-tree .current>.reference,
+.sidebar-tree .current-page>.reference,
+.sidebar-tree li.current>a.reference,
+.sidebar-tree li.current-page>a.reference,
 .toc-tree a.reference:hover,
 .toc-tree a.reference:focus-visible,
 .toc-tree a.reference:active,
-.toc-tree li.scroll-current > a.reference {
+.toc-tree li.scroll-current>a.reference {
   color: var(--kangengine-accent);
 }
 
 .sidebar-tree .reference:hover,
 .sidebar-tree .reference:focus-visible,
-.sidebar-tree .current > .reference {
+.sidebar-tree .current>.reference {
   background: var(--kangengine-accent-soft);
 }
 
 .sidebar-tree label:hover .icon,
-.sidebar-tree .current > label .icon,
-.sidebar-tree .current-page > label .icon {
+.sidebar-tree .current>label .icon,
+.sidebar-tree .current-page>label .icon {
   color: var(--kangengine-accent);
 }
 
@@ -69,6 +103,65 @@ a:active {
 
 .toc-tree li.kangengine-toc-fold {
   position: relative;
+}
+
+/* Keep generated API references visually scannable. Top-level objects form
+   distinct sections, while their members retain a lighter nested hierarchy. */
+article dl.py.class,
+article dl.py.function,
+article dl.py.exception,
+article dl.py.data {
+  margin-block: 2.4rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--color-background-border);
+}
+
+article dt.sig.sig-object {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  margin-inline: 0;
+  text-indent: 0;
+  overflow-x: auto;
+}
+
+article dt.sig.sig-object>dl {
+  margin: 0.35rem 0 0.25rem 1.25rem;
+  padding: 0;
+}
+
+article dt.sig.sig-object>dl>dd {
+  margin-left: 0;
+}
+
+article dl.py.class>dt.sig,
+article dl.py.function>dt.sig,
+article dl.py.exception>dt.sig,
+article dl.py.data>dt.sig {
+  padding: 0.7rem 0.85rem;
+  border-left: 0.2rem solid var(--kangengine-accent);
+  border-radius: 0.2rem;
+  background: var(--kangengine-accent-soft);
+}
+
+article dl.py.class>dd {
+  margin-left: 1.1rem;
+}
+
+article dl.py.class dl.py.method,
+article dl.py.class dl.py.property,
+article dl.py.class dl.py.attribute {
+  margin-block: 1.15rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--color-background-border);
+}
+
+article dl.py.class dl.py.method>dt.sig,
+article dl.py.class dl.py.property>dt.sig,
+article dl.py.class dl.py.attribute>dt.sig {
+  padding: 0.35rem 0.55rem;
+  border-radius: 0.2rem;
+  background: var(--color-inline-code-background);
 }
 
 .toc-tree .kangengine-toc-toggle {

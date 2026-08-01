@@ -458,13 +458,47 @@ PYBIND11_MODULE(_kangengine, m) {
         .value("FENCE", ExternalSyncPolicy::Fence)
         .value("EVENT", ExternalSyncPolicy::Event);
 
-    py::class_<ExternalBufferDesc>(m, "ExternalBufferDesc")
-        .def(py::init<>())
-        .def_readwrite("view", &ExternalBufferDesc::view)
-        .def_readwrite("format", &ExternalBufferDesc::format)
-        .def_readwrite("count", &ExternalBufferDesc::count)
-        .def_readwrite("stride_bytes", &ExternalBufferDesc::strideBytes)
-        .def_readwrite("sync_policy", &ExternalBufferDesc::syncPolicy);
+    py::class_<ExternalBufferDesc>(
+        m, "ExternalBufferDesc",
+        "Descriptor for renderer buffers whose storage is owned externally.")
+        .def(py::init([](const Sim::GpuArrayView& view,
+                         ExternalBufferFormat format, int count,
+                         int stride_bytes, ExternalSyncPolicy sync_policy) {
+                 ExternalBufferDesc config;
+                 config.view = view;
+                 config.format = format;
+                 config.count = count;
+                 config.strideBytes = stride_bytes;
+                 config.syncPolicy = sync_policy;
+                 return config;
+             }),
+             py::kw_only(),
+             py::arg_v("view", Sim::GpuArrayView{}, "GpuArrayView()"),
+             py::arg_v("format", ExternalBufferDesc{}.format,
+                       "ExternalBufferFormat.MAT4"),
+             py::arg("count") = ExternalBufferDesc{}.count,
+             py::arg("stride_bytes") = ExternalBufferDesc{}.strideBytes,
+             py::arg_v("sync_policy", ExternalBufferDesc{}.syncPolicy,
+                       "ExternalSyncPolicy.NONE"),
+             "Create an external buffer descriptor from keyword arguments.")
+        .def_readwrite("view", &ExternalBufferDesc::view,
+                       "External array metadata and ownership view.")
+        .def_readwrite("format", &ExternalBufferDesc::format,
+                       "Element layout used to decode the external buffer.")
+        .def_readwrite("count", &ExternalBufferDesc::count,
+                       "Element count; zero derives it from the view shape.")
+        .def_readwrite(
+            "stride_bytes", &ExternalBufferDesc::strideBytes,
+            "Element stride in bytes; zero derives it from the view.")
+        .def_readwrite("sync_policy", &ExternalBufferDesc::syncPolicy,
+                       "Synchronization policy for external producer updates.")
+        .def("__repr__", [](const ExternalBufferDesc& config) {
+            return py::str(
+                       "ExternalBufferDesc(view={!r}, format={}, count={!r}, "
+                       "stride_bytes={!r}, sync_policy={})")
+                .attr("format")(config.view, config.format, config.count,
+                                config.strideBytes, config.syncPolicy);
+        });
 
     py::enum_<InteractionMode>(m, "InteractionMode")
         .value("Inspect", InteractionMode::Inspect)
@@ -916,11 +950,41 @@ PYBIND11_MODULE(_kangengine, m) {
 
     py::class_<Backend::SamplerDesc>(
         m, "SamplerDesc", "Texture sampler settings independent of GL/WebGPU.")
-        .def(py::init<>())
-        .def_readwrite("wrap_u", &Backend::SamplerDesc::wrapU)
-        .def_readwrite("wrap_v", &Backend::SamplerDesc::wrapV)
-        .def_readwrite("min_filter", &Backend::SamplerDesc::minFilter)
-        .def_readwrite("mag_filter", &Backend::SamplerDesc::magFilter);
+        .def(py::init([](Backend::TextureWrap wrap_u,
+                         Backend::TextureWrap wrap_v,
+                         Backend::TextureFilter min_filter,
+                         Backend::TextureFilter mag_filter) {
+                 Backend::SamplerDesc config;
+                 config.wrapU = wrap_u;
+                 config.wrapV = wrap_v;
+                 config.minFilter = min_filter;
+                 config.magFilter = mag_filter;
+                 return config;
+             }),
+             py::kw_only(),
+             py::arg_v("wrap_u", Backend::SamplerDesc{}.wrapU,
+                       "TextureWrap.Repeat"),
+             py::arg_v("wrap_v", Backend::SamplerDesc{}.wrapV,
+                       "TextureWrap.Repeat"),
+             py::arg_v("min_filter", Backend::SamplerDesc{}.minFilter,
+                       "TextureFilter.LinearMipmapLinear"),
+             py::arg_v("mag_filter", Backend::SamplerDesc{}.magFilter,
+                       "TextureFilter.Linear"),
+             "Create texture sampler settings from keyword arguments.")
+        .def_readwrite("wrap_u", &Backend::SamplerDesc::wrapU,
+                       "Texture coordinate wrapping mode on the U axis.")
+        .def_readwrite("wrap_v", &Backend::SamplerDesc::wrapV,
+                       "Texture coordinate wrapping mode on the V axis.")
+        .def_readwrite("min_filter", &Backend::SamplerDesc::minFilter,
+                       "Texture minification filter.")
+        .def_readwrite("mag_filter", &Backend::SamplerDesc::magFilter,
+                       "Texture magnification filter.")
+        .def("__repr__", [](const Backend::SamplerDesc& config) {
+            return py::str("SamplerDesc(wrap_u={}, wrap_v={}, "
+                           "min_filter={}, mag_filter={})")
+                .attr("format")(config.wrapU, config.wrapV, config.minFilter,
+                                config.magFilter);
+        });
 
     // Backend::GraphicsDevice
     py::class_<Backend::GraphicsDevice,
@@ -2238,7 +2302,9 @@ py::class_<glm::vec3>(m, "vec3")
              "Return the active scene backend.");
 
     py::class_<Bridge::SkinVisualBridge,
-               std::unique_ptr<Bridge::SkinVisualBridge>>(m, "SkinVisual")
+               std::unique_ptr<Bridge::SkinVisualBridge>>(
+        m, "SkinVisual",
+        "Skinned-character visual bridge created from an FBX asset.")
         .def_static(
             "from_fbx",
             [](App* app, Backend::Shader* shader, const std::string& fbxPath,

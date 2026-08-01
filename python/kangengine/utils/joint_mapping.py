@@ -224,10 +224,13 @@ DEFAULT_CONTACT_SEMANTICS = (
 
 
 def normalize_joint_name(name: str) -> str:
+    """Lowercase a joint name and remove non-alphanumeric characters."""
     return "".join(ch for ch in str(name).lower() if ch.isalnum())
 
 
 class JointMapper:
+    """Resolve semantic and literal joint names against a motion skeleton."""
+
     def __init__(
         self,
         joint_names: list[str],

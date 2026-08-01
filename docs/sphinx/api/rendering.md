@@ -1,6 +1,22 @@
 # ke.render
 
-Graphics resources, renderer controls, materials, and color helpers.
+Graphics resources, renderer controls, and color helpers.
+
+## API overview
+
+```{eval-rst}
+.. currentmodule:: kangengine.render
+
+.. autosummary::
+   :nosignatures:
+
+   Renderer
+   GraphicsDevice
+   Shader
+   Texture
+   SamplerDesc
+   ExternalBufferDesc
+```
 
 ```{eval-rst}
 .. currentmodule:: kangengine.render
@@ -14,6 +30,10 @@ Graphics resources, renderer controls, materials, and color helpers.
 .. autoclass:: Renderer
 
 .. autoclass:: SamplerDesc
+   :special-members: __init__
+
+.. autoclass:: ExternalBufferDesc
+   :special-members: __init__
 
 .. autoclass:: TextureRole
 
