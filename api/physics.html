@@ -11,7 +11,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=a7642cbd" />
+    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=eebc5524" />
     
     
 
@@ -208,6 +208,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/VIDEO_RECORDING.html">Video Recording</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/DEBUG_VISUALIZATION.html">Debug Visualization and Text Rendering</a></li>
 </ul>
 </li>
@@ -220,6 +221,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VIEWER_SYNC.html">Viewer Synchronization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RUN_MODES.html">Simulation Run Modes</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/motion_animation/INDEX.html">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="simple">
@@ -299,6 +301,36 @@
           <section id="ke-physics">
 <h1>ke.physics<a class="headerlink" href="#ke-physics" title="Link to this heading">¶</a></h1>
 <p>Low-level PhysX world, rigid body, articulation, and visual sync APIs.</p>
+<section id="api-overview">
+<h2>API overview<a class="headerlink" href="#api-overview" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.physics.PhysicsConfig" title="kangengine.physics.PhysicsConfig"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PhysicsConfig</span></code></a></p></td>
+<td><p>PhysX world configuration including timestep, up axis, and reporting.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.physics.PhysicsWorld" title="kangengine.physics.PhysicsWorld"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PhysicsWorld</span></code></a></p></td>
+<td><p>PhysX simulation world.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.physics.ArticulationConfig" title="kangengine.physics.ArticulationConfig"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ArticulationConfig</span></code></a></p></td>
+<td><p>PhysX articulation construction settings.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.physics.Articulation" title="kangengine.physics.Articulation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Articulation</span></code></a></p></td>
+<td><p>PhysX articulation wrapper.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.physics.PhysicsBridge" title="kangengine.physics.PhysicsBridge"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PhysicsBridge</span></code></a></p></td>
+<td><p>Sync PhysX articulation state into scene/render visuals.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.physics.GpuPhysicsConfig" title="kangengine.physics.GpuPhysicsConfig"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GpuPhysicsConfig</span></code></a></p></td>
+<td><p>Configuration for explicit GPU physics state synchronization.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.physics.PhysicsGpuSystem" title="kangengine.physics.PhysicsGpuSystem"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PhysicsGpuSystem</span></code></a></p></td>
+<td><p>Explicit GPU physics synchronization wrapper.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
 <section id="wrapper-and-lifetime-policy">
 <h2>Wrapper and lifetime policy<a class="headerlink" href="#wrapper-and-lifetime-policy" title="Link to this heading">¶</a></h2>
 <p>The Python low-level physics API is exposed through thin wrapper classes around
@@ -314,11 +346,70 @@ Helper code that accepts either wrapper or native objects should normalize with
 <code class="docutils literal notranslate"><span class="pre">PhysicsGpuSystem.views()</span></code> conservatively: later simulation, synchronization,
 refresh, or clear operations may update or invalidate the underlying storage.
 Copy returned array-like data explicitly when a stable snapshot is required.</p>
+</section>
+<section id="return-and-error-contracts">
+<h2>Return and error contracts<a class="headerlink" href="#return-and-error-contracts" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper colwidths-given docutils container">
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 32.0%" />
+<col style="width: 68.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>API</p></th>
+<th class="head"><p>Contract</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">PhysicsGpuSystem.views()</span></code> and GPU buffer accessors</p></td>
+<td><p>Borrowed device storage owned by the GPU system. Fetch and apply methods
+update it; releasing or invalidating the system invalidates the view.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.get_contacts()</span></code> and <code class="docutils literal notranslate"><span class="pre">get_contact_forces(...)</span></code></p></td>
+<td><p>Current-query data only. Copy values that must remain stable across later
+simulation or clear operations.</p></td>
+</tr>
+<tr class="row-even"><td><p>Resource and actor wrappers</p></td>
+<td><p>Native handles tied to their owning world. Using them after world release
+raises <code class="docutils literal notranslate"><span class="pre">RuntimeError</span></code> or results in an invalid native handle.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Invalid indices and names generally raise <code class="docutils literal notranslate"><span class="pre">KeyError</span></code> or <code class="docutils literal notranslate"><span class="pre">IndexError</span></code>;
+invalid shapes and configuration values raise <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>; unavailable
+PhysX/CUDA features and invalid lifecycle state raise <code class="docutils literal notranslate"><span class="pre">RuntimeError</span></code>.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsConfig">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">PhysicsConfig</span></span><a class="headerlink" href="#kangengine.physics.PhysicsConfig" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>PhysX world configuration including timestep, up axis, and reporting.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">PhysicsConfig</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.physics.PhysicsConfig" title="Link to this definition">¶</a></dt>
+<dd><p>PhysX world configuration including timestep, up axis, and reporting.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsConfig.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">dt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span> <span class="pre">/</span> <span class="pre">60.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">solver_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">static_friction</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">dynamic_friction</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">restitution</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">enable_gpu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">gpu_dynamics</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.PhysicsGpuDynamicsConfig" title="kangengine.physics.PhysicsGpuDynamicsConfig"><span class="pre">PhysicsGpuDynamicsConfig</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">PhysicsGpuDynamicsConfig()</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">enable_contact_reports</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">cpu_dispatcher_threads</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">4</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.PhysicsConfig.__init__" title="Link to this definition">¶</a></dt>
+<dd><p>Create physics configuration from keyword arguments.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsConfig.cpu_dispatcher_threads">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">cpu_dispatcher_threads</span></span><a class="headerlink" href="#kangengine.physics.PhysicsConfig.cpu_dispatcher_threads" title="Link to this definition">¶</a></dt>
+<dd><p>Worker threads used by the PhysX CPU dispatcher.</p>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsConfig.dt">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">dt</span></span><a class="headerlink" href="#kangengine.physics.PhysicsConfig.dt" title="Link to this definition">¶</a></dt>
@@ -356,6 +447,17 @@ Copy returned array-like data explicitly when a stable snapshot is required.</p>
 </dd></dl>
 
 <dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsConfig.solver_type">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">solver_type</span></span><a class="headerlink" href="#kangengine.physics.PhysicsConfig.solver_type" title="Link to this definition">¶</a></dt>
+<dd><p>0 for PGS, 1 for TGS.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Solver type</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsConfig.static_friction">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">static_friction</span></span><a class="headerlink" href="#kangengine.physics.PhysicsConfig.static_friction" title="Link to this definition">¶</a></dt>
 <dd><p>Default material static friction.</p>
@@ -363,26 +465,106 @@ Copy returned array-like data explicitly when a stable snapshot is required.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsConfig.y_up">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">y_up</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.PhysicsConfig" title="kangengine.physics.PhysicsConfig"><span class="pre">kangengine.physics.PhysicsConfig</span></a></span></span><a class="headerlink" href="#kangengine.physics.PhysicsConfig.y_up" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">y_up</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.PhysicsConfig" title="kangengine.physics.PhysicsConfig"><span class="pre">PhysicsConfig</span></a></span></span><a class="headerlink" href="#kangengine.physics.PhysicsConfig.y_up" title="Link to this definition">¶</a></dt>
 <dd><p>Create configuration for a Y-up world.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsConfig.z_up">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">z_up</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.PhysicsConfig" title="kangengine.physics.PhysicsConfig"><span class="pre">kangengine.physics.PhysicsConfig</span></a></span></span><a class="headerlink" href="#kangengine.physics.PhysicsConfig.z_up" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">z_up</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.PhysicsConfig" title="kangengine.physics.PhysicsConfig"><span class="pre">PhysicsConfig</span></a></span></span><a class="headerlink" href="#kangengine.physics.PhysicsConfig.z_up" title="Link to this definition">¶</a></dt>
 <dd><p>Create configuration for a Z-up world.</p>
 </dd></dl>
 
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuDynamicsConfig">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">PhysicsGpuDynamicsConfig</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuDynamicsConfig" title="Link to this definition">¶</a></dt>
+<dd><p>PhysX GPU dynamics buffer capacities used during scene creation.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuDynamicsConfig.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">temp_buffer_capacity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">67108864</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">max_rigid_contact_count</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">4194304</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">max_rigid_patch_count</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">524288</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">heap_capacity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">268435456</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">found_lost_pairs_capacity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">4194304</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">found_lost_aggregate_pairs_capacity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">33554432</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">total_aggregate_pairs_capacity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2097152</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">collision_stack_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">268435456</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">max_num_partitions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">8</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.PhysicsGpuDynamicsConfig.__init__" title="Link to this definition">¶</a></dt>
+<dd><p>Create GPU dynamics capacities from keyword arguments.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuDynamicsConfig.collision_stack_size">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">collision_stack_size</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuDynamicsConfig.collision_stack_size" title="Link to this definition">¶</a></dt>
+<dd><p>GPU collision stack size in bytes.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuDynamicsConfig.found_lost_aggregate_pairs_capacity">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">found_lost_aggregate_pairs_capacity</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuDynamicsConfig.found_lost_aggregate_pairs_capacity" title="Link to this definition">¶</a></dt>
+<dd><p>Capacity for found and lost aggregate pairs.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuDynamicsConfig.found_lost_pairs_capacity">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">found_lost_pairs_capacity</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuDynamicsConfig.found_lost_pairs_capacity" title="Link to this definition">¶</a></dt>
+<dd><p>Capacity for found and lost rigid pairs.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuDynamicsConfig.heap_capacity">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">heap_capacity</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuDynamicsConfig.heap_capacity" title="Link to this definition">¶</a></dt>
+<dd><p>GPU dynamics heap capacity in bytes.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuDynamicsConfig.max_num_partitions">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">max_num_partitions</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuDynamicsConfig.max_num_partitions" title="Link to this definition">¶</a></dt>
+<dd><p>Maximum GPU dynamics partition count.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuDynamicsConfig.max_rigid_contact_count">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">max_rigid_contact_count</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuDynamicsConfig.max_rigid_contact_count" title="Link to this definition">¶</a></dt>
+<dd><p>Maximum rigid contact count.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuDynamicsConfig.max_rigid_patch_count">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">max_rigid_patch_count</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuDynamicsConfig.max_rigid_patch_count" title="Link to this definition">¶</a></dt>
+<dd><p>Maximum rigid contact patch count.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuDynamicsConfig.temp_buffer_capacity">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">temp_buffer_capacity</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuDynamicsConfig.temp_buffer_capacity" title="Link to this definition">¶</a></dt>
+<dd><p>Temporary GPU buffer capacity in bytes.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuDynamicsConfig.total_aggregate_pairs_capacity">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">total_aggregate_pairs_capacity</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuDynamicsConfig.total_aggregate_pairs_capacity" title="Link to this definition">¶</a></dt>
+<dd><p>Capacity for all aggregate pairs.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsMaterialDesc">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">PhysicsMaterialDesc</span></span><a class="headerlink" href="#kangengine.physics.PhysicsMaterialDesc" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>PhysX material factors used by collision shapes.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">PhysicsMaterialDesc</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.physics.PhysicsMaterialDesc" title="Link to this definition">¶</a></dt>
+<dd><p>PhysX material factors used by collision shapes.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsMaterialDesc.as_tuple">
-<span class="sig-name descname"><span class="pre">as_tuple</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.PhysicsMaterialDesc" title="kangengine.physics.PhysicsMaterialDesc"><span class="pre">kangengine.physics.PhysicsMaterialDesc</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><a class="headerlink" href="#kangengine.physics.PhysicsMaterialDesc.as_tuple" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">as_tuple</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.PhysicsMaterialDesc" title="kangengine.physics.PhysicsMaterialDesc"><span class="pre">PhysicsMaterialDesc</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><a class="headerlink" href="#kangengine.physics.PhysicsMaterialDesc.as_tuple" title="Link to this definition">¶</a></dt>
 <dd><p>Return (static_friction, dynamic_friction, restitution).</p>
 </dd></dl>
 
@@ -408,12 +590,17 @@ Copy returned array-like data explicitly when a stable snapshot is required.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.physics.CollisionMaterialOverride">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">CollisionMaterialOverride</span></span><a class="headerlink" href="#kangengine.physics.CollisionMaterialOverride" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Collision material override matched by body/geom name or index. Later overrides win.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">CollisionMaterialOverride</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.physics.CollisionMaterialOverride" title="Link to this definition">¶</a></dt>
+<dd><p>Collision material override matched by body/geom name or index. Later overrides win.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.CollisionMaterialOverride.all_geoms">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">all_geoms</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.CollisionMaterialOverride" title="kangengine.physics.CollisionMaterialOverride"><span class="pre">kangengine.physics.CollisionMaterialOverride</span></a></span></span><a class="headerlink" href="#kangengine.physics.CollisionMaterialOverride.all_geoms" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">all_geoms</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.CollisionMaterialOverride" title="kangengine.physics.CollisionMaterialOverride"><span class="pre">CollisionMaterialOverride</span></a></span></span><a class="headerlink" href="#kangengine.physics.CollisionMaterialOverride.all_geoms" title="Link to this definition">¶</a></dt>
 <dd><p>Override every collision geom in the built actor/articulation.</p>
 </dd></dl>
 
@@ -431,19 +618,42 @@ Copy returned array-like data explicitly when a stable snapshot is required.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.CollisionMaterialOverride.for_body">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">for_body</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">body_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.CollisionMaterialOverride" title="kangengine.physics.CollisionMaterialOverride"><span class="pre">kangengine.physics.CollisionMaterialOverride</span></a></span></span><a class="headerlink" href="#kangengine.physics.CollisionMaterialOverride.for_body" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">for_body</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">body_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.CollisionMaterialOverride" title="kangengine.physics.CollisionMaterialOverride"><span class="pre">CollisionMaterialOverride</span></a></span></span><a class="headerlink" href="#kangengine.physics.CollisionMaterialOverride.for_body" title="Link to this definition">¶</a></dt>
 <dd><p>Override every collision geom on a named body.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.CollisionMaterialOverride.for_geom">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">for_geom</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">body_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geom_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.CollisionMaterialOverride" title="kangengine.physics.CollisionMaterialOverride"><span class="pre">kangengine.physics.CollisionMaterialOverride</span></a></span></span><a class="headerlink" href="#kangengine.physics.CollisionMaterialOverride.for_geom" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">for_geom</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">body_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">geom_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.CollisionMaterialOverride" title="kangengine.physics.CollisionMaterialOverride"><span class="pre">CollisionMaterialOverride</span></a></span></span><a class="headerlink" href="#kangengine.physics.CollisionMaterialOverride.for_geom" title="Link to this definition">¶</a></dt>
 <dd><p>Override one named collision geom on a named body.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.CollisionMaterialOverride.for_indices">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">for_indices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">body_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geom_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.CollisionMaterialOverride" title="kangengine.physics.CollisionMaterialOverride"><span class="pre">kangengine.physics.CollisionMaterialOverride</span></a></span></span><a class="headerlink" href="#kangengine.physics.CollisionMaterialOverride.for_indices" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">for_indices</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">body_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">geom_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.CollisionMaterialOverride" title="kangengine.physics.CollisionMaterialOverride"><span class="pre">CollisionMaterialOverride</span></a></span></span><a class="headerlink" href="#kangengine.physics.CollisionMaterialOverride.for_indices" title="Link to this definition">¶</a></dt>
 <dd><p>Override by imported body index and collision geom index.</p>
 </dd></dl>
 
@@ -469,9 +679,8 @@ Copy returned array-like data explicitly when a stable snapshot is required.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.physics.ContactPoint">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">ContactPoint</span></span><a class="headerlink" href="#kangengine.physics.ContactPoint" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Contact point reported by the PhysX world.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">ContactPoint</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.physics.ContactPoint" title="Link to this definition">¶</a></dt>
+<dd><p>Contact point reported by the PhysX world.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.ContactPoint.impulse">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">impulse</span></span><a class="headerlink" href="#kangengine.physics.ContactPoint.impulse" title="Link to this definition">¶</a></dt>
@@ -500,13 +709,12 @@ Copy returned array-like data explicitly when a stable snapshot is required.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.physics.RigidDynamic">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">RigidDynamic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.RigidDynamic" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-</dd></dl>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">RigidDynamic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.physics.RigidDynamic" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.physics.unwrap_native">
-<span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">unwrap_native</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.unwrap_native" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">unwrap_native</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.physics.unwrap_native" title="Link to this definition">¶</a></dt>
 <dd><p>Return <code class="docutils literal notranslate"><span class="pre">obj._native</span></code> when <code class="docutils literal notranslate"><span class="pre">obj</span></code> is a KangEngine Python wrapper.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
@@ -520,13 +728,19 @@ Copy returned array-like data explicitly when a stable snapshot is required.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.physics.mjcf_friction_to_physx">
-<span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">mjcf_friction_to_physx</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">friction</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">SupportsFloat</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.PhysicsMaterialDesc" title="kangengine.physics.PhysicsMaterialDesc"><span class="pre">kangengine.physics.PhysicsMaterialDesc</span></a></span></span><a class="headerlink" href="#kangengine.physics.mjcf_friction_to_physx" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">mjcf_friction_to_physx</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">friction</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.PhysicsMaterialDesc" title="kangengine.physics.PhysicsMaterialDesc"><span class="pre">PhysicsMaterialDesc</span></a></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.physics.mjcf_friction_to_physx" title="Link to this definition">¶</a></dt>
 <dd><p>Map MJCF geom friction values to KangEngine’s PhysX material descriptor.</p>
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsWorld">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">PhysicsWorld</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.PhysicsWorld" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">PhysicsWorld</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.physics.PhysicsWorld" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_NativeWrapper</span></code></p>
 <p>PhysX simulation world.</p>
 <p>The class is always importable.  Constructing it requires a KangEngine build
@@ -549,7 +763,20 @@ with PhysX bindings.  The wrapper owns a native
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsWorld.add_heightfield">
-<span class="sig-name descname"><span class="pre">add_heightfield</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">heights</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rows</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cols</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">horizontal_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">center</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">register_as_ground</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.PhysicsWorld.add_heightfield" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">add_heightfield</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">heights</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">rows</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">cols</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">horizontal_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">center</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">register_as_ground</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.PhysicsWorld.add_heightfield" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
@@ -571,7 +798,21 @@ with PhysX bindings.  The wrapper owns a native
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsWorld.add_heightmap_collision">
-<span class="sig-name descname"><span class="pre">add_heightmap_collision</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">horizontal_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">height_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">64.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">height_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-16.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_stride</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">center</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">register_as_ground</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.PhysicsWorld.add_heightmap_collision" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">add_heightmap_collision</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">horizontal_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">height_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">64.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">height_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-16.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">sample_stride</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">center</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">register_as_ground</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.PhysicsWorld.add_heightmap_collision" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
@@ -594,7 +835,16 @@ with PhysX bindings.  The wrapper owns a native
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsWorld.add_static_box">
-<span class="sig-name descname"><span class="pre">add_static_box</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">half_extents</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rot_xyzw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.0,</span> <span class="pre">0.0,</span> <span class="pre">0.0,</span> <span class="pre">1.0)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">register_as_ground</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.PhysicsWorld.add_static_box" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">add_static_box</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">half_extents</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">pos</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">rot_xyzw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.0,</span> <span class="pre">0.0,</span> <span class="pre">0.0,</span> <span class="pre">1.0)</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">register_as_ground</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.PhysicsWorld.add_static_box" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
@@ -632,7 +882,16 @@ with PhysX bindings.  The wrapper owns a native
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsWorld.create_dynamic_box">
-<span class="sig-name descname"><span class="pre">create_dynamic_box</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">half_extents</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rot_xyzw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.0,</span> <span class="pre">0.0,</span> <span class="pre">0.0,</span> <span class="pre">1.0)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">density</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.PhysicsWorld.create_dynamic_box" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">create_dynamic_box</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">half_extents</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">pos</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">rot_xyzw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.0,</span> <span class="pre">0.0,</span> <span class="pre">0.0,</span> <span class="pre">1.0)</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">density</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.PhysicsWorld.create_dynamic_box" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.physics.RigidDynamic" title="kangengine.physics.RigidDynamic"><code class="xref py py-class docutils literal notranslate"><span class="pre">RigidDynamic</span></code></a></span></p>
@@ -650,7 +909,20 @@ with PhysX bindings.  The wrapper owns a native
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsWorld.create_dynamic_rigid">
-<span class="sig-name descname"><span class="pre">create_dynamic_rigid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rot_xyzw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.0,</span> <span class="pre">0.0,</span> <span class="pre">0.0,</span> <span class="pre">1.0)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">density</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collision_group</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contact_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.02</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rest_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">material_overrides</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.PhysicsWorld.create_dynamic_rigid" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">create_dynamic_rigid</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">pos</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">rot_xyzw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.0,</span> <span class="pre">0.0,</span> <span class="pre">0.0,</span> <span class="pre">1.0)</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">density</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">collision_group</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">contact_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.02</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">rest_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material_overrides</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.PhysicsWorld.create_dynamic_rigid" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.physics.RigidDynamic" title="kangengine.physics.RigidDynamic"><code class="xref py py-class docutils literal notranslate"><span class="pre">RigidDynamic</span></code></a></span></p>
@@ -672,7 +944,16 @@ with PhysX bindings.  The wrapper owns a native
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsWorld.create_dynamic_sphere">
-<span class="sig-name descname"><span class="pre">create_dynamic_sphere</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">radius</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rot_xyzw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.0,</span> <span class="pre">0.0,</span> <span class="pre">0.0,</span> <span class="pre">1.0)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">density</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.PhysicsWorld.create_dynamic_sphere" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">create_dynamic_sphere</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">radius</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">pos</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">rot_xyzw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.0,</span> <span class="pre">0.0,</span> <span class="pre">0.0,</span> <span class="pre">1.0)</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">density</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.PhysicsWorld.create_dynamic_sphere" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.physics.RigidDynamic" title="kangengine.physics.RigidDynamic"><code class="xref py py-class docutils literal notranslate"><span class="pre">RigidDynamic</span></code></a></span></p>
@@ -867,18 +1148,57 @@ unchanged after later step(), sync(), or clear_contacts() calls.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.physics.ArticulationConfig">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">ArticulationConfig</span></span><a class="headerlink" href="#kangengine.physics.ArticulationConfig" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>PhysX articulation construction settings.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">ArticulationConfig</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.physics.ArticulationConfig" title="Link to this definition">¶</a></dt>
+<dd><p>PhysX articulation construction settings.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.ArticulationConfig.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">fix_base</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">disable_self_collision</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">use_aggregate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">solver_position_iteration_count</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">16</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">solver_velocity_iteration_count</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">collision_group</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">root_linear_damping</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">root_angular_damping</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05000000074505806</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">link_linear_damping</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">link_angular_damping</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05000000074505806</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">max_angular_velocity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">100.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">contact_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.019999999552965164</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">rest_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material_overrides</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Sequence</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#kangengine.physics.CollisionMaterialOverride" title="kangengine.physics.CollisionMaterialOverride"><span class="pre">CollisionMaterialOverride</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">[]</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">enable_ccd</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.ArticulationConfig.__init__" title="Link to this definition">¶</a></dt>
+<dd><p>Create articulation configuration from keyword arguments.</p>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.ArticulationConfig.add_material_override">
-<span class="sig-name descname"><span class="pre">add_material_override</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.ArticulationConfig" title="kangengine.physics.ArticulationConfig"><span class="pre">kangengine.physics.ArticulationConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">override</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.CollisionMaterialOverride" title="kangengine.physics.CollisionMaterialOverride"><span class="pre">kangengine.physics.CollisionMaterialOverride</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.ArticulationConfig" title="kangengine.physics.ArticulationConfig"><span class="pre">kangengine.physics.ArticulationConfig</span></a></span></span><a class="headerlink" href="#kangengine.physics.ArticulationConfig.add_material_override" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">add_material_override</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.ArticulationConfig" title="kangengine.physics.ArticulationConfig"><span class="pre">ArticulationConfig</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">override</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.CollisionMaterialOverride" title="kangengine.physics.CollisionMaterialOverride"><span class="pre">CollisionMaterialOverride</span></a></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.ArticulationConfig" title="kangengine.physics.ArticulationConfig"><span class="pre">ArticulationConfig</span></a></span></span><a class="headerlink" href="#kangengine.physics.ArticulationConfig.add_material_override" title="Link to this definition">¶</a></dt>
 <dd><p>Append a build-time collision material override. Later overrides win.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.ArticulationConfig.clear_material_overrides">
-<span class="sig-name descname"><span class="pre">clear_material_overrides</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.ArticulationConfig" title="kangengine.physics.ArticulationConfig"><span class="pre">kangengine.physics.ArticulationConfig</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.ArticulationConfig" title="kangengine.physics.ArticulationConfig"><span class="pre">kangengine.physics.ArticulationConfig</span></a></span></span><a class="headerlink" href="#kangengine.physics.ArticulationConfig.clear_material_overrides" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">clear_material_overrides</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.ArticulationConfig" title="kangengine.physics.ArticulationConfig"><span class="pre">ArticulationConfig</span></a></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.ArticulationConfig" title="kangengine.physics.ArticulationConfig"><span class="pre">ArticulationConfig</span></a></span></span><a class="headerlink" href="#kangengine.physics.ArticulationConfig.clear_material_overrides" title="Link to this definition">¶</a></dt>
 <dd><p>Remove all collision material overrides.</p>
 </dd></dl>
 
@@ -914,13 +1234,13 @@ unchanged after later step(), sync(), or clear_contacts() calls.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.ArticulationConfig.fixed_base">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">fixed_base</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.ArticulationConfig" title="kangengine.physics.ArticulationConfig"><span class="pre">kangengine.physics.ArticulationConfig</span></a></span></span><a class="headerlink" href="#kangengine.physics.ArticulationConfig.fixed_base" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">fixed_base</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.ArticulationConfig" title="kangengine.physics.ArticulationConfig"><span class="pre">ArticulationConfig</span></a></span></span><a class="headerlink" href="#kangengine.physics.ArticulationConfig.fixed_base" title="Link to this definition">¶</a></dt>
 <dd><p>Create configuration for a fixed-base articulation.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.ArticulationConfig.free_base">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">free_base</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.ArticulationConfig" title="kangengine.physics.ArticulationConfig"><span class="pre">kangengine.physics.ArticulationConfig</span></a></span></span><a class="headerlink" href="#kangengine.physics.ArticulationConfig.free_base" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">free_base</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.ArticulationConfig" title="kangengine.physics.ArticulationConfig"><span class="pre">ArticulationConfig</span></a></span></span><a class="headerlink" href="#kangengine.physics.ArticulationConfig.free_base" title="Link to this definition">¶</a></dt>
 <dd><p>Create configuration for a free-base articulation.</p>
 </dd></dl>
 
@@ -969,14 +1289,32 @@ unchanged after later step(), sync(), or clear_contacts() calls.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.ArticulationConfig.solver_iterations">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">solver_iterations</span></span><a class="headerlink" href="#kangengine.physics.ArticulationConfig.solver_iterations" title="Link to this definition">¶</a></dt>
-<dd><p>Solver iteration count.</p>
+<dd><p>Compatibility alias for solver_position_iteration_count.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.ArticulationConfig.solver_position_iteration_count">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">solver_position_iteration_count</span></span><a class="headerlink" href="#kangengine.physics.ArticulationConfig.solver_position_iteration_count" title="Link to this definition">¶</a></dt>
+<dd><p>Position solver iteration count.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.ArticulationConfig.solver_velocity_iteration_count">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">solver_velocity_iteration_count</span></span><a class="headerlink" href="#kangengine.physics.ArticulationConfig.solver_velocity_iteration_count" title="Link to this definition">¶</a></dt>
+<dd><p>Velocity solver iteration count.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.ArticulationConfig.use_aggregate">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">use_aggregate</span></span><a class="headerlink" href="#kangengine.physics.ArticulationConfig.use_aggregate" title="Link to this definition">¶</a></dt>
+<dd><p>Group articulation links into one PhysX broadphase aggregate.</p>
 </dd></dl>
 
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.physics.Articulation">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">Articulation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">native_articulation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.Articulation" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">Articulation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">native_articulation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.physics.Articulation" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_NativeWrapper</span></code></p>
 <p>PhysX articulation wrapper.</p>
 <dl class="field-list simple">
@@ -1067,7 +1405,7 @@ unchanged after later step(), sync(), or clear_contacts() calls.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsBridge">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">PhysicsBridge</span></span><a class="headerlink" href="#kangengine.physics.PhysicsBridge" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">PhysicsBridge</span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.physics.PhysicsBridge" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_NativeWrapper</span></code></p>
 <p>Sync PhysX articulation state into scene/render visuals.</p>
 <dl class="field-list simple">
@@ -1090,7 +1428,16 @@ unchanged after later step(), sync(), or clear_contacts() calls.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsBridge.add_collision_visuals">
-<span class="sig-name descname"><span class="pre">add_collision_visuals</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">artic</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scene</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/collision'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">visible_by_default</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.PhysicsBridge.add_collision_visuals" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">add_collision_visuals</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">artic</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">scene</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">base_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/collision'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">visible_by_default</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.PhysicsBridge.add_collision_visuals" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -1130,126 +1477,160 @@ unchanged after later step(), sync(), or clear_contacts() calls.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.physics.GpuPhysicsConfig">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">GpuPhysicsConfig</span></span><a class="headerlink" href="#kangengine.physics.GpuPhysicsConfig" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Configuration for explicit GPU physics state synchronization.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">GpuPhysicsConfig</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.physics.GpuPhysicsConfig" title="Link to this definition">¶</a></dt>
+<dd><p>Configuration for explicit GPU physics state synchronization.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.GpuPhysicsConfig.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">cuda_device_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">max_contact_pairs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">65536</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">max_contact_points</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">262144</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.GpuPhysicsConfig.__init__" title="Link to this definition">¶</a></dt>
+<dd><p>Create GPU synchronization configuration from keyword arguments.</p>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.GpuPhysicsConfig.cuda_device_id">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">cuda_device_id</span></span><a class="headerlink" href="#kangengine.physics.GpuPhysicsConfig.cuda_device_id" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>CUDA device ordinal used by GPU physics.</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.GpuPhysicsConfig.max_contact_pairs">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">max_contact_pairs</span></span><a class="headerlink" href="#kangengine.physics.GpuPhysicsConfig.max_contact_pairs" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Maximum mirrored contact pair count.</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.GpuPhysicsConfig.max_contact_points">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">max_contact_points</span></span><a class="headerlink" href="#kangengine.physics.GpuPhysicsConfig.max_contact_points" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Maximum mirrored contact point count.</p>
+</dd></dl>
 
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">PhysicsGpuStateViews</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>GPU buffer views used by PhysicsGpuSystem.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">PhysicsGpuStateViews</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews" title="Link to this definition">¶</a></dt>
+<dd><p>Backend-owned GPU state and command-buffer views. State buffers are refreshed by the corresponding fetch methods; command buffers are submitted by apply methods. The views become invalid when their PhysicsGpuSystem is released.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.articulation_joint_accelerations">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">articulation_joint_accelerations</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.articulation_joint_accelerations" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Articulation joint-acceleration state.</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.articulation_joint_forces">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">articulation_joint_forces</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.articulation_joint_forces" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Articulation joint-force state.</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.articulation_joint_positions">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">articulation_joint_positions</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.articulation_joint_positions" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Articulation joint-position state.</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.articulation_joint_velocities">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">articulation_joint_velocities</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.articulation_joint_velocities" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Articulation joint-velocity state.</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.articulation_link_data">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">articulation_link_data</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.articulation_link_data" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Articulation link pose and velocity state.</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.articulation_link_incoming_joint_forces">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">articulation_link_incoming_joint_forces</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.articulation_link_incoming_joint_forces" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Incoming joint-force state for articulation links.</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.articulation_target_joint_positions">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">articulation_target_joint_positions</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.articulation_target_joint_positions" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Joint-position target command buffer.</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.articulation_target_joint_velocities">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">articulation_target_joint_velocities</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.articulation_target_joint_velocities" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Joint-velocity target command buffer.</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.contact_pair_body_refs">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">contact_pair_body_refs</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.contact_pair_body_refs" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Body references for packed contact pairs.</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.contact_pair_count">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">contact_pair_count</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.contact_pair_count" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Number of valid packed contact pairs.</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.contact_pair_headers">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">contact_pair_headers</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.contact_pair_headers" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Headers describing packed contact-pair ranges.</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.contact_pairs">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">contact_pairs</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.contact_pairs" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Packed contact-pair state buffer.</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.contact_point_count">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">contact_point_count</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.contact_point_count" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Number of valid packed contact points.</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.contact_point_pair_indices">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">contact_point_pair_indices</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.contact_point_pair_indices" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Contact-pair index for each packed contact point.</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.contact_points">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">contact_points</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.contact_points" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Packed contact-point state buffer.</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.rigid_data">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">rigid_data</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.rigid_data" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Rigid pose and velocity state refreshed by fetch_rigid_data().</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.rigid_force">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">rigid_force</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.rigid_force" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Rigid force command buffer submitted by apply_rigid_force().</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.rigid_torque">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">rigid_torque</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.rigid_torque" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Rigid torque command buffer submitted by apply_rigid_torque().</p>
+</dd></dl>
 
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuSystem">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">PhysicsGpuSystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">world</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.PhysicsGpuSystem" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">PhysicsGpuSystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">world</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuSystem" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_NativeWrapper</span></code></p>
 <p>Explicit GPU physics synchronization wrapper.</p>
 <dl class="field-list simple">
@@ -1378,17 +1759,35 @@ KangEngine fallback boxes. Visual-only mesh geoms remain render-only.</p>
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">ke.physics</a><ul>
-<li><a class="reference internal" href="#wrapper-and-lifetime-policy">Wrapper and lifetime policy</a><ul>
+<li><a class="reference internal" href="#api-overview">API overview</a></li>
+<li><a class="reference internal" href="#wrapper-and-lifetime-policy">Wrapper and lifetime policy</a></li>
+<li><a class="reference internal" href="#return-and-error-contracts">Return and error contracts</a><ul>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsConfig"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.__init__"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.__init__()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.cpu_dispatcher_threads"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.cpu_dispatcher_threads</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.dt"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.dt</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.dynamic_friction"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.dynamic_friction</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.enable_contact_reports"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.enable_contact_reports</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.enable_gpu"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.enable_gpu</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.gpu_dynamics"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.gpu_dynamics</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.restitution"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.restitution</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.solver_type"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.solver_type</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.static_friction"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.static_friction</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.y_up"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.y_up()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.z_up"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.z_up()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsGpuDynamicsConfig"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuDynamicsConfig</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsGpuDynamicsConfig.__init__"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuDynamicsConfig.__init__()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsGpuDynamicsConfig.collision_stack_size"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuDynamicsConfig.collision_stack_size</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsGpuDynamicsConfig.found_lost_aggregate_pairs_capacity"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuDynamicsConfig.found_lost_aggregate_pairs_capacity</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsGpuDynamicsConfig.found_lost_pairs_capacity"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuDynamicsConfig.found_lost_pairs_capacity</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsGpuDynamicsConfig.heap_capacity"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuDynamicsConfig.heap_capacity</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsGpuDynamicsConfig.max_num_partitions"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuDynamicsConfig.max_num_partitions</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsGpuDynamicsConfig.max_rigid_contact_count"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuDynamicsConfig.max_rigid_contact_count</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsGpuDynamicsConfig.max_rigid_patch_count"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuDynamicsConfig.max_rigid_patch_count</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsGpuDynamicsConfig.temp_buffer_capacity"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuDynamicsConfig.temp_buffer_capacity</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsGpuDynamicsConfig.total_aggregate_pairs_capacity"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuDynamicsConfig.total_aggregate_pairs_capacity</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsMaterialDesc"><code class="docutils literal notranslate"><span class="pre">PhysicsMaterialDesc</span></code></a><ul>
@@ -1446,6 +1845,7 @@ KangEngine fallback boxes. Visual-only mesh geoms remain render-only.</p>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.physics.ArticulationConfig"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.__init__"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.__init__()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.add_material_override"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.add_material_override()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.clear_material_overrides"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.clear_material_overrides()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.collision_group"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.collision_group</span></code></a></li>
@@ -1463,6 +1863,9 @@ KangEngine fallback boxes. Visual-only mesh geoms remain render-only.</p>
 <li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.root_angular_damping"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.root_angular_damping</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.root_linear_damping"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.root_linear_damping</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.solver_iterations"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.solver_iterations</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.solver_position_iteration_count"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.solver_position_iteration_count</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.solver_velocity_iteration_count"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.solver_velocity_iteration_count</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.use_aggregate"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.use_aggregate</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.physics.Articulation"><code class="docutils literal notranslate"><span class="pre">Articulation</span></code></a><ul>
@@ -1482,6 +1885,7 @@ KangEngine fallback boxes. Visual-only mesh geoms remain render-only.</p>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.physics.GpuPhysicsConfig"><code class="docutils literal notranslate"><span class="pre">GpuPhysicsConfig</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.physics.GpuPhysicsConfig.__init__"><code class="docutils literal notranslate"><span class="pre">GpuPhysicsConfig.__init__()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.GpuPhysicsConfig.cuda_device_id"><code class="docutils literal notranslate"><span class="pre">GpuPhysicsConfig.cuda_device_id</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.GpuPhysicsConfig.max_contact_pairs"><code class="docutils literal notranslate"><span class="pre">GpuPhysicsConfig.max_contact_pairs</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.GpuPhysicsConfig.max_contact_points"><code class="docutils literal notranslate"><span class="pre">GpuPhysicsConfig.max_contact_points</span></code></a></li>

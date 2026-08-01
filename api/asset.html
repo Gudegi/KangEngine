@@ -11,7 +11,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=a7642cbd" />
+    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=eebc5524" />
     
     
 
@@ -208,6 +208,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/VIDEO_RECORDING.html">Video Recording</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/DEBUG_VISUALIZATION.html">Debug Visualization and Text Rendering</a></li>
 </ul>
 </li>
@@ -220,6 +221,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VIEWER_SYNC.html">Viewer Synchronization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RUN_MODES.html">Simulation Run Modes</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/motion_animation/INDEX.html">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="simple">
@@ -299,33 +301,93 @@
           <section id="ke-asset">
 <h1>ke.asset<a class="headerlink" href="#ke-asset" title="Link to this heading">¶</a></h1>
 <p>Loaders and result types for MJCF, BVH, FBX, and USD assets.</p>
-<dl class="py class">
-<dt class="sig sig-object py" id="kangengine.asset.ImportDiagnostics">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">ImportDiagnostics</span></span><a class="headerlink" href="#kangengine.asset.ImportDiagnostics" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Warnings collected while importing an asset.</p>
-<dl class="py property">
-<dt class="sig sig-object py" id="kangengine.asset.ImportDiagnostics.warnings">
-<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">warnings</span></span><a class="headerlink" href="#kangengine.asset.ImportDiagnostics.warnings" title="Link to this definition">¶</a></dt>
-<dd><p>Human-readable importer warnings.</p>
-</dd></dl>
-
-</dd></dl>
-
+<section id="api-overview">
+<h2>API overview<a class="headerlink" href="#api-overview" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.asset.MJCFLoader" title="kangengine.asset.MJCFLoader"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MJCFLoader</span></code></a></p></td>
+<td><p>Loader for MJCF/XML robot character assets.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.asset.BVHLoader" title="kangengine.asset.BVHLoader"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BVHLoader</span></code></a></p></td>
+<td><p>Loader for BVH skeleton and motion files.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.asset.FBXLoader" title="kangengine.asset.FBXLoader"><code class="xref py py-obj docutils literal notranslate"><span class="pre">FBXLoader</span></code></a></p></td>
+<td><p>Loader for FBX skeletons, motions, and meshes.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.asset.USDLoader" title="kangengine.asset.USDLoader"><code class="xref py py-obj docutils literal notranslate"><span class="pre">USDLoader</span></code></a></p></td>
+<td><p>Loader for USD mesh scenes.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">ImportDiagnostics</span></code></p></td>
+<td><p>Warnings collected while importing an asset.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="loader-return-contracts">
+<h2>Loader return contracts<a class="headerlink" href="#loader-return-contracts" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper colwidths-given docutils container">
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 28.0%" />
+<col style="width: 72.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>API</p></th>
+<th class="head"><p>Return</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">MJCFLoader.parse()</span></code> / <code class="docutils literal notranslate"><span class="pre">BVHLoader.parse()</span></code></p></td>
+<td><p>An import-result value containing the parsed payload and diagnostics.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">MJCFLoader.load()</span></code> / <code class="docutils literal notranslate"><span class="pre">BVHLoader.load()</span></code></p></td>
+<td><p>The commonly used character or motion payload without the result wrapper.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">FBXLoader.load()</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">FBXImportResult</span></code> containing meshes, animation clips, materials, and
+diagnostics. Mesh payloads retain shared native storage.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">USDLoader.parse()</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">USDImportResult</span></code> containing imported mesh records and diagnostics.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Missing or unreadable files and malformed source data raise <code class="docutils literal notranslate"><span class="pre">RuntimeError</span></code>;
+invalid argument values raise <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> where validation is available.
+Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagnostics</span></code> for supported non-fatal import warnings.
+.. autoclass:: ImportDiagnostics</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.MJCFLoader">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">MJCFLoader</span></span><a class="headerlink" href="#kangengine.asset.MJCFLoader" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Loader for MJCF/XML robot character assets.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">MJCFLoader</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.MJCFLoader" title="Link to this definition">¶</a></dt>
+<dd><p>Loader for MJCF/XML robot character assets.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.asset.MJCFLoader.load">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="character.html#kangengine.character.CharacterData" title="kangengine.character.CharacterData"><span class="pre">kangengine.character.CharacterData</span></a></span></span><a class="headerlink" href="#kangengine.asset.MJCFLoader.load" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="character.html#kangengine.character.CharacterData" title="kangengine.character.CharacterData"><span class="pre">CharacterData</span></a></span></span><a class="headerlink" href="#kangengine.asset.MJCFLoader.load" title="Link to this definition">¶</a></dt>
 <dd><p>Load MJCF and return character data.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.asset.MJCFLoader.parse">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">parse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.MJCFImportResult" title="kangengine.asset.MJCFImportResult"><span class="pre">kangengine.asset.MJCFImportResult</span></a></span></span><a class="headerlink" href="#kangengine.asset.MJCFLoader.parse" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">parse</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.MJCFImportResult" title="kangengine.asset.MJCFImportResult"><span class="pre">MJCFImportResult</span></a></span></span><a class="headerlink" href="#kangengine.asset.MJCFLoader.parse" title="Link to this definition">¶</a></dt>
 <dd><p>Parse MJCF and return character data with diagnostics.</p>
 </dd></dl>
 
@@ -333,9 +395,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.MJCFImportResult">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">MJCFImportResult</span></span><a class="headerlink" href="#kangengine.asset.MJCFImportResult" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Parsed MJCF character plus diagnostics.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">MJCFImportResult</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.MJCFImportResult" title="Link to this definition">¶</a></dt>
+<dd><p>Parsed MJCF character plus diagnostics.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.MJCFImportResult.character">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">character</span></span><a class="headerlink" href="#kangengine.asset.MJCFImportResult.character" title="Link to this definition">¶</a></dt>
@@ -352,24 +413,37 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.BVHLoader">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">BVHLoader</span></span><a class="headerlink" href="#kangengine.asset.BVHLoader" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Loader for BVH skeleton and motion files.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">BVHLoader</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.BVHLoader" title="Link to this definition">¶</a></dt>
+<dd><p>Loader for BVH skeleton and motion files.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.asset.BVHLoader.load_motion">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_motion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bvh_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">kangengine.animation.SkeletonMotion</span></a></span></span><a class="headerlink" href="#kangengine.asset.BVHLoader.load_motion" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_motion</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">bvh_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">SkeletonMotion</span></a></span></span><a class="headerlink" href="#kangengine.asset.BVHLoader.load_motion" title="Link to this definition">¶</a></dt>
 <dd><p>Load skeleton motion from a BVH file.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.asset.BVHLoader.load_skeleton">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_skeleton</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bvh_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">kangengine.animation.SkeletonTree</span></a></span></span><a class="headerlink" href="#kangengine.asset.BVHLoader.load_skeleton" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_skeleton</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">bvh_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">SkeletonTree</span></a></span></span><a class="headerlink" href="#kangengine.asset.BVHLoader.load_skeleton" title="Link to this definition">¶</a></dt>
 <dd><p>Load only the skeleton hierarchy from a BVH file.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.asset.BVHLoader.parse">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">parse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bvh_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.BVHImportResult" title="kangengine.asset.BVHImportResult"><span class="pre">kangengine.asset.BVHImportResult</span></a></span></span><a class="headerlink" href="#kangengine.asset.BVHLoader.parse" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">parse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bvh_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.BVHImportResult" title="kangengine.asset.BVHImportResult"><span class="pre">BVHImportResult</span></a></span></span><a class="headerlink" href="#kangengine.asset.BVHLoader.parse" title="Link to this definition">¶</a></dt>
 <dd><p>Parse BVH and return motion plus diagnostics.</p>
 </dd></dl>
 
@@ -377,9 +451,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.BVHImportResult">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">BVHImportResult</span></span><a class="headerlink" href="#kangengine.asset.BVHImportResult" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Parsed BVH skeleton motion plus diagnostics.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">BVHImportResult</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.BVHImportResult" title="Link to this definition">¶</a></dt>
+<dd><p>Parsed BVH skeleton motion plus diagnostics.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.BVHImportResult.diagnostics">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">diagnostics</span></span><a class="headerlink" href="#kangengine.asset.BVHImportResult.diagnostics" title="Link to this definition">¶</a></dt>
@@ -414,60 +487,126 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.FBXLoader">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">FBXLoader</span></span><a class="headerlink" href="#kangengine.asset.FBXLoader" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Loader for FBX skeletons, motions, and meshes.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">FBXLoader</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.FBXLoader" title="Link to this definition">¶</a></dt>
+<dd><p>Loader for FBX skeletons, motions, and meshes.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.asset.FBXLoader.load_animation_clip_infos">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_animation_clip_infos</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#kangengine.asset.FBXAnimationClipInfo" title="kangengine.asset.FBXAnimationClipInfo"><span class="pre">kangengine.asset.FBXAnimationClipInfo</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.load_animation_clip_infos" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_animation_clip_infos</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#kangengine.asset.FBXAnimationClipInfo" title="kangengine.asset.FBXAnimationClipInfo"><span class="pre">FBXAnimationClipInfo</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.load_animation_clip_infos" title="Link to this definition">¶</a></dt>
 <dd><p>List animation clips available in an FBX file.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.asset.FBXLoader.load_character">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_character</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clip_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.009999999776482582</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.FBXCharacterData" title="kangengine.asset.FBXCharacterData"><span class="pre">kangengine.asset.FBXCharacterData</span></a></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.load_character" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_character</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">clip_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">fps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.009999999776482582</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.FBXCharacterData" title="kangengine.asset.FBXCharacterData"><span class="pre">FBXCharacterData</span></a></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.load_character" title="Link to this definition">¶</a></dt>
 <dd><p>Load FBX character data without diagnostics.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.asset.FBXLoader.load_character_with_bind">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_character_with_bind</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">motion_fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bind_fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clip_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.009999999776482582</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.FBXCharacterData" title="kangengine.asset.FBXCharacterData"><span class="pre">kangengine.asset.FBXCharacterData</span></a></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.load_character_with_bind" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_character_with_bind</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">motion_fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">bind_fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">clip_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">fps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.009999999776482582</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.FBXCharacterData" title="kangengine.asset.FBXCharacterData"><span class="pre">FBXCharacterData</span></a></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.load_character_with_bind" title="Link to this definition">¶</a></dt>
 <dd><p>Load FBX character data using a separate bind-pose file.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.asset.FBXLoader.load_meshes">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_meshes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.009999999776482582</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.load_meshes" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_meshes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.009999999776482582</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.load_meshes" title="Link to this definition">¶</a></dt>
 <dd><p>Load static meshes from an FBX file.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.asset.FBXLoader.load_motion">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_motion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clip_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.009999999776482582</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">kangengine.animation.SkeletonMotion</span></a></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.load_motion" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_motion</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">clip_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">fps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.009999999776482582</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">SkeletonMotion</span></a></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.load_motion" title="Link to this definition">¶</a></dt>
 <dd><p>Load skeleton motion from an FBX file.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.asset.FBXLoader.load_skeleton">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_skeleton</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.009999999776482582</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">kangengine.animation.SkeletonTree</span></a></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.load_skeleton" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_skeleton</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.009999999776482582</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">SkeletonTree</span></a></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.load_skeleton" title="Link to this definition">¶</a></dt>
 <dd><p>Load only the skeleton hierarchy from an FBX file.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.asset.FBXLoader.load_skinned_meshes">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_skinned_meshes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.009999999776482582</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.load_skinned_meshes" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_skinned_meshes</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.009999999776482582</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.load_skinned_meshes" title="Link to this definition">¶</a></dt>
 <dd><p>Load skinned meshes from an FBX file.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.asset.FBXLoader.parse">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">parse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clip_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.009999999776482582</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.FBXImportResult" title="kangengine.asset.FBXImportResult"><span class="pre">kangengine.asset.FBXImportResult</span></a></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.parse" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">parse</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">clip_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">fps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.009999999776482582</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.FBXImportResult" title="kangengine.asset.FBXImportResult"><span class="pre">FBXImportResult</span></a></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.parse" title="Link to this definition">¶</a></dt>
 <dd><p>Parse an FBX file and return character data plus diagnostics.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.asset.FBXLoader.parse_with_bind">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">parse_with_bind</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">motion_fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bind_fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clip_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.009999999776482582</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.FBXImportResult" title="kangengine.asset.FBXImportResult"><span class="pre">kangengine.asset.FBXImportResult</span></a></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.parse_with_bind" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">parse_with_bind</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">motion_fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">bind_fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">clip_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">fps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.009999999776482582</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.FBXImportResult" title="kangengine.asset.FBXImportResult"><span class="pre">FBXImportResult</span></a></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.parse_with_bind" title="Link to this definition">¶</a></dt>
 <dd><p>Parse FBX motion with a separate bind-pose FBX file.</p>
 </dd></dl>
 
@@ -475,9 +614,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.FBXImportResult">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">FBXImportResult</span></span><a class="headerlink" href="#kangengine.asset.FBXImportResult" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Parsed FBX character, clips, and diagnostics.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">FBXImportResult</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.FBXImportResult" title="Link to this definition">¶</a></dt>
+<dd><p>Parsed FBX character, clips, and diagnostics.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.FBXImportResult.character">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">character</span></span><a class="headerlink" href="#kangengine.asset.FBXImportResult.character" title="Link to this definition">¶</a></dt>
@@ -512,9 +650,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.FBXAnimationClipInfo">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">FBXAnimationClipInfo</span></span><a class="headerlink" href="#kangengine.asset.FBXAnimationClipInfo" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Animation clip metadata discovered in an FBX file.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">FBXAnimationClipInfo</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.FBXAnimationClipInfo" title="Link to this definition">¶</a></dt>
+<dd><p>Animation clip metadata discovered in an FBX file.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.FBXAnimationClipInfo.end_time">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">end_time</span></span><a class="headerlink" href="#kangengine.asset.FBXAnimationClipInfo.end_time" title="Link to this definition">¶</a></dt>
@@ -543,9 +680,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.FBXMaterialInfo">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">FBXMaterialInfo</span></span><a class="headerlink" href="#kangengine.asset.FBXMaterialInfo" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Material metadata imported from an FBX file.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">FBXMaterialInfo</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.FBXMaterialInfo" title="Link to this definition">¶</a></dt>
+<dd><p>Material metadata imported from an FBX file.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.FBXMaterialInfo.diffuse_color">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">diffuse_color</span></span><a class="headerlink" href="#kangengine.asset.FBXMaterialInfo.diffuse_color" title="Link to this definition">¶</a></dt>
@@ -598,9 +734,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.FBXMeshMetadata">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">FBXMeshMetadata</span></span><a class="headerlink" href="#kangengine.asset.FBXMeshMetadata" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Summary metadata for a mesh imported from FBX.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">FBXMeshMetadata</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.FBXMeshMetadata" title="Link to this definition">¶</a></dt>
+<dd><p>Summary metadata for a mesh imported from FBX.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.FBXMeshMetadata.has_normals">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">has_normals</span></span><a class="headerlink" href="#kangengine.asset.FBXMeshMetadata.has_normals" title="Link to this definition">¶</a></dt>
@@ -665,9 +800,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.FBXMeshInfo">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">FBXMeshInfo</span></span><a class="headerlink" href="#kangengine.asset.FBXMeshInfo" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Static mesh payload imported from an FBX file.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">FBXMeshInfo</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.FBXMeshInfo" title="Link to this definition">¶</a></dt>
+<dd><p>Static mesh payload imported from an FBX file.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.FBXMeshInfo.has_normals">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">has_normals</span></span><a class="headerlink" href="#kangengine.asset.FBXMeshInfo.has_normals" title="Link to this definition">¶</a></dt>
@@ -732,9 +866,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.FBXSkinnedMeshInfo">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">FBXSkinnedMeshInfo</span></span><a class="headerlink" href="#kangengine.asset.FBXSkinnedMeshInfo" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Skinned mesh payload imported from an FBX file.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">FBXSkinnedMeshInfo</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.FBXSkinnedMeshInfo" title="Link to this definition">¶</a></dt>
+<dd><p>Skinned mesh payload imported from an FBX file.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.FBXSkinnedMeshInfo.bind_bone_matrices">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">bind_bone_matrices</span></span><a class="headerlink" href="#kangengine.asset.FBXSkinnedMeshInfo.bind_bone_matrices" title="Link to this definition">¶</a></dt>
@@ -864,9 +997,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.FBXCharacterData">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">FBXCharacterData</span></span><a class="headerlink" href="#kangengine.asset.FBXCharacterData" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>FBX character import result with motion and skinned meshes.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">FBXCharacterData</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.FBXCharacterData" title="Link to this definition">¶</a></dt>
+<dd><p>FBX character import result with motion and skinned meshes.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.FBXCharacterData.motion">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">motion</span></span><a class="headerlink" href="#kangengine.asset.FBXCharacterData.motion" title="Link to this definition">¶</a></dt>
@@ -883,18 +1015,17 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.USDLoader">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">USDLoader</span></span><a class="headerlink" href="#kangengine.asset.USDLoader" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Loader for USD mesh scenes.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">USDLoader</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.USDLoader" title="Link to this definition">¶</a></dt>
+<dd><p>Loader for USD mesh scenes.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.asset.USDLoader.load_meshes">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_meshes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">usd_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#kangengine.asset.USDLoader.load_meshes" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_meshes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">usd_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#kangengine.asset.USDLoader.load_meshes" title="Link to this definition">¶</a></dt>
 <dd><p>Load mesh payloads from a USD file.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.asset.USDLoader.parse">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">parse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">usd_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.USDImportResult" title="kangengine.asset.USDImportResult"><span class="pre">kangengine.asset.USDImportResult</span></a></span></span><a class="headerlink" href="#kangengine.asset.USDLoader.parse" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">parse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">usd_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.USDImportResult" title="kangengine.asset.USDImportResult"><span class="pre">USDImportResult</span></a></span></span><a class="headerlink" href="#kangengine.asset.USDLoader.parse" title="Link to this definition">¶</a></dt>
 <dd><p>Parse USD and return meshes plus diagnostics.</p>
 </dd></dl>
 
@@ -902,9 +1033,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.USDImportResult">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">USDImportResult</span></span><a class="headerlink" href="#kangengine.asset.USDImportResult" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Parsed USD meshes plus diagnostics.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">USDImportResult</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.USDImportResult" title="Link to this definition">¶</a></dt>
+<dd><p>Parsed USD meshes plus diagnostics.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.USDImportResult.diagnostics">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">diagnostics</span></span><a class="headerlink" href="#kangengine.asset.USDImportResult.diagnostics" title="Link to this definition">¶</a></dt>
@@ -921,9 +1051,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.USDMeshInfo">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">USDMeshInfo</span></span><a class="headerlink" href="#kangengine.asset.USDMeshInfo" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Mesh payload imported from a USD scene.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">USDMeshInfo</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.USDMeshInfo" title="Link to this definition">¶</a></dt>
+<dd><p>Mesh payload imported from a USD scene.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.USDMeshInfo.diffuse_texture_path">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">diffuse_texture_path</span></span><a class="headerlink" href="#kangengine.asset.USDMeshInfo.diffuse_texture_path" title="Link to this definition">¶</a></dt>
@@ -971,6 +1100,7 @@
 
 </dd></dl>
 
+</section>
 </section>
 
         </article>
@@ -1029,10 +1159,8 @@
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">ke.asset</a><ul>
-<li><a class="reference internal" href="#kangengine.asset.ImportDiagnostics"><code class="docutils literal notranslate"><span class="pre">ImportDiagnostics</span></code></a><ul>
-<li><a class="reference internal" href="#kangengine.asset.ImportDiagnostics.warnings"><code class="docutils literal notranslate"><span class="pre">ImportDiagnostics.warnings</span></code></a></li>
-</ul>
-</li>
+<li><a class="reference internal" href="#api-overview">API overview</a></li>
+<li><a class="reference internal" href="#loader-return-contracts">Loader return contracts</a><ul>
 <li><a class="reference internal" href="#kangengine.asset.MJCFLoader"><code class="docutils literal notranslate"><span class="pre">MJCFLoader</span></code></a><ul>
 <li><a class="reference internal" href="#kangengine.asset.MJCFLoader.load"><code class="docutils literal notranslate"><span class="pre">MJCFLoader.load()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.MJCFLoader.parse"><code class="docutils literal notranslate"><span class="pre">MJCFLoader.parse()</span></code></a></li>
@@ -1175,6 +1303,8 @@
 <li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.normal_texture_path"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.normal_texture_path</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.prim_path"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.prim_path</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.vertex_count"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.vertex_count</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

@@ -11,7 +11,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=a7642cbd" />
+    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=eebc5524" />
     
     
 
@@ -208,19 +208,20 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/VIDEO_RECORDING.html">Video Recording</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/DEBUG_VISUALIZATION.html">Debug Visualization and Text Rendering</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RUN_MODES.html">Simulation Run Modes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MJCF_ARTICULATION.html">Load an MJCF Articulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VIEWER_SYNC.html">Viewer Synchronization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RUN_MODES.html">Simulation Run Modes</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/motion_animation/INDEX.html">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="simple">
@@ -299,32 +300,95 @@
         <article role="main" id="furo-main-content">
           <section id="api-reference">
 <h1>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading">¶</a></h1>
-<p>This section contains KangEngine’s Python API reference, split between the
-native pybind11 surface and higher-level pure Python workflow helpers.</p>
+<p>This section contains KangEngine’s public Python API. Examples conventionally
+use <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">kangengine</span> <span class="pre">as</span> <span class="pre">ke</span></code>; <code class="docutils literal notranslate"><span class="pre">ke</span></code> is only a local alias for the <code class="docutils literal notranslate"><span class="pre">kangengine</span></code>
+package, not a separate package or API layer.</p>
+<p>The public API exposes native pybind11 types and pure Python helpers side by
+side under the documented <code class="docutils literal notranslate"><span class="pre">ke.*</span></code> paths. Their implementation origin does not
+affect how they are imported or called. Underscored implementation modules are
+internal and may change without notice.</p>
+<p><span class="api-origin api-origin-native">[native]</span> identifies compiled
+pybind11 APIs. <span class="api-origin api-origin-python">[python]</span>
+identifies Python workflow helpers. Meaningful public inheritance is still shown;
+implementation-only base classes are omitted.</p>
+<p>Application-wide entry points and common app helpers live directly under <code class="docutils literal notranslate"><span class="pre">ke</span></code>,
+while specialized APIs are grouped by domain under modules such as <code class="docutils literal notranslate"><span class="pre">ke.scene</span></code>,
+<code class="docutils literal notranslate"><span class="pre">ke.physics</span></code>, and <code class="docutils literal notranslate"><span class="pre">ke.material</span></code>.</p>
 <div class="toctree-wrapper compound">
 </div>
-<p>The reference follows the public <code class="docutils literal notranslate"><span class="pre">kangengine</span></code> and <code class="docutils literal notranslate"><span class="pre">ke.*</span></code> package roots directly.</p>
-<section id="native-runtime">
-<h2>Native Runtime<a class="headerlink" href="#native-runtime" title="Link to this heading">¶</a></h2>
+<section id="application">
+<h2>Application<a class="headerlink" href="#application" title="Link to this heading">¶</a></h2>
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="rendering.html#kangengine.render.GraphicsDevice" title="kangengine.render.GraphicsDevice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GraphicsDevice</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="python.html#kangengine.App" title="kangengine.App"><code class="xref py py-obj docutils literal notranslate"><span class="pre">App</span></code></a></p></td>
+<td><p>Base class for Python KangEngine apps.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="python.html#kangengine.DebugGeometry" title="kangengine.DebugGeometry"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DebugGeometry</span></code></a></p></td>
+<td><p>Mesh-based debug geometry owned by the SceneGraph.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="python.html#kangengine.DebugOverlay" title="kangengine.DebugOverlay"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DebugOverlay</span></code></a></p></td>
+<td><p>OpenGL debug overlay that does not create SceneGraph prims.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="python.html#kangengine.WorldText" title="kangengine.WorldText"><code class="xref py py-obj docutils literal notranslate"><span class="pre">WorldText</span></code></a></p></td>
+<td><p>Persistent screen-aligned text anchored at world-space positions.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="python.html#kangengine.ScreenText" title="kangengine.ScreenText"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ScreenText</span></code></a></p></td>
+<td><p>Persistent text positioned in viewport pixel(screen) coordinates.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="rendering-and-materials">
+<h2>Rendering And Materials<a class="headerlink" href="#rendering-and-materials" title="Link to this heading">¶</a></h2>
+<section id="rendering">
+<h3>Rendering<a class="headerlink" href="#rendering" title="Link to this heading">¶</a></h3>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="rendering.html#kangengine.render.Renderer" title="kangengine.render.Renderer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Renderer</span></code></a></p></td>
+<td><p>Renderer facade for updating renderable resources and draw settings.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rendering.html#kangengine.render.GraphicsDevice" title="kangengine.render.GraphicsDevice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GraphicsDevice</span></code></a></p></td>
 <td><p>Factory for backend graphics resources such as shaders and textures.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="rendering.html#kangengine.render.Shader" title="kangengine.render.Shader"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Shader</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="rendering.html#kangengine.render.Shader" title="kangengine.render.Shader"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Shader</span></code></a></p></td>
 <td><p>Compiled GPU shader program used by renderer materials.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="rendering.html#kangengine.render.Texture" title="kangengine.render.Texture"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Texture</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="rendering.html#kangengine.render.Texture" title="kangengine.render.Texture"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Texture</span></code></a></p></td>
 <td><p>GPU texture object created by a GraphicsDevice.</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p>Materials are documented separately under the <code class="docutils literal notranslate"><span class="pre">ke.material</span></code> domain.</p>
+</section>
+<section id="materials">
+<h3>Materials<a class="headerlink" href="#materials" title="Link to this heading">¶</a></h3>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="material.html#kangengine.material.Material" title="kangengine.material.Material"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Material</span></code></a></p></td>
+<td><p>Base wrapper for renderer materials.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="material.html#kangengine.material.VertexColorMaterial" title="kangengine.material.VertexColorMaterial"><code class="xref py py-obj docutils literal notranslate"><span class="pre">VertexColorMaterial</span></code></a></p></td>
+<td><p>Material for vertex/display-color shaders.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="material.html#kangengine.material.PhongMaterial" title="kangengine.material.PhongMaterial"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PhongMaterial</span></code></a></p></td>
+<td><p>Phong material wrapper with optional preset initialization.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="material.html#kangengine.material.PBRMaterial" title="kangengine.material.PBRMaterial"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PBRMaterial</span></code></a></p></td>
+<td><p>PBR material wrapper with optional preset initialization.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
 </section>
 <section id="scene-and-assets">
 <h2>Scene And Assets<a class="headerlink" href="#scene-and-assets" title="Link to this heading">¶</a></h2>
+<section id="scene">
+<h3>Scene<a class="headerlink" href="#scene" title="Link to this heading">¶</a></h3>
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
@@ -343,6 +407,9 @@ native pybind11 surface and higher-level pure Python workflow helpers.</p>
 </tbody>
 </table>
 </div>
+</section>
+<section id="assets">
+<h3>Assets<a class="headerlink" href="#assets" title="Link to this heading">¶</a></h3>
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
@@ -362,8 +429,11 @@ native pybind11 surface and higher-level pure Python workflow helpers.</p>
 </table>
 </div>
 </section>
-<section id="animation-and-physics">
-<h2>Animation And Physics<a class="headerlink" href="#animation-and-physics" title="Link to this heading">¶</a></h2>
+</section>
+<section id="animation-and-visuals">
+<h2>Animation And Visuals<a class="headerlink" href="#animation-and-visuals" title="Link to this heading">¶</a></h2>
+<section id="animation">
+<h3>Animation<a class="headerlink" href="#animation" title="Link to this heading">¶</a></h3>
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
@@ -379,6 +449,9 @@ native pybind11 surface and higher-level pure Python workflow helpers.</p>
 </tbody>
 </table>
 </div>
+</section>
+<section id="visual-bridges">
+<h3>Visual Bridges<a class="headerlink" href="#visual-bridges" title="Link to this heading">¶</a></h3>
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
@@ -391,6 +464,12 @@ native pybind11 surface and higher-level pure Python workflow helpers.</p>
 </tbody>
 </table>
 </div>
+</section>
+</section>
+<section id="physics-and-simulation">
+<h2>Physics And Simulation<a class="headerlink" href="#physics-and-simulation" title="Link to this heading">¶</a></h2>
+<section id="physics">
+<h3>Physics<a class="headerlink" href="#physics" title="Link to this heading">¶</a></h3>
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
@@ -410,26 +489,8 @@ native pybind11 surface and higher-level pure Python workflow helpers.</p>
 </table>
 </div>
 </section>
-<section id="python-workflow-layer">
-<h2>Python Workflow Layer<a class="headerlink" href="#python-workflow-layer" title="Link to this heading">¶</a></h2>
-<div class="table-wrapper autosummary longtable docutils container">
-<table class="autosummary longtable docutils align-default">
-<tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="python.html#kangengine.DebugGeometry" title="kangengine.DebugGeometry"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DebugGeometry</span></code></a></p></td>
-<td><p>Mesh-based debug geometry owned by the SceneGraph.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="python.html#kangengine.DebugOverlay" title="kangengine.DebugOverlay"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DebugOverlay</span></code></a></p></td>
-<td><p>OpenGL debug overlay that does not create SceneGraph prims.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="python.html#kangengine.WorldText" title="kangengine.WorldText"><code class="xref py py-obj docutils literal notranslate"><span class="pre">WorldText</span></code></a></p></td>
-<td><p>Persistent screen-aligned text anchored at world-space positions.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="python.html#kangengine.ScreenText" title="kangengine.ScreenText"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ScreenText</span></code></a></p></td>
-<td><p>Persistent text positioned in viewport pixel(screen) coordinates.</p></td>
-</tr>
-</tbody>
-</table>
-</div>
+<section id="simulation">
+<h3>Simulation<a class="headerlink" href="#simulation" title="Link to this heading">¶</a></h3>
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
@@ -439,30 +500,9 @@ native pybind11 surface and higher-level pure Python workflow helpers.</p>
 </tbody>
 </table>
 </div>
-<div class="table-wrapper autosummary longtable docutils container">
-<table class="autosummary longtable docutils align-default">
-<tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="motion.html#kangengine.motion_module.MotionEditor" title="kangengine.motion_module.MotionEditor"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MotionEditor</span></code></a></p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="motion.html#kangengine.motion_module.MotionPlayer" title="kangengine.motion_module.MotionPlayer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MotionPlayer</span></code></a></p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="motion.html#kangengine.motion_module.MotionModule" title="kangengine.motion_module.MotionModule"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MotionModule</span></code></a></p></td>
-<td><p></p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="table-wrapper autosummary longtable docutils container">
-<table class="autosummary longtable docutils align-default">
-<tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">JointMapper</span></code></p></td>
-<td><p></p></td>
-</tr>
-</tbody>
-</table>
-</div>
+</section>
+<section id="simulation-visualization">
+<h3>Simulation Visualization<a class="headerlink" href="#simulation-visualization" title="Link to this heading">¶</a></h3>
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
@@ -472,6 +512,40 @@ native pybind11 surface and higher-level pure Python workflow helpers.</p>
 </tbody>
 </table>
 </div>
+</section>
+</section>
+<section id="motion-and-utilities">
+<h2>Motion And Utilities<a class="headerlink" href="#motion-and-utilities" title="Link to this heading">¶</a></h2>
+<section id="motion">
+<h3>Motion<a class="headerlink" href="#motion" title="Link to this heading">¶</a></h3>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="motion.html#kangengine.motion_module.MotionEditor" title="kangengine.motion_module.MotionEditor"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MotionEditor</span></code></a></p></td>
+<td><p>Motion playback, sequencer UI, and pluggable motion modules.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="motion.html#kangengine.motion_module.MotionPlayer" title="kangengine.motion_module.MotionPlayer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MotionPlayer</span></code></a></p></td>
+<td><p>Track playback time and select frames from a sampled motion.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="motion.html#kangengine.motion_module.MotionModule" title="kangengine.motion_module.MotionModule"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MotionModule</span></code></a></p></td>
+<td><p>Base interface for optional MotionEditor processing and visualization.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="joint-mapping">
+<h3>Joint Mapping<a class="headerlink" href="#joint-mapping" title="Link to this heading">¶</a></h3>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="utils.html#kangengine.utils.JointMapper" title="kangengine.utils.JointMapper"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JointMapper</span></code></a></p></td>
+<td><p>Resolve semantic and literal joint names against a motion skeleton.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
 </section>
 </section>
 
@@ -531,10 +605,33 @@ native pybind11 surface and higher-level pure Python workflow helpers.</p>
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">API Reference</a><ul>
-<li><a class="reference internal" href="#native-runtime">Native Runtime</a></li>
-<li><a class="reference internal" href="#scene-and-assets">Scene And Assets</a></li>
-<li><a class="reference internal" href="#animation-and-physics">Animation And Physics</a></li>
-<li><a class="reference internal" href="#python-workflow-layer">Python Workflow Layer</a></li>
+<li><a class="reference internal" href="#application">Application</a></li>
+<li><a class="reference internal" href="#rendering-and-materials">Rendering And Materials</a><ul>
+<li><a class="reference internal" href="#rendering">Rendering</a></li>
+<li><a class="reference internal" href="#materials">Materials</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#scene-and-assets">Scene And Assets</a><ul>
+<li><a class="reference internal" href="#scene">Scene</a></li>
+<li><a class="reference internal" href="#assets">Assets</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#animation-and-visuals">Animation And Visuals</a><ul>
+<li><a class="reference internal" href="#animation">Animation</a></li>
+<li><a class="reference internal" href="#visual-bridges">Visual Bridges</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#physics-and-simulation">Physics And Simulation</a><ul>
+<li><a class="reference internal" href="#physics">Physics</a></li>
+<li><a class="reference internal" href="#simulation">Simulation</a></li>
+<li><a class="reference internal" href="#simulation-visualization">Simulation Visualization</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#motion-and-utilities">Motion And Utilities</a><ul>
+<li><a class="reference internal" href="#motion">Motion</a></li>
+<li><a class="reference internal" href="#joint-mapping">Joint Mapping</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

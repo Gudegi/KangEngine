@@ -11,7 +11,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=a7642cbd" />
+    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=eebc5524" />
     
     
 
@@ -208,6 +208,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/VIDEO_RECORDING.html">Video Recording</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/DEBUG_VISUALIZATION.html">Debug Visualization and Text Rendering</a></li>
 </ul>
 </li>
@@ -220,6 +221,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VIEWER_SYNC.html">Viewer Synchronization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RUN_MODES.html">Simulation Run Modes</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/motion_animation/INDEX.html">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="simple">
@@ -299,9 +301,29 @@
           <section id="ke-material">
 <h1>ke.material<a class="headerlink" href="#ke-material" title="Link to this heading">¶</a></h1>
 <p>Python-friendly surface material authoring and renderer material presets.</p>
+<section id="api-overview">
+<h2>API overview<a class="headerlink" href="#api-overview" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.material.Material" title="kangengine.material.Material"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Material</span></code></a></p></td>
+<td><p>Base wrapper for renderer materials.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.material.VertexColorMaterial" title="kangengine.material.VertexColorMaterial"><code class="xref py py-obj docutils literal notranslate"><span class="pre">VertexColorMaterial</span></code></a></p></td>
+<td><p>Material for vertex/display-color shaders.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.material.PhongMaterial" title="kangengine.material.PhongMaterial"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PhongMaterial</span></code></a></p></td>
+<td><p>Phong material wrapper with optional preset initialization.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.material.PBRMaterial" title="kangengine.material.PBRMaterial"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PBRMaterial</span></code></a></p></td>
+<td><p>PBR material wrapper with optional preset initialization.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.material.Material">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.material.</span></span><span class="sig-name descname"><span class="pre">Material</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">native</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">shader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.Material" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.material.</span></span><span class="sig-name descname"><span class="pre">Material</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">native</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">shader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.material.Material" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">NativeWrapper</span></code></p>
 <p>Base wrapper for renderer materials.</p>
 <dl class="field-list simple">
@@ -329,7 +351,7 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.material.VertexColorMaterial">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.material.</span></span><span class="sig-name descname"><span class="pre">VertexColorMaterial</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">native</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.VertexColorMaterial" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.material.</span></span><span class="sig-name descname"><span class="pre">VertexColorMaterial</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">native</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.material.VertexColorMaterial" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#kangengine.material.Material" title="kangengine.material.Material"><code class="xref py py-class docutils literal notranslate"><span class="pre">Material</span></code></a></p>
 <p>Material for vertex/display-color shaders.</p>
 <dl class="field-list simple">
@@ -341,7 +363,7 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.material.PhongMaterial">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.material.</span></span><span class="sig-name descname"><span class="pre">PhongMaterial</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">native</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PhongMaterial" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.material.</span></span><span class="sig-name descname"><span class="pre">PhongMaterial</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">native</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.material.PhongMaterial" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#kangengine.material.Material" title="kangengine.material.Material"><code class="xref py py-class docutils literal notranslate"><span class="pre">Material</span></code></a></p>
 <p>Phong material wrapper with optional preset initialization.</p>
 <dl class="field-list simple">
@@ -451,7 +473,7 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.material.PBRMaterial">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.material.</span></span><span class="sig-name descname"><span class="pre">PBRMaterial</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">native</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.material.PBRMaterial" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.material.</span></span><span class="sig-name descname"><span class="pre">PBRMaterial</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">native</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.material.PBRMaterial" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#kangengine.material.Material" title="kangengine.material.Material"><code class="xref py py-class docutils literal notranslate"><span class="pre">Material</span></code></a></p>
 <p>PBR material wrapper with optional preset initialization.</p>
 <dl class="field-list simple">
@@ -618,9 +640,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.material.PhongMaterialType">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.material.</span></span><span class="sig-name descname"><span class="pre">PhongMaterialType</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Built-in blin-phong based material presets.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.material.</span></span><span class="sig-name descname"><span class="pre">PhongMaterialType</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.material.PhongMaterialType" title="Link to this definition">¶</a></dt>
+<dd><p>Built-in blin-phong based material presets.</p>
 <p>Members:</p>
 <blockquote>
 <div><p>EMERALD</p>
@@ -782,9 +803,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.material.PBRMaterialType">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.material.</span></span><span class="sig-name descname"><span class="pre">PBRMaterialType</span></span><a class="headerlink" href="#kangengine.material.PBRMaterialType" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Built-in physically based material presets.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.material.</span></span><span class="sig-name descname"><span class="pre">PBRMaterialType</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.material.PBRMaterialType" title="Link to this definition">¶</a></dt>
+<dd><p>Built-in physically based material presets.</p>
 <p>Members:</p>
 <blockquote>
 <div><p>GRAY_CARD</p>
@@ -879,6 +899,7 @@
 </dd></dl>
 
 </section>
+</section>
 
         </article>
       </div>
@@ -936,6 +957,7 @@
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">ke.material</a><ul>
+<li><a class="reference internal" href="#api-overview">API overview</a><ul>
 <li><a class="reference internal" href="#kangengine.material.Material"><code class="docutils literal notranslate"><span class="pre">Material</span></code></a><ul>
 <li><a class="reference internal" href="#kangengine.material.Material.get_shader"><code class="docutils literal notranslate"><span class="pre">Material.get_shader()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.material.Material.set_shader"><code class="docutils literal notranslate"><span class="pre">Material.set_shader()</span></code></a></li>
@@ -1036,6 +1058,8 @@
 <li><a class="reference internal" href="#kangengine.material.PBRMaterialType.RED_BRICK"><code class="docutils literal notranslate"><span class="pre">PBRMaterialType.RED_BRICK</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.material.PBRMaterialType.WHITE_PLASTIC"><code class="docutils literal notranslate"><span class="pre">PBRMaterialType.WHITE_PLASTIC</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.material.PBRMaterialType.value"><code class="docutils literal notranslate"><span class="pre">PBRMaterialType.value</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

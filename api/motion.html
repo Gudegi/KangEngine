@@ -11,7 +11,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=a7642cbd" />
+    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=eebc5524" />
     
     
 
@@ -208,6 +208,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/VIDEO_RECORDING.html">Video Recording</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/DEBUG_VISUALIZATION.html">Debug Visualization and Text Rendering</a></li>
 </ul>
 </li>
@@ -220,6 +221,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VIEWER_SYNC.html">Viewer Synchronization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RUN_MODES.html">Simulation Run Modes</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/motion_animation/INDEX.html">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="simple">
@@ -299,11 +301,36 @@
           <section id="ke-motion-module">
 <h1>ke.motion_module<a class="headerlink" href="#ke-motion-module" title="Link to this heading">¶</a></h1>
 <p>Python motion sampling, editor panels, and debug visualization modules.</p>
+<section id="api-overview">
+<h2>API overview<a class="headerlink" href="#api-overview" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.motion_module.MotionEditor" title="kangengine.motion_module.MotionEditor"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MotionEditor</span></code></a></p></td>
+<td><p>Motion playback, sequencer UI, and pluggable motion modules.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.motion_module.MotionPlayer" title="kangengine.motion_module.MotionPlayer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MotionPlayer</span></code></a></p></td>
+<td><p>Track playback time and select frames from a sampled motion.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.motion_module.MotionModule" title="kangengine.motion_module.MotionModule"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MotionModule</span></code></a></p></td>
+<td><p>Base interface for optional MotionEditor processing and visualization.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.motion_module.RootTrajectoryModule" title="kangengine.motion_module.RootTrajectoryModule"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RootTrajectoryModule</span></code></a></p></td>
+<td><p>Visualize root positions, directions, and velocities around the playhead.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.motion_module.TrackingModule" title="kangengine.motion_module.TrackingModule"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TrackingModule</span></code></a></p></td>
+<td><p>Visualize selected joint trajectories and velocities around the playhead.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.motion_module.ContactModule" title="kangengine.motion_module.ContactModule"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ContactModule</span></code></a></p></td>
+<td><p>Estimate and visualize foot contacts from motion samples.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.motion_module.MotionSampleData">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.motion_module.</span></span><span class="sig-name descname"><span class="pre">MotionSampleData</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">positions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">matrices</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">velocities</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_names</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mapper</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.motion_module.MotionSampleData" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<dl class="field-list simple">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.motion_module.</span></span><span class="sig-name descname"><span class="pre">MotionSampleData</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">positions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">matrices</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">velocities</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_names</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mapper</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.motion_module.MotionSampleData" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>positions</strong> (<em>np.ndarray</em>)</p></li>
@@ -385,9 +412,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.motion_module.RootTrajectoryData">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.motion_module.</span></span><span class="sig-name descname"><span class="pre">RootTrajectoryData</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">positions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">velocities</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">directions</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.motion_module.RootTrajectoryData" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<dl class="field-list simple">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.motion_module.</span></span><span class="sig-name descname"><span class="pre">RootTrajectoryData</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">positions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">velocities</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">directions</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.motion_module.RootTrajectoryData" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>positions</strong> (<em>np.ndarray</em>)</p></li>
@@ -431,9 +457,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.motion_module.TrackingData">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.motion_module.</span></span><span class="sig-name descname"><span class="pre">TrackingData</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">positions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">velocities</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">joint_indices</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">joint_names</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.motion_module.TrackingData" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<dl class="field-list simple">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.motion_module.</span></span><span class="sig-name descname"><span class="pre">TrackingData</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">positions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">velocities</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">joint_indices</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">joint_names</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.motion_module.TrackingData" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>positions</strong> (<em>np.ndarray</em>)</p></li>
@@ -445,7 +470,17 @@
 </dl>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.motion_module.TrackingData.from_motion">
-<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_motion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">motion</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">joint_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">joint_indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">joint_semantics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">samples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.motion_module.TrackingData.from_motion" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_motion</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">motion</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">joint_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">joint_indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">joint_semantics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">samples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><a class="headerlink" href="#kangengine.motion_module.TrackingData.from_motion" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.motion_module.TrackingData" title="kangengine.motion_module.TrackingData"><code class="xref py py-class docutils literal notranslate"><span class="pre">TrackingData</span></code></a></span></p>
@@ -485,9 +520,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.motion_module.ContactData">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.motion_module.</span></span><span class="sig-name descname"><span class="pre">ContactData</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">positions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">velocities</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">foot_indices</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">foot_names</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.motion_module.ContactData" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<dl class="field-list simple">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.motion_module.</span></span><span class="sig-name descname"><span class="pre">ContactData</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">positions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">velocities</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">foot_indices</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">foot_names</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.motion_module.ContactData" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>positions</strong> (<em>np.ndarray</em>)</p></li>
@@ -516,7 +550,18 @@
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.motion_module.ContactData.from_motion">
-<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_motion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">motion</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">foot_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">foot_indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">foot_semantics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">samples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.motion_module.ContactData.from_motion" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_motion</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">motion</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">foot_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">foot_indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">foot_semantics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">samples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><a class="headerlink" href="#kangengine.motion_module.ContactData.from_motion" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.motion_module.ContactData" title="kangengine.motion_module.ContactData"><code class="xref py py-class docutils literal notranslate"><span class="pre">ContactData</span></code></a></span></p>
@@ -562,9 +607,20 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.motion_module.MotionCameraFollower">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.motion_module.</span></span><span class="sig-name descname"><span class="pre">MotionCameraFollower</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">motion</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">samples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_semantic</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">JointSemantic.HIPS</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.0,</span> <span class="pre">0.85,</span> <span class="pre">0.0)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">camera_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.0,</span> <span class="pre">0.65,</span> <span class="pre">3.2)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smoothing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.12</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.motion_module.MotionCameraFollower" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<dl class="field-list simple">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.motion_module.</span></span><span class="sig-name descname"><span class="pre">MotionCameraFollower</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">motion</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">samples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">target_semantic</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">JointSemantic.HIPS</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">target_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">target_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.0,</span> <span class="pre">0.85,</span> <span class="pre">0.0)</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">camera_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.0,</span> <span class="pre">0.65,</span> <span class="pre">3.2)</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">smoothing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.12</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.motion_module.MotionCameraFollower" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>samples</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="#kangengine.motion_module.MotionSampleData" title="kangengine.motion_module.MotionSampleData"><em>MotionSampleData</em></a><em>]</em>)</p></li>
@@ -607,8 +663,20 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.motion_module.MotionPlayer">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.motion_module.</span></span><span class="sig-name descname"><span class="pre">MotionPlayer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">duration</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_frames</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.motion_module.MotionPlayer" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.motion_module.</span></span><span class="sig-name descname"><span class="pre">MotionPlayer</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">duration</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">fps</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">num_frames</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">playing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">loop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">time_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.motion_module.MotionPlayer" title="Link to this definition">¶</a></dt>
+<dd><p>Track playback time and select frames from a sampled motion.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -725,8 +793,17 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.motion_module.MotionEditor">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.motion_module.</span></span><span class="sig-name descname"><span class="pre">MotionEditor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">motion</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">motion_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Motion'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">panel_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'MotionSequencer'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fit_to_content</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.motion_module.MotionEditor" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.motion_module.</span></span><span class="sig-name descname"><span class="pre">MotionEditor</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">motion</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">motion_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Motion'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">panel_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'MotionSequencer'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">fit_to_content</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.motion_module.MotionEditor" title="Link to this definition">¶</a></dt>
+<dd><p>Motion playback, sequencer UI, and pluggable motion modules.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -844,8 +921,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.motion_module.MotionModule">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.motion_module.</span></span><span class="sig-name descname"><span class="pre">MotionModule</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.motion_module.MotionModule" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.motion_module.</span></span><span class="sig-name descname"><span class="pre">MotionModule</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.motion_module.MotionModule" title="Link to this definition">¶</a></dt>
+<dd><p>Base interface for optional MotionEditor processing and visualization.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>name</strong> (<em>str</em>)</p>
@@ -894,8 +971,19 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.motion_module.RootTrajectoryModule">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.motion_module.</span></span><span class="sig-name descname"><span class="pre">RootTrajectoryModule</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">app</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/debug/root_trajectory'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">root_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">line_width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">point_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.motion_module.RootTrajectoryModule" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.motion_module.</span></span><span class="sig-name descname"><span class="pre">RootTrajectoryModule</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">app</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/debug/root_trajectory'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">root_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">line_width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">point_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10.0</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.motion_module.RootTrajectoryModule" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#kangengine.motion_module.MotionModule" title="kangengine.motion_module.MotionModule"><code class="xref py py-class docutils literal notranslate"><span class="pre">MotionModule</span></code></a></p>
+<p>Visualize root positions, directions, and velocities around the playhead.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -949,8 +1037,21 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.motion_module.TrackingModule">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.motion_module.</span></span><span class="sig-name descname"><span class="pre">TrackingModule</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">app</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/debug/motion_tracking'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">joint_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">joint_indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">joint_semantics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">line_width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">point_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">9.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.motion_module.TrackingModule" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.motion_module.</span></span><span class="sig-name descname"><span class="pre">TrackingModule</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">app</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/debug/motion_tracking'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">joint_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">joint_indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">joint_semantics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">line_width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">point_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">9.0</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.motion_module.TrackingModule" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#kangengine.motion_module.MotionModule" title="kangengine.motion_module.MotionModule"><code class="xref py py-class docutils literal notranslate"><span class="pre">MotionModule</span></code></a></p>
+<p>Visualize selected joint trajectories and velocities around the playhead.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -1006,8 +1107,21 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.motion_module.ContactModule">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.motion_module.</span></span><span class="sig-name descname"><span class="pre">ContactModule</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">app</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/debug/motion_contacts'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">foot_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">foot_indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">foot_semantics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">point_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.motion_module.ContactModule" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.motion_module.</span></span><span class="sig-name descname"><span class="pre">ContactModule</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">app</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/debug/motion_contacts'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">foot_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">foot_indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">foot_semantics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">point_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20.0</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.motion_module.ContactModule" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#kangengine.motion_module.MotionModule" title="kangengine.motion_module.MotionModule"><code class="xref py py-class docutils literal notranslate"><span class="pre">MotionModule</span></code></a></p>
+<p>Estimate and visualize foot contacts from motion samples.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -1063,7 +1177,22 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.motion_module.TargetModule">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.motion_module.</span></span><span class="sig-name descname"><span class="pre">TargetModule</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">app</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/debug/motion_target'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_semantic</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">JointSemantic.RIGHT_HAND</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.25,</span> <span class="pre">0.15,</span> <span class="pre">0.0)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_euler_extrinsic_xyz_deg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.0,</span> <span class="pre">0.0,</span> <span class="pre">0.0)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_transform</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset_frame</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'root'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">point_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">18.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">line_width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.motion_module.TargetModule" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.motion_module.</span></span><span class="sig-name descname"><span class="pre">TargetModule</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">app</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/debug/motion_target'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">source_semantic</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">JointSemantic.RIGHT_HAND</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">source_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">target_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.25,</span> <span class="pre">0.15,</span> <span class="pre">0.0)</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">target_euler_extrinsic_xyz_deg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.0,</span> <span class="pre">0.0,</span> <span class="pre">0.0)</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">target_transform</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">offset_frame</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'root'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">point_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">18.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">line_width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.0</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.motion_module.TargetModule" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#kangengine.motion_module.MotionModule" title="kangengine.motion_module.MotionModule"><code class="xref py py-class docutils literal notranslate"><span class="pre">MotionModule</span></code></a></p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -1202,6 +1331,7 @@
 </dd></dl>
 
 </section>
+</section>
 
         </article>
       </div>
@@ -1259,6 +1389,7 @@
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">ke.motion_module</a><ul>
+<li><a class="reference internal" href="#api-overview">API overview</a><ul>
 <li><a class="reference internal" href="#kangengine.motion_module.MotionSampleData"><code class="docutils literal notranslate"><span class="pre">MotionSampleData</span></code></a><ul>
 <li><a class="reference internal" href="#kangengine.motion_module.MotionSampleData.from_motion"><code class="docutils literal notranslate"><span class="pre">MotionSampleData.from_motion()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.motion_module.MotionSampleData.joint_indices"><code class="docutils literal notranslate"><span class="pre">MotionSampleData.joint_indices()</span></code></a></li>
@@ -1366,6 +1497,8 @@
 <li><a class="reference internal" href="#kangengine.motion_module.TargetModule.target_world_transform"><code class="docutils literal notranslate"><span class="pre">TargetModule.target_world_transform()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.motion_module.TargetModule.ui"><code class="docutils literal notranslate"><span class="pre">TargetModule.ui()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.motion_module.TargetModule.update"><code class="docutils literal notranslate"><span class="pre">TargetModule.update()</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

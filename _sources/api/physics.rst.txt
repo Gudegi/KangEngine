@@ -5,6 +5,20 @@ Low-level PhysX world, rigid body, articulation, and visual sync APIs.
 
 .. currentmodule:: kangengine.physics
 
+API overview
+------------
+
+.. autosummary::
+   :nosignatures:
+
+   PhysicsConfig
+   PhysicsWorld
+   ArticulationConfig
+   Articulation
+   PhysicsBridge
+   GpuPhysicsConfig
+   PhysicsGpuSystem
+
 Wrapper and lifetime policy
 ---------------------------
 
@@ -24,7 +38,35 @@ Contact queries and GPU state views expose backend-owned state. Treat
 refresh, or clear operations may update or invalidate the underlying storage.
 Copy returned array-like data explicitly when a stable snapshot is required.
 
+
+Return and error contracts
+--------------------------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 32 68
+
+   * - API
+     - Contract
+   * - ``PhysicsGpuSystem.views()`` and GPU buffer accessors
+     - Borrowed device storage owned by the GPU system. Fetch and apply methods
+       update it; releasing or invalidating the system invalidates the view.
+   * - ``PhysicsWorld.get_contacts()`` and ``get_contact_forces(...)``
+     - Current-query data only. Copy values that must remain stable across later
+       simulation or clear operations.
+   * - Resource and actor wrappers
+     - Native handles tied to their owning world. Using them after world release
+       raises ``RuntimeError`` or results in an invalid native handle.
+
+Invalid indices and names generally raise ``KeyError`` or ``IndexError``;
+invalid shapes and configuration values raise ``ValueError``; unavailable
+PhysX/CUDA features and invalid lifecycle state raise ``RuntimeError``.
+
 .. autoclass:: PhysicsConfig
+   :special-members: __init__
+
+.. autoclass:: PhysicsGpuDynamicsConfig
+   :special-members: __init__
 
 .. autoclass:: PhysicsMaterialDesc
 
@@ -41,12 +83,14 @@ Copy returned array-like data explicitly when a stable snapshot is required.
 .. autoclass:: PhysicsWorld
 
 .. autoclass:: ArticulationConfig
+   :special-members: __init__
 
 .. autoclass:: Articulation
 
 .. autoclass:: PhysicsBridge
 
 .. autoclass:: GpuPhysicsConfig
+   :special-members: __init__
 
 .. autoclass:: PhysicsGpuStateViews
 

@@ -1,6 +1,21 @@
 # ke.geometry
 
 Data-only procedural mesh factories. These functions return mesh payloads and
+
+## API overview
+
+```{eval-rst}
+.. currentmodule:: kangengine.geometry
+
+.. autosummary::
+   :nosignatures:
+
+   create_box_data
+   create_plane_data
+   create_sphere_data
+   create_capsule_data
+   create_arrow_data
+```
 do not create scene prims, renderer resources, or physics actors.
 
 ```{eval-rst}

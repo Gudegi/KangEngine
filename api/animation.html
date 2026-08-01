@@ -11,7 +11,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=a7642cbd" />
+    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=eebc5524" />
     
     
 
@@ -208,6 +208,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/VIDEO_RECORDING.html">Video Recording</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/DEBUG_VISUALIZATION.html">Debug Visualization and Text Rendering</a></li>
 </ul>
 </li>
@@ -220,6 +221,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VIEWER_SYNC.html">Viewer Synchronization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RUN_MODES.html">Simulation Run Modes</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/motion_animation/INDEX.html">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="simple">
@@ -304,74 +306,139 @@
 types for these bridges, but the public <code class="docutils literal notranslate"><span class="pre">kangengine.animation</span></code> module removes
 them. Python code should use <code class="docutils literal notranslate"><span class="pre">ke.visual.ArticulationVisual</span></code> or
 <code class="docutils literal notranslate"><span class="pre">ke.visual.SkeletalVisual</span></code> for viewer-side objects.</p>
+<section id="api-overview">
+<h2>API overview<a class="headerlink" href="#api-overview" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SkeletonTree</span></code></a></p></td>
+<td><p>Read-only skeleton hierarchy with local bind transforms.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SkeletonMotion</span></code></a></p></td>
+<td><p>Sampled skeleton animation clip with root motion and local rotations.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.animation.SkeletonState" title="kangengine.animation.SkeletonState"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SkeletonState</span></code></a></p></td>
+<td><p>Pose state for a SkeletonTree, stored as root translation and rotations.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.animation.Transform" title="kangengine.animation.Transform"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Transform</span></code></a></p></td>
+<td><p>Forward-kinematics transform result.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.animation.cpu_skin" title="kangengine.animation.cpu_skin"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cpu_skin</span></code></a></p></td>
+<td><p>CPU-skin bind-space positions and normals with current bone matrices.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.animation.cpu_skin">
-<span class="sig-prename descclassname"><span class="pre">kangengine.animation.</span></span><span class="sig-name descname"><span class="pre">cpu_skin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bind_positions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bind_normals</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bone_indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.int32</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bone_weights</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bone_node_indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.int32</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inverse_bind_matrices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">current_global_matrices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="headerlink" href="#kangengine.animation.cpu_skin" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">kangengine.animation.</span></span><span class="sig-name descname"><span class="pre">cpu_skin</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">bind_positions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">bind_normals</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">bone_indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.int32</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">bone_weights</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">bone_node_indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.int32</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">inverse_bind_matrices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">current_global_matrices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.animation.cpu_skin" title="Link to this definition">¶</a></dt>
 <dd><p>CPU-skin bind-space positions and normals with current bone matrices.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.animation.compute_skinning_matrices">
-<span class="sig-prename descclassname"><span class="pre">kangengine.animation.</span></span><span class="sig-name descname"><span class="pre">compute_skinning_matrices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bone_node_indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.int32</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inverse_bind_matrices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">current_global_matrices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.typing.NDArray</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.animation.compute_skinning_matrices" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">kangengine.animation.</span></span><span class="sig-name descname"><span class="pre">compute_skinning_matrices</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">bone_node_indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.int32</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">inverse_bind_matrices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">current_global_matrices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.typing.NDArray</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.animation.compute_skinning_matrices" title="Link to this definition">¶</a></dt>
 <dd><p>Compute skinning matrices from skeleton globals and inverse binds.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.animation.compute_skinning_matrices_into">
-<span class="sig-prename descclassname"><span class="pre">kangengine.animation.</span></span><span class="sig-name descname"><span class="pre">compute_skinning_matrices_into</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bone_node_indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.int32</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inverse_bind_matrices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">current_global_matrices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.typing.NDArray</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.animation.compute_skinning_matrices_into" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">kangengine.animation.</span></span><span class="sig-name descname"><span class="pre">compute_skinning_matrices_into</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">bone_node_indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.int32</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">inverse_bind_matrices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">current_global_matrices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">output</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.typing.NDArray</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.animation.compute_skinning_matrices_into" title="Link to this definition">¶</a></dt>
 <dd><p>Compute skinning matrices into an existing output array.</p>
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonTree">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.animation.</span></span><span class="sig-name descname"><span class="pre">SkeletonTree</span></span><a class="headerlink" href="#kangengine.animation.SkeletonTree" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Read-only skeleton hierarchy with local bind transforms.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.animation.</span></span><span class="sig-name descname"><span class="pre">SkeletonTree</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.animation.SkeletonTree" title="Link to this definition">¶</a></dt>
+<dd><p>Read-only skeleton hierarchy with local bind transforms.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonTree.local_rotation">
-<span class="sig-name descname"><span class="pre">local_rotation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">kangengine.animation.SkeletonTree</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">glm::qua&lt;float,</span> <span class="pre">(glm::qualifier)0&gt;</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonTree.local_rotation" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">local_rotation</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">SkeletonTree</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">glm::qua&lt;float,</span> <span class="pre">(glm::qualifier)0&gt;</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonTree.local_rotation" title="Link to this definition">¶</a></dt>
 <dd><p>Return local bind rotation for a joint.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonTree.local_translation">
-<span class="sig-name descname"><span class="pre">local_translation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">kangengine.animation.SkeletonTree</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">glm::vec&lt;3,</span> <span class="pre">float,</span> <span class="pre">(glm::qualifier)0&gt;</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonTree.local_translation" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">local_translation</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">SkeletonTree</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">glm::vec&lt;3,</span> <span class="pre">float,</span> <span class="pre">(glm::qualifier)0&gt;</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonTree.local_translation" title="Link to this definition">¶</a></dt>
 <dd><p>Return local bind translation for a joint.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonTree.node_name">
-<span class="sig-name descname"><span class="pre">node_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">kangengine.animation.SkeletonTree</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonTree.node_name" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">node_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">SkeletonTree</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonTree.node_name" title="Link to this definition">¶</a></dt>
 <dd><p>Return a joint name by index.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonTree.node_names">
-<span class="sig-name descname"><span class="pre">node_names</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">kangengine.animation.SkeletonTree</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonTree.node_names" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">node_names</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">SkeletonTree</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonTree.node_names" title="Link to this definition">¶</a></dt>
 <dd><p>Return all joint names.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonTree.num_joints">
-<span class="sig-name descname"><span class="pre">num_joints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">kangengine.animation.SkeletonTree</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonTree.num_joints" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">num_joints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">SkeletonTree</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonTree.num_joints" title="Link to this definition">¶</a></dt>
 <dd><p>Return the number of joints/nodes.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonTree.parent_index">
-<span class="sig-name descname"><span class="pre">parent_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">kangengine.animation.SkeletonTree</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonTree.parent_index" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">parent_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">SkeletonTree</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonTree.parent_index" title="Link to this definition">¶</a></dt>
 <dd><p>Return a joint’s parent index, or -1 for the root.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonTree.parent_indices">
-<span class="sig-name descname"><span class="pre">parent_indices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">kangengine.animation.SkeletonTree</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonTree.parent_indices" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">parent_indices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">SkeletonTree</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonTree.parent_indices" title="Link to this definition">¶</a></dt>
 <dd><p>Return parent index for each joint.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonTree.print">
-<span class="sig-name descname"><span class="pre">print</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">kangengine.animation.SkeletonTree</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonTree.print" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">print</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">SkeletonTree</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonTree.print" title="Link to this definition">¶</a></dt>
 <dd><p>Print the skeleton hierarchy for debugging.</p>
 </dd></dl>
 
@@ -379,84 +446,125 @@ them. Python code should use <code class="docutils literal notranslate"><span cl
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.animation.</span></span><span class="sig-name descname"><span class="pre">SkeletonMotion</span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Sampled skeleton animation clip with root motion and local rotations.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.animation.</span></span><span class="sig-name descname"><span class="pre">SkeletonMotion</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion" title="Link to this definition">¶</a></dt>
+<dd><p>Sampled skeleton animation clip with root motion and local rotations.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.duration">
-<span class="sig-name descname"><span class="pre">duration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">kangengine.animation.SkeletonMotion</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.duration" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">duration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">SkeletonMotion</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.duration" title="Link to this definition">¶</a></dt>
 <dd><p>Return the clip duration in seconds.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.fps">
-<span class="sig-name descname"><span class="pre">fps</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">kangengine.animation.SkeletonMotion</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.fps" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">fps</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">SkeletonMotion</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.fps" title="Link to this definition">¶</a></dt>
 <dd><p>Return the clip frame rate in Hz.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.frame">
-<span class="sig-name descname"><span class="pre">frame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">kangengine.animation.SkeletonMotion</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">KE::Animation::SkeletonState</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.frame" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">frame</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">SkeletonMotion</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">frame_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">KE::Animation::SkeletonState</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.frame" title="Link to this definition">¶</a></dt>
 <dd><p>Return a SkeletonState for a frame.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.local_rotation">
-<span class="sig-name descname"><span class="pre">local_rotation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">kangengine.animation.SkeletonMotion</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">joint</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">glm::qua&lt;float,</span> <span class="pre">(glm::qualifier)0&gt;</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.local_rotation" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">local_rotation</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">SkeletonMotion</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">joint</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">glm::qua&lt;float,</span> <span class="pre">(glm::qualifier)0&gt;</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.local_rotation" title="Link to this definition">¶</a></dt>
 <dd><p>Return local joint rotation for a frame.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.local_rotations_wxyz_flat">
-<span class="sig-name descname"><span class="pre">local_rotations_wxyz_flat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">kangengine.animation.SkeletonMotion</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.local_rotations_wxyz_flat" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">local_rotations_wxyz_flat</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">SkeletonMotion</span></a></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.local_rotations_wxyz_flat" title="Link to this definition">¶</a></dt>
 <dd><p>Return local rotations as a flat WXYZ float array.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.motion_name">
-<span class="sig-name descname"><span class="pre">motion_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">kangengine.animation.SkeletonMotion</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.motion_name" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">motion_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">SkeletonMotion</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.motion_name" title="Link to this definition">¶</a></dt>
 <dd><p>Return the motion/clip name.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.node_names">
-<span class="sig-name descname"><span class="pre">node_names</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">kangengine.animation.SkeletonMotion</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.node_names" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">node_names</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">SkeletonMotion</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.node_names" title="Link to this definition">¶</a></dt>
 <dd><p>Return skeleton joint names.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.num_frames">
-<span class="sig-name descname"><span class="pre">num_frames</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">kangengine.animation.SkeletonMotion</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.num_frames" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">num_frames</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">SkeletonMotion</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.num_frames" title="Link to this definition">¶</a></dt>
 <dd><p>Return the number of sampled frames.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.num_joints">
-<span class="sig-name descname"><span class="pre">num_joints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">kangengine.animation.SkeletonMotion</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.num_joints" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">num_joints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">SkeletonMotion</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.num_joints" title="Link to this definition">¶</a></dt>
 <dd><p>Return the number of joints.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.parent_indices">
-<span class="sig-name descname"><span class="pre">parent_indices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">kangengine.animation.SkeletonMotion</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.parent_indices" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">parent_indices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">SkeletonMotion</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.parent_indices" title="Link to this definition">¶</a></dt>
 <dd><p>Return skeleton parent indices.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.root_translation">
-<span class="sig-name descname"><span class="pre">root_translation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">kangengine.animation.SkeletonMotion</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">glm::vec&lt;3,</span> <span class="pre">float,</span> <span class="pre">(glm::qualifier)0&gt;</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.root_translation" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">root_translation</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">SkeletonMotion</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">glm::vec&lt;3,</span> <span class="pre">float,</span> <span class="pre">(glm::qualifier)0&gt;</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.root_translation" title="Link to this definition">¶</a></dt>
 <dd><p>Return root translation for a frame.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.root_translations_flat">
-<span class="sig-name descname"><span class="pre">root_translations_flat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">kangengine.animation.SkeletonMotion</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.root_translations_flat" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">root_translations_flat</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">SkeletonMotion</span></a></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.root_translations_flat" title="Link to this definition">¶</a></dt>
 <dd><p>Return root translations as a flat float array.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.sample">
-<span class="sig-name descname"><span class="pre">sample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">kangengine.animation.SkeletonMotion</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">time</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loop</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">KE::Animation::SkeletonState</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.sample" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">sample</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">SkeletonMotion</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">time</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">loop</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">KE::Animation::SkeletonState</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.sample" title="Link to this definition">¶</a></dt>
 <dd><p>Sample a SkeletonState at time in seconds.</p>
 </dd></dl>
 
@@ -464,9 +572,8 @@ them. Python code should use <code class="docutils literal notranslate"><span cl
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.animation.Transform">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.animation.</span></span><span class="sig-name descname"><span class="pre">Transform</span></span><a class="headerlink" href="#kangengine.animation.Transform" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Forward-kinematics transform result.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.animation.</span></span><span class="sig-name descname"><span class="pre">Transform</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.animation.Transform" title="Link to this definition">¶</a></dt>
+<dd><p>Forward-kinematics transform result.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.animation.Transform.rotation">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">rotation</span></span><a class="headerlink" href="#kangengine.animation.Transform.rotation" title="Link to this definition">¶</a></dt>
@@ -483,60 +590,99 @@ them. Python code should use <code class="docutils literal notranslate"><span cl
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonState">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.animation.</span></span><span class="sig-name descname"><span class="pre">SkeletonState</span></span><a class="headerlink" href="#kangengine.animation.SkeletonState" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Pose state for a SkeletonTree, stored as root translation and rotations.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.animation.</span></span><span class="sig-name descname"><span class="pre">SkeletonState</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.animation.SkeletonState" title="Link to this definition">¶</a></dt>
+<dd><p>Pose state for a SkeletonTree, stored as root translation and rotations.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonState.compute_global_matrices">
-<span class="sig-name descname"><span class="pre">compute_global_matrices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonState" title="kangengine.animation.SkeletonState"><span class="pre">kangengine.animation.SkeletonState</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.typing.NDArray</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonState.compute_global_matrices" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">compute_global_matrices</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonState" title="kangengine.animation.SkeletonState"><span class="pre">SkeletonState</span></a></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.typing.NDArray</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonState.compute_global_matrices" title="Link to this definition">¶</a></dt>
 <dd><p>Compute global FK matrices for all joints.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonState.compute_global_positions">
-<span class="sig-name descname"><span class="pre">compute_global_positions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonState" title="kangengine.animation.SkeletonState"><span class="pre">kangengine.animation.SkeletonState</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list[glm::vec&lt;3,</span> <span class="pre">float,</span> <span class="pre">(glm::qualifier)0&gt;]</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonState.compute_global_positions" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">compute_global_positions</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonState" title="kangengine.animation.SkeletonState"><span class="pre">SkeletonState</span></a></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list[glm::vec&lt;3,</span> <span class="pre">float,</span> <span class="pre">(glm::qualifier)0&gt;]</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonState.compute_global_positions" title="Link to this definition">¶</a></dt>
 <dd><p>Compute global joint positions.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonState.compute_global_transforms">
-<span class="sig-name descname"><span class="pre">compute_global_transforms</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonState" title="kangengine.animation.SkeletonState"><span class="pre">kangengine.animation.SkeletonState</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#kangengine.animation.Transform" title="kangengine.animation.Transform"><span class="pre">kangengine.animation.Transform</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonState.compute_global_transforms" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">compute_global_transforms</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonState" title="kangengine.animation.SkeletonState"><span class="pre">SkeletonState</span></a></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#kangengine.animation.Transform" title="kangengine.animation.Transform"><span class="pre">Transform</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonState.compute_global_transforms" title="Link to this definition">¶</a></dt>
 <dd><p>Compute global FK transforms for all joints.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonState.from_rotation_and_root_translation">
-<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_rotation_and_root_translation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tree</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">kangengine.animation.SkeletonTree</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">rotations</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">root_translation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_local</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.animation.SkeletonState" title="kangengine.animation.SkeletonState"><span class="pre">kangengine.animation.SkeletonState</span></a></span></span><a class="headerlink" href="#kangengine.animation.SkeletonState.from_rotation_and_root_translation" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_rotation_and_root_translation</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">tree</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">SkeletonTree</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">rotations</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">root_translation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">is_local</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.animation.SkeletonState" title="kangengine.animation.SkeletonState"><span class="pre">SkeletonState</span></a></span></span><a class="headerlink" href="#kangengine.animation.SkeletonState.from_rotation_and_root_translation" title="Link to this definition">¶</a></dt>
 <dd><p>Create a pose from rotations and root translation.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonState.is_local">
-<span class="sig-name descname"><span class="pre">is_local</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonState" title="kangengine.animation.SkeletonState"><span class="pre">kangengine.animation.SkeletonState</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonState.is_local" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">is_local</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonState" title="kangengine.animation.SkeletonState"><span class="pre">SkeletonState</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonState.is_local" title="Link to this definition">¶</a></dt>
 <dd><p>Return true if rotations are stored in local space.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonState.num_joints">
-<span class="sig-name descname"><span class="pre">num_joints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonState" title="kangengine.animation.SkeletonState"><span class="pre">kangengine.animation.SkeletonState</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonState.num_joints" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">num_joints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonState" title="kangengine.animation.SkeletonState"><span class="pre">SkeletonState</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonState.num_joints" title="Link to this definition">¶</a></dt>
 <dd><p>Return the number of joints.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonState.print_global_positions">
-<span class="sig-name descname"><span class="pre">print_global_positions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonState" title="kangengine.animation.SkeletonState"><span class="pre">kangengine.animation.SkeletonState</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonState.print_global_positions" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">print_global_positions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonState" title="kangengine.animation.SkeletonState"><span class="pre">SkeletonState</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonState.print_global_positions" title="Link to this definition">¶</a></dt>
 <dd><p>Print global joint positions for debugging.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonState.root_translation">
-<span class="sig-name descname"><span class="pre">root_translation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonState" title="kangengine.animation.SkeletonState"><span class="pre">kangengine.animation.SkeletonState</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">glm::vec&lt;3,</span> <span class="pre">float,</span> <span class="pre">(glm::qualifier)0&gt;</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonState.root_translation" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">root_translation</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonState" title="kangengine.animation.SkeletonState"><span class="pre">SkeletonState</span></a></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">glm::vec&lt;3,</span> <span class="pre">float,</span> <span class="pre">(glm::qualifier)0&gt;</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonState.root_translation" title="Link to this definition">¶</a></dt>
 <dd><p>Return the root translation.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonState.rotation">
-<span class="sig-name descname"><span class="pre">rotation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonState" title="kangengine.animation.SkeletonState"><span class="pre">kangengine.animation.SkeletonState</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">glm::qua&lt;float,</span> <span class="pre">(glm::qualifier)0&gt;</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonState.rotation" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">rotation</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonState" title="kangengine.animation.SkeletonState"><span class="pre">SkeletonState</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">glm::qua&lt;float,</span> <span class="pre">(glm::qualifier)0&gt;</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonState.rotation" title="Link to this definition">¶</a></dt>
 <dd><p>Return a joint rotation.</p>
 </dd></dl>
 
@@ -570,6 +716,7 @@ them. Python code should use <code class="docutils literal notranslate"><span cl
 
 </dd></dl>
 
+</section>
 </section>
 
         </article>
@@ -628,6 +775,7 @@ them. Python code should use <code class="docutils literal notranslate"><span cl
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">ke.animation</a><ul>
+<li><a class="reference internal" href="#api-overview">API overview</a><ul>
 <li><a class="reference internal" href="#kangengine.animation.cpu_skin"><code class="docutils literal notranslate"><span class="pre">cpu_skin()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.animation.compute_skinning_matrices"><code class="docutils literal notranslate"><span class="pre">compute_skinning_matrices()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.animation.compute_skinning_matrices_into"><code class="docutils literal notranslate"><span class="pre">compute_skinning_matrices_into()</span></code></a></li>
@@ -675,6 +823,8 @@ them. Python code should use <code class="docutils literal notranslate"><span cl
 <li><a class="reference internal" href="#kangengine.animation.SkeletonState.rotation"><code class="docutils literal notranslate"><span class="pre">SkeletonState.rotation()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.animation.SkeletonState.set_root_translation"><code class="docutils literal notranslate"><span class="pre">SkeletonState.set_root_translation()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.animation.SkeletonState.set_rotation"><code class="docutils literal notranslate"><span class="pre">SkeletonState.set_rotation()</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

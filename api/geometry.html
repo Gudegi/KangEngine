@@ -11,7 +11,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=a7642cbd" />
+    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=eebc5524" />
     
     
 
@@ -208,6 +208,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/VIDEO_RECORDING.html">Video Recording</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/DEBUG_VISUALIZATION.html">Debug Visualization and Text Rendering</a></li>
 </ul>
 </li>
@@ -220,6 +221,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VIEWER_SYNC.html">Viewer Synchronization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RUN_MODES.html">Simulation Run Modes</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/motion_animation/INDEX.html">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="simple">
@@ -298,56 +300,141 @@
         <article role="main" id="furo-main-content">
           <section id="ke-geometry">
 <h1>ke.geometry<a class="headerlink" href="#ke-geometry" title="Link to this heading">¶</a></h1>
-<p>Data-only procedural mesh factories. These functions return mesh payloads and
-do not create scene prims, renderer resources, or physics actors.</p>
+<p>Data-only procedural mesh factories. These functions return mesh payloads and</p>
+<section id="api-overview">
+<h2>API overview<a class="headerlink" href="#api-overview" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.geometry.create_box_data" title="kangengine.geometry.create_box_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">create_box_data</span></code></a></p></td>
+<td><p>Create a box mesh payload with independent axis lengths.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.geometry.create_plane_data" title="kangengine.geometry.create_plane_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">create_plane_data</span></code></a></p></td>
+<td><p>Create a plane mesh payload.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.geometry.create_sphere_data" title="kangengine.geometry.create_sphere_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">create_sphere_data</span></code></a></p></td>
+<td><p>Create a UV sphere mesh payload.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.geometry.create_capsule_data" title="kangengine.geometry.create_capsule_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">create_capsule_data</span></code></a></p></td>
+<td><p>Create a capsule mesh payload.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.geometry.create_arrow_data" title="kangengine.geometry.create_arrow_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">create_arrow_data</span></code></a></p></td>
+<td><p>Create an arrow mesh payload.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>do not create scene prims, renderer resources, or physics actors.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.geometry.create_cube_data">
-<span class="sig-prename descclassname"><span class="pre">kangengine.geometry.</span></span><span class="sig-name descname"><span class="pre">create_cube_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="scene.html#kangengine.scene.MeshData" title="kangengine.scene.MeshData"><span class="pre">kangengine.scene.MeshData</span></a></span></span><a class="headerlink" href="#kangengine.geometry.create_cube_data" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">kangengine.geometry.</span></span><span class="sig-name descname"><span class="pre">create_cube_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="scene.html#kangengine.scene.MeshData" title="kangengine.scene.MeshData"><span class="pre">MeshData</span></a></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.geometry.create_cube_data" title="Link to this definition">¶</a></dt>
 <dd><p>Create a cube mesh payload.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.geometry.create_box_data">
-<span class="sig-prename descclassname"><span class="pre">kangengine.geometry.</span></span><span class="sig-name descname"><span class="pre">create_box_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x_scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="scene.html#kangengine.scene.MeshData" title="kangengine.scene.MeshData"><span class="pre">kangengine.scene.MeshData</span></a></span></span><a class="headerlink" href="#kangengine.geometry.create_box_data" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">kangengine.geometry.</span></span><span class="sig-name descname"><span class="pre">create_box_data</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">x_scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">y_scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">z_scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="scene.html#kangengine.scene.MeshData" title="kangengine.scene.MeshData"><span class="pre">MeshData</span></a></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.geometry.create_box_data" title="Link to this definition">¶</a></dt>
 <dd><p>Create a box mesh payload with independent axis lengths.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.geometry.create_plane_data">
-<span class="sig-prename descclassname"><span class="pre">kangengine.geometry.</span></span><span class="sig-name descname"><span class="pre">create_plane_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.UpAxis</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;UpAxis.Y:</span> <span class="pre">1&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="scene.html#kangengine.scene.MeshData" title="kangengine.scene.MeshData"><span class="pre">kangengine.scene.MeshData</span></a></span></span><a class="headerlink" href="#kangengine.geometry.create_plane_data" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">kangengine.geometry.</span></span><span class="sig-name descname"><span class="pre">create_plane_data</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.UpAxis</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;UpAxis.Y:</span> <span class="pre">1&gt;</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="scene.html#kangengine.scene.MeshData" title="kangengine.scene.MeshData"><span class="pre">MeshData</span></a></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.geometry.create_plane_data" title="Link to this definition">¶</a></dt>
 <dd><p>Create a plane mesh payload.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.geometry.create_sphere_data">
-<span class="sig-prename descclassname"><span class="pre">kangengine.geometry.</span></span><span class="sig-name descname"><span class="pre">create_sphere_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_longitudes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_latitudes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="scene.html#kangengine.scene.MeshData" title="kangengine.scene.MeshData"><span class="pre">kangengine.scene.MeshData</span></a></span></span><a class="headerlink" href="#kangengine.geometry.create_sphere_data" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">kangengine.geometry.</span></span><span class="sig-name descname"><span class="pre">create_sphere_data</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">num_longitudes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">num_latitudes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="scene.html#kangengine.scene.MeshData" title="kangengine.scene.MeshData"><span class="pre">MeshData</span></a></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.geometry.create_sphere_data" title="Link to this definition">¶</a></dt>
 <dd><p>Create a UV sphere mesh payload.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.geometry.create_cylinder_data">
-<span class="sig-prename descclassname"><span class="pre">kangengine.geometry.</span></span><span class="sig-name descname"><span class="pre">create_cylinder_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.UpAxis</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;UpAxis.Y:</span> <span class="pre">1&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">segments</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">32</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="scene.html#kangengine.scene.MeshData" title="kangengine.scene.MeshData"><span class="pre">kangengine.scene.MeshData</span></a></span></span><a class="headerlink" href="#kangengine.geometry.create_cylinder_data" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">kangengine.geometry.</span></span><span class="sig-name descname"><span class="pre">create_cylinder_data</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.UpAxis</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;UpAxis.Y:</span> <span class="pre">1&gt;</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">segments</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">32</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="scene.html#kangengine.scene.MeshData" title="kangengine.scene.MeshData"><span class="pre">MeshData</span></a></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.geometry.create_cylinder_data" title="Link to this definition">¶</a></dt>
 <dd><p>Create a cylinder mesh payload.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.geometry.create_capsule_data">
-<span class="sig-prename descclassname"><span class="pre">kangengine.geometry.</span></span><span class="sig-name descname"><span class="pre">create_capsule_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.UpAxis</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;UpAxis.Y:</span> <span class="pre">1&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">segments</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">32</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="scene.html#kangengine.scene.MeshData" title="kangengine.scene.MeshData"><span class="pre">kangengine.scene.MeshData</span></a></span></span><a class="headerlink" href="#kangengine.geometry.create_capsule_data" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">kangengine.geometry.</span></span><span class="sig-name descname"><span class="pre">create_capsule_data</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.UpAxis</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;UpAxis.Y:</span> <span class="pre">1&gt;</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">segments</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">32</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="scene.html#kangengine.scene.MeshData" title="kangengine.scene.MeshData"><span class="pre">MeshData</span></a></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.geometry.create_capsule_data" title="Link to this definition">¶</a></dt>
 <dd><p>Create a capsule mesh payload.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.geometry.create_cone_data">
-<span class="sig-prename descclassname"><span class="pre">kangengine.geometry.</span></span><span class="sig-name descname"><span class="pre">create_cone_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.UpAxis</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;UpAxis.Y:</span> <span class="pre">1&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">segments</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">32</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="scene.html#kangengine.scene.MeshData" title="kangengine.scene.MeshData"><span class="pre">kangengine.scene.MeshData</span></a></span></span><a class="headerlink" href="#kangengine.geometry.create_cone_data" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">kangengine.geometry.</span></span><span class="sig-name descname"><span class="pre">create_cone_data</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.UpAxis</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;UpAxis.Y:</span> <span class="pre">1&gt;</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">segments</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">32</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="scene.html#kangengine.scene.MeshData" title="kangengine.scene.MeshData"><span class="pre">MeshData</span></a></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.geometry.create_cone_data" title="Link to this definition">¶</a></dt>
 <dd><p>Create a cone mesh payload.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.geometry.create_arrow_data">
-<span class="sig-prename descclassname"><span class="pre">kangengine.geometry.</span></span><span class="sig-name descname"><span class="pre">create_arrow_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base_radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.UpAxis</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;UpAxis.Y:</span> <span class="pre">1&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cap_radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cap_height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsFloat</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">segments</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SupportsInt</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">32</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="scene.html#kangengine.scene.MeshData" title="kangengine.scene.MeshData"><span class="pre">kangengine.scene.MeshData</span></a></span></span><a class="headerlink" href="#kangengine.geometry.create_arrow_data" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">kangengine.geometry.</span></span><span class="sig-name descname"><span class="pre">create_arrow_data</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">base_radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">base_height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.UpAxis</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;UpAxis.Y:</span> <span class="pre">1&gt;</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">cap_radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">cap_height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">segments</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">32</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="scene.html#kangengine.scene.MeshData" title="kangengine.scene.MeshData"><span class="pre">MeshData</span></a></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.geometry.create_arrow_data" title="Link to this definition">¶</a></dt>
 <dd><p>Create an arrow mesh payload.</p>
 </dd></dl>
 
+</section>
 </section>
 
         </article>
@@ -406,6 +493,7 @@ do not create scene prims, renderer resources, or physics actors.</p>
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">ke.geometry</a><ul>
+<li><a class="reference internal" href="#api-overview">API overview</a><ul>
 <li><a class="reference internal" href="#kangengine.geometry.create_cube_data"><code class="docutils literal notranslate"><span class="pre">create_cube_data()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.geometry.create_box_data"><code class="docutils literal notranslate"><span class="pre">create_box_data()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.geometry.create_plane_data"><code class="docutils literal notranslate"><span class="pre">create_plane_data()</span></code></a></li>
@@ -414,6 +502,8 @@ do not create scene prims, renderer resources, or physics actors.</p>
 <li><a class="reference internal" href="#kangengine.geometry.create_capsule_data"><code class="docutils literal notranslate"><span class="pre">create_capsule_data()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.geometry.create_cone_data"><code class="docutils literal notranslate"><span class="pre">create_cone_data()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.geometry.create_arrow_data"><code class="docutils literal notranslate"><span class="pre">create_arrow_data()</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

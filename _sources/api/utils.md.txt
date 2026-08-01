@@ -1,6 +1,22 @@
 # ke.utils
 
 Pure Python helpers for joint mapping, math, tensor conversion, colors, and
+
+## API overview
+
+```{eval-rst}
+.. currentmodule:: kangengine.utils
+
+.. autosummary::
+   :nosignatures:
+
+   JointMapper
+   normalize_joint_name
+   as_tensor
+   as_cpu_numpy
+   as_sim_buffer
+   preset_rgba
+```
 debug drawing.
 
 ## Joint Mapping

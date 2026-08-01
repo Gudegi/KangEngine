@@ -3,7 +3,7 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Debug Visualization and Text Rendering" href="DEBUG_VISUALIZATION.html"><link rel="prev" title="Load Assets" href="LOAD_ASSETS.html">
+<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Video Recording" href="VIDEO_RECORDING.html"><link rel="prev" title="Load Assets" href="LOAD_ASSETS.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
         <title>Camera and Viewer - KangEngine Docs</title>
@@ -11,7 +11,7 @@
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="../../_static/kangengine.css?v=a7642cbd" />
+    <link rel="stylesheet" type="text/css" href="../../_static/kangengine.css?v=eebc5524" />
     
     
 
@@ -208,6 +208,7 @@
 <li class="toctree-l3"><a class="reference internal" href="MATERIALS_TEXTURES.html">Materials and Textures</a></li>
 <li class="toctree-l3"><a class="reference internal" href="LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Camera and Viewer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="VIDEO_RECORDING.html">Video Recording</a></li>
 <li class="toctree-l3"><a class="reference internal" href="DEBUG_VISUALIZATION.html">Debug Visualization and Text Rendering</a></li>
 </ul>
 </li>
@@ -220,6 +221,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/VIEWER_SYNC.html">Viewer Synchronization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/RUN_MODES.html">Simulation Run Modes</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../motion_animation/INDEX.html">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="simple">
@@ -317,6 +319,11 @@
 <p>Use <code class="docutils literal notranslate"><span class="pre">ke.keys</span></code> in lifecycle callbacks for keyboard interaction and <code class="docutils literal notranslate"><span class="pre">ke.imgui</span></code>
 for small panels. See <code class="docutils literal notranslate"><span class="pre">python/examples/sim_world_minimal.py</span></code> for pause/reset
 controls and a state panel.</p>
+<p>Viewer capture shortcuts:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">T</span></code>: save one screenshot.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Shift+T</span></code>: start or stop video recording.</p></li>
+</ul>
 <p><img alt="Viewer and ImGui panels" src="../../_images/camera_viewer.png" /></p>
 </section>
 
@@ -325,12 +332,12 @@ controls and a state panel.</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="DEBUG_VISUALIZATION.html">
+          <a class="next-page" href="VIDEO_RECORDING.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Debug Visualization and Text Rendering</div>
+                <div class="title">Video Recording</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>

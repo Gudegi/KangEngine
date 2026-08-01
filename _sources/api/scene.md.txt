@@ -2,6 +2,22 @@
 
 Scene graph, prim hierarchy, components, resource mirrors, and debug drawing.
 
+## API overview
+
+```{eval-rst}
+.. currentmodule:: kangengine.scene
+
+.. autosummary::
+   :nosignatures:
+
+   Prim
+   SceneBackend
+   SceneResourceManager
+   MeshData
+   SkinnedMeshData
+   DebugDraw
+```
+
 ```{eval-rst}
 .. currentmodule:: kangengine.scene
 
@@ -33,6 +49,20 @@ Scene graph, prim hierarchy, components, resource mirrors, and debug drawing.
 
 .. autoclass:: SceneBackend
 ```
+## Return and ownership rules
+
+| API | Return and lifetime contract |
+| --- | --- |
+| `register_mesh/material/texture/shader()` | A runtime `ResourceHandle`; it is not a persistent asset identifier. |
+| `mesh()` | A shared mesh payload, or `None` for an unknown handle. |
+| `material()`, `texture()`, `shader()` | Borrowed engine objects, or `None`; the manager does not own these payloads. |
+| `resource_prim()` | A scene-owned mirror prim, valid until removal, `clear()`, or scene teardown. |
+| `usage_paths()` | A Python list converted from the current usage cache. |
+
+`clear()` removes manager records and their `/.Resources` mirror prims. Keep a
+separate owned reference when a non-owned material, texture, or shader must
+outlive its resource registration.
+
 
 ## Debug geometry
 

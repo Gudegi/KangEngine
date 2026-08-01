@@ -11,7 +11,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=a7642cbd" />
+    <link rel="stylesheet" type="text/css" href="../_static/kangengine.css?v=eebc5524" />
     
     
 
@@ -208,6 +208,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/VIDEO_RECORDING.html">Video Recording</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/DEBUG_VISUALIZATION.html">Debug Visualization and Text Rendering</a></li>
 </ul>
 </li>
@@ -220,6 +221,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VIEWER_SYNC.html">Viewer Synchronization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RUN_MODES.html">Simulation Run Modes</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/motion_animation/INDEX.html">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="simple">
@@ -299,12 +301,37 @@
           <section id="ke-character">
 <h1>ke.character<a class="headerlink" href="#ke-character" title="Link to this heading">¶</a></h1>
 <p>Backend-neutral character, body, joint, site, and collision descriptions.</p>
+<section id="api-overview">
+<h2>API overview<a class="headerlink" href="#api-overview" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.character.CharacterData" title="kangengine.character.CharacterData"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CharacterData</span></code></a></p></td>
+<td><p>Imported character description with skeleton, visual, collision, joint, and site payloads.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.character.JointDesc" title="kangengine.character.JointDesc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JointDesc</span></code></a></p></td>
+<td><p>Joint description imported from robot/character assets.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.character.SiteDesc" title="kangengine.character.SiteDesc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SiteDesc</span></code></a></p></td>
+<td><p>Imported MJCF site description attached to a character body.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.character.InertialDesc" title="kangengine.character.InertialDesc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">InertialDesc</span></code></a></p></td>
+<td><p>Imported body-local inertial properties.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.character.VisualGeomDesc" title="kangengine.character.VisualGeomDesc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">VisualGeomDesc</span></code></a></p></td>
+<td><p>Visual mesh description imported from a character asset.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.character.CollisionGeomDesc" title="kangengine.character.CollisionGeomDesc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CollisionGeomDesc</span></code></a></p></td>
+<td><p>Imported body-local collision geometry description.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 <p id="module-kangengine.character">Character and robot description payload types.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.character.CharacterData">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.character.</span></span><span class="sig-name descname"><span class="pre">CharacterData</span></span><a class="headerlink" href="#kangengine.character.CharacterData" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Imported character description with skeleton, visual, collision, joint, and site payloads.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.character.</span></span><span class="sig-name descname"><span class="pre">CharacterData</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.character.CharacterData" title="Link to this definition">¶</a></dt>
+<dd><p>Imported character description with skeleton, visual, collision, joint, and site payloads.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.character.CharacterData.collision_geoms">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">collision_geoms</span></span><a class="headerlink" href="#kangengine.character.CharacterData.collision_geoms" title="Link to this definition">¶</a></dt>
@@ -351,9 +378,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.character.CollisionGeomDesc">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.character.</span></span><span class="sig-name descname"><span class="pre">CollisionGeomDesc</span></span><a class="headerlink" href="#kangengine.character.CollisionGeomDesc" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Imported body-local collision geometry description.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.character.</span></span><span class="sig-name descname"><span class="pre">CollisionGeomDesc</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.character.CollisionGeomDesc" title="Link to this definition">¶</a></dt>
+<dd><p>Imported body-local collision geometry description.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.character.CollisionGeomDesc.condim">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">condim</span></span><a class="headerlink" href="#kangengine.character.CollisionGeomDesc.condim" title="Link to this definition">¶</a></dt>
@@ -436,9 +462,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.character.CollisionGeomDescType">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.character.</span></span><span class="sig-name descname"><span class="pre">CollisionGeomDescType</span></span><a class="headerlink" href="#kangengine.character.CollisionGeomDescType" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Collision geometry description type imported from character assets.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.character.</span></span><span class="sig-name descname"><span class="pre">CollisionGeomDescType</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.character.CollisionGeomDescType" title="Link to this definition">¶</a></dt>
+<dd><p>Collision geometry description type imported from character assets.</p>
 <p>Members:</p>
 <blockquote>
 <div><p>Capsule</p>
@@ -480,9 +505,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.character.InertialDesc">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.character.</span></span><span class="sig-name descname"><span class="pre">InertialDesc</span></span><a class="headerlink" href="#kangengine.character.InertialDesc" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Imported body-local inertial properties.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.character.</span></span><span class="sig-name descname"><span class="pre">InertialDesc</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.character.InertialDesc" title="Link to this definition">¶</a></dt>
+<dd><p>Imported body-local inertial properties.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.character.InertialDesc.com">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">com</span></span><a class="headerlink" href="#kangengine.character.InertialDesc.com" title="Link to this definition">¶</a></dt>
@@ -511,9 +535,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.character.JointDesc">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.character.</span></span><span class="sig-name descname"><span class="pre">JointDesc</span></span><a class="headerlink" href="#kangengine.character.JointDesc" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Joint description imported from robot/character assets.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.character.</span></span><span class="sig-name descname"><span class="pre">JointDesc</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.character.JointDesc" title="Link to this definition">¶</a></dt>
+<dd><p>Joint description imported from robot/character assets.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.character.JointDesc.axis">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">axis</span></span><a class="headerlink" href="#kangengine.character.JointDesc.axis" title="Link to this definition">¶</a></dt>
@@ -542,9 +565,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.character.SiteDesc">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.character.</span></span><span class="sig-name descname"><span class="pre">SiteDesc</span></span><a class="headerlink" href="#kangengine.character.SiteDesc" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Imported MJCF site description attached to a character body.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.character.</span></span><span class="sig-name descname"><span class="pre">SiteDesc</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.character.SiteDesc" title="Link to this definition">¶</a></dt>
+<dd><p>Imported MJCF site description attached to a character body.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.character.SiteDesc.body_index">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">body_index</span></span><a class="headerlink" href="#kangengine.character.SiteDesc.body_index" title="Link to this definition">¶</a></dt>
@@ -603,9 +625,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.character.SiteDescType">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.character.</span></span><span class="sig-name descname"><span class="pre">SiteDescType</span></span><a class="headerlink" href="#kangengine.character.SiteDescType" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>MJCF site geometry description type.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.character.</span></span><span class="sig-name descname"><span class="pre">SiteDescType</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.character.SiteDescType" title="Link to this definition">¶</a></dt>
+<dd><p>MJCF site geometry description type.</p>
 <p>Members:</p>
 <blockquote>
 <div><p>Sphere</p>
@@ -641,9 +662,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.character.VisualGeomDesc">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.character.</span></span><span class="sig-name descname"><span class="pre">VisualGeomDesc</span></span><a class="headerlink" href="#kangengine.character.VisualGeomDesc" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pybind11_object</span></code></p>
-<p>Visual mesh description imported from a character asset.</p>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.character.</span></span><span class="sig-name descname"><span class="pre">VisualGeomDesc</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.character.VisualGeomDesc" title="Link to this definition">¶</a></dt>
+<dd><p>Visual mesh description imported from a character asset.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.character.VisualGeomDesc.body_index">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">body_index</span></span><a class="headerlink" href="#kangengine.character.VisualGeomDesc.body_index" title="Link to this definition">¶</a></dt>
@@ -682,6 +702,7 @@
 
 </dd></dl>
 
+</section>
 </section>
 
         </article>
@@ -740,6 +761,7 @@
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">ke.character</a><ul>
+<li><a class="reference internal" href="#api-overview">API overview</a><ul>
 <li><a class="reference internal" href="#kangengine.character.CharacterData"><code class="docutils literal notranslate"><span class="pre">CharacterData</span></code></a><ul>
 <li><a class="reference internal" href="#kangengine.character.CharacterData.collision_geoms"><code class="docutils literal notranslate"><span class="pre">CharacterData.collision_geoms</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.character.CharacterData.inertials"><code class="docutils literal notranslate"><span class="pre">CharacterData.inertials</span></code></a></li>
@@ -814,6 +836,8 @@
 <li><a class="reference internal" href="#kangengine.character.VisualGeomDesc.pos"><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc.pos</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.character.VisualGeomDesc.quat"><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc.quat</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.character.VisualGeomDesc.rgba"><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc.rgba</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

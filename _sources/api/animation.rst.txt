@@ -11,6 +11,18 @@ them. Python code should use ``ke.visual.ArticulationVisual`` or
 
 .. currentmodule:: kangengine.animation
 
+API overview
+------------
+
+.. autosummary::
+   :nosignatures:
+
+   SkeletonTree
+   SkeletonMotion
+   SkeletonState
+   Transform
+   cpu_skin
+
 .. autofunction:: cpu_skin
 
 .. autofunction:: compute_skinning_matrices
