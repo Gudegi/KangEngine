@@ -69,9 +69,7 @@ def _check_binding(component, role, body_index, body_name, root_path):
     if component.body_name != body_name:
         raise AssertionError(f"body name mismatch: {component.body_name}")
     if component.articulation_root_path != root_path:
-        raise AssertionError(
-            f"root path mismatch: {component.articulation_root_path}"
-        )
+        raise AssertionError(f"root path mismatch: {component.articulation_root_path}")
 
 
 def _check_articulation_root(
@@ -106,7 +104,9 @@ def _check_collision_shape(component):
     if component.shape_type != ke.scene.CollisionShapeType.Box:
         raise AssertionError(f"shape type mismatch: {component.shape_type}")
     if component.source_geom_index != 0:
-        raise AssertionError(f"source geom index mismatch: {component.source_geom_index}")
+        raise AssertionError(
+            f"source geom index mismatch: {component.source_geom_index}"
+        )
     if component.has_from_to:
         raise AssertionError("box collision shape should not use from/to")
     size = component.size
@@ -182,7 +182,9 @@ def main():
 
         physics = ke.physics.PhysicsWorld(ke.physics.PhysicsConfig.y_up())
         articulation = ke.physics.Articulation.build(
-            physics, ke.asset.MJCFLoader.load(str(mjcf)), ke.physics.ArticulationConfig.fixed_base()
+            physics,
+            ke.asset.MJCFLoader.load(str(mjcf)),
+            ke.physics.ArticulationConfig.fixed_base(),
         )
         physics_bridge = ke.physics.PhysicsBridge()
         physics_bridge.add(articulation, split)
@@ -190,7 +192,9 @@ def main():
             articulation, scene, "/split_robot/collision", False
         )
         if len(collision_prims) != 1:
-            raise AssertionError(f"expected one collision visual, got {len(collision_prims)}")
+            raise AssertionError(
+                f"expected one collision visual, got {len(collision_prims)}"
+            )
         _check_binding(
             collision_prims[0].get_articulation_binding_component(),
             ke.scene.ArticulationPrimRole.CollisionGeom,

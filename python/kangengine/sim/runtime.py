@@ -41,8 +41,7 @@ class SimulationRuntime:
     ):
         if state_access not in ("snapshot", "gpu"):
             raise ValueError(
-                "state_access must be either 'snapshot' or 'gpu', "
-                f"got {state_access!r}"
+                f"state_access must be either 'snapshot' or 'gpu', got {state_access!r}"
             )
         self.world = KangSimWorld(**world_kwargs)
         self.state_access: StateAccess = state_access
@@ -52,9 +51,7 @@ class SimulationRuntime:
         if self.state_access == "gpu" and not self.uses_gpu_sim:
             self.world.release()
             self._is_closed = True
-            raise ValueError(
-                "state_access='gpu' requires sim_device='cuda'"
-            )
+            raise ValueError("state_access='gpu' requires sim_device='cuda'")
 
     @property
     def device(self):
@@ -213,8 +210,7 @@ class SimulationRuntime:
         self._require_open()
         if not self._is_initialized:
             raise RuntimeError(
-                "SimulationRuntime.initialize() must be called after "
-                "registering simulation objects"
+                "SimulationRuntime.initialize() must be called after registering simulation objects"
             )
 
     def __enter__(self):

@@ -98,13 +98,11 @@ class TerrainGrid:
         if not (0 <= row < self.rows and 0 <= col < self.cols):
             raise IndexError("tile row/col out of range")
         if tile.height_field_raw.shape != (self.tile_width, self.tile_length):
-            raise ValueError(
-                "tile shape must match TerrainGrid tile_width/tile_length"
-            )
+            raise ValueError("tile shape must match TerrainGrid tile_width/tile_length")
         r0, c0 = self.tile_origin(row, col)
-        self.height_field_raw[
-            r0 : r0 + self.tile_width, c0 : c0 + self.tile_length
-        ] = tile.height_field_raw
+        self.height_field_raw[r0 : r0 + self.tile_width, c0 : c0 + self.tile_length] = (
+            tile.height_field_raw
+        )
         return self
 
     def fill(self, generator: Callable[[SubTerrain, int, int], SubTerrain]):
@@ -182,7 +180,9 @@ def pyramid_sloped_terrain(
     cy = max((terrain.length - 1) * 0.5, 1.0)
     wx = 1.0 - np.abs(x - cx) / cx
     wy = 1.0 - np.abs(y - cy) / cy
-    max_height = slope * terrain.horizontal_scale * min(terrain.width, terrain.length) * 0.5
+    max_height = (
+        slope * terrain.horizontal_scale * min(terrain.width, terrain.length) * 0.5
+    )
     heights = max_height * np.outer(wx, wy)
     terrain.height_field_raw += np.rint(heights / terrain.vertical_scale).astype(
         np.int16
@@ -246,12 +246,12 @@ def discrete_obstacles_terrain(
     heights = np.array([-max_h, -max_h // 2, max_h // 2, max_h], dtype=np.int16)
     for _ in range(int(num_rects)):
         w = int(rng.integers(min_px, max_px + 1))
-        l = int(rng.integers(min_px, max_px + 1))
-        if w >= terrain.width or l >= terrain.length:
+        length = int(rng.integers(min_px, max_px + 1))
+        if w >= terrain.width or length >= terrain.length:
             continue
         x0 = int(rng.integers(0, terrain.width - w))
-        y0 = int(rng.integers(0, terrain.length - l))
-        terrain.height_field_raw[x0 : x0 + w, y0 : y0 + l] = rng.choice(heights)
+        y0 = int(rng.integers(0, terrain.length - length))
+        terrain.height_field_raw[x0 : x0 + w, y0 : y0 + length] = rng.choice(heights)
 
     half = int(max(0.0, platform_size) / terrain.horizontal_scale * 0.5)
     if half > 0:

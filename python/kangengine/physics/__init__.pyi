@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from typing import Any
 
-
 class PhysicsGpuDynamicsConfig:
     temp_buffer_capacity: int
     max_rigid_contact_count: int
@@ -14,6 +13,7 @@ class PhysicsGpuDynamicsConfig:
     total_aggregate_pairs_capacity: int
     collision_stack_size: int
     max_num_partitions: int
+
 class PhysicsConfig:
     dt: float
     solver_type: int
@@ -30,7 +30,6 @@ class PhysicsConfig:
     @staticmethod
     def z_up() -> PhysicsConfig: ...
 
-
 class PhysicsMaterialDesc:
     static_friction: float
     dynamic_friction: float
@@ -43,18 +42,23 @@ class PhysicsMaterialDesc:
     ) -> None: ...
     def as_tuple(self) -> tuple[float, float, float]: ...
 
-
 class CollisionMaterialOverride:
     body_index: int
     body_name: str
     geom_index: int
     geom_name: str
     material: PhysicsMaterialDesc
-    def __init__(self, material: PhysicsMaterialDesc | Sequence[float] | None = None) -> None: ...
+    def __init__(
+        self, material: PhysicsMaterialDesc | Sequence[float] | None = None
+    ) -> None: ...
     @staticmethod
-    def all_geoms(material: PhysicsMaterialDesc | Sequence[float]) -> CollisionMaterialOverride: ...
+    def all_geoms(
+        material: PhysicsMaterialDesc | Sequence[float],
+    ) -> CollisionMaterialOverride: ...
     @staticmethod
-    def for_body(body_name: str, material: PhysicsMaterialDesc | Sequence[float]) -> CollisionMaterialOverride: ...
+    def for_body(
+        body_name: str, material: PhysicsMaterialDesc | Sequence[float]
+    ) -> CollisionMaterialOverride: ...
     @staticmethod
     def for_geom(
         body_name: str,
@@ -68,11 +72,10 @@ class CollisionMaterialOverride:
         material: PhysicsMaterialDesc | Sequence[float],
     ) -> CollisionMaterialOverride: ...
 
-
 def mjcf_friction_to_physx(friction: Sequence[float]) -> PhysicsMaterialDesc: ...
 
-
 class ContactPoint: ...
+
 class RigidDynamic:
     def get_root_position(self) -> Any: ...
     def get_root_rotation(self) -> Any: ...
@@ -90,15 +93,12 @@ class RigidDynamic:
     def add_force(self, force: Any) -> None: ...
     def add_force_at_position(self, force: Any, position: Any) -> None: ...
 
-
 class NativePhysicsWorld: ...
 class NativeArticulation: ...
 class NativePhysicsBridge: ...
 class NativePhysicsGpuSystem: ...
 
-
 def unwrap_native(obj: Any) -> Any: ...
-
 
 class PhysicsWorld:
     native: NativePhysicsWorld
@@ -175,10 +175,16 @@ class PhysicsWorld:
         storage.
         """
         ...
-    def get_ground_contact_forces(self, articulation: Articulation | NativeArticulation) -> Any: ...
-    def get_rigid_contact_force(self, rigid: RigidDynamic, ground_only: bool = False) -> Any: ...
+    def get_ground_contact_forces(
+        self, articulation: Articulation | NativeArticulation
+    ) -> Any: ...
+    def get_rigid_contact_force(
+        self, rigid: RigidDynamic, ground_only: bool = False
+    ) -> Any: ...
     def get_rigid_ground_contact_force(self, rigid: RigidDynamic) -> Any: ...
-    def set_rigid_collision_material(self, rigid: RigidDynamic, material: PhysicsMaterialDesc) -> int: ...
+    def set_rigid_collision_material(
+        self, rigid: RigidDynamic, material: PhysicsMaterialDesc
+    ) -> int: ...
     def set_rigid_collision_material_overrides(
         self,
         rigid: RigidDynamic,
@@ -197,7 +203,6 @@ class PhysicsWorld:
         material_overrides: Sequence[CollisionMaterialOverride] = ...,
     ) -> RigidDynamic: ...
     def set_dt(self, dt: float) -> None: ...
-
 
 class ArticulationConfig:
     fix_base: bool
@@ -220,6 +225,7 @@ class ArticulationConfig:
     def fixed_base() -> ArticulationConfig: ...
     @staticmethod
     def free_base() -> ArticulationConfig: ...
+
 class Articulation:
     native: NativeArticulation
     def __init__(self, native_articulation: Any | None = None) -> None: ...
@@ -241,11 +247,12 @@ class Articulation:
         material_overrides: Sequence[CollisionMaterialOverride],
     ) -> int: ...
 
-
 class PhysicsBridge:
     native: NativePhysicsBridge
     def __init__(self) -> None: ...
-    def add(self, artic: Articulation | NativeArticulation, skel_bridge: Any) -> None: ...
+    def add(
+        self, artic: Articulation | NativeArticulation, skel_bridge: Any
+    ) -> None: ...
     def sync(self) -> None: ...
     def set_collision_visible(self, visible: bool) -> None: ...
     def add_collision_visuals(
@@ -256,9 +263,9 @@ class PhysicsBridge:
         visible_by_default: bool = False,
     ) -> Any: ...
 
-
 class GpuPhysicsConfig: ...
 class PhysicsGpuStateViews: ...
+
 class PhysicsGpuSystem:
     native: NativePhysicsGpuSystem
     def __init__(
@@ -266,7 +273,9 @@ class PhysicsGpuSystem:
         world: PhysicsWorld | NativePhysicsWorld,
         config: GpuPhysicsConfig | None = None,
     ) -> None: ...
-    def articulation_row(self, articulation: Articulation | NativeArticulation) -> int: ...
+    def articulation_row(
+        self, articulation: Articulation | NativeArticulation
+    ) -> int: ...
     def rigid_row(self, rigid: RigidDynamic) -> int: ...
     def views(self) -> PhysicsGpuStateViews:
         """Return borrowed GPU state views owned by this PhysicsGpuSystem.
@@ -277,7 +286,6 @@ class PhysicsGpuSystem:
         synchronization, or refresh operations.
         """
         ...
-
 
 aggregate_contact_sensors_cuda: Callable[..., Any] | None
 

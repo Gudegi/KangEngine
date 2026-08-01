@@ -31,8 +31,7 @@ class GridCloner:
         self.num_envs = world.num_envs if num_envs is None else int(num_envs)
         if self.num_envs != world.num_envs:
             raise ValueError(
-                "GridCloner num_envs must match world.num_envs: "
-                f"{self.num_envs} != {world.num_envs}"
+                f"GridCloner num_envs must match world.num_envs: {self.num_envs} != {world.num_envs}"
             )
         self.spacing = self._normalize_spacing(spacing)
         self.columns = (
@@ -208,9 +207,7 @@ class GridCloner:
             dtype=torch.float32,
             device=self.world.device,
         )
-        origins[:, 0] = (
-            env_ids.remainder(self.columns).float() * self.spacing[0]
-        )
+        origins[:, 0] = env_ids.remainder(self.columns).float() * self.spacing[0]
         origins[:, 1] = (
             torch.div(env_ids, self.columns, rounding_mode="floor").float()
             * self.spacing[1]
@@ -244,6 +241,5 @@ class GridCloner:
         if tensor.ndim == 2 and tuple(tensor.shape) == (len(selected), width):
             return tensor.contiguous()
         raise ValueError(
-            f"{name} must have shape ({width},) or "
-            f"({len(selected)}, {width}), got {tuple(tensor.shape)}"
+            f"{name} must have shape ({width},) or ({len(selected)}, {width}), got {tuple(tensor.shape)}"
         )

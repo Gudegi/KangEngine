@@ -31,9 +31,7 @@ class MyApp(ke.App):
             color=ke.vec4(0.8, 0.3, 0.02, 1.0),
         )
         box.set_local_translation(ke.vec3(0.0, 2.0, 0.0))
-        box.set_local_rotation_axis_angle(
-            ke.vec3(0.0, 1.0, 0.0), np.deg2rad(25.0)
-        )
+        box.set_local_rotation_axis_angle(ke.vec3(0.0, 1.0, 0.0), np.deg2rad(25.0))
 
         # Box2
         box2 = self.scene.add_mesh(

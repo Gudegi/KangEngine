@@ -132,8 +132,7 @@ class ContactSensor:
     def _gpu_rows(self):
         if self._kind == 0:
             return tuple(
-                self.world.rigid_gpu_row(env_id, self.obj_id)
-                for env_id in self.env_ids
+                self.world.rigid_gpu_row(env_id, self.obj_id) for env_id in self.env_ids
             )
         return tuple(
             self.world.articulation_gpu_row(env_id, self.obj_id)
@@ -271,9 +270,7 @@ class _ContactSensorBatch:
             device=device,
         )
         row_map_tensor = torch.tensor(row_maps, dtype=torch.int32, device=device)
-        body_map_tensor = torch.tensor(
-            body_maps, dtype=torch.int32, device=device
-        )
+        body_map_tensor = torch.tensor(body_maps, dtype=torch.int32, device=device)
         contact_count = torch.zeros(output_offset, dtype=torch.int32, device=device)
         in_contact = torch.zeros(output_offset, dtype=torch.bool, device=device)
         net_impulse = torch.zeros(

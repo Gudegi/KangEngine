@@ -20,7 +20,6 @@ import numpy as np
 import torch
 
 
-
 RIGID_COUNT = 8
 VALIDATION_STEPS = 4
 CONTACT_RIGID_ROWS = (0, 1)
@@ -76,7 +75,11 @@ def _expected_after_steps(pos, rot, linear_velocity, angular_velocity, dt, steps
     position = (
         np.asarray(pos, dtype=np.float32)
         + np.asarray(linear_velocity, dtype=np.float32) * dt * step_count
-        + gravity * (dt * dt) * step_count * (step_count + np.float32(1.0)) * np.float32(0.5)
+        + gravity
+        * (dt * dt)
+        * step_count
+        * (step_count + np.float32(1.0))
+        * np.float32(0.5)
     )
     return np.array(
         [
@@ -297,8 +300,7 @@ def _assert_sparse_root_state_apply(world, gpu_system, rigid_state, rigid_view, 
     torch.cuda.synchronize(0)
     if rigid_view.version != previous_version + 1:
         raise AssertionError(
-            "expected rigid data version to advance after sparse apply, "
-            f"got {rigid_view.version}"
+            f"expected rigid data version to advance after sparse apply, got {rigid_view.version}"
         )
 
     world.step()
@@ -417,14 +419,10 @@ def main():
     torch.cuda.synchronize(0)
     if articulation_link_view.version != 2:
         raise AssertionError(
-            "expected articulation link data version 2 after pose/velocity fetch, "
-            f"got {articulation_link_view.version}"
+            f"expected articulation link data version 2 after pose/velocity fetch, got {articulation_link_view.version}"
         )
     np.testing.assert_allclose(
-        articulation_link_state[articulation_row, 0, 7:13]
-        .detach()
-        .cpu()
-        .numpy(),
+        articulation_link_state[articulation_row, 0, 7:13].detach().cpu().numpy(),
         np.zeros(6, dtype=np.float32),
         rtol=1e-5,
         atol=1e-5,
@@ -447,12 +445,8 @@ def main():
     articulation_qvel_view = gpu_system.articulation_joint_velocities()
     articulation_qacc_view = gpu_system.articulation_joint_accelerations()
     articulation_qf_view = gpu_system.articulation_joint_forces()
-    articulation_target_qpos_view = (
-        gpu_system.articulation_target_joint_positions()
-    )
-    articulation_target_qvel_view = (
-        gpu_system.articulation_target_joint_velocities()
-    )
+    articulation_target_qpos_view = gpu_system.articulation_target_joint_positions()
+    articulation_target_qvel_view = gpu_system.articulation_target_joint_velocities()
     articulation_incoming_joint_force_view = (
         gpu_system.articulation_link_incoming_joint_forces()
     )
@@ -526,14 +520,10 @@ def main():
         ("target qpos", articulation_target_qpos),
         ("target qvel", articulation_target_qvel),
     ):
-        if not torch.isfinite(
-            tensor[articulation_row, :articulation_dof_count]
-        ).all():
+        if not torch.isfinite(tensor[articulation_row, :articulation_dof_count]).all():
             raise AssertionError(f"articulation GPU {label} contains non-finite values")
     if not torch.isfinite(
-        articulation_incoming_joint_force[
-            articulation_row, :articulation_link_count, :
-        ]
+        articulation_incoming_joint_force[articulation_row, :articulation_link_count, :]
     ).all():
         raise AssertionError(
             "articulation GPU incoming joint force contains non-finite values"
@@ -592,9 +582,7 @@ def main():
     articulation_target_qpos[articulation_row, 0] = command_target_qpos
     articulation_target_qvel[articulation_row, 0] = command_target_qvel
     gpu_system.apply_articulation_joint_forces(sparse_articulation_index_view)
-    gpu_system.apply_articulation_target_joint_positions(
-        sparse_articulation_index_view
-    )
+    gpu_system.apply_articulation_target_joint_positions(sparse_articulation_index_view)
     gpu_system.apply_articulation_target_joint_velocities(
         sparse_articulation_index_view
     )
@@ -736,9 +724,7 @@ def main():
             f"expected rigid torque version 2 after sparse apply, got {torque_view.version}"
         )
     rigid_force[0] = torch.tensor([1.0, 2.0, 3.0], device="cuda:0")
-    rigid_torque[RIGID_COUNT - 1] = torch.tensor(
-        [-3.0, -2.0, -1.0], device="cuda:0"
-    )
+    rigid_torque[RIGID_COUNT - 1] = torch.tensor([-3.0, -2.0, -1.0], device="cuda:0")
     gpu_system.clear_rigid_commands(sparse_index_view)
     torch.cuda.synchronize(0)
     if force_view.version != 3 or torque_view.version != 3:
@@ -780,8 +766,7 @@ def main():
         f"{articulation_qf_view.version}"
     )
     print(
-        f"  target ver   : {articulation_target_qpos_view.version} / "
-        f"{articulation_target_qvel_view.version}"
+        f"  target ver   : {articulation_target_qpos_view.version} / {articulation_target_qvel_view.version}"
     )
     print(
         f"  incoming f   : {articulation_incoming_joint_force_view.shape} "
@@ -954,9 +939,7 @@ def main():
     )
     print(f"  version      : {contact_pairs_view.version}")
 
-    _assert_sparse_root_state_apply(
-        world, gpu_system, rigid_state, rigid_view, config
-    )
+    _assert_sparse_root_state_apply(world, gpu_system, rigid_state, rigid_view, config)
 
     del rigid_state
     del rigid_force

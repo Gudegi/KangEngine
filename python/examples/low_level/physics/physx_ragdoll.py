@@ -9,7 +9,7 @@ kp in code for active pose holding.
 import os
 
 import kangengine as ke
-from kangengine import asset, imgui, keys, scene, visual
+from kangengine import asset, imgui, keys, visual
 
 
 def asset_path(*parts):
@@ -92,9 +92,7 @@ class RagdollApp(ke.App):
         self.reset()
 
         print(
-            "Ragdoll loaded: "
-            f"{self.articulation.num_links()} links, "
-            f"{self.articulation.num_dofs()} DOFs"
+            f"Ragdoll loaded: {self.articulation.num_links()} links, {self.articulation.num_dofs()} DOFs"
         )
         print("Defaults: kp=0.0, kd=5.0, free base, Z-up")
         self.check_error()
@@ -208,8 +206,7 @@ if __name__ == "__main__":
     ]
     if missing:
         raise RuntimeError(
-            "This example requires KangEngine to be built with PhysX bindings. "
-            f"Missing: {', '.join(missing)}"
+            f"This example requires KangEngine to be built with PhysX bindings. Missing: {', '.join(missing)}"
         )
 
     app = RagdollApp()

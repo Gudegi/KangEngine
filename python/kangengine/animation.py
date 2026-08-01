@@ -1,10 +1,11 @@
 """Animation, skeleton, skinning, and character bridge APIs."""
+
 from __future__ import annotations
 
 from ._core import _ke
 from ._public import export_public_module
 
-export_public_module(_ke.animation, globals())
+__all__ = export_public_module(_ke.animation, globals())
 
 # Visual objects are implemented in the native animation binding for now, but
 # the public Python surface owns them under ``kangengine.visual``.

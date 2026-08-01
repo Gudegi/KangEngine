@@ -19,9 +19,7 @@ def target_tensor(num_dofs: int, sim_time: float, *, device) -> torch.Tensor:
     dof_ids = torch.arange(num_dofs, dtype=torch.float32, device=device)
     phase = dof_ids * 0.37
     frequency = 1.2 + 0.15 * torch.remainder(dof_ids, 5.0)
-    return 0.45 * torch.sin(
-        2.0 * torch.pi * frequency * float(sim_time) + phase
-    )
+    return 0.45 * torch.sin(2.0 * torch.pi * frequency * float(sim_time) + phase)
 
 
 def configure_drives(articulation, num_dofs: int, kp: float, kd: float):
@@ -69,9 +67,7 @@ def summarize(
     window_motion = (last_window[1:] - last_window[:-1]).abs().mean().item()
     tracking_error = (q[-1] - target[-1]).abs().mean().item()
     print(
-        f"{name:16s} | max_delta={delta: .4f} "
-        f"last_motion={window_motion: .6f} "
-        f"final_err={tracking_error: .4f}"
+        f"{name:16s} | max_delta={delta: .4f} last_motion={window_motion: .6f} final_err={tracking_error: .4f}"
     )
     return {
         "max_delta": float(delta),
@@ -156,8 +152,12 @@ def run_gpu_explicit_pd(steps: int, kp: float, kd: float, cuda_device: int):
         world.step(substeps=0, refresh=False, apply_commands=False)
         row = world.articulation_gpu_row(0, OBJ_ID)
         device = torch.device(f"cuda:{cuda_device}")
-        kp_array = torch.full((num_dofs,), float(kp), dtype=torch.float32, device=device)
-        kd_array = torch.full((num_dofs,), float(kd), dtype=torch.float32, device=device)
+        kp_array = torch.full(
+            (num_dofs,), float(kp), dtype=torch.float32, device=device
+        )
+        kd_array = torch.full(
+            (num_dofs,), float(kd), dtype=torch.float32, device=device
+        )
         q_samples = []
         target_samples = []
         for _ in range(steps):

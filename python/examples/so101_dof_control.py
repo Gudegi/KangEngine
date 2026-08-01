@@ -13,6 +13,7 @@ import torch
 from mjcf_dof_control import MjcfDofControlApp
 import kangengine as ke
 from kangengine import imgui
+from kangengine.lbfgs_ik import MJCFLBFGSIK
 
 # python python/examples/so101_dof_control.py   --robot-port /dev/ttyACM1   --robot-id my_so101_follower   --max-relative-target 10
 
@@ -35,6 +36,7 @@ SO101_IK_JOINT_NAMES = (
     "wrist_roll",
 )
 
+
 def default_so101_xml() -> Path:
     return (
         Path(__file__).resolve().parents[2]
@@ -45,7 +47,7 @@ def default_so101_xml() -> Path:
         / "so101_new_calib.xml"
     )
 
-from kangengine.lbfgs_ik import MJCFLBFGSIK
+
 class SO101LBFGSIK(MJCFLBFGSIK):
     """SO-101 preset with LeRobot-style action conversion."""
 
@@ -78,6 +80,7 @@ class SO101LBFGSIK(MJCFLBFGSIK):
         }
         action["gripper.pos"] = float(gripper_percent)
         return action
+
 
 class SO101DofControlApp(MjcfDofControlApp):
     window_title = "SO101 DOF Control"
@@ -376,9 +379,7 @@ class SO101DofControlApp(MjcfDofControlApp):
         )
         if self.ik_follow_ball:
             self.animate = False
-        _, self.ik_auto_ball = imgui.checkbox(
-            "Animate target ball", self.ik_auto_ball
-        )
+        _, self.ik_auto_ball = imgui.checkbox("Animate target ball", self.ik_auto_ball)
         _, self.ik_solve_hz = imgui.slider_float(
             "IK solve Hz", self.ik_solve_hz, 1.0, 60.0
         )

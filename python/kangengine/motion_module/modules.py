@@ -13,11 +13,11 @@ from .editor import (
     TrackingData,
 )
 from ..utils import (
-    JointSemantic, 
-    log_debug_axes, 
-    preset_rgba, 
-    DEFAULT_CONTACT_SEMANTICS, 
-    DEFAULT_TRACKING_SEMANTICS
+    JointSemantic,
+    log_debug_axes,
+    preset_rgba,
+    DEFAULT_CONTACT_SEMANTICS,
+    DEFAULT_TRACKING_SEMANTICS,
 )
 
 imgui = _ke.imgui
@@ -65,6 +65,7 @@ class MotionModule:
 
     def ui(self, editor: MotionEditor) -> bool:
         return False
+
 
 class RootTrajectoryModule(MotionModule):
     def __init__(
@@ -322,6 +323,7 @@ class RootTrajectoryModule(MotionModule):
 
         return is_changed
 
+
 class TrackingModule(MotionModule):
     def __init__(
         self,
@@ -460,9 +462,7 @@ class TrackingModule(MotionModule):
             velocity_starts.append((current_pos + vertical_offset).tolist())
             velocity_ends.append(
                 (
-                    current_pos
-                    + vertical_offset
-                    + velocity * self.velocity_scale
+                    current_pos + vertical_offset + velocity * self.velocity_scale
                 ).tolist()
             )
             velocity_colors.append([*base_color[:3], 0.8])
@@ -583,6 +583,7 @@ class TrackingModule(MotionModule):
 
         return is_changed
 
+
 class ContactModule(MotionModule):
     def __init__(
         self,
@@ -600,9 +601,7 @@ class ContactModule(MotionModule):
         self.foot_names = list(foot_names or [])
         self.foot_indices = list(foot_indices or [])
         self.foot_semantics = list(
-            foot_semantics
-            if foot_semantics is not None
-            else DEFAULT_CONTACT_SEMANTICS
+            foot_semantics if foot_semantics is not None else DEFAULT_CONTACT_SEMANTICS
         )
         self.up_axis = int(up_axis)
         self.point_size = point_size
@@ -718,9 +717,7 @@ class ContactModule(MotionModule):
             vertical_offset = np.array([0.0, 0.035, 0.0], dtype=np.float32)
             velocity = self._velocities[current, foot_slot] * 0.08
             velocity_starts.append((current_pos + vertical_offset).tolist())
-            velocity_ends.append(
-                (current_pos + vertical_offset + velocity).tolist()
-            )
+            velocity_ends.append((current_pos + vertical_offset + velocity).tolist())
             velocity_colors.append(self._contact_color(current_contact, 0.75))
 
         if self.draw_window_points and window_points:
@@ -845,6 +842,7 @@ class ContactModule(MotionModule):
 
         return is_changed
 
+
 class TargetModule(MotionModule):
     OFFSET_FRAMES = ("world", "root", "source")
 
@@ -879,9 +877,7 @@ class TargetModule(MotionModule):
             )
         )
         self.offset_frame = (
-            offset_frame
-            if offset_frame in self.OFFSET_FRAMES
-            else "root"
+            offset_frame if offset_frame in self.OFFSET_FRAMES else "root"
         )
         self.point_size = float(point_size)
         self.line_width = float(line_width)
@@ -1064,9 +1060,7 @@ class TargetModule(MotionModule):
             self._last_key = None
             is_changed = True
 
-        for axis, label in enumerate(
-            ("target pos X", "target pos Y", "target pos Z")
-        ):
+        for axis, label in enumerate(("target pos X", "target pos Y", "target pos Z")):
             changed, value = imgui.slider_float(
                 f"{label}##{self.name}",
                 float(self.target_transform[axis, 3]),
@@ -1093,10 +1087,8 @@ class TargetModule(MotionModule):
             )
             if changed:
                 self.target_euler_extrinsic_xyz_deg[axis] = value
-                self.target_transform[:3, :3] = (
-                    _rotation_extrinsic_xyz_degrees(
-                        self.target_euler_extrinsic_xyz_deg
-                    )
+                self.target_transform[:3, :3] = _rotation_extrinsic_xyz_degrees(
+                    self.target_euler_extrinsic_xyz_deg
                 )
                 self._last_key = None
                 is_changed = True

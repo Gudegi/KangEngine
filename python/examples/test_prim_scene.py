@@ -4,7 +4,8 @@ Demonstrates Token, Prim, and attribute system usage.
 """
 
 import sys
-sys.path.insert(0, './bindings')
+
+sys.path.insert(0, "./bindings")
 
 import kangengine as ke
 from kangengine import scene
@@ -60,7 +61,9 @@ if color_alpha:
     print(f"Display color alpha: {color_alpha}")
 
 # Test has_attribute
-print(f"Has 'primvars:displaycolor': {cube_prim.has_attribute('primvars:displaycolor')}")
+print(
+    f"Has 'primvars:displaycolor': {cube_prim.has_attribute('primvars:displaycolor')}"
+)
 print(f"Has 'nonexistent': {cube_prim.has_attribute('nonexistent')}")
 
 # Test compute_model_matrix

@@ -45,6 +45,7 @@ from .utils import (
     MIXAMO,
     preset_rgba,
 )
+
 # TODO: Keep Torch-heavy modules lazy until CUDA context interop is explicit.
 # This avoids accidental Torch CUDA initialization before PhysX GPU setup.
 _LAZY_IMPORTS = {
@@ -93,6 +94,7 @@ def __getattr__(name):
     value = getattr(import_module(module_name, __name__), attr_name)
     globals()[name] = value
     return value
+
 
 # Core engine API. Keep top-level exports focused on common viewer/app usage;
 # heavier simulation and MimicKit APIs stay lazy via _LAZY_IMPORTS.
@@ -171,6 +173,7 @@ __all__ = [
     "scene",
     "asset",
     "animation",
+    "character",
     "geometry",
     "input",
     "material",

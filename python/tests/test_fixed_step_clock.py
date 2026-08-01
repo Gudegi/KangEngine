@@ -52,5 +52,6 @@ class FixedStepClockTest(unittest.TestCase):
             places=9,
         )
 
+
 if __name__ == "__main__":
     unittest.main()

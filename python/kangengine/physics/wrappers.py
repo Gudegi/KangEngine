@@ -8,6 +8,7 @@ availability is checked when native objects are actually constructed or used.
 Performance rule: wrappers may validate, unwrap, and forward; they must not add
 per-body/per-step Python loops around native bulk calls.
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
@@ -30,9 +31,7 @@ def _native_attr(name: str) -> Any:
     try:
         return getattr(native_module, name)
     except AttributeError as exc:
-        raise RuntimeError(
-            f"KangEngine PhysX binding is missing {name!r}."
-        ) from exc
+        raise RuntimeError(f"KangEngine PhysX binding is missing {name!r}.") from exc
 
 
 def unwrap_native(obj: Any) -> Any:
@@ -247,9 +246,7 @@ class PhysicsWorld(_NativeWrapper):
         rot_xyzw: Sequence[float] = (0.0, 0.0, 0.0, 1.0),
         density: float = 1.0,
     ) -> RigidDynamic:
-        return self._native.create_dynamic_box(
-            half_extents, pos, rot_xyzw, density
-        )
+        return self._native.create_dynamic_box(half_extents, pos, rot_xyzw, density)
 
     def create_dynamic_sphere(
         self,
@@ -270,20 +267,24 @@ class PhysicsWorld(_NativeWrapper):
         simulation steps or synchronization calls may update the underlying
         storage.
         """
-        return self._native.get_contact_forces(
-            unwrap_native(articulation), ground_only
-        )
+        return self._native.get_contact_forces(unwrap_native(articulation), ground_only)
 
-    def get_ground_contact_forces(self, articulation: Articulation | NativeArticulation) -> Any:
+    def get_ground_contact_forces(
+        self, articulation: Articulation | NativeArticulation
+    ) -> Any:
         return self._native.get_ground_contact_forces(unwrap_native(articulation))
 
-    def get_rigid_contact_force(self, rigid: RigidDynamic, ground_only: bool = False) -> Any:
+    def get_rigid_contact_force(
+        self, rigid: RigidDynamic, ground_only: bool = False
+    ) -> Any:
         return self._native.get_rigid_contact_force(unwrap_native(rigid), ground_only)
 
     def get_rigid_ground_contact_force(self, rigid: RigidDynamic) -> Any:
         return self._native.get_rigid_ground_contact_force(unwrap_native(rigid))
 
-    def set_rigid_collision_material(self, rigid: RigidDynamic, material: PhysicsMaterialDesc) -> int:
+    def set_rigid_collision_material(
+        self, rigid: RigidDynamic, material: PhysicsMaterialDesc
+    ) -> int:
         return self._native.set_rigid_collision_material(unwrap_native(rigid), material)
 
     def set_rigid_collision_material_overrides(
@@ -401,7 +402,9 @@ class PhysicsGpuSystem(_NativeWrapper):
     """Explicit GPU physics synchronization wrapper."""
 
     def __init__(
-        self, world: PhysicsWorld | NativePhysicsWorld, config: GpuPhysicsConfig | None = None
+        self,
+        world: PhysicsWorld | NativePhysicsWorld,
+        config: GpuPhysicsConfig | None = None,
     ):
         native_module = _require_native()
         if config is None:

@@ -100,12 +100,8 @@ def create_simulation(num_envs: int, cuda_device: int):
         origins = cloner.env_origins.cpu()
         rotations = identity_quaternions(num_envs)
 
-        ball_positions = origins + torch.tensor(
-            [0.0, 1.0, 1.5], dtype=torch.float32
-        )
-        robot_positions = origins + torch.tensor(
-            [0.0, 0.0, 1.0], dtype=torch.float32
-        )
+        ball_positions = origins + torch.tensor([0.0, 1.0, 1.5], dtype=torch.float32)
+        robot_positions = origins + torch.tensor([0.0, 0.0, 1.0], dtype=torch.float32)
         robots.set_dof_state(
             None,
             torch.zeros((num_envs, robots.num_dofs), dtype=torch.float32),
@@ -136,9 +132,7 @@ def create_cuda_commands(
     base_frequency: float,
 ):
     device = torch.device(f"cuda:{cuda_device}")
-    targets = torch.zeros(
-        (num_envs, num_dofs), dtype=torch.float32, device=device
-    )
+    targets = torch.zeros((num_envs, num_dofs), dtype=torch.float32, device=device)
     kp = torch.empty_like(targets)
     kd = torch.empty_like(targets)
     noise = torch.empty_like(targets)
@@ -179,8 +173,7 @@ def update_random_position_targets(
     control_mode: str,
 ):
     targets.copy_(
-        noise_scale
-        * torch.sin(2.0 * torch.pi * frequency * float(sim_time) + phase)
+        noise_scale * torch.sin(2.0 * torch.pi * frequency * float(sim_time) + phase)
     )
     noise.uniform_(-noise_scale * 0.08, noise_scale * 0.08, generator=generator)
     targets.add_(noise).clamp_(-noise_scale, noise_scale)
@@ -246,9 +239,9 @@ def reset_scene(
         ball_positions[selected_envs]
         + torch.tensor([0.0, 0.0, 1.0], dtype=torch.float32),
         rotations[selected_envs],
-        linear_velocity=torch.tensor(
-            [0.0, -1.0, 0.0], dtype=torch.float32
-        ).repeat(count, 1),
+        linear_velocity=torch.tensor([0.0, -1.0, 0.0], dtype=torch.float32).repeat(
+            count, 1
+        ),
         angular_velocity=zeros3[selected_envs],
     )
     robots.set_root_state(
@@ -311,8 +304,7 @@ def run_headless(args):
         pd_kd.fill_(float(args.pd_kd))
 
         print(
-            f"  Torch cmd     : {device} "
-            f"({args.control_mode}, continuous randomized targets)"
+            f"  Torch cmd     : {device} ({args.control_mode}, continuous randomized targets)"
         )
 
         reset_step = args.steps // 2

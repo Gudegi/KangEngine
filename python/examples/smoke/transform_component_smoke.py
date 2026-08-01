@@ -55,9 +55,7 @@ def main():
     _close_tuple(_vec3_tuple(child.get_local_translation()), (0.0, 2.0, 0.0))
     _close_tuple(_vec3_tuple(child.get_world_translation()), (1.0, 2.0, 0.0))
     _close_tuple(_translation(child.compute_world_matrix()), (1.0, 2.0, 0.0))
-    _close_tuple(
-        _translation(child_transform.compute_world_matrix()), (1.0, 2.0, 0.0)
-    )
+    _close_tuple(_translation(child_transform.compute_world_matrix()), (1.0, 2.0, 0.0))
 
     version = child_transform.version
     parent.set_local_translation(ke.vec3(3.0, 0.0, 0.0))
@@ -92,9 +90,7 @@ def main():
         local_rotation = tuple(-value for value in local_rotation)
     _close_tuple(local_rotation, expected_local_rotation)
 
-    child_transform.set_world_rotation_axis_angle(
-        ke.vec3(0.0, 1.0, 0.0), math.pi / 4.0
-    )
+    child_transform.set_world_rotation_axis_angle(ke.vec3(0.0, 1.0, 0.0), math.pi / 4.0)
     expected_world_rotation = (
         math.cos(math.pi / 8.0),
         0.0,

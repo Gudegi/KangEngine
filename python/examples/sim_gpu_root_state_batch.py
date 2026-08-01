@@ -54,7 +54,9 @@ def main():
         gpu_system = world.init_gpu_system(cuda_device_id=args.cuda_device)
         print("KangSimWorld PhysX GPU root-state batch")
         print(f"  envs       : {args.num_envs}")
-        print(f"  rigid rows : {[world.rigid_gpu_row(i, 0) for i in range(args.num_envs)]}")
+        print(
+            f"  rigid rows : {[world.rigid_gpu_row(i, 0) for i in range(args.num_envs)]}"
+        )
 
         selected_envs = list(range(1, args.num_envs, 2))
         index_view = world.rigid_gpu_index_view(selected_envs, obj_id=0)

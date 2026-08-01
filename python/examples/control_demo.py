@@ -12,7 +12,7 @@ import os
 import torch
 
 import kangengine as ke
-from kangengine import imgui, keys, scene
+from kangengine import imgui, keys
 
 
 def asset_path(*parts: str) -> str:
@@ -58,12 +58,8 @@ class ControlDemo(ke.App):
             shader.set_uniform_block_binding("shadowUBO", 2)
 
         self.ground_shader.use()
-        self.ground_shader.set_vec4(
-            "checkerColor1", ke.vec4([1.0, 1.0, 1.0, 1.0])
-        )
-        self.ground_shader.set_vec4(
-            "checkerColor2", ke.vec4([0.77, 0.93, 0.78, 1.0])
-        )
+        self.ground_shader.set_vec4("checkerColor1", ke.vec4([1.0, 1.0, 1.0, 1.0]))
+        self.ground_shader.set_vec4("checkerColor2", ke.vec4([0.77, 0.93, 0.78, 1.0]))
 
         self.world = ke.sim.KangSimWorld(
             num_envs=1,
@@ -138,7 +134,9 @@ class ControlDemo(ke.App):
             linear_velocity=zero3,
             angular_velocity=zero3,
         )
-        self.world.set_dof_state(None, 0, torch.zeros(self.num_dofs, dtype=torch.float32))
+        self.world.set_dof_state(
+            None, 0, torch.zeros(self.num_dofs, dtype=torch.float32)
+        )
         self.world.set_root_state(
             None,
             1,

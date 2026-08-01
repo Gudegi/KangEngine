@@ -29,16 +29,13 @@ class VideoRecorder:
             raise ValueError("fps must be finite and positive")
         if output_path is None and not retain_frames and frame_dir is None:
             raise ValueError(
-                "VideoRecorder requires output_path, retain_frames=True, "
-                "or frame_dir"
+                "VideoRecorder requires output_path, retain_frames=True, or frame_dir"
             )
 
         self.output_path = (
             None if output_path is None else Path(output_path).expanduser()
         )
-        self.frame_dir = (
-            None if frame_dir is None else Path(frame_dir).expanduser()
-        )
+        self.frame_dir = None if frame_dir is None else Path(frame_dir).expanduser()
         self.codec = None if codec is None else str(codec)
         self.retain_frames = bool(retain_frames)
         self._fps = fps
@@ -94,16 +91,14 @@ class VideoRecorder:
         rgb = np.asarray(frame, dtype=np.uint8)
         if rgb.ndim != 3 or rgb.shape[-1] != 3:
             raise ValueError(
-                "expected RGB frame with shape [H, W, 3], "
-                f"got {rgb.shape}"
+                f"expected RGB frame with shape [H, W, 3], got {rgb.shape}"
             )
         resolution = (int(rgb.shape[0]), int(rgb.shape[1]))
         if self.frame_count == 0:
             self._resolution = resolution
         elif resolution != self._resolution:
             raise ValueError(
-                f"frame resolution changed from {self._resolution} "
-                f"to {resolution}"
+                f"frame resolution changed from {self._resolution} to {resolution}"
             )
 
         rgb = np.ascontiguousarray(rgb)
@@ -132,8 +127,7 @@ class VideoRecorder:
     def get_frames(self) -> list[np.ndarray]:
         if not self.retain_frames:
             raise RuntimeError(
-                "frames were not retained; construct VideoRecorder with "
-                "retain_frames=True"
+                "frames were not retained; construct VideoRecorder with retain_frames=True"
             )
         return self._frames
 
@@ -149,9 +143,7 @@ class VideoRecorder:
         if self._same_path(path, self._streamed_output):
             return path
         if not self.retain_frames:
-            raise RuntimeError(
-                "saving to a new path requires retain_frames=True"
-            )
+            raise RuntimeError("saving to a new path requires retain_frames=True")
 
         writer = self._open_writer(path)
         try:

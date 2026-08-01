@@ -101,8 +101,7 @@ class FixedUpdateGpuStressApp(ke.App):
         max_updates = max(self.fixed_updates_per_frame, default=0)
         if max_updates > self.args.max_catch_up_steps:
             raise AssertionError(
-                f"catch-up limit exceeded: {max_updates} > "
-                f"{self.args.max_catch_up_steps}"
+                f"catch-up limit exceeded: {max_updates} > {self.args.max_catch_up_steps}"
             )
         if self.args.expect_dropped_time and self.get_dropped_wall_time() <= 0.0:
             raise AssertionError("expected delayed frames to drop wall time")
@@ -121,8 +120,7 @@ class FixedUpdateGpuStressApp(ke.App):
         expected_sim_time = physics_steps / self.args.physics_hz
         if abs(self.final_sim_time - expected_sim_time) > 1.0e-5:
             raise AssertionError(
-                f"simulation time mismatch: {self.final_sim_time} != "
-                f"{expected_sim_time}"
+                f"simulation time mismatch: {self.final_sim_time} != {expected_sim_time}"
             )
 
     def report(self):

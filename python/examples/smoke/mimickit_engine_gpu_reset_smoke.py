@@ -23,11 +23,7 @@ def main():
         visualize=False,
     )
     articulation_xml = str(
-        Path(ke.__file__).resolve().parent
-        / "assets"
-        / "characters"
-        / "kw"
-        / "kw5.xml"
+        Path(ke.__file__).resolve().parent / "assets" / "characters" / "kw" / "kw5.xml"
     )
 
     try:
@@ -67,15 +63,17 @@ def main():
             raise AssertionError("scalar root velocity did not broadcast on CUDA")
 
         num_bodies = engine.get_obj_num_bodies(0)
-        reset_body_pos = torch.tensor(
-            [0.25, -0.5, 1.25], dtype=torch.float32, device=device
-        ).reshape(1, 1, 3).expand(1, num_bodies, 3).contiguous()
+        reset_body_pos = (
+            torch.tensor([0.25, -0.5, 1.25], dtype=torch.float32, device=device)
+            .reshape(1, 1, 3)
+            .expand(1, num_bodies, 3)
+            .contiguous()
+        )
         engine.set_body_pos(reset_ids, 0, reset_body_pos)
         observed = engine.get_body_pos(0)[reset_ids]
         if not torch.allclose(observed, reset_body_pos, atol=1e-6, rtol=0.0):
             raise AssertionError(
-                "MimicKit reset body pose was stale before the physics step: "
-                f"{observed.detach().cpu().tolist()}"
+                f"MimicKit reset body pose was stale before the physics step: {observed.detach().cpu().tolist()}"
             )
 
         peak_force = 0.0
@@ -110,8 +108,7 @@ def main():
             )
 
         print(
-            "PASS: MimicKit GPU reset pose and ground contact "
-            f"peak_force={peak_force:.6f}"
+            f"PASS: MimicKit GPU reset pose and ground contact peak_force={peak_force:.6f}"
         )
     finally:
         engine.release()

@@ -11,7 +11,9 @@ import torch
 def main():
     world = ke.sim.KangSimWorld(num_envs=2, sim_device="cuda", add_ground=False)
     try:
-        ball_xml = Path(ke.__file__).resolve().parent / "assets" / "objects" / "ball.xml"
+        ball_xml = (
+            Path(ke.__file__).resolve().parent / "assets" / "objects" / "ball.xml"
+        )
         data = world.load_mjcf(str(ball_xml))
 
         positions = (
@@ -41,9 +43,7 @@ def main():
         sensor = tracked.add_contact_sensor(body_ids=[0], name="ball_contact")
         force_sensor = tracked.add_force_sensor(body_ids=[0], name="ball_force")
         other = world.get_rigid_batch([0, 1], obj_id=1)
-        other_sensor = other.add_contact_sensor(
-            body_ids=[0], name="other_ball_contact"
-        )
+        other_sensor = other.add_contact_sensor(body_ids=[0], name="other_ball_contact")
         world.init_gpu_system(cuda_device_id=0)
         world.step(refresh=False)
 

@@ -23,7 +23,12 @@ import kangengine as ke
 from kangengine import imgui
 
 CRYTEK_SPONZA_OBJ = (
-    Path(__file__).resolve().parents[2] / "assets" / "external" / "Scenes" / "crytek_sponza" / "sponza.obj"
+    Path(__file__).resolve().parents[2]
+    / "assets"
+    / "external"
+    / "Scenes"
+    / "crytek_sponza"
+    / "sponza.obj"
 )
 
 

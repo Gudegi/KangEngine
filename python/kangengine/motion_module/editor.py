@@ -1,4 +1,4 @@
-""" ImGui motion timeline"""
+"""ImGui motion timeline"""
 
 from __future__ import annotations
 
@@ -12,8 +12,8 @@ from ..utils import (
     DEFAULT_TRACKING_SEMANTICS,
     JointMapper,
     JointSemantic,
-    preset_rgba,
 )
+
 imgui = _ke.imgui
 
 
@@ -127,10 +127,7 @@ class TrackingData:
         unique_indices = []
         for index in indices:
             index = int(index)
-            if (
-                0 <= index < samples.positions.shape[1]
-                and index not in unique_indices
-            ):
+            if 0 <= index < samples.positions.shape[1] and index not in unique_indices:
                 unique_indices.append(index)
         if not unique_indices and samples.positions.shape[1] > 0:
             unique_indices = [0]
@@ -177,10 +174,7 @@ class ContactData:
         unique_indices = []
         for index in indices:
             index = int(index)
-            if (
-                0 <= index < samples.positions.shape[1]
-                and index not in unique_indices
-            ):
+            if 0 <= index < samples.positions.shape[1] and index not in unique_indices:
                 unique_indices.append(index)
 
         names = [
@@ -237,12 +231,8 @@ class MotionCameraFollower:
     def target_at(self, frame_index: int) -> np.ndarray:
         if self.samples.positions.size == 0:
             return self.target_offset.copy()
-        frame = int(
-            np.clip(frame_index, 0, self.samples.positions.shape[0] - 1)
-        )
-        joint = int(
-            np.clip(self.target_index, 0, self.samples.positions.shape[1] - 1)
-        )
+        frame = int(np.clip(frame_index, 0, self.samples.positions.shape[0] - 1))
+        joint = int(np.clip(self.target_index, 0, self.samples.positions.shape[1] - 1))
         return self.samples.positions[frame, joint, :] + self.target_offset
 
     def update(self, camera, frame_index: int, force: bool = False) -> None:
@@ -414,8 +404,7 @@ class MotionEditor:
         current_frame = player.frame_index
 
         imgui.text(
-            f"Frame {current_frame + 1}/{player.num_frames}  "
-            f"{player.time:.3f}s / {player.duration:.3f}s  |  {state}"
+            f"Frame {current_frame + 1}/{player.num_frames}  {player.time:.3f}s / {player.duration:.3f}s  |  {state}"
         )
 
         if imgui.button("Pause" if player.playing else "Play"):
@@ -441,19 +430,17 @@ class MotionEditor:
             self.is_expanded,
             self.selected_track_idx,
             self.legend_width,
-        ) = (
-            imgui.motion_sequencer_resizable(
-                self.panel_name,
-                current_frame,
-                0,
-                max(player.num_frames - 1, 0),
-                self.first_frame,
-                self.is_expanded,
-                self.selected_track_idx,
-                self.motion_name,
-                self.fit_to_content,
-                self.legend_width,
-            )
+        ) = imgui.motion_sequencer_resizable(
+            self.panel_name,
+            current_frame,
+            0,
+            max(player.num_frames - 1, 0),
+            self.first_frame,
+            self.is_expanded,
+            self.selected_track_idx,
+            self.motion_name,
+            self.fit_to_content,
+            self.legend_width,
         )
         if seq_is_changed:
             player.set_frame(current_frame)

@@ -60,9 +60,7 @@ class Gamepad:
         if state is None:
             state = self.state()
         magnitude = math.hypot(state.left_x, state.left_y)
-        drift_threshold = min(
-            0.99, max(0.0, float(drift_threshold))
-        )
+        drift_threshold = min(0.99, max(0.0, float(drift_threshold)))
         if not state.connected or magnitude <= drift_threshold:
             return None
 
@@ -112,9 +110,7 @@ class Gamepad:
         if state is None:
             state = self.state()
         magnitude = math.hypot(state.right_x, state.right_y)
-        drift_threshold = min(
-            0.99, max(0.0, float(drift_threshold))
-        )
+        drift_threshold = min(0.99, max(0.0, float(drift_threshold)))
         if not state.connected or magnitude <= drift_threshold:
             return None
 

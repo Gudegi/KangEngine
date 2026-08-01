@@ -75,12 +75,8 @@ class VideoRecorderTest(unittest.TestCase):
             self.assertEqual(recorder.get_num_frames(), 2)
             self.assertEqual(recorder.get_resolution(), (3, 5))
             self.assertEqual(len(recorder.get_frames()), 2)
-            self.assertTrue(
-                (Path(directory) / "frame_000000.ppm").is_file()
-            )
-            self.assertTrue(
-                (Path(directory) / "frame_000001.ppm").is_file()
-            )
+            self.assertTrue((Path(directory) / "frame_000000.ppm").is_file())
+            self.assertTrue((Path(directory) / "frame_000001.ppm").is_file())
 
     def test_rejects_resolution_changes(self):
         recorder = VideoRecorder(retain_frames=True)
@@ -100,9 +96,7 @@ class VideoRecorderTest(unittest.TestCase):
                 return_value=writer,
             ):
                 with recorder:
-                    recorder.write(
-                        np.zeros((2, 4, 3), dtype=np.uint8)
-                    )
+                    recorder.write(np.zeros((2, 4, 3), dtype=np.uint8))
                 saved_path = recorder.save()
 
             self.assertEqual(saved_path, output_path)
@@ -113,9 +107,7 @@ class VideoRecorderTest(unittest.TestCase):
 
     def test_inactive_write_is_ignored(self):
         recorder = VideoRecorder(retain_frames=True)
-        result = recorder.write(
-            np.zeros((2, 2, 3), dtype=np.uint8)
-        )
+        result = recorder.write(np.zeros((2, 2, 3), dtype=np.uint8))
         self.assertIsNone(result)
         self.assertEqual(recorder.get_num_frames(), 0)
 
@@ -181,8 +173,7 @@ class VideoCaptureControllerTest(unittest.TestCase):
         app = _FakeApp(render_hz=30.0)
         app.read_rgb_pixels = mock.Mock(
             side_effect=[
-                np.full((4, 8, 3), value, dtype=np.uint8)
-                for value in range(30)
+                np.full((4, 8, 3), value, dtype=np.uint8) for value in range(30)
             ]
         )
         clock = _FakeClock()

@@ -7,7 +7,7 @@ import math
 from pathlib import Path
 
 import kangengine as ke
-from kangengine import asset, imgui, scene
+from kangengine import asset, imgui
 
 
 SPONZA_USD = (
@@ -125,7 +125,7 @@ class USDSceneViewer(ke.App):
         camera = self.get_camera()
         camera.set_near_plane(0.5)
         camera.set_far_plane(4000.0)
-        self.set_camera_move_speed(500.)
+        self.set_camera_move_speed(500.0)
         camera.set_fov(58.0)
 
         if self.bounds_min is None or self.bounds_max is None:
@@ -137,7 +137,9 @@ class USDSceneViewer(ke.App):
         size = self.bounds_max - self.bounds_min
         radius = max(float(math.sqrt(float((size * size).sum()))) * 0.5, 1.0)
         distance = radius * 1.15
-        camera.set_target_pos(ke.vec3(float(center[0]), float(center[1]), float(center[2])))
+        camera.set_target_pos(
+            ke.vec3(float(center[0]), float(center[1]), float(center[2]))
+        )
         camera.set_camera_pos(
             ke.vec3(
                 float(center[0] + distance * 0.35),
@@ -235,8 +237,7 @@ def _parse_usd_or_explain(usd_file: str, scale: float):
         message = str(exc)
         if "USD support not compiled" in message:
             raise RuntimeError(
-                "view_usd_scene.py requires KangEngine built with "
-                "-DUSE_USD=ON."
+                "view_usd_scene.py requires KangEngine built with -DUSE_USD=ON."
             ) from exc
         raise
 

@@ -33,6 +33,7 @@ def grid_position(index: int, columns: int, spacing: float, height: float):
     y = row * spacing
     return [x, y, height]
 
+
 # TDOO : make easy Cloner API
 def grid_positions(num_envs: int, columns: int, spacing: float, height: float):
     env_ids = torch.arange(num_envs, dtype=torch.float32)
@@ -159,7 +160,7 @@ class MultiEnvSimWorldApp(ke.App):
             dtype=torch.float32,
         )
         rotations = torch.zeros((self.num_envs, 4), dtype=torch.float32)
-        rotations[:, 3] = 1.0 # quat xyzw
+        rotations[:, 3] = 1.0  # quat xyzw
 
         velocities = torch.zeros((self.num_envs, 3), dtype=torch.float32)
         # +X is downhill for the ramp quaternion above.
@@ -226,17 +227,13 @@ class MultiEnvSimWorldApp(ke.App):
         imgui.separator()
         imgui.text("Runtime friction material test")
         imgui.text(
-            f"switch: {'done' if self.runtime_material_applied else 'pending'} "
-            f"at t={self.friction_switch_time:.2f}s"
+            f"switch: {'done' if self.runtime_material_applied else 'pending'} at t={self.friction_switch_time:.2f}s"
         )
         imgui.text(f"ramp angle: {self.ramp_angle_deg:.1f} deg")
         imgui.text(f"updated shapes: {self.material_update_count}")
         imgui.text(f"low friction envs: {self.low_friction_envs}")
         imgui.text(f"high friction envs: {self.high_friction_envs}")
-        imgui.text(
-            "downhill velocity low/high: "
-            f"{low_speed: .3f} / {high_speed: .3f}"
-        )
+        imgui.text(f"downhill velocity low/high: {low_speed: .3f} / {high_speed: .3f}")
         imgui.end()
 
     def _ramp_spawn_position(self, env_id: int):

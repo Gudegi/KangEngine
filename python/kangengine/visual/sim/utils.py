@@ -41,7 +41,9 @@ def batch_colors(color, env_ids):
             (len(env_ids), 1),
         )
     rows = [
-        normalize_color_array(select_env_visual_value(color, index, len(env_ids), env_id))
+        normalize_color_array(
+            select_env_visual_value(color, index, len(env_ids), env_id)
+        )
         for index, env_id in enumerate(env_ids)
     ]
     return np.stack(rows, axis=0).astype(np.float32, copy=False)

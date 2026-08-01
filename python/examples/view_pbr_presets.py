@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import kangengine as ke
-from kangengine import imgui, scene
+from kangengine import imgui
 
 
 PRESETS = [
@@ -70,7 +70,9 @@ class PBRPresetViewer(ke.App):
         imgui.text("Neutral white light, high gray ambient.")
         imgui.separator()
         for row_start in range(0, len(PRESETS), 4):
-            imgui.text(" / ".join(name for name, _ in PRESETS[row_start : row_start + 4]))
+            imgui.text(
+                " / ".join(name for name, _ in PRESETS[row_start : row_start + 4])
+            )
         imgui.end()
 
 

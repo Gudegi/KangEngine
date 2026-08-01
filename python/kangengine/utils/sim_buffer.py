@@ -135,8 +135,7 @@ def _sim_device(value, sim_device) -> torch.device:
         device = torch.device("cpu")
     if device.type not in ("cpu", "cuda"):
         raise ValueError(
-            "sim_device must be 'cpu', 'cuda', or 'cuda:<ordinal>' "
-            f"(got {sim_device!r})"
+            f"sim_device must be 'cpu', 'cuda', or 'cuda:<ordinal>' (got {sim_device!r})"
         )
     return device
 
@@ -153,9 +152,7 @@ def as_sim_buffer(value, *, shape=None, sim_device=None, dtype=torch.float32):
         tensor = tensor.reshape(shape)
 
     is_cuda = device.type == "cuda"
-    stream_handle = (
-        int(torch.cuda.current_stream(device).cuda_stream) if is_cuda else 0
-    )
+    stream_handle = int(torch.cuda.current_stream(device).cuda_stream) if is_cuda else 0
     return SimBuffer(
         tensor,
         str(device),
@@ -262,8 +259,6 @@ def to_external_transform_desc(
     sync_policy=None,
 ):
     """Build an ExternalBufferDesc for float32 column-major [N, 4, 4] transforms."""
-    from .._core import _ke
-
     buffer = (
         value
         if isinstance(value, SimBuffer)
@@ -274,9 +269,7 @@ def to_external_transform_desc(
             dtype=dtype,
         )
     )
-    if len(buffer.shape) != 3 or tuple(
-        int(dim) for dim in buffer.shape[1:]
-    ) != (4, 4):
+    if len(buffer.shape) != 3 or tuple(int(dim) for dim in buffer.shape[1:]) != (4, 4):
         raise ValueError("transform buffer must have shape [N, 4, 4]")
 
     view = to_gpu_array_view(buffer, name=name)
@@ -289,8 +282,6 @@ def to_external_transform_desc(
     desc.count = int(buffer.shape[0])
     desc.stride_bytes = 0
     desc.sync_policy = (
-        render_api.ExternalSyncPolicy.VERSIONED
-        if sync_policy is None
-        else sync_policy
+        render_api.ExternalSyncPolicy.VERSIONED if sync_policy is None else sync_policy
     )
     return desc, buffer

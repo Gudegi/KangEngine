@@ -1,4 +1,5 @@
 """Character and robot description payload types."""
+
 from __future__ import annotations
 
 from ._core import _ke

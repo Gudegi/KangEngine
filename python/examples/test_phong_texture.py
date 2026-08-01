@@ -13,10 +13,9 @@ path used by commonTex.fs examples.
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 
 import kangengine as ke
-from kangengine import imgui, scene
+from kangengine import imgui
 
 
 class PhongTextureViewer(ke.App):
@@ -86,7 +85,7 @@ class PhongTextureViewer(ke.App):
 
 def main():
     parser = argparse.ArgumentParser()
-    args = parser.parse_args()
+    parser.parse_args()
 
     app = PhongTextureViewer()
     app.initialize(900, 500, False, ke.UpAxis.Z)

@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import kangengine as ke
-from kangengine import imgui, scene
+from kangengine import imgui
 
 
 ROOT = Path("assets/external/PBR/woods/oak-wood-bare-bl")
@@ -75,7 +75,9 @@ class PBROakWoodViewer(ke.App):
         material.roughness_texture = (
             self.oak_textures["roughness"] if self.texture_flags["roughness"] else None
         )
-        material.ao_texture = self.oak_textures["ao"] if self.texture_flags["ao"] else None
+        material.ao_texture = (
+            self.oak_textures["ao"] if self.texture_flags["ao"] else None
+        )
 
     def render(self):
         imgui.begin("PBR Oak Wood")

@@ -3,12 +3,10 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, overload
 
-
 class BackendType(Enum):
     OpenGL: BackendType
     Vulkan: BackendType
     WebGPU: BackendType
-
 
 class TextureRole(Enum):
     BaseColor: TextureRole
@@ -21,12 +19,10 @@ class TextureRole(Enum):
     Roughness: TextureRole
     OcclusionRoughnessMetallic: TextureRole
 
-
 class AlphaMode(Enum):
     Opaque: AlphaMode
     Mask: AlphaMode
     Blend: AlphaMode
-
 
 class ToneMapMode(Enum):
     Off: ToneMapMode
@@ -35,11 +31,9 @@ class ToneMapMode(Enum):
     AcesNarkowicz: ToneMapMode
     AcesFitted: ToneMapMode
 
-
 class TransformSource(Enum):
     SceneGraph: TransformSource
     ExternalBuffer: TransformSource
-
 
 class ExternalBufferFormat(Enum):
     MAT4: ExternalBufferFormat
@@ -47,13 +41,11 @@ class ExternalBufferFormat(Enum):
     POSITION_ROTATION_SCALE: ExternalBufferFormat
     CUSTOM: ExternalBufferFormat
 
-
 class ExternalSyncPolicy(Enum):
     NONE: ExternalSyncPolicy
     VERSIONED: ExternalSyncPolicy
     FENCE: ExternalSyncPolicy
     EVENT: ExternalSyncPolicy
-
 
 class ExternalBufferDesc:
     view: Any
@@ -63,18 +55,15 @@ class ExternalBufferDesc:
     sync_policy: ExternalSyncPolicy
     def __init__(self) -> None: ...
 
-
 class TextureWrap(Enum):
     Repeat: TextureWrap
     ClampToEdge: TextureWrap
     MirroredRepeat: TextureWrap
 
-
 class TextureFilter(Enum):
     Nearest: TextureFilter
     Linear: TextureFilter
     LinearMipmapLinear: TextureFilter
-
 
 class SamplerDesc:
     wrap_u: TextureWrap
@@ -82,7 +71,6 @@ class SamplerDesc:
     min_filter: TextureFilter
     mag_filter: TextureFilter
     def __init__(self) -> None: ...
-
 
 class Shader:
     def use(self) -> None: ...
@@ -94,9 +82,7 @@ class Shader:
     @overload
     def set_color(self, name: str, value: Any) -> None: ...
     @overload
-    def set_color(
-        self, name: str, r: float, g: float, b: float, a: float
-    ) -> None: ...
+    def set_color(self, name: str, r: float, g: float, b: float, a: float) -> None: ...
     @overload
     def set_vec2(self, name: str, value: Any) -> None: ...
     @overload
@@ -108,16 +94,13 @@ class Shader:
     @overload
     def set_vec4(self, name: str, value: Any) -> None: ...
     @overload
-    def set_vec4(
-        self, name: str, x: float, y: float, z: float, w: float
-    ) -> None: ...
+    def set_vec4(self, name: str, x: float, y: float, z: float, w: float) -> None: ...
     def set_mat2(self, name: str, value: Any) -> None: ...
     def set_mat3(self, name: str, value: Any) -> None: ...
     def set_mat4(self, name: str, value: Any) -> None: ...
     def set_uniform_block_binding(
         self, block_name: str, binding_point: int
     ) -> None: ...
-
 
 class Texture:
     @property
@@ -129,21 +112,15 @@ class Texture:
     def get_width(self) -> int: ...
     def get_height(self) -> int: ...
 
-
 class GraphicsDevice:
-    def create_shader(
-        self, vertex_source: str, fragment_source: str
-    ) -> Shader: ...
-    def create_shader_from_file(
-        self, vert_path: str, frag_path: str
-    ) -> Shader: ...
+    def create_shader(self, vertex_source: str, fragment_source: str) -> Shader: ...
+    def create_shader_from_file(self, vert_path: str, frag_path: str) -> Shader: ...
     def create_texture(
         self,
         path: str,
         flip: bool = False,
         sampler: SamplerDesc = ...,
     ) -> Texture: ...
-
 
 class Renderer:
     def device(self) -> GraphicsDevice: ...
@@ -192,6 +169,5 @@ class Renderer:
     def update_renderable_skinning_matrices(
         self, handle: int, bone_matrices: Any
     ) -> None: ...
-
 
 __all__: list[str]

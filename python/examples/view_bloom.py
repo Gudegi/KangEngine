@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 
 import kangengine as ke
-from kangengine import imgui, scene
+from kangengine import imgui
 
 
 class BloomViewer(ke.App):
@@ -23,12 +23,8 @@ class BloomViewer(ke.App):
         self._add_glow_sphere(
             "/glow/core", [-1.4, 0.0, 1.2], 0.45, [70.0, 4.8, 1.3, 1.0]
         )
-        self._add_glow_sphere(
-            "/glow/cyan", [0.0, 0.0, 1.0], 0.35, [1.0, 5.5, 7.0, 1.0]
-        )
-        self._add_glow_sphere(
-            "/glow/pink", [1.2, 0.0, 1.4], 0.28, [6.5, 1.2, 4.8, 1.0]
-        )
+        self._add_glow_sphere("/glow/cyan", [0.0, 0.0, 1.0], 0.35, [1.0, 5.5, 7.0, 1.0])
+        self._add_glow_sphere("/glow/pink", [1.2, 0.0, 1.4], 0.28, [6.5, 1.2, 4.8, 1.0])
 
         for i in range(14):
             x = -3.5 + i * 0.55

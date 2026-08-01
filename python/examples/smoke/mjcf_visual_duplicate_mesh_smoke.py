@@ -52,10 +52,7 @@ def main():
                         'contype="0" conaffinity="0" group="1" '
                         'density="0" rgba="0.7 0.7 0.7 1"/>'
                     ),
-                    (
-                        '      <geom type="mesh" mesh="body_mesh" '
-                        'rgba="0.2 0.2 0.2 1"/>'
-                    ),
+                    ('      <geom type="mesh" mesh="body_mesh" rgba="0.2 0.2 0.2 1"/>'),
                     "    </body>",
                     "  </worldbody>",
                     "</mujoco>",
@@ -80,7 +77,9 @@ def main():
                 f"expected one split visual render prim, got {len(render_prims)}"
             )
         if not render_prims[0].get_path().endswith("/visual_0"):
-            raise AssertionError(f"unexpected render prim path: {render_prims[0].get_path()}")
+            raise AssertionError(
+                f"unexpected render prim path: {render_prims[0].get_path()}"
+            )
 
     print("PASS: MJCF duplicate visual mesh smoke completed")
 

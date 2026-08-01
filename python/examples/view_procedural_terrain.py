@@ -160,9 +160,7 @@ class ProceduralTerrainViewer(ke.App):
         elif kind == "wave":
             terrain.wave_terrain(t, num_waves=3.0, amplitude=0.35)
         elif kind == "random":
-            terrain.random_uniform_terrain(
-                t, -0.05, 0.05, step=0.01, rng=self.rng
-            )
+            terrain.random_uniform_terrain(t, -0.05, 0.05, step=0.01, rng=self.rng)
         elif kind == "obstacles":
             terrain.discrete_obstacles_terrain(
                 t,
@@ -209,9 +207,7 @@ class ProceduralTerrainViewer(ke.App):
         radius = max(0.08, self.horizontal_scale * 5.0)
         half = max(0.08, self.horizontal_scale * 4.0)
         sphere_mesh_data = ke.geometry.create_sphere_data(radius, 20, 10)
-        box_mesh_data = ke.geometry.create_box_data(
-            half * 2.0, half * 2.0, half * 2.0
-        )
+        box_mesh_data = ke.geometry.create_box_data(half * 2.0, half * 2.0, half * 2.0)
 
         for index in range(count):
             pos = self._random_spawn_position(index, count * 2)

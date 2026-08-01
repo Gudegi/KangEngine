@@ -103,10 +103,7 @@ def main():
         )
         np.testing.assert_allclose(
             render_transforms[:, 1, 3, :3].detach().cpu().numpy(),
-            link_state[selected_row, link_indices.long(), :3]
-            .detach()
-            .cpu()
-            .numpy(),
+            link_state[selected_row, link_indices.long(), :3].detach().cpu().numpy(),
             rtol=1e-5,
             atol=1e-5,
             err_msg="articulation visual-to-PhysX link permutation mismatch",
@@ -297,8 +294,7 @@ def main():
         )
 
         print(
-            "PASS: KangSimWorld GPU articulation state/command and CUDA Mat4 "
-            "gather path"
+            "PASS: KangSimWorld GPU articulation state/command and CUDA Mat4 gather path"
         )
     finally:
         world.release()

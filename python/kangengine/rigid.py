@@ -77,10 +77,7 @@ def expand_rigid_body_state(root_pos, root_rot, local_pos, local_rot):
         [root_pos + quat_xyzw_rotate(root_rot, pos) for pos in local_pos], axis=0
     ).astype(np.float32)
     body_rot = np.stack(
-        [
-            quat_xyzw_normalize(quat_xyzw_multiply(root_rot, rot))
-            for rot in local_rot
-        ],
+        [quat_xyzw_normalize(quat_xyzw_multiply(root_rot, rot)) for rot in local_rot],
         axis=0,
     ).astype(np.float32)
     return body_pos, body_rot
@@ -107,8 +104,10 @@ def _shape_spec(name: str, geom) -> RigidShapeSpec:
             local_rot = quat_xyzw_from_two_vectors([1.0, 0.0, 0.0], axis)
     else:
         local_pos = _vec3(geom.pos)
-        local_rot = _quat(geom.quat) if geom_type == "Box" else np.array(
-            [0.0, 0.0, 0.0, 1.0], dtype=np.float32
+        local_rot = (
+            _quat(geom.quat)
+            if geom_type == "Box"
+            else np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32)
         )
 
     return RigidShapeSpec(

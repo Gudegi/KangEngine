@@ -121,8 +121,12 @@ class ArticulationStateCache:
 
     def refresh_into(self, state: SimObjectState) -> SimObjectState:
         a = self.articulation
-        state.root_pos.copy_(as_tensor(a.get_root_position(), shape=(3,), device=self.device))
-        state.root_rot.copy_(as_tensor(a.get_root_rotation(), shape=(4,), device=self.device))
+        state.root_pos.copy_(
+            as_tensor(a.get_root_position(), shape=(3,), device=self.device)
+        )
+        state.root_rot.copy_(
+            as_tensor(a.get_root_rotation(), shape=(4,), device=self.device)
+        )
         state.root_vel.copy_(
             as_tensor(a.get_root_linear_velocity(), shape=(3,), device=self.device)
         )
@@ -159,7 +163,9 @@ class ArticulationStateCache:
             as_tensor(a.get_dof_positions(), shape=(self.num_dofs,), device=self.device)
         )
         state.dof_vel.copy_(
-            as_tensor(a.get_dof_velocities(), shape=(self.num_dofs,), device=self.device)
+            as_tensor(
+                a.get_dof_velocities(), shape=(self.num_dofs,), device=self.device
+            )
         )
         state.dof_force.copy_(
             as_tensor(a.get_dof_forces(), shape=(self.num_dofs,), device=self.device)
@@ -177,7 +183,9 @@ class ArticulationStateCache:
         out.copy_(as_tensor(values, shape=(self.num_bodies, 3), device=self.device))
 
     def set_root(self, pos, rot_xyzw, linear_velocity=None, angular_velocity=None):
-        linear_velocity = [0.0, 0.0, 0.0] if linear_velocity is None else linear_velocity
+        linear_velocity = (
+            [0.0, 0.0, 0.0] if linear_velocity is None else linear_velocity
+        )
         angular_velocity = (
             [0.0, 0.0, 0.0] if angular_velocity is None else angular_velocity
         )
@@ -190,7 +198,9 @@ class ArticulationStateCache:
 
     def set_dofs(self, positions, velocities=None):
         if velocities is None:
-            velocities = torch.zeros(self.num_dofs, dtype=torch.float32, device=self.device)
+            velocities = torch.zeros(
+                self.num_dofs, dtype=torch.float32, device=self.device
+            )
         self.articulation.set_dof_state(
             as_cpu_numpy(positions, shape=(self.num_dofs,)),
             as_cpu_numpy(velocities, shape=(self.num_dofs,)),
@@ -243,8 +253,12 @@ class RigidStateCache:
         self.dof_limits = torch.zeros((0, 2), dtype=torch.float32, device=self.device)
         self.dof_kps = torch.zeros((0,), dtype=torch.float32, device=self.device)
         self.dof_kds = torch.zeros((0,), dtype=torch.float32, device=self.device)
-        self.dof_effort_limits = torch.zeros((0,), dtype=torch.float32, device=self.device)
-        self.body_masses = torch.zeros((self.num_bodies,), dtype=torch.float32, device=self.device)
+        self.dof_effort_limits = torch.zeros(
+            (0,), dtype=torch.float32, device=self.device
+        )
+        self.body_masses = torch.zeros(
+            (self.num_bodies,), dtype=torch.float32, device=self.device
+        )
         if self.num_bodies:
             self.body_masses[0] = float(self.rigid.get_mass())
 
@@ -282,7 +296,9 @@ class RigidStateCache:
             out[0] = as_tensor(values, shape=(3,), device=self.device)
 
     def set_root(self, pos, rot_xyzw, linear_velocity=None, angular_velocity=None):
-        linear_velocity = [0.0, 0.0, 0.0] if linear_velocity is None else linear_velocity
+        linear_velocity = (
+            [0.0, 0.0, 0.0] if linear_velocity is None else linear_velocity
+        )
         angular_velocity = (
             [0.0, 0.0, 0.0] if angular_velocity is None else angular_velocity
         )
@@ -395,11 +411,15 @@ class CPUStateBackend:
         env_id = int(env_id)
         obj_id = int(obj_id)
         if env_id < 0 or env_id >= self.num_envs:
-            raise ValueError(f"env_id {env_id} out of range for num_envs={self.num_envs}")
+            raise ValueError(
+                f"env_id {env_id} out of range for num_envs={self.num_envs}"
+            )
         key = (env_id, obj_id)
         if key in self._records:
             raise ValueError(f"object already registered at env={env_id}, obj={obj_id}")
-        cache = ArticulationStateCache(articulation, physics=physics, device=self.device)
+        cache = ArticulationStateCache(
+            articulation, physics=physics, device=self.device
+        )
         record = ObjectRecord(env_id, obj_id, articulation, str(name), cache)
         self._register_record(record)
         self._records[key] = record
@@ -419,7 +439,9 @@ class CPUStateBackend:
         env_id = int(env_id)
         obj_id = int(obj_id)
         if env_id < 0 or env_id >= self.num_envs:
-            raise ValueError(f"env_id {env_id} out of range for num_envs={self.num_envs}")
+            raise ValueError(
+                f"env_id {env_id} out of range for num_envs={self.num_envs}"
+            )
         key = (env_id, obj_id)
         if key in self._records:
             raise ValueError(f"object already registered at env={env_id}, obj={obj_id}")
@@ -449,7 +471,9 @@ class CPUStateBackend:
         try:
             return self._records[key]
         except KeyError as exc:
-            raise KeyError(f"no object registered at env={key[0]}, obj={key[1]}") from exc
+            raise KeyError(
+                f"no object registered at env={key[0]}, obj={key[1]}"
+            ) from exc
 
     def object_state(self, env_id: int, obj_id: int) -> SimObjectState:
         self._check_snapshot_read()
@@ -466,7 +490,9 @@ class CPUStateBackend:
     def articulation_state(self, env_id: int, obj_id: int) -> SimObjectState:
         return self.object_state(env_id, obj_id)
 
-    def articulation_states(self, obj_id: int, env_ids: EnvIdLike = None) -> SimObjectState:
+    def articulation_states(
+        self, obj_id: int, env_ids: EnvIdLike = None
+    ) -> SimObjectState:
         return self.object_states(obj_id, env_ids)
 
     def _batched_state(self, obj_id: int) -> SimObjectState:
@@ -474,8 +500,12 @@ class CPUStateBackend:
         obj_id = int(obj_id)
         if obj_id not in self._complete_obj_ids:
             registered = self._registered_env_ids.get(obj_id, set())
-            missing = [env_id for env_id in range(self.num_envs) if env_id not in registered]
-            raise KeyError(f"object obj={obj_id} is missing env registrations: {missing}")
+            missing = [
+                env_id for env_id in range(self.num_envs) if env_id not in registered
+            ]
+            raise KeyError(
+                f"object obj={obj_id} is missing env registrations: {missing}"
+            )
         return self._states[obj_id]
 
     def get_root_pos(self, obj_id: int):
@@ -656,7 +686,6 @@ class StateSnapshotBackend(CPUStateBackend):
             if isinstance(cache, ArticulationStateCache):
                 row = int(gpu_system.articulation_row(cache.articulation))
                 num_bodies = int(cache.num_bodies)
-                num_dofs = int(cache.num_dofs)
                 link_indices = torch.as_tensor(
                     cache.articulation.get_link_indices(),
                     dtype=torch.long,
@@ -687,24 +716,28 @@ class StateSnapshotBackend(CPUStateBackend):
                 state.root_vel.copy_(rigid_state[7:10].to(self.device))
                 state.root_ang_vel.copy_(rigid_state[10:13].to(self.device))
                 state.body_pos.copy_(
-                    rigid_state[0:3].to(self.device).reshape(1, 3).expand_as(
-                        state.body_pos
-                    )
+                    rigid_state[0:3]
+                    .to(self.device)
+                    .reshape(1, 3)
+                    .expand_as(state.body_pos)
                 )
                 state.body_rot.copy_(
-                    rigid_state[3:7].to(self.device).reshape(1, 4).expand_as(
-                        state.body_rot
-                    )
+                    rigid_state[3:7]
+                    .to(self.device)
+                    .reshape(1, 4)
+                    .expand_as(state.body_rot)
                 )
                 state.body_vel.copy_(
-                    rigid_state[7:10].to(self.device).reshape(1, 3).expand_as(
-                        state.body_vel
-                    )
+                    rigid_state[7:10]
+                    .to(self.device)
+                    .reshape(1, 3)
+                    .expand_as(state.body_vel)
                 )
                 state.body_ang_vel.copy_(
-                    rigid_state[10:13].to(self.device).reshape(1, 3).expand_as(
-                        state.body_ang_vel
-                    )
+                    rigid_state[10:13]
+                    .to(self.device)
+                    .reshape(1, 3)
+                    .expand_as(state.body_ang_vel)
                 )
                 state.body_contact_force.zero_()
                 state.body_ground_contact_force.zero_()
@@ -800,8 +833,12 @@ class GPUStateBackend:
         obj_id = int(obj_id)
         if obj_id not in backend._complete_obj_ids:
             registered = backend._registered_env_ids.get(obj_id, set())
-            missing = [env_id for env_id in range(self.num_envs) if env_id not in registered]
-            raise KeyError(f"object obj={obj_id} is missing env registrations: {missing}")
+            missing = [
+                env_id for env_id in range(self.num_envs) if env_id not in registered
+            ]
+            raise KeyError(
+                f"object obj={obj_id} is missing env registrations: {missing}"
+            )
         return [backend.record(env_id, obj_id) for env_id in range(self.num_envs)]
 
     def _object_kind(self, obj_id: int):
@@ -820,7 +857,9 @@ class GPUStateBackend:
         gpu_system = self._require_gpu_system()
         records = self._records_for_obj(obj_id)
         if kind == "articulation":
-            rows = [int(gpu_system.articulation_row(r.cache.articulation)) for r in records]
+            rows = [
+                int(gpu_system.articulation_row(r.cache.articulation)) for r in records
+            ]
         elif kind == "rigid":
             rows = [int(gpu_system.rigid_row(r.cache.rigid)) for r in records]
         else:
@@ -862,7 +901,9 @@ class GPUStateBackend:
         self._dof_index_tensors[key] = first
         return first
 
-    def _articulation_link_tensor(self, obj_id: int, *, fetch_pose=True, fetch_velocity=True):
+    def _articulation_link_tensor(
+        self, obj_id: int, *, fetch_pose=True, fetch_velocity=True
+    ):
         gpu_system = self._require_gpu_system()
         cache_key = ("articulation_link", int(obj_id))
         if not fetch_pose and not fetch_velocity and cache_key in self._frame_cache:
@@ -883,7 +924,9 @@ class GPUStateBackend:
             self._frame_cache[cache_key] = value
         return value
 
-    def _articulation_dof_tensor(self, obj_id: int, source, *, fetch=True, cache_name=None):
+    def _articulation_dof_tensor(
+        self, obj_id: int, source, *, fetch=True, cache_name=None
+    ):
         cache_key = None if cache_name is None else (cache_name, int(obj_id))
         if not fetch and cache_key is not None and cache_key in self._frame_cache:
             return self._frame_cache[cache_key]
@@ -913,31 +956,41 @@ class GPUStateBackend:
     def get_root_pos(self, obj_id: int, *, fetch: bool = True):
         kind = self._object_kind(obj_id)
         if kind == "articulation":
-            return self._articulation_link_tensor(obj_id, fetch_pose=fetch, fetch_velocity=False)[:, 0, 0:3]
+            return self._articulation_link_tensor(
+                obj_id, fetch_pose=fetch, fetch_velocity=False
+            )[:, 0, 0:3]
         return self._rigid_tensor(obj_id, fetch=fetch)[:, 0:3]
 
     def get_root_rot(self, obj_id: int, *, fetch: bool = True):
         kind = self._object_kind(obj_id)
         if kind == "articulation":
-            return self._articulation_link_tensor(obj_id, fetch_pose=fetch, fetch_velocity=False)[:, 0, 3:7]
+            return self._articulation_link_tensor(
+                obj_id, fetch_pose=fetch, fetch_velocity=False
+            )[:, 0, 3:7]
         return self._rigid_tensor(obj_id, fetch=fetch)[:, 3:7]
 
     def get_root_vel(self, obj_id: int, *, fetch: bool = True):
         kind = self._object_kind(obj_id)
         if kind == "articulation":
-            return self._articulation_link_tensor(obj_id, fetch_pose=False, fetch_velocity=fetch)[:, 0, 7:10]
+            return self._articulation_link_tensor(
+                obj_id, fetch_pose=False, fetch_velocity=fetch
+            )[:, 0, 7:10]
         return self._rigid_tensor(obj_id, fetch=fetch)[:, 7:10]
 
     def get_root_ang_vel(self, obj_id: int, *, fetch: bool = True):
         kind = self._object_kind(obj_id)
         if kind == "articulation":
-            return self._articulation_link_tensor(obj_id, fetch_pose=False, fetch_velocity=fetch)[:, 0, 10:13]
+            return self._articulation_link_tensor(
+                obj_id, fetch_pose=False, fetch_velocity=fetch
+            )[:, 0, 10:13]
         return self._rigid_tensor(obj_id, fetch=fetch)[:, 10:13]
 
     def get_body_pos(self, obj_id: int, *, fetch: bool = True):
         kind = self._object_kind(obj_id)
         if kind == "articulation":
-            return self._articulation_link_tensor(obj_id, fetch_pose=fetch, fetch_velocity=False)[:, :, 0:3]
+            return self._articulation_link_tensor(
+                obj_id, fetch_pose=fetch, fetch_velocity=False
+            )[:, :, 0:3]
         rigid = self._rigid_tensor(obj_id, fetch=fetch)
         num_bodies = self._records_for_obj(obj_id)[0].cache.num_bodies
         return rigid[:, 0:3].reshape(self.num_envs, 1, 3).expand(-1, num_bodies, -1)
@@ -945,7 +998,9 @@ class GPUStateBackend:
     def get_body_rot(self, obj_id: int, *, fetch: bool = True):
         kind = self._object_kind(obj_id)
         if kind == "articulation":
-            return self._articulation_link_tensor(obj_id, fetch_pose=fetch, fetch_velocity=False)[:, :, 3:7]
+            return self._articulation_link_tensor(
+                obj_id, fetch_pose=fetch, fetch_velocity=False
+            )[:, :, 3:7]
         rigid = self._rigid_tensor(obj_id, fetch=fetch)
         num_bodies = self._records_for_obj(obj_id)[0].cache.num_bodies
         return rigid[:, 3:7].reshape(self.num_envs, 1, 4).expand(-1, num_bodies, -1)
@@ -953,7 +1008,9 @@ class GPUStateBackend:
     def get_body_vel(self, obj_id: int, *, fetch: bool = True):
         kind = self._object_kind(obj_id)
         if kind == "articulation":
-            return self._articulation_link_tensor(obj_id, fetch_pose=False, fetch_velocity=fetch)[:, :, 7:10]
+            return self._articulation_link_tensor(
+                obj_id, fetch_pose=False, fetch_velocity=fetch
+            )[:, :, 7:10]
         rigid = self._rigid_tensor(obj_id, fetch=fetch)
         num_bodies = self._records_for_obj(obj_id)[0].cache.num_bodies
         return rigid[:, 7:10].reshape(self.num_envs, 1, 3).expand(-1, num_bodies, -1)
@@ -961,14 +1018,18 @@ class GPUStateBackend:
     def get_body_ang_vel(self, obj_id: int, *, fetch: bool = True):
         kind = self._object_kind(obj_id)
         if kind == "articulation":
-            return self._articulation_link_tensor(obj_id, fetch_pose=False, fetch_velocity=fetch)[:, :, 10:13]
+            return self._articulation_link_tensor(
+                obj_id, fetch_pose=False, fetch_velocity=fetch
+            )[:, :, 10:13]
         rigid = self._rigid_tensor(obj_id, fetch=fetch)
         num_bodies = self._records_for_obj(obj_id)[0].cache.num_bodies
         return rigid[:, 10:13].reshape(self.num_envs, 1, 3).expand(-1, num_bodies, -1)
 
     def get_dof_pos(self, obj_id: int, *, fetch: bool = True):
         if self._object_kind(obj_id) != "articulation":
-            return torch.empty((self.num_envs, 0), dtype=torch.float32, device=self.device)
+            return torch.empty(
+                (self.num_envs, 0), dtype=torch.float32, device=self.device
+            )
         return self._articulation_dof_tensor(
             obj_id,
             self.articulation_joint_positions,
@@ -978,7 +1039,9 @@ class GPUStateBackend:
 
     def get_dof_vel(self, obj_id: int, *, fetch: bool = True):
         if self._object_kind(obj_id) != "articulation":
-            return torch.empty((self.num_envs, 0), dtype=torch.float32, device=self.device)
+            return torch.empty(
+                (self.num_envs, 0), dtype=torch.float32, device=self.device
+            )
         return self._articulation_dof_tensor(
             obj_id,
             self.articulation_joint_velocities,
@@ -988,7 +1051,9 @@ class GPUStateBackend:
 
     def get_dof_forces(self, obj_id: int, *, fetch: bool = True):
         if self._object_kind(obj_id) != "articulation":
-            return torch.empty((self.num_envs, 0), dtype=torch.float32, device=self.device)
+            return torch.empty(
+                (self.num_envs, 0), dtype=torch.float32, device=self.device
+            )
         return self._articulation_dof_tensor(
             obj_id,
             self.articulation_joint_forces,

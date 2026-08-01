@@ -10,7 +10,7 @@ import numpy as np
 import torch
 
 import kangengine as ke
-from kangengine import asset, imgui, keys, scene
+from kangengine import asset, imgui, keys
 
 
 def repo_root() -> Path:
@@ -103,7 +103,9 @@ class FbxCharacterApplyPoseViewer(ke.App):
         self.motion = self.character.motion()
         self.parents = self.motion.parent_indices()
         self.names = self.motion.node_names()
-        self.root_translations, self.local_rotations_wxyz = self._extract_motion_pose_arrays()
+        self.root_translations, self.local_rotations_wxyz = (
+            self._extract_motion_pose_arrays()
+        )
 
         self._apply_pose_frame(0)
         self._update_skeleton_lines(self.motion.frame(0))
@@ -243,10 +245,9 @@ class FbxCharacterApplyPoseViewer(ke.App):
     def _print_import_info(self):
         clips = asset.FBXLoader.load_animation_clip_infos(self.fbx_file)
         print(f"FBX apply-pose character loaded: {Path(self.fbx_file).name}")
-        print(f"load: SkinVisual.from_fbx(...)")
+        print("load: SkinVisual.from_fbx(...)")
         print(
-            "pose path: motion -> root_translations/local_rotations_wxyz "
-            "-> sampled pose -> character.apply_pose(...)"
+            "pose path: motion -> root_translations/local_rotations_wxyz -> sampled pose -> character.apply_pose(...)"
         )
         print(f"pose sampling: {'interpolated' if self.interpolate else 'nearest'}")
         print("skeleton path: original motion.sample(time)")
@@ -291,8 +292,7 @@ class FbxCharacterApplyPoseViewer(ke.App):
         imgui.begin("FBX Apply Pose")
         imgui.text(f"{Path(self.fbx_file).name}")
         imgui.text(
-            f"Meshes: {self.character.num_meshes()}  "
-            f"Joints: {self.motion.num_joints()}"
+            f"Meshes: {self.character.num_meshes()}  Joints: {self.motion.num_joints()}"
         )
         state = "running" if self.playing else "paused"
         imgui.text(f"Time: {self.time:.3f}s  |  {state}")

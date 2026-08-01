@@ -5,11 +5,10 @@ Loads Unitree H1 from MJCF and optionally plays back motion from poselib.
 
 import os
 import sys
-import numpy as np
 from pathlib import Path
 
 import kangengine as ke
-from kangengine import scene, visual
+from kangengine import visual
 
 
 # ---------------------------------------------------------------------------
@@ -22,7 +21,9 @@ try:
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
 
-    from references.isaacsim.poselib.poselib.skeleton.my_skeleton3d import SkeletonMotion
+    from references.isaacsim.poselib.poselib.skeleton.my_skeleton3d import (
+        SkeletonMotion,
+    )
 
     _motion_file = "/Users/asaid/Dev/sample_isaac/assets/IsaacSim_motions/unitree_h1/samples/SwingDancing1.npy"
     _mot = SkeletonMotion.from_file(_motion_file)

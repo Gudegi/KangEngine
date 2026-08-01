@@ -9,7 +9,9 @@ class GamepadVisualizerApp(ke.App):
         self.orbit_camera = True
         self.attach_camera = True
         self.gamepad = self.input.gamepad()
-        self.gamepad_visualizer = ke.input.GamepadVisualizer(self, width=400, anchor=ke.render.ScreenAnchor.BottomCenter)
+        self.gamepad_visualizer = ke.input.GamepadVisualizer(
+            self, width=400, anchor=ke.render.ScreenAnchor.BottomCenter
+        )
         self.gamepad_state = self.gamepad.state()
         self.standard_materials = self.create_standard_materials()
         self.scene.add_ground("/ground", scale=20.0)
@@ -86,9 +88,7 @@ class GamepadVisualizerApp(ke.App):
             else np.array([0.0, 1.0, 0.0])
         )
         offset = (
-            camera_pos - target_pos
-            if self.orbit_camera
-            else target_pos - camera_pos
+            camera_pos - target_pos if self.orbit_camera else target_pos - camera_pos
         )
         angle_scale = np.deg2rad(90.0) * min(self.get_delta_time(), 0.1)
         offset = self._rotate(offset, up, -yaw_pitch[0] * angle_scale)
@@ -106,9 +106,7 @@ class GamepadVisualizerApp(ke.App):
     def render(self):
         self.gamepad_visualizer.draw(self.gamepad_state)
         if ke.imgui.begin("Gamepad Camera"):
-            _, self.orbit_camera = ke.imgui.checkbox(
-                "Orbit camera", self.orbit_camera
-            )
+            _, self.orbit_camera = ke.imgui.checkbox("Orbit camera", self.orbit_camera)
             _, self.attach_camera = ke.imgui.checkbox(
                 "Attach camera", self.attach_camera
             )

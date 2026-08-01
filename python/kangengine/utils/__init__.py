@@ -61,6 +61,7 @@ def __getattr__(name):
     globals()[name] = value
     return value
 
+
 __all__ = [
     "preset_rgba",
     "log_debug_axes",

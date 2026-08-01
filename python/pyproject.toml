@@ -51,8 +51,22 @@ kangengine = [
 kangengine = ["assets/external/**/*"]
 
 [tool.ruff]
-line-length = 120
+line-length = 88
 target-version = "py312"
+extend-exclude = ["kangengine/assets"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
+[tool.ruff.lint.per-file-ignores]
+"kangengine/__init__.py" = ["E402"]
+"kangengine/input/__init__.py" = ["E402"]
+"kangengine/physics/__init__.py" = ["F403"]
 
 [tool.ruff.format]
 docstring-code-format = true
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.1",
+]

@@ -81,9 +81,7 @@ class PBRViewer(ke.App):
         warm_light.color = ke.vec3(1.0, 0.55, 0.28)
         warm_light.intensity = 85.0
         warm_light.range = 5.0
-        warm_prim = self.scene.define_prim(
-            "/lights/warm_point", scene.PrimType.Light
-        )
+        warm_prim = self.scene.define_prim("/lights/warm_point", scene.PrimType.Light)
         warm_prim.set_point_light(warm_light)
 
         cool_light = ke.PointLight()
@@ -91,9 +89,7 @@ class PBRViewer(ke.App):
         cool_light.color = ke.vec3(0.25, 0.55, 1.0)
         cool_light.intensity = 70.0
         cool_light.range = 4.8
-        cool_prim = self.scene.define_prim(
-            "/lights/cool_point", scene.PrimType.Light
-        )
+        cool_prim = self.scene.define_prim("/lights/cool_point", scene.PrimType.Light)
         cool_prim.set_point_light(cool_light)
 
         spot_light = ke.SpotLight()
@@ -104,9 +100,7 @@ class PBRViewer(ke.App):
         spot_light.range = 6.0
         spot_light.inner_cone_angle = 0.34
         spot_light.outer_cone_angle = 0.62
-        spot_prim = self.scene.define_prim(
-            "/lights/soft_spot", scene.PrimType.Light
-        )
+        spot_prim = self.scene.define_prim("/lights/soft_spot", scene.PrimType.Light)
         spot_prim.set_spot_light(spot_light)
 
         self.local_light_prims = [warm_prim, cool_prim, spot_prim]

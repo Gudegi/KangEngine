@@ -79,14 +79,10 @@ class FBXMeshViewer(ke.App):
                 _safe_prim_name(mesh.name, f"mesh_{idx}"),
                 used_mesh_names,
             )
-            prim_path = (
-                f"{FBX_ROOT_PATH}/{mesh_name}"
-            )
+            prim_path = f"{FBX_ROOT_PATH}/{mesh_name}"
             diffuse_path = _material_texture_path(mesh, "diffuse")
             diffuse_texture = self._load_texture(diffuse_path)
-            normal_texture = self._load_texture(
-                _material_texture_path(mesh, "normal")
-            )
+            normal_texture = self._load_texture(_material_texture_path(mesh, "normal"))
             shader = (
                 self.mesh_texture_shader
                 if diffuse_texture is not None
@@ -205,9 +201,7 @@ def _mesh_material_color(mesh, fallback):
     if material is None or material.diffuse_color is None:
         return fallback
     color = material.diffuse_color
-    return ke.vec4(
-        float(color[0]), float(color[1]), float(color[2]), float(color[3])
-    )
+    return ke.vec4(float(color[0]), float(color[1]), float(color[2]), float(color[3]))
 
 
 def _primary_material(mesh):

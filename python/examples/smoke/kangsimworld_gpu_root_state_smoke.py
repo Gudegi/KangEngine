@@ -12,7 +12,9 @@ import kangengine as ke
 def main():
     world = ke.sim.KangSimWorld(num_envs=2, sim_device="cuda", add_ground=False)
     try:
-        ball_xml = Path(ke.__file__).resolve().parent / "assets" / "objects" / "ball.xml"
+        ball_xml = (
+            Path(ke.__file__).resolve().parent / "assets" / "objects" / "ball.xml"
+        )
         data = world.load_mjcf(str(ball_xml))
         world.add_rigid(data, env_id=0, obj_id=0, pos=[0.0, 0.0, 2.0], density=10.0)
         world.add_rigid(data, env_id=1, obj_id=0, pos=[1.0, 0.0, 2.0], density=10.0)

@@ -74,9 +74,7 @@ class BVHCharacterViewer(ke.App):
         imgui.begin("BVH Character")
         imgui.text(Path(self.bvh_file).name)
         imgui.text(
-            f"joints={self.motion.num_joints()} "
-            f"frames={self.motion.num_frames()} "
-            f"fps={self.motion.fps():.2f}"
+            f"joints={self.motion.num_joints()} frames={self.motion.num_frames()} fps={self.motion.fps():.2f}"
         )
         changed, self.show_skeleton = imgui.checkbox(
             "show skeleton", self.show_skeleton

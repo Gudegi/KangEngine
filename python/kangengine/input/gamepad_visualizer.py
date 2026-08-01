@@ -42,16 +42,32 @@ class GamepadVisualizer:
     )
     _BUMPERS = {
         "left_bumper": (
-            (0.2425, 0.2183), (0.2750, 0.2000), (0.3125, 0.1883),
-            (0.3500, 0.1833), (0.3875, 0.1867), (0.4113, 0.1917),
-            (0.4063, 0.2250), (0.3750, 0.2183), (0.3375, 0.2167),
-            (0.3000, 0.2167), (0.2625, 0.2267), (0.2425, 0.2333),
+            (0.2425, 0.2183),
+            (0.2750, 0.2000),
+            (0.3125, 0.1883),
+            (0.3500, 0.1833),
+            (0.3875, 0.1867),
+            (0.4113, 0.1917),
+            (0.4063, 0.2250),
+            (0.3750, 0.2183),
+            (0.3375, 0.2167),
+            (0.3000, 0.2167),
+            (0.2625, 0.2267),
+            (0.2425, 0.2333),
         ),
         "right_bumper": (
-            (0.5888, 0.1917), (0.6125, 0.1867), (0.6500, 0.1833),
-            (0.6875, 0.1883), (0.7250, 0.2000), (0.7575, 0.2183),
-            (0.7575, 0.2333), (0.7375, 0.2267), (0.7000, 0.2167),
-            (0.6625, 0.2167), (0.6250, 0.2183), (0.5938, 0.2250),
+            (0.5888, 0.1917),
+            (0.6125, 0.1867),
+            (0.6500, 0.1833),
+            (0.6875, 0.1883),
+            (0.7250, 0.2000),
+            (0.7575, 0.2183),
+            (0.7575, 0.2333),
+            (0.7375, 0.2267),
+            (0.7000, 0.2167),
+            (0.6625, 0.2167),
+            (0.6250, 0.2183),
+            (0.5938, 0.2250),
         ),
     }
 
@@ -78,15 +94,9 @@ class GamepadVisualizer:
         self._stick = _ke.vec4(
             *preset_rgba(_ke.ColorType.PASTEL_SKY, 0.98 * self.opacity)
         )
-        self._inactive = _ke.vec4(
-            *preset_rgba(_ke.ColorType.SLATE_GRAY, self.opacity)
-        )
-        self._stick_cap = _ke.vec4(
-            *preset_rgba(_ke.ColorType.DARK_GRAY, self.opacity)
-        )
-        self.anchor = (
-            _ke.ScreenAnchor.BottomLeft if anchor is None else anchor
-        )
+        self._inactive = _ke.vec4(*preset_rgba(_ke.ColorType.SLATE_GRAY, self.opacity))
+        self._stick_cap = _ke.vec4(*preset_rgba(_ke.ColorType.DARK_GRAY, self.opacity))
+        self.anchor = _ke.ScreenAnchor.BottomLeft if anchor is None else anchor
         self.offset = (float(offset[0]), float(offset[1]))
         asset = (
             Path(__file__).resolve().parents[1]
@@ -112,9 +122,7 @@ class GamepadVisualizer:
         x = image_x + uv[0] * self.width
         y = image_y + uv[1] * self.height
         if color is None:
-            _ke.imgui.draw_circle_filled(
-                x, y, radius * 2.0, self._active_glow
-            )
+            _ke.imgui.draw_circle_filled(x, y, radius * 2.0, self._active_glow)
         _ke.imgui.draw_circle_filled(
             x, y, radius, self._active if color is None else color
         )
@@ -157,10 +165,7 @@ class GamepadVisualizer:
 
     def _bumper(self, image_x, image_y, polygon, active=False):
         _ke.imgui.draw_convex_polygon_filled(
-            [
-                (image_x + x * self.width, image_y + y * self.height)
-                for x, y in polygon
-            ],
+            [(image_x + x * self.width, image_y + y * self.height) for x, y in polygon],
             self._active if active else self._inactive,
         )
 
@@ -185,9 +190,7 @@ class GamepadVisualizer:
             return
 
         image_x, image_y = _ke.imgui.cursor_screen_pos()
-        _ke.imgui.image(
-            self._texture, self.width, self.height, self.opacity
-        )
+        _ke.imgui.image(self._texture, self.width, self.height, self.opacity)
         scale = self.width / 400.0
 
         for uv, radius in self._ROUND_CUTOUTS.values():
@@ -278,5 +281,6 @@ class GamepadVisualizer:
                 )
 
         _ke.imgui.end()
+
 
 __all__ = ["GamepadVisualizer"]

@@ -1,8 +1,8 @@
 """
 This example shows simple pd target control of walking motion.
-KW has defined for human like, so it has several spherical joints (hips, shoulders, ankles..). 
+KW has defined for human like, so it has several spherical joints (hips, shoulders, ankles..).
 But in kw.xml definition, all joints are defined hinge joint(1~3 hinge). It means articulation can't fully follow the original motion.
-# TODO: support spherical 
+# TODO: support spherical
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from pathlib import Path
 import numpy as np
 
 import kangengine as ke
-from kangengine import asset, imgui, keys, scene, visual
+from kangengine import asset, imgui, keys, visual
 from kangengine.utils.math import quat_wxyz_to_xyzw, quat_wxyz_twist_angle
 
 from view_motion import default_char_file, default_motion_file, load_motion
@@ -174,7 +174,9 @@ class KwMotionTrackingApp(ke.App):
         targets = self._motion_dof_targets(self.local_rot[0])
         if len(targets) == self.num_dofs:
             self.sim_world.set_dof_state(None, 0, targets)
-            self.sim_world.set_cmd(None, 0, targets, ke.sim.ControlMode.POS, self.kp, self.kd)
+            self.sim_world.set_cmd(
+                None, 0, targets, ke.sim.ControlMode.POS, self.kp, self.kd
+            )
         self.sim_world.step(substeps=0, apply_commands=False)
         self.visual_bridge.sync()
 
@@ -196,7 +198,9 @@ class KwMotionTrackingApp(ke.App):
 
         targets = self._motion_dof_targets(self.local_rot[idx])
         if len(targets) == self.num_dofs:
-            self.sim_world.set_cmd(None, 0, targets, ke.sim.ControlMode.POS, self.kp, self.kd)
+            self.sim_world.set_cmd(
+                None, 0, targets, ke.sim.ControlMode.POS, self.kp, self.kd
+            )
 
         self.sim_world.advance(fixed_dt)
 
@@ -210,8 +214,7 @@ class KwMotionTrackingApp(ke.App):
         state = "PAUSED" if self.is_simulation_paused() else "running"
         imgui.begin("KW Motion Tracking")
         imgui.text(
-            f"Links: {self.articulation.num_links()}  "
-            f"DOFs: {self.num_dofs}  |  {state}"
+            f"Links: {self.articulation.num_links()}  DOFs: {self.num_dofs}  |  {state}"
         )
         imgui.text(f"Frame: {self.frame_idx} / {self.root_pos.shape[0] - 1}")
         imgui.text("Enter: play/pause    Space: pause/step    R: reset")

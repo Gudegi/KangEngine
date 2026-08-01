@@ -11,8 +11,7 @@ try:
     from pxr import Gf, Usd, UsdGeom
 except ImportError as exc:
     raise RuntimeError(
-        "usd_file_bridge.py requires Python OpenUSD (pxr) and a USD-enabled "
-        "KangEngine development build"
+        "usd_file_bridge.py requires Python OpenUSD (pxr) and a USD-enabled KangEngine development build"
     ) from exc
 
 
@@ -47,11 +46,13 @@ def main(output_dir: Path):
 
     # Create a custom mesh
     mesh = UsdGeom.Mesh.Define(stage, "/World/CustomTriangle")
-    mesh.GetPointsAttr().Set([
-        Gf.Vec3f(0, 0, 0),
-        Gf.Vec3f(1, 0, 0),
-        Gf.Vec3f(0.5, 1, 0),
-    ])
+    mesh.GetPointsAttr().Set(
+        [
+            Gf.Vec3f(0, 0, 0),
+            Gf.Vec3f(1, 0, 0),
+            Gf.Vec3f(0.5, 1, 0),
+        ]
+    )
     mesh.GetFaceVertexCountsAttr().Set([3])
     mesh.GetFaceVertexIndicesAttr().Set([0, 1, 2])
     mesh.AddTranslateOp().Set(Gf.Vec3d(0, 2, 0))
@@ -95,7 +96,9 @@ def main(output_dir: Path):
 
             # Get mesh data for rendering
             mesh_data = ke_scene.load_mesh(mesh_path)
-            print(f"     (vertices: {len(mesh_data.vertices)}, indices: {len(mesh_data.indices)})")
+            print(
+                f"     (vertices: {len(mesh_data.vertices)}, indices: {len(mesh_data.indices)})"
+            )
     else:
         print("   Failed to load scene")
         return

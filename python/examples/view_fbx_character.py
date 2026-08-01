@@ -23,7 +23,7 @@ def package_asset_path(*parts: str) -> str:
 
 def default_fbx_file() -> Path:
     return repo_root() / "assets" / "external" / "Capoeira.fbx"
-    #return repo_root() / "assets" / "external" / "Dying.fbx"
+    # return repo_root() / "assets" / "external" / "Dying.fbx"
 
 
 def prim_safe_name(name: str, fallback: str) -> str:
@@ -129,9 +129,7 @@ class FbxCharacterViewer(ke.App):
         print(f"load: {self.load_call}")
         fps_text = "source" if self.fps <= 0.0 else f"{self.fps:g}"
         print(
-            f"request: clip_index={self.clip_index} "
-            f"fps={fps_text} "
-            f"scale={self.scale:g}"
+            f"request: clip_index={self.clip_index} fps={fps_text} scale={self.scale:g}"
         )
         print("clips:")
         for idx, clip in enumerate(self.clips):
@@ -188,7 +186,9 @@ class FbxCharacterViewer(ke.App):
             prim.set_display_color_alpha(color)
             texture = self._load_mesh_texture(mesh)
             normal_texture = self._load_mesh_normal_texture(mesh)
-            shader = self.textured_mesh_shader if texture is not None else self.mesh_shader
+            shader = (
+                self.textured_mesh_shader if texture is not None else self.mesh_shader
+            )
             view = self.add_skinned_mesh(prim, shader, mesh.skinned_mesh_data)
             if texture is not None:
                 view.set_texture(texture, 0)
@@ -232,7 +232,9 @@ class FbxCharacterViewer(ke.App):
         color = material.diffuse_color
         if color is None:
             return fallback
-        return ke.vec4(float(color[0]), float(color[1]), float(color[2]), float(color[3]))
+        return ke.vec4(
+            float(color[0]), float(color[1]), float(color[2]), float(color[3])
+        )
 
     def _load_mesh_texture(self, mesh):
         material = self._primary_material(mesh)

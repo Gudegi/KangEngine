@@ -8,7 +8,9 @@ import kangengine as ke
 def main():
     scene = ke.scene.create_backend(ke.scene.BackendType.Native)
 
-    resource_prim = scene.define_prim("/.Resources/Materials/Gold", ke.scene.PrimType.Resource)
+    resource_prim = scene.define_prim(
+        "/.Resources/Materials/Gold", ke.scene.PrimType.Resource
+    )
     if resource_prim.get_transform_component() is not None:
         raise AssertionError("Resource prim should not own TransformComponent")
     if resource_prim.has_transform_component():

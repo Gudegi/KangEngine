@@ -12,9 +12,7 @@ def main():
     mesh = ke.scene.Prim.create_plane_data(1.0)
     handle = registry.register_mesh("Unit Plane", mesh, "memory://unit-plane")
     if handle == 0:
-        raise AssertionError(
-            "SceneResourceManager returned an invalid-looking handle"
-        )
+        raise AssertionError("SceneResourceManager returned an invalid-looking handle")
     if len(registry) != 1:
         raise AssertionError("SceneResourceManager size mismatch")
     if registry.mesh(handle) is not mesh:

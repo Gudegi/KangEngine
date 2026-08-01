@@ -30,18 +30,13 @@ def main():
 
     first.set_visible(False)
     app.render_frame_once()
-    hidden_pick = app.ray_pick(
-        ke.vec3(-2.0, 0.0, 5.0), ke.vec3(0.0, 0.0, -1.0)
-    )
-    second_pick = app.ray_pick(
-        ke.vec3(2.0, 0.0, 5.0), ke.vec3(0.0, 0.0, -1.0)
-    )
+    hidden_pick = app.ray_pick(ke.vec3(-2.0, 0.0, 5.0), ke.vec3(0.0, 0.0, -1.0))
+    second_pick = app.ray_pick(ke.vec3(2.0, 0.0, 5.0), ke.vec3(0.0, 0.0, -1.0))
     assert not hidden_pick.hit
     assert second_pick.hit
     assert second_pick.prim is second.prim
     assert (
-        second_pick.prim.get_manipulation_policy()
-        == ke.scene.ManipulationPolicy.Self
+        second_pick.prim.get_manipulation_policy() == ke.scene.ManipulationPolicy.Self
     )
 
     assert first.remove()
@@ -63,9 +58,7 @@ def main():
     assert transforms_ref() is not None
 
     app.render_frame_once()
-    batch_pick = app.ray_pick(
-        ke.vec3(0.0, 0.0, 5.0), ke.vec3(0.0, 0.0, -1.0)
-    )
+    batch_pick = app.ray_pick(ke.vec3(0.0, 0.0, 5.0), ke.vec3(0.0, 0.0, -1.0))
     assert batch_pick.hit
     assert batch_pick.transform_source == ke.render.TransformSource.ExternalBuffer
     assert batch_pick.prim is None

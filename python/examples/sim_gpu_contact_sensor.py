@@ -80,7 +80,9 @@ class GpuContactSensorDemo:
     def setup(self):
         args = self.args
         physics_config = ke.physics.PhysicsConfig.z_up()
-        physics_config.enable_contact_reports = False  # Turn off CPU contact report callback
+        physics_config.enable_contact_reports = (
+            False  # Turn off CPU contact report callback
+        )
         physics_config.restitution = 0.3
         self.world = ke.sim.KangSimWorld(
             num_envs=args.num_envs,
@@ -127,7 +129,9 @@ class GpuContactSensorDemo:
         args = self.args
         origins = make_env_origins(args.num_envs, self.device)
         self.rotations = make_identity_quaternions(args.num_envs, self.device)
-        self.zeros3 = torch.zeros((args.num_envs, 3), dtype=torch.float32, device=self.device)
+        self.zeros3 = torch.zeros(
+            (args.num_envs, 3), dtype=torch.float32, device=self.device
+        )
 
         offset = initial_x_offset(self.args)
         self.left_pos = origins + torch.tensor(
@@ -360,9 +364,9 @@ class GpuContactSensorViewer(ke.App):
             return
 
         starts = positions[active].astype(np.float32, copy=False)
-        ends = (
-            starts + forces[active] * float(self.args.force_arrow_scale)
-        ).astype(np.float32, copy=False)
+        ends = (starts + forces[active] * float(self.args.force_arrow_scale)).astype(
+            np.float32, copy=False
+        )
         colors = np.repeat(
             np.array([[1.0, 0.86, 0.05, 1.0]], dtype=np.float32),
             starts.shape[0],
@@ -397,8 +401,7 @@ class GpuContactSensorViewer(ke.App):
         imgui.text(f"Contact debug: {'on' if self.show_contact_debug else 'off'}")
         imgui.separator()
         imgui.text(
-            "Enter: play/pause    Space: pause/step    "
-            "R: reset    C: contact debug"
+            "Enter: play/pause    Space: pause/step    R: reset    C: contact debug"
         )
         imgui.end()
 

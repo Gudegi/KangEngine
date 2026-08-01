@@ -109,9 +109,7 @@ def main() -> None:
     # The optional CUDA implementation belongs to the native physics module.
     # This verifies namespace resolution and the CPU-build error path without
     # requiring a CUDA device or launching a kernel.
-    native_aggregator = getattr(
-        _ke.physics, "aggregate_contact_sensors_cuda", None
-    )
+    native_aggregator = getattr(_ke.physics, "aggregate_contact_sensors_cuda", None)
     if native_aggregator is None:
         try:
             sim_sensor._contact_sensor_aggregator()

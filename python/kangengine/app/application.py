@@ -5,6 +5,7 @@ frame lifecycle, and scene rendering.  This wrapper adds default lifecycle
 hooks and small input helpers so examples can inherit from `kangengine.App`
 without talking directly to the pybind class.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -59,9 +60,21 @@ def _rotation_matrix(rotation):
     scale = 2.0 / norm
     return np.array(
         [
-            [1.0 - scale * (y * y + z * z), scale * (x * y - z * w), scale * (x * z + y * w)],
-            [scale * (x * y + z * w), 1.0 - scale * (x * x + z * z), scale * (y * z - x * w)],
-            [scale * (x * z - y * w), scale * (y * z + x * w), 1.0 - scale * (x * x + y * y)],
+            [
+                1.0 - scale * (y * y + z * z),
+                scale * (x * y - z * w),
+                scale * (x * z + y * w),
+            ],
+            [
+                scale * (x * y + z * w),
+                1.0 - scale * (x * x + z * z),
+                scale * (y * z - x * w),
+            ],
+            [
+                scale * (x * z - y * w),
+                scale * (y * z + x * w),
+                1.0 - scale * (x * x + y * y),
+            ],
         ],
         dtype=np.float32,
     )
@@ -1101,7 +1114,11 @@ class App(_NativeApp):
         existing = self._existing_resource_handle(texture)
         if existing is not None:
             return existing
-        name = str(display_name) if display_name else self._next_resource_name(texture, "Texture")
+        name = (
+            str(display_name)
+            if display_name
+            else self._next_resource_name(texture, "Texture")
+        )
         handle = self.resources.register_texture(
             name,
             unwrap_native(texture),
@@ -1113,7 +1130,11 @@ class App(_NativeApp):
         existing = self._existing_resource_handle(mesh_data)
         if existing is not None:
             return existing
-        name = str(display_name) if display_name else self._next_resource_name(mesh_data, "Mesh")
+        name = (
+            str(display_name)
+            if display_name
+            else self._next_resource_name(mesh_data, "Mesh")
+        )
         handle = self.resources.register_mesh(
             name,
             mesh_data,
@@ -1127,7 +1148,9 @@ class App(_NativeApp):
         self._register_material_resource(material)
         return material
 
-    def create_vertex_color_material(self, *, shader=None) -> material_api.VertexColorMaterial:
+    def create_vertex_color_material(
+        self, *, shader=None
+    ) -> material_api.VertexColorMaterial:
         """Create and retain a material for display/vertex-color shaders."""
         if shader is None:
             shader = self.create_standard_shaders().common
@@ -1309,9 +1332,7 @@ class App(_NativeApp):
             if diffuse_path.exists():
                 diffuse_map = self.load_texture(diffuse_path, flip=True)
         if material_info.has_specular_texture:
-            specular_path = _texture_path_candidate(
-                material_info.specular_texture_path
-            )
+            specular_path = _texture_path_candidate(material_info.specular_texture_path)
             if specular_path.exists():
                 specular_map = self.load_texture(specular_path, flip=True)
         if material_info.has_alpha_texture:
@@ -1469,14 +1490,18 @@ class App(_NativeApp):
         return config
 
     def set_video_recording_dir(self, output_dir):
-        self._video_capture.configure(run_mode=self._recording_run_mode(), output_dir=output_dir)
+        self._video_capture.configure(
+            run_mode=self._recording_run_mode(), output_dir=output_dir
+        )
         return self
 
     def set_video_recording_fps(self, fps: float):
         self._video_capture.configure(run_mode=self._recording_run_mode(), fps=fps)
         return self
 
-    def set_video_recording_resolution(self, width: int | None, height: int | None = None):
+    def set_video_recording_resolution(
+        self, width: int | None, height: int | None = None
+    ):
         """Set the recording resolution cap, or pass None for native size."""
         self._video_capture.set_max_resolution(width, height)
         return self
@@ -1582,7 +1607,11 @@ class App(_NativeApp):
         if self.run_config is None:
             from ..sim.run_mode import SimulationRunConfig, SimulationRunMode
 
-            mode = SimulationRunMode.OFFSCREEN_FAST if self.headless else SimulationRunMode.PACED
+            mode = (
+                SimulationRunMode.OFFSCREEN_FAST
+                if self.headless
+                else SimulationRunMode.PACED
+            )
             self.configure_run(SimulationRunConfig(mode=mode))
         return result
 

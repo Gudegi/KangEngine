@@ -46,7 +46,13 @@ class VideoCaptureController:
     def recorder(self) -> VideoRecorder | None:
         return self._recorder
 
-    def configure(self, *, run_mode, output_dir: str | Path | None = None, fps: float | None = None):
+    def configure(
+        self,
+        *,
+        run_mode,
+        output_dir: str | Path | None = None,
+        fps: float | None = None,
+    ):
         if self.is_recording:
             raise RuntimeError("cannot reconfigure video capture while recording")
         self._run_mode = self._mode_value(run_mode)
@@ -71,13 +77,21 @@ class VideoCaptureController:
     def is_offscreen(self) -> bool:
         return self._run_mode == "offscreen_fast"
 
-    def start(self, app, output_path: str | Path | None = None, fps: float | None = None) -> Path:
+    def start(
+        self, app, output_path: str | Path | None = None, fps: float | None = None
+    ) -> Path:
         if self._run_mode == "headless_fast":
-            raise RuntimeError("HEADLESS_FAST disables rendering and cannot record video")
+            raise RuntimeError(
+                "HEADLESS_FAST disables rendering and cannot record video"
+            )
         if self.is_recording:
             raise RuntimeError("video recording is already active")
 
-        path = self._default_output_path() if output_path is None else Path(output_path).expanduser()
+        path = (
+            self._default_output_path()
+            if output_path is None
+            else Path(output_path).expanduser()
+        )
         recording_fps = self._resolve_fps(app, fps)
         self._recorder = VideoRecorder(path, fps=recording_fps)
         self._recorder.start()
@@ -164,7 +178,9 @@ class VideoCaptureController:
             return
 
         current_frame = frame.copy()
-        held_frame = current_frame if self._last_paced_frame is None else self._last_paced_frame
+        held_frame = (
+            current_frame if self._last_paced_frame is None else self._last_paced_frame
+        )
         self._encode_queue.put_nowait((held_frame, current_frame, repeat_count))
         self._last_paced_frame = current_frame
         self._scheduled_frame_count += repeat_count

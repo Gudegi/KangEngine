@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 
 import kangengine as ke
-from kangengine import imgui, keys, scene, visual
+from kangengine import imgui, keys, visual
 
 
 def repo_root() -> Path:
@@ -24,7 +24,9 @@ def default_char_file() -> Path:
 
 
 def default_motion_file() -> Path:
-    return repo_root() / "assets" / "characters" / "kw" / "motions" / "Walking.npy" # from Mixamo
+    return (
+        repo_root() / "assets" / "characters" / "kw" / "motions" / "Walking.npy"
+    )  # from Mixamo
 
 
 def _array_from_saved(value) -> np.ndarray:

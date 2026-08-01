@@ -33,6 +33,7 @@ from .records import (
 if TYPE_CHECKING:
     from ...sim import SimArticulation, SimArticulationBatch, SimRigid, SimRigidBatch
 
+
 class _VisualLifetime:
     def _mark_released(self):
         self._released = True
@@ -301,9 +302,7 @@ class ArticulationGPUExternalBackend(_VisualLifetime):
         self.collision_prims = tuple(collision_prims)
         self.num_bodies = len(self.body_handles)
         self.num_envs = len(self.env_ids)
-        self._rows = world.articulation_gpu_index_view(
-            self.env_ids, self.obj_id
-        )
+        self._rows = world.articulation_gpu_index_view(self.env_ids, self.obj_id)
         link_view = world.gpu_system.articulation_link_data()
         device = torch.device(f"cuda:{int(link_view.device_id)}")
         link_indices = world.articulations[
@@ -326,9 +325,7 @@ class ArticulationGPUExternalBackend(_VisualLifetime):
             name=f"gpu_articulation_{self.obj_id}_link_indices",
         )
         self.device_id = int(link_view.device_id)
-        self.stream_handle = int(
-            torch.cuda.current_stream(device).cuda_stream
-        )
+        self.stream_handle = int(torch.cuda.current_stream(device).cuda_stream)
 
     @property
     def prims(self):
@@ -426,9 +423,7 @@ class RigidGPUExternalBackend(_VisualLifetime):
         rigid_view = world.gpu_system.rigid_data()
         device = torch.device(f"cuda:{int(rigid_view.device_id)}")
         self.device_id = int(rigid_view.device_id)
-        self.stream_handle = int(
-            torch.cuda.current_stream(device).cuda_stream
-        )
+        self.stream_handle = int(torch.cuda.current_stream(device).cuda_stream)
 
     @property
     def prims(self):
@@ -705,10 +700,14 @@ class SimWorldVisualizer:
         self._require_valid()
         key = (int(env_id), int(obj_id))
         if key in self.visual_articulation_scene_graphs:
-            raise ValueError(f"visual already registered for env={key[0]}, obj={key[1]}")
+            raise ValueError(
+                f"visual already registered for env={key[0]}, obj={key[1]}"
+            )
 
         articulation = self.world.articulation(key[0], key[1])
-        asset, mesh_asset_base_path = self._articulation_visual_asset(mjcf_path, scale, order)
+        asset, mesh_asset_base_path = self._articulation_visual_asset(
+            mjcf_path, scale, order
+        )
         articulation_visual = asset.instantiate(
             self.scene,
             prim_base_path,
@@ -803,7 +802,9 @@ class SimWorldVisualizer:
         if any((env_id, obj_id) not in self.world.articulations for env_id in env_ids):
             raise KeyError(f"articulation obj={obj_id} is not registered in every env")
 
-        asset, mesh_asset_base_path = self._articulation_visual_asset(mjcf_path, scale, order)
+        asset, mesh_asset_base_path = self._articulation_visual_asset(
+            mjcf_path, scale, order
+        )
         articulation_visual = asset.instantiate(
             self.scene, prim_base_path, mesh_asset_base_path
         )
@@ -863,22 +864,24 @@ class SimWorldVisualizer:
         self._require_valid()
         material = self._resolve_visual_material(material, shader)
         if material is None:
-            raise ValueError("_add_cpu_external_articulation requires a material or shader")
+            raise ValueError(
+                "_add_cpu_external_articulation requires a material or shader"
+            )
 
         obj_id = int(sim_view.obj_id)
         env_ids = tuple(int(env_id) for env_id in sim_view.env_ids)
         if obj_id in self.visual_batches:
             raise ValueError(f"visual batch already registered for obj={obj_id}")
         if obj_id in self.cpu_visual_batches:
-            raise ValueError(
-                f"CPU visual batch already registered for obj={obj_id}"
-            )
+            raise ValueError(f"CPU visual batch already registered for obj={obj_id}")
         if obj_id in self.gpu_visual_batches:
             raise ValueError(f"GPU visual batch already registered for obj={obj_id}")
         if any((env_id, obj_id) not in self.world.articulations for env_id in env_ids):
             raise KeyError(f"articulation obj={obj_id} is not registered in every env")
 
-        asset, mesh_asset_base_path = self._articulation_visual_asset(mjcf_path, scale, order)
+        asset, mesh_asset_base_path = self._articulation_visual_asset(
+            mjcf_path, scale, order
+        )
         articulation_visual = asset.instantiate(
             self.scene, prim_base_path, mesh_asset_base_path
         )
@@ -992,9 +995,7 @@ class SimWorldVisualizer:
         if obj_id in self.visual_batches:
             raise ValueError(f"visual batch already registered for obj={obj_id}")
         if obj_id in self.cpu_visual_batches:
-            raise ValueError(
-                f"CPU visual batch already registered for obj={obj_id}"
-            )
+            raise ValueError(f"CPU visual batch already registered for obj={obj_id}")
         if obj_id in self.gpu_visual_batches:
             raise ValueError(f"GPU visual batch already registered for obj={obj_id}")
         data = self.world.load_mjcf(mjcf_path, scale=scale, order=order)
@@ -1057,7 +1058,9 @@ class SimWorldVisualizer:
             key in self.visual_rigid_scene_graphs
             or key in self.visual_articulation_scene_graphs
         ):
-            raise ValueError(f"visual already registered for env={key[0]}, obj={key[1]}")
+            raise ValueError(
+                f"visual already registered for env={key[0]}, obj={key[1]}"
+            )
 
         rigid = self.world.rigid(key[0], key[1])
         data = self.world.load_mjcf(mjcf_path, scale=scale, order=order)
@@ -1109,9 +1112,13 @@ class SimWorldVisualizer:
         self._require_valid()
         key = (int(env_id), int(obj_id))
         if key in self.visual_articulation_scene_graphs:
-            raise ValueError(f"visual already registered for env={key[0]}, obj={key[1]}")
+            raise ValueError(
+                f"visual already registered for env={key[0]}, obj={key[1]}"
+            )
 
-        asset, mesh_asset_base_path = self._articulation_visual_asset(mjcf_path, scale, order)
+        asset, mesh_asset_base_path = self._articulation_visual_asset(
+            mjcf_path, scale, order
+        )
         articulation_visual = asset.instantiate(
             self.scene,
             prim_base_path,
@@ -1169,9 +1176,7 @@ class SimWorldVisualizer:
         obj_id: int,
     ) -> VisualArticulationSceneGraph | None:
         self._require_valid()
-        return self.visual_articulation_scene_graphs.get(
-            (int(env_id), int(obj_id))
-        )
+        return self.visual_articulation_scene_graphs.get((int(env_id), int(obj_id)))
 
     def get_visual_rigid_scene_graph(
         self, env_id: int, obj_id: int
@@ -1241,7 +1246,9 @@ class SimWorldVisualizer:
                 # MimicKit stores quaternions as xyzw; KangEngine's Python quat
                 # constructor takes wxyz.
                 prim.set_world_rotation(
-                    _ke.quat(float(rot[3]), float(rot[0]), float(rot[1]), float(rot[2])),
+                    _ke.quat(
+                        float(rot[3]), float(rot[0]), float(rot[1]), float(rot[2])
+                    ),
                 )
 
     def set_root_transform_scene_graph(

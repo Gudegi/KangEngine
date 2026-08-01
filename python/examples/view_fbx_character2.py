@@ -8,7 +8,7 @@ from pathlib import Path
 import torch
 
 import kangengine as ke
-from kangengine import imgui, keys, scene, JointMapper, JointSemantic
+from kangengine import imgui, keys, JointMapper, JointSemantic
 
 
 def repo_root() -> Path:
@@ -20,7 +20,9 @@ def package_asset_path(*parts: str) -> str:
 
 
 def default_fbx_file() -> Path:
-    return repo_root() / "assets" / "external" / "Geno/lafan_fbx/aiming1_subject4.fbx" #"Capoeira.fbx"
+    return (
+        repo_root() / "assets" / "external" / "Geno/lafan_fbx/aiming1_subject4.fbx"
+    )  # "Capoeira.fbx"
 
 
 def default_bind_file() -> Path:
@@ -144,13 +146,15 @@ class FbxCharacterBridgeViewer(ke.App):
             )
         )
         mapper = JointMapper.from_motion(self.motion, profiles=["Geno", "common"])
-        tracking = mapper.find_many([
-            JointSemantic.HEAD,
-            JointSemantic.LEFT_HAND,
-            JointSemantic.RIGHT_HAND,
-            JointSemantic.LEFT_ANKLE,
-            JointSemantic.RIGHT_ANKLE,
-        ])
+        tracking = mapper.find_many(
+            [
+                JointSemantic.HEAD,
+                JointSemantic.LEFT_HAND,
+                JointSemantic.RIGHT_HAND,
+                JointSemantic.LEFT_ANKLE,
+                JointSemantic.RIGHT_ANKLE,
+            ]
+        )
         self.editor.add_module(
             ke.motion_module.TrackingModule(
                 self,
@@ -289,8 +293,7 @@ class FbxCharacterBridgeViewer(ke.App):
         imgui.begin("FBX Character 2")
         imgui.text(f"{Path(self.fbx_file).name}")
         imgui.text(
-            f"Meshes: {self.character.num_meshes()}  "
-            f"Joints: {self.motion.num_joints()}"
+            f"Meshes: {self.character.num_meshes()}  Joints: {self.motion.num_joints()}"
         )
         imgui.text("Space: pause/resume    M: mesh    L: skeleton")
         mesh_changed, self.show_mesh = imgui.checkbox("show mesh", self.show_mesh)

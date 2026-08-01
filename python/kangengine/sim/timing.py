@@ -28,9 +28,15 @@ class SimulationTimingConfig:
             catch_up_steps = int(self.max_catch_up_steps)
         except (OverflowError, TypeError, ValueError):
             raise ValueError("max_catch_up_steps must be a positive integer")
-        if isinstance(self.max_catch_up_steps, bool) or catch_up_steps < 1 or catch_up_steps != self.max_catch_up_steps:
+        if (
+            isinstance(self.max_catch_up_steps, bool)
+            or catch_up_steps < 1
+            or catch_up_steps != self.max_catch_up_steps
+        ):
             raise ValueError("max_catch_up_steps must be a positive integer")
-        max_frame_delta = self._validate_number("max_frame_delta", self.max_frame_delta, allow_zero=True)
+        max_frame_delta = self._validate_number(
+            "max_frame_delta", self.max_frame_delta, allow_zero=True
+        )
         object.__setattr__(self, "render_hz", render_hz)
         object.__setattr__(self, "physics_hz", physics_hz)
         object.__setattr__(self, "fixed_update_hz", fixed_update_hz)

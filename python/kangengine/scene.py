@@ -1,4 +1,5 @@
 """Scene graph, prim, mesh, and debug drawing APIs."""
+
 from __future__ import annotations
 
 from ._core import _ke

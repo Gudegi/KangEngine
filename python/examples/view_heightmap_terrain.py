@@ -16,7 +16,10 @@ from kangengine import imgui
 
 
 DEFAULT_HEIGHTMAP = (
-    Path(__file__).resolve().parents[2] / "assets" / "external" / "iceland_heightmap.png"
+    Path(__file__).resolve().parents[2]
+    / "assets"
+    / "external"
+    / "iceland_heightmap.png"
 )
 
 
@@ -195,7 +198,9 @@ class HeightmapTerrainViewer(ke.App):
     def _collision_test_spawn_position(self):
         center = (self.bounds_min + self.bounds_max) * 0.5
         if self.up_axis == ke.UpAxis.Z:
-            return ke.vec3(center.x, center.y, self.bounds_max.z + self.test_radius * 6.0)
+            return ke.vec3(
+                center.x, center.y, self.bounds_max.z + self.test_radius * 6.0
+            )
         return ke.vec3(center.x, self.bounds_max.y + self.test_radius * 6.0, center.z)
 
     def _reset_collision_test_sphere(self):

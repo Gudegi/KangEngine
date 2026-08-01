@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import kangengine as ke
-from kangengine import imgui, scene
+from kangengine import imgui
 
 
 NORMAL_DEBUG_MODES = [
@@ -55,7 +55,9 @@ class BrickwallNormalMapViewer(ke.App):
 
         root = brickwall_dir()
         self.diffuse_texture = device.create_texture(str(root / "brickwall.jpg"), True)
-        self.normal_texture = device.create_texture(str(root / "brickwall_normal.jpg"), True)
+        self.normal_texture = device.create_texture(
+            str(root / "brickwall_normal.jpg"), True
+        )
 
         self.wall_view = self.scene.add_mesh(
             "/brickwall",

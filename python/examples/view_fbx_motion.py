@@ -8,7 +8,7 @@ from pathlib import Path
 import torch
 
 import kangengine as ke
-from kangengine import asset, imgui, keys, scene
+from kangengine import asset, imgui, keys
 
 
 def repo_root() -> Path:

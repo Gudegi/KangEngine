@@ -19,6 +19,7 @@ def package_asset_path(*parts: str) -> str:
 def default_mjcf_path() -> Path:
     return Path(package_asset_path("characters", "kw", "kw.xml"))
 
+
 class MjcfDofControlApp(ke.App):
     """Load an MJCF articulation and expose every DOF as an ImGui slider."""
 
@@ -174,8 +175,7 @@ class MjcfDofControlApp(ke.App):
 
     def print_summary(self):
         print(
-            f"{self.object_name} loaded: "
-            f"links={self.robot.num_links()} dofs={self.num_dofs}"
+            f"{self.object_name} loaded: links={self.robot.num_links()} dofs={self.num_dofs}"
         )
         print("DOFs:", ", ".join(self.dof_names))
         print("XML:", self.mjcf_path)
@@ -294,10 +294,9 @@ class MjcfDofControlApp(ke.App):
         radius = self._quat_rotate_xyzw(body_rot, self._drag_force_local_anchor)
         anchor_world = body_pos + radius
         point_vel = body_vel + np.cross(body_ang_vel, radius)
-        force = (
-            (self._drag_force_target - anchor_world) * float(self.drag_force_stiffness)
-            - point_vel * float(self.drag_force_damping)
-        )
+        force = (self._drag_force_target - anchor_world) * float(
+            self.drag_force_stiffness
+        ) - point_vel * float(self.drag_force_damping)
         norm = float(np.linalg.norm(force))
         if norm > float(self.drag_force_max) > 0.0:
             force *= float(self.drag_force_max) / norm
@@ -385,7 +384,10 @@ class MjcfDofControlApp(ke.App):
     def _clear_drag_force(self):
         if getattr(self, "_drag_force_body_id", None) is not None:
             self.world.set_body_force(
-                0, self.obj_id, int(self._drag_force_body_id), np.zeros(3, dtype=np.float32)
+                0,
+                self.obj_id,
+                int(self._drag_force_body_id),
+                np.zeros(3, dtype=np.float32),
             )
         self._drag_force_body_id = None
         self._drag_force_local_anchor = None
@@ -405,7 +407,7 @@ class MjcfDofControlApp(ke.App):
             self._clear_contact_force_arrows()
             return
 
-        # Body-aggregated force visualization. 
+        # Body-aggregated force visualization.
         # the arrows start at link origins instead of real contact points.
         # body_pos = np.asarray(
         #     self.world.state.get_body_pos(self.obj_id)[0], dtype=np.float32
@@ -452,7 +454,9 @@ class MjcfDofControlApp(ke.App):
 
     @staticmethod
     def _vec3_to_np(value) -> np.ndarray:
-        return np.array([float(value.x), float(value.y), float(value.z)], dtype=np.float32)
+        return np.array(
+            [float(value.x), float(value.y), float(value.z)], dtype=np.float32
+        )
 
     @staticmethod
     def _state_array(value) -> np.ndarray:
@@ -496,7 +500,9 @@ class MjcfDofControlApp(ke.App):
         imgui.begin(self.window_title)
         state = "paused" if self.is_simulation_paused() else "running"
         imgui.text(f"State: {state}")
-        imgui.text("Enter: play/pause    Space: pause/step    R: reset    Q: auto motion")
+        imgui.text(
+            "Enter: play/pause    Space: pause/step    R: reset    Q: auto motion"
+        )
         imgui.text(f"Links: {self.robot.num_links()}  DOFs: {self.num_dofs}")
         imgui.text(Path(self.mjcf_path).name)
         imgui.separator()

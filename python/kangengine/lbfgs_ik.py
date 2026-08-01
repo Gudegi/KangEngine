@@ -7,6 +7,7 @@ from pathlib import Path
 
 import torch
 
+
 @dataclass(frozen=True)
 class BodyLink:
     name: str
@@ -120,9 +121,15 @@ def _quat_wxyz_to_matrix(quat: torch.Tensor) -> torch.Tensor:
     w, x, y, z = quat.unbind()
     return torch.stack(
         (
-            torch.stack((1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w))),
-            torch.stack((2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w))),
-            torch.stack((2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y))),
+            torch.stack(
+                (1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w))
+            ),
+            torch.stack(
+                (2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w))
+            ),
+            torch.stack(
+                (2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y))
+            ),
         )
     )
 
@@ -152,9 +159,7 @@ def _stack_quat_matrices(values, *, dtype, device) -> torch.Tensor:
 
 
 def _transform_from_rot_pos(rot: torch.Tensor, pos: torch.Tensor) -> torch.Tensor:
-    bottom = torch.tensor(
-        [[0.0, 0.0, 0.0, 1.0]], dtype=pos.dtype, device=pos.device
-    )
+    bottom = torch.tensor([[0.0, 0.0, 0.0, 1.0]], dtype=pos.dtype, device=pos.device)
     return torch.cat(
         (
             torch.cat((rot, pos.reshape(3, 1)), dim=1),
@@ -208,8 +213,7 @@ class MJCFLBFGSIK:
         )
         if self.joint_names != self.requested_joint_names:
             raise ValueError(
-                "unexpected MJCF joint order: "
-                f"expected {self.requested_joint_names}, got {self.joint_names}"
+                f"unexpected MJCF joint order: expected {self.requested_joint_names}, got {self.joint_names}"
             )
         self._cache_torch_chain()
 
@@ -248,7 +252,9 @@ class MJCFLBFGSIK:
     def _site_position_and_body_rotation(
         self, q: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        q = torch.as_tensor(q, dtype=self.dtype, device=self.device).reshape(self.num_joints)
+        q = torch.as_tensor(q, dtype=self.dtype, device=self.device).reshape(
+            self.num_joints
+        )
         rot = torch.eye(3, dtype=self.dtype, device=self.device)
         pos = torch.zeros(3, dtype=self.dtype, device=self.device)
 
@@ -281,11 +287,15 @@ class MJCFLBFGSIK:
         posture_weight: float = 0.0,
         line_search_fn: str = "strong_wolfe",
     ) -> IKResult:
-        target = torch.as_tensor(target_pos, dtype=self.dtype, device=self.device).reshape(3)
+        target = torch.as_tensor(
+            target_pos, dtype=self.dtype, device=self.device
+        ).reshape(3)
         if initial_q is None:
             initial = torch.zeros(self.num_joints, dtype=self.dtype, device=self.device)
         else:
-            initial = torch.as_tensor(initial_q, dtype=self.dtype, device=self.device).reshape(self.num_joints)
+            initial = torch.as_tensor(
+                initial_q, dtype=self.dtype, device=self.device
+            ).reshape(self.num_joints)
         initial = self.clamp_to_limits(initial)
 
         raw = self._q_to_raw(initial).detach().clone().requires_grad_(True)
@@ -328,8 +338,12 @@ class MJCFLBFGSIK:
         )
 
     def clamp_to_limits(self, q: torch.Tensor) -> torch.Tensor:
-        q = torch.as_tensor(q, dtype=self.dtype, device=self.device).reshape(self.num_joints)
-        return torch.maximum(torch.minimum(q, self.joint_limits[:, 1]), self.joint_limits[:, 0])
+        q = torch.as_tensor(q, dtype=self.dtype, device=self.device).reshape(
+            self.num_joints
+        )
+        return torch.maximum(
+            torch.minimum(q, self.joint_limits[:, 1]), self.joint_limits[:, 0]
+        )
 
     def _raw_to_q(self, raw: torch.Tensor) -> torch.Tensor:
         lo = self.joint_limits[:, 0]
@@ -349,10 +363,8 @@ class MJCFLBFGSIK:
     def q_to_joint_positions(
         self, q: torch.Tensor, *, degrees: bool = False
     ) -> dict[str, float]:
-        q = torch.as_tensor(q, dtype=self.dtype, device=self.device).reshape(self.num_joints)
+        q = torch.as_tensor(q, dtype=self.dtype, device=self.device).reshape(
+            self.num_joints
+        )
         values = torch.rad2deg(q) if degrees else q
-        return {
-            name: float(values[i].cpu())
-            for i, name in enumerate(self.joint_names)
-        }
-
+        return {name: float(values[i].cpu()) for i, name in enumerate(self.joint_names)}
