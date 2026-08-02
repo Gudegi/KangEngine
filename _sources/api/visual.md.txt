@@ -1,8 +1,9 @@
 # ke.visual
 
-Python viewer-side bridges that sync simulation state into scene and render
+Python viewer-side bridges for scene objects, animated characters, and simulation
+state visualization.
 
-## API overview
+## Scene and asset visuals
 
 ```{eval-rst}
 .. currentmodule:: kangengine.visual
@@ -16,7 +17,6 @@ Python viewer-side bridges that sync simulation state into scene and render
    SkeletalVisual
    SkeletalVisualConfig
 ```
-objects.
 
 ```{eval-rst}
 .. currentmodule:: kangengine.visual
@@ -31,7 +31,28 @@ objects.
    :special-members: __init__
 
 .. autoclass:: SkeletalVisual
+```
 
+## Simulation visual sync
+
+`ke.visual.sim` mirrors `KangSimWorld` objects into scene and render visuals.
+These objects own visualization state only; simulation state remains owned by
+the world and its simulation handles.
+
+```{eval-rst}
+.. currentmodule:: kangengine.visual.sim
+
+.. autosummary::
+   :nosignatures:
+
+   SimWorldVisualizer
+   VisualBatch
+   VisualBodyPick
+   VisualRigidSceneGraph
+   VisualArticulationSceneGraph
+```
+
+```{eval-rst}
 .. currentmodule:: kangengine.visual.sim
 
 .. autoclass:: SimWorldVisualizer

@@ -40,6 +40,7 @@ Loader return contracts
 Missing or unreadable files and malformed source data raise ``RuntimeError``;
 invalid argument values raise ``ValueError`` where validation is available.
 Inspect ``ImportDiagnostics`` for supported non-fatal import warnings.
+
 .. autoclass:: ImportDiagnostics
 
 .. autoclass:: MJCFLoader

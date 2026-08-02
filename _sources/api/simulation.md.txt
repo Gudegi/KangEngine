@@ -24,6 +24,7 @@ High-level Python simulation helpers built on the low-level PhysX bindings.
 Simulation getters return Torch tensors on the configured state device. They are
 views into reusable state storage, not immutable snapshots; use `tensor.clone()`
 when data must survive later `step()`, `refresh()`, reset, or `release()` calls.
+Shape labels use `N` for environments, `B` for bodies, and `D` for DOFs.
 
 | API | Return and lifetime contract |
 | --- | --- |
@@ -41,6 +42,18 @@ after release raise `RuntimeError`.
 .. currentmodule:: kangengine.sim
 
 .. autoclass:: KangSimWorld
+
+.. autoclass:: SimArticulation
+
+.. autoclass:: SimArticulationBatch
+
+.. autoclass:: SimRigid
+
+.. autoclass:: SimRigidBatch
+
+.. autoclass:: SimulationRuntime
+
+.. autoclass:: ArticulationStateView
 
 .. autoclass:: SimulationTimingConfig
    :members:

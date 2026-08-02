@@ -279,13 +279,30 @@
           <span>Back to top</span>
         </a>
         <div class="content-icon-container">
-          <div class="view-this-page">
+          <div class="view-this-page github-repository-link">
+  <a
+    class="muted-link"
+    href="https://github.com/Gudegi/KangEngine"
+    target="_blank"
+    rel="noopener noreferrer"
+    title="KangEngine on GitHub"
+    aria-label="KangEngine on GitHub"
+  >
+    <svg viewBox="-1 -1 26 26" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M12 .5a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58l-.02-2.26c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18a4.64 4.64 0 0 1 1.24 3.22c0 4.61-2.81 5.62-5.48 5.92.43.37.81 1.1.81 2.22l-.01 3.29c0 .32.22.7.82.58A12 12 0 0 0 12 .5Z"
+      />
+    </svg>
+    <span class="visually-hidden">KangEngine on GitHub</span>
+  </a>
+</div>
+<div class="view-this-page">
   <a class="muted-link" href="../_sources/api/rendering.md.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
-</div>
-<div class="theme-toggle-container theme-toggle-content">
+</div><div class="theme-toggle-container theme-toggle-content">
             <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
               <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
               <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
@@ -397,11 +414,11 @@
 <span class="sig-name descname"><span class="pre">set_color</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.render.Shader.set_color" title="Link to this definition">¶</a></dt>
 <dd><p>Overloaded function.</p>
 <ol class="arabic simple">
-<li><p>set_color(self: kangengine._kangengine.Shader, name: str, r: typing.SupportsFloat, g: typing.SupportsFloat, b: typing.SupportsFloat, a: typing.SupportsFloat) -&gt; None</p></li>
+<li><p>set_color(self: kangengine.Shader, name: str, r: float, g: float, b: float, a: float) -&gt; None</p></li>
 </ol>
 <p>Set a color uniform from RGBA components.</p>
 <ol class="arabic simple" start="2">
-<li><p>set_color(self: kangengine._kangengine.Shader, name: str, value: glm::vec&lt;4, float, (glm::qualifier)0&gt;) -&gt; None</p></li>
+<li><p>set_color(self: kangengine.Shader, name: str, value: glm::vec&lt;4, float, (glm::qualifier)0&gt;) -&gt; None</p></li>
 </ol>
 <p>Set a color uniform from an RGBA vector.</p>
 </dd></dl>
@@ -488,11 +505,11 @@
 <span class="sig-name descname"><span class="pre">set_vec2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.render.Shader.set_vec2" title="Link to this definition">¶</a></dt>
 <dd><p>Overloaded function.</p>
 <ol class="arabic simple">
-<li><p>set_vec2(self: kangengine._kangengine.Shader, name: str, value: glm::vec&lt;2, float, (glm::qualifier)0&gt;) -&gt; None</p></li>
+<li><p>set_vec2(self: kangengine.Shader, name: str, value: glm::vec&lt;2, float, (glm::qualifier)0&gt;) -&gt; None</p></li>
 </ol>
 <p>Set a vec2 uniform.</p>
 <ol class="arabic simple" start="2">
-<li><p>set_vec2(self: kangengine._kangengine.Shader, name: str, x: typing.SupportsFloat, y: typing.SupportsFloat) -&gt; None</p></li>
+<li><p>set_vec2(self: kangengine.Shader, name: str, x: float, y: float) -&gt; None</p></li>
 </ol>
 <p>Set a vec2 uniform from components.</p>
 </dd></dl>
@@ -502,11 +519,11 @@
 <span class="sig-name descname"><span class="pre">set_vec3</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.render.Shader.set_vec3" title="Link to this definition">¶</a></dt>
 <dd><p>Overloaded function.</p>
 <ol class="arabic simple">
-<li><p>set_vec3(self: kangengine._kangengine.Shader, name: str, value: glm::vec&lt;3, float, (glm::qualifier)0&gt;) -&gt; None</p></li>
+<li><p>set_vec3(self: kangengine.Shader, name: str, value: glm::vec&lt;3, float, (glm::qualifier)0&gt;) -&gt; None</p></li>
 </ol>
 <p>Set a vec3 uniform.</p>
 <ol class="arabic simple" start="2">
-<li><p>set_vec3(self: kangengine._kangengine.Shader, name: str, x: typing.SupportsFloat, y: typing.SupportsFloat, z: typing.SupportsFloat) -&gt; None</p></li>
+<li><p>set_vec3(self: kangengine.Shader, name: str, x: float, y: float, z: float) -&gt; None</p></li>
 </ol>
 <p>Set a vec3 uniform from components.</p>
 </dd></dl>
@@ -516,11 +533,11 @@
 <span class="sig-name descname"><span class="pre">set_vec4</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.render.Shader.set_vec4" title="Link to this definition">¶</a></dt>
 <dd><p>Overloaded function.</p>
 <ol class="arabic simple">
-<li><p>set_vec4(self: kangengine._kangengine.Shader, name: str, value: glm::vec&lt;4, float, (glm::qualifier)0&gt;) -&gt; None</p></li>
+<li><p>set_vec4(self: kangengine.Shader, name: str, value: glm::vec&lt;4, float, (glm::qualifier)0&gt;) -&gt; None</p></li>
 </ol>
 <p>Set a vec4 uniform.</p>
 <ol class="arabic simple" start="2">
-<li><p>set_vec4(self: kangengine._kangengine.Shader, name: str, x: typing.SupportsFloat, y: typing.SupportsFloat, z: typing.SupportsFloat, w: typing.SupportsFloat) -&gt; None</p></li>
+<li><p>set_vec4(self: kangengine.Shader, name: str, x: float, y: float, z: float, w: float) -&gt; None</p></li>
 </ol>
 <p>Set a vec4 uniform from components.</p>
 </dd></dl>
@@ -662,7 +679,7 @@
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Renderer</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">colors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">colors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">npt.ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">torch.Tensor</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.set_renderable_colors" title="Link to this definition">¶</a></dt>
@@ -702,11 +719,11 @@
 <span class="sig-name descname"><span class="pre">set_renderable_texture</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.render.Renderer.set_renderable_texture" title="Link to this definition">¶</a></dt>
 <dd><p>Overloaded function.</p>
 <ol class="arabic simple">
-<li><p>set_renderable_texture(self: kangengine._kangengine.Renderer, handle: typing.SupportsInt, texture: kangengine._kangengine.Texture, role: kangengine._kangengine.TextureRole) -&gt; None</p></li>
+<li><p>set_renderable_texture(self: kangengine.Renderer, handle: int, texture: kangengine.Texture, role: kangengine.TextureRole) -&gt; None</p></li>
 </ol>
 <p>Attach a texture to a renderable using a material texture role.</p>
 <ol class="arabic simple" start="2">
-<li><p>set_renderable_texture(self: kangengine._kangengine.Renderer, handle: typing.SupportsInt, texture: kangengine._kangengine.Texture, slot: typing.SupportsInt = 0) -&gt; None</p></li>
+<li><p>set_renderable_texture(self: kangengine.Renderer, handle: int, texture: kangengine.Texture, slot: int = 0) -&gt; None</p></li>
 </ol>
 <p>Attach a texture to a renderable using a raw texture slot.</p>
 </dd></dl>
@@ -765,7 +782,7 @@
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Renderer</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">positions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">positions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">npt.ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">torch.Tensor</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">normals</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 </dl>
 
@@ -780,7 +797,7 @@
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Renderer</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">bone_matrices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">bone_matrices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">npt.ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">torch.Tensor</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.update_renderable_skinning_matrices" title="Link to this definition">¶</a></dt>
@@ -794,7 +811,7 @@
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Renderer</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">transforms</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Annotated</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.typing.ArrayLike</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">numpy.float32</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">transforms</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">npt.ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">torch.Tensor</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">colors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 </dl>
 
