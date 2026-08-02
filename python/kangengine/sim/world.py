@@ -6,11 +6,14 @@ import math
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
+from typing import Self
 
 import numpy as np
+import torch
 
 from .._core import _ke
 from ..rigid import rigid_shape_specs
+from ..state import KangWorldState, SimObjectState
 from ..utils.env_utils import (
     EnvIdLike,
     env_id_list,
@@ -153,7 +156,7 @@ class SimArticulation:
     obj_id: int
     name: str
     articulation: object
-    world: object | None = None
+    world: KangSimWorld | None = None
 
     @property
     def key(self):
@@ -164,41 +167,50 @@ class SimArticulation:
         return (self.env_id,)
 
     @property
-    def data(self):
+    def data(self) -> SimObjectState:
         return self._require_world().state.object_state(self.env_id, self.obj_id)
 
-    def get_data(self, env_ids: EnvIdLike | None = None):
+    def get_data(self, env_ids: EnvIdLike | None = None) -> SimObjectState:
         if env_ids is None:
             return self.data
         return self._require_world().state.object_states(
             self.obj_id, self._selected_env_ids(env_ids)
         )
 
-    def get_root_pos(self, env_ids: EnvIdLike | None = None):
+    def get_root_pos(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(..., 3)``."""
         return self.get_data(env_ids).root_pos
 
-    def get_root_rot(self, env_ids: EnvIdLike | None = None):
+    def get_root_rot(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(..., 4)``."""
         return self.get_data(env_ids).root_rot
 
-    def get_root_vel(self, env_ids: EnvIdLike | None = None):
+    def get_root_vel(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(..., 3)``."""
         return self.get_data(env_ids).root_vel
 
-    def get_root_ang_vel(self, env_ids: EnvIdLike | None = None):
+    def get_root_ang_vel(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(..., 3)``."""
         return self.get_data(env_ids).root_ang_vel
 
-    def get_body_pos(self, env_ids: EnvIdLike | None = None):
+    def get_body_pos(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(..., B, 3)``."""
         return self.get_data(env_ids).body_pos
 
-    def get_body_rot(self, env_ids: EnvIdLike | None = None):
+    def get_body_rot(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(..., B, 4)``."""
         return self.get_data(env_ids).body_rot
 
-    def get_dof_pos(self, env_ids: EnvIdLike | None = None):
+    def get_dof_pos(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(..., D)``."""
         return self.get_data(env_ids).dof_pos
 
-    def get_dof_vel(self, env_ids: EnvIdLike | None = None):
+    def get_dof_vel(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(..., D)``."""
         return self.get_data(env_ids).dof_vel
 
-    def get_dof_force(self, env_ids: EnvIdLike | None = None):
+    def get_dof_force(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(..., D)``."""
         return self.get_data(env_ids).dof_force
 
     @property
@@ -236,11 +248,12 @@ class SimArticulation:
     def set_cmd(
         self,
         env_ids: EnvIdLike | None,
-        cmd,
+        cmd: torch.Tensor,
         mode: "ControlMode | str" = "pos",
-        kp: float | None = 200.0,
-        kd: float | None = 10.0,
-    ):
+        kp: float | torch.Tensor | None = 200.0,
+        kd: float | torch.Tensor | None = 10.0,
+    ) -> Self:
+        """Shape: command and tensor gains ``(..., D)``."""
         self._require_world().set_cmd(
             self._selected_env_ids(env_ids),
             self.obj_id,
@@ -261,12 +274,13 @@ class SimArticulation:
     def set_root_state(
         self,
         env_ids: EnvIdLike | None,
-        pos,
-        rot_xyzw,
-        linear_velocity=None,
-        angular_velocity=None,
+        pos: torch.Tensor,
+        rot_xyzw: torch.Tensor,
+        linear_velocity: torch.Tensor | None = None,
+        angular_velocity: torch.Tensor | None = None,
         immediate: bool = False,
-    ):
+    ) -> Self:
+        """Shapes: position/velocity ``(..., 3)``, rotation ``(..., 4)``."""
         self._require_world().set_root_state(
             self._selected_env_ids(env_ids),
             self.obj_id,
@@ -281,10 +295,11 @@ class SimArticulation:
     def set_dof_state(
         self,
         env_ids: EnvIdLike | None,
-        positions,
-        velocities=None,
+        positions: torch.Tensor,
+        velocities: torch.Tensor | None = None,
         immediate: bool = False,
-    ):
+    ) -> Self:
+        """Shape: ``(..., D)``."""
         self._require_world().set_dof_state(
             self._selected_env_ids(env_ids),
             self.obj_id,
@@ -298,8 +313,9 @@ class SimArticulation:
         self,
         env_ids: EnvIdLike | None,
         body_id: int,
-        force,
-    ):
+        force: torch.Tensor,
+    ) -> Self:
+        """Shape: ``(..., 3)``."""
         self._require_world().set_body_force(
             self._selected_env_ids(env_ids),
             self.obj_id,
@@ -312,9 +328,10 @@ class SimArticulation:
         self,
         env_ids: EnvIdLike | None,
         body_id: int,
-        force,
-        position,
-    ):
+        force: torch.Tensor,
+        position: torch.Tensor,
+    ) -> Self:
+        """Shape: force and position ``(..., 3)``."""
         self._require_world().set_body_force_at_position(
             self._selected_env_ids(env_ids),
             self.obj_id,
@@ -348,7 +365,7 @@ class SimRigid:
     obj_id: int
     name: str
     rigid: object
-    world: object | None = None
+    world: KangSimWorld | None = None
     source_data: object | None = None
 
     @property
@@ -360,32 +377,38 @@ class SimRigid:
         return (self.env_id,)
 
     @property
-    def data(self):
+    def data(self) -> SimObjectState:
         return self._require_world().state.object_state(self.env_id, self.obj_id)
 
-    def get_data(self, env_ids: EnvIdLike | None = None):
+    def get_data(self, env_ids: EnvIdLike | None = None) -> SimObjectState:
         if env_ids is None:
             return self.data
         return self._require_world().state.object_states(
             self.obj_id, self._selected_env_ids(env_ids)
         )
 
-    def get_root_pos(self, env_ids: EnvIdLike | None = None):
+    def get_root_pos(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(..., 3)``."""
         return self.get_data(env_ids).root_pos
 
-    def get_root_rot(self, env_ids: EnvIdLike | None = None):
+    def get_root_rot(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(..., 4)``."""
         return self.get_data(env_ids).root_rot
 
-    def get_root_vel(self, env_ids: EnvIdLike | None = None):
+    def get_root_vel(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(..., 3)``."""
         return self.get_data(env_ids).root_vel
 
-    def get_root_ang_vel(self, env_ids: EnvIdLike | None = None):
+    def get_root_ang_vel(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(..., 3)``."""
         return self.get_data(env_ids).root_ang_vel
 
-    def get_body_pos(self, env_ids: EnvIdLike | None = None):
+    def get_body_pos(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(..., B, 3)``."""
         return self.get_data(env_ids).body_pos
 
-    def get_body_rot(self, env_ids: EnvIdLike | None = None):
+    def get_body_rot(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(..., B, 4)``."""
         return self.get_data(env_ids).body_rot
 
     @property
@@ -433,12 +456,13 @@ class SimRigid:
     def set_root_state(
         self,
         env_ids: EnvIdLike | None,
-        pos,
-        rot_xyzw,
-        linear_velocity=None,
-        angular_velocity=None,
+        pos: torch.Tensor,
+        rot_xyzw: torch.Tensor,
+        linear_velocity: torch.Tensor | None = None,
+        angular_velocity: torch.Tensor | None = None,
         immediate: bool = False,
-    ):
+    ) -> Self:
+        """Shapes: position/velocity ``(..., 3)``, rotation ``(..., 4)``."""
         self._require_world().set_root_state(
             self._selected_env_ids(env_ids),
             self.obj_id,
@@ -454,8 +478,9 @@ class SimRigid:
         self,
         env_ids: EnvIdLike | None,
         body_id: int,
-        force,
-    ):
+        force: torch.Tensor,
+    ) -> Self:
+        """Shape: ``(..., 3)``."""
         self._require_world().set_body_force(
             self._selected_env_ids(env_ids),
             self.obj_id,
@@ -468,9 +493,10 @@ class SimRigid:
         self,
         env_ids: EnvIdLike | None,
         body_id: int,
-        force,
-        position,
-    ):
+        force: torch.Tensor,
+        position: torch.Tensor,
+    ) -> Self:
+        """Shape: force and position ``(..., 3)``."""
         self._require_world().set_body_force_at_position(
             self._selected_env_ids(env_ids),
             self.obj_id,
@@ -517,7 +543,7 @@ class SimRigid:
 class SimArticulationBatch:
     """Batched simulation-facing view for one logical articulation object."""
 
-    world: object
+    world: KangSimWorld
     obj_id: int
     env_ids: tuple[int, ...]
     name: str = ""
@@ -527,39 +553,48 @@ class SimArticulationBatch:
         return (self.env_ids, self.obj_id)
 
     @property
-    def data(self):
+    def data(self) -> SimObjectState:
         return self.get_data()
 
-    def get_data(self, env_ids: EnvIdLike | None = None):
+    def get_data(self, env_ids: EnvIdLike | None = None) -> SimObjectState:
         return self.world.state.object_states(
             self.obj_id, self._selected_env_ids(env_ids)
         )
 
-    def get_root_pos(self, env_ids: EnvIdLike | None = None):
+    def get_root_pos(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(N, 3)``."""
         return self.get_data(env_ids).root_pos
 
-    def get_root_rot(self, env_ids: EnvIdLike | None = None):
+    def get_root_rot(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(N, 4)``."""
         return self.get_data(env_ids).root_rot
 
-    def get_root_vel(self, env_ids: EnvIdLike | None = None):
+    def get_root_vel(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(N, 3)``."""
         return self.get_data(env_ids).root_vel
 
-    def get_root_ang_vel(self, env_ids: EnvIdLike | None = None):
+    def get_root_ang_vel(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(N, 3)``."""
         return self.get_data(env_ids).root_ang_vel
 
-    def get_body_pos(self, env_ids: EnvIdLike | None = None):
+    def get_body_pos(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(N, B, 3)``."""
         return self.get_data(env_ids).body_pos
 
-    def get_body_rot(self, env_ids: EnvIdLike | None = None):
+    def get_body_rot(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(N, B, 4)``."""
         return self.get_data(env_ids).body_rot
 
-    def get_dof_pos(self, env_ids: EnvIdLike | None = None):
+    def get_dof_pos(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(N, D)``."""
         return self.get_data(env_ids).dof_pos
 
-    def get_dof_vel(self, env_ids: EnvIdLike | None = None):
+    def get_dof_vel(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(N, D)``."""
         return self.get_data(env_ids).dof_vel
 
-    def get_dof_force(self, env_ids: EnvIdLike | None = None):
+    def get_dof_force(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(N, D)``."""
         return self.get_data(env_ids).dof_force
 
     @property
@@ -611,11 +646,12 @@ class SimArticulationBatch:
     def set_cmd(
         self,
         env_ids: EnvIdLike | None,
-        cmd,
+        cmd: torch.Tensor,
         mode: "ControlMode | str" = "pos",
-        kp: object | None = 200.0,
-        kd: object | None = 10.0,
-    ):
+        kp: float | torch.Tensor | None = 200.0,
+        kd: float | torch.Tensor | None = 10.0,
+    ) -> Self:
+        """Shape: command and tensor gains ``(N, D)``."""
         self.world.set_cmd(
             self._selected_env_ids(env_ids),
             self.obj_id,
@@ -633,12 +669,13 @@ class SimArticulationBatch:
     def set_root_state(
         self,
         env_ids: EnvIdLike | None,
-        pos,
-        rot_xyzw,
-        linear_velocity=None,
-        angular_velocity=None,
+        pos: torch.Tensor,
+        rot_xyzw: torch.Tensor,
+        linear_velocity: torch.Tensor | None = None,
+        angular_velocity: torch.Tensor | None = None,
         immediate: bool = False,
-    ):
+    ) -> Self:
+        """Shapes: position/velocity ``(N, 3)``, rotation ``(N, 4)``."""
         self.world.set_root_state(
             self._selected_env_ids(env_ids),
             self.obj_id,
@@ -653,10 +690,11 @@ class SimArticulationBatch:
     def set_dof_state(
         self,
         env_ids: EnvIdLike | None,
-        positions,
-        velocities=None,
+        positions: torch.Tensor,
+        velocities: torch.Tensor | None = None,
         immediate: bool = False,
-    ):
+    ) -> Self:
+        """Shape: ``(N, D)``."""
         self.world.set_dof_state(
             self._selected_env_ids(env_ids),
             self.obj_id,
@@ -670,8 +708,9 @@ class SimArticulationBatch:
         self,
         env_ids: EnvIdLike | None,
         body_id: int,
-        force,
-    ):
+        force: torch.Tensor,
+    ) -> Self:
+        """Shape: ``(N, 3)``."""
         self.world.set_body_force(
             self._selected_env_ids(env_ids),
             self.obj_id,
@@ -684,9 +723,10 @@ class SimArticulationBatch:
         self,
         env_ids: EnvIdLike | None,
         body_id: int,
-        force,
-        position,
-    ):
+        force: torch.Tensor,
+        position: torch.Tensor,
+    ) -> Self:
+        """Shape: force and position ``(N, 3)``."""
         self.world.set_body_force_at_position(
             self._selected_env_ids(env_ids),
             self.obj_id,
@@ -712,7 +752,7 @@ class SimArticulationBatch:
 class SimRigidBatch:
     """Batched simulation-facing view for one logical rigid object."""
 
-    world: object
+    world: KangSimWorld
     obj_id: int
     env_ids: tuple[int, ...]
     name: str = ""
@@ -722,30 +762,36 @@ class SimRigidBatch:
         return (self.env_ids, self.obj_id)
 
     @property
-    def data(self):
+    def data(self) -> SimObjectState:
         return self.get_data()
 
-    def get_data(self, env_ids: EnvIdLike | None = None):
+    def get_data(self, env_ids: EnvIdLike | None = None) -> SimObjectState:
         return self.world.state.object_states(
             self.obj_id, self._selected_env_ids(env_ids)
         )
 
-    def get_root_pos(self, env_ids: EnvIdLike | None = None):
+    def get_root_pos(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(N, 3)``."""
         return self.get_data(env_ids).root_pos
 
-    def get_root_rot(self, env_ids: EnvIdLike | None = None):
+    def get_root_rot(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(N, 4)``."""
         return self.get_data(env_ids).root_rot
 
-    def get_root_vel(self, env_ids: EnvIdLike | None = None):
+    def get_root_vel(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(N, 3)``."""
         return self.get_data(env_ids).root_vel
 
-    def get_root_ang_vel(self, env_ids: EnvIdLike | None = None):
+    def get_root_ang_vel(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(N, 3)``."""
         return self.get_data(env_ids).root_ang_vel
 
-    def get_body_pos(self, env_ids: EnvIdLike | None = None):
+    def get_body_pos(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(N, B, 3)``."""
         return self.get_data(env_ids).body_pos
 
-    def get_body_rot(self, env_ids: EnvIdLike | None = None):
+    def get_body_rot(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """Shape: ``(N, B, 4)``."""
         return self.get_data(env_ids).body_rot
 
     @property
@@ -785,12 +831,13 @@ class SimRigidBatch:
     def set_root_state(
         self,
         env_ids: EnvIdLike | None,
-        pos,
-        rot_xyzw,
-        linear_velocity=None,
-        angular_velocity=None,
+        pos: torch.Tensor,
+        rot_xyzw: torch.Tensor,
+        linear_velocity: torch.Tensor | None = None,
+        angular_velocity: torch.Tensor | None = None,
         immediate: bool = False,
-    ):
+    ) -> Self:
+        """Shapes: position/velocity ``(N, 3)``, rotation ``(N, 4)``."""
         self.world.set_root_state(
             self._selected_env_ids(env_ids),
             self.obj_id,
@@ -806,8 +853,9 @@ class SimRigidBatch:
         self,
         env_ids: EnvIdLike | None,
         body_id: int,
-        force,
-    ):
+        force: torch.Tensor,
+    ) -> Self:
+        """Shape: ``(N, 3)``."""
         self.world.set_body_force(
             self._selected_env_ids(env_ids),
             self.obj_id,
@@ -820,9 +868,10 @@ class SimRigidBatch:
         self,
         env_ids: EnvIdLike | None,
         body_id: int,
-        force,
-        position,
-    ):
+        force: torch.Tensor,
+        position: torch.Tensor,
+    ) -> Self:
+        """Shape: force and position ``(N, 3)``."""
         self.world.set_body_force_at_position(
             self._selected_env_ids(env_ids),
             self.obj_id,
@@ -983,8 +1032,6 @@ class KangSimWorld:
         self.physics = _ke.physics.PhysicsWorld(physics_config)
         if add_ground:
             self.physics.add_default_ground()
-
-        from ..state import KangWorldState
 
         self.sim_device = sim_device
         self.state_device = _resolve_state_device(

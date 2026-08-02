@@ -58,10 +58,22 @@ def _state_slice(state, index):
 
 @dataclass(slots=True)
 class SimObjectState:
-    """Tensor views for one simulation object or an env batch.
+    """Torch state views for one object or an environment batch.
 
-    Quaternion arrays use xyzw order. Body arrays include the root body at
-    index 0.
+    Shapes:
+        root_pos: ``(..., 3)``.
+        root_rot: ``(..., 4)``.
+        root_vel: ``(..., 3)``.
+        root_ang_vel: ``(..., 3)``.
+        body_pos: ``(..., B, 3)``.
+        body_rot: ``(..., B, 4)``.
+        body_vel: ``(..., B, 3)``.
+        body_ang_vel: ``(..., B, 3)``.
+        body_contact_force: ``(..., B, 3)``.
+        body_ground_contact_force: ``(..., B, 3)``.
+        dof_pos: ``(..., D)``.
+        dof_vel: ``(..., D)``.
+        dof_force: ``(..., D)``.
     """
 
     root_pos: torch.Tensor
@@ -1325,43 +1337,56 @@ class KangWorldState:
     def articulation_states(self, *args, **kwargs):
         return self.object_states(*args, **kwargs)
 
-    def get_root_pos(self, obj_id: int):
+    def get_root_pos(self, obj_id: int) -> torch.Tensor:
+        """Shape: ``(N, 3)``."""
         return self._read_backend().get_root_pos(obj_id)
 
-    def get_root_rot(self, obj_id: int):
+    def get_root_rot(self, obj_id: int) -> torch.Tensor:
+        """Shape: ``(N, 4)``."""
         return self._read_backend().get_root_rot(obj_id)
 
-    def get_root_vel(self, obj_id: int):
+    def get_root_vel(self, obj_id: int) -> torch.Tensor:
+        """Shape: ``(N, 3)``."""
         return self._read_backend().get_root_vel(obj_id)
 
-    def get_root_ang_vel(self, obj_id: int):
+    def get_root_ang_vel(self, obj_id: int) -> torch.Tensor:
+        """Shape: ``(N, 3)``."""
         return self._read_backend().get_root_ang_vel(obj_id)
 
-    def get_body_pos(self, obj_id: int):
+    def get_body_pos(self, obj_id: int) -> torch.Tensor:
+        """Shape: ``(N, B, 3)``."""
         return self._read_backend().get_body_pos(obj_id)
 
-    def get_body_rot(self, obj_id: int):
+    def get_body_rot(self, obj_id: int) -> torch.Tensor:
+        """Shape: ``(N, B, 4)``."""
         return self._read_backend().get_body_rot(obj_id)
 
-    def get_body_vel(self, obj_id: int):
+    def get_body_vel(self, obj_id: int) -> torch.Tensor:
+        """Shape: ``(N, B, 3)``."""
         return self._read_backend().get_body_vel(obj_id)
 
-    def get_body_ang_vel(self, obj_id: int):
+    def get_body_ang_vel(self, obj_id: int) -> torch.Tensor:
+        """Shape: ``(N, B, 3)``."""
         return self._read_backend().get_body_ang_vel(obj_id)
 
-    def get_contact_forces(self, obj_id: int):
+    def get_contact_forces(self, obj_id: int) -> torch.Tensor:
+        """Shape: ``(N, B, 3)``."""
         return self._read_backend().get_contact_forces(obj_id)
 
-    def get_ground_contact_forces(self, obj_id: int):
+    def get_ground_contact_forces(self, obj_id: int) -> torch.Tensor:
+        """Shape: ``(N, B, 3)``."""
         return self._read_backend().get_ground_contact_forces(obj_id)
 
-    def get_dof_pos(self, obj_id: int):
+    def get_dof_pos(self, obj_id: int) -> torch.Tensor:
+        """Shape: ``(N, D)``."""
         return self._read_backend().get_dof_pos(obj_id)
 
-    def get_dof_vel(self, obj_id: int):
+    def get_dof_vel(self, obj_id: int) -> torch.Tensor:
+        """Shape: ``(N, D)``."""
         return self._read_backend().get_dof_vel(obj_id)
 
-    def get_dof_forces(self, obj_id: int):
+    def get_dof_forces(self, obj_id: int) -> torch.Tensor:
+        """Shape: ``(N, D)``."""
         return self._read_backend().get_dof_forces(obj_id)
 
     def get_obj_num_bodies(self, obj_id: int) -> int:
@@ -1373,16 +1398,20 @@ class KangWorldState:
     def get_obj_dof_names(self, obj_id: int) -> list[str]:
         return self.snapshot.get_obj_dof_names(obj_id)
 
-    def get_obj_dof_limits(self, obj_id: int):
+    def get_obj_dof_limits(self, obj_id: int) -> torch.Tensor:
+        """Shape: ``(D, 2)``."""
         return self.snapshot.get_obj_dof_limits(obj_id)
 
-    def get_obj_pd_gains(self, obj_id: int):
+    def get_obj_pd_gains(self, obj_id: int) -> tuple[torch.Tensor, torch.Tensor]:
+        """Shapes: two ``(D,)`` tensors."""
         return self.snapshot.get_obj_pd_gains(obj_id)
 
-    def get_obj_effort_limits(self, obj_id: int):
+    def get_obj_effort_limits(self, obj_id: int) -> torch.Tensor:
+        """Shape: ``(D,)``."""
         return self.snapshot.get_obj_effort_limits(obj_id)
 
-    def get_obj_body_masses(self, obj_id: int):
+    def get_obj_body_masses(self, obj_id: int) -> torch.Tensor:
+        """Shape: ``(B,)``."""
         return self.snapshot.get_obj_body_masses(obj_id)
 
     def calc_obj_mass(self, *args, **kwargs):

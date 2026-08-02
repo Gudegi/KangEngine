@@ -3,20 +3,16 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TypeAlias
 
 import numpy as np
+import torch
 
 from .tensor import as_cpu_numpy
 
-if TYPE_CHECKING:
-    import torch
-
-    EnvIdLike: TypeAlias = (
-        int | np.integer | Sequence[int] | np.ndarray | torch.Tensor | None
-    )
-else:
-    EnvIdLike: TypeAlias = int | np.integer | Sequence[int] | np.ndarray | None
+EnvIdLike: TypeAlias = (
+    int | np.integer | Sequence[int] | np.ndarray | torch.Tensor | None
+)
 
 
 def env_id_list(env_id: EnvIdLike, num_envs: int) -> list[int]:

@@ -1,6 +1,7 @@
 # ke.utils
 
 Pure Python helpers for joint mapping, math, tensor conversion, colors, and
+debug drawing.
 
 ## API overview
 
@@ -17,7 +18,6 @@ Pure Python helpers for joint mapping, math, tensor conversion, colors, and
    as_sim_buffer
    preset_rgba
 ```
-debug drawing.
 
 ## Joint Mapping
 

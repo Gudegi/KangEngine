@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import torch
+
 
 def _contact_sensor_aggregator():
     """Return the optional native CUDA contact aggregator."""
@@ -49,16 +51,23 @@ class _ContactSensorDescriptor:
 
 @dataclass(slots=True)
 class ContactSensorData:
-    """Per-environment, per-body contact state on the simulation device."""
+    """Per-environment, per-body Torch contact state.
 
-    contact_count: object
-    in_contact: object
-    net_impulse: object
+    Shapes:
+        contact_count: ``(N, B)``.
+        in_contact: ``(N, B)``.
+        net_impulse: ``(N, B, 3)``.
+        net_force: ``(N, B, 3)``.
+    """
+
+    contact_count: torch.Tensor
+    in_contact: torch.Tensor
+    net_impulse: torch.Tensor
     sim_dt: float
 
     @property
-    def net_force(self):
-        """Average normal force over the simulation step."""
+    def net_force(self) -> torch.Tensor:
+        """Shape: ``(N, B, 3)``."""
         return self.net_impulse / self.sim_dt
 
 
@@ -95,20 +104,23 @@ class ContactSensor:
         )
 
     @property
-    def contact_count(self):
+    def contact_count(self) -> torch.Tensor:
+        """Shape: ``(N, B)``."""
         return self.data.contact_count
 
     @property
-    def in_contact(self):
+    def in_contact(self) -> torch.Tensor:
+        """Shape: ``(N, B)``."""
         return self.data.in_contact
 
     @property
-    def net_impulse(self):
+    def net_impulse(self) -> torch.Tensor:
+        """Shape: ``(N, B, 3)``."""
         return self.data.net_impulse
 
     @property
-    def net_force(self):
-        """Average normal force over the last simulation step."""
+    def net_force(self) -> torch.Tensor:
+        """Shape: ``(N, B, 3)``."""
         return self.data.net_force
 
     def refresh(self) -> ContactSensorData:
@@ -171,11 +183,13 @@ class ForceSensor(ContactSensor):
     """
 
     @property
-    def force(self):
+    def force(self) -> torch.Tensor:
+        """Shape: ``(N, B, 3)``."""
         return self.net_force
 
     @property
-    def impulse(self):
+    def impulse(self) -> torch.Tensor:
+        """Shape: ``(N, B, 3)``."""
         return self.net_impulse
 
 

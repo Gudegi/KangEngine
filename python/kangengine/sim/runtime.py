@@ -14,7 +14,16 @@ StateAccess = Literal["snapshot", "gpu"]
 
 @dataclass(slots=True)
 class ArticulationStateView:
-    """State tensors needed by control and reinforcement-learning loops."""
+    """Torch tensors for control and reinforcement-learning loops.
+
+    Shapes:
+        root_pos: ``(N, 3)``.
+        root_rot: ``(N, 4)``.
+        root_vel: ``(N, 3)``.
+        root_ang_vel: ``(N, 3)``.
+        dof_pos: ``(N, D)``.
+        dof_vel: ``(N, D)``.
+    """
 
     root_pos: torch.Tensor
     root_rot: torch.Tensor
@@ -54,11 +63,11 @@ class SimulationRuntime:
             raise ValueError("state_access='gpu' requires sim_device='cuda'")
 
     @property
-    def device(self):
+    def device(self) -> torch.device:
         return self.world.device
 
     @property
-    def sim_device(self):
+    def sim_device(self) -> torch.device:
         return self.world.sim_device
 
     @property
@@ -77,7 +86,7 @@ class SimulationRuntime:
     def is_closed(self) -> bool:
         return self._is_closed
 
-    def initialize(self):
+    def initialize(self) -> SimulationRuntime:
         """Finalize the runtime after all simulation objects are registered."""
         self._require_open()
         if self._is_initialized:
@@ -98,7 +107,7 @@ class SimulationRuntime:
         *,
         apply_commands: bool = True,
         refresh_state: bool = True,
-    ):
+    ) -> object | None:
         """Advance physics and optionally refresh the selected state path."""
         self._require_initialized()
         refresh_snapshot = refresh_state and not self.uses_gpu_state
@@ -111,7 +120,7 @@ class SimulationRuntime:
             self.world.state.gpu.refresh_frame_cache()
         return state
 
-    def flush(self, *, apply_commands: bool = False):
+    def flush(self, *, apply_commands: bool = False) -> object | None:
         """Apply queued state without advancing simulation time."""
         return self.step(
             substeps=0,
@@ -155,8 +164,8 @@ class SimulationRuntime:
         root_ang_vel: torch.Tensor,
         dof_pos: torch.Tensor,
         dof_vel: torch.Tensor,
-    ):
-        """Queue root and DOF state for selected articulation environments."""
+    ) -> None:
+        """Shapes: env IDs ``(N,)``, root state ``(N, 3|4)``, DOFs ``(N, D)``."""
         self._require_initialized()
         if self.uses_gpu_state:
             root_state = torch.cat(
@@ -195,7 +204,7 @@ class SimulationRuntime:
             dof_vel,
         )
 
-    def close(self):
+    def close(self) -> None:
         """Release the owned world. This operation is idempotent."""
         if self._is_closed:
             return

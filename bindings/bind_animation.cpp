@@ -5,6 +5,7 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/typing.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include "py_array_view.hpp"
@@ -287,15 +288,15 @@ void bind_animation(py::module& m) {
             std::vector<Eigen::Vector3f> normals =
                 eigenVec3ArrayFromPy(bindNormals, "bind_normals");
             std::vector<std::array<int, 4>> indices =
-                intVec4ArrayFromPy(boneIndices, "bone_indices");
+                intVec4ArrayFromPy(boneIndices, "skin_bone_indices");
             std::vector<std::array<float, 4>> weights =
-                floatVec4ArrayFromPy(boneWeights, "bone_weights");
+                floatVec4ArrayFromPy(boneWeights, "skin_bone_weights");
             std::vector<int> nodeIndices =
-                intVectorFromPy(boneNodeIndices, "bone_node_indices");
+                intVectorFromPy(boneNodeIndices, "skin_bone_node_indices");
             std::vector<Eigen::Matrix4f> inv =
                 eigenMat4ArrayFromPy(inverseBinds, "inverse_bind_matrices");
             std::vector<Eigen::Matrix4f> globals = eigenMat4ArrayFromPy(
-                currentGlobalMatrices, "current_global_matrices");
+                currentGlobalMatrices, "skeleton_global_matrices");
 
             CPUSkinningInput input;
             input.bindPositions = &positions;
@@ -307,15 +308,15 @@ void bind_animation(py::module& m) {
             input.currentGlobalMatrices = &globals;
             CPUSkinningResult result = Skinning::cpuSkin(input);
 
-            py::dict out;
+            py::typing::Dict<py::str, py::array_t<float>> out;
             out["positions"] = floatArrayFromVec3Vector(result.positions);
             out["normals"] = floatArrayFromVec3Vector(result.normals);
             return out;
         },
         py::arg("bind_positions"), py::arg("bind_normals"),
-        py::arg("bone_indices"), py::arg("bone_weights"),
-        py::arg("bone_node_indices"), py::arg("inverse_bind_matrices"),
-        py::arg("current_global_matrices"),
+        py::arg("skin_bone_indices"), py::arg("skin_bone_weights"),
+        py::arg("skin_bone_node_indices"), py::arg("inverse_bind_matrices"),
+        py::arg("skeleton_global_matrices"),
         "CPU-skin bind-space positions and normals with current bone "
         "matrices.");
 
@@ -324,16 +325,16 @@ void bind_animation(py::module& m) {
         [](py::array_t<int> boneNodeIndices, const FloatArray& inverseBinds,
            const FloatArray& currentGlobalMatrices) {
             std::vector<int> nodeIndices =
-                intVectorFromPy(boneNodeIndices, "bone_node_indices");
+                intVectorFromPy(boneNodeIndices, "skin_bone_node_indices");
             std::vector<Eigen::Matrix4f> inv =
                 eigenMat4ArrayFromPy(inverseBinds, "inverse_bind_matrices");
             std::vector<Eigen::Matrix4f> globals = eigenMat4ArrayFromPy(
-                currentGlobalMatrices, "current_global_matrices");
+                currentGlobalMatrices, "skeleton_global_matrices");
             return floatArrayFromMat4Vector(
                 Skinning::computeSkinningMatrices(nodeIndices, inv, globals));
         },
-        py::arg("bone_node_indices"), py::arg("inverse_bind_matrices"),
-        py::arg("current_global_matrices"),
+        py::arg("skin_bone_node_indices"), py::arg("inverse_bind_matrices"),
+        py::arg("skeleton_global_matrices"),
         "Compute skinning matrices from skeleton globals and inverse binds.");
 
     anim.def(
@@ -341,19 +342,19 @@ void bind_animation(py::module& m) {
         [](py::array_t<int> boneNodeIndices, const FloatArray& inverseBinds,
            const FloatArray& currentGlobalMatrices, const FloatArray& output) {
             std::vector<int> nodeIndices =
-                intVectorFromPy(boneNodeIndices, "bone_node_indices");
+                intVectorFromPy(boneNodeIndices, "skin_bone_node_indices");
             std::vector<Eigen::Matrix4f> inv =
                 eigenMat4ArrayFromPy(inverseBinds, "inverse_bind_matrices");
             std::vector<Eigen::Matrix4f> globals = eigenMat4ArrayFromPy(
-                currentGlobalMatrices, "current_global_matrices");
+                currentGlobalMatrices, "skeleton_global_matrices");
             std::vector<Eigen::Matrix4f> matrices;
             Skinning::computeSkinningMatricesInto(nodeIndices, inv, globals,
                                                   matrices);
             writeMat4VectorToPy(matrices, output, "output");
             return output;
         },
-        py::arg("bone_node_indices"), py::arg("inverse_bind_matrices"),
-        py::arg("current_global_matrices"), py::arg("output"),
+        py::arg("skin_bone_node_indices"), py::arg("inverse_bind_matrices"),
+        py::arg("skeleton_global_matrices"), py::arg("output"),
         "Compute skinning matrices into an existing output array.");
 
     // SkeletonTree (read-only after construction)

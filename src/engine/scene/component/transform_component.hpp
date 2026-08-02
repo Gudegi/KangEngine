@@ -39,7 +39,6 @@ class TransformComponent : public ComponentBase {
 
   private:
     friend class Prim;
-    friend class TransformComponent;
 
     explicit TransformComponent(Prim* owner);
     void detach();

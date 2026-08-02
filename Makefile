@@ -107,6 +107,7 @@ validate_python_api: build_python
 		python/kangengine/__init__.py \
 		python/kangengine/app/__init__.py \
 		python/kangengine/app/application.py \
+		python/kangengine/animation.py \
 		python/kangengine/material/__init__.py \
 		python/kangengine/material/materials.py \
 		python/kangengine/physics/__init__.py \
@@ -167,7 +168,8 @@ build_usd_python_debug:
 
 # Documentation
 docs:
-	uv run --project python --extra docs sphinx-build -b html docs/sphinx docs/sphinx/_build/html
+	uv run --project python --extra docs sphinx-build -W -b html docs/sphinx docs/sphinx/_build/html
+	uv run --project python python docs/tests/check_api_output.py docs/sphinx/_build/html/api
 
 docs_clean:
 	rm -rf docs/sphinx/_build

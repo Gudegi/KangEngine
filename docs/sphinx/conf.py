@@ -8,8 +8,15 @@ from pathlib import Path
 
 from docutils import nodes
 
-ROOT = Path(__file__).resolve().parents[1]
+CONF_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(CONF_DIR))
+
+from stub_docstrings import load_stub_docstrings, stub_docstring_fingerprint
+
+ROOT = Path(__file__).resolve().parents[2]
 PYTHON_DIR = ROOT / "python"
+_STUB_DOCSTRINGS = load_stub_docstrings(PYTHON_DIR)
+stub_docstrings_fingerprint = stub_docstring_fingerprint(_STUB_DOCSTRINGS)
 
 sys.path.insert(0, str(PYTHON_DIR))
 
@@ -50,9 +57,16 @@ exclude_patterns = [
 
 html_theme = os.environ.get("KANGENGINE_SPHINX_THEME", "furo")
 html_title = "KangEngine Docs"
+templates_path = ["_templates"]
 html_static_path = ["_static"]
 html_css_files = ["kangengine.css"]
 html_js_files = ["kangengine-toc.js"]
+html_context = {
+    "github_repository_url": "https://github.com/Gudegi/KangEngine",
+}
+html_theme_options = {
+    "top_of_page_buttons": ["view"],
+}
 
 myst_enable_extensions = [
     "colon_fence",
@@ -79,6 +93,22 @@ autodoc_default_options = {
 nitpicky = False
 
 _PUBLIC_SIGNATURE_REPLACEMENTS = (
+    (
+        "typing.Annotated[numpy.typing.ArrayLike, numpy.float32]",
+        "npt.ArrayLike | torch.Tensor",
+    ),
+    (
+        "typing.Annotated[numpy.typing.ArrayLike, numpy.int32]",
+        "npt.ArrayLike | torch.Tensor",
+    ),
+    (
+        "Annotated[numpy.typing.ArrayLike, numpy.float32]",
+        "npt.ArrayLike | torch.Tensor",
+    ),
+    (
+        "Annotated[numpy.typing.ArrayLike, numpy.int32]",
+        "npt.ArrayLike | torch.Tensor",
+    ),
     ("kangengine._core._ke.animation.", "kangengine.animation."),
     ("kangengine._kangengine.animation.", "kangengine.animation."),
     ("kangengine._core._ke.scene.", "kangengine.scene."),
@@ -118,6 +148,11 @@ def process_signature(app, what, name, obj, options, signature, return_annotatio
 
 
 def process_docstring(app, what, name, obj, options, lines):
+    stub_docstring = _STUB_DOCSTRINGS.get(_public_signature(name) or name)
+    if stub_docstring is not None:
+        lines[:] = stub_docstring
+    lines[:] = [_public_signature(line) or "" for line in lines]
+
     constant_modules = {
         "kangengine.imgui": "Window flags",
         "kangengine.keys": "Key constants",
@@ -207,7 +242,13 @@ def process_object_description(app, domain, objtype, contentnode):
 
 
 def setup(app):
+    app.add_config_value(
+        "stub_docstrings_fingerprint", stub_docstrings_fingerprint, "env"
+    )
     app.connect("autodoc-process-signature", process_signature)
     app.connect("autodoc-process-bases", process_bases)
     app.connect("object-description-transform", process_object_description)
-    app.connect("autodoc-process-docstring", process_docstring)
+    # Run before Napoleon so Google-style Args/Returns sections sourced from
+    # stubs are converted exactly like runtime Python and native docstrings.
+    app.connect("autodoc-process-docstring", process_docstring, priority=100)
+    return {"parallel_read_safe": True}
