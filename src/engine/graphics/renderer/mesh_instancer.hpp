@@ -55,9 +55,7 @@ constexpr uint32_t vertexBufferSlot(MeshVertexBufferSlot slot) {
     return static_cast<uint32_t>(slot);
 }
 
-// Instanced renderer for a single (shader, mesh) combination.
-// All Prims sharing the same MeshData pointer + Shader are batched
-// into one glDrawElementsInstanced call.
+// Instanced renderer for one mesh/material combination.
 class MeshInstancer {
 
   private:
@@ -67,11 +65,9 @@ class MeshInstancer {
     };
 
     Backend::GraphicsDevice* _device = nullptr;
-    Backend::Shader* _shader = nullptr;
     Material* _material = nullptr;
 
     // Geometry (static) — shared by all instances
-    std::unique_ptr<Backend::VertexArray> _vao;
     std::vector<std::unique_ptr<Backend::Buffer>> _vbos;
     std::unique_ptr<Backend::Buffer> _indexBuffer;
     std::unique_ptr<Backend::Buffer> _overrideTransformVBO;
@@ -117,12 +113,6 @@ class MeshInstancer {
 
     void _initMeshData(const Scene::MeshData& mesh);
     void _setupSkinningAttribs(const Scene::SkinnedMeshData& skinnedMesh);
-    void _setupInstanceAttribs(Backend::VertexArray* vao,
-                               Backend::Buffer* transformBuffer,
-                               Backend::Buffer* colorBuffer);
-    void _setupInstanceTransformAttribs(Backend::VertexArray* vao,
-                                        Backend::Buffer* transformBuffer);
-    void _setupInstanceAttribs();
     void _initOverrideInstanceData();
     // Recreate instance VBOs when transform/color capacity grows.
     void _reallocate(int newMax);
@@ -151,10 +141,10 @@ class MeshInstancer {
     MeshInstancer& operator=(const MeshInstancer&) = delete;
 
     // Upload static geometry. Must be called before addPrim/update/render.
-    void init(Backend::GraphicsDevice* device, Backend::Shader* shader,
-              const Scene::MeshData& mesh, TransformSource transformSource,
+    void init(Backend::GraphicsDevice* device, const Scene::MeshData& mesh,
+              TransformSource transformSource,
               Material* material = nullptr);
-    void init(Backend::GraphicsDevice* device, Backend::Shader* shader,
+    void init(Backend::GraphicsDevice* device,
               const Scene::SkinnedMeshData& skinnedMesh,
               TransformSource transformSource, Material* material = nullptr);
 
@@ -188,10 +178,9 @@ class MeshInstancer {
     // body). Vertex count must match the mesh passed to init().
     void updateGeometry(const std::vector<glm::vec3>& positions,
                         const std::vector<glm::vec3>& normals);
-    // Store bone matrices; render passes upload them to their active shader.
+    // Store bone matrices for the RHI skinning uniform buffer.
     void updateRenderableSkinningMatrices(
         const std::vector<glm::mat4>& boneMatrices);
-    void uploadSkinningMatrices(Backend::Shader* shader = nullptr);
     // Compact instance buffers to objects intersecting the current frustum.
     void applyFrustumCulling(const Geometry::Frustum* frustum);
     bool findRayIntersection(const Geometry::Ray& ray, int& outInstanceIndex,
@@ -204,7 +193,6 @@ class MeshInstancer {
     bool setInstanceTransform(int instanceIndex, const glm::mat4& transform);
     TransformSource transformSource() const { return _transformSource; }
 
-    void render();
     // Record the currently visible instance batch without touching backend
     // state. Resources are only consumed when the command buffer is submitted.
     void recordDraw(Backend::RenderPassEncoder& pass,
@@ -272,34 +260,6 @@ class MeshInstancer {
                 return texture;
         return nullptr;
     }
-    void bindTextures() const {
-        bool hasNormalMap =
-            _hasTangents && _material && _material->hasNormalMap();
-        for (auto& [tex, slot] : _textures)
-            if (tex) {
-                tex->bind(slot);
-                hasNormalMap =
-                    hasNormalMap ||
-                    (_hasTangents && slot == RendererTextureSlot::Normal);
-            }
-        if (_shader) {
-            _shader->setInt("uTexture", RendererTextureSlot::Diffuse);
-            _shader->setInt("normalMap", RendererTextureSlot::Normal);
-            _shader->setInt("useNormalMap", hasNormalMap ? 1 : 0);
-            if (!_material) {
-                _shader->setInt("useDiffuseMap", 0);
-                _shader->setInt("useSpecularMap", 0);
-            }
-            bindAlphaState(_shader, false);
-        }
-    }
-
-    // Bind the alpha state and base-color texture to an arbitrary pass shader
-    // (notably shadow and selection-mask passes).
-    void bindAlphaState(Backend::Shader* shader,
-                        bool bindAlphaTextureForPass = true) const;
-
-    Backend::Shader* shader() const { return _shader; }
     Material* material() const { return _material; }
     bool hasTransparent() const { return _hasTransparent; }
     int instanceCount() const { return static_cast<int>(_transforms.size()); }

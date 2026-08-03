@@ -797,13 +797,8 @@ void App::setCameraMoveSpeed(float speed) {
 }
 
 void App::coreRender() {
-    if (_renderWireframe == true) {
-        _graphicsDevice->setPolygonMode(Backend::PolygonMode::Line);
-    } else {
-        _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
-    }
-
     if (_rasterizer) {
+        _rasterizer->setWireframeEnabled(_renderWireframe);
         getRenderer().applyBackgroundSettings();
         _rasterizer->render(_viewMatrix, _projectionMatrix,
                             _sceneDrawTarget.get());
@@ -894,14 +889,20 @@ void App::rebuildSceneClearTarget(const glm::vec4& clearColor) {
 
     Backend::RenderPassDesc passDesc;
     passDesc.label = "main_scene_clear_pass";
-    passDesc.colorAttachments = {{
-        _sceneMsaaColorView.get(), nullptr, Backend::LoadOp::Clear,
-        Backend::StoreOp::Store,
-        {clearColor.r, clearColor.g, clearColor.b, clearColor.a}}};
-    passDesc.depthStencilAttachment = Backend::DepthStencilAttachmentDesc{
-        _sceneMsaaDepthStencilView.get(), Backend::LoadOp::Clear,
-        Backend::StoreOp::Store, 1.0f, Backend::LoadOp::Clear,
-        Backend::StoreOp::Store, 0};
+    passDesc.colorAttachments = {
+        {_sceneMsaaColorView.get(),
+         nullptr,
+         Backend::LoadOp::Clear,
+         Backend::StoreOp::Store,
+         {clearColor.r, clearColor.g, clearColor.b, clearColor.a}}};
+    passDesc.depthStencilAttachment =
+        Backend::DepthStencilAttachmentDesc{_sceneMsaaDepthStencilView.get(),
+                                            Backend::LoadOp::Clear,
+                                            Backend::StoreOp::Store,
+                                            1.0f,
+                                            Backend::LoadOp::Clear,
+                                            Backend::StoreOp::Store,
+                                            0};
     _sceneClearTarget = _graphicsDevice->createRenderTarget(passDesc);
 }
 

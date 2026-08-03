@@ -106,50 +106,15 @@ GLenum toGLTextureMagFilter(TextureFilter filter) {
 } // namespace
 
 // OpenGLBuffer Implementation
-OpenGLBuffer::OpenGLBuffer(BufferType type, size_t size, const void* data)
-    : _type(type), _size(size) {
-
-    switch (type) {
-    case BufferType::Vertex:
-        _usage = BufferUsage::Vertex;
-        _target = GL_ARRAY_BUFFER;
-        break;
-    case BufferType::DynamicVertex:
-        _usage = BufferUsage::Vertex | BufferUsage::CopyDst;
-        _target = GL_ARRAY_BUFFER;
-        break;
-    case BufferType::Index:
-        _usage = BufferUsage::Index;
-        _target = GL_ELEMENT_ARRAY_BUFFER;
-        break;
-    case BufferType::Uniform:
-        _usage = BufferUsage::Uniform | BufferUsage::CopyDst;
-        _target = GL_UNIFORM_BUFFER;
-        break;
-    }
-
-    GLenum usage =
-        (type == BufferType::Uniform || type == BufferType::DynamicVertex)
-            ? GL_DYNAMIC_DRAW
-            : GL_STATIC_DRAW;
-    glGenBuffers(1, &_buffer);
-    glBindBuffer(_target, _buffer);
-    glBufferData(_target, size, data, usage);
-    glBindBuffer(_target, 0);
-}
-
 OpenGLBuffer::OpenGLBuffer(const BufferDesc& desc, const void* data)
     : _size(desc.size), _usage(desc.usage) {
     if (_size == 0 || _usage == BufferUsage::None)
         throw std::invalid_argument("portable buffer requires size and usage");
     if (hasFlag(_usage, BufferUsage::Vertex)) {
-        _type = BufferType::Vertex;
         _target = GL_ARRAY_BUFFER;
     } else if (hasFlag(_usage, BufferUsage::Index)) {
-        _type = BufferType::Index;
         _target = GL_ELEMENT_ARRAY_BUFFER;
     } else if (hasFlag(_usage, BufferUsage::Uniform)) {
-        _type = BufferType::Uniform;
         _target = GL_UNIFORM_BUFFER;
     } else {
         throw std::invalid_argument(
@@ -696,8 +661,7 @@ OpenGLTexture::OpenGLTexture(const TextureResourceDesc& desc,
       _format(desc.format), _usage(desc.usage),
       _mipLevelCount(desc.mipLevelCount), _sampleCount(desc.sampleCount),
       _depthOrArrayLayers(desc.extent.depthOrArrayLayers),
-      _dimension(desc.dimension),
-      _portableResource(true) {
+      _dimension(desc.dimension), _portableResource(true) {
     const DescriptorValidationResult validation = validate(desc);
     if (!validation)
         throw std::invalid_argument(
@@ -776,9 +740,8 @@ OpenGLTexture::OpenGLTexture(GLuint cubemapHandle, int faceWidth,
                              int faceHeight)
     : _textureID(cubemapHandle), _target(GL_TEXTURE_CUBE_MAP),
       _width(faceWidth), _height(faceHeight), _channels(4),
-      _format(TextureFormat::RGBA8Unorm),
-      _usage(TextureUsage::TextureBinding), _mipLevelCount(1),
-      _sampleCount(1), _depthOrArrayLayers(6),
+      _format(TextureFormat::RGBA8Unorm), _usage(TextureUsage::TextureBinding),
+      _mipLevelCount(1), _sampleCount(1), _depthOrArrayLayers(6),
       _dimension(TextureDimension::D2), _portableResource(true) {
     if (!_textureID || faceWidth <= 0 || faceHeight <= 0)
         throw std::invalid_argument("invalid OpenGL cubemap texture");
@@ -818,10 +781,9 @@ OpenGLTextureView::OpenGLTextureView(OpenGLTexture* texture,
         _desc.format = _texture->format();
 
     TextureResourceDesc textureDesc;
-    textureDesc.extent = {
-        static_cast<uint32_t>(_texture->getWidth()),
-        static_cast<uint32_t>(_texture->getHeight()),
-        _texture->getDepthOrArrayLayers()};
+    textureDesc.extent = {static_cast<uint32_t>(_texture->getWidth()),
+                          static_cast<uint32_t>(_texture->getHeight()),
+                          _texture->getDepthOrArrayLayers()};
     textureDesc.dimension = _texture->getDimension();
     textureDesc.format = _texture->format();
     textureDesc.usage = _texture->usage();
@@ -922,8 +884,8 @@ OpenGLRenderTarget::OpenGLRenderTarget(const RenderPassDesc& desc)
             attachedColorTextures.push_back(texture->getHandle());
 
             if (attachment.resolveTarget) {
-                auto* resolveView = dynamic_cast<OpenGLTextureView*>(
-                    attachment.resolveTarget);
+                auto* resolveView =
+                    dynamic_cast<OpenGLTextureView*>(attachment.resolveTarget);
                 auto* resolveTexture = resolveView
                                            ? dynamic_cast<OpenGLTexture*>(
                                                  resolveView->getTexture())
@@ -938,12 +900,13 @@ OpenGLRenderTarget::OpenGLRenderTarget(const RenderPassDesc& desc)
                 if (texture->sampleCount() <= 1 ||
                     resolveTexture->sampleCount() != 1)
                     throw std::invalid_argument(
-                        "resolve requires multisampled source and single-sample target");
+                        "resolve requires multisampled source and "
+                        "single-sample target");
                 if (resolveTexture->getWidth() != texture->getWidth() ||
                     resolveTexture->getHeight() != texture->getHeight() ||
                     resolveTexture->format() != texture->format())
-                    throw std::invalid_argument(
-                        "resolve source and target must match extent and format");
+                    throw std::invalid_argument("resolve source and target "
+                                                "must match extent and format");
                 if (resolveTexture->getHandle() == texture->getHandle())
                     throw std::invalid_argument(
                         "resolve source and target must be distinct");
@@ -1318,8 +1281,7 @@ void OpenGLGraphicsPipeline::apply() const {
         if (depthBiasEnabled) {
             glEnable(GL_POLYGON_OFFSET_FILL);
             glPolygonOffset(_desc.depthStencil->depthBiasSlopeScale,
-                            static_cast<float>(
-                                _desc.depthStencil->depthBias));
+                            static_cast<float>(_desc.depthStencil->depthBias));
         } else {
             glDisable(GL_POLYGON_OFFSET_FILL);
         }
@@ -1339,26 +1301,41 @@ void OpenGLGraphicsPipeline::apply() const {
     if (!_desc.colorTargets.empty() && _desc.colorTargets.front().blend) {
         auto toFactor = [](BlendFactorValue factor) {
             switch (factor) {
-            case BlendFactorValue::Zero: return GL_ZERO;
-            case BlendFactorValue::One: return GL_ONE;
-            case BlendFactorValue::Src: return GL_SRC_COLOR;
-            case BlendFactorValue::OneMinusSrc: return GL_ONE_MINUS_SRC_COLOR;
-            case BlendFactorValue::SrcAlpha: return GL_SRC_ALPHA;
-            case BlendFactorValue::OneMinusSrcAlpha: return GL_ONE_MINUS_SRC_ALPHA;
-            case BlendFactorValue::Dst: return GL_DST_COLOR;
-            case BlendFactorValue::OneMinusDst: return GL_ONE_MINUS_DST_COLOR;
-            case BlendFactorValue::DstAlpha: return GL_DST_ALPHA;
-            case BlendFactorValue::OneMinusDstAlpha: return GL_ONE_MINUS_DST_ALPHA;
+            case BlendFactorValue::Zero:
+                return GL_ZERO;
+            case BlendFactorValue::One:
+                return GL_ONE;
+            case BlendFactorValue::Src:
+                return GL_SRC_COLOR;
+            case BlendFactorValue::OneMinusSrc:
+                return GL_ONE_MINUS_SRC_COLOR;
+            case BlendFactorValue::SrcAlpha:
+                return GL_SRC_ALPHA;
+            case BlendFactorValue::OneMinusSrcAlpha:
+                return GL_ONE_MINUS_SRC_ALPHA;
+            case BlendFactorValue::Dst:
+                return GL_DST_COLOR;
+            case BlendFactorValue::OneMinusDst:
+                return GL_ONE_MINUS_DST_COLOR;
+            case BlendFactorValue::DstAlpha:
+                return GL_DST_ALPHA;
+            case BlendFactorValue::OneMinusDstAlpha:
+                return GL_ONE_MINUS_DST_ALPHA;
             }
             return GL_ONE;
         };
         auto toOperation = [](BlendOperation operation) {
             switch (operation) {
-            case BlendOperation::Add: return GL_FUNC_ADD;
-            case BlendOperation::Subtract: return GL_FUNC_SUBTRACT;
-            case BlendOperation::ReverseSubtract: return GL_FUNC_REVERSE_SUBTRACT;
-            case BlendOperation::Min: return GL_MIN;
-            case BlendOperation::Max: return GL_MAX;
+            case BlendOperation::Add:
+                return GL_FUNC_ADD;
+            case BlendOperation::Subtract:
+                return GL_FUNC_SUBTRACT;
+            case BlendOperation::ReverseSubtract:
+                return GL_FUNC_REVERSE_SUBTRACT;
+            case BlendOperation::Min:
+                return GL_MIN;
+            case BlendOperation::Max:
+                return GL_MAX;
             }
             return GL_FUNC_ADD;
         };
@@ -1366,14 +1343,12 @@ void OpenGLGraphicsPipeline::apply() const {
         glEnable(GL_BLEND);
         glBlendEquationSeparate(toOperation(blend.color.operation),
                                 toOperation(blend.alpha.operation));
-        glBlendFuncSeparate(toFactor(blend.color.srcFactor),
-                            toFactor(blend.color.dstFactor),
-                            toFactor(blend.alpha.srcFactor),
-                            toFactor(blend.alpha.dstFactor));
+        glBlendFuncSeparate(
+            toFactor(blend.color.srcFactor), toFactor(blend.color.dstFactor),
+            toFactor(blend.alpha.srcFactor), toFactor(blend.alpha.dstFactor));
     } else {
         glDisable(GL_BLEND);
     }
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     const ColorWriteMask mask = _desc.colorTargets.empty()
                                     ? ColorWriteMask::None
                                     : _desc.colorTargets.front().writeMask;
@@ -1539,7 +1514,12 @@ struct ScissorCommand {
     uint32_t width = 0;
     uint32_t height = 0;
 };
-struct LineWidthCommand { float width = 1.0f; };
+struct LineWidthCommand {
+    float width = 1.0f;
+};
+struct PolygonModeCommand {
+    PolygonMode mode = PolygonMode::Fill;
+};
 struct SetPipelineCommand {
     OpenGLGraphicsPipeline* pipeline = nullptr;
 };
@@ -1578,10 +1558,10 @@ struct EndPassCommand {
 
 using OpenGLCommand =
     std::variant<BeginPassCommand, ViewportCommand, ScissorCommand,
-                 LineWidthCommand,
-                 SetPipelineCommand, SetBindGroupCommand,
-                 SetVertexBufferCommand, SetIndexBufferCommand, DrawCommand,
-                 DrawIndexedCommand, EndPassCommand>;
+                 LineWidthCommand, PolygonModeCommand, SetPipelineCommand,
+                 SetBindGroupCommand, SetVertexBufferCommand,
+                 SetIndexBufferCommand, DrawCommand, DrawIndexedCommand,
+                 EndPassCommand>;
 
 struct OpenGLRecordingState {
     std::vector<OpenGLCommand> commands;
@@ -1638,6 +1618,11 @@ class OpenGLRenderPassEncoder final : public RenderPassEncoder {
         _state->commands.emplace_back(LineWidthCommand{width});
     }
 
+    void setPolygonMode(PolygonMode mode) override {
+        requireActive();
+        _state->commands.emplace_back(PolygonModeCommand{mode});
+    }
+
     void setPipeline(GraphicsPipeline* pipeline) override {
         requireActive();
         auto* glPipeline = dynamic_cast<OpenGLGraphicsPipeline*>(pipeline);
@@ -1674,8 +1659,8 @@ class OpenGLRenderPassEncoder final : public RenderPassEncoder {
         _state->activePipeline = glPipeline;
         _state->vertexBuffersSet.assign(
             glPipeline->getDesc().vertexBuffers.size(), false);
-        for (size_t slot = 0;
-             slot < glPipeline->getDesc().vertexBuffers.size(); ++slot) {
+        for (size_t slot = 0; slot < glPipeline->getDesc().vertexBuffers.size();
+             ++slot) {
             if (glPipeline->getDesc().vertexBuffers[slot].attributes.empty())
                 _state->vertexBuffersSet[slot] = true;
         }
@@ -1811,8 +1796,7 @@ class OpenGLRenderPassEncoder final : public RenderPassEncoder {
 
     void end() override {
         requireActive();
-        _state->commands.emplace_back(
-            EndPassCommand{_state->activeTarget});
+        _state->commands.emplace_back(EndPassCommand{_state->activeTarget});
         _state->passActive = false;
         _state->activeTarget = nullptr;
         _state->pipelineSet = false;
@@ -1979,11 +1963,6 @@ void OpenGLDevice::checkError() {
         }
         std::cout << errStr << std::endl;
     }
-}
-
-std::unique_ptr<Buffer> OpenGLDevice::createBuffer(BufferType type, size_t size,
-                                                   const void* data) {
-    return std::make_unique<OpenGLBuffer>(type, size, data);
 }
 
 std::unique_ptr<Buffer> OpenGLDevice::createBuffer(const BufferDesc& desc,
@@ -2213,9 +2192,9 @@ void OpenGLDevice::submit(CommandBuffer& commandBuffer) {
         glGetIntegerv(GL_TEXTURE_BINDING_2D, &texture2D);
         glGetIntegerv(GL_TEXTURE_BINDING_CUBE_MAP, &textureCube);
         glGetIntegeri_v(GL_SAMPLER_BINDING, slot, &sampler);
-        textureBindingStates.push_back(
-            {static_cast<GLuint>(texture2D), static_cast<GLuint>(textureCube),
-             static_cast<GLuint>(sampler)});
+        textureBindingStates.push_back({static_cast<GLuint>(texture2D),
+                                        static_cast<GLuint>(textureCube),
+                                        static_cast<GLuint>(sampler)});
     }
     std::vector<GLuint> uniformBindingStates;
     for (GLuint slot : usedUniformSlots) {
@@ -2227,8 +2206,7 @@ void OpenGLDevice::submit(CommandBuffer& commandBuffer) {
     auto restoreBindings = [&] {
         for (size_t index = 0; index < usedTextureSlots.size(); ++index) {
             glActiveTexture(GL_TEXTURE0 + usedTextureSlots[index]);
-            glBindTexture(GL_TEXTURE_2D,
-                          textureBindingStates[index].texture2D);
+            glBindTexture(GL_TEXTURE_2D, textureBindingStates[index].texture2D);
             glBindTexture(GL_TEXTURE_CUBE_MAP,
                           textureBindingStates[index].textureCube);
             glBindSampler(usedTextureSlots[index],
@@ -2269,9 +2247,16 @@ void OpenGLDevice::submit(CommandBuffer& commandBuffer) {
                                   static_cast<GLint>(value.y),
                                   static_cast<GLsizei>(value.width),
                                   static_cast<GLsizei>(value.height));
-                    } else if constexpr (std::is_same_v<T,
-                                                        LineWidthCommand>) {
+                    } else if constexpr (std::is_same_v<T, LineWidthCommand>) {
                         glLineWidth(value.width);
+                    } else if constexpr (std::is_same_v<T,
+                                                        PolygonModeCommand>) {
+                        GLenum mode = GL_FILL;
+                        if (value.mode == PolygonMode::Line)
+                            mode = GL_LINE;
+                        else if (value.mode == PolygonMode::Point)
+                            mode = GL_POINT;
+                        glPolygonMode(GL_FRONT_AND_BACK, mode);
                     } else if constexpr (std::is_same_v<T,
                                                         SetPipelineCommand>) {
                         value.pipeline->apply();
@@ -2387,10 +2372,6 @@ void OpenGLDevice::submit(CommandBuffer& commandBuffer) {
                 "OpenGL validation error after command submission: " +
                 std::to_string(static_cast<uint32_t>(error)));
     }
-}
-
-std::unique_ptr<VertexArray> OpenGLDevice::createVertexArray() {
-    return std::make_unique<OpenGLVertexArray>();
 }
 
 std::unique_ptr<Shader> OpenGLDevice::createShader(const char* vertexSource,
@@ -2577,63 +2558,6 @@ void OpenGLDevice::setClearColor(float r, float g, float b, float a) {
 std::unique_ptr<Framebuffer>
 OpenGLDevice::createFramebuffer(const FramebufferDesc& desc) {
     return std::make_unique<OpenGLFramebuffer>(desc);
-}
-
-// OpenGLVertexArray Implementation
-OpenGLVertexArray::OpenGLVertexArray() { glGenVertexArrays(1, &_vao); }
-
-OpenGLVertexArray::~OpenGLVertexArray() { glDeleteVertexArrays(1, &_vao); }
-
-void OpenGLVertexArray::bind() { glBindVertexArray(_vao); }
-
-void OpenGLVertexArray::unbind() { glBindVertexArray(0); }
-
-void OpenGLVertexArray::setVertexAttribute(const VertexAttribute& attribute) {
-    bind();
-
-    GLenum glType;
-    switch (attribute.type) {
-    case VertexAttributeType::Float:
-        glType = GL_FLOAT;
-        break;
-    case VertexAttributeType::Int:
-        glType = GL_INT;
-        break;
-    case VertexAttributeType::UnsignedInt:
-        glType = GL_UNSIGNED_INT;
-        break;
-    case VertexAttributeType::Byte:
-        glType = GL_BYTE;
-        break;
-    case VertexAttributeType::UnsignedByte:
-        glType = GL_UNSIGNED_BYTE;
-        break;
-    }
-
-    if (attribute.type == VertexAttributeType::Int ||
-        attribute.type == VertexAttributeType::UnsignedInt) {
-        glVertexAttribIPointer(attribute.location, attribute.size, glType,
-                               attribute.stride,
-                               reinterpret_cast<void*>(attribute.offset));
-    } else {
-        glVertexAttribPointer(attribute.location, attribute.size, glType,
-                              attribute.normalized ? GL_TRUE : GL_FALSE,
-                              attribute.stride,
-                              reinterpret_cast<void*>(attribute.offset));
-    }
-    glEnableVertexAttribArray(attribute.location);
-    if (attribute.divisor > 0)
-        glVertexAttribDivisor(attribute.location, attribute.divisor);
-}
-
-void OpenGLVertexArray::setVertexBuffer(Buffer* buffer) {
-    bind();
-    buffer->bind();
-}
-
-void OpenGLVertexArray::setIndexBuffer(Buffer* buffer) {
-    bind();
-    buffer->bind();
 }
 
 // OpenGLFramebuffer Impl
@@ -3016,8 +2940,8 @@ OpenGLDevice::createCubemapTexture(const std::string& crossPath) {
     return std::make_unique<OpenGLTexture>(handle, width, height);
 }
 
-std::unique_ptr<Texture> OpenGLDevice::createCubemapTexture(
-    const std::vector<std::string>& facePaths) {
+std::unique_ptr<Texture>
+OpenGLDevice::createCubemapTexture(const std::vector<std::string>& facePaths) {
     const GLuint handle = loadCubemap(facePaths);
     if (!handle)
         return nullptr;

@@ -197,10 +197,14 @@ class Phase1SceneSmoke final : public App {
             require(hasSelection(), "selected skinned prim was not registered");
             require(getSelection().instanceIndex == 0,
                     "selected prim instance index mismatch");
+            // Exercise the editor panel's RHI wireframe state on the next
+            // frame, then restore fill before offscreen validation.
+            _renderWireframe = true;
             framebufferSizeCallback(getWindow(), 400, 240);
-        } else if (frame == 1)
+        } else if (frame == 1) {
+            _renderWireframe = false;
             framebufferSizeCallback(getWindow(), 257, 193);
-        else if (frame == 2) {
+        } else if (frame == 2) {
             getRenderer().renderSceneToFramebuffer(
                 getCamera(), previewFramebuffer.get(), 96, 64, true);
             getRenderer().renderSceneToFramebuffer(

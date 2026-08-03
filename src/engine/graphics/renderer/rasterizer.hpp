@@ -58,13 +58,10 @@ class Rasterizer : public RenderPipeline {
     // Scene Mesh Pipelines - batching and renderable registration
     // =====================================================================
     struct InstancerKey {
-        Backend::Shader* shader;
         const Scene::MeshData* mesh;
         Material* material;
         TransformSource transformSource;
         bool operator<(const InstancerKey& o) const {
-            if (shader != o.shader)
-                return shader < o.shader;
             if (mesh != o.mesh)
                 return mesh < o.mesh;
             if (material != o.material)
@@ -150,13 +147,14 @@ class Rasterizer : public RenderPipeline {
     std::unique_ptr<Backend::PipelineLayout> _forwardSkinPipelineLayout;
     std::unique_ptr<Backend::GraphicsPipeline> _forwardSkinPipeline;
     std::unique_ptr<Backend::GraphicsPipeline> _forwardSkinDoubleSidedPipeline;
-    std::unique_ptr<Backend::BindGroupLayout>
-        _texturedVertexColorGroupLayout;
+    std::unique_ptr<Backend::BindGroupLayout> _texturedVertexColorGroupLayout;
     std::array<std::unique_ptr<Backend::PipelineLayout>, 2>
         _texturedVertexColorPipelineLayouts;
     // [Static, Skinned][Opaque/Mask, Transparent][BackFace, DoubleSided]
-    std::array<std::array<std::array<
-        std::unique_ptr<Backend::GraphicsPipeline>, 2>, 2>, 2>
+    std::array<
+        std::array<std::array<std::unique_ptr<Backend::GraphicsPipeline>, 2>,
+                   2>,
+        2>
         _texturedVertexColorPipelines;
     struct TexturedVertexColorRhiResources {
         std::unique_ptr<Backend::Buffer> params;
@@ -205,8 +203,10 @@ class Rasterizer : public RenderPipeline {
     std::array<std::unique_ptr<Backend::PipelineLayout>, 2>
         _skinnedMaterialPipelineLayouts;
     // [Phong, PBR][Opaque, Transparent][BackFace, DoubleSided]
-    std::array<std::array<std::array<
-        std::unique_ptr<Backend::GraphicsPipeline>, 2>, 2>, 2>
+    std::array<
+        std::array<std::array<std::unique_ptr<Backend::GraphicsPipeline>, 2>,
+                   2>,
+        2>
         _skinnedMaterialPipelines;
 
     // =====================================================================
@@ -280,6 +280,7 @@ class Rasterizer : public RenderPipeline {
     // =====================================================================
     Geometry::Frustum _viewFrustum;
     bool _frustumCullingEnabled = true;
+    bool _wireframeEnabled = false;
     bool _debugRenderAABB = false;
     int _cullingTotalBatches = 0;
     int _cullingCulledBatches = 0;
@@ -417,6 +418,7 @@ class Rasterizer : public RenderPipeline {
     void setFrustumCullingEnabled(bool enabled) {
         _frustumCullingEnabled = enabled;
     }
+    void setWireframeEnabled(bool enabled) { _wireframeEnabled = enabled; }
     bool isFrustumCullingEnabled() const { return _frustumCullingEnabled; }
     void setBackgroundSettings(const BackgroundSettings& settings);
     void setDebugRenderAABB(bool enabled) { _debugRenderAABB = enabled; }

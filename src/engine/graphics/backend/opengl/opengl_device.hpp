@@ -23,7 +23,6 @@ class OpenGLBuffer : public Buffer {
   private:
     GLuint _buffer;
     GLenum _target;
-    BufferType _type;
     BufferUsage _usage = BufferUsage::None;
     size_t _size;
 #ifdef KANGENGINE_USE_CUDA_GL_INTEROP
@@ -31,7 +30,6 @@ class OpenGLBuffer : public Buffer {
 #endif
 
   public:
-    OpenGLBuffer(BufferType type, size_t size, const void* data = nullptr);
     OpenGLBuffer(const BufferDesc& desc, const void* data = nullptr);
     ~OpenGLBuffer() override;
 
@@ -43,7 +41,6 @@ class OpenGLBuffer : public Buffer {
                          size_t elementSize, size_t sourceStrideBytes) override;
     cudaGraphicsResource* cudaResource();
 #endif
-    BufferType getType() const override { return _type; }
     BufferUsage getUsage() const override { return _usage; }
     size_t getSize() const override { return _size; }
     GLuint getHandle() const { return _buffer; }
@@ -255,21 +252,6 @@ class OpenGLGraphicsPipeline : public GraphicsPipeline {
     std::vector<GLuint> uniformSlots() const;
 };
 
-class OpenGLVertexArray : public VertexArray {
-  private:
-    GLuint _vao;
-
-  public:
-    OpenGLVertexArray();
-    ~OpenGLVertexArray() override;
-
-    void bind() override;
-    void unbind() override;
-    void setVertexAttribute(const VertexAttribute& attribute) override;
-    void setVertexBuffer(Buffer* buffer) override;
-    void setIndexBuffer(Buffer* buffer) override;
-};
-
 class OpenGLFramebuffer : public Framebuffer {
   private:
     // --- Texture FBO (non-MSAA scene FBO) ---
@@ -365,8 +347,6 @@ class OpenGLDevice : public GraphicsDevice {
     void setClearColor(float r, float g, float b, float a) override;
 
     // Resource creation
-    std::unique_ptr<Buffer> createBuffer(BufferType type, size_t size,
-                                         const void* data = nullptr) override;
     std::unique_ptr<Buffer>
     createBuffer(const BufferDesc& desc, const void* data = nullptr) override;
     std::unique_ptr<Shader> createShader(const ShaderDesc& desc) override;
@@ -398,8 +378,6 @@ class OpenGLDevice : public GraphicsDevice {
     TextureReadback readTexture(TextureView* view) override;
     std::unique_ptr<CommandEncoder> createCommandEncoder() override;
     void submit(CommandBuffer& commandBuffer) override;
-    std::unique_ptr<VertexArray> createVertexArray() override;
-
     // Convenience shader creation methods (KE::Shader compatible)
     std::unique_ptr<Shader> createShader(const char* vertexSource,
                                          const char* fragmentSource) override;

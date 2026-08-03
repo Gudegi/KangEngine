@@ -33,8 +33,7 @@ void main() {}
 )";
 
 constexpr size_t shadowPipelineIndex(bool skin, bool alpha, bool doubleSided) {
-    return (skin ? 4u : 0u) | (alpha ? 2u : 0u) |
-           (doubleSided ? 1u : 0u);
+    return (skin ? 4u : 0u) | (alpha ? 2u : 0u) | (doubleSided ? 1u : 0u);
 }
 constexpr int LIGHT_UBO_BIND_SLOT = 1;
 constexpr int SHADOW_UBO_BIND_SLOT = 2;
@@ -75,18 +74,24 @@ namespace KE {
 
 Rasterizer::Rasterizer(Backend::GraphicsDevice* graphicsDevice) {
     _graphicsDevice = graphicsDevice;
-    _cameraUBO = _graphicsDevice->createBuffer(Backend::BufferType::Uniform,
-                                               2 * sizeof(glm::mat4));
+    Backend::BufferDesc uniformDesc;
+    uniformDesc.size = 2 * sizeof(glm::mat4);
+    uniformDesc.usage =
+        Backend::BufferUsage::Uniform | Backend::BufferUsage::CopyDst;
+    uniformDesc.label = "camera_uniforms";
+    _cameraUBO = _graphicsDevice->createBuffer(uniformDesc);
     _graphicsDevice->bindUniformBuffer(_cameraUBO.get(), CAMERA_UBO_BIND_SLOT);
-    _lightUBO = _graphicsDevice->createBuffer(
-        Backend::BufferType::Uniform, LIGHT_UBO_VEC4_COUNT * sizeof(glm::vec4));
+    uniformDesc.size = LIGHT_UBO_VEC4_COUNT * sizeof(glm::vec4);
+    uniformDesc.label = "light_uniforms";
+    _lightUBO = _graphicsDevice->createBuffer(uniformDesc);
     _graphicsDevice->bindUniformBuffer(_lightUBO.get(), LIGHT_UBO_BIND_SLOT);
     // std140 shadow data: mat4[4] cascade matrices, vec4 cascade splits,
     // vec4 cascade ortho half-sizes, vec4 cascade map sizes, vec4 params,
     // vec4 info.
-    _shadowUBO = _graphicsDevice->createBuffer(
-        Backend::BufferType::Uniform,
-        MaxShadowCascades * sizeof(glm::mat4) + 5 * sizeof(glm::vec4));
+    uniformDesc.size =
+        MaxShadowCascades * sizeof(glm::mat4) + 5 * sizeof(glm::vec4);
+    uniformDesc.label = "shadow_uniforms";
+    _shadowUBO = _graphicsDevice->createBuffer(uniformDesc);
     _graphicsDevice->bindUniformBuffer(_shadowUBO.get(), SHADOW_UBO_BIND_SLOT);
 
     _shadowFbo = _graphicsDevice->createFramebuffer(
@@ -159,13 +164,12 @@ Rasterizer::addSkinnedRenderable(Material* material, Scene::Prim* prim,
         meshData->indices.empty() || !skinnedMesh.hasValidVertexSkinning())
         return InvalidHandle;
 
-    auto* shader = material->getShader();
-    InstancerKey key{shader, meshData.get(), material, transformSource};
+    InstancerKey key{meshData.get(), material, transformSource};
     auto it = _instancers.find(key);
     if (it == _instancers.end()) {
         auto [newIt, inserted] = _instancers.emplace(key, MeshInstancer{});
-        newIt->second.init(_graphicsDevice, shader, skinnedMesh,
-                           transformSource, material);
+        newIt->second.init(_graphicsDevice, skinnedMesh, transformSource,
+                           material);
         it = newIt;
     }
     registerPrimSource(prim, transformSource);
@@ -189,12 +193,11 @@ RenderableHandle Rasterizer::addRenderable(Material* material,
         meshData->indices.empty())
         return InvalidHandle;
 
-    auto* shader = material->getShader();
-    InstancerKey key{shader, meshData.get(), material, transformSource};
+    InstancerKey key{meshData.get(), material, transformSource};
     auto it = _instancers.find(key);
     if (it == _instancers.end()) {
         auto [newIt, inserted] = _instancers.emplace(key, MeshInstancer{});
-        newIt->second.init(_graphicsDevice, shader, *meshData, transformSource,
+        newIt->second.init(_graphicsDevice, *meshData, transformSource,
                            material);
         it = newIt;
     }
@@ -460,8 +463,7 @@ void Rasterizer::setWorldText(const std::string& path,
     _textRenderer.setWorldText(path, desc);
 }
 
-void Rasterizer::setWorldTextString(const std::string& path,
-                                    std::string text) {
+void Rasterizer::setWorldTextString(const std::string& path, std::string text) {
     _textRenderer.setWorldString(path, std::move(text));
 }
 
@@ -659,11 +661,10 @@ bool Rasterizer::removeRenderHook(RenderHookHandle handle) {
     if (handle == InvalidRenderHook)
         return false;
     for (auto& hooks : _renderHooks) {
-        const auto found = std::find_if(
-            hooks.begin(), hooks.end(),
-            [handle](const RenderHookEntry& entry) {
-                return entry.handle == handle;
-            });
+        const auto found = std::find_if(hooks.begin(), hooks.end(),
+                                        [handle](const RenderHookEntry& entry) {
+                                            return entry.handle == handle;
+                                        });
         if (found != hooks.end()) {
             hooks.erase(found);
             return true;
@@ -672,8 +673,8 @@ bool Rasterizer::removeRenderHook(RenderHookHandle handle) {
     return false;
 }
 
-void Rasterizer::recordRenderHooks(
-    RenderHookPhase phase, Backend::RenderTarget* sceneDrawTarget) {
+void Rasterizer::recordRenderHooks(RenderHookPhase phase,
+                                   Backend::RenderTarget* sceneDrawTarget) {
     if (!sceneDrawTarget)
         return;
     const size_t phaseIndex = static_cast<size_t>(phase);
@@ -718,13 +719,14 @@ void Rasterizer::bindShadowTextures(Backend::Texture* shadowTexture) {
 // -------------------------------------------------------------------------
 void Rasterizer::renderOpaquePass(Backend::Texture* shadowTexture,
                                   Backend::RenderTarget* sceneDrawTarget) {
-    if (sceneDrawTarget && _forwardFrameBindGroup &&
-        _shadowSamplingBindGroup) {
+    if (sceneDrawTarget && _forwardFrameBindGroup && _shadowSamplingBindGroup) {
         auto encoder = _graphicsDevice->createCommandEncoder();
         auto pass = encoder->beginRenderPass(sceneDrawTarget);
         std::vector<std::unique_ptr<Backend::BindGroup>> transientSkinGroups;
         pass->setViewport(0.0f, 0.0f, static_cast<float>(_viewportWidth),
                           static_cast<float>(_viewportHeight));
+        pass->setPolygonMode(_wireframeEnabled ? Backend::PolygonMode::Line
+                                               : Backend::PolygonMode::Fill);
         for (auto& entry : _instancers) {
             MeshInstancer& inst = entry.second;
             if (inst.hasTransparent() || inst.visibleCount() == 0)
@@ -741,27 +743,30 @@ void Rasterizer::renderOpaquePass(Backend::Texture* shadowTexture,
                     continue;
                 }
             }
-            const bool texturedVertexColor =
-                usesRhiTexturedVertexColor(inst);
+            const bool texturedVertexColor = usesRhiTexturedVertexColor(inst);
             const bool checkerboard = usesRhiCheckerboard(inst);
             const bool skinnedTexturedVertexColor =
                 inst.hasSkinning() && texturedVertexColor;
             const bool skinnedVertexColor =
-                inst.hasSkinning() && inst.material()->shadingModel() ==
-                                          MaterialShadingModel::VertexColor &&
+                inst.hasSkinning() &&
+                inst.material()->shadingModel() ==
+                    MaterialShadingModel::VertexColor &&
                 !texturedVertexColor;
             const bool skinnedMaterial =
                 inst.hasSkinning() &&
-                (inst.material()->shadingModel() == MaterialShadingModel::Phong ||
+                (inst.material()->shadingModel() ==
+                     MaterialShadingModel::Phong ||
                  inst.material()->shadingModel() == MaterialShadingModel::PBR);
             Backend::GraphicsPipeline* pipeline = nullptr;
             if (checkerboard)
-                pipeline = _checkerboardPipelines[0]
-                    [inst.isDoubleSided() ? 1 : 0].get();
+                pipeline =
+                    _checkerboardPipelines[0][inst.isDoubleSided() ? 1 : 0]
+                        .get();
             else if (texturedVertexColor)
-                pipeline = _texturedVertexColorPipelines
-                    [inst.hasSkinning() ? 1 : 0][0]
-                    [inst.isDoubleSided() ? 1 : 0].get();
+                pipeline =
+                    _texturedVertexColorPipelines[inst.hasSkinning() ? 1 : 0][0]
+                                                 [inst.isDoubleSided() ? 1 : 0]
+                                                     .get();
             else if (skinnedVertexColor)
                 pipeline = inst.isDoubleSided()
                                ? _forwardSkinDoubleSidedPipeline.get()
@@ -769,20 +774,21 @@ void Rasterizer::renderOpaquePass(Backend::Texture* shadowTexture,
             else if (skinnedMaterial) {
                 const size_t model = inst.material()->shadingModel() ==
                                              MaterialShadingModel::Phong
-                                         ? 0 : 1;
-                pipeline = _skinnedMaterialPipelines[model][0]
-                    [inst.isDoubleSided() ? 1 : 0].get();
-            }
-            else if (inst.material()->shadingModel() ==
-                     MaterialShadingModel::Phong)
+                                         ? 0
+                                         : 1;
+                pipeline =
+                    _skinnedMaterialPipelines[model][0]
+                                             [inst.isDoubleSided() ? 1 : 0]
+                                                 .get();
+            } else if (inst.material()->shadingModel() ==
+                       MaterialShadingModel::Phong)
                 pipeline = inst.isDoubleSided()
                                ? _phongDoubleSidedPipeline.get()
                                : _phongPipeline.get();
             else if (inst.material()->shadingModel() ==
                      MaterialShadingModel::PBR)
-                pipeline = inst.isDoubleSided()
-                               ? _pbrDoubleSidedPipeline.get()
-                               : _pbrPipeline.get();
+                pipeline = inst.isDoubleSided() ? _pbrDoubleSidedPipeline.get()
+                                                : _pbrPipeline.get();
             else
                 pipeline = inst.isDoubleSided()
                                ? _forwardDoubleSidedPipeline.get()
@@ -805,22 +811,22 @@ void Rasterizer::renderOpaquePass(Backend::Texture* shadowTexture,
                     pass->setBindGroup(
                         3, updateTexturedVertexColorRhiResources(inst));
                     inst.recordSkinnedMaterialDraw(
-                        *pass,
-                        inst.textureAtSlot(RendererTextureSlot::Normal) !=
-                            nullptr);
+                        *pass, inst.textureAtSlot(
+                                   RendererTextureSlot::Normal) != nullptr);
                 } else if (skinnedVertexColor) {
                     inst.recordSkinnedForwardDraw(*pass);
                 } else if (inst.material()->shadingModel() ==
                            MaterialShadingModel::Phong) {
-                    auto* material = static_cast<PhongMaterial*>(inst.material());
-                    pass->setBindGroup(3,
-                        updatePhongRhiResources(*material, inst));
-                    inst.recordSkinnedMaterialDraw(
-                        *pass, material->normalMap != nullptr);
+                    auto* material =
+                        static_cast<PhongMaterial*>(inst.material());
+                    pass->setBindGroup(
+                        3, updatePhongRhiResources(*material, inst));
+                    inst.recordSkinnedMaterialDraw(*pass, material->normalMap !=
+                                                              nullptr);
                 } else {
                     auto* material = static_cast<PBRMaterial*>(inst.material());
                     pass->setBindGroup(3,
-                        updatePbrRhiResources(*material, inst));
+                                       updatePbrRhiResources(*material, inst));
                     inst.recordSkinnedMaterialDraw(
                         *pass, material->normalTexture != nullptr);
                 }
@@ -828,17 +834,17 @@ void Rasterizer::renderOpaquePass(Backend::Texture* shadowTexture,
                 pass->setBindGroup(3, _checkerboardBindGroup.get());
                 inst.recordMaterialDraw(*pass, true, false);
             } else if (texturedVertexColor) {
-                pass->setBindGroup(
-                    3, updateTexturedVertexColorRhiResources(inst));
+                pass->setBindGroup(3,
+                                   updateTexturedVertexColorRhiResources(inst));
                 inst.recordMaterialDraw(
                     *pass, true,
                     inst.textureAtSlot(RendererTextureSlot::Normal) != nullptr);
             } else if (inst.material()->shadingModel() ==
-                MaterialShadingModel::Phong) {
+                       MaterialShadingModel::Phong) {
                 auto* phong = static_cast<PhongMaterial*>(inst.material());
-                pass->setBindGroup(3,
-                                   updatePhongRhiResources(*phong, inst));
-                inst.recordMaterialDraw(*pass, true, phong->normalMap != nullptr);
+                pass->setBindGroup(3, updatePhongRhiResources(*phong, inst));
+                inst.recordMaterialDraw(*pass, true,
+                                        phong->normalMap != nullptr);
             } else if (inst.material()->shadingModel() ==
                        MaterialShadingModel::PBR) {
                 auto* pbr = static_cast<PBRMaterial*>(inst.material());
@@ -858,8 +864,7 @@ void Rasterizer::renderOpaquePass(Backend::Texture* shadowTexture,
 // -------------------------------------------------------------------------
 // Skybox Pipeline
 // -------------------------------------------------------------------------
-void Rasterizer::renderSkyboxPass(const glm::mat4& view,
-                                  const glm::mat4& proj,
+void Rasterizer::renderSkyboxPass(const glm::mat4& view, const glm::mat4& proj,
                                   Backend::RenderTarget* sceneDrawTarget) {
     // Drawn after opaque geometry so the skybox only fills empty pixels.
     if (!sceneDrawTarget || !_skyboxPipeline || !_skyboxTextureBindGroup) {
@@ -874,7 +879,8 @@ void Rasterizer::renderSkyboxPass(const glm::mat4& view,
     pass->setBindGroup(1, _skyboxParamsBindGroup.get());
     pass->setBindGroup(3, _skyboxTextureBindGroup.get());
     pass->setVertexBuffer(0, _skyboxVertexBuffer.get());
-    pass->setIndexBuffer(_skyboxIndexBuffer.get(), Backend::IndexFormat::Uint32);
+    pass->setIndexBuffer(_skyboxIndexBuffer.get(),
+                         Backend::IndexFormat::Uint32);
     pass->drawIndexed(36);
     pass->end();
     auto commands = encoder->finish();
@@ -884,44 +890,58 @@ void Rasterizer::renderSkyboxPass(const glm::mat4& view,
 // -------------------------------------------------------------------------
 // Transparent Scene Pipeline
 // -------------------------------------------------------------------------
-void Rasterizer::renderTransparentPass(
-    Backend::Texture* shadowTexture, Backend::RenderTarget* sceneDrawTarget) {
+void Rasterizer::renderTransparentPass(Backend::Texture* shadowTexture,
+                                       Backend::RenderTarget* sceneDrawTarget) {
     if (sceneDrawTarget && _shadowSamplingBindGroup) {
         auto encoder = _graphicsDevice->createCommandEncoder();
         auto pass = encoder->beginRenderPass(sceneDrawTarget);
         pass->setViewport(0.0f, 0.0f, static_cast<float>(_viewportWidth),
                           static_cast<float>(_viewportHeight));
+        pass->setPolygonMode(_wireframeEnabled ? Backend::PolygonMode::Line
+                                               : Backend::PolygonMode::Fill);
         std::vector<std::unique_ptr<Backend::BindGroup>> skinGroups;
         for (auto& entry : _instancers) {
             MeshInstancer& inst = entry.second;
             if (!inst.hasTransparent() || inst.visibleCount() == 0)
                 continue;
             size_t kind = 0;
-            const bool texturedVertexColor =
-                usesRhiTexturedVertexColor(inst);
+            const bool texturedVertexColor = usesRhiTexturedVertexColor(inst);
             const bool checkerboard = usesRhiCheckerboard(inst);
-            const bool skinnedMaterial = inst.hasSkinning() &&
-                (inst.material()->shadingModel() == MaterialShadingModel::Phong ||
+            const bool skinnedMaterial =
+                inst.hasSkinning() &&
+                (inst.material()->shadingModel() ==
+                     MaterialShadingModel::Phong ||
                  inst.material()->shadingModel() == MaterialShadingModel::PBR);
-            if (inst.hasSkinning() && !skinnedMaterial) kind = 1;
-            else if (inst.material()->shadingModel() == MaterialShadingModel::Phong) kind = 2;
-            else if (inst.material()->shadingModel() == MaterialShadingModel::PBR) kind = 3;
+            if (inst.hasSkinning() && !skinnedMaterial)
+                kind = 1;
+            else if (inst.material()->shadingModel() ==
+                     MaterialShadingModel::Phong)
+                kind = 2;
+            else if (inst.material()->shadingModel() ==
+                     MaterialShadingModel::PBR)
+                kind = 3;
             if (checkerboard) {
-                pass->setPipeline(_checkerboardPipelines[1]
-                    [inst.isDoubleSided() ? 1 : 0].get());
+                pass->setPipeline(
+                    _checkerboardPipelines[1][inst.isDoubleSided() ? 1 : 0]
+                        .get());
             } else if (texturedVertexColor) {
-                pass->setPipeline(_texturedVertexColorPipelines
-                    [inst.hasSkinning() ? 1 : 0][1]
-                    [inst.isDoubleSided() ? 1 : 0].get());
+                pass->setPipeline(
+                    _texturedVertexColorPipelines[inst.hasSkinning() ? 1 : 0][1]
+                                                 [inst.isDoubleSided() ? 1 : 0]
+                                                     .get());
             } else if (skinnedMaterial) {
                 const size_t model = inst.material()->shadingModel() ==
                                              MaterialShadingModel::Phong
-                                         ? 0 : 1;
-                pass->setPipeline(_skinnedMaterialPipelines[model][1]
-                    [inst.isDoubleSided() ? 1 : 0].get());
+                                         ? 0
+                                         : 1;
+                pass->setPipeline(
+                    _skinnedMaterialPipelines[model][1]
+                                             [inst.isDoubleSided() ? 1 : 0]
+                                                 .get());
             } else {
-                pass->setPipeline(_transparentPipelines[kind]
-                    [inst.isDoubleSided() ? 1 : 0].get());
+                pass->setPipeline(
+                    _transparentPipelines[kind][inst.isDoubleSided() ? 1 : 0]
+                        .get());
             }
             pass->setBindGroup(0, _forwardFrameBindGroup.get());
             pass->setBindGroup(1, _shadowSamplingBindGroup.get());
@@ -938,22 +958,22 @@ void Rasterizer::renderTransparentPass(
                     pass->setBindGroup(
                         3, updateTexturedVertexColorRhiResources(inst));
                     inst.recordSkinnedMaterialDraw(
-                        *pass,
-                        inst.textureAtSlot(RendererTextureSlot::Normal) !=
-                            nullptr);
+                        *pass, inst.textureAtSlot(
+                                   RendererTextureSlot::Normal) != nullptr);
                 } else if (!skinnedMaterial) {
                     inst.recordSkinnedForwardDraw(*pass);
                 } else if (inst.material()->shadingModel() ==
                            MaterialShadingModel::Phong) {
-                    auto* material = static_cast<PhongMaterial*>(inst.material());
-                    pass->setBindGroup(3,
-                        updatePhongRhiResources(*material, inst));
-                    inst.recordSkinnedMaterialDraw(
-                        *pass, material->normalMap != nullptr);
+                    auto* material =
+                        static_cast<PhongMaterial*>(inst.material());
+                    pass->setBindGroup(
+                        3, updatePhongRhiResources(*material, inst));
+                    inst.recordSkinnedMaterialDraw(*pass, material->normalMap !=
+                                                              nullptr);
                 } else {
                     auto* material = static_cast<PBRMaterial*>(inst.material());
                     pass->setBindGroup(3,
-                        updatePbrRhiResources(*material, inst));
+                                       updatePbrRhiResources(*material, inst));
                     inst.recordSkinnedMaterialDraw(
                         *pass, material->normalTexture != nullptr);
                 }
@@ -961,19 +981,21 @@ void Rasterizer::renderTransparentPass(
                 pass->setBindGroup(3, _checkerboardBindGroup.get());
                 inst.recordMaterialDraw(*pass, true, false);
             } else if (texturedVertexColor) {
-                pass->setBindGroup(
-                    3, updateTexturedVertexColorRhiResources(inst));
+                pass->setBindGroup(3,
+                                   updateTexturedVertexColorRhiResources(inst));
                 inst.recordMaterialDraw(
                     *pass, true,
                     inst.textureAtSlot(RendererTextureSlot::Normal) != nullptr);
             } else if (kind == 2) {
                 auto* material = static_cast<PhongMaterial*>(inst.material());
                 pass->setBindGroup(3, updatePhongRhiResources(*material, inst));
-                inst.recordMaterialDraw(*pass, true, material->normalMap != nullptr);
+                inst.recordMaterialDraw(*pass, true,
+                                        material->normalMap != nullptr);
             } else if (kind == 3) {
                 auto* material = static_cast<PBRMaterial*>(inst.material());
                 pass->setBindGroup(3, updatePbrRhiResources(*material, inst));
-                inst.recordMaterialDraw(*pass, true, material->normalTexture != nullptr);
+                inst.recordMaterialDraw(*pass, true,
+                                        material->normalTexture != nullptr);
             } else {
                 inst.recordForwardDraw(*pass);
             }
@@ -1003,9 +1025,8 @@ void Rasterizer::initSelectionMaskRhi() {
         KE::getAssetPath("shaders/selection_mask.vs"));
     const std::string selectionFragmentSource = Backend::loadShaderSource(
         KE::getAssetPath("shaders/selection_mask.fs"));
-    const std::string skinnedSelectionVertexSource =
-        Backend::loadShaderSource(
-            KE::getAssetPath("shaders/skinned_selection_mask.vs"));
+    const std::string skinnedSelectionVertexSource = Backend::loadShaderSource(
+        KE::getAssetPath("shaders/skinned_selection_mask.vs"));
 
     // Selection pipeline layouts and frame bindings.
     Backend::BindGroupLayoutDesc frameDesc;
@@ -1038,15 +1059,14 @@ void Rasterizer::initSelectionMaskRhi() {
     pipelineDesc.colorTargets = {{Backend::TextureFormat::RGBA8Unorm}};
     Backend::VertexBufferLayout positionLayout;
     positionLayout.arrayStride = sizeof(glm::vec3);
-    positionLayout.attributes = {{Backend::VertexFormat::Float32x3, 0,
-                                  RendererAttribute::Position}};
+    positionLayout.attributes = {
+        {Backend::VertexFormat::Float32x3, 0, RendererAttribute::Position}};
     Backend::VertexBufferLayout transformLayout;
     transformLayout.arrayStride = sizeof(glm::mat4);
     transformLayout.stepMode = Backend::VertexStepMode::Instance;
     for (uint32_t column = 0; column < 4; ++column) {
         transformLayout.attributes.push_back(
-            {Backend::VertexFormat::Float32x4,
-             column * sizeof(glm::vec4),
+            {Backend::VertexFormat::Float32x4, column * sizeof(glm::vec4),
              static_cast<uint32_t>(RendererAttribute::InstanceTransform0) +
                  column});
     }
@@ -1092,8 +1112,8 @@ void Rasterizer::initSelectionMaskRhi() {
     Backend::VertexBufferLayout emptyLayout;
     Backend::VertexBufferLayout texCoordLayout;
     texCoordLayout.arrayStride = sizeof(glm::vec2);
-    texCoordLayout.attributes = {{Backend::VertexFormat::Float32x2, 0,
-                                  RendererAttribute::TexCoord}};
+    texCoordLayout.attributes = {
+        {Backend::VertexFormat::Float32x2, 0, RendererAttribute::TexCoord}};
     pipelineDesc.vertexBuffers = {positionLayout, transformLayout, emptyLayout,
                                   texCoordLayout};
     pipelineDesc.primitive.cullMode = Backend::CullMode::Back;
@@ -1129,19 +1149,19 @@ void Rasterizer::initSelectionMaskRhi() {
 
     Backend::VertexBufferLayout boneIndexLayout;
     boneIndexLayout.arrayStride = sizeof(glm::ivec4);
-    boneIndexLayout.attributes = {{Backend::VertexFormat::Sint32x4, 0,
-                                   RendererAttribute::BoneIndices}};
+    boneIndexLayout.attributes = {
+        {Backend::VertexFormat::Sint32x4, 0, RendererAttribute::BoneIndices}};
     Backend::VertexBufferLayout boneWeightLayout;
     boneWeightLayout.arrayStride = sizeof(glm::vec4);
-    boneWeightLayout.attributes = {{Backend::VertexFormat::Float32x4, 0,
-                                    RendererAttribute::BoneWeights}};
+    boneWeightLayout.attributes = {
+        {Backend::VertexFormat::Float32x4, 0, RendererAttribute::BoneWeights}};
     pipelineDesc.shader.name = "selection_mask_skin_rhi";
     pipelineDesc.shader.stages = {
         {skinnedSelectionVertexSource, Backend::ShaderType::Vertex, "main"},
         {OpaqueMaskRhiFs, Backend::ShaderType::Fragment, "main"},
     };
     pipelineDesc.vertexBuffers = {
-        positionLayout, transformLayout, emptyLayout, emptyLayout,
+        positionLayout, transformLayout, emptyLayout,     emptyLayout,
         emptyLayout,    emptyLayout,     boneIndexLayout, boneWeightLayout,
     };
     pipelineDesc.pipelineLayout = _selectionMaskSkinPipelineLayout.get();
@@ -1155,10 +1175,11 @@ void Rasterizer::initSelectionMaskRhi() {
         _graphicsDevice->createGraphicsPipeline(pipelineDesc);
 
     pipelineDesc.shader.name = "selection_mask_skin_alpha_rhi";
-    pipelineDesc.shader.stages[1] =
-        {selectionFragmentSource, Backend::ShaderType::Fragment, "main"};
-    pipelineDesc.vertexBuffers[vertexBufferSlot(
-        MeshVertexBufferSlot::TexCoord)] = texCoordLayout;
+    pipelineDesc.shader.stages[1] = {selectionFragmentSource,
+                                     Backend::ShaderType::Fragment, "main"};
+    pipelineDesc
+        .vertexBuffers[vertexBufferSlot(MeshVertexBufferSlot::TexCoord)] =
+        texCoordLayout;
     pipelineDesc.pipelineLayout = _selectionMaskSkinAlphaPipelineLayout.get();
     pipelineDesc.label = "selection_mask_skin_alpha_pipeline";
     pipelineDesc.primitive.cullMode = Backend::CullMode::Back;
@@ -1182,10 +1203,9 @@ void Rasterizer::initSelectionMaskRhi() {
     Backend::BindGroupDesc bindDesc;
     bindDesc.layout = _selectionMaskGroupLayouts[0].get();
     bindDesc.label = "selection_mask_frame_bind_group";
-    bindDesc.entries = {{0, _cameraUBO.get(), 0, 2 * sizeof(glm::mat4),
-                         nullptr, nullptr}};
-    _selectionMaskFrameBindGroup =
-        _graphicsDevice->createBindGroup(bindDesc);
+    bindDesc.entries = {
+        {0, _cameraUBO.get(), 0, 2 * sizeof(glm::mat4), nullptr, nullptr}};
+    _selectionMaskFrameBindGroup = _graphicsDevice->createBindGroup(bindDesc);
 }
 
 void Rasterizer::initShadowRhi() {
@@ -1194,10 +1214,10 @@ void Rasterizer::initShadowRhi() {
     // Records single-map and CSM depth passes. The 8 immutable variants cover
     // static/skinned, opaque/alpha-mask, and culled/double-sided casters.
     // =====================================================================
-    const std::string shadowVertexSource = Backend::loadShaderSource(
-        KE::getAssetPath("shaders/shadow.vs"));
-    const std::string shadowFragmentSource = Backend::loadShaderSource(
-        KE::getAssetPath("shaders/shadow.fs"));
+    const std::string shadowVertexSource =
+        Backend::loadShaderSource(KE::getAssetPath("shaders/shadow.vs"));
+    const std::string shadowFragmentSource =
+        Backend::loadShaderSource(KE::getAssetPath("shaders/shadow.fs"));
     const std::string skinnedShadowVertexSource = Backend::loadShaderSource(
         KE::getAssetPath("shaders/skinned_shadow.vs"));
 
@@ -1205,38 +1225,37 @@ void Rasterizer::initShadowRhi() {
     Backend::BindGroupDesc frameBindDesc;
     frameBindDesc.layout = _selectionMaskGroupLayouts[0].get();
     frameBindDesc.label = "shadow_frame_bind_group";
-    frameBindDesc.entries = {{
-        0, _shadowUBO.get(), 0,
-        MaxShadowCascades * sizeof(glm::mat4) + 5 * sizeof(glm::vec4), nullptr,
-        nullptr}};
+    frameBindDesc.entries = {
+        {0, _shadowUBO.get(), 0,
+         MaxShadowCascades * sizeof(glm::mat4) + 5 * sizeof(glm::vec4), nullptr,
+         nullptr}};
     _shadowFrameBindGroup = _graphicsDevice->createBindGroup(frameBindDesc);
 
     Backend::VertexBufferLayout positionLayout;
     positionLayout.arrayStride = sizeof(glm::vec3);
-    positionLayout.attributes = {{Backend::VertexFormat::Float32x3, 0,
-                                  RendererAttribute::Position}};
+    positionLayout.attributes = {
+        {Backend::VertexFormat::Float32x3, 0, RendererAttribute::Position}};
     Backend::VertexBufferLayout transformLayout;
     transformLayout.arrayStride = sizeof(glm::mat4);
     transformLayout.stepMode = Backend::VertexStepMode::Instance;
     for (uint32_t column = 0; column < 4; ++column) {
         transformLayout.attributes.push_back(
-            {Backend::VertexFormat::Float32x4,
-             column * sizeof(glm::vec4),
+            {Backend::VertexFormat::Float32x4, column * sizeof(glm::vec4),
              static_cast<uint32_t>(RendererAttribute::InstanceTransform0) +
                  column});
     }
     Backend::VertexBufferLayout texCoordLayout;
     texCoordLayout.arrayStride = sizeof(glm::vec2);
-    texCoordLayout.attributes = {{Backend::VertexFormat::Float32x2, 0,
-                                  RendererAttribute::TexCoord}};
+    texCoordLayout.attributes = {
+        {Backend::VertexFormat::Float32x2, 0, RendererAttribute::TexCoord}};
     Backend::VertexBufferLayout boneIndexLayout;
     boneIndexLayout.arrayStride = sizeof(glm::ivec4);
-    boneIndexLayout.attributes = {{Backend::VertexFormat::Sint32x4, 0,
-                                   RendererAttribute::BoneIndices}};
+    boneIndexLayout.attributes = {
+        {Backend::VertexFormat::Sint32x4, 0, RendererAttribute::BoneIndices}};
     Backend::VertexBufferLayout boneWeightLayout;
     boneWeightLayout.arrayStride = sizeof(glm::vec4);
-    boneWeightLayout.attributes = {{Backend::VertexFormat::Float32x4, 0,
-                                    RendererAttribute::BoneWeights}};
+    boneWeightLayout.attributes = {
+        {Backend::VertexFormat::Float32x4, 0, RendererAttribute::BoneWeights}};
     Backend::VertexBufferLayout emptyLayout;
 
     // Immutable shadow pipeline variants.
@@ -1249,14 +1268,17 @@ void Rasterizer::initShadowRhi() {
                 desc.shader.stages = {
                     {skin ? skinnedShadowVertexSource : shadowVertexSource,
                      Backend::ShaderType::Vertex, "main"},
-                    {alpha ? shadowFragmentSource
-                           : std::string(DepthOnlyRhiFs),
+                    {alpha ? shadowFragmentSource : std::string(DepthOnlyRhiFs),
                      Backend::ShaderType::Fragment, "main"},
                 };
                 desc.vertexBuffers = {
-                    positionLayout, transformLayout, emptyLayout,
-                    alpha ? texCoordLayout : emptyLayout, emptyLayout,
-                    emptyLayout, skin ? boneIndexLayout : emptyLayout,
+                    positionLayout,
+                    transformLayout,
+                    emptyLayout,
+                    alpha ? texCoordLayout : emptyLayout,
+                    emptyLayout,
+                    emptyLayout,
+                    skin ? boneIndexLayout : emptyLayout,
                     skin ? boneWeightLayout : emptyLayout,
                 };
                 if (skin && alpha)
@@ -1270,11 +1292,11 @@ void Rasterizer::initShadowRhi() {
                         _selectionMaskAlphaPipelineLayout.get();
                 else
                     desc.pipelineLayout = _selectionMaskPipelineLayout.get();
-                desc.primitive.cullMode = doubleSided
-                                              ? Backend::CullMode::None
-                                              : Backend::CullMode::Back;
+                desc.primitive.cullMode = doubleSided ? Backend::CullMode::None
+                                                      : Backend::CullMode::Back;
                 desc.depthStencil = Backend::DepthStencilState{
-                    Backend::TextureFormat::Depth32Float, true,
+                    Backend::TextureFormat::Depth32Float,
+                    true,
                     Backend::CompareFunction::Less,
                     1,    // constant bias: one implementation depth unit
                     1.0f, // slope bias: reduces acne on grazing surfaces
@@ -1287,26 +1309,28 @@ void Rasterizer::initShadowRhi() {
     }
 
     // Depth-only render targets for the single shadow map and CSM cascades.
-    auto createDepthTarget = [&](Backend::Framebuffer* framebuffer,
-                                 const std::string& label,
-                                 std::unique_ptr<Backend::TextureView>& view,
-                                 std::unique_ptr<Backend::RenderTarget>& target) {
-        Backend::Texture* depth =
-            framebuffer ? framebuffer->getDepthTexture() : nullptr;
-        if (!depth)
-            return;
-        Backend::TextureViewDesc viewDesc;
-        viewDesc.format = depth->getFormat();
-        viewDesc.aspect = Backend::TextureAspect::DepthOnly;
-        viewDesc.label = label + "_view";
-        view = _graphicsDevice->createTextureView(depth, viewDesc);
-        Backend::RenderPassDesc passDesc;
-        passDesc.label = label;
-        passDesc.depthStencilAttachment = Backend::DepthStencilAttachmentDesc{
-            view.get(), Backend::LoadOp::Clear, Backend::StoreOp::Store, 1.0f,
-            Backend::LoadOp::Load, Backend::StoreOp::Store, 0};
-        target = _graphicsDevice->createRenderTarget(passDesc);
-    };
+    auto createDepthTarget =
+        [&](Backend::Framebuffer* framebuffer, const std::string& label,
+            std::unique_ptr<Backend::TextureView>& view,
+            std::unique_ptr<Backend::RenderTarget>& target) {
+            Backend::Texture* depth =
+                framebuffer ? framebuffer->getDepthTexture() : nullptr;
+            if (!depth)
+                return;
+            Backend::TextureViewDesc viewDesc;
+            viewDesc.format = depth->getFormat();
+            viewDesc.aspect = Backend::TextureAspect::DepthOnly;
+            viewDesc.label = label + "_view";
+            view = _graphicsDevice->createTextureView(depth, viewDesc);
+            Backend::RenderPassDesc passDesc;
+            passDesc.label = label;
+            passDesc.depthStencilAttachment =
+                Backend::DepthStencilAttachmentDesc{
+                    view.get(), Backend::LoadOp::Clear, Backend::StoreOp::Store,
+                    1.0f,       Backend::LoadOp::Load,  Backend::StoreOp::Store,
+                    0};
+            target = _graphicsDevice->createRenderTarget(passDesc);
+        };
     createDepthTarget(_shadowFbo.get(), "shadow_depth_pass", _shadowDepthView,
                       _shadowRenderTarget);
     for (size_t i = 0; i < _cascadeFbos.size(); ++i) {
@@ -1342,13 +1366,12 @@ void Rasterizer::initShadowRhi() {
     shadowSamplerDesc.minFilter = Backend::TextureFilter::Nearest;
     shadowSamplerDesc.magFilter = Backend::TextureFilter::Nearest;
     shadowSamplerDesc.label = "shadow_sampling_sampler";
-    _shadowSamplingSampler =
-        _graphicsDevice->createSampler(shadowSamplerDesc);
+    _shadowSamplingSampler = _graphicsDevice->createSampler(shadowSamplerDesc);
 
     Backend::BufferDesc samplingParamsDesc;
     samplingParamsDesc.size = sizeof(glm::vec4);
-    samplingParamsDesc.usage = Backend::BufferUsage::Uniform |
-                               Backend::BufferUsage::CopyDst;
+    samplingParamsDesc.usage =
+        Backend::BufferUsage::Uniform | Backend::BufferUsage::CopyDst;
     samplingParamsDesc.label = "shadow_sampling_params";
     _shadowSamplingParamsBuffer =
         _graphicsDevice->createBuffer(samplingParamsDesc);
@@ -1370,8 +1393,8 @@ void Rasterizer::rebuildShadowSamplingBindings(
         handles[i] = textures[i]->getNativeHandle();
     }
 
-    const glm::vec4 params{
-        (_debugCsmCascadeTint && _useCsm) ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f};
+    const glm::vec4 params{(_debugCsmCascadeTint && _useCsm) ? 1.0f : 0.0f,
+                           0.0f, 0.0f, 0.0f};
     _shadowSamplingParamsBuffer->setData(&params, sizeof(params));
     if (_shadowSamplingBindGroup && handles == _shadowSamplingHandles)
         return;
@@ -1390,15 +1413,14 @@ void Rasterizer::rebuildShadowSamplingBindings(
     bindDesc.layout = _shadowSamplingGroupLayout.get();
     bindDesc.label = "shadow_sampling_bind_group";
     for (uint32_t binding = 0; binding < MaxShadowCascades; ++binding) {
-        bindDesc.entries.push_back(
-            {binding, nullptr, 0, 0,
-             _shadowSamplingViews[binding].get(), nullptr});
+        bindDesc.entries.push_back({binding, nullptr, 0, 0,
+                                    _shadowSamplingViews[binding].get(),
+                                    nullptr});
     }
     bindDesc.entries.push_back(
         {4, nullptr, 0, 0, nullptr, _shadowSamplingSampler.get()});
-    bindDesc.entries.push_back(
-        {5, _shadowSamplingParamsBuffer.get(), 0, sizeof(glm::vec4), nullptr,
-         nullptr});
+    bindDesc.entries.push_back({5, _shadowSamplingParamsBuffer.get(), 0,
+                                sizeof(glm::vec4), nullptr, nullptr});
     _shadowSamplingBindGroup = _graphicsDevice->createBindGroup(bindDesc);
     _shadowSamplingHandles = handles;
 }
@@ -1416,8 +1438,7 @@ void Rasterizer::initForwardRhi() {
         {2, Backend::BindingType::UniformBuffer,
          Backend::ShaderStageVisibility::Fragment},
     };
-    _forwardGroupLayouts[0] =
-        _graphicsDevice->createBindGroupLayout(frameDesc);
+    _forwardGroupLayouts[0] = _graphicsDevice->createBindGroupLayout(frameDesc);
     for (size_t i = 1; i < _forwardGroupLayouts.size(); ++i) {
         Backend::BindGroupLayoutDesc emptyDesc;
         emptyDesc.label = "forward_reserved_group_" + std::to_string(i + 1);
@@ -1430,8 +1451,7 @@ void Rasterizer::initForwardRhi() {
     layoutDesc.bindGroupLayouts = {
         _forwardGroupLayouts[0].get(), _shadowSamplingGroupLayout.get(),
         _forwardGroupLayouts[1].get(), _forwardGroupLayouts[2].get()};
-    _forwardPipelineLayout =
-        _graphicsDevice->createPipelineLayout(layoutDesc);
+    _forwardPipelineLayout = _graphicsDevice->createPipelineLayout(layoutDesc);
 
     Backend::BindGroupDesc bindDesc;
     bindDesc.layout = _forwardGroupLayouts[0].get();
@@ -1445,8 +1465,8 @@ void Rasterizer::initForwardRhi() {
 
     Backend::VertexBufferLayout position;
     position.arrayStride = sizeof(glm::vec3);
-    position.attributes = {{Backend::VertexFormat::Float32x3, 0,
-                            RendererAttribute::Position}};
+    position.attributes = {
+        {Backend::VertexFormat::Float32x3, 0, RendererAttribute::Position}};
     Backend::VertexBufferLayout transform;
     transform.arrayStride = sizeof(glm::mat4);
     transform.stepMode = Backend::VertexStepMode::Instance;
@@ -1457,8 +1477,8 @@ void Rasterizer::initForwardRhi() {
                  column});
     Backend::VertexBufferLayout normal;
     normal.arrayStride = sizeof(glm::vec3);
-    normal.attributes = {{Backend::VertexFormat::Float32x3, 0,
-                          RendererAttribute::Normal}};
+    normal.attributes = {
+        {Backend::VertexFormat::Float32x3, 0, RendererAttribute::Normal}};
     Backend::VertexBufferLayout color;
     color.arrayStride = sizeof(glm::vec4);
     color.stepMode = Backend::VertexStepMode::Instance;
@@ -1480,13 +1500,12 @@ void Rasterizer::initForwardRhi() {
     pipelineDesc.pipelineLayout = _forwardPipelineLayout.get();
     pipelineDesc.vertexBuffers = {position, transform, normal, empty, color};
     pipelineDesc.primitive.cullMode = Backend::CullMode::Back;
-    pipelineDesc.depthStencil = Backend::DepthStencilState{
-        Backend::TextureFormat::Depth24Stencil8, true,
-        Backend::CompareFunction::Less};
+    pipelineDesc.depthStencil =
+        Backend::DepthStencilState{Backend::TextureFormat::Depth24Stencil8,
+                                   true, Backend::CompareFunction::Less};
     pipelineDesc.colorTargets = {{Backend::TextureFormat::RGBA16Float}};
     pipelineDesc.sampleCount = 4;
-    _forwardPipeline =
-        _graphicsDevice->createGraphicsPipeline(pipelineDesc);
+    _forwardPipeline = _graphicsDevice->createGraphicsPipeline(pipelineDesc);
     pipelineDesc.label = "forward_vertex_color_double_sided_pipeline";
     pipelineDesc.primitive.cullMode = Backend::CullMode::None;
     _forwardDoubleSidedPipeline =
@@ -1507,22 +1526,22 @@ void Rasterizer::initForwardRhi() {
         _graphicsDevice->createPipelineLayout(skinPipelineLayoutDesc);
     Backend::VertexBufferLayout boneIndices;
     boneIndices.arrayStride = sizeof(glm::ivec4);
-    boneIndices.attributes = {{Backend::VertexFormat::Sint32x4, 0,
-                               RendererAttribute::BoneIndices}};
+    boneIndices.attributes = {
+        {Backend::VertexFormat::Sint32x4, 0, RendererAttribute::BoneIndices}};
     Backend::VertexBufferLayout boneWeights;
     boneWeights.arrayStride = sizeof(glm::vec4);
-    boneWeights.attributes = {{Backend::VertexFormat::Float32x4, 0,
-                               RendererAttribute::BoneWeights}};
+    boneWeights.attributes = {
+        {Backend::VertexFormat::Float32x4, 0, RendererAttribute::BoneWeights}};
     pipelineDesc.label = "forward_skinned_vertex_color_pipeline";
     pipelineDesc.shader.name = "forward_skinned_vertex_color_rhi";
-    pipelineDesc.shader.stages[0] =
-        {Backend::loadShaderSource(KE::getAssetPath(
-             "shaders/rhi/forward_skinned_vertex_color.vs")),
-         Backend::ShaderType::Vertex, "main"};
+    pipelineDesc.shader.stages[0] = {
+        Backend::loadShaderSource(
+            KE::getAssetPath("shaders/rhi/forward_skinned_vertex_color.vs")),
+        Backend::ShaderType::Vertex, "main"};
     pipelineDesc.pipelineLayout = _forwardSkinPipelineLayout.get();
-    pipelineDesc.vertexBuffers = {
-        position, transform, normal, empty, color, empty, boneIndices,
-        boneWeights};
+    pipelineDesc.vertexBuffers = {position,    transform,  normal,
+                                  empty,       color,      empty,
+                                  boneIndices, boneWeights};
     pipelineDesc.primitive.cullMode = Backend::CullMode::Back;
     _forwardSkinPipeline =
         _graphicsDevice->createGraphicsPipeline(pipelineDesc);
@@ -1583,12 +1602,12 @@ void Rasterizer::initForwardRhi() {
 
     Backend::VertexBufferLayout texCoord;
     texCoord.arrayStride = sizeof(glm::vec2);
-    texCoord.attributes = {{Backend::VertexFormat::Float32x2, 0,
-                            RendererAttribute::TexCoord}};
+    texCoord.attributes = {
+        {Backend::VertexFormat::Float32x2, 0, RendererAttribute::TexCoord}};
     Backend::VertexBufferLayout tangent;
     tangent.arrayStride = sizeof(glm::vec4);
-    tangent.attributes = {{Backend::VertexFormat::Float32x4, 0,
-                           RendererAttribute::Tangent}};
+    tangent.attributes = {
+        {Backend::VertexFormat::Float32x4, 0, RendererAttribute::Tangent}};
 
     // Textured Vertex-Color Pipeline
     // Covers commonTex.fs users such as SkinVisualBridge and deformable cloth
@@ -1609,12 +1628,13 @@ void Rasterizer::initForwardRhi() {
         _graphicsDevice->createBindGroupLayout(texturedLayoutDesc);
     for (size_t skin = 0; skin < 2; ++skin) {
         Backend::PipelineLayoutDesc texturedPipelineLayoutDesc;
-        texturedPipelineLayoutDesc.label = skin
-            ? "forward_skinned_textured_vertex_color_pipeline_layout"
-            : "forward_textured_vertex_color_pipeline_layout";
+        texturedPipelineLayoutDesc.label =
+            skin ? "forward_skinned_textured_vertex_color_pipeline_layout"
+                 : "forward_textured_vertex_color_pipeline_layout";
         texturedPipelineLayoutDesc.bindGroupLayouts = {
             _forwardGroupLayouts[0].get(), _shadowSamplingGroupLayout.get(),
-            skin ? _forwardSkinGroupLayout.get() : _forwardGroupLayouts[1].get(),
+            skin ? _forwardSkinGroupLayout.get()
+                 : _forwardGroupLayouts[1].get(),
             _texturedVertexColorGroupLayout.get()};
         _texturedVertexColorPipelineLayouts[skin] =
             _graphicsDevice->createPipelineLayout(texturedPipelineLayoutDesc);
@@ -1629,32 +1649,31 @@ void Rasterizer::initForwardRhi() {
     const std::string texturedFs = Backend::loadShaderSource(
         KE::getAssetPath("shaders/rhi/forward_textured_vertex_color.fs"));
     for (size_t skin = 0; skin < 2; ++skin) {
-        const std::string texturedVs = Backend::loadShaderSource(KE::getAssetPath(
-            skin ? "shaders/rhi/forward_skinned_material.vs"
-                 : "shaders/rhi/forward_material.vs"));
+        const std::string texturedVs = Backend::loadShaderSource(
+            KE::getAssetPath(skin ? "shaders/rhi/forward_skinned_material.vs"
+                                  : "shaders/rhi/forward_material.vs"));
         for (size_t transparent = 0; transparent < 2; ++transparent) {
             for (size_t doubleSided = 0; doubleSided < 2; ++doubleSided) {
                 Backend::GraphicsPipelineDesc desc;
                 desc.label = std::string("forward_") +
-                    (skin ? "skinned_" : "") +
-                    "textured_vertex_color_" +
-                    (transparent ? "transparent_" : "opaque_") +
-                    (doubleSided ? "double_sided" : "back_face");
+                             (skin ? "skinned_" : "") +
+                             "textured_vertex_color_" +
+                             (transparent ? "transparent_" : "opaque_") +
+                             (doubleSided ? "double_sided" : "back_face");
                 desc.shader.name = desc.label + "_rhi";
                 desc.shader.stages = {
                     {texturedVs, Backend::ShaderType::Vertex, "main"},
                     {texturedFs, Backend::ShaderType::Fragment, "main"}};
                 desc.pipelineLayout =
                     _texturedVertexColorPipelineLayouts[skin].get();
-                desc.vertexBuffers = {position, transform, normal, texCoord,
-                                      color, tangent};
+                desc.vertexBuffers = {position, transform, normal,
+                                      texCoord, color,     tangent};
                 if (skin) {
                     desc.vertexBuffers.push_back(boneIndices);
                     desc.vertexBuffers.push_back(boneWeights);
                 }
-                desc.primitive.cullMode = doubleSided
-                                              ? Backend::CullMode::None
-                                              : Backend::CullMode::Back;
+                desc.primitive.cullMode = doubleSided ? Backend::CullMode::None
+                                                      : Backend::CullMode::Back;
                 desc.depthStencil = Backend::DepthStencilState{
                     Backend::TextureFormat::Depth24Stencil8, !transparent,
                     Backend::CompareFunction::Less};
@@ -1671,9 +1690,8 @@ void Rasterizer::initForwardRhi() {
     // Checkerboard Ground Pipeline
     Backend::BindGroupLayoutDesc checkerLayoutDesc;
     checkerLayoutDesc.label = "checkerboard_group_layout";
-    checkerLayoutDesc.entries = {{
-        0, Backend::BindingType::UniformBuffer,
-        Backend::ShaderStageVisibility::Fragment}};
+    checkerLayoutDesc.entries = {{0, Backend::BindingType::UniformBuffer,
+                                  Backend::ShaderStageVisibility::Fragment}};
     _checkerboardGroupLayout =
         _graphicsDevice->createBindGroupLayout(checkerLayoutDesc);
     Backend::PipelineLayoutDesc checkerPipelineLayoutDesc;
@@ -1685,19 +1703,17 @@ void Rasterizer::initForwardRhi() {
         _graphicsDevice->createPipelineLayout(checkerPipelineLayoutDesc);
     Backend::BufferDesc checkerParamsDesc;
     checkerParamsDesc.size = sizeof(glm::vec4) * 4;
-    checkerParamsDesc.usage = Backend::BufferUsage::Uniform |
-                              Backend::BufferUsage::CopyDst;
+    checkerParamsDesc.usage =
+        Backend::BufferUsage::Uniform | Backend::BufferUsage::CopyDst;
     checkerParamsDesc.label = "checkerboard_params";
     _checkerboardParamsBuffer =
         _graphicsDevice->createBuffer(checkerParamsDesc);
     Backend::BindGroupDesc checkerGroupDesc;
     checkerGroupDesc.layout = _checkerboardGroupLayout.get();
     checkerGroupDesc.label = "checkerboard_bind_group";
-    checkerGroupDesc.entries = {{
-        0, _checkerboardParamsBuffer.get(), 0, checkerParamsDesc.size, nullptr,
-        nullptr}};
-    _checkerboardBindGroup =
-        _graphicsDevice->createBindGroup(checkerGroupDesc);
+    checkerGroupDesc.entries = {{0, _checkerboardParamsBuffer.get(), 0,
+                                 checkerParamsDesc.size, nullptr, nullptr}};
+    _checkerboardBindGroup = _graphicsDevice->createBindGroup(checkerGroupDesc);
     setBackgroundSettings(BackgroundSettings{});
 
     const std::string checkerVs = Backend::loadShaderSource(
@@ -1708,18 +1724,17 @@ void Rasterizer::initForwardRhi() {
         for (size_t doubleSided = 0; doubleSided < 2; ++doubleSided) {
             Backend::GraphicsPipelineDesc desc;
             desc.label = std::string("forward_checkerboard_") +
-                (transparent ? "transparent_" : "opaque_") +
-                (doubleSided ? "double_sided" : "back_face");
+                         (transparent ? "transparent_" : "opaque_") +
+                         (doubleSided ? "double_sided" : "back_face");
             desc.shader.name = desc.label + "_rhi";
             desc.shader.stages = {
                 {checkerVs, Backend::ShaderType::Vertex, "main"},
                 {checkerFs, Backend::ShaderType::Fragment, "main"}};
             desc.pipelineLayout = _checkerboardPipelineLayout.get();
-            desc.vertexBuffers = {position, transform, normal, texCoord, color,
-                                  tangent};
-            desc.primitive.cullMode = doubleSided
-                                          ? Backend::CullMode::None
-                                          : Backend::CullMode::Back;
+            desc.vertexBuffers = {position, transform, normal,
+                                  texCoord, color,     tangent};
+            desc.primitive.cullMode =
+                doubleSided ? Backend::CullMode::None : Backend::CullMode::Back;
             desc.depthStencil = Backend::DepthStencilState{
                 Backend::TextureFormat::Depth24Stencil8, !transparent,
                 Backend::CompareFunction::Less};
@@ -1743,8 +1758,8 @@ void Rasterizer::initForwardRhi() {
          Backend::ShaderType::Fragment, "main"},
     };
     pipelineDesc.pipelineLayout = _phongPipelineLayout.get();
-    pipelineDesc.vertexBuffers = {position, transform, normal, texCoord, color,
-                                  tangent};
+    pipelineDesc.vertexBuffers = {position, transform, normal,
+                                  texCoord, color,     tangent};
     pipelineDesc.primitive.cullMode = Backend::CullMode::Back;
     _phongPipeline = _graphicsDevice->createGraphicsPipeline(pipelineDesc);
     pipelineDesc.label = "forward_phong_double_sided_pipeline";
@@ -1775,10 +1790,9 @@ void Rasterizer::initForwardRhi() {
     _pbrPipelineLayout = _graphicsDevice->createPipelineLayout(pbrLayoutDesc);
     pipelineDesc.label = "forward_pbr_pipeline";
     pipelineDesc.shader.name = "forward_pbr_rhi";
-    pipelineDesc.shader.stages[1] =
-        {Backend::loadShaderSource(
-             KE::getAssetPath("shaders/rhi/forward_pbr.fs")),
-         Backend::ShaderType::Fragment, "main"};
+    pipelineDesc.shader.stages[1] = {Backend::loadShaderSource(KE::getAssetPath(
+                                         "shaders/rhi/forward_pbr.fs")),
+                                     Backend::ShaderType::Fragment, "main"};
     pipelineDesc.pipelineLayout = _pbrPipelineLayout.get();
     pipelineDesc.primitive.cullMode = Backend::CullMode::Back;
     _pbrPipeline = _graphicsDevice->createGraphicsPipeline(pipelineDesc);
@@ -1807,8 +1821,8 @@ void Rasterizer::initForwardRhi() {
             desc.depthStencil = Backend::DepthStencilState{
                 Backend::TextureFormat::Depth24Stencil8, false,
                 Backend::CompareFunction::Less};
-            desc.colorTargets = {{Backend::TextureFormat::RGBA16Float,
-                                  alphaBlend}};
+            desc.colorTargets = {
+                {Backend::TextureFormat::RGBA16Float, alphaBlend}};
             desc.sampleCount = 4;
             desc.primitive.cullMode = Backend::CullMode::Back;
             _transparentPipelines[kind][0] =
@@ -1834,27 +1848,25 @@ void Rasterizer::initForwardRhi() {
                               _forwardPipelineLayout.get(), vertexColorVs,
                               vertexColorFs,
                               {position, transform, normal, empty, color});
+    createTransparentVariants(1, "transparent_skinned_vertex_color",
+                              _forwardSkinPipelineLayout.get(),
+                              skinnedVertexColorVs, vertexColorFs,
+                              {position, transform, normal, empty, color, empty,
+                               boneIndices, boneWeights});
     createTransparentVariants(
-        1, "transparent_skinned_vertex_color", _forwardSkinPipelineLayout.get(),
-        skinnedVertexColorVs, vertexColorFs,
-        {position, transform, normal, empty, color, empty, boneIndices,
-         boneWeights});
-    createTransparentVariants(2, "transparent_phong",
-                              _phongPipelineLayout.get(), materialVs, phongFs,
-                              {position, transform, normal, texCoord, color,
-                               tangent});
-    createTransparentVariants(3, "transparent_pbr", _pbrPipelineLayout.get(),
-                              materialVs, pbrFs,
-                              {position, transform, normal, texCoord, color,
-                               tangent});
+        2, "transparent_phong", _phongPipelineLayout.get(), materialVs, phongFs,
+        {position, transform, normal, texCoord, color, tangent});
+    createTransparentVariants(
+        3, "transparent_pbr", _pbrPipelineLayout.get(), materialVs, pbrFs,
+        {position, transform, normal, texCoord, color, tangent});
 
     const std::string skinnedMaterialVs = Backend::loadShaderSource(
         KE::getAssetPath("shaders/rhi/forward_skinned_material.vs"));
     for (size_t model = 0; model < 2; ++model) {
         Backend::PipelineLayoutDesc skinnedLayoutDesc;
         skinnedLayoutDesc.label = model == 0
-            ? "forward_skinned_phong_pipeline_layout"
-            : "forward_skinned_pbr_pipeline_layout";
+                                      ? "forward_skinned_phong_pipeline_layout"
+                                      : "forward_skinned_pbr_pipeline_layout";
         skinnedLayoutDesc.bindGroupLayouts = {
             _forwardGroupLayouts[0].get(), _shadowSamplingGroupLayout.get(),
             _forwardSkinGroupLayout.get(),
@@ -1864,18 +1876,20 @@ void Rasterizer::initForwardRhi() {
             _graphicsDevice->createPipelineLayout(skinnedLayoutDesc);
         for (size_t transparent = 0; transparent < 2; ++transparent) {
             Backend::GraphicsPipelineDesc desc;
-            const std::string baseLabel = std::string("forward_skinned_") +
+            const std::string baseLabel =
+                std::string("forward_skinned_") +
                 (model == 0 ? "phong" : "pbr") +
                 (transparent ? "_transparent" : "_opaque");
             desc.label = baseLabel + "_pipeline";
             desc.shader.name = baseLabel + "_rhi";
             desc.shader.stages = {
                 {skinnedMaterialVs, Backend::ShaderType::Vertex, "main"},
-                {model == 0 ? phongFs : pbrFs,
-                 Backend::ShaderType::Fragment, "main"}};
+                {model == 0 ? phongFs : pbrFs, Backend::ShaderType::Fragment,
+                 "main"}};
             desc.pipelineLayout = _skinnedMaterialPipelineLayouts[model].get();
-            desc.vertexBuffers = {position, transform, normal, texCoord, color,
-                                  tangent, boneIndices, boneWeights};
+            desc.vertexBuffers = {position,    transform,  normal,
+                                  texCoord,    color,      tangent,
+                                  boneIndices, boneWeights};
             desc.depthStencil = Backend::DepthStencilState{
                 Backend::TextureFormat::Depth24Stencil8, !transparent,
                 Backend::CompareFunction::Less};
@@ -1894,50 +1908,50 @@ void Rasterizer::initForwardRhi() {
     }
 }
 
-bool Rasterizer::usesRhiTexturedVertexColor(
-    const MeshInstancer& inst) const {
-    return inst.material() &&
-           inst.material()->shadingModel() ==
-               MaterialShadingModel::VertexColor &&
-           inst.shader() &&
-           inst.shader()->getName().find("shaders/commonTex.fs") !=
-               std::string::npos;
+bool Rasterizer::usesRhiTexturedVertexColor(const MeshInstancer& inst) const {
+    if (!inst.material() ||
+        inst.material()->shadingModel() != MaterialShadingModel::VertexColor)
+        return false;
+    return inst.material()->vertexColorStyle() == VertexColorStyle::Textured;
 }
 
 bool Rasterizer::usesRhiCheckerboard(const MeshInstancer& inst) const {
-    return inst.material() &&
-           inst.material()->shadingModel() ==
-               MaterialShadingModel::VertexColor &&
-           inst.shader() &&
-           inst.shader()->getName().find("shaders/checkerboard.fs") !=
-               std::string::npos;
+    if (!inst.material() ||
+        inst.material()->shadingModel() != MaterialShadingModel::VertexColor)
+        return false;
+    return inst.material()->vertexColorStyle() ==
+           VertexColorStyle::Checkerboard;
 }
 
 void Rasterizer::setBackgroundSettings(const BackgroundSettings& settings) {
     if (!_checkerboardParamsBuffer)
         return;
     const std::array<glm::vec4, 4> params{
-        settings.checkerColor1, settings.checkerColor2,
-        settings.gridColor,
+        settings.checkerColor1, settings.checkerColor2, settings.gridColor,
         glm::vec4(settings.showGrid ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f)};
     _checkerboardParamsBuffer->setData(params.data(), sizeof(params));
 }
 
 void Rasterizer::initSkyboxRhi() {
     static constexpr glm::vec3 vertices[] = {
-        {-1,-1,-1}, {1,-1,-1}, {1,1,-1}, {-1,1,-1},
-        {-1,-1, 1}, {1,-1, 1}, {1,1, 1}, {-1,1, 1}};
-    static constexpr uint32_t indices[] = {
-        0,1,2, 2,3,0, 1,5,6, 6,2,1, 5,4,7, 7,6,5,
-        4,0,3, 3,7,4, 3,2,6, 6,7,3, 4,5,1, 1,0,4};
-    _skyboxVertexBuffer = _graphicsDevice->createBuffer(
-        Backend::BufferType::Vertex, sizeof(vertices), vertices);
-    _skyboxIndexBuffer = _graphicsDevice->createBuffer(
-        Backend::BufferType::Index, sizeof(indices), indices);
+        {-1, -1, -1}, {1, -1, -1}, {1, 1, -1}, {-1, 1, -1},
+        {-1, -1, 1},  {1, -1, 1},  {1, 1, 1},  {-1, 1, 1}};
+    static constexpr uint32_t indices[] = {0, 1, 2, 2, 3, 0, 1, 5, 6, 6, 2, 1,
+                                           5, 4, 7, 7, 6, 5, 4, 0, 3, 3, 7, 4,
+                                           3, 2, 6, 6, 7, 3, 4, 5, 1, 1, 0, 4};
+    Backend::BufferDesc geometryDesc;
+    geometryDesc.size = sizeof(vertices);
+    geometryDesc.usage = Backend::BufferUsage::Vertex;
+    geometryDesc.label = "skybox_vertices";
+    _skyboxVertexBuffer = _graphicsDevice->createBuffer(geometryDesc, vertices);
+    geometryDesc.size = sizeof(indices);
+    geometryDesc.usage = Backend::BufferUsage::Index;
+    geometryDesc.label = "skybox_indices";
+    _skyboxIndexBuffer = _graphicsDevice->createBuffer(geometryDesc, indices);
     Backend::BufferDesc paramsDesc;
     paramsDesc.size = sizeof(glm::vec4);
-    paramsDesc.usage = Backend::BufferUsage::Uniform |
-                       Backend::BufferUsage::CopyDst;
+    paramsDesc.usage =
+        Backend::BufferUsage::Uniform | Backend::BufferUsage::CopyDst;
     paramsDesc.label = "skybox_params";
     _skyboxParamsBuffer = _graphicsDevice->createBuffer(paramsDesc);
 
@@ -1950,21 +1964,19 @@ void Rasterizer::initSkyboxRhi() {
     Backend::BindGroupDesc paramsGroupDesc;
     paramsGroupDesc.layout = _skyboxPassGroupLayout.get();
     paramsGroupDesc.label = "skybox_params_bind_group";
-    paramsGroupDesc.entries = {{0, _skyboxParamsBuffer.get(), 0,
-                                sizeof(glm::vec4), nullptr, nullptr}};
-    _skyboxParamsBindGroup =
-        _graphicsDevice->createBindGroup(paramsGroupDesc);
+    paramsGroupDesc.entries = {
+        {0, _skyboxParamsBuffer.get(), 0, sizeof(glm::vec4), nullptr, nullptr}};
+    _skyboxParamsBindGroup = _graphicsDevice->createBindGroup(paramsGroupDesc);
 
     Backend::BindGroupLayoutDesc textureLayoutDesc;
     textureLayoutDesc.label = "skybox_texture_group_layout";
-    textureLayoutDesc.entries = {
-        {0, Backend::BindingType::SampledTexture,
-         Backend::ShaderStageVisibility::Fragment,
-         Backend::TextureFormat::Undefined,
-         Backend::TextureSampleType::Float,
-         Backend::TextureViewDimension::Cube},
-        {1, Backend::BindingType::Sampler,
-         Backend::ShaderStageVisibility::Fragment}};
+    textureLayoutDesc.entries = {{0, Backend::BindingType::SampledTexture,
+                                  Backend::ShaderStageVisibility::Fragment,
+                                  Backend::TextureFormat::Undefined,
+                                  Backend::TextureSampleType::Float,
+                                  Backend::TextureViewDimension::Cube},
+                                 {1, Backend::BindingType::Sampler,
+                                  Backend::ShaderStageVisibility::Fragment}};
     _skyboxTextureGroupLayout =
         _graphicsDevice->createBindGroupLayout(textureLayoutDesc);
     Backend::PipelineLayoutDesc pipelineLayoutDesc;
@@ -1989,9 +2001,9 @@ void Rasterizer::initSkyboxRhi() {
     pipelineDesc.pipelineLayout = _skyboxPipelineLayout.get();
     pipelineDesc.vertexBuffers = {vertexLayout};
     pipelineDesc.primitive.cullMode = Backend::CullMode::None;
-    pipelineDesc.depthStencil = Backend::DepthStencilState{
-        Backend::TextureFormat::Depth24Stencil8, false,
-        Backend::CompareFunction::LessEqual};
+    pipelineDesc.depthStencil =
+        Backend::DepthStencilState{Backend::TextureFormat::Depth24Stencil8,
+                                   false, Backend::CompareFunction::LessEqual};
     pipelineDesc.colorTargets = {{Backend::TextureFormat::RGBA16Float}};
     pipelineDesc.sampleCount = 4;
     _skyboxPipeline = _graphicsDevice->createGraphicsPipeline(pipelineDesc);
@@ -2006,8 +2018,7 @@ void Rasterizer::initSkyboxRhi() {
 }
 
 void Rasterizer::rebuildSkyboxBinding(UpAxis upAxis) {
-    const glm::vec4 params{upAxis == UpAxis::Z ? 1.0f : 0.0f, 0.0f, 0.0f,
-                           0.0f};
+    const glm::vec4 params{upAxis == UpAxis::Z ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f};
     _skyboxParamsBuffer->setData(&params, sizeof(params));
     _skyboxTextureBindGroup.reset();
     _skyboxTextureView.reset();
@@ -2022,9 +2033,8 @@ void Rasterizer::rebuildSkyboxBinding(UpAxis upAxis) {
     Backend::BindGroupDesc groupDesc;
     groupDesc.layout = _skyboxTextureGroupLayout.get();
     groupDesc.label = "skybox_texture_bind_group";
-    groupDesc.entries = {
-        {0, nullptr, 0, 0, _skyboxTextureView.get(), nullptr},
-        {1, nullptr, 0, 0, nullptr, _skyboxSampler.get()}};
+    groupDesc.entries = {{0, nullptr, 0, 0, _skyboxTextureView.get(), nullptr},
+                         {1, nullptr, 0, 0, nullptr, _skyboxSampler.get()}};
     _skyboxTextureBindGroup = _graphicsDevice->createBindGroup(groupDesc);
 }
 
@@ -2053,8 +2063,8 @@ Rasterizer::updatePhongRhiResources(PhongMaterial& material,
     if (inserted) {
         Backend::BufferDesc desc;
         desc.size = sizeof(PhongParams);
-        desc.usage = Backend::BufferUsage::Uniform |
-                     Backend::BufferUsage::CopyDst;
+        desc.usage =
+            Backend::BufferUsage::Uniform | Backend::BufferUsage::CopyDst;
         desc.label = "phong_material_params";
         resources.params = _graphicsDevice->createBuffer(desc);
     }
@@ -2071,7 +2081,8 @@ Rasterizer::updatePhongRhiResources(PhongMaterial& material,
 
     std::array<Backend::Texture*, 4> textures{
         material.diffuseMap ? material.diffuseMap : _materialWhiteTexture.get(),
-        material.specularMap ? material.specularMap : _materialWhiteTexture.get(),
+        material.specularMap ? material.specularMap
+                             : _materialWhiteTexture.get(),
         material.alphaMap ? material.alphaMap : _materialWhiteTexture.get(),
         material.normalMap ? material.normalMap : _materialNormalTexture.get()};
     std::array<uintptr_t, 4> handles{};
@@ -2089,7 +2100,8 @@ Rasterizer::updatePhongRhiResources(PhongMaterial& material,
         desc.layout = _phongMaterialGroupLayout.get();
         desc.label = "phong_material_bind_group";
         desc.entries = {
-            {0, resources.params.get(), 0, sizeof(PhongParams), nullptr, nullptr},
+            {0, resources.params.get(), 0, sizeof(PhongParams), nullptr,
+             nullptr},
             {1, nullptr, 0, 0, resources.views[0].get(), nullptr},
             {2, nullptr, 0, 0, resources.views[1].get(), nullptr},
             {3, nullptr, 0, 0, resources.views[2].get(), nullptr},
@@ -2117,8 +2129,8 @@ Rasterizer::updatePbrRhiResources(PBRMaterial& material,
     if (inserted) {
         Backend::BufferDesc desc;
         desc.size = sizeof(PbrParams);
-        desc.usage = Backend::BufferUsage::Uniform |
-                     Backend::BufferUsage::CopyDst;
+        desc.usage =
+            Backend::BufferUsage::Uniform | Backend::BufferUsage::CopyDst;
         desc.label = "pbr_material_params";
         resources.params = _graphicsDevice->createBuffer(desc);
     }
@@ -2143,9 +2155,8 @@ Rasterizer::updatePbrRhiResources(PBRMaterial& material,
                                   : _materialWhiteTexture.get(),
         material.normalTexture ? material.normalTexture
                                : _materialNormalTexture.get(),
-        material.metallicRoughnessTexture
-            ? material.metallicRoughnessTexture
-            : _materialWhiteTexture.get(),
+        material.metallicRoughnessTexture ? material.metallicRoughnessTexture
+                                          : _materialWhiteTexture.get(),
         material.metallicTexture ? material.metallicTexture
                                  : _materialWhiteTexture.get(),
         material.roughnessTexture ? material.roughnessTexture
@@ -2168,12 +2179,12 @@ Rasterizer::updatePbrRhiResources(PBRMaterial& material,
         Backend::BindGroupDesc desc;
         desc.layout = _pbrMaterialGroupLayout.get();
         desc.label = "pbr_material_bind_group";
-        desc.entries.push_back(
-            {0, resources.params.get(), 0, sizeof(PbrParams), nullptr, nullptr});
+        desc.entries.push_back({0, resources.params.get(), 0, sizeof(PbrParams),
+                                nullptr, nullptr});
         for (uint32_t binding = 1; binding <= 8; ++binding)
-            desc.entries.push_back(
-                {binding, nullptr, 0, 0,
-                 resources.views[binding - 1].get(), nullptr});
+            desc.entries.push_back({binding, nullptr, 0, 0,
+                                    resources.views[binding - 1].get(),
+                                    nullptr});
         desc.entries.push_back(
             {9, nullptr, 0, 0, nullptr, _materialSampler.get()});
         resources.bindGroup = _graphicsDevice->createBindGroup(desc);
@@ -2182,24 +2193,22 @@ Rasterizer::updatePbrRhiResources(PBRMaterial& material,
     return resources.bindGroup.get();
 }
 
-Backend::BindGroup* Rasterizer::updateTexturedVertexColorRhiResources(
-    const MeshInstancer& inst) {
-    auto [it, inserted] =
-        _texturedVertexColorRhiResources.try_emplace(&inst);
+Backend::BindGroup*
+Rasterizer::updateTexturedVertexColorRhiResources(const MeshInstancer& inst) {
+    auto [it, inserted] = _texturedVertexColorRhiResources.try_emplace(&inst);
     TexturedVertexColorRhiResources& resources = it->second;
     if (inserted) {
         Backend::BufferDesc desc;
         desc.size = sizeof(glm::vec4);
-        desc.usage = Backend::BufferUsage::Uniform |
-                     Backend::BufferUsage::CopyDst;
+        desc.usage =
+            Backend::BufferUsage::Uniform | Backend::BufferUsage::CopyDst;
         desc.label = "textured_vertex_color_params";
         resources.params = _graphicsDevice->createBuffer(desc);
     }
 
     Backend::Texture* baseColor =
         inst.textureAtSlot(RendererTextureSlot::BaseColor);
-    Backend::Texture* normal =
-        inst.textureAtSlot(RendererTextureSlot::Normal);
+    Backend::Texture* normal = inst.textureAtSlot(RendererTextureSlot::Normal);
     const glm::vec4 params{
         normal && inst.hasTangents() ? 1.0f : 0.0f,
         static_cast<float>(static_cast<int>(inst.alphaMode())),
@@ -2209,14 +2218,13 @@ Backend::BindGroup* Rasterizer::updateTexturedVertexColorRhiResources(
     std::array<Backend::Texture*, 2> textures{
         baseColor ? baseColor : _materialWhiteTexture.get(),
         normal ? normal : _materialNormalTexture.get()};
-    const std::array<const Backend::Texture*, 2> textureIdentity{
-        textures[0], textures[1]};
+    const std::array<const Backend::Texture*, 2> textureIdentity{textures[0],
+                                                                 textures[1]};
     if (!resources.bindGroup || resources.textures != textureIdentity) {
         resources.bindGroup.reset();
         for (size_t i = 0; i < textures.size(); ++i) {
             Backend::TextureViewDesc viewDesc;
-            viewDesc.label =
-                "textured_vertex_color_view_" + std::to_string(i);
+            viewDesc.label = "textured_vertex_color_view_" + std::to_string(i);
             resources.views[i] =
                 _graphicsDevice->createTextureView(textures[i], viewDesc);
         }
@@ -2227,8 +2235,7 @@ Backend::BindGroup* Rasterizer::updateTexturedVertexColorRhiResources(
             {0, nullptr, 0, 0, resources.views[0].get(), nullptr},
             {1, nullptr, 0, 0, resources.views[1].get(), nullptr},
             {2, nullptr, 0, 0, nullptr, _materialSampler.get()},
-            {3, resources.params.get(), 0, sizeof(glm::vec4), nullptr,
-             nullptr},
+            {3, resources.params.get(), 0, sizeof(glm::vec4), nullptr, nullptr},
         };
         resources.bindGroup = _graphicsDevice->createBindGroup(desc);
         resources.textures = textureIdentity;
@@ -2257,12 +2264,12 @@ void Rasterizer::ensureSelectionMaskTarget(Backend::Framebuffer* target) {
         _graphicsDevice->createTextureView(texture, viewDesc);
     Backend::RenderPassDesc passDesc;
     passDesc.label = "selection_mask_opaque_pass";
-    passDesc.colorAttachments = {{_selectionMaskOutputView.get(), nullptr,
+    passDesc.colorAttachments = {{_selectionMaskOutputView.get(),
+                                  nullptr,
                                   Backend::LoadOp::Clear,
                                   Backend::StoreOp::Store,
                                   {0.0f, 0.0f, 0.0f, 1.0f}}};
-    _selectionMaskOutputTarget =
-        _graphicsDevice->createRenderTarget(passDesc);
+    _selectionMaskOutputTarget = _graphicsDevice->createRenderTarget(passDesc);
     _selectionMaskOutputHandle = handle;
     _selectionMaskOutputWidth = texture->getWidth();
     _selectionMaskOutputHeight = texture->getHeight();
@@ -2282,9 +2289,9 @@ void Rasterizer::renderSelectionMaskPass(const RayPickResult& selection,
         ensureSelectionMaskTarget(target);
         if (!_selectionMaskOutputTarget || width <= 0 || height <= 0)
             return;
-        Backend::Texture* alphaTexture =
-            inst->alphaMode() == AlphaMode::Mask ? inst->alphaMaskTexture()
-                                                 : nullptr;
+        Backend::Texture* alphaTexture = inst->alphaMode() == AlphaMode::Mask
+                                             ? inst->alphaMaskTexture()
+                                             : nullptr;
         std::unique_ptr<Backend::TextureView> alphaView;
         std::unique_ptr<Backend::BindGroup> alphaBindGroup;
         std::unique_ptr<Backend::BindGroup> skinBindGroup;
@@ -2292,8 +2299,8 @@ void Rasterizer::renderSelectionMaskPass(const RayPickResult& selection,
             Backend::TextureViewDesc alphaViewDesc;
             alphaViewDesc.format = alphaTexture->getFormat();
             alphaViewDesc.label = "selection_mask_alpha_view";
-            alphaView = _graphicsDevice->createTextureView(alphaTexture,
-                                                           alphaViewDesc);
+            alphaView =
+                _graphicsDevice->createTextureView(alphaTexture, alphaViewDesc);
             if (!inst->alphaParamsBuffer())
                 throw std::runtime_error(
                     "RHI alpha-mask draw is missing its parameter buffer");
@@ -2302,13 +2309,11 @@ void Rasterizer::renderSelectionMaskPass(const RayPickResult& selection,
             alphaBindDesc.label = "selection_mask_alpha_bind_group";
             alphaBindDesc.entries = {
                 {0, nullptr, 0, 0, alphaView.get(), nullptr},
-                {1, nullptr, 0, 0, nullptr,
-                 _selectionMaskAlphaSampler.get()},
-                {2, inst->alphaParamsBuffer(), 0,
-                 sizeof(glm::vec4), nullptr, nullptr},
+                {1, nullptr, 0, 0, nullptr, _selectionMaskAlphaSampler.get()},
+                {2, inst->alphaParamsBuffer(), 0, sizeof(glm::vec4), nullptr,
+                 nullptr},
             };
-            alphaBindGroup =
-                _graphicsDevice->createBindGroup(alphaBindDesc);
+            alphaBindGroup = _graphicsDevice->createBindGroup(alphaBindDesc);
         }
         if (inst->hasSkinning()) {
             if (!inst->boneMatricesBuffer())
@@ -2317,14 +2322,14 @@ void Rasterizer::renderSelectionMaskPass(const RayPickResult& selection,
             Backend::BindGroupDesc skinBindDesc;
             skinBindDesc.layout = _selectionMaskSkinGroupLayout.get();
             skinBindDesc.label = "selection_mask_skin_bind_group";
-            skinBindDesc.entries = {{
-                0, inst->boneMatricesBuffer(), 0,
-                sizeof(glm::mat4) * Scene::MaxSkinningBones, nullptr, nullptr}};
+            skinBindDesc.entries = {
+                {0, inst->boneMatricesBuffer(), 0,
+                 sizeof(glm::mat4) * Scene::MaxSkinningBones, nullptr,
+                 nullptr}};
             skinBindGroup = _graphicsDevice->createBindGroup(skinBindDesc);
         }
         auto encoder = _graphicsDevice->createCommandEncoder();
-        auto pass =
-            encoder->beginRenderPass(_selectionMaskOutputTarget.get());
+        auto pass = encoder->beginRenderPass(_selectionMaskOutputTarget.get());
         pass->setViewport(0.0f, 0.0f, static_cast<float>(width),
                           static_cast<float>(height));
         if (inst->hasSkinning() && alphaTexture)
@@ -2333,15 +2338,13 @@ void Rasterizer::renderSelectionMaskPass(const RayPickResult& selection,
                     ? _selectionMaskSkinAlphaDoubleSidedPipeline.get()
                     : _selectionMaskSkinAlphaPipeline.get());
         else if (inst->hasSkinning())
-            pass->setPipeline(
-                inst->isDoubleSided()
-                    ? _selectionMaskSkinDoubleSidedPipeline.get()
-                    : _selectionMaskSkinPipeline.get());
+            pass->setPipeline(inst->isDoubleSided()
+                                  ? _selectionMaskSkinDoubleSidedPipeline.get()
+                                  : _selectionMaskSkinPipeline.get());
         else if (alphaTexture)
-            pass->setPipeline(
-                inst->isDoubleSided()
-                    ? _selectionMaskAlphaDoubleSidedPipeline.get()
-                    : _selectionMaskAlphaPipeline.get());
+            pass->setPipeline(inst->isDoubleSided()
+                                  ? _selectionMaskAlphaDoubleSidedPipeline.get()
+                                  : _selectionMaskAlphaPipeline.get());
         else
             pass->setPipeline(inst->isDoubleSided()
                                   ? _selectionMaskDoubleSidedPipeline.get()
@@ -2352,8 +2355,7 @@ void Rasterizer::renderSelectionMaskPass(const RayPickResult& selection,
         if (alphaBindGroup)
             pass->setBindGroup(3, alphaBindGroup.get());
         inst->recordInstanceMask(*pass, selection.instanceIndex,
-                                 alphaTexture != nullptr,
-                                 inst->hasSkinning());
+                                 alphaTexture != nullptr, inst->hasSkinning());
         pass->end();
         auto commands = encoder->finish();
         _graphicsDevice->submit(*commands);
@@ -2623,8 +2625,7 @@ void Rasterizer::renderShadowMap(Camera& camera, UpAxis upAxis,
     _graphicsDevice->setViewport(0, 0, viewportWidth, viewportHeight);
 }
 
-void Rasterizer::drawShadowCasters(Backend::RenderTarget* target,
-                                   int mapSize) {
+void Rasterizer::drawShadowCasters(Backend::RenderTarget* target, int mapSize) {
     if (!target || mapSize <= 0)
         return;
     auto encoder = _graphicsDevice->createCommandEncoder();
@@ -2643,9 +2644,9 @@ void Rasterizer::drawShadowCasters(Backend::RenderTarget* target,
             continue;
         if (!inst.castsShadow())
             continue;
-        Backend::Texture* alphaTexture =
-            inst.alphaMode() == AlphaMode::Mask ? inst.alphaMaskTexture()
-                                                : nullptr;
+        Backend::Texture* alphaTexture = inst.alphaMode() == AlphaMode::Mask
+                                             ? inst.alphaMaskTexture()
+                                             : nullptr;
         Backend::BindGroup* alphaBindGroup = nullptr;
         Backend::BindGroup* skinBindGroup = nullptr;
         if (alphaTexture) {
@@ -2659,8 +2660,7 @@ void Rasterizer::drawShadowCasters(Backend::RenderTarget* target,
             bindDesc.label = "shadow_alpha_bind_group";
             bindDesc.entries = {
                 {0, nullptr, 0, 0, alphaViews.back().get(), nullptr},
-                {1, nullptr, 0, 0, nullptr,
-                 _selectionMaskAlphaSampler.get()},
+                {1, nullptr, 0, 0, nullptr, _selectionMaskAlphaSampler.get()},
                 {2, inst.alphaParamsBuffer(), 0, sizeof(glm::vec4), nullptr,
                  nullptr},
             };
@@ -2672,17 +2672,17 @@ void Rasterizer::drawShadowCasters(Backend::RenderTarget* target,
             Backend::BindGroupDesc bindDesc;
             bindDesc.layout = _selectionMaskSkinGroupLayout.get();
             bindDesc.label = "shadow_skin_bind_group";
-            bindDesc.entries = {{
-                0, inst.boneMatricesBuffer(), 0,
-                sizeof(glm::mat4) * Scene::MaxSkinningBones, nullptr, nullptr}};
+            bindDesc.entries = {{0, inst.boneMatricesBuffer(), 0,
+                                 sizeof(glm::mat4) * Scene::MaxSkinningBones,
+                                 nullptr, nullptr}};
             skinBindGroups.push_back(
                 _graphicsDevice->createBindGroup(bindDesc));
             skinBindGroup = skinBindGroups.back().get();
         }
         pass->setPipeline(
-            _shadowPipelines[shadowPipelineIndex(
-                                 inst.hasSkinning(), alphaTexture != nullptr,
-                                 inst.isDoubleSided())]
+            _shadowPipelines[shadowPipelineIndex(inst.hasSkinning(),
+                                                 alphaTexture != nullptr,
+                                                 inst.isDoubleSided())]
                 .get());
         pass->setBindGroup(0, _shadowFrameBindGroup.get());
         if (skinBindGroup)

@@ -102,11 +102,6 @@ void WebGPUDevice::setClearColor(float, float, float, float) {
     throwNotImplemented("setClearColor");
 }
 
-std::unique_ptr<Buffer> WebGPUDevice::createBuffer(BufferType, size_t,
-                                                    const void*) {
-    throwNotImplemented("createBuffer");
-}
-
 std::unique_ptr<Buffer> WebGPUDevice::createBuffer(const BufferDesc&,
                                                     const void*) {
     throwNotImplemented("createBuffer(BufferDesc)");
@@ -169,10 +164,6 @@ std::unique_ptr<CommandEncoder> WebGPUDevice::createCommandEncoder() {
 }
 
 void WebGPUDevice::submit(CommandBuffer&) { throwNotImplemented("submit"); }
-
-std::unique_ptr<VertexArray> WebGPUDevice::createVertexArray() {
-    throwNotImplemented("createVertexArray");
-}
 
 std::unique_ptr<Shader> WebGPUDevice::createShader(const char*, const char*) {
     throwNotImplemented("createShader");

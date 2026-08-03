@@ -25,10 +25,6 @@ using std::vector;
 
 enum class BackendType { OpenGL, Vulkan, WebGPU };
 
-// Legacy allocation categories used by the immediate OpenGL renderer. New RHI
-// resources should describe combinable intent through BufferUsage/BufferDesc.
-enum class BufferType { Vertex, DynamicVertex, Index, Uniform };
-
 enum class ShaderType { Vertex, Fragment, Geometry, Compute };
 
 enum class UniformType { Int, Float, Vec2, Vec3, Vec4, Mat3, Mat4 };
@@ -185,7 +181,6 @@ class GraphicsPipeline;
 class BindGroup;
 class CommandEncoder;
 class CommandBuffer;
-class VertexArray;
 class Framebuffer;
 
 class GraphicsDevice {
@@ -230,8 +225,6 @@ class GraphicsDevice {
 
     // Resource creation
     virtual std::unique_ptr<Buffer>
-    createBuffer(BufferType type, size_t size, const void* data = nullptr) = 0;
-    virtual std::unique_ptr<Buffer>
     createBuffer(const BufferDesc& desc, const void* data = nullptr) = 0;
     virtual void bindUniformBuffer(Buffer* buffer, int slot) = 0;
     virtual std::unique_ptr<Shader> createShader(const ShaderDesc& desc) = 0;
@@ -268,7 +261,6 @@ class GraphicsDevice {
     virtual TextureReadback readTexture(TextureView* view) = 0;
     virtual std::unique_ptr<CommandEncoder> createCommandEncoder() = 0;
     virtual void submit(CommandBuffer& commandBuffer) = 0;
-    virtual std::unique_ptr<VertexArray> createVertexArray() = 0;
 
     // Legacy shader convenience path for OpenGL/debug shaders.
     // New backend-neutral features should use typed buffers and material/pass
@@ -313,7 +305,6 @@ class GraphicsDevice {
         throw std::runtime_error(
             "CUDA buffer unmap is unsupported by this graphics backend");
     }
-
 };
 
 class Buffer {
@@ -328,7 +319,6 @@ class Buffer {
                                  size_t) {
         return false;
     }
-    virtual BufferType getType() const = 0;
     virtual BufferUsage getUsage() const = 0;
     virtual size_t getSize() const = 0;
 };
@@ -340,14 +330,16 @@ class RenderPassEncoder {
   public:
     virtual ~RenderPassEncoder() = default;
     virtual void setViewport(float x, float y, float width, float height,
-                             float minDepth = 0.0f,
-                             float maxDepth = 1.0f) = 0;
+                             float minDepth = 0.0f, float maxDepth = 1.0f) = 0;
     virtual void setScissor(uint32_t x, uint32_t y, uint32_t width,
                             uint32_t height) = 0;
     // Optional wide-line state for debug rendering. Portable production
     // geometry must not depend on widths above 1; WebGPU may clamp or expand
     // debug lines into triangles.
     virtual void setLineWidth(float width) = 0;
+    // Optional native rasterization mode. WebGPU backends may support only
+    // Fill and must report/ignore unsupported editor wireframe requests.
+    virtual void setPolygonMode(PolygonMode mode) = 0;
     virtual void setPipeline(GraphicsPipeline* pipeline) = 0;
     virtual void setBindGroup(uint32_t index, BindGroup* bindGroup) = 0;
     virtual void setVertexBuffer(uint32_t slot, Buffer* buffer,
@@ -355,11 +347,9 @@ class RenderPassEncoder {
     virtual void setIndexBuffer(Buffer* buffer, IndexFormat format,
                                 uint64_t offset = 0) = 0;
     virtual void draw(uint32_t vertexCount, uint32_t instanceCount = 1,
-                      uint32_t firstVertex = 0,
-                      uint32_t firstInstance = 0) = 0;
+                      uint32_t firstVertex = 0, uint32_t firstInstance = 0) = 0;
     virtual void drawIndexed(uint32_t indexCount, uint32_t instanceCount = 1,
-                             uint32_t firstIndex = 0,
-                             int32_t baseVertex = 0,
+                             uint32_t firstIndex = 0, int32_t baseVertex = 0,
                              uint32_t firstInstance = 0) = 0;
     virtual void end() = 0;
 };
@@ -501,16 +491,6 @@ class BindGroup {
   public:
     virtual ~BindGroup() = default;
     virtual const BindGroupDesc& getDesc() const = 0;
-};
-
-class VertexArray {
-  public:
-    virtual ~VertexArray() = default;
-    virtual void bind() = 0;
-    virtual void unbind() = 0;
-    virtual void setVertexAttribute(const VertexAttribute& attribute) = 0;
-    virtual void setVertexBuffer(Buffer* buffer) = 0;
-    virtual void setIndexBuffer(Buffer* buffer) = 0;
 };
 
 } // namespace Backend

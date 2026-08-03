@@ -18,6 +18,12 @@ enum class MaterialShadingModel {
     Custom,
 };
 
+enum class VertexColorStyle {
+    Untextured,
+    Textured,
+    Checkerboard,
+};
+
 class Material {
   protected:
     Backend::Shader* _shader = nullptr;
@@ -33,6 +39,9 @@ class Material {
     virtual MaterialShadingModel shadingModel() const {
         return MaterialShadingModel::Custom;
     }
+    virtual VertexColorStyle vertexColorStyle() const {
+        return VertexColorStyle::Untextured;
+    }
     virtual Backend::Shader* getShader() const { return _shader; }
     virtual void setShader(Backend::Shader* shader) { _shader = shader; }
 };
@@ -44,9 +53,19 @@ class Material {
 // the scene/render path treat shader-only objects as material-backed without
 // changing their visual behavior.
 class VertexColorMaterial : public Material {
+  private:
+    VertexColorStyle _style = VertexColorStyle::Untextured;
+
   public:
     explicit VertexColorMaterial(Backend::Shader* shader = nullptr) {
         setShader(shader);
+        if (!shader)
+            return;
+        const std::string& name = shader->getName();
+        if (name.find("shaders/checkerboard.fs") != std::string::npos)
+            _style = VertexColorStyle::Checkerboard;
+        else if (name.find("shaders/commonTex.fs") != std::string::npos)
+            _style = VertexColorStyle::Textured;
     }
 
     void bind() override {
@@ -58,6 +77,8 @@ class VertexColorMaterial : public Material {
     MaterialShadingModel shadingModel() const override {
         return MaterialShadingModel::VertexColor;
     }
+    VertexColorStyle vertexColorStyle() const override { return _style; }
+    void setStyle(VertexColorStyle style) { _style = style; }
 };
 
 class PhongMaterial : public Material {

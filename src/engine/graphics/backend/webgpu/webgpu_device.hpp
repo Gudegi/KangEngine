@@ -48,10 +48,8 @@ class WebGPUDevice : public GraphicsDevice {
     void setCullFaceMode(CullFaceMode mode) override;
     void setClearColor(float r, float g, float b, float a) override;
 
-    std::unique_ptr<Buffer> createBuffer(BufferType type, size_t size,
+    std::unique_ptr<Buffer> createBuffer(const BufferDesc& desc,
                                          const void* data = nullptr) override;
-    std::unique_ptr<Buffer>
-    createBuffer(const BufferDesc& desc, const void* data = nullptr) override;
     void bindUniformBuffer(Buffer* buffer, int slot) override;
     std::unique_ptr<Shader> createShader(const ShaderDesc& desc) override;
     std::unique_ptr<Texture> createTexture(const TextureDesc& desc) override;
@@ -76,7 +74,6 @@ class WebGPUDevice : public GraphicsDevice {
     TextureReadback readTexture(TextureView* view) override;
     std::unique_ptr<CommandEncoder> createCommandEncoder() override;
     void submit(CommandBuffer& commandBuffer) override;
-    std::unique_ptr<VertexArray> createVertexArray() override;
 
     std::unique_ptr<Shader> createShader(const char* vertexSource,
                                          const char* fragmentSource) override;
