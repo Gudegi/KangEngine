@@ -53,7 +53,7 @@ class OpenGLBuffer : public Buffer {
 class OpenGLShader : public Shader {
   private:
     GLuint _shaderProgram;
-    std::string _name;
+    ShaderDesc _desc;
 
     std::string loadFile(const std::string& path);
     GLuint compile(const std::string& source, GLenum type);
@@ -64,6 +64,9 @@ class OpenGLShader : public Shader {
   public:
     OpenGLShader(const ShaderDesc& desc);
     ~OpenGLShader() override;
+
+    const std::string& getName() const override { return _desc.name; }
+    const ShaderDesc& getDesc() const override { return _desc; }
 
     void bind() override;
     void unbind() override;
@@ -104,6 +107,8 @@ class OpenGLTexture : public Texture {
     TextureUsage _usage = TextureUsage::None;
     uint32_t _mipLevelCount = 1;
     uint32_t _sampleCount = 1;
+    uint32_t _depthOrArrayLayers = 1;
+    TextureDimension _dimension = TextureDimension::D2;
     bool _portableResource = false;
     float _warpParam, _filterMinParam, _filterMaxParam;
 
@@ -114,6 +119,7 @@ class OpenGLTexture : public Texture {
                   float filterMinParam, float filterMaxParam);
     OpenGLTexture(const TextureResourceDesc& desc,
                   const TextureInitialData* initialData);
+    OpenGLTexture(GLuint cubemapHandle, int faceWidth, int faceHeight);
     // Empty color texture for FBO color attachment.
     OpenGLTexture(int w, int h, FramebufferColorFormat colorFormat);
     // Depth (or depth+stencil) texture for FBO attachment
@@ -132,6 +138,11 @@ class OpenGLTexture : public Texture {
     TextureUsage getUsage() const override { return _usage; }
     uint32_t getMipLevelCount() const override { return _mipLevelCount; }
     uint32_t getSampleCount() const override { return _sampleCount; }
+    uint32_t getDepthOrArrayLayers() const override {
+        return _depthOrArrayLayers;
+    }
+    TextureDimension getDimension() const override { return _dimension; }
+    GLenum getTarget() const { return _target; }
     void setSize(int w, int h) {
         _width = w;
         _height = h;
@@ -157,6 +168,7 @@ class OpenGLTextureView : public TextureView {
     Texture* getTexture() const override { return _texture; }
     const TextureViewDesc& getDesc() const override { return _desc; }
     GLuint getHandle() const { return _texture->getHandle(); }
+    GLenum getTarget() const { return _texture->getTarget(); }
 };
 
 class OpenGLSampler : public Sampler {
@@ -172,11 +184,13 @@ class OpenGLSampler : public Sampler {
 class OpenGLRenderTarget : public RenderTarget {
   private:
     GLuint _fbo = 0;
+    GLuint _resolveFbo = 0;
     RenderPassDesc _desc;
     int _width = 0;
     int _height = 0;
     uint32_t _sampleCount = 1;
     std::vector<GLenum> _drawBuffers;
+    std::vector<OpenGLTexture*> _resolveTextures;
 
   public:
     explicit OpenGLRenderTarget(const RenderPassDesc& desc);
@@ -370,6 +384,10 @@ class OpenGLDevice : public GraphicsDevice {
     std::unique_ptr<Texture>
     createTexture(const TextureResourceDesc& desc,
                   const TextureInitialData* initialData = nullptr) override;
+    std::unique_ptr<Texture>
+    createCubemapTexture(const std::string& crossPath) override;
+    std::unique_ptr<Texture> createCubemapTexture(
+        const std::vector<std::string>& facePaths) override;
     std::unique_ptr<TextureView>
     createTextureView(Texture* texture,
                       const TextureViewDesc& desc = {}) override;
@@ -377,6 +395,8 @@ class OpenGLDevice : public GraphicsDevice {
     createSampler(const SamplerDesc& desc = {}) override;
     std::unique_ptr<RenderTarget>
     createRenderTarget(const RenderPassDesc& desc) override;
+    void beginLegacyRenderPass(RenderTarget* target) override;
+    void endLegacyRenderPass(RenderTarget* target) override;
     std::unique_ptr<GraphicsPipeline>
     createGraphicsPipeline(const GraphicsPipelineDesc& desc) override;
     std::unique_ptr<BindGroupLayout>

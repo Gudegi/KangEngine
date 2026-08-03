@@ -30,24 +30,22 @@ enum class TextureUsage : uint32_t {
 };
 
 template <typename Enum>
-constexpr std::enable_if_t<std::is_enum_v<Enum>, Enum>
-enumOr(Enum lhs, Enum rhs) {
+constexpr std::enable_if_t<std::is_enum_v<Enum>, Enum> enumOr(Enum lhs,
+                                                              Enum rhs) {
     using Value = std::underlying_type_t<Enum>;
-    return static_cast<Enum>(static_cast<Value>(lhs) |
-                             static_cast<Value>(rhs));
+    return static_cast<Enum>(static_cast<Value>(lhs) | static_cast<Value>(rhs));
 }
 
 template <typename Enum>
-constexpr std::enable_if_t<std::is_enum_v<Enum>, Enum>
-enumAnd(Enum lhs, Enum rhs) {
+constexpr std::enable_if_t<std::is_enum_v<Enum>, Enum> enumAnd(Enum lhs,
+                                                               Enum rhs) {
     using Value = std::underlying_type_t<Enum>;
-    return static_cast<Enum>(static_cast<Value>(lhs) &
-                             static_cast<Value>(rhs));
+    return static_cast<Enum>(static_cast<Value>(lhs) & static_cast<Value>(rhs));
 }
 
 template <typename Enum>
-constexpr std::enable_if_t<std::is_enum_v<Enum>, bool>
-hasFlag(Enum value, Enum flag) {
+constexpr std::enable_if_t<std::is_enum_v<Enum>, bool> hasFlag(Enum value,
+                                                               Enum flag) {
     using Value = std::underlying_type_t<Enum>;
     const Value flagValue = static_cast<Value>(flag);
     return flagValue != 0 &&
@@ -91,6 +89,7 @@ enum class TextureFormat : uint8_t {
 };
 
 enum class TextureDimension : uint8_t { D1, D2, D3 };
+enum class TextureViewDimension : uint8_t { D2, Cube };
 
 enum class TextureAspect : uint8_t { All, DepthOnly, StencilOnly };
 
@@ -108,7 +107,13 @@ enum class PrimitiveTopology : uint8_t {
     TriangleStrip,
 };
 
-enum class VertexFormat : uint8_t { Float32, Float32x2, Float32x3, Float32x4 };
+enum class VertexFormat : uint8_t {
+    Float32,
+    Float32x2,
+    Float32x3,
+    Float32x4,
+    Sint32x4,
+};
 enum class VertexStepMode : uint8_t { Vertex, Instance };
 enum class FrontFace : uint8_t { CCW, CW };
 enum class CullMode : uint8_t { None, Front, Back };
@@ -143,12 +148,15 @@ constexpr ShaderStageVisibility operator|(ShaderStageVisibility lhs,
     return enumOr(lhs, rhs);
 }
 enum class BindingType : uint8_t { UniformBuffer, SampledTexture, Sampler };
+enum class TextureSampleType : uint8_t { Float, Depth };
 
 struct BindGroupLayoutEntry {
     uint32_t binding = 0;
     BindingType type = BindingType::UniformBuffer;
     ShaderStageVisibility visibility = ShaderStageVisibility::None;
     TextureFormat textureFormat = TextureFormat::Undefined;
+    TextureSampleType textureSampleType = TextureSampleType::Float;
+    TextureViewDimension textureViewDimension = TextureViewDimension::D2;
 };
 
 struct BindGroupLayoutDesc {
@@ -182,9 +190,20 @@ struct DepthStencilState {
     TextureFormat format = TextureFormat::Depth32Float;
     bool depthWriteEnabled = true;
     CompareFunction depthCompare = CompareFunction::Less;
+    // Portable pipeline depth bias. OpenGL maps constant/slope to
+    // glPolygonOffset; WebGPU maps all three fields directly.
+    int32_t depthBias = 0;
+    float depthBiasSlopeScale = 0.0f;
+    float depthBiasClamp = 0.0f;
 };
 
-enum class BlendOperation : uint8_t { Add, Subtract, ReverseSubtract, Min, Max };
+enum class BlendOperation : uint8_t {
+    Add,
+    Subtract,
+    ReverseSubtract,
+    Min,
+    Max
+};
 enum class BlendFactorValue : uint8_t {
     Zero,
     One,
@@ -259,6 +278,7 @@ struct TextureViewDesc {
     uint32_t baseArrayLayer = 0;
     uint32_t arrayLayerCount = 1;
     std::string label;
+    TextureViewDimension dimension = TextureViewDimension::D2;
 };
 
 struct ClearColor {
@@ -330,8 +350,7 @@ constexpr DescriptorValidationResult validate(const BufferDesc& desc) {
     return {};
 }
 
-constexpr DescriptorValidationResult
-validate(const TextureResourceDesc& desc) {
+constexpr DescriptorValidationResult validate(const TextureResourceDesc& desc) {
     if (desc.extent.width == 0 || desc.extent.height == 0 ||
         desc.extent.depthOrArrayLayers == 0)
         return {false, "texture extent dimensions must be greater than zero"};
@@ -365,8 +384,7 @@ validate(const TextureViewDesc& view, const TextureResourceDesc& texture) {
         view.format == TextureFormat::Undefined ? texture.format : view.format;
     if (viewFormat != texture.format)
         return {false, "view format reinterpretation is not supported yet"};
-    if (view.mipLevelCount == 0 ||
-        view.baseMipLevel >= texture.mipLevelCount ||
+    if (view.mipLevelCount == 0 || view.baseMipLevel >= texture.mipLevelCount ||
         view.mipLevelCount > texture.mipLevelCount - view.baseMipLevel)
         return {false, "texture view mip range is out of bounds"};
     if (view.arrayLayerCount == 0 ||
@@ -379,6 +397,10 @@ validate(const TextureViewDesc& view, const TextureResourceDesc& texture) {
     if (view.aspect == TextureAspect::StencilOnly &&
         !hasStencilAspect(viewFormat))
         return {false, "StencilOnly aspect requires a stencil format"};
+    if (view.dimension == TextureViewDimension::Cube &&
+        (texture.dimension != TextureDimension::D2 ||
+         view.arrayLayerCount != 6))
+        return {false, "cube view requires six layers of a 2D texture"};
     return {};
 }
 

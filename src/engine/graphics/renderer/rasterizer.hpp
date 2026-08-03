@@ -54,7 +54,9 @@ class Rasterizer : public RenderPipeline {
     static constexpr int MaxShadowCascades = 4;
 
   private:
-    // Prim-based instanced rendering
+    // =====================================================================
+    // Scene Mesh Pipelines - batching and renderable registration
+    // =====================================================================
     struct InstancerKey {
         Backend::Shader* shader;
         const Scene::MeshData* mesh;
@@ -83,11 +85,25 @@ class Rasterizer : public RenderPipeline {
         _primSourceRegistrations;
     void registerPrimSource(Scene::Prim* prim, TransformSource source);
     void unregisterPrimSource(Scene::Prim* prim, TransformSource source);
+
+    struct RenderHookEntry {
+        RenderHookHandle handle = InvalidRenderHook;
+        RenderHookCallback callback;
+    };
+    std::array<std::vector<RenderHookEntry>, 2> _renderHooks;
+    RenderHookHandle _nextRenderHook = 1;
+
+    // =====================================================================
+    // Debug Overlay / Text Pipelines
+    // =====================================================================
     DebugRenderer _debugRenderer;
     TextRenderer _textRenderer;
     int _viewportWidth = 1;
     int _viewportHeight = 1;
 
+    // =====================================================================
+    // Shared Frame Data - camera and lighting
+    // =====================================================================
     std::unique_ptr<Backend::Buffer> _cameraUBO;
     std::unique_ptr<Backend::Buffer> _lightUBO;
     std::unique_ptr<Backend::Buffer> _shadowUBO;
@@ -96,16 +112,152 @@ class Rasterizer : public RenderPipeline {
     std::vector<SpotLight> _spotLights;
     bool _lightDirty = true;
 
+    // =====================================================================
+    // Shadow Depth Pipeline - depth targets, CSM, and immutable variants
+    // =====================================================================
     std::unique_ptr<Backend::Framebuffer> _shadowFbo; // depth-only
     int _shadowMapWH = 4096;
     std::array<int, MaxShadowCascades> _cascadeMapSizes{4096, 2048, 1024, 1024};
     std::array<std::unique_ptr<Backend::Framebuffer>, MaxShadowCascades>
         _cascadeFbos;
     std::array<Backend::Texture*, MaxShadowCascades> _cascadeMaps{};
-    std::unique_ptr<Backend::Shader> _shadowShader;
-    std::unique_ptr<Backend::Shader> _skinnedShadowShader;
-    std::unique_ptr<Backend::Shader> _selectionMaskShader;
-    std::unique_ptr<Backend::Shader> _skinnedSelectionMaskShader;
+    std::array<std::unique_ptr<Backend::GraphicsPipeline>, 8> _shadowPipelines;
+    std::unique_ptr<Backend::BindGroup> _shadowFrameBindGroup;
+    std::unique_ptr<Backend::TextureView> _shadowDepthView;
+    std::unique_ptr<Backend::RenderTarget> _shadowRenderTarget;
+    std::array<std::unique_ptr<Backend::TextureView>, MaxShadowCascades>
+        _cascadeDepthViews;
+    std::array<std::unique_ptr<Backend::RenderTarget>, MaxShadowCascades>
+        _cascadeRenderTargets;
+    std::unique_ptr<Backend::BindGroupLayout> _shadowSamplingGroupLayout;
+    std::unique_ptr<Backend::Sampler> _shadowSamplingSampler;
+    std::unique_ptr<Backend::Buffer> _shadowSamplingParamsBuffer;
+    std::array<std::unique_ptr<Backend::TextureView>, MaxShadowCascades>
+        _shadowSamplingViews;
+    std::unique_ptr<Backend::BindGroup> _shadowSamplingBindGroup;
+    std::array<uintptr_t, MaxShadowCascades> _shadowSamplingHandles{};
+
+    // =====================================================================
+    // Opaque Vertex-Color Forward Pipeline - first main-scene RHI path
+    // =====================================================================
+    std::array<std::unique_ptr<Backend::BindGroupLayout>, 3>
+        _forwardGroupLayouts;
+    std::unique_ptr<Backend::PipelineLayout> _forwardPipelineLayout;
+    std::unique_ptr<Backend::BindGroup> _forwardFrameBindGroup;
+    std::unique_ptr<Backend::GraphicsPipeline> _forwardPipeline;
+    std::unique_ptr<Backend::GraphicsPipeline> _forwardDoubleSidedPipeline;
+    std::unique_ptr<Backend::BindGroupLayout> _forwardSkinGroupLayout;
+    std::unique_ptr<Backend::PipelineLayout> _forwardSkinPipelineLayout;
+    std::unique_ptr<Backend::GraphicsPipeline> _forwardSkinPipeline;
+    std::unique_ptr<Backend::GraphicsPipeline> _forwardSkinDoubleSidedPipeline;
+    std::unique_ptr<Backend::BindGroupLayout>
+        _texturedVertexColorGroupLayout;
+    std::array<std::unique_ptr<Backend::PipelineLayout>, 2>
+        _texturedVertexColorPipelineLayouts;
+    // [Static, Skinned][Opaque/Mask, Transparent][BackFace, DoubleSided]
+    std::array<std::array<std::array<
+        std::unique_ptr<Backend::GraphicsPipeline>, 2>, 2>, 2>
+        _texturedVertexColorPipelines;
+    struct TexturedVertexColorRhiResources {
+        std::unique_ptr<Backend::Buffer> params;
+        std::array<std::unique_ptr<Backend::TextureView>, 2> views;
+        std::unique_ptr<Backend::BindGroup> bindGroup;
+        std::array<const Backend::Texture*, 2> textures{};
+    };
+    std::unordered_map<const MeshInstancer*, TexturedVertexColorRhiResources>
+        _texturedVertexColorRhiResources;
+    std::unique_ptr<Backend::BindGroupLayout> _checkerboardGroupLayout;
+    std::unique_ptr<Backend::PipelineLayout> _checkerboardPipelineLayout;
+    // [Opaque, Transparent][BackFace, DoubleSided]
+    std::array<std::array<std::unique_ptr<Backend::GraphicsPipeline>, 2>, 2>
+        _checkerboardPipelines;
+    std::unique_ptr<Backend::Buffer> _checkerboardParamsBuffer;
+    std::unique_ptr<Backend::BindGroup> _checkerboardBindGroup;
+    std::unique_ptr<Backend::BindGroupLayout> _phongMaterialGroupLayout;
+    std::unique_ptr<Backend::PipelineLayout> _phongPipelineLayout;
+    std::unique_ptr<Backend::GraphicsPipeline> _phongPipeline;
+    std::unique_ptr<Backend::GraphicsPipeline> _phongDoubleSidedPipeline;
+    std::unique_ptr<Backend::Sampler> _materialSampler;
+    std::unique_ptr<Backend::Texture> _materialWhiteTexture;
+    std::unique_ptr<Backend::Texture> _materialNormalTexture;
+    struct PhongRhiResources {
+        std::unique_ptr<Backend::Buffer> params;
+        std::array<std::unique_ptr<Backend::TextureView>, 4> views;
+        std::unique_ptr<Backend::BindGroup> bindGroup;
+        std::array<uintptr_t, 4> textureHandles{};
+    };
+    std::unordered_map<const PhongMaterial*, PhongRhiResources>
+        _phongRhiResources;
+    std::unique_ptr<Backend::BindGroupLayout> _pbrMaterialGroupLayout;
+    std::unique_ptr<Backend::PipelineLayout> _pbrPipelineLayout;
+    std::unique_ptr<Backend::GraphicsPipeline> _pbrPipeline;
+    std::unique_ptr<Backend::GraphicsPipeline> _pbrDoubleSidedPipeline;
+    struct PbrRhiResources {
+        std::unique_ptr<Backend::Buffer> params;
+        std::array<std::unique_ptr<Backend::TextureView>, 8> views;
+        std::unique_ptr<Backend::BindGroup> bindGroup;
+        std::array<uintptr_t, 8> textureHandles{};
+    };
+    std::unordered_map<const PBRMaterial*, PbrRhiResources> _pbrRhiResources;
+    // [VertexColor, SkinnedVertexColor, Phong, PBR][BackFace, DoubleSided]
+    std::array<std::array<std::unique_ptr<Backend::GraphicsPipeline>, 2>, 4>
+        _transparentPipelines;
+    std::array<std::unique_ptr<Backend::PipelineLayout>, 2>
+        _skinnedMaterialPipelineLayouts;
+    // [Phong, PBR][Opaque, Transparent][BackFace, DoubleSided]
+    std::array<std::array<std::array<
+        std::unique_ptr<Backend::GraphicsPipeline>, 2>, 2>, 2>
+        _skinnedMaterialPipelines;
+
+    // =====================================================================
+    // Skybox Pipeline - cubemap resource and immutable background draw
+    // =====================================================================
+    std::unique_ptr<Backend::BindGroupLayout> _skyboxPassGroupLayout;
+    std::unique_ptr<Backend::BindGroupLayout> _skyboxTextureGroupLayout;
+    std::unique_ptr<Backend::PipelineLayout> _skyboxPipelineLayout;
+    std::unique_ptr<Backend::GraphicsPipeline> _skyboxPipeline;
+    std::unique_ptr<Backend::Buffer> _skyboxVertexBuffer;
+    std::unique_ptr<Backend::Buffer> _skyboxIndexBuffer;
+    std::unique_ptr<Backend::Buffer> _skyboxParamsBuffer;
+    std::unique_ptr<Backend::BindGroup> _skyboxParamsBindGroup;
+    std::unique_ptr<Backend::Texture> _skyboxTexture;
+    std::unique_ptr<Backend::TextureView> _skyboxTextureView;
+    std::unique_ptr<Backend::Sampler> _skyboxSampler;
+    std::unique_ptr<Backend::BindGroup> _skyboxTextureBindGroup;
+
+    // =====================================================================
+    // Selection Mask Pipeline - opaque, alpha-mask, and skinned variants
+    // =====================================================================
+    std::array<std::unique_ptr<Backend::BindGroupLayout>, 4>
+        _selectionMaskGroupLayouts;
+    std::unique_ptr<Backend::PipelineLayout> _selectionMaskPipelineLayout;
+    std::unique_ptr<Backend::GraphicsPipeline> _selectionMaskPipeline;
+    std::unique_ptr<Backend::GraphicsPipeline>
+        _selectionMaskDoubleSidedPipeline;
+    std::unique_ptr<Backend::BindGroupLayout> _selectionMaskAlphaGroupLayout;
+    std::unique_ptr<Backend::PipelineLayout> _selectionMaskAlphaPipelineLayout;
+    std::unique_ptr<Backend::GraphicsPipeline> _selectionMaskAlphaPipeline;
+    std::unique_ptr<Backend::GraphicsPipeline>
+        _selectionMaskAlphaDoubleSidedPipeline;
+    std::unique_ptr<Backend::BindGroupLayout> _selectionMaskSkinGroupLayout;
+    std::unique_ptr<Backend::PipelineLayout> _selectionMaskSkinPipelineLayout;
+    std::unique_ptr<Backend::PipelineLayout>
+        _selectionMaskSkinAlphaPipelineLayout;
+    std::unique_ptr<Backend::GraphicsPipeline> _selectionMaskSkinPipeline;
+    std::unique_ptr<Backend::GraphicsPipeline>
+        _selectionMaskSkinDoubleSidedPipeline;
+    std::unique_ptr<Backend::GraphicsPipeline> _selectionMaskSkinAlphaPipeline;
+    std::unique_ptr<Backend::GraphicsPipeline>
+        _selectionMaskSkinAlphaDoubleSidedPipeline;
+    std::unique_ptr<Backend::BindGroup> _selectionMaskFrameBindGroup;
+    std::unique_ptr<Backend::Sampler> _selectionMaskAlphaSampler;
+    std::unique_ptr<Backend::TextureView> _selectionMaskOutputView;
+    std::unique_ptr<Backend::RenderTarget> _selectionMaskOutputTarget;
+    uintptr_t _selectionMaskOutputHandle = 0;
+    int _selectionMaskOutputWidth = 0;
+    int _selectionMaskOutputHeight = 0;
+
+    // Shadow configuration and per-frame cascade state.
     float _shadowRadius = 3.0f;
     int _shadowPcfSamples = 16;
     float _shadowDistance = 20.0f; // 0 = shadow disabled
@@ -122,6 +274,10 @@ class Rasterizer : public RenderPipeline {
     std::array<float, MaxShadowCascades> _cascadeSplits{};
     std::array<float, MaxShadowCascades> _cascadeOrthoHalfSizes{};
     std::array<glm::mat4, MaxShadowCascades> _cascadeLightMatrices{};
+
+    // =====================================================================
+    // Frustum Culling / Renderer Diagnostics
+    // =====================================================================
     Geometry::Frustum _viewFrustum;
     bool _frustumCullingEnabled = true;
     bool _debugRenderAABB = false;
@@ -130,13 +286,41 @@ class Rasterizer : public RenderPipeline {
     int _cullingTotalInstances = 0;
     int _cullingCulledInstances = 0;
 
-    // shadow
+    // =====================================================================
+    // Shadow Depth Pipeline - private operations
+    // =====================================================================
     void updateShadowUBO(float activeOrthoHalfSize);
+    void initShadowRhi();
+    void rebuildShadowSamplingBindings(Backend::Texture* fallbackTexture);
+    void initForwardRhi();
+    void initSkyboxRhi();
+    void rebuildSkyboxBinding(UpAxis upAxis);
+    bool usesRhiForward(const MeshInstancer& inst) const;
+    bool usesRhiTexturedVertexColor(const MeshInstancer& inst) const;
+    bool usesRhiCheckerboard(const MeshInstancer& inst) const;
+    Backend::BindGroup* updatePhongRhiResources(PhongMaterial& material,
+                                                const MeshInstancer& inst);
+    Backend::BindGroup* updatePbrRhiResources(PBRMaterial& material,
+                                              const MeshInstancer& inst);
+    Backend::BindGroup*
+    updateTexturedVertexColorRhiResources(const MeshInstancer& inst);
+
+    // =====================================================================
+    // Selection Mask Pipeline - private operations
+    // =====================================================================
+    void initSelectionMaskRhi();
+    void ensureSelectionMaskTarget(Backend::Framebuffer* target);
+
+    // Shadow matrix/caster operations.
     void updateShadowPassUBO(const glm::mat4& lightSpaceMatrix,
                              float activeOrthoHalfSize);
     void setShadowMap(Backend::Texture* tex, const glm::mat4& lightSpaceMat,
                       float radius, float distance);
-    void drawShadowCasters();
+    void drawShadowCasters(Backend::RenderTarget* target, int mapSize);
+
+    // =====================================================================
+    // Scene / Skybox / Transparent / Debug Pipelines - private operations
+    // =====================================================================
     void updateDebugRenderAABB();
     Backend::Texture* activeShadowTexture() const;
     void bindShadowTextures(Backend::Texture* shadowTexture);
@@ -144,14 +328,32 @@ class Rasterizer : public RenderPipeline {
                            Backend::Texture* shadowTexture);
     void renderSceneInstancer(MeshInstancer& inst, bool transparentPass,
                               Backend::Texture* shadowTexture);
-    void renderOpaquePass(Backend::Texture* shadowTexture);
-    void renderSkyboxPass(const glm::mat4& view, const glm::mat4& proj);
-    void renderTransparentPass(Backend::Texture* shadowTexture);
-    void renderDebugOverlayPass();
+    void renderOpaquePass(Backend::Texture* shadowTexture,
+                          Backend::RenderTarget* sceneDrawTarget,
+                          Backend::RenderTarget* legacyResumeTarget);
+    void renderSkyboxPass(const glm::mat4& view, const glm::mat4& proj,
+                          Backend::RenderTarget* sceneDrawTarget);
+    void renderTransparentPass(Backend::Texture* shadowTexture,
+                               Backend::RenderTarget* sceneDrawTarget,
+                               Backend::RenderTarget* legacyResumeTarget);
+    void renderDebugOverlayPass(Backend::RenderTarget* sceneDrawTarget,
+                                Backend::RenderTarget* legacyResumeTarget);
+    void recordRenderHooks(RenderHookPhase phase,
+                           Backend::RenderTarget* sceneDrawTarget,
+                           Backend::RenderTarget* legacyResumeTarget);
 
   public:
     Rasterizer(Backend::GraphicsDevice* graphicsDevice);
+    Backend::BindGroupLayout* sceneFrameBindGroupLayout() const {
+        return _forwardGroupLayouts[0].get();
+    }
+    RenderHookHandle addRenderHook(RenderHookPhase phase,
+                                   RenderHookCallback callback);
+    bool removeRenderHook(RenderHookHandle handle);
 
+    // =====================================================================
+    // Lighting API
+    // =====================================================================
     void setLight(const DirectionalLight& light) {
         _light = light;
         _lightDirty = true;
@@ -174,7 +376,9 @@ class Rasterizer : public RenderPipeline {
     }
     const std::vector<SpotLight>& getSpotLights() const { return _spotLights; }
 
-    // shadow
+    // =====================================================================
+    // Shadow Depth / CSM API
+    // =====================================================================
     void setShadowDistance(float distance) {
         _shadowDistance = std::max(0.0f, distance);
     }
@@ -216,10 +420,14 @@ class Rasterizer : public RenderPipeline {
                                       float shadowNear, float shadowFar);
     Backend::Framebuffer* getShadowFbo() { return _shadowFbo.get(); }
 
+    // =====================================================================
+    // Culling / Renderer Diagnostics API
+    // =====================================================================
     void setFrustumCullingEnabled(bool enabled) {
         _frustumCullingEnabled = enabled;
     }
     bool isFrustumCullingEnabled() const { return _frustumCullingEnabled; }
+    void setBackgroundSettings(const BackgroundSettings& settings);
     void setDebugRenderAABB(bool enabled) { _debugRenderAABB = enabled; }
     bool getDebugRenderAABB() const { return _debugRenderAABB; }
     int getCullingTotalBatches() const { return _cullingTotalBatches; }
@@ -227,6 +435,9 @@ class Rasterizer : public RenderPipeline {
     int getCullingTotalInstances() const { return _cullingTotalInstances; }
     int getCullingCulledInstances() const { return _cullingCulledInstances; }
 
+    // =====================================================================
+    // Renderable Registration / Simulation Buffer API
+    // =====================================================================
     RenderableHandle addRenderable(
         Material* material, Scene::Prim* prim,
         TransformSource transformSource = TransformSource::SceneGraph);
@@ -281,6 +492,9 @@ class Rasterizer : public RenderPipeline {
     void updateRenderableSkinningMatrices(
         RenderableHandle handle, const std::vector<glm::mat4>& boneMatrices);
 
+    // =====================================================================
+    // Debug Overlay API
+    // =====================================================================
     void logDebugLines(const std::string& path,
                        const std::vector<glm::vec3>& starts,
                        const std::vector<glm::vec3>& ends,
@@ -313,21 +527,27 @@ class Rasterizer : public RenderPipeline {
     void setScreenTextHidden(const std::string& path, bool hidden);
     void removeScreenText(const std::string& path);
     void clearScreenText();
+
+    // =====================================================================
+    // Viewport / Skybox API
+    // =====================================================================
     void setViewportSize(int width, int height) {
         _viewportWidth = std::max(width, 1);
         _viewportHeight = std::max(height, 1);
     }
 
-    void setSkybox(const std::string& path, UpAxis upAxis = UpAxis::Y) {
-        _graphicsDevice->setSkybox(path, upAxis);
-    }
+    void setSkybox(const std::string& path, UpAxis upAxis = UpAxis::Y);
     void setSkybox(const std::vector<std::string>& paths,
-                   UpAxis upAxis = UpAxis::Y) {
-        _graphicsDevice->setSkybox(paths, upAxis);
-    }
+                   UpAxis upAxis = UpAxis::Y);
 
+    // =====================================================================
+    // Frame Rendering / Selection Pipeline API
+    // =====================================================================
     void updateFrameData(const glm::mat4& view, const glm::mat4& proj);
     void render(const glm::mat4& view, const glm::mat4& proj) override;
+    void render(const glm::mat4& view, const glm::mat4& proj,
+                Backend::RenderTarget* sceneDrawTarget,
+                Backend::RenderTarget* legacyResumeTarget);
     bool buildPrimSelection(Scene::Prim* prim,
                             RayPickResult& outSelection) const;
     bool getPrimTransformSource(const Scene::Prim* prim,

@@ -243,12 +243,31 @@ class GraphicsDevice {
     virtual std::unique_ptr<Texture>
     createTexture(const TextureResourceDesc& desc,
                   const TextureInitialData* initialData = nullptr) = 0;
+    virtual std::unique_ptr<Texture>
+    createCubemapTexture(const std::string& crossPath) {
+        throw std::runtime_error("cubemap textures are unsupported");
+    }
+    virtual std::unique_ptr<Texture>
+    createCubemapTexture(const std::vector<std::string>& facePaths) {
+        throw std::runtime_error("cubemap textures are unsupported");
+    }
     virtual std::unique_ptr<TextureView>
     createTextureView(Texture* texture, const TextureViewDesc& desc = {}) = 0;
     virtual std::unique_ptr<Sampler>
     createSampler(const SamplerDesc& desc = {}) = 0;
     virtual std::unique_ptr<RenderTarget>
     createRenderTarget(const RenderPassDesc& desc) = 0;
+    // Temporary migration bridge: legacy immediate draws may target an RHI
+    // render pass while production passes are converted incrementally.
+    // Backends without an immediate API reject this explicitly.
+    virtual void beginLegacyRenderPass(RenderTarget*) {
+        throw std::runtime_error(
+            "legacy rendering into an RHI target is unsupported");
+    }
+    virtual void endLegacyRenderPass(RenderTarget*) {
+        throw std::runtime_error(
+            "legacy rendering into an RHI target is unsupported");
+    }
     virtual std::unique_ptr<GraphicsPipeline>
     createGraphicsPipeline(const GraphicsPipelineDesc& desc) = 0;
     virtual std::unique_ptr<BindGroupLayout>
@@ -273,8 +292,13 @@ class GraphicsDevice {
 
     std::unique_ptr<Shader> createShaderFromFile(const std::string& vertPath,
                                                  const std::string& fragPath) {
-        return createShader(loadShaderSource(vertPath),
-                            loadShaderSource(fragPath));
+        ShaderDesc desc;
+        desc.name = vertPath + "|" + fragPath;
+        desc.stages = {
+            {loadShaderSource(vertPath), ShaderType::Vertex, "main"},
+            {loadShaderSource(fragPath), ShaderType::Fragment, "main"},
+        };
+        return createShader(desc);
     }
     virtual std::unique_ptr<Texture> createTexture(const std::string path,
                                                    bool flip = false) = 0;
@@ -337,6 +361,10 @@ class RenderPassEncoder {
                              float maxDepth = 1.0f) = 0;
     virtual void setScissor(uint32_t x, uint32_t y, uint32_t width,
                             uint32_t height) = 0;
+    // Optional wide-line state for debug rendering. Portable production
+    // geometry must not depend on widths above 1; WebGPU may clamp or expand
+    // debug lines into triangles.
+    virtual void setLineWidth(float width) = 0;
     virtual void setPipeline(GraphicsPipeline* pipeline) = 0;
     virtual void setBindGroup(uint32_t index, BindGroup* bindGroup) = 0;
     virtual void setVertexBuffer(uint32_t slot, Buffer* buffer,
@@ -386,6 +414,11 @@ class Framebuffer {
 class Shader {
   public:
     virtual ~Shader() = default;
+    // Stable diagnostic identity and backend-neutral source descriptor.
+    // Materials use the descriptor to request cached RHI pipeline variants;
+    // render code must not infer shader behavior from file names.
+    virtual const std::string& getName() const = 0;
+    virtual const ShaderDesc& getDesc() const = 0;
     virtual void bind() = 0;
     virtual void unbind() = 0;
 
@@ -436,6 +469,8 @@ class Texture {
     virtual TextureUsage getUsage() const = 0;
     virtual uint32_t getMipLevelCount() const = 0;
     virtual uint32_t getSampleCount() const = 0;
+    virtual uint32_t getDepthOrArrayLayers() const = 0;
+    virtual TextureDimension getDimension() const = 0;
     // Backend-native resource handle (GLuint, etc.) for external use
     virtual uintptr_t getNativeHandle() const = 0;
 };

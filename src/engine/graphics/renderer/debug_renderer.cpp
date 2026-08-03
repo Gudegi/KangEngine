@@ -57,7 +57,9 @@ void validatePointInputs(const char* functionName,
 
 } // namespace
 
-void DebugRenderer::init(Backend::GraphicsDevice* device) {
+void DebugRenderer::init(Backend::GraphicsDevice* device,
+                         Backend::BindGroupLayout* frameGroupLayout,
+                         Backend::BindGroup* frameBindGroup) {
     _device = device;
     if (!_device)
         return;
@@ -67,6 +69,66 @@ void DebugRenderer::init(Backend::GraphicsDevice* device) {
                                       KE::getAssetPath("shaders/debug.fs"));
     _shader = _ownedShader.get();
     _shader->setUniformBlockBinding("cameraUBO", 0);
+    _frameBindGroup = frameBindGroup;
+    if (!frameGroupLayout || !_frameBindGroup)
+        return;
+    for (size_t i = 0; i < _reservedGroupLayouts.size(); ++i) {
+        Backend::BindGroupLayoutDesc desc;
+        desc.label = "debug_reserved_group_" + std::to_string(i + 1);
+        _reservedGroupLayouts[i] = _device->createBindGroupLayout(desc);
+    }
+    Backend::PipelineLayoutDesc layoutDesc;
+    layoutDesc.label = "debug_pipeline_layout";
+    layoutDesc.bindGroupLayouts = {
+        frameGroupLayout, _reservedGroupLayouts[0].get(),
+        _reservedGroupLayouts[1].get(), _reservedGroupLayouts[2].get()};
+    _pipelineLayout = _device->createPipelineLayout(layoutDesc);
+
+    Backend::BlendState blend;
+    blend.color.srcFactor = Backend::BlendFactorValue::SrcAlpha;
+    blend.color.dstFactor = Backend::BlendFactorValue::OneMinusSrcAlpha;
+    blend.alpha.srcFactor = Backend::BlendFactorValue::SrcAlpha;
+    blend.alpha.dstFactor = Backend::BlendFactorValue::OneMinusSrcAlpha;
+    Backend::VertexBufferLayout lineLayout;
+    lineLayout.arrayStride = sizeof(LineVertex);
+    lineLayout.attributes = {
+        {Backend::VertexFormat::Float32x3, offsetof(LineVertex, position), 0},
+        {Backend::VertexFormat::Float32x4, offsetof(LineVertex, color), 1}};
+    Backend::GraphicsPipelineDesc desc;
+    desc.label = "debug_line_pipeline";
+    desc.shader.name = "debug_line_rhi";
+    desc.shader.stages = {
+        {Backend::loadShaderSource(KE::getAssetPath("shaders/rhi/debug.vs")),
+         Backend::ShaderType::Vertex, "main"},
+        {Backend::loadShaderSource(
+             KE::getAssetPath("shaders/rhi/debug_line.fs")),
+         Backend::ShaderType::Fragment, "main"}};
+    desc.pipelineLayout = _pipelineLayout.get();
+    desc.vertexBuffers = {lineLayout};
+    desc.primitive.topology = Backend::PrimitiveTopology::LineList;
+    desc.primitive.cullMode = Backend::CullMode::None;
+    desc.depthStencil = Backend::DepthStencilState{
+        Backend::TextureFormat::Depth24Stencil8, true,
+        Backend::CompareFunction::Less};
+    desc.colorTargets = {{Backend::TextureFormat::RGBA16Float, blend}};
+    desc.sampleCount = 4;
+    _linePipeline = _device->createGraphicsPipeline(desc);
+
+    Backend::VertexBufferLayout pointLayout;
+    pointLayout.arrayStride = sizeof(PointVertex);
+    pointLayout.attributes = {
+        {Backend::VertexFormat::Float32x3, offsetof(PointVertex, position), 0},
+        {Backend::VertexFormat::Float32x4, offsetof(PointVertex, color), 1},
+        {Backend::VertexFormat::Float32, offsetof(PointVertex, size), 2}};
+    desc.label = "debug_point_pipeline";
+    desc.shader.name = "debug_point_rhi";
+    desc.shader.stages[1] =
+        {Backend::loadShaderSource(
+             KE::getAssetPath("shaders/rhi/debug_point.fs")),
+         Backend::ShaderType::Fragment, "main"};
+    desc.vertexBuffers = {pointLayout};
+    desc.primitive.topology = Backend::PrimitiveTopology::PointList;
+    _pointPipeline = _device->createGraphicsPipeline(desc);
 }
 
 void DebugRenderer::ensureLineBatchGpu(LineBatch& batch) {
@@ -262,6 +324,47 @@ void DebugRenderer::render() {
 
     _device->setBlend(false);
     _device->setCullFace(true);
+}
+
+void DebugRenderer::render(Backend::RenderTarget* target, int viewportWidth,
+                           int viewportHeight) {
+    if (!target || !_device || !_linePipeline || !_pointPipeline ||
+        !_frameBindGroup || viewportWidth <= 0 || viewportHeight <= 0)
+        return;
+    bool hasRenderable = false;
+    for (const auto& [path, batch] : _lineBatches)
+        hasRenderable = hasRenderable ||
+            (!batch.hidden && !batch.vertices.empty() && batch.vertexBuffer);
+    for (const auto& [path, batch] : _pointBatches)
+        hasRenderable = hasRenderable ||
+            (!batch.hidden && !batch.vertices.empty() && batch.vertexBuffer);
+    if (!hasRenderable)
+        return;
+
+    auto encoder = _device->createCommandEncoder();
+    auto pass = encoder->beginRenderPass(target);
+    pass->setViewport(0.0f, 0.0f, static_cast<float>(viewportWidth),
+                      static_cast<float>(viewportHeight));
+    for (auto& [path, batch] : _lineBatches) {
+        if (batch.hidden || batch.vertices.empty() || !batch.vertexBuffer)
+            continue;
+        pass->setPipeline(_linePipeline.get());
+        pass->setBindGroup(0, _frameBindGroup);
+        pass->setLineWidth(batch.width);
+        pass->setVertexBuffer(0, batch.vertexBuffer.get());
+        pass->draw(static_cast<uint32_t>(batch.vertices.size()));
+    }
+    for (auto& [path, batch] : _pointBatches) {
+        if (batch.hidden || batch.vertices.empty() || !batch.vertexBuffer)
+            continue;
+        pass->setPipeline(_pointPipeline.get());
+        pass->setBindGroup(0, _frameBindGroup);
+        pass->setVertexBuffer(0, batch.vertexBuffer.get());
+        pass->draw(static_cast<uint32_t>(batch.vertices.size()));
+    }
+    pass->end();
+    auto commands = encoder->finish();
+    _device->submit(*commands);
 }
 
 } // namespace KE

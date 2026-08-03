@@ -11,6 +11,13 @@
 
 namespace KE {
 
+enum class MaterialShadingModel {
+    VertexColor,
+    Phong,
+    PBR,
+    Custom,
+};
+
 class Material {
   protected:
     Backend::Shader* _shader = nullptr;
@@ -23,6 +30,9 @@ class Material {
     // Texture sampled by depth-only passes when AlphaMode::Mask is active.
     virtual Backend::Texture* alphaTexture() const { return nullptr; }
     virtual bool alphaTextureUsesRedChannel() const { return false; }
+    virtual MaterialShadingModel shadingModel() const {
+        return MaterialShadingModel::Custom;
+    }
     virtual Backend::Shader* getShader() const { return _shader; }
     virtual void setShader(Backend::Shader* shader) { _shader = shader; }
 };
@@ -45,6 +55,9 @@ class VertexColorMaterial : public Material {
     }
 
     void unbind() override {}
+    MaterialShadingModel shadingModel() const override {
+        return MaterialShadingModel::VertexColor;
+    }
 };
 
 class PhongMaterial : public Material {
@@ -98,6 +111,9 @@ class PhongMaterial : public Material {
     }
 
     bool hasNormalMap() const override { return normalMap != nullptr; }
+    MaterialShadingModel shadingModel() const override {
+        return MaterialShadingModel::Phong;
+    }
     Backend::Texture* alphaTexture() const override {
         return alphaMap ? alphaMap : diffuseMap;
     }
@@ -184,6 +200,9 @@ class PBRMaterial : public Material {
     Backend::Texture* emissiveTexture = nullptr;
 
     bool hasNormalMap() const override { return normalTexture != nullptr; }
+    MaterialShadingModel shadingModel() const override {
+        return MaterialShadingModel::PBR;
+    }
     Backend::Texture* alphaTexture() const override { return baseColorTexture; }
 
     PBRMaterial* setBaseColor(glm::vec4 v) {

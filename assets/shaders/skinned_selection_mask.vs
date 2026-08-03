@@ -8,19 +8,26 @@ layout(location = 6) in vec4 aInstanceTransform3;
 layout(location = 8) in ivec4 aBoneIndices;
 layout(location = 9) in vec4 aBoneWeights;
 
-#import "skinning_common.glsl"
-
-layout(std140) uniform cameraUBO {
+layout(std140) uniform ke_g0_b0 {
     mat4 view;
     mat4 projection;
 };
+layout(std140) uniform ke_g2_b0 {
+    mat4 boneMatrices[128];
+};
 
-out vec2 TexCoord;
+out vec2 vTexCoord;
 
 void main() {
     mat4 model = mat4(aInstanceTransform0, aInstanceTransform1,
                       aInstanceTransform2, aInstanceTransform3);
-    mat4 skin = skinMatrix(aBoneIndices, aBoneWeights);
+    mat4 skin = mat4(0.0);
+
+    skin += aBoneWeights.x * boneMatrices[aBoneIndices.x];
+    skin += aBoneWeights.y * boneMatrices[aBoneIndices.y];
+    skin += aBoneWeights.z * boneMatrices[aBoneIndices.z];
+    skin += aBoneWeights.w * boneMatrices[aBoneIndices.w];
+
     gl_Position = projection * view * model * skin * vec4(aPos, 1.0);
-    TexCoord = aTexCoord;
+    vTexCoord = aTexCoord;
 }

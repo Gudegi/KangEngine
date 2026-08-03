@@ -12,6 +12,7 @@
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <algorithm>
+#include <cstdint>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -36,6 +37,24 @@ constexpr int Tangent = 10;
 
 } // namespace RendererAttribute
 
+// Pipeline vertex-buffer array indices. These are intentionally distinct from
+// RendererAttribute shader locations above: one buffer slot may provide
+// several shader attributes (InstanceTransform provides locations 3-6).
+enum class MeshVertexBufferSlot : uint32_t {
+    Position = 0,
+    InstanceTransform,
+    Normal,
+    TexCoord,
+    InstanceColor,
+    Tangent,
+    BoneIndices,
+    BoneWeights,
+};
+
+constexpr uint32_t vertexBufferSlot(MeshVertexBufferSlot slot) {
+    return static_cast<uint32_t>(slot);
+}
+
 // Instanced renderer for a single (shader, mesh) combination.
 // All Prims sharing the same MeshData pointer + Shader are batched
 // into one glDrawElementsInstanced call.
@@ -53,10 +72,11 @@ class MeshInstancer {
 
     // Geometry (static) — shared by all instances
     std::unique_ptr<Backend::VertexArray> _vao;
-    std::unique_ptr<Backend::VertexArray> _overrideVAO;
     std::vector<std::unique_ptr<Backend::Buffer>> _vbos;
     std::unique_ptr<Backend::Buffer> _indexBuffer;
     std::unique_ptr<Backend::Buffer> _overrideTransformVBO;
+    std::unique_ptr<Backend::Buffer> _boneMatricesUBO;
+    std::unique_ptr<Backend::Buffer> _alphaParamsUBO;
     int _numIndices = 0;
 
     // Instance data (dynamic, uploaded each frame)
@@ -117,6 +137,11 @@ class MeshInstancer {
     void _consumeExternalBuffer();
     void _uploadOverrideTransform(const glm::mat4& transform);
     void _updateTransparency();
+    void _updateAlphaParamsBuffer();
+    void _recordGeometry(Backend::RenderPassEncoder& pass,
+                         Backend::Buffer* transformBuffer,
+                         uint32_t instanceCount, bool includeTexCoord,
+                         bool includeSkinning) const;
 
   public:
     MeshInstancer() = default;
@@ -180,22 +205,49 @@ class MeshInstancer {
     TransformSource transformSource() const { return _transformSource; }
 
     void render();
-    // Draw one instance into a selection mask pass using only its transform.
-    void renderInstanceMask(int instanceIndex);
+    // Record the currently visible instance batch without touching backend
+    // state. Resources are only consumed when the command buffer is submitted.
+    void recordDraw(Backend::RenderPassEncoder& pass,
+                    bool includeTexCoord = false,
+                    bool includeSkinning = false) const;
+    void recordForwardDraw(Backend::RenderPassEncoder& pass) const;
+    void recordSkinnedForwardDraw(Backend::RenderPassEncoder& pass) const;
+    // Full static material geometry used by Phong/PBR pipelines. In addition
+    // to the common forward inputs this records UV and tangent streams.
+    void recordMaterialDraw(Backend::RenderPassEncoder& pass,
+                            bool requireTexCoord,
+                            bool requireTangent,
+                            bool includeSkinning = false) const;
+    void recordSkinnedMaterialDraw(Backend::RenderPassEncoder& pass,
+                                   bool requireTangent) const;
+    // Record the same one-instance geometry draw through the RHI. The caller's
+    // pipeline must use MeshVertexBufferSlot::Position and
+    // MeshVertexBufferSlot::InstanceTransform. The transform buffer provides
+    // shader attribute locations 3-6.
+    void recordInstanceMask(Backend::RenderPassEncoder& pass,
+                            int instanceIndex, bool includeTexCoord = false,
+                            bool includeSkinning = false);
+    Backend::Buffer* boneMatricesBuffer() const {
+        return _boneMatricesUBO.get();
+    }
+    Backend::Texture* alphaMaskTexture() const;
+    Backend::Buffer* alphaParamsBuffer() const {
+        return _alphaParamsUBO.get();
+    }
+    bool alphaMaskUsesRedChannel() const {
+        return _material && _material->alphaTextureUsesRedChannel();
+    }
 
     // DoubleSided means the mesh can be seen both back and forward side.
     void setDoubleSided(bool v) { _doubleSided = v; }
     bool isDoubleSided() const { return _doubleSided; }
     void setCastsShadow(bool v) { _castsShadow = v; }
     bool castsShadow() const { return _castsShadow; }
-    void setAlphaMode(AlphaMode mode, float cutoff = 0.5f) {
-        _alphaMode = mode;
-        _alphaCutoff = std::clamp(cutoff, 0.0f, 1.0f);
-        _updateTransparency();
-    }
+    void setAlphaMode(AlphaMode mode, float cutoff = 0.5f);
     AlphaMode alphaMode() const { return _alphaMode; }
     float alphaCutoff() const { return _alphaCutoff; }
     bool hasSkinning() const { return _hasSkinning; }
+    bool hasTangents() const { return _hasTangents; }
     const Geometry::AABB& localBounds() const { return _localBounds; }
     const Geometry::Sphere& localSphere() const { return _localSphere; }
     const Geometry::AABB& combinedWorldBounds() const {
@@ -213,6 +265,12 @@ class MeshInstancer {
             }
         }
         _textures.emplace_back(tex, slot);
+    }
+    Backend::Texture* textureAtSlot(int slot) const {
+        for (const auto& [texture, textureSlot] : _textures)
+            if (textureSlot == slot)
+                return texture;
+        return nullptr;
     }
     void bindTextures() const {
         bool hasNormalMap =

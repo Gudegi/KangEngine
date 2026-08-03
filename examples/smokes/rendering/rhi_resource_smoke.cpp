@@ -3,6 +3,8 @@
 
 #include <array>
 #include <cmath>
+#include <cstdio>
+#include <fstream>
 #include <iostream>
 #include <stdexcept>
 
@@ -251,6 +253,46 @@ int main() {
     require(rejectedColorDepthView,
             "color texture accepted a depth-only texture view");
 
+    // Cubemap resource/view contract used by the RHI skybox pipeline.
+    std::array<std::string, 6> cubeFacePaths{};
+    for (size_t face = 0; face < cubeFacePaths.size(); ++face) {
+        cubeFacePaths[face] = "/tmp/kang_rhi_cube_face_" +
+                              std::to_string(face) + ".ppm";
+        std::ofstream file(cubeFacePaths[face], std::ios::binary);
+        file << "P6\n1 1\n255\n";
+        const std::array<unsigned char, 3> pixel{
+            static_cast<unsigned char>(32 + face * 16), 64, 128};
+        file.write(reinterpret_cast<const char*>(pixel.data()), pixel.size());
+    }
+    const std::vector<std::string> cubeFaces(cubeFacePaths.begin(),
+                                              cubeFacePaths.end());
+    auto cube = device.createCubemapTexture(cubeFaces);
+    auto* glCube = dynamic_cast<OpenGLTexture*>(cube.get());
+    require(glCube && glCube->getTarget() == GL_TEXTURE_CUBE_MAP &&
+                glCube->getDepthOrArrayLayers() == 6,
+            "cubemap texture metadata mismatch");
+    TextureViewDesc cubeViewDesc;
+    cubeViewDesc.dimension = TextureViewDimension::Cube;
+    cubeViewDesc.arrayLayerCount = 6;
+    cubeViewDesc.label = "rhi_smoke_cube_view";
+    auto cubeView = device.createTextureView(cube.get(), cubeViewDesc);
+    BindGroupLayoutDesc cubeLayoutDesc;
+    cubeLayoutDesc.entries = {
+        {0, BindingType::SampledTexture, ShaderStageVisibility::Fragment,
+         TextureFormat::Undefined, TextureSampleType::Float,
+         TextureViewDimension::Cube},
+        {1, BindingType::Sampler, ShaderStageVisibility::Fragment}};
+    auto cubeLayout = device.createBindGroupLayout(cubeLayoutDesc);
+    BindGroupDesc cubeGroupDesc;
+    cubeGroupDesc.layout = cubeLayout.get();
+    cubeGroupDesc.entries = {
+        {0, nullptr, 0, 0, cubeView.get(), nullptr},
+        {1, nullptr, 0, 0, nullptr, sampler.get()}};
+    auto cubeGroup = device.createBindGroup(cubeGroupDesc);
+    require(cubeGroup != nullptr, "cubemap bind group creation failed");
+    for (const std::string& path : cubeFacePaths)
+        std::remove(path.c_str());
+
     for (int iteration = 0; iteration < 32; ++iteration) {
         GLuint releasedHandle = 0;
         {
@@ -272,7 +314,7 @@ int main() {
     glDeleteFramebuffers(1, &depthFbo);
     glDeleteFramebuffers(1, &colorFbo);
     glDeleteVertexArrays(1, &samplingVao);
-    std::cout << "PASS: OpenGL RHI textures, views, formats, and sampler"
+    std::cout << "PASS: OpenGL RHI textures, cube views, formats, and sampler"
               << std::endl;
     return 0;
 }

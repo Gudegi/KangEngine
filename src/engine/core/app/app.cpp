@@ -215,9 +215,12 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     sceneFramebufferDesc.width = _width;
     sceneFramebufferDesc.height = _height;
     sceneFramebufferDesc.stencil = true;
-    sceneFramebufferDesc.msaaSamples = 4;
+    // The legacy framebuffer owns only the resolved color used by post-process
+    // and readback. The RHI scene target owns the 4x MSAA attachments.
+    sceneFramebufferDesc.msaaSamples = 0;
     sceneFramebufferDesc.colorFormat = Backend::FramebufferColorFormat::RGBA16F;
     _framebuffer = _graphicsDevice->createFramebuffer(sceneFramebufferDesc);
+    rebuildSceneRenderTarget();
     _selectionMaskFramebuffer =
         _graphicsDevice->createFramebuffer({_width, _height, false, false, 0});
 
@@ -369,20 +372,8 @@ Backend::Texture* App::renderActiveSceneCameraPreview(int width, int height,
     const RendererSettings& settings = getRenderer().settings();
 
     getRenderer().syncSceneLights(getScene());
-    getRenderer().applyBackgroundSettings();
-    _rasterizer->updateFrameData(view, proj);
-    _sceneCameraPreviewFramebuffer->bind();
-    _graphicsDevice->setViewport(0, 0, width, height);
-    _rasterizer->setViewportSize(width, height);
-    const glm::vec4& color = settings.background.backgroundColor;
-    _graphicsDevice->clear(color.r, color.g, color.b, color.a);
-    _rasterizer->render(view, proj);
-    _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
-    _sceneCameraPreviewFramebuffer->resolve();
-    _sceneCameraPreviewFramebuffer->unbind();
-
-    _graphicsDevice->setViewport(0, 0, _width, _height);
-    _rasterizer->setViewportSize(_width, _height);
+    getRenderer().renderSceneToFramebuffer(
+        view, proj, _sceneCameraPreviewFramebuffer.get(), width, height, true);
     if (_sceneCameraPreviewPostProcessor) {
         if (_sceneCameraPreviewPostWidth != width ||
             _sceneCameraPreviewPostHeight != height) {
@@ -546,16 +537,17 @@ void App::renderFrameOnce() {
     const RendererSettings& settings = getRenderer().settings();
     const double renderStart = glfwGetTime();
 
-    // Scene pass: render into FBO (MSAA if enabled)
-    _framebuffer->bind();
+    // Main Scene Pipeline: legacy immediate passes temporarily coexist inside
+    // the RHI-owned 4x MSAA render target. Ending the pass resolves into
+    // _framebuffer's single-sample RGBA16F texture.
+    _graphicsDevice->beginLegacyRenderPass(_sceneRenderTarget.get());
     const glm::vec4& color = settings.background.backgroundColor;
     _graphicsDevice->clear(color.r, color.g, color.b, color.a);
 
     coreRender(); // records ImGui widgets, no GL ImGui draw yet
     this->render();
     _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
-    _framebuffer->resolve();
-    _framebuffer->unbind();
+    _graphicsDevice->endLegacyRenderPass(_sceneRenderTarget.get());
 
     Backend::Texture* finalSource = _framebuffer->getColorTexture();
 
@@ -805,8 +797,80 @@ void App::coreRender() {
 
     if (_rasterizer) {
         getRenderer().applyBackgroundSettings();
-        _rasterizer->render(_viewMatrix, _projectionMatrix);
+        _rasterizer->render(_viewMatrix, _projectionMatrix,
+                            _sceneDrawTarget.get(),
+                            _sceneRenderTarget.get());
     }
+}
+
+void App::rebuildSceneRenderTarget() {
+    if (!_graphicsDevice || !_framebuffer || _width <= 0 || _height <= 0)
+        return;
+
+    _sceneRenderTarget.reset();
+    _sceneDrawTarget.reset();
+    _sceneMsaaDepthStencilView.reset();
+    _sceneResolveColorView.reset();
+    _sceneMsaaColorView.reset();
+    _sceneMsaaDepthStencil.reset();
+    _sceneMsaaColor.reset();
+
+    Backend::TextureResourceDesc colorDesc;
+    colorDesc.extent = {static_cast<uint32_t>(_width),
+                        static_cast<uint32_t>(_height), 1};
+    colorDesc.format = Backend::TextureFormat::RGBA16Float;
+    colorDesc.usage = Backend::TextureUsage::RenderAttachment;
+    colorDesc.sampleCount = 4;
+    colorDesc.label = "main_scene_msaa_color";
+    _sceneMsaaColor = _graphicsDevice->createTexture(colorDesc);
+
+    Backend::TextureResourceDesc depthDesc;
+    depthDesc.extent = colorDesc.extent;
+    depthDesc.format = Backend::TextureFormat::Depth24Stencil8;
+    depthDesc.usage = Backend::TextureUsage::RenderAttachment;
+    depthDesc.sampleCount = 4;
+    depthDesc.label = "main_scene_msaa_depth_stencil";
+    _sceneMsaaDepthStencil = _graphicsDevice->createTexture(depthDesc);
+
+    Backend::TextureViewDesc colorViewDesc;
+    colorViewDesc.format = Backend::TextureFormat::RGBA16Float;
+    colorViewDesc.label = "main_scene_msaa_color_view";
+    _sceneMsaaColorView = _graphicsDevice->createTextureView(
+        _sceneMsaaColor.get(), colorViewDesc);
+
+    Backend::TextureViewDesc resolveViewDesc;
+    resolveViewDesc.format = Backend::TextureFormat::RGBA16Float;
+    resolveViewDesc.label = "main_scene_resolve_color_view";
+    _sceneResolveColorView = _graphicsDevice->createTextureView(
+        _framebuffer->getColorTexture(), resolveViewDesc);
+
+    Backend::TextureViewDesc depthViewDesc;
+    depthViewDesc.format = Backend::TextureFormat::Depth24Stencil8;
+    depthViewDesc.aspect = Backend::TextureAspect::All;
+    depthViewDesc.label = "main_scene_msaa_depth_stencil_view";
+    _sceneMsaaDepthStencilView = _graphicsDevice->createTextureView(
+        _sceneMsaaDepthStencil.get(), depthViewDesc);
+
+    Backend::RenderPassDesc passDesc;
+    passDesc.label = "main_scene_msaa_pass";
+    passDesc.colorAttachments = {{_sceneMsaaColorView.get(),
+                                  _sceneResolveColorView.get(),
+                                  Backend::LoadOp::Load,
+                                  Backend::StoreOp::Store,
+                                  {}}};
+    passDesc.depthStencilAttachment =
+        Backend::DepthStencilAttachmentDesc{_sceneMsaaDepthStencilView.get(),
+                                            Backend::LoadOp::Load,
+                                            Backend::StoreOp::Store,
+                                            1.0f,
+                                            Backend::LoadOp::Load,
+                                            Backend::StoreOp::Store,
+                                            0};
+    _sceneRenderTarget = _graphicsDevice->createRenderTarget(passDesc);
+
+    passDesc.label = "main_scene_msaa_draw_pass";
+    passDesc.colorAttachments[0].resolveTarget = nullptr;
+    _sceneDrawTarget = _graphicsDevice->createRenderTarget(passDesc);
 }
 
 Scene::Prim* App::defaultDirectionalLightPrim() {
@@ -1428,8 +1492,10 @@ void App::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
     _graphicsDevice->setViewport(0, 0, _width, _height);
     _camera.updateProjMatrix(_width, _height);
     _sceneCamera.updateProjMatrix(_width, _height);
-    if (_framebuffer)
+    if (_framebuffer) {
         _framebuffer->resize(_width, _height);
+        rebuildSceneRenderTarget();
+    }
     if (_selectionMaskFramebuffer)
         _selectionMaskFramebuffer->resize(_width, _height);
     if (_postProcessor)

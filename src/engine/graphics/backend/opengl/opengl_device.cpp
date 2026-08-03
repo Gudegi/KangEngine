@@ -362,7 +362,7 @@ void OpenGLDevice::unmapCudaBuffers(const std::vector<Buffer*>& buffers,
 #endif
 
 // OpenGLShader Implementation
-OpenGLShader::OpenGLShader(const ShaderDesc& desc) : _name(desc.name) {
+OpenGLShader::OpenGLShader(const ShaderDesc& desc) : _desc(desc) {
     GLuint vertexShader = 0, fragmentShader = 0;
 
     for (const auto& stage : desc.stages) {
@@ -695,6 +695,8 @@ OpenGLTexture::OpenGLTexture(const TextureResourceDesc& desc,
       _height(static_cast<int>(desc.extent.height)), _channels(0),
       _format(desc.format), _usage(desc.usage),
       _mipLevelCount(desc.mipLevelCount), _sampleCount(desc.sampleCount),
+      _depthOrArrayLayers(desc.extent.depthOrArrayLayers),
+      _dimension(desc.dimension),
       _portableResource(true) {
     const DescriptorValidationResult validation = validate(desc);
     if (!validation)
@@ -770,6 +772,18 @@ OpenGLTexture::OpenGLTexture(const TextureResourceDesc& desc,
     glBindTexture(_target, 0);
 }
 
+OpenGLTexture::OpenGLTexture(GLuint cubemapHandle, int faceWidth,
+                             int faceHeight)
+    : _textureID(cubemapHandle), _target(GL_TEXTURE_CUBE_MAP),
+      _width(faceWidth), _height(faceHeight), _channels(4),
+      _format(TextureFormat::RGBA8Unorm),
+      _usage(TextureUsage::TextureBinding), _mipLevelCount(1),
+      _sampleCount(1), _depthOrArrayLayers(6),
+      _dimension(TextureDimension::D2), _portableResource(true) {
+    if (!_textureID || faceWidth <= 0 || faceHeight <= 0)
+        throw std::invalid_argument("invalid OpenGL cubemap texture");
+}
+
 OpenGLTexture::~OpenGLTexture() { glDeleteTextures(1, &_textureID); }
 
 void OpenGLTexture::bind(int slot) {
@@ -804,8 +818,11 @@ OpenGLTextureView::OpenGLTextureView(OpenGLTexture* texture,
         _desc.format = _texture->format();
 
     TextureResourceDesc textureDesc;
-    textureDesc.extent = {static_cast<uint32_t>(_texture->getWidth()),
-                          static_cast<uint32_t>(_texture->getHeight()), 1};
+    textureDesc.extent = {
+        static_cast<uint32_t>(_texture->getWidth()),
+        static_cast<uint32_t>(_texture->getHeight()),
+        _texture->getDepthOrArrayLayers()};
+    textureDesc.dimension = _texture->getDimension();
     textureDesc.format = _texture->format();
     textureDesc.usage = _texture->usage();
     textureDesc.mipLevelCount = _texture->mipLevelCount();
@@ -816,7 +833,8 @@ OpenGLTextureView::OpenGLTextureView(OpenGLTexture* texture,
                                     validation.message);
     if (_desc.baseMipLevel != 0 ||
         _desc.mipLevelCount != _texture->mipLevelCount() ||
-        _desc.baseArrayLayer != 0 || _desc.arrayLayerCount != 1)
+        _desc.baseArrayLayer != 0 ||
+        _desc.arrayLayerCount != _texture->getDepthOrArrayLayers())
         throw std::invalid_argument(
             "OpenGL bootstrap supports full-resource texture views only");
 }
@@ -880,14 +898,12 @@ OpenGLRenderTarget::OpenGLRenderTarget(const RenderPassDesc& desc)
     glBindFramebuffer(GL_FRAMEBUFFER, _fbo);
     try {
         _drawBuffers.reserve(_desc.colorAttachments.size());
+        _resolveTextures.resize(_desc.colorAttachments.size(), nullptr);
         std::vector<GLuint> attachedColorTextures;
         attachedColorTextures.reserve(_desc.colorAttachments.size());
         for (size_t index = 0; index < _desc.colorAttachments.size(); ++index) {
             const ColorAttachmentDesc& attachment =
                 _desc.colorAttachments[index];
-            if (attachment.resolveTarget)
-                throw std::invalid_argument(
-                    "resolve targets are not implemented in the MRT bootstrap");
             if (attachment.storeOp == StoreOp::Discard)
                 throw std::invalid_argument(
                     "StoreOp::Discard is not implemented by the OpenGL "
@@ -904,6 +920,35 @@ OpenGLRenderTarget::OpenGLRenderTarget(const RenderPassDesc& desc)
                 throw std::invalid_argument(
                     "MRT color attachments must reference distinct textures");
             attachedColorTextures.push_back(texture->getHandle());
+
+            if (attachment.resolveTarget) {
+                auto* resolveView = dynamic_cast<OpenGLTextureView*>(
+                    attachment.resolveTarget);
+                auto* resolveTexture = resolveView
+                                           ? dynamic_cast<OpenGLTexture*>(
+                                                 resolveView->getTexture())
+                                           : nullptr;
+                if (!resolveTexture ||
+                    !hasFlag(resolveTexture->usage(),
+                             TextureUsage::RenderAttachment) ||
+                    isDepthFormat(resolveTexture->format()) ||
+                    resolveView->getDesc().aspect != TextureAspect::All)
+                    throw std::invalid_argument(
+                        "resolve target requires a color render attachment");
+                if (texture->sampleCount() <= 1 ||
+                    resolveTexture->sampleCount() != 1)
+                    throw std::invalid_argument(
+                        "resolve requires multisampled source and single-sample target");
+                if (resolveTexture->getWidth() != texture->getWidth() ||
+                    resolveTexture->getHeight() != texture->getHeight() ||
+                    resolveTexture->format() != texture->format())
+                    throw std::invalid_argument(
+                        "resolve source and target must match extent and format");
+                if (resolveTexture->getHandle() == texture->getHandle())
+                    throw std::invalid_argument(
+                        "resolve source and target must be distinct");
+                _resolveTextures[index] = resolveTexture;
+            }
 
             const GLenum point =
                 GL_COLOR_ATTACHMENT0 + static_cast<GLenum>(index);
@@ -976,11 +1021,23 @@ OpenGLRenderTarget::OpenGLRenderTarget(const RenderPassDesc& desc)
 
         if (glObjectLabel != nullptr && !_desc.label.empty())
             glObjectLabel(GL_FRAMEBUFFER, _fbo, -1, _desc.label.c_str());
+        if (std::any_of(_resolveTextures.begin(), _resolveTextures.end(),
+                        [](const OpenGLTexture* texture) {
+                            return texture != nullptr;
+                        })) {
+            glGenFramebuffers(1, &_resolveFbo);
+            if (glObjectLabel != nullptr && !_desc.label.empty())
+                glObjectLabel(GL_FRAMEBUFFER, _resolveFbo, -1,
+                              (_desc.label + "_resolve").c_str());
+        }
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     } catch (...) {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glDeleteFramebuffers(1, &_fbo);
+        if (_resolveFbo)
+            glDeleteFramebuffers(1, &_resolveFbo);
         _fbo = 0;
+        _resolveFbo = 0;
         throw;
     }
 }
@@ -988,6 +1045,8 @@ OpenGLRenderTarget::OpenGLRenderTarget(const RenderPassDesc& desc)
 OpenGLRenderTarget::~OpenGLRenderTarget() {
     if (_fbo)
         glDeleteFramebuffers(1, &_fbo);
+    if (_resolveFbo)
+        glDeleteFramebuffers(1, &_resolveFbo);
 }
 
 void OpenGLRenderTarget::beginPass() {
@@ -1032,7 +1091,28 @@ void OpenGLRenderTarget::beginPass() {
     }
 }
 
-void OpenGLRenderTarget::endPass() { glBindFramebuffer(GL_FRAMEBUFFER, 0); }
+void OpenGLRenderTarget::endPass() {
+    if (_resolveFbo) {
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, _fbo);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, _resolveFbo);
+        for (size_t index = 0; index < _resolveTextures.size(); ++index) {
+            OpenGLTexture* resolve = _resolveTextures[index];
+            if (!resolve)
+                continue;
+            glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                   GL_TEXTURE_2D, resolve->getHandle(), 0);
+            glReadBuffer(GL_COLOR_ATTACHMENT0 + static_cast<GLenum>(index));
+            glDrawBuffer(GL_COLOR_ATTACHMENT0);
+            if (glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) !=
+                GL_FRAMEBUFFER_COMPLETE)
+                throw std::runtime_error(
+                    "OpenGL resolve framebuffer is incomplete");
+            glBlitFramebuffer(0, 0, _width, _height, 0, 0, _width, _height,
+                              GL_COLOR_BUFFER_BIT, GL_NEAREST);
+        }
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
 
 OpenGLBindGroupLayout::OpenGLBindGroupLayout(BindGroupLayoutDesc desc)
     : _desc(std::move(desc)) {
@@ -1045,10 +1125,6 @@ OpenGLBindGroupLayout::OpenGLBindGroupLayout(BindGroupLayoutDesc desc)
             bindings.end())
             throw std::invalid_argument("duplicate bind-group layout binding");
         bindings.push_back(entry.binding);
-        if (entry.type == BindingType::SampledTexture &&
-            entry.textureFormat == TextureFormat::Undefined)
-            throw std::invalid_argument(
-                "sampled texture binding needs a format");
         if (entry.type == BindingType::Sampler)
             ++samplerCount;
     }
@@ -1092,11 +1168,18 @@ OpenGLBindGroup::OpenGLBindGroup(BindGroupDesc desc) : _desc(std::move(desc)) {
                 throw std::invalid_argument(
                     "uniform binding range is out of bounds");
         } else if (layoutEntry.type == BindingType::SampledTexture) {
+            const bool expectsDepth =
+                layoutEntry.textureSampleType == TextureSampleType::Depth;
             if (!it->textureView ||
                 !hasFlag(it->textureView->getTexture()->getUsage(),
                          TextureUsage::TextureBinding) ||
-                it->textureView->getTexture()->getFormat() !=
-                    layoutEntry.textureFormat)
+                isDepthFormat(it->textureView->getTexture()->getFormat()) !=
+                    expectsDepth ||
+                it->textureView->getDesc().dimension !=
+                    layoutEntry.textureViewDimension ||
+                (layoutEntry.textureFormat != TextureFormat::Undefined &&
+                 it->textureView->getTexture()->getFormat() !=
+                     layoutEntry.textureFormat))
                 throw std::invalid_argument("sampled texture binding mismatch");
         } else if (!it->sampler) {
             throw std::invalid_argument("sampler binding is null");
@@ -1106,8 +1189,9 @@ OpenGLBindGroup::OpenGLBindGroup(BindGroupDesc desc) : _desc(std::move(desc)) {
 
 OpenGLGraphicsPipeline::OpenGLGraphicsPipeline(const GraphicsPipelineDesc& desc)
     : _desc(desc) {
-    if (_desc.sampleCount != 1)
-        throw std::invalid_argument("pipeline sampleCount must be 1 initially");
+    if (_desc.sampleCount != 1 && _desc.sampleCount != 4)
+        throw std::invalid_argument(
+            "OpenGL pipeline sampleCount must be 1 or 4");
     if (_desc.raster.depthClamp)
         throw std::invalid_argument("pipeline depth clamp is not implemented");
     for (const ShaderStage& stage : _desc.shader.stages) {
@@ -1136,9 +1220,6 @@ OpenGLGraphicsPipeline::OpenGLGraphicsPipeline(const GraphicsPipelineDesc& desc)
         if (target.format == TextureFormat::Undefined ||
             isDepthFormat(target.format))
             throw std::invalid_argument("invalid pipeline color target format");
-        if (target.blend)
-            throw std::invalid_argument(
-                "pipeline blending awaits explicit blend components");
         if (commonWriteMask && *commonWriteMask != target.writeMask)
             throw std::invalid_argument(
                 "distinct MRT write masks are deferred until indexed GL state");
@@ -1146,6 +1227,9 @@ OpenGLGraphicsPipeline::OpenGLGraphicsPipeline(const GraphicsPipelineDesc& desc)
     }
     if (_desc.depthStencil && !isDepthFormat(_desc.depthStencil->format))
         throw std::invalid_argument("invalid pipeline depth format");
+    if (_desc.depthStencil && _desc.depthStencil->depthBiasClamp != 0.0f)
+        throw std::invalid_argument(
+            "OpenGL 4.1 backend does not support depth-bias clamp");
     _shader = std::make_unique<OpenGLShader>(_desc.shader);
     glGenVertexArrays(1, &_vao);
     if (_desc.pipelineLayout) {
@@ -1228,9 +1312,21 @@ void OpenGLGraphicsPipeline::apply() const {
             break;
         }
         glDepthFunc(compare);
+        const bool depthBiasEnabled =
+            _desc.depthStencil->depthBias != 0 ||
+            _desc.depthStencil->depthBiasSlopeScale != 0.0f;
+        if (depthBiasEnabled) {
+            glEnable(GL_POLYGON_OFFSET_FILL);
+            glPolygonOffset(_desc.depthStencil->depthBiasSlopeScale,
+                            static_cast<float>(
+                                _desc.depthStencil->depthBias));
+        } else {
+            glDisable(GL_POLYGON_OFFSET_FILL);
+        }
     } else {
         glDisable(GL_DEPTH_TEST);
         glDepthMask(GL_FALSE);
+        glDisable(GL_POLYGON_OFFSET_FILL);
     }
     if (_desc.primitive.cullMode == CullMode::None) {
         glDisable(GL_CULL_FACE);
@@ -1240,7 +1336,43 @@ void OpenGLGraphicsPipeline::apply() const {
                                                                : GL_BACK);
     }
     glFrontFace(_desc.primitive.frontFace == FrontFace::CCW ? GL_CCW : GL_CW);
-    glDisable(GL_BLEND);
+    if (!_desc.colorTargets.empty() && _desc.colorTargets.front().blend) {
+        auto toFactor = [](BlendFactorValue factor) {
+            switch (factor) {
+            case BlendFactorValue::Zero: return GL_ZERO;
+            case BlendFactorValue::One: return GL_ONE;
+            case BlendFactorValue::Src: return GL_SRC_COLOR;
+            case BlendFactorValue::OneMinusSrc: return GL_ONE_MINUS_SRC_COLOR;
+            case BlendFactorValue::SrcAlpha: return GL_SRC_ALPHA;
+            case BlendFactorValue::OneMinusSrcAlpha: return GL_ONE_MINUS_SRC_ALPHA;
+            case BlendFactorValue::Dst: return GL_DST_COLOR;
+            case BlendFactorValue::OneMinusDst: return GL_ONE_MINUS_DST_COLOR;
+            case BlendFactorValue::DstAlpha: return GL_DST_ALPHA;
+            case BlendFactorValue::OneMinusDstAlpha: return GL_ONE_MINUS_DST_ALPHA;
+            }
+            return GL_ONE;
+        };
+        auto toOperation = [](BlendOperation operation) {
+            switch (operation) {
+            case BlendOperation::Add: return GL_FUNC_ADD;
+            case BlendOperation::Subtract: return GL_FUNC_SUBTRACT;
+            case BlendOperation::ReverseSubtract: return GL_FUNC_REVERSE_SUBTRACT;
+            case BlendOperation::Min: return GL_MIN;
+            case BlendOperation::Max: return GL_MAX;
+            }
+            return GL_FUNC_ADD;
+        };
+        const BlendState& blend = *_desc.colorTargets.front().blend;
+        glEnable(GL_BLEND);
+        glBlendEquationSeparate(toOperation(blend.color.operation),
+                                toOperation(blend.alpha.operation));
+        glBlendFuncSeparate(toFactor(blend.color.srcFactor),
+                            toFactor(blend.color.dstFactor),
+                            toFactor(blend.alpha.srcFactor),
+                            toFactor(blend.alpha.dstFactor));
+    } else {
+        glDisable(GL_BLEND);
+    }
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     const ColorWriteMask mask = _desc.colorTargets.empty()
                                     ? ColorWriteMask::None
@@ -1266,6 +1398,7 @@ void OpenGLGraphicsPipeline::bindVertexBuffer(uint32_t slot,
     glBindBuffer(GL_ARRAY_BUFFER, buffer->getHandle());
     for (const VertexAttributeDesc& attribute : layout.attributes) {
         GLint components = 1;
+        bool integer = false;
         switch (attribute.format) {
         case VertexFormat::Float32:
             components = 1;
@@ -1279,12 +1412,23 @@ void OpenGLGraphicsPipeline::bindVertexBuffer(uint32_t slot,
         case VertexFormat::Float32x4:
             components = 4;
             break;
+        case VertexFormat::Sint32x4:
+            components = 4;
+            integer = true;
+            break;
         }
         glEnableVertexAttribArray(attribute.shaderLocation);
-        glVertexAttribPointer(
-            attribute.shaderLocation, components, GL_FLOAT, GL_FALSE,
-            static_cast<GLsizei>(layout.arrayStride),
-            reinterpret_cast<const void*>(offset + attribute.offset));
+        if (integer) {
+            glVertexAttribIPointer(
+                attribute.shaderLocation, components, GL_INT,
+                static_cast<GLsizei>(layout.arrayStride),
+                reinterpret_cast<const void*>(offset + attribute.offset));
+        } else {
+            glVertexAttribPointer(
+                attribute.shaderLocation, components, GL_FLOAT, GL_FALSE,
+                static_cast<GLsizei>(layout.arrayStride),
+                reinterpret_cast<const void*>(offset + attribute.offset));
+        }
         glVertexAttribDivisor(attribute.shaderLocation,
                               layout.stepMode == VertexStepMode::Instance ? 1
                                                                           : 0);
@@ -1320,7 +1464,7 @@ void OpenGLGraphicsPipeline::bindGroup(uint32_t index,
         if (layoutIt->type == BindingType::SampledTexture) {
             auto* view = dynamic_cast<OpenGLTextureView*>(entry.textureView);
             glActiveTexture(GL_TEXTURE0 + cacheIt->slot);
-            glBindTexture(GL_TEXTURE_2D, view->getHandle());
+            glBindTexture(view->getTarget(), view->getHandle());
             if (cacheIt->location >= 0)
                 glUniform1i(cacheIt->location,
                             static_cast<GLint>(cacheIt->slot));
@@ -1395,6 +1539,7 @@ struct ScissorCommand {
     uint32_t width = 0;
     uint32_t height = 0;
 };
+struct LineWidthCommand { float width = 1.0f; };
 struct SetPipelineCommand {
     OpenGLGraphicsPipeline* pipeline = nullptr;
 };
@@ -1427,10 +1572,13 @@ struct DrawIndexedCommand {
     uint64_t bufferOffset = 0;
     PrimitiveTopology topology = PrimitiveTopology::TriangleList;
 };
-struct EndPassCommand {};
+struct EndPassCommand {
+    OpenGLRenderTarget* target = nullptr;
+};
 
 using OpenGLCommand =
     std::variant<BeginPassCommand, ViewportCommand, ScissorCommand,
+                 LineWidthCommand,
                  SetPipelineCommand, SetBindGroupCommand,
                  SetVertexBufferCommand, SetIndexBufferCommand, DrawCommand,
                  DrawIndexedCommand, EndPassCommand>;
@@ -1483,6 +1631,13 @@ class OpenGLRenderPassEncoder final : public RenderPassEncoder {
         _state->commands.emplace_back(ScissorCommand{x, y, width, height});
     }
 
+    void setLineWidth(float width) override {
+        requireActive();
+        if (width < 1.0f)
+            throw std::invalid_argument("line width must be at least 1");
+        _state->commands.emplace_back(LineWidthCommand{width});
+    }
+
     void setPipeline(GraphicsPipeline* pipeline) override {
         requireActive();
         auto* glPipeline = dynamic_cast<OpenGLGraphicsPipeline*>(pipeline);
@@ -1519,6 +1674,11 @@ class OpenGLRenderPassEncoder final : public RenderPassEncoder {
         _state->activePipeline = glPipeline;
         _state->vertexBuffersSet.assign(
             glPipeline->getDesc().vertexBuffers.size(), false);
+        for (size_t slot = 0;
+             slot < glPipeline->getDesc().vertexBuffers.size(); ++slot) {
+            if (glPipeline->getDesc().vertexBuffers[slot].attributes.empty())
+                _state->vertexBuffersSet[slot] = true;
+        }
         const size_t groupCount = glPipeline->getDesc().pipelineLayout
                                       ? glPipeline->getDesc()
                                             .pipelineLayout->getDesc()
@@ -1651,7 +1811,8 @@ class OpenGLRenderPassEncoder final : public RenderPassEncoder {
 
     void end() override {
         requireActive();
-        _state->commands.emplace_back(EndPassCommand{});
+        _state->commands.emplace_back(
+            EndPassCommand{_state->activeTarget});
         _state->passActive = false;
         _state->activeTarget = nullptr;
         _state->pipelineSet = false;
@@ -1880,6 +2041,28 @@ OpenGLDevice::createRenderTarget(const RenderPassDesc& desc) {
     return std::make_unique<OpenGLRenderTarget>(desc);
 }
 
+void OpenGLDevice::beginLegacyRenderPass(RenderTarget* target) {
+    if (std::this_thread::get_id() != _renderThread)
+        throw std::runtime_error(
+            "legacy RHI render pass must begin on the render thread");
+    auto* glTarget = dynamic_cast<OpenGLRenderTarget*>(target);
+    if (!glTarget)
+        throw std::invalid_argument(
+            "legacy RHI render pass requires an OpenGL target");
+    glTarget->beginPass();
+}
+
+void OpenGLDevice::endLegacyRenderPass(RenderTarget* target) {
+    if (std::this_thread::get_id() != _renderThread)
+        throw std::runtime_error(
+            "legacy RHI render pass must end on the render thread");
+    auto* glTarget = dynamic_cast<OpenGLRenderTarget*>(target);
+    if (!glTarget)
+        throw std::invalid_argument(
+            "legacy RHI render pass requires an OpenGL target");
+    glTarget->endPass();
+}
+
 std::unique_ptr<GraphicsPipeline>
 OpenGLDevice::createGraphicsPipeline(const GraphicsPipelineDesc& desc) {
     if (!_initialized || std::this_thread::get_id() != _renderThread)
@@ -1995,6 +2178,13 @@ void OpenGLDevice::submit(CommandBuffer& commandBuffer) {
     GLint previousDepthFunc = GL_LESS;
     GLint previousCullFace = GL_BACK;
     GLint previousFrontFace = GL_CCW;
+    GLfloat previousLineWidth = 1.0f;
+    GLint previousBlendSrcRgb = GL_ONE;
+    GLint previousBlendDstRgb = GL_ZERO;
+    GLint previousBlendSrcAlpha = GL_ONE;
+    GLint previousBlendDstAlpha = GL_ZERO;
+    GLint previousBlendEquationRgb = GL_FUNC_ADD;
+    GLint previousBlendEquationAlpha = GL_FUNC_ADD;
     GLint previousPolygonMode[2] = {};
     GLint previousProgram = 0;
     GLint previousVao = 0;
@@ -2008,6 +2198,13 @@ void OpenGLDevice::submit(CommandBuffer& commandBuffer) {
     glGetIntegerv(GL_DEPTH_FUNC, &previousDepthFunc);
     glGetIntegerv(GL_CULL_FACE_MODE, &previousCullFace);
     glGetIntegerv(GL_FRONT_FACE, &previousFrontFace);
+    glGetFloatv(GL_LINE_WIDTH, &previousLineWidth);
+    glGetIntegerv(GL_BLEND_SRC_RGB, &previousBlendSrcRgb);
+    glGetIntegerv(GL_BLEND_DST_RGB, &previousBlendDstRgb);
+    glGetIntegerv(GL_BLEND_SRC_ALPHA, &previousBlendSrcAlpha);
+    glGetIntegerv(GL_BLEND_DST_ALPHA, &previousBlendDstAlpha);
+    glGetIntegerv(GL_BLEND_EQUATION_RGB, &previousBlendEquationRgb);
+    glGetIntegerv(GL_BLEND_EQUATION_ALPHA, &previousBlendEquationAlpha);
     glGetIntegerv(GL_POLYGON_MODE, previousPolygonMode);
     glGetIntegerv(GL_CURRENT_PROGRAM, &previousProgram);
     glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &previousVao);
@@ -2029,18 +2226,22 @@ void OpenGLDevice::submit(CommandBuffer& commandBuffer) {
         }
     }
     struct TextureBindingState {
-        GLuint texture = 0;
+        GLuint texture2D = 0;
+        GLuint textureCube = 0;
         GLuint sampler = 0;
     };
     std::vector<TextureBindingState> textureBindingStates;
     for (GLuint slot : usedTextureSlots) {
         glActiveTexture(GL_TEXTURE0 + slot);
-        GLint texture = 0;
+        GLint texture2D = 0;
+        GLint textureCube = 0;
         GLint sampler = 0;
-        glGetIntegerv(GL_TEXTURE_BINDING_2D, &texture);
+        glGetIntegerv(GL_TEXTURE_BINDING_2D, &texture2D);
+        glGetIntegerv(GL_TEXTURE_BINDING_CUBE_MAP, &textureCube);
         glGetIntegeri_v(GL_SAMPLER_BINDING, slot, &sampler);
         textureBindingStates.push_back(
-            {static_cast<GLuint>(texture), static_cast<GLuint>(sampler)});
+            {static_cast<GLuint>(texture2D), static_cast<GLuint>(textureCube),
+             static_cast<GLuint>(sampler)});
     }
     std::vector<GLuint> uniformBindingStates;
     for (GLuint slot : usedUniformSlots) {
@@ -2052,7 +2253,10 @@ void OpenGLDevice::submit(CommandBuffer& commandBuffer) {
     auto restoreBindings = [&] {
         for (size_t index = 0; index < usedTextureSlots.size(); ++index) {
             glActiveTexture(GL_TEXTURE0 + usedTextureSlots[index]);
-            glBindTexture(GL_TEXTURE_2D, textureBindingStates[index].texture);
+            glBindTexture(GL_TEXTURE_2D,
+                          textureBindingStates[index].texture2D);
+            glBindTexture(GL_TEXTURE_CUBE_MAP,
+                          textureBindingStates[index].textureCube);
             glBindSampler(usedTextureSlots[index],
                           textureBindingStates[index].sampler);
         }
@@ -2092,6 +2296,9 @@ void OpenGLDevice::submit(CommandBuffer& commandBuffer) {
                                   static_cast<GLsizei>(value.width),
                                   static_cast<GLsizei>(value.height));
                     } else if constexpr (std::is_same_v<T,
+                                                        LineWidthCommand>) {
+                        glLineWidth(value.width);
+                    } else if constexpr (std::is_same_v<T,
                                                         SetPipelineCommand>) {
                         value.pipeline->apply();
                         activePipeline = value.pipeline;
@@ -2130,7 +2337,7 @@ void OpenGLDevice::submit(CommandBuffer& commandBuffer) {
                     } else if constexpr (std::is_same_v<T, EndPassCommand>) {
                         if (glPopDebugGroup != nullptr)
                             glPopDebugGroup();
-                        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                        value.target->endPass();
                         passActive = false;
                         activePipeline = nullptr;
                     }
@@ -2152,12 +2359,17 @@ void OpenGLDevice::submit(CommandBuffer& commandBuffer) {
                              : glDisable(GL_DEPTH_TEST);
         previousCullEnabled ? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
         previousBlendEnabled ? glEnable(GL_BLEND) : glDisable(GL_BLEND);
+        glBlendEquationSeparate(previousBlendEquationRgb,
+                                previousBlendEquationAlpha);
+        glBlendFuncSeparate(previousBlendSrcRgb, previousBlendDstRgb,
+                            previousBlendSrcAlpha, previousBlendDstAlpha);
         glDepthMask(previousDepthMask);
         glColorMask(previousColorMask[0], previousColorMask[1],
                     previousColorMask[2], previousColorMask[3]);
         glDepthFunc(previousDepthFunc);
         glCullFace(previousCullFace);
         glFrontFace(previousFrontFace);
+        glLineWidth(previousLineWidth);
         glPolygonMode(GL_FRONT_AND_BACK, previousPolygonMode[0]);
         glUseProgram(previousProgram);
         glBindVertexArray(previousVao);
@@ -2177,12 +2389,17 @@ void OpenGLDevice::submit(CommandBuffer& commandBuffer) {
     previousDepthEnabled ? glEnable(GL_DEPTH_TEST) : glDisable(GL_DEPTH_TEST);
     previousCullEnabled ? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
     previousBlendEnabled ? glEnable(GL_BLEND) : glDisable(GL_BLEND);
+    glBlendEquationSeparate(previousBlendEquationRgb,
+                            previousBlendEquationAlpha);
+    glBlendFuncSeparate(previousBlendSrcRgb, previousBlendDstRgb,
+                        previousBlendSrcAlpha, previousBlendDstAlpha);
     glDepthMask(previousDepthMask);
     glColorMask(previousColorMask[0], previousColorMask[1],
                 previousColorMask[2], previousColorMask[3]);
     glDepthFunc(previousDepthFunc);
     glCullFace(previousCullFace);
     glFrontFace(previousFrontFace);
+    glLineWidth(previousLineWidth);
     glPolygonMode(GL_FRONT_AND_BACK, previousPolygonMode[0]);
     glUseProgram(previousProgram);
     glBindVertexArray(previousVao);
@@ -2838,6 +3055,36 @@ GLuint OpenGLDevice::loadCubemap(const std::vector<std::string>& paths) {
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
     return texID;
+}
+
+std::unique_ptr<Texture>
+OpenGLDevice::createCubemapTexture(const std::string& crossPath) {
+    const GLuint handle = loadCubemapCross(crossPath);
+    if (!handle)
+        return nullptr;
+    GLint width = 0, height = 0;
+    glBindTexture(GL_TEXTURE_CUBE_MAP, handle);
+    glGetTexLevelParameteriv(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0,
+                             GL_TEXTURE_WIDTH, &width);
+    glGetTexLevelParameteriv(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0,
+                             GL_TEXTURE_HEIGHT, &height);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    return std::make_unique<OpenGLTexture>(handle, width, height);
+}
+
+std::unique_ptr<Texture> OpenGLDevice::createCubemapTexture(
+    const std::vector<std::string>& facePaths) {
+    const GLuint handle = loadCubemap(facePaths);
+    if (!handle)
+        return nullptr;
+    GLint width = 0, height = 0;
+    glBindTexture(GL_TEXTURE_CUBE_MAP, handle);
+    glGetTexLevelParameteriv(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0,
+                             GL_TEXTURE_WIDTH, &width);
+    glGetTexLevelParameteriv(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0,
+                             GL_TEXTURE_HEIGHT, &height);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    return std::make_unique<OpenGLTexture>(handle, width, height);
 }
 
 // Unit-cube VAO for skybox rendering

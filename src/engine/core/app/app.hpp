@@ -96,7 +96,19 @@ class App {
 
   private:
     std::unique_ptr<Backend::GraphicsDevice> _graphicsDevice;
+    // Main Scene Pipeline: RHI-owned 4x MSAA attachments resolve into the
+    // legacy framebuffer's single-sample color texture during migration.
     std::unique_ptr<Backend::Framebuffer> _framebuffer;
+    std::unique_ptr<Backend::Texture> _sceneMsaaColor;
+    std::unique_ptr<Backend::Texture> _sceneMsaaDepthStencil;
+    std::unique_ptr<Backend::TextureView> _sceneMsaaColorView;
+    std::unique_ptr<Backend::TextureView> _sceneResolveColorView;
+    std::unique_ptr<Backend::TextureView> _sceneMsaaDepthStencilView;
+    // RHI mesh passes append into the MSAA attachments without resolving.
+    // The coexistence target performs the single final resolve after the
+    // remaining legacy skybox/debug/transparent passes have finished.
+    std::unique_ptr<Backend::RenderTarget> _sceneDrawTarget;
+    std::unique_ptr<Backend::RenderTarget> _sceneRenderTarget;
     std::unique_ptr<Backend::Framebuffer> _selectionMaskFramebuffer;
     std::unique_ptr<Backend::Framebuffer> _sceneCameraPreviewFramebuffer;
     std::unique_ptr<PostProcessor> _sceneCameraPreviewPostProcessor;
@@ -144,6 +156,7 @@ class App {
     void processInput();
     void checkError();
     void coreRender();
+    void rebuildSceneRenderTarget();
 
     App();
     virtual ~App();

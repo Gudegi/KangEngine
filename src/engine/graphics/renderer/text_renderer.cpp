@@ -79,12 +79,119 @@ const GlyphInfo* FontAtlasData::findGlyph(char32_t codepoint) const {
 }
 
 void TextRenderer::init(Backend::GraphicsDevice* device,
-                        FontAtlasData atlasData) {
+                        FontAtlasData atlasData,
+                        Backend::BindGroupLayout* frameGroupLayout,
+                        Backend::BindGroup* frameBindGroup) {
     _device = device;
+    _frameBindGroup = frameBindGroup;
     _atlasData = std::move(atlasData);
     if (!_device)
         return;
     createGPUResources();
+
+    if (!frameGroupLayout || !_frameBindGroup)
+        return;
+    Backend::BindGroupLayoutDesc passLayoutDesc;
+    passLayoutDesc.label = "text_pass_group_layout";
+    passLayoutDesc.entries = {{0, Backend::BindingType::UniformBuffer,
+                               Backend::ShaderStageVisibility::Vertex}};
+    _passGroupLayout = _device->createBindGroupLayout(passLayoutDesc);
+    Backend::BindGroupLayoutDesc emptyLayoutDesc;
+    emptyLayoutDesc.label = "text_reserved_object_group_layout";
+    _reservedObjectGroupLayout =
+        _device->createBindGroupLayout(emptyLayoutDesc);
+    Backend::BindGroupLayoutDesc atlasLayoutDesc;
+    atlasLayoutDesc.label = "text_atlas_group_layout";
+    atlasLayoutDesc.entries = {
+        {0, Backend::BindingType::SampledTexture,
+         Backend::ShaderStageVisibility::Fragment},
+        {1, Backend::BindingType::Sampler,
+         Backend::ShaderStageVisibility::Fragment}};
+    _atlasGroupLayout = _device->createBindGroupLayout(atlasLayoutDesc);
+    Backend::PipelineLayoutDesc pipelineLayoutDesc;
+    pipelineLayoutDesc.label = "text_pipeline_layout";
+    pipelineLayoutDesc.bindGroupLayouts = {
+        frameGroupLayout, _passGroupLayout.get(),
+        _reservedObjectGroupLayout.get(), _atlasGroupLayout.get()};
+    _rhiPipelineLayout = _device->createPipelineLayout(pipelineLayoutDesc);
+
+    Backend::BufferDesc paramsDesc;
+    paramsDesc.size = sizeof(glm::vec4);
+    paramsDesc.usage = Backend::BufferUsage::Uniform |
+                       Backend::BufferUsage::CopyDst;
+    paramsDesc.label = "text_world_pass_params";
+    _worldPassParams = _device->createBuffer(paramsDesc);
+    paramsDesc.label = "text_screen_pass_params";
+    _screenPassParams = _device->createBuffer(paramsDesc);
+    Backend::BindGroupDesc groupDesc;
+    groupDesc.layout = _passGroupLayout.get();
+    groupDesc.label = "text_world_pass_bind_group";
+    groupDesc.entries = {{0, _worldPassParams.get(), 0, sizeof(glm::vec4),
+                          nullptr, nullptr}};
+    _worldPassBindGroup = _device->createBindGroup(groupDesc);
+    groupDesc.label = "text_screen_pass_bind_group";
+    groupDesc.entries[0].buffer = _screenPassParams.get();
+    _screenPassBindGroup = _device->createBindGroup(groupDesc);
+
+    Backend::TextureViewDesc atlasViewDesc;
+    atlasViewDesc.label = "text_atlas_view";
+    _atlasView = _device->createTextureView(_atlasTexture.get(), atlasViewDesc);
+    Backend::SamplerDesc atlasSamplerDesc;
+    atlasSamplerDesc.wrapU = Backend::TextureWrap::ClampToEdge;
+    atlasSamplerDesc.wrapV = Backend::TextureWrap::ClampToEdge;
+    atlasSamplerDesc.minFilter = Backend::TextureFilter::Linear;
+    atlasSamplerDesc.magFilter = Backend::TextureFilter::Linear;
+    atlasSamplerDesc.label = "text_atlas_sampler";
+    _atlasSampler = _device->createSampler(atlasSamplerDesc);
+    Backend::BindGroupDesc atlasGroupDesc;
+    atlasGroupDesc.layout = _atlasGroupLayout.get();
+    atlasGroupDesc.label = "text_atlas_bind_group";
+    atlasGroupDesc.entries = {
+        {0, nullptr, 0, 0, _atlasView.get(), nullptr},
+        {1, nullptr, 0, 0, nullptr, _atlasSampler.get()}};
+    _atlasBindGroup = _device->createBindGroup(atlasGroupDesc);
+
+    Backend::VertexBufferLayout quadLayout;
+    quadLayout.arrayStride = sizeof(QuadVertex);
+    quadLayout.attributes = {
+        {Backend::VertexFormat::Float32x2, offsetof(QuadVertex, position), 0},
+        {Backend::VertexFormat::Float32x2, offsetof(QuadVertex, uv), 1}};
+    Backend::VertexBufferLayout instanceLayout;
+    instanceLayout.arrayStride = sizeof(GlyphInstance);
+    instanceLayout.stepMode = Backend::VertexStepMode::Instance;
+    instanceLayout.attributes = {
+        {Backend::VertexFormat::Float32x3, offsetof(GlyphInstance, origin), 2},
+        {Backend::VertexFormat::Float32x2, offsetof(GlyphInstance, offset), 3},
+        {Backend::VertexFormat::Float32x2, offsetof(GlyphInstance, size), 4},
+        {Backend::VertexFormat::Float32x4, offsetof(GlyphInstance, uvRect), 5},
+        {Backend::VertexFormat::Float32x4, offsetof(GlyphInstance, color), 6}};
+    Backend::BlendState blend;
+    blend.color.srcFactor = Backend::BlendFactorValue::SrcAlpha;
+    blend.color.dstFactor = Backend::BlendFactorValue::OneMinusSrcAlpha;
+    blend.alpha.srcFactor = Backend::BlendFactorValue::SrcAlpha;
+    blend.alpha.dstFactor = Backend::BlendFactorValue::OneMinusSrcAlpha;
+    Backend::GraphicsPipelineDesc pipelineDesc;
+    pipelineDesc.label = "text_world_depth_pipeline";
+    pipelineDesc.shader.name = "text_rhi";
+    pipelineDesc.shader.stages = {
+        {Backend::loadShaderSource(KE::getAssetPath("shaders/rhi/text.vs")),
+         Backend::ShaderType::Vertex, "main"},
+        {Backend::loadShaderSource(KE::getAssetPath("shaders/rhi/text.fs")),
+         Backend::ShaderType::Fragment, "main"}};
+    pipelineDesc.pipelineLayout = _rhiPipelineLayout.get();
+    pipelineDesc.vertexBuffers = {quadLayout, instanceLayout};
+    pipelineDesc.primitive.cullMode = Backend::CullMode::None;
+    pipelineDesc.depthStencil = Backend::DepthStencilState{
+        Backend::TextureFormat::Depth24Stencil8, false,
+        Backend::CompareFunction::Less};
+    pipelineDesc.colorTargets = {{Backend::TextureFormat::RGBA16Float, blend}};
+    pipelineDesc.sampleCount = 4;
+    _worldDepthPipeline = _device->createGraphicsPipeline(pipelineDesc);
+    pipelineDesc.label = "text_world_overlay_pipeline";
+    pipelineDesc.depthStencil->depthCompare = Backend::CompareFunction::Always;
+    _worldOverlayPipeline = _device->createGraphicsPipeline(pipelineDesc);
+    pipelineDesc.label = "text_screen_pipeline";
+    _screenPipeline = _device->createGraphicsPipeline(pipelineDesc);
 }
 
 void TextRenderer::createGPUResources() {
@@ -380,6 +487,57 @@ void TextRenderer::render(int viewportWidth, int viewportHeight) {
     _device->setDepthWrite(true);
     _device->setDepthTest(true);
     _device->setCullFace(true);
+}
+
+void TextRenderer::render(Backend::RenderTarget* target, int viewportWidth,
+                          int viewportHeight) {
+    if (!target || !_device || !_worldDepthPipeline || !_atlasBindGroup ||
+        viewportWidth <= 0 || viewportHeight <= 0)
+        return;
+    if (viewportWidth != _lastViewportWidth ||
+        viewportHeight != _lastViewportHeight)
+        _screenDirty = true;
+    if (_worldDepthDirty || _worldOverlayDirty || _screenDirty)
+        rebuildDirtyInstances(viewportWidth, viewportHeight);
+    if (_depthBatch.instances.empty() && _overlayBatch.instances.empty() &&
+        _screenBatch.instances.empty())
+        return;
+
+    const glm::vec4 worldParams{static_cast<float>(viewportWidth),
+                                static_cast<float>(viewportHeight), 0.0f, 0.0f};
+    const glm::vec4 screenParams{static_cast<float>(viewportWidth),
+                                 static_cast<float>(viewportHeight), 1.0f, 0.0f};
+    _worldPassParams->setData(&worldParams, sizeof(worldParams));
+    _screenPassParams->setData(&screenParams, sizeof(screenParams));
+
+    auto encoder = _device->createCommandEncoder();
+    auto pass = encoder->beginRenderPass(target);
+    pass->setViewport(0.0f, 0.0f, static_cast<float>(viewportWidth),
+                      static_cast<float>(viewportHeight));
+    auto recordBatch = [&](InstanceBatch& batch,
+                           Backend::GraphicsPipeline* pipeline,
+                           Backend::BindGroup* paramsGroup) {
+        if (batch.instances.empty() || !batch.instanceBuffer)
+            return;
+        pass->setPipeline(pipeline);
+        pass->setBindGroup(0, _frameBindGroup);
+        pass->setBindGroup(1, paramsGroup);
+        pass->setBindGroup(3, _atlasBindGroup.get());
+        pass->setVertexBuffer(0, _quadVertexBuffer.get());
+        pass->setVertexBuffer(1, batch.instanceBuffer.get());
+        pass->setIndexBuffer(_quadIndexBuffer.get(),
+                             Backend::IndexFormat::Uint32);
+        pass->drawIndexed(6, static_cast<uint32_t>(batch.instances.size()));
+    };
+    recordBatch(_depthBatch, _worldDepthPipeline.get(),
+                _worldPassBindGroup.get());
+    recordBatch(_overlayBatch, _worldOverlayPipeline.get(),
+                _worldPassBindGroup.get());
+    recordBatch(_screenBatch, _screenPipeline.get(),
+                _screenPassBindGroup.get());
+    pass->end();
+    auto commands = encoder->finish();
+    _device->submit(*commands);
 }
 
 void TextRenderer::setWorldText(const std::string& path,

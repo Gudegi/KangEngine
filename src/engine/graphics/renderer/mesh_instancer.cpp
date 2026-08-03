@@ -22,11 +22,16 @@ void MeshInstancer::_initMeshData(const Scene::MeshData& mesh) {
 
     Scene::MeshData tangentMesh;
     const Scene::MeshData* uploadMesh = &mesh;
-    if (mesh.tangents.empty() && !mesh.vertices.empty() &&
-        mesh.normals.size() == mesh.vertices.size() &&
-        mesh.uvs.size() == mesh.vertices.size()) {
+    if ((!mesh.vertices.empty() && mesh.uvs.size() != mesh.vertices.size()) ||
+        mesh.tangents.size() != mesh.vertices.size()) {
         tangentMesh = mesh;
-        Geometry::computeTangents(tangentMesh);
+        if (tangentMesh.uvs.size() != tangentMesh.vertices.size())
+            tangentMesh.uvs.assign(tangentMesh.vertices.size(), glm::vec2(0.0f));
+        if (tangentMesh.normals.size() == tangentMesh.vertices.size())
+            Geometry::computeTangents(tangentMesh);
+        if (tangentMesh.tangents.size() != tangentMesh.vertices.size())
+            tangentMesh.tangents.assign(tangentMesh.vertices.size(),
+                                        glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
         uploadMesh = &tangentMesh;
     }
 
@@ -37,6 +42,14 @@ void MeshInstancer::_initMeshData(const Scene::MeshData& mesh) {
     _vao->setIndexBuffer(_indexBuffer.get());
     _numIndices = (int)uploadMesh->indices.size();
     _hasTangents = uploadMesh->tangents.size() == uploadMesh->vertices.size();
+
+    Backend::BufferDesc alphaParamsDesc;
+    alphaParamsDesc.size = sizeof(glm::vec4);
+    alphaParamsDesc.usage =
+        Backend::BufferUsage::Uniform | Backend::BufferUsage::CopyDst;
+    alphaParamsDesc.label = "mesh_alpha_params";
+    _alphaParamsUBO = _device->createBuffer(alphaParamsDesc);
+    _updateAlphaParamsBuffer();
 
     auto addGeomAttr = [&](const auto& data, int location, int size) {
         if (data.empty())
@@ -137,6 +150,16 @@ void MeshInstancer::init(Backend::GraphicsDevice* device,
     _initMeshData(skinnedMesh.mesh);
     _setupSkinningAttribs(skinnedMesh);
 
+    Backend::BufferDesc boneBufferDesc;
+    boneBufferDesc.size = sizeof(glm::mat4) * Scene::MaxSkinningBones;
+    boneBufferDesc.usage =
+        Backend::BufferUsage::Uniform | Backend::BufferUsage::CopyDst;
+    boneBufferDesc.label = "mesh_skinning_matrices";
+    std::vector<glm::mat4> identityBones(Scene::MaxSkinningBones,
+                                         glm::mat4(1.0f));
+    _boneMatricesUBO =
+        _device->createBuffer(boneBufferDesc, identityBones.data());
+
     _vao->unbind();
     _initOverrideInstanceData();
 }
@@ -204,22 +227,10 @@ void MeshInstancer::_setupInstanceAttribs() {
 }
 
 void MeshInstancer::_initOverrideInstanceData() {
-    // Selection mask draws need a one-instance path without rebinding the main
-    // instance VBOs. Reuse the static mesh attributes, but attach a separate
-    // transform buffer to this override VAO.
-    _overrideVAO = _device->createVertexArray();
-    _overrideVAO->bind();
-    _overrideVAO->setIndexBuffer(_indexBuffer.get());
-    for (const auto& binding : _vertexBufferBindings) {
-        _overrideVAO->setVertexBuffer(binding.buffer);
-        _overrideVAO->setVertexAttribute(binding.attribute);
-    }
-
+    // Selection mask draws upload one transform without mutating the main
+    // instance buffer. Geometry binding is recorded explicitly by the RHI.
     _overrideTransformVBO = _device->createBuffer(
         Backend::BufferType::DynamicVertex, sizeof(glm::mat4));
-    _setupInstanceTransformAttribs(_overrideVAO.get(),
-                                   _overrideTransformVBO.get());
-    _overrideVAO->unbind();
 }
 
 void MeshInstancer::uploadSkinningMatrices(Backend::Shader* shader) {
@@ -312,6 +323,23 @@ void MeshInstancer::_updateTransparency() {
     }
 }
 
+void MeshInstancer::_updateAlphaParamsBuffer() {
+    if (!_alphaParamsUBO)
+        return;
+    const glm::vec4 params{
+        _alphaCutoff,
+        (_material && _material->alphaTextureUsesRedChannel()) ? 1.0f : 0.0f,
+        0.0f, 0.0f};
+    _alphaParamsUBO->setData(&params, sizeof(params));
+}
+
+void MeshInstancer::setAlphaMode(AlphaMode mode, float cutoff) {
+    _alphaMode = mode;
+    _alphaCutoff = std::clamp(cutoff, 0.0f, 1.0f);
+    _updateTransparency();
+    _updateAlphaParamsBuffer();
+}
+
 void MeshInstancer::bindAlphaState(Backend::Shader* shader,
                                    bool bindAlphaTextureForPass) const {
     if (!shader)
@@ -336,6 +364,17 @@ void MeshInstancer::bindAlphaState(Backend::Shader* shader,
     }
     if (texture)
         texture->bind(RendererTextureSlot::BaseColor);
+}
+
+Backend::Texture* MeshInstancer::alphaMaskTexture() const {
+    Backend::Texture* texture = _material ? _material->alphaTexture() : nullptr;
+    for (const auto& [candidate, slot] : _textures) {
+        if (slot == RendererTextureSlot::BaseColor) {
+            texture = candidate;
+            break;
+        }
+    }
+    return texture;
 }
 
 void MeshInstancer::setColors(const std::vector<glm::vec4>& colors) {
@@ -582,7 +621,16 @@ void MeshInstancer::updateRenderableSkinningMatrices(
     const std::vector<glm::mat4>& boneMatrices) {
     if (!_hasSkinning)
         return;
+    if (boneMatrices.size() > Scene::MaxSkinningBones) {
+        throw std::runtime_error(
+            "Skinned mesh update has " + std::to_string(boneMatrices.size()) +
+            " bone matrices, but GPU skinning supports at most " +
+            std::to_string(Scene::MaxSkinningBones));
+    }
     _boneMatrices = boneMatrices;
+    if (_boneMatricesUBO && !_boneMatrices.empty())
+        _boneMatricesUBO->setData(_boneMatrices.data(),
+                                  sizeof(glm::mat4) * _boneMatrices.size());
 }
 
 void MeshInstancer::applyFrustumCulling(const Geometry::Frustum* frustum) {
@@ -693,15 +741,212 @@ void MeshInstancer::render() {
     _vao->unbind();
 }
 
-void MeshInstancer::renderInstanceMask(int instanceIndex) {
+void MeshInstancer::_recordGeometry(Backend::RenderPassEncoder& pass,
+                                    Backend::Buffer* transformBuffer,
+                                    uint32_t instanceCount,
+                                    bool includeTexCoord,
+                                    bool includeSkinning) const {
+    Backend::Buffer* positionBuffer = nullptr;
+    Backend::Buffer* texCoordBuffer = nullptr;
+    Backend::Buffer* boneIndexBuffer = nullptr;
+    Backend::Buffer* boneWeightBuffer = nullptr;
+    for (const auto& binding : _vertexBufferBindings) {
+        if (binding.attribute.location == RendererAttribute::Position) {
+            positionBuffer = binding.buffer;
+        } else if (binding.attribute.location == RendererAttribute::TexCoord)
+            texCoordBuffer = binding.buffer;
+        else if (binding.attribute.location == RendererAttribute::BoneIndices)
+            boneIndexBuffer = binding.buffer;
+        else if (binding.attribute.location == RendererAttribute::BoneWeights)
+            boneWeightBuffer = binding.buffer;
+    }
+    if (!positionBuffer || !transformBuffer || !_indexBuffer)
+        throw std::runtime_error("RHI mesh draw is missing geometry buffers");
+
+    pass.setVertexBuffer(vertexBufferSlot(MeshVertexBufferSlot::Position),
+                         positionBuffer);
+    pass.setVertexBuffer(
+        vertexBufferSlot(MeshVertexBufferSlot::InstanceTransform),
+        transformBuffer);
+    if (includeTexCoord) {
+        if (!texCoordBuffer)
+            throw std::runtime_error(
+                "RHI alpha-mask draw is missing texture coordinates");
+        pass.setVertexBuffer(vertexBufferSlot(MeshVertexBufferSlot::TexCoord),
+                             texCoordBuffer);
+    }
+    if (includeSkinning) {
+        if (!boneIndexBuffer || !boneWeightBuffer)
+            throw std::runtime_error(
+                "RHI skinned mask draw is missing bone vertex buffers");
+        pass.setVertexBuffer(
+            vertexBufferSlot(MeshVertexBufferSlot::BoneIndices),
+            boneIndexBuffer);
+        pass.setVertexBuffer(
+            vertexBufferSlot(MeshVertexBufferSlot::BoneWeights),
+            boneWeightBuffer);
+    }
+    pass.setIndexBuffer(_indexBuffer.get(), Backend::IndexFormat::Uint32);
+    pass.drawIndexed(static_cast<uint32_t>(_numIndices), instanceCount);
+}
+
+void MeshInstancer::recordDraw(Backend::RenderPassEncoder& pass,
+                               bool includeTexCoord,
+                               bool includeSkinning) const {
+    if (_visibleCount <= 0)
+        return;
+    _recordGeometry(pass, _transformVBO.get(),
+                    static_cast<uint32_t>(_visibleCount), includeTexCoord,
+                    includeSkinning);
+}
+
+void MeshInstancer::recordForwardDraw(Backend::RenderPassEncoder& pass) const {
+    if (_visibleCount <= 0)
+        return;
+    Backend::Buffer* position = nullptr;
+    Backend::Buffer* normal = nullptr;
+    for (const auto& binding : _vertexBufferBindings) {
+        if (binding.attribute.location == RendererAttribute::Position)
+            position = binding.buffer;
+        else if (binding.attribute.location == RendererAttribute::Normal)
+            normal = binding.buffer;
+    }
+    if (!position || !normal || !_transformVBO || !_colorVBO || !_indexBuffer)
+        throw std::runtime_error("RHI forward draw is missing mesh buffers");
+    pass.setVertexBuffer(vertexBufferSlot(MeshVertexBufferSlot::Position),
+                         position);
+    pass.setVertexBuffer(vertexBufferSlot(MeshVertexBufferSlot::InstanceTransform),
+                         _transformVBO.get());
+    pass.setVertexBuffer(vertexBufferSlot(MeshVertexBufferSlot::Normal), normal);
+    pass.setVertexBuffer(vertexBufferSlot(MeshVertexBufferSlot::InstanceColor),
+                         _colorVBO.get());
+    pass.setIndexBuffer(_indexBuffer.get(), Backend::IndexFormat::Uint32);
+    pass.drawIndexed(static_cast<uint32_t>(_numIndices),
+                     static_cast<uint32_t>(_visibleCount));
+}
+
+void MeshInstancer::recordSkinnedForwardDraw(
+    Backend::RenderPassEncoder& pass) const {
+    if (_visibleCount <= 0)
+        return;
+    Backend::Buffer* position = nullptr;
+    Backend::Buffer* normal = nullptr;
+    Backend::Buffer* boneIndices = nullptr;
+    Backend::Buffer* boneWeights = nullptr;
+    for (const auto& binding : _vertexBufferBindings) {
+        switch (binding.attribute.location) {
+        case RendererAttribute::Position: position = binding.buffer; break;
+        case RendererAttribute::Normal: normal = binding.buffer; break;
+        case RendererAttribute::BoneIndices: boneIndices = binding.buffer; break;
+        case RendererAttribute::BoneWeights: boneWeights = binding.buffer; break;
+        default: break;
+        }
+    }
+    if (!position || !normal || !boneIndices || !boneWeights ||
+        !_transformVBO || !_colorVBO || !_indexBuffer)
+        throw std::runtime_error("RHI skinned forward draw is missing buffers");
+    pass.setVertexBuffer(vertexBufferSlot(MeshVertexBufferSlot::Position), position);
+    pass.setVertexBuffer(vertexBufferSlot(MeshVertexBufferSlot::InstanceTransform),
+                         _transformVBO.get());
+    pass.setVertexBuffer(vertexBufferSlot(MeshVertexBufferSlot::Normal), normal);
+    pass.setVertexBuffer(vertexBufferSlot(MeshVertexBufferSlot::InstanceColor),
+                         _colorVBO.get());
+    pass.setVertexBuffer(vertexBufferSlot(MeshVertexBufferSlot::BoneIndices),
+                         boneIndices);
+    pass.setVertexBuffer(vertexBufferSlot(MeshVertexBufferSlot::BoneWeights),
+                         boneWeights);
+    pass.setIndexBuffer(_indexBuffer.get(), Backend::IndexFormat::Uint32);
+    pass.drawIndexed(static_cast<uint32_t>(_numIndices),
+                     static_cast<uint32_t>(_visibleCount));
+}
+
+void MeshInstancer::recordMaterialDraw(Backend::RenderPassEncoder& pass,
+                                       bool requireTexCoord,
+                                       bool requireTangent,
+                                       bool includeSkinning) const {
+    if (_visibleCount <= 0)
+        return;
+    Backend::Buffer* position = nullptr;
+    Backend::Buffer* normal = nullptr;
+    Backend::Buffer* texCoord = nullptr;
+    Backend::Buffer* tangent = nullptr;
+    Backend::Buffer* boneIndices = nullptr;
+    Backend::Buffer* boneWeights = nullptr;
+    for (const auto& binding : _vertexBufferBindings) {
+        switch (binding.attribute.location) {
+        case RendererAttribute::Position:
+            position = binding.buffer;
+            break;
+        case RendererAttribute::Normal:
+            normal = binding.buffer;
+            break;
+        case RendererAttribute::TexCoord:
+            texCoord = binding.buffer;
+            break;
+        case RendererAttribute::Tangent:
+            tangent = binding.buffer;
+            break;
+        case RendererAttribute::BoneIndices:
+            boneIndices = binding.buffer;
+            break;
+        case RendererAttribute::BoneWeights:
+            boneWeights = binding.buffer;
+            break;
+        default:
+            break;
+        }
+    }
+    if (!position || !normal || !_transformVBO || !_colorVBO || !_indexBuffer)
+        throw std::runtime_error(
+            "RHI material draw is missing common mesh buffers");
+    if (requireTexCoord && !texCoord)
+        throw std::runtime_error(
+            "RHI textured material draw is missing texture coordinates");
+    if (requireTangent && !tangent)
+        throw std::runtime_error(
+            "RHI normal-mapped material draw is missing tangents");
+    if (includeSkinning && (!boneIndices || !boneWeights))
+        throw std::runtime_error(
+            "RHI skinned material draw is missing bone vertex buffers");
+
+    pass.setVertexBuffer(vertexBufferSlot(MeshVertexBufferSlot::Position),
+                         position);
+    pass.setVertexBuffer(vertexBufferSlot(MeshVertexBufferSlot::InstanceTransform),
+                         _transformVBO.get());
+    pass.setVertexBuffer(vertexBufferSlot(MeshVertexBufferSlot::Normal), normal);
+    if (texCoord)
+        pass.setVertexBuffer(vertexBufferSlot(MeshVertexBufferSlot::TexCoord),
+                             texCoord);
+    pass.setVertexBuffer(vertexBufferSlot(MeshVertexBufferSlot::InstanceColor),
+                         _colorVBO.get());
+    if (tangent)
+        pass.setVertexBuffer(vertexBufferSlot(MeshVertexBufferSlot::Tangent),
+                             tangent);
+    if (includeSkinning) {
+        pass.setVertexBuffer(vertexBufferSlot(MeshVertexBufferSlot::BoneIndices),
+                             boneIndices);
+        pass.setVertexBuffer(vertexBufferSlot(MeshVertexBufferSlot::BoneWeights),
+                             boneWeights);
+    }
+    pass.setIndexBuffer(_indexBuffer.get(), Backend::IndexFormat::Uint32);
+    pass.drawIndexed(static_cast<uint32_t>(_numIndices),
+                     static_cast<uint32_t>(_visibleCount));
+}
+
+void MeshInstancer::recordSkinnedMaterialDraw(
+    Backend::RenderPassEncoder& pass, bool requireTangent) const {
+    recordMaterialDraw(pass, true, requireTangent, true);
+}
+
+void MeshInstancer::recordInstanceMask(Backend::RenderPassEncoder& pass,
+                                       int instanceIndex, bool includeTexCoord,
+                                       bool includeSkinning) {
     if (instanceIndex < 0 ||
         instanceIndex >= static_cast<int>(_transforms.size()))
         return;
-
     _uploadOverrideTransform(_transforms[static_cast<size_t>(instanceIndex)]);
-    _overrideVAO->bind();
-    _device->drawIndexedInstanced(_numIndices, 1);
-    _overrideVAO->unbind();
+    _recordGeometry(pass, _overrideTransformVBO.get(), 1, includeTexCoord,
+                    includeSkinning);
 }
 
 } // namespace KE

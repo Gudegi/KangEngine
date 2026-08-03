@@ -150,7 +150,10 @@ std::array<float, 4> readPixel(GraphicsDevice& device, TextureView* view) {
 
 void expectNear(float actual, float expected, float tolerance,
                 const char* message) {
-    require(std::abs(actual - expected) <= tolerance, message);
+    if (std::abs(actual - expected) > tolerance)
+        throw std::runtime_error(std::string(message) + " (actual=" +
+                                 std::to_string(actual) + ", expected=" +
+                                 std::to_string(expected) + ")");
 }
 
 } // namespace
@@ -334,7 +337,7 @@ int main(int argc, char** argv) {
         {3, BindingType::Sampler, ShaderStageVisibility::Fragment},
         {4, BindingType::UniformBuffer, ShaderStageVisibility::Fragment},
         {5, BindingType::SampledTexture, ShaderStageVisibility::Fragment,
-         TextureFormat::Depth32Float},
+         TextureFormat::Depth32Float, TextureSampleType::Depth},
     };
     auto group3Layout = device.createBindGroupLayout(consumerGroupDesc);
     PipelineLayoutDesc consumerLayoutDesc;
@@ -495,10 +498,49 @@ int main(int argc, char** argv) {
     expectInvalid([&] { (void)device.createRenderTarget(duplicate); },
                   "duplicate MRT texture was accepted");
 
-    RenderPassDesc resolve = passDesc;
-    resolve.colorAttachments[0].resolveTarget = color2View.get();
-    expectInvalid([&] { (void)device.createRenderTarget(resolve); },
-                  "unsupported resolve target was accepted");
+    TextureResourceDesc msaaDesc =
+        textureDesc(width, height, TextureFormat::RGBA8Unorm,
+                    TextureUsage::RenderAttachment, "rhi_msaa_color");
+    msaaDesc.sampleCount = 4;
+    auto msaaColor = device.createTexture(msaaDesc);
+    auto msaaColorView =
+        makeView(device, msaaColor.get(), TextureFormat::RGBA8Unorm,
+                 TextureAspect::All, "rhi_msaa_color_view");
+    auto resolvedColor = device.createTexture(textureDesc(
+        width, height, TextureFormat::RGBA8Unorm, attachmentUsage,
+        "rhi_msaa_resolved"));
+    auto resolvedColorView =
+        makeView(device, resolvedColor.get(), TextureFormat::RGBA8Unorm,
+                 TextureAspect::All, "rhi_msaa_resolved_view");
+    RenderPassDesc resolve;
+    resolve.label = "rhi_msaa_resolve_pass";
+    resolve.colorAttachments = {{
+        msaaColorView.get(), resolvedColorView.get(), LoadOp::Clear,
+        StoreOp::Store, {0.0f, 0.0f, 0.0f, 1.0f}}};
+    auto resolveTarget = device.createRenderTarget(resolve);
+    GraphicsPipelineDesc resolvePipelineDesc;
+    resolvePipelineDesc.label = "rhi_msaa_resolve_pipeline";
+    resolvePipelineDesc.shader.name = "rhi_msaa_resolve_shader";
+    resolvePipelineDesc.shader.stages = {
+        {FullscreenTriangleVs, ShaderType::Vertex, "main"},
+        {ColorProducerFs, ShaderType::Fragment, "main"},
+    };
+    resolvePipelineDesc.primitive.cullMode = CullMode::None;
+    resolvePipelineDesc.colorTargets = {{TextureFormat::RGBA8Unorm}};
+    resolvePipelineDesc.sampleCount = 4;
+    auto resolvePipeline =
+        device.createGraphicsPipeline(resolvePipelineDesc);
+    auto resolveEncoder = device.createCommandEncoder();
+    auto resolvePass = resolveEncoder->beginRenderPass(resolveTarget.get());
+    resolvePass->setPipeline(resolvePipeline.get());
+    resolvePass->draw(3);
+    resolvePass->end();
+    auto resolveCommands = resolveEncoder->finish();
+    device.submit(*resolveCommands);
+    const auto resolvedPixel = readPixel(device, resolvedColorView.get());
+    expectNear(resolvedPixel[0], 0.15f, 0.02f, "MSAA resolve red mismatch");
+    expectNear(resolvedPixel[1], 0.25f, 0.02f, "MSAA resolve green mismatch");
+    expectNear(resolvedPixel[2], 0.35f, 0.02f, "MSAA resolve blue mismatch");
 
     RenderPassDesc discard = passDesc;
     discard.colorAttachments[0].storeOp = StoreOp::Discard;
