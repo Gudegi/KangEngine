@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <glad/glad.h>
 #include <memory>
+#include <thread>
 #ifdef KANGENGINE_USE_CUDA_GL_INTEROP
 #include <cuda_gl_interop.h>
 #endif
@@ -23,6 +24,7 @@ class OpenGLBuffer : public Buffer {
     GLuint _buffer;
     GLenum _target;
     BufferType _type;
+    BufferUsage _usage = BufferUsage::None;
     size_t _size;
 #ifdef KANGENGINE_USE_CUDA_GL_INTEROP
     cudaGraphicsResource* _cudaResource = nullptr;
@@ -30,6 +32,7 @@ class OpenGLBuffer : public Buffer {
 
   public:
     OpenGLBuffer(BufferType type, size_t size, const void* data = nullptr);
+    OpenGLBuffer(const BufferDesc& desc, const void* data = nullptr);
     ~OpenGLBuffer() override;
 
     void bind() override;
@@ -41,6 +44,8 @@ class OpenGLBuffer : public Buffer {
     cudaGraphicsResource* cudaResource();
 #endif
     BufferType getType() const override { return _type; }
+    BufferUsage getUsage() const override { return _usage; }
+    size_t getSize() const override { return _size; }
     GLuint getHandle() const { return _buffer; }
     size_t size() const { return _size; }
 };
@@ -87,6 +92,7 @@ class OpenGLShader : public Shader {
                       size_t count) override;
     void setUniformBlockBinding(const std::string& blockName,
                                 int slot) override;
+    GLuint getHandle() const { return _shaderProgram; }
 };
 
 class OpenGLTexture : public Texture {
@@ -94,6 +100,11 @@ class OpenGLTexture : public Texture {
     GLuint _textureID;
     GLenum _target = GL_TEXTURE_2D;
     int _width, _height, _channels;
+    TextureFormat _format = TextureFormat::Undefined;
+    TextureUsage _usage = TextureUsage::None;
+    uint32_t _mipLevelCount = 1;
+    uint32_t _sampleCount = 1;
+    bool _portableResource = false;
     float _warpParam, _filterMinParam, _filterMaxParam;
 
   public:
@@ -101,6 +112,8 @@ class OpenGLTexture : public Texture {
     OpenGLTexture(const TextureDesc& desc, const SamplerDesc& sampler);
     OpenGLTexture(const TextureDesc& desc, float warpParam,
                   float filterMinParam, float filterMaxParam);
+    OpenGLTexture(const TextureResourceDesc& desc,
+                  const TextureInitialData* initialData);
     // Empty color texture for FBO color attachment.
     OpenGLTexture(int w, int h, FramebufferColorFormat colorFormat);
     // Depth (or depth+stencil) texture for FBO attachment
@@ -115,14 +128,117 @@ class OpenGLTexture : public Texture {
                         GLfloat filterMaxParam = GL_LINEAR) const;
     int getWidth() const override { return _width; }
     int getHeight() const override { return _height; }
+    TextureFormat getFormat() const override { return _format; }
+    TextureUsage getUsage() const override { return _usage; }
+    uint32_t getMipLevelCount() const override { return _mipLevelCount; }
+    uint32_t getSampleCount() const override { return _sampleCount; }
     void setSize(int w, int h) {
         _width = w;
         _height = h;
     }
     GLuint getHandle() const { return _textureID; }
+    TextureFormat format() const { return _format; }
+    TextureUsage usage() const { return _usage; }
+    uint32_t mipLevelCount() const { return _mipLevelCount; }
+    uint32_t sampleCount() const { return _sampleCount; }
+    bool isPortableResource() const { return _portableResource; }
     uintptr_t getNativeHandle() const override {
         return static_cast<uintptr_t>(_textureID);
     }
+};
+
+class OpenGLTextureView : public TextureView {
+  private:
+    OpenGLTexture* _texture = nullptr;
+    TextureViewDesc _desc;
+
+  public:
+    OpenGLTextureView(OpenGLTexture* texture, TextureViewDesc desc);
+    Texture* getTexture() const override { return _texture; }
+    const TextureViewDesc& getDesc() const override { return _desc; }
+    GLuint getHandle() const { return _texture->getHandle(); }
+};
+
+class OpenGLSampler : public Sampler {
+  private:
+    GLuint _sampler = 0;
+
+  public:
+    explicit OpenGLSampler(const SamplerDesc& desc);
+    ~OpenGLSampler() override;
+    GLuint getHandle() const { return _sampler; }
+};
+
+class OpenGLRenderTarget : public RenderTarget {
+  private:
+    GLuint _fbo = 0;
+    RenderPassDesc _desc;
+    int _width = 0;
+    int _height = 0;
+    uint32_t _sampleCount = 1;
+    std::vector<GLenum> _drawBuffers;
+
+  public:
+    explicit OpenGLRenderTarget(const RenderPassDesc& desc);
+    ~OpenGLRenderTarget() override;
+
+    const RenderPassDesc& getDesc() const override { return _desc; }
+    int getWidth() const override { return _width; }
+    int getHeight() const override { return _height; }
+    uint32_t getSampleCount() const override { return _sampleCount; }
+    GLuint getHandle() const { return _fbo; }
+
+    // Backend execution hooks. OpenGLDevice::submit owns thread validation.
+    void beginPass();
+    void endPass();
+};
+
+class OpenGLBindGroupLayout : public BindGroupLayout {
+    BindGroupLayoutDesc _desc;
+  public:
+    explicit OpenGLBindGroupLayout(BindGroupLayoutDesc desc);
+    const BindGroupLayoutDesc& getDesc() const override { return _desc; }
+};
+
+class OpenGLPipelineLayout : public PipelineLayout {
+    PipelineLayoutDesc _desc;
+  public:
+    explicit OpenGLPipelineLayout(PipelineLayoutDesc desc);
+    const PipelineLayoutDesc& getDesc() const override { return _desc; }
+};
+
+class OpenGLBindGroup : public BindGroup {
+    BindGroupDesc _desc;
+  public:
+    explicit OpenGLBindGroup(BindGroupDesc desc);
+    const BindGroupDesc& getDesc() const override { return _desc; }
+};
+
+class OpenGLGraphicsPipeline : public GraphicsPipeline {
+  private:
+    GraphicsPipelineDesc _desc;
+    std::unique_ptr<OpenGLShader> _shader;
+    GLuint _vao = 0;
+    struct CachedBinding {
+        uint32_t group = 0;
+        uint32_t binding = 0;
+        BindingType type = BindingType::UniformBuffer;
+        GLint location = -1;
+        GLuint slot = 0;
+    };
+    std::vector<CachedBinding> _bindings;
+
+  public:
+    explicit OpenGLGraphicsPipeline(const GraphicsPipelineDesc& desc);
+    ~OpenGLGraphicsPipeline() override;
+    const GraphicsPipelineDesc& getDesc() const override { return _desc; }
+    void apply() const;
+    void bindVertexBuffer(uint32_t slot, OpenGLBuffer* buffer,
+                          uint64_t offset) const;
+    void bindIndexBuffer(OpenGLBuffer* buffer) const;
+    void bindGroup(uint32_t index, OpenGLBindGroup* group) const;
+    std::vector<GLuint> textureSlots() const;
+    std::vector<GLuint> uniformSlots() const;
 };
 
 class OpenGLVertexArray : public VertexArray {
@@ -186,6 +302,8 @@ class OpenGLFramebuffer : public Framebuffer {
 class OpenGLDevice : public GraphicsDevice {
   private:
     bool _initialized;
+    bool _validationEnabled = false;
+    std::thread::id _renderThread;
 
     // Skybox
     GLuint _skyboxVAO = 0;
@@ -207,6 +325,10 @@ class OpenGLDevice : public GraphicsDevice {
     void initialize() override;
     void shutdown() override;
     BackendType getBackendType() const override { return BackendType::OpenGL; }
+    void setValidationEnabled(bool enabled) override {
+        _validationEnabled = enabled;
+    }
+    bool isValidationEnabled() const override { return _validationEnabled; }
 
     // Rendering
     void beginFrame() override;
@@ -239,10 +361,33 @@ class OpenGLDevice : public GraphicsDevice {
     // Resource creation
     std::unique_ptr<Buffer> createBuffer(BufferType type, size_t size,
                                          const void* data = nullptr) override;
+    std::unique_ptr<Buffer>
+    createBuffer(const BufferDesc& desc, const void* data = nullptr) override;
     std::unique_ptr<Shader> createShader(const ShaderDesc& desc) override;
     std::unique_ptr<Texture> createTexture(const TextureDesc& desc) override;
     std::unique_ptr<Texture> createTexture(const TextureDesc& desc,
                                            const SamplerDesc& sampler) override;
+    std::unique_ptr<Texture>
+    createTexture(const TextureResourceDesc& desc,
+                  const TextureInitialData* initialData = nullptr) override;
+    std::unique_ptr<TextureView>
+    createTextureView(Texture* texture,
+                      const TextureViewDesc& desc = {}) override;
+    std::unique_ptr<Sampler>
+    createSampler(const SamplerDesc& desc = {}) override;
+    std::unique_ptr<RenderTarget>
+    createRenderTarget(const RenderPassDesc& desc) override;
+    std::unique_ptr<GraphicsPipeline>
+    createGraphicsPipeline(const GraphicsPipelineDesc& desc) override;
+    std::unique_ptr<BindGroupLayout>
+    createBindGroupLayout(const BindGroupLayoutDesc& desc) override;
+    std::unique_ptr<PipelineLayout>
+    createPipelineLayout(const PipelineLayoutDesc& desc) override;
+    std::unique_ptr<BindGroup>
+    createBindGroup(const BindGroupDesc& desc) override;
+    TextureReadback readTexture(TextureView* view) override;
+    std::unique_ptr<CommandEncoder> createCommandEncoder() override;
+    void submit(CommandBuffer& commandBuffer) override;
     std::unique_ptr<VertexArray> createVertexArray() override;
 
     // Convenience shader creation methods (KE::Shader compatible)

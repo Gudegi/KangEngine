@@ -36,6 +36,7 @@ option(IS_PYTHON_LIB "Build Python bindings" OFF) # Use -DIS_PYTHON_LIB=ON to en
 option(USE_USD "Enable USD support" OFF) # Use -DUSE_USD=ON to enable
 option(USE_PHYSX "Enable Physx support" ON) # Use -DUSE_PHYSX=ON to enable
 option(USE_CUDA_INTEROP "Enable CUDA/graphics buffer interop when explicitly configured" OFF)
+option(KANGENGINE_BUILD_SMOKES "Build C++ smoke-test executables" OFF)
 set(USD_DIR "$ENV{HOME}/usd_build" CACHE PATH "OpenUSD installation prefix")
 
 
@@ -231,18 +232,18 @@ endif()
 #file(GLOB MAIN_FILE "${MAIN_DIR}/test_stl.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/test_xml.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physx_drop_box.cpp")
-#file(GLOB MAIN_FILE "${MAIN_DIR}/test_prims.cpp")
+file(GLOB MAIN_FILE "${MAIN_DIR}/test_prims.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/xpbd_cloth.cpp")
 
 # Active PhysX Examples
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_articulation.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_jointmonkey.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_ragdoll.cpp")
-if(KANGENGINE_HAS_CUDA)
-    set(MAIN_FILE "${MAIN_DIR}/physics/physx_gpu_box_instancing.cpp")
-else()
-    set(MAIN_FILE "${MAIN_DIR}/physics/physx_box_instancing.cpp")
-endif()
+#if(KANGENGINE_HAS_CUDA)
+#    set(MAIN_FILE "${MAIN_DIR}/physics/physx_gpu_box_instancing.cpp")
+#else()
+#    set(MAIN_FILE "${MAIN_DIR}/physics/physx_box_instancing.cpp")
+#endif()
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_instancing.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/view_fbx_character.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_mimickit_assets.cpp")
@@ -252,9 +253,20 @@ endif()
 add_executable(${PROJECT_NAME} ${MAIN_FILE})
 target_link_libraries(${PROJECT_NAME} PRIVATE engine_core)
 
-if(KANGENGINE_HAS_CUDA)
-    add_executable(physx_gpu_step_smoke examples/physics/physx_gpu_step_smoke.cpp)
-    target_link_libraries(physx_gpu_step_smoke PRIVATE engine_core)
+if(KANGENGINE_BUILD_SMOKES)
+    file(GLOB_RECURSE KANGENGINE_SMOKE_SOURCES CONFIGURE_DEPENDS
+        "${MAIN_DIR}/smokes/*.cpp")
+    foreach(SMOKE_SOURCE IN LISTS KANGENGINE_SMOKE_SOURCES)
+        get_filename_component(SMOKE_TARGET "${SMOKE_SOURCE}" NAME_WE)
+        if((SMOKE_TARGET STREQUAL "cuda_gl_buffer_interop_smoke" OR
+            SMOKE_TARGET STREQUAL "physx_gpu_step_smoke") AND
+           NOT KANGENGINE_HAS_CUDA)
+            continue()
+        endif()
+        add_executable(${SMOKE_TARGET} "${SMOKE_SOURCE}")
+        target_link_libraries(${SMOKE_TARGET} PRIVATE engine_core)
+        set_property(TARGET ${SMOKE_TARGET} PROPERTY FOLDER "smokes")
+    endforeach()
 endif()
 
 # Define asset path macro for C++ executable

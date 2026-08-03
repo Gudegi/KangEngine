@@ -50,9 +50,32 @@ class WebGPUDevice : public GraphicsDevice {
 
     std::unique_ptr<Buffer> createBuffer(BufferType type, size_t size,
                                          const void* data = nullptr) override;
+    std::unique_ptr<Buffer>
+    createBuffer(const BufferDesc& desc, const void* data = nullptr) override;
     void bindUniformBuffer(Buffer* buffer, int slot) override;
     std::unique_ptr<Shader> createShader(const ShaderDesc& desc) override;
     std::unique_ptr<Texture> createTexture(const TextureDesc& desc) override;
+    std::unique_ptr<Texture>
+    createTexture(const TextureResourceDesc& desc,
+                  const TextureInitialData* initialData = nullptr) override;
+    std::unique_ptr<TextureView>
+    createTextureView(Texture* texture,
+                      const TextureViewDesc& desc = {}) override;
+    std::unique_ptr<Sampler>
+    createSampler(const SamplerDesc& desc = {}) override;
+    std::unique_ptr<RenderTarget>
+    createRenderTarget(const RenderPassDesc& desc) override;
+    std::unique_ptr<GraphicsPipeline>
+    createGraphicsPipeline(const GraphicsPipelineDesc& desc) override;
+    std::unique_ptr<BindGroupLayout>
+    createBindGroupLayout(const BindGroupLayoutDesc& desc) override;
+    std::unique_ptr<PipelineLayout>
+    createPipelineLayout(const PipelineLayoutDesc& desc) override;
+    std::unique_ptr<BindGroup>
+    createBindGroup(const BindGroupDesc& desc) override;
+    TextureReadback readTexture(TextureView* view) override;
+    std::unique_ptr<CommandEncoder> createCommandEncoder() override;
+    void submit(CommandBuffer& commandBuffer) override;
     std::unique_ptr<VertexArray> createVertexArray() override;
 
     std::unique_ptr<Shader> createShader(const char* vertexSource,

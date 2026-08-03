@@ -5,6 +5,7 @@
 #ifndef _GRAPHICS_DEVICE_HPP_
 #define _GRAPHICS_DEVICE_HPP_
 
+#include "rhi_types.hpp"
 #include "shader_preprocessor.hpp"
 #include "sim/gpu_array_view.hpp"
 #include "utils/types.hpp"
@@ -24,6 +25,8 @@ using std::vector;
 
 enum class BackendType { OpenGL, Vulkan, WebGPU };
 
+// Legacy allocation categories used by the immediate OpenGL renderer. New RHI
+// resources should describe combinable intent through BufferUsage/BufferDesc.
 enum class BufferType { Vertex, DynamicVertex, Index, Uniform };
 
 enum class ShaderType { Vertex, Fragment, Geometry, Compute };
@@ -105,6 +108,47 @@ struct ShaderDesc {
     std::string name;
 };
 
+class Buffer;
+class TextureView;
+class Sampler;
+class BindGroupLayout;
+class PipelineLayout;
+
+struct PipelineLayoutDesc {
+    std::vector<BindGroupLayout*> bindGroupLayouts;
+    std::string label;
+};
+
+struct BindGroupEntry {
+    uint32_t binding = 0;
+    Buffer* buffer = nullptr;
+    uint64_t offset = 0;
+    uint64_t size = 0;
+    TextureView* textureView = nullptr;
+    Sampler* sampler = nullptr;
+};
+
+struct BindGroupDesc {
+    BindGroupLayout* layout = nullptr;
+    std::vector<BindGroupEntry> entries;
+    std::string label;
+};
+
+struct GraphicsPipelineDesc {
+    ShaderDesc shader;
+    std::vector<VertexBufferLayout> vertexBuffers;
+    PrimitiveState primitive;
+    RasterState raster;
+    std::optional<DepthStencilState> depthStencil;
+    std::vector<ColorTargetState> colorTargets;
+    uint32_t sampleCount = 1;
+    // WP6 replaces this placeholder with a typed PipelineLayout reference.
+    PipelineLayout* pipelineLayout = nullptr;
+    std::string label;
+};
+
+// Legacy image-upload descriptor. New portable allocations use
+// TextureResourceDesc with explicit format and usage.
 struct TextureDesc {
     int width, height;
     int channels = 4;
@@ -117,8 +161,11 @@ struct SamplerDesc {
     TextureWrap wrapV = TextureWrap::Repeat;
     TextureFilter minFilter = TextureFilter::LinearMipmapLinear;
     TextureFilter magFilter = TextureFilter::Linear;
+    std::string label;
 };
 
+// Legacy single-color framebuffer descriptor. Do not extend this for MRT; new
+// rendering uses explicit color/depth attachment descriptions.
 struct FramebufferDesc {
     int width, height;
     bool depthOnly = false; // shadow FBO: no color attachment
@@ -131,6 +178,13 @@ struct FramebufferDesc {
 class Buffer;
 class Shader;
 class Texture;
+class TextureView;
+class Sampler;
+class RenderTarget;
+class GraphicsPipeline;
+class BindGroup;
+class CommandEncoder;
+class CommandBuffer;
 class VertexArray;
 class Framebuffer;
 
@@ -141,6 +195,8 @@ class GraphicsDevice {
     virtual void initialize() = 0;
     virtual void shutdown() = 0;
     virtual BackendType getBackendType() const = 0;
+    virtual void setValidationEnabled(bool) {}
+    virtual bool isValidationEnabled() const { return false; }
 
     // Rendering
     virtual void beginFrame() = 0;
@@ -175,6 +231,8 @@ class GraphicsDevice {
     // Resource creation
     virtual std::unique_ptr<Buffer>
     createBuffer(BufferType type, size_t size, const void* data = nullptr) = 0;
+    virtual std::unique_ptr<Buffer>
+    createBuffer(const BufferDesc& desc, const void* data = nullptr) = 0;
     virtual void bindUniformBuffer(Buffer* buffer, int slot) = 0;
     virtual std::unique_ptr<Shader> createShader(const ShaderDesc& desc) = 0;
     virtual std::unique_ptr<Texture> createTexture(const TextureDesc& desc) = 0;
@@ -182,6 +240,26 @@ class GraphicsDevice {
                                                    const SamplerDesc&) {
         return createTexture(desc);
     }
+    virtual std::unique_ptr<Texture>
+    createTexture(const TextureResourceDesc& desc,
+                  const TextureInitialData* initialData = nullptr) = 0;
+    virtual std::unique_ptr<TextureView>
+    createTextureView(Texture* texture, const TextureViewDesc& desc = {}) = 0;
+    virtual std::unique_ptr<Sampler>
+    createSampler(const SamplerDesc& desc = {}) = 0;
+    virtual std::unique_ptr<RenderTarget>
+    createRenderTarget(const RenderPassDesc& desc) = 0;
+    virtual std::unique_ptr<GraphicsPipeline>
+    createGraphicsPipeline(const GraphicsPipelineDesc& desc) = 0;
+    virtual std::unique_ptr<BindGroupLayout>
+    createBindGroupLayout(const BindGroupLayoutDesc& desc) = 0;
+    virtual std::unique_ptr<PipelineLayout>
+    createPipelineLayout(const PipelineLayoutDesc& desc) = 0;
+    virtual std::unique_ptr<BindGroup>
+    createBindGroup(const BindGroupDesc& desc) = 0;
+    virtual TextureReadback readTexture(TextureView* view) = 0;
+    virtual std::unique_ptr<CommandEncoder> createCommandEncoder() = 0;
+    virtual void submit(CommandBuffer& commandBuffer) = 0;
     virtual std::unique_ptr<VertexArray> createVertexArray() = 0;
 
     // Legacy shader convenience path for OpenGL/debug shaders.
@@ -244,6 +322,48 @@ class Buffer {
         return false;
     }
     virtual BufferType getType() const = 0;
+    virtual BufferUsage getUsage() const = 0;
+    virtual size_t getSize() const = 0;
+};
+
+// Command recording is CPU-only. Referenced resources must outlive submission.
+// Backend objects are touched only by GraphicsDevice::submit on its render
+// thread, leaving recording suitable for future worker/Taskflow tasks.
+class RenderPassEncoder {
+  public:
+    virtual ~RenderPassEncoder() = default;
+    virtual void setViewport(float x, float y, float width, float height,
+                             float minDepth = 0.0f,
+                             float maxDepth = 1.0f) = 0;
+    virtual void setScissor(uint32_t x, uint32_t y, uint32_t width,
+                            uint32_t height) = 0;
+    virtual void setPipeline(GraphicsPipeline* pipeline) = 0;
+    virtual void setBindGroup(uint32_t index, BindGroup* bindGroup) = 0;
+    virtual void setVertexBuffer(uint32_t slot, Buffer* buffer,
+                                 uint64_t offset = 0) = 0;
+    virtual void setIndexBuffer(Buffer* buffer, IndexFormat format,
+                                uint64_t offset = 0) = 0;
+    virtual void draw(uint32_t vertexCount, uint32_t instanceCount = 1,
+                      uint32_t firstVertex = 0,
+                      uint32_t firstInstance = 0) = 0;
+    virtual void drawIndexed(uint32_t indexCount, uint32_t instanceCount = 1,
+                             uint32_t firstIndex = 0,
+                             int32_t baseVertex = 0,
+                             uint32_t firstInstance = 0) = 0;
+    virtual void end() = 0;
+};
+
+class CommandBuffer {
+  public:
+    virtual ~CommandBuffer() = default;
+};
+
+class CommandEncoder {
+  public:
+    virtual ~CommandEncoder() = default;
+    virtual std::unique_ptr<RenderPassEncoder>
+    beginRenderPass(RenderTarget* target) = 0;
+    virtual std::unique_ptr<CommandBuffer> finish() = 0;
 };
 
 class Framebuffer {
@@ -312,8 +432,57 @@ class Texture {
     virtual void unbind() = 0;
     virtual int getWidth() const = 0;
     virtual int getHeight() const = 0;
+    virtual TextureFormat getFormat() const = 0;
+    virtual TextureUsage getUsage() const = 0;
+    virtual uint32_t getMipLevelCount() const = 0;
+    virtual uint32_t getSampleCount() const = 0;
     // Backend-native resource handle (GLuint, etc.) for external use
     virtual uintptr_t getNativeHandle() const = 0;
+};
+
+class TextureView {
+  public:
+    virtual ~TextureView() = default;
+    virtual Texture* getTexture() const = 0;
+    virtual const TextureViewDesc& getDesc() const = 0;
+};
+
+class Sampler {
+  public:
+    virtual ~Sampler() = default;
+};
+
+class RenderTarget {
+  public:
+    virtual ~RenderTarget() = default;
+    virtual const RenderPassDesc& getDesc() const = 0;
+    virtual int getWidth() const = 0;
+    virtual int getHeight() const = 0;
+    virtual uint32_t getSampleCount() const = 0;
+};
+
+class GraphicsPipeline {
+  public:
+    virtual ~GraphicsPipeline() = default;
+    virtual const GraphicsPipelineDesc& getDesc() const = 0;
+};
+
+class BindGroupLayout {
+  public:
+    virtual ~BindGroupLayout() = default;
+    virtual const BindGroupLayoutDesc& getDesc() const = 0;
+};
+
+class PipelineLayout {
+  public:
+    virtual ~PipelineLayout() = default;
+    virtual const PipelineLayoutDesc& getDesc() const = 0;
+};
+
+class BindGroup {
+  public:
+    virtual ~BindGroup() = default;
+    virtual const BindGroupDesc& getDesc() const = 0;
 };
 
 class VertexArray {

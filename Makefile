@@ -1,4 +1,4 @@
-.PHONY: build build_all build_cuda build_current build_debug build_release build_relWithDebInfo \
+.PHONY: build build_all build_cuda build_smokes build_smokes_cuda build_current build_debug build_release build_relWithDebInfo \
         build_usd build_usd_debug build_python build_python_debug \
         build_python_cuda build_usd_python build_usd_python_debug wheel wheel_cuda \
         validate_physx_gpu validate_physx_gpu_cpp validate_fixed_update_gpu \
@@ -16,10 +16,10 @@ EXECUTABLE := KangEngine
 PYTHON ?= python/.venv/bin/python
 UV ?= uv
 UNAME_S := $(shell uname -s)
-DEFAULT_CMAKE_FLAGS := -DUSE_CUDA_INTEROP=OFF
+DEFAULT_CMAKE_FLAGS := -DUSE_CUDA_INTEROP=OFF -DKANGENGINE_BUILD_SMOKES=OFF
 CUDA_TOOLKIT_ROOT ?= /usr/local/cuda
 PHYSX_CUDA_BIN_PLATFORM ?= linux.x86_64
-CUDA_INTEROP_CMAKE_FLAGS := -DUSE_CUDA_INTEROP=ON -DCUDAToolkit_ROOT=$(CUDA_TOOLKIT_ROOT) -DCUDAToolkit_NVCC_EXECUTABLE=$(CUDA_TOOLKIT_ROOT)/bin/nvcc -DPHYSX_BIN_PLATFORM=$(PHYSX_CUDA_BIN_PLATFORM)
+CUDA_INTEROP_CMAKE_FLAGS := -DUSE_CUDA_INTEROP=ON -DKANGENGINE_BUILD_SMOKES=OFF -DCUDAToolkit_ROOT=$(CUDA_TOOLKIT_ROOT) -DCUDAToolkit_NVCC_EXECUTABLE=$(CUDA_TOOLKIT_ROOT)/bin/nvcc -DPHYSX_BIN_PLATFORM=$(PHYSX_CUDA_BIN_PLATFORM)
 
 # Easy workflow
 # 1. make build_all
@@ -53,6 +53,12 @@ endif
 
 build_cuda:
 	$(call do_cuda_build,vcpkg,$(RELEASE_DIR),)
+
+build_smokes:
+	$(call do_build,vcpkg,$(RELEASE_DIR),-DKANGENGINE_BUILD_SMOKES=ON)
+
+build_smokes_cuda:
+	$(call do_cuda_build,vcpkg,$(RELEASE_DIR),-DKANGENGINE_BUILD_SMOKES=ON)
 
 build_current:
 	cmake --build $(RELEASE_DIR)
@@ -93,7 +99,7 @@ validate_physx_gpu: build_python_cuda
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/kangsimworld_gpu_contact_sensor_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/mimickit_engine_gpu_reset_smoke.py
 
-validate_physx_gpu_cpp: build_cuda
+validate_physx_gpu_cpp: build_smokes_cuda
 	./$(RELEASE_DIR)/physx_gpu_step_smoke
 
 validate_fixed_update_gpu: build_python_cuda

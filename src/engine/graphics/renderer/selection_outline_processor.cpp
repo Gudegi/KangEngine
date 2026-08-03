@@ -1,4 +1,5 @@
 #include "selection_outline_processor.hpp"
+#include "fullscreen_pass.hpp"
 
 namespace KE {
 
@@ -6,12 +7,13 @@ namespace {
 
 static const char* SelectionOutlineVs = R"(
 #version 410 core
-layout(location = 0) in vec2 aPos;
-layout(location = 1) in vec2 aUV;
 out vec2 TexCoord;
 void main() {
-    gl_Position = vec4(aPos, 0.0, 1.0);
-    TexCoord = aUV;
+    vec2 position = vec2(
+        gl_VertexID == 1 ? 3.0 : -1.0,
+        gl_VertexID == 2 ? 3.0 : -1.0);
+    gl_Position = vec4(position, 0.0, 1.0);
+    TexCoord = position * 0.5 + 0.5;
 }
 )";
 
@@ -20,24 +22,26 @@ static const char* SelectionOutlineFs = R"(
 in vec2 TexCoord;
 out vec4 FragColor;
 
-uniform sampler2D uScene;
-uniform sampler2D uMask;
-uniform vec2 uTexelSize;
-uniform vec4 uOutlineColor;
-uniform float uOutlineRadius;
+uniform sampler2D ke_g3_b0;
+uniform sampler2D ke_g3_b1;
+layout(std140) uniform ke_g3_b3 {
+    vec4 uTexelSizeAndRadius;
+    vec4 uOutlineColor;
+};
 
 void main() {
-    vec4 sceneColor = texture(uScene, TexCoord);
-    float center = texture(uMask, TexCoord).r;
+    vec4 sceneColor = texture(ke_g3_b0, TexCoord);
+    float center = texture(ke_g3_b1, TexCoord).r;
     float neighbor = 0.0;
 
-    int radius = int(clamp(ceil(uOutlineRadius), 1.0, 8.0));
+    int radius = int(clamp(ceil(uTexelSizeAndRadius.z), 1.0, 8.0));
     // TODO : Too heavy, use separable pass(ping-phong FBO)
     for (int y = -radius; y <= radius; ++y) {
         for (int x = -radius; x <= radius; ++x) {
-            vec2 offset = vec2(float(x), float(y)) * uTexelSize;
+            vec2 offset = vec2(float(x), float(y)) *
+                          uTexelSizeAndRadius.xy;
             vec2 sampleUv = clamp(TexCoord + offset, vec2(0.0), vec2(1.0));
-            neighbor = max(neighbor, texture(uMask, sampleUv).r);
+            neighbor = max(neighbor, texture(ke_g3_b1, sampleUv).r);
         }
     }
 
@@ -47,14 +51,6 @@ void main() {
 }
 )";
 
-static const float QuadPos[] = {
-    -1.f, 1.f, -1.f, -1.f, 1.f, -1.f, 1.f, 1.f,
-};
-static const float QuadUV[] = {
-    0.f, 1.f, 0.f, 0.f, 1.f, 0.f, 1.f, 1.f,
-};
-static const unsigned int QuadIdx[] = {0, 1, 2, 0, 2, 3};
-
 } // namespace
 
 void SelectionOutlineProcessor::init(Backend::GraphicsDevice* device, int width,
@@ -63,56 +59,141 @@ void SelectionOutlineProcessor::init(Backend::GraphicsDevice* device, int width,
     _width = width;
     _height = height;
 
-    _shader = device->createShader(SelectionOutlineVs, SelectionOutlineFs);
-    _posVBO = device->createBuffer(Backend::BufferType::Vertex, sizeof(QuadPos),
-                                   QuadPos);
-    _uvVBO = device->createBuffer(Backend::BufferType::Vertex, sizeof(QuadUV),
-                                  QuadUV);
-    _ibo = device->createBuffer(Backend::BufferType::Index, sizeof(QuadIdx),
-                                QuadIdx);
+    for (size_t i = 0; i < 3; ++i) {
+        Backend::BindGroupLayoutDesc emptyDesc;
+        emptyDesc.label = "selection_outline_empty_group_" + std::to_string(i);
+        _groupLayouts[i] = device->createBindGroupLayout(emptyDesc);
+    }
+    Backend::BindGroupLayoutDesc passLayoutDesc;
+    passLayoutDesc.label = "selection_outline_pass_layout";
+    passLayoutDesc.entries = {
+        {0, Backend::BindingType::SampledTexture,
+         Backend::ShaderStageVisibility::Fragment,
+         Backend::TextureFormat::RGBA16Float},
+        {1, Backend::BindingType::SampledTexture,
+         Backend::ShaderStageVisibility::Fragment,
+         Backend::TextureFormat::RGBA8Unorm},
+        {2, Backend::BindingType::Sampler,
+         Backend::ShaderStageVisibility::Fragment},
+        {3, Backend::BindingType::UniformBuffer,
+         Backend::ShaderStageVisibility::Fragment},
+    };
+    _groupLayouts[3] = device->createBindGroupLayout(passLayoutDesc);
 
-    _quadVAO = device->createVertexArray();
-    _quadVAO->bind();
-    _quadVAO->setIndexBuffer(_ibo.get());
-    _quadVAO->setVertexBuffer(_posVBO.get());
-    _quadVAO->setVertexAttribute({0, 2, Backend::VertexAttributeType::Float,
-                                  false, 2 * sizeof(float), 0});
-    _quadVAO->setVertexBuffer(_uvVBO.get());
-    _quadVAO->setVertexAttribute({1, 2, Backend::VertexAttributeType::Float,
-                                  false, 2 * sizeof(float), 0});
-    _quadVAO->unbind();
+    Backend::PipelineLayoutDesc pipelineLayoutDesc;
+    pipelineLayoutDesc.label = "selection_outline_pipeline_layout";
+    for (const auto& layout : _groupLayouts)
+        pipelineLayoutDesc.bindGroupLayouts.push_back(layout.get());
+    _pipelineLayout = device->createPipelineLayout(pipelineLayoutDesc);
+
+    Backend::GraphicsPipelineDesc pipelineDesc;
+    pipelineDesc.label = "selection_outline_pipeline";
+    pipelineDesc.shader.name = "selection_outline_rhi";
+    pipelineDesc.shader.stages = {
+        {SelectionOutlineVs, Backend::ShaderType::Vertex, "main"},
+        {SelectionOutlineFs, Backend::ShaderType::Fragment, "main"},
+    };
+    pipelineDesc.primitive.cullMode = Backend::CullMode::None;
+    pipelineDesc.colorTargets = {{Backend::TextureFormat::RGBA16Float}};
+    pipelineDesc.pipelineLayout = _pipelineLayout.get();
+    _pipeline = device->createGraphicsPipeline(pipelineDesc);
+
+    Backend::SamplerDesc samplerDesc;
+    samplerDesc.wrapU = Backend::TextureWrap::ClampToEdge;
+    samplerDesc.wrapV = Backend::TextureWrap::ClampToEdge;
+    samplerDesc.minFilter = Backend::TextureFilter::Linear;
+    samplerDesc.magFilter = Backend::TextureFilter::Linear;
+    samplerDesc.label = "selection_outline_sampler";
+    _sampler = device->createSampler(samplerDesc);
+
+    Backend::BufferDesc paramsDesc;
+    paramsDesc.size = sizeof(OutlineParams);
+    paramsDesc.usage =
+        Backend::BufferUsage::Uniform | Backend::BufferUsage::CopyDst;
+    paramsDesc.label = "selection_outline_params";
+    _paramsBuffer = device->createBuffer(paramsDesc);
+
     // Output format must be 16f for HDR.
     _outputFBO =
         device->createFramebuffer({width, height, false, false, 0,
                                    Backend::FramebufferColorFormat::RGBA16F});
+    rebuildOutputTarget();
+}
+
+void SelectionOutlineProcessor::rebuildOutputTarget() {
+    _outputTarget.reset();
+    _outputView.reset();
+    if (!_outputFBO || _width <= 0 || _height <= 0)
+        return;
+
+    Backend::TextureViewDesc viewDesc;
+    viewDesc.format = Backend::TextureFormat::RGBA16Float;
+    viewDesc.label = "selection_outline_output_view";
+    _outputView =
+        _device->createTextureView(_outputFBO->getColorTexture(), viewDesc);
+
+    Backend::RenderPassDesc passDesc;
+    passDesc.label = "selection_outline_composite_pass";
+    passDesc.colorAttachments = {{_outputView.get(),
+                                  nullptr,
+                                  Backend::LoadOp::Clear,
+                                  Backend::StoreOp::Store,
+                                  {0.0f, 0.0f, 0.0f, 1.0f}}};
+    _outputTarget = _device->createRenderTarget(passDesc);
+}
+
+void SelectionOutlineProcessor::ensurePassBindings(
+    Backend::Texture* sceneColor, Backend::Texture* selectionMask) {
+    if (_passBindGroup && _boundScene == sceneColor &&
+        _boundMask == selectionMask)
+        return;
+
+    Backend::TextureViewDesc sceneDesc;
+    sceneDesc.format = Backend::TextureFormat::RGBA16Float;
+    sceneDesc.label = "selection_outline_scene_view";
+    _sceneView = _device->createTextureView(sceneColor, sceneDesc);
+    Backend::TextureViewDesc maskDesc;
+    maskDesc.format = Backend::TextureFormat::RGBA8Unorm;
+    maskDesc.label = "selection_outline_mask_view";
+    _maskView = _device->createTextureView(selectionMask, maskDesc);
+
+    Backend::BindGroupDesc bindDesc;
+    bindDesc.layout = _groupLayouts[3].get();
+    bindDesc.label = "selection_outline_pass_bind_group";
+    bindDesc.entries = {
+        {0, nullptr, 0, 0, _sceneView.get(), nullptr},
+        {1, nullptr, 0, 0, _maskView.get(), nullptr},
+        {2, nullptr, 0, 0, nullptr, _sampler.get()},
+        {3, _paramsBuffer.get(), 0, sizeof(OutlineParams), nullptr, nullptr},
+    };
+    _passBindGroup = _device->createBindGroup(bindDesc);
+    _boundScene = sceneColor;
+    _boundMask = selectionMask;
 }
 
 void SelectionOutlineProcessor::renderOutlineCompositePass(
     Backend::Texture* sceneColor, Backend::Texture* selectionMask) {
-    if (!sceneColor || !selectionMask)
+    if (!sceneColor || !selectionMask || !_outputTarget || _width <= 0 ||
+        _height <= 0)
         return;
 
-    _outputFBO->bind();
-    _device->setViewport(0, 0, _width, _height);
-    _device->clear(0.f, 0.f, 0.f, 1.f);
-    _device->setDepthTest(false);
+    ensurePassBindings(sceneColor, selectionMask);
+    OutlineParams params;
+    params.texelSizeAndRadius =
+        glm::vec4(1.0f / static_cast<float>(_width),
+                  1.0f / static_cast<float>(_height), _config.radius, 0.0f);
+    params.color = _config.color;
+    _paramsBuffer->setData(&params, sizeof(params));
 
-    _shader->use();
-    _shader->setInt("uScene", 0);
-    _shader->setInt("uMask", 1);
-    _shader->setVec2("uTexelSize", 1.0f / static_cast<float>(_width),
-                     1.0f / static_cast<float>(_height));
-    _shader->setVec4("uOutlineColor", _config.color);
-    _shader->setFloat("uOutlineRadius", _config.radius);
-    sceneColor->bind(0);
-    selectionMask->bind(1);
-
-    _quadVAO->bind();
-    _device->drawIndexed(6);
-    _quadVAO->unbind();
-
-    _device->setDepthTest(true);
-    _outputFBO->unbind();
+    auto encoder = _device->createCommandEncoder();
+    auto pass = encoder->beginRenderPass(_outputTarget.get());
+    FullscreenPass::record(*pass, _pipeline.get(),
+                           static_cast<uint32_t>(_width),
+                           static_cast<uint32_t>(_height),
+                           _passBindGroup.get());
+    pass->end();
+    auto commands = encoder->finish();
+    _device->submit(*commands);
 }
 
 Backend::Texture* SelectionOutlineProcessor::getResult() {
@@ -130,7 +211,18 @@ void SelectionOutlineProcessor::blitToScreen(int width, int height) {
 void SelectionOutlineProcessor::resize(int width, int height) {
     _width = width;
     _height = height;
+    _passBindGroup.reset();
+    _sceneView.reset();
+    _maskView.reset();
+    _boundScene = nullptr;
+    _boundMask = nullptr;
+    if (width <= 0 || height <= 0) {
+        _outputTarget.reset();
+        _outputView.reset();
+        return;
+    }
     _outputFBO->resize(width, height);
+    rebuildOutputTarget();
 }
 
 } // namespace KE

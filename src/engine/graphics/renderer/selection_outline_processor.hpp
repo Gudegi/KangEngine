@@ -2,6 +2,7 @@
 #define _SELECTION_OUTLINE_PROCESSOR_HPP_
 
 #include "engine/graphics/backend/base/graphics_device.hpp"
+#include <array>
 #include <glm/vec4.hpp>
 #include <memory>
 
@@ -28,16 +29,32 @@ class SelectionOutlineProcessor {
     void setOutlineRadius(float radius) { _config.radius = radius; }
 
   private:
+    struct alignas(16) OutlineParams {
+        glm::vec4 texelSizeAndRadius{0.0f};
+        glm::vec4 color{1.0f};
+    };
+
     Backend::GraphicsDevice* _device = nullptr;
-    std::unique_ptr<Backend::Shader> _shader;
-    std::unique_ptr<Backend::VertexArray> _quadVAO;
-    std::unique_ptr<Backend::Buffer> _posVBO;
-    std::unique_ptr<Backend::Buffer> _uvVBO;
-    std::unique_ptr<Backend::Buffer> _ibo;
     std::unique_ptr<Backend::Framebuffer> _outputFBO;
+    std::array<std::unique_ptr<Backend::BindGroupLayout>, 4> _groupLayouts;
+    std::unique_ptr<Backend::PipelineLayout> _pipelineLayout;
+    std::unique_ptr<Backend::GraphicsPipeline> _pipeline;
+    std::unique_ptr<Backend::Sampler> _sampler;
+    std::unique_ptr<Backend::Buffer> _paramsBuffer;
+    std::unique_ptr<Backend::TextureView> _outputView;
+    std::unique_ptr<Backend::RenderTarget> _outputTarget;
+    std::unique_ptr<Backend::TextureView> _sceneView;
+    std::unique_ptr<Backend::TextureView> _maskView;
+    std::unique_ptr<Backend::BindGroup> _passBindGroup;
+    Backend::Texture* _boundScene = nullptr;
+    Backend::Texture* _boundMask = nullptr;
     SelectionOutlineConfig _config;
     int _width = 0;
     int _height = 0;
+
+    void rebuildOutputTarget();
+    void ensurePassBindings(Backend::Texture* sceneColor,
+                            Backend::Texture* selectionMask);
 };
 
 } // namespace KE
