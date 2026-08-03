@@ -1884,10 +1884,6 @@ class OpenGLCommandEncoder final : public CommandEncoder {
 OpenGLDevice::OpenGLDevice() : _initialized(false) {}
 
 OpenGLDevice::~OpenGLDevice() {
-    if (_skyboxVAO)
-        glDeleteVertexArrays(1, &_skyboxVAO);
-    if (_skyboxTex)
-        glDeleteTextures(1, &_skyboxTex);
     if (_initialized)
         shutdown();
 }
@@ -2039,28 +2035,6 @@ std::unique_ptr<Sampler> OpenGLDevice::createSampler(const SamplerDesc& desc) {
 std::unique_ptr<RenderTarget>
 OpenGLDevice::createRenderTarget(const RenderPassDesc& desc) {
     return std::make_unique<OpenGLRenderTarget>(desc);
-}
-
-void OpenGLDevice::beginLegacyRenderPass(RenderTarget* target) {
-    if (std::this_thread::get_id() != _renderThread)
-        throw std::runtime_error(
-            "legacy RHI render pass must begin on the render thread");
-    auto* glTarget = dynamic_cast<OpenGLRenderTarget*>(target);
-    if (!glTarget)
-        throw std::invalid_argument(
-            "legacy RHI render pass requires an OpenGL target");
-    glTarget->beginPass();
-}
-
-void OpenGLDevice::endLegacyRenderPass(RenderTarget* target) {
-    if (std::this_thread::get_id() != _renderThread)
-        throw std::runtime_error(
-            "legacy RHI render pass must end on the render thread");
-    auto* glTarget = dynamic_cast<OpenGLRenderTarget*>(target);
-    if (!glTarget)
-        throw std::invalid_argument(
-            "legacy RHI render pass requires an OpenGL target");
-    glTarget->endPass();
 }
 
 std::unique_ptr<GraphicsPipeline>
@@ -2883,36 +2857,6 @@ Texture* OpenGLFramebuffer::getDepthTexture() { return _depthTexObj.get(); }
 Texture* OpenGLFramebuffer::getStencilTexture() { return nullptr; }
 Texture* OpenGLFramebuffer::getDepthStencilTexture() { return nullptr; }
 
-// ---------------------------------------------------------------------------
-// Skybox
-
-static const char* skyboxVs = R"(
-#version 410 core
-layout(location = 0) in vec3 aPos;
-out vec3 TexDir;
-uniform mat4 projection;
-uniform mat4 view;
-uniform bool zUp;
-void main() {
-    // Y-up world: cube coords map directly to cubemap coords.
-    // Z-up world: remap so that world +Z -> cubemap +Y (up),
-    //             world -Y -> cubemap +Z (south), world +X stays.
-    TexDir = zUp ? vec3(aPos.x, aPos.z, -aPos.y) : aPos;
-    vec4 pos = projection * mat4(mat3(view)) * vec4(aPos, 1.0); // remove trans of view
-    gl_Position = pos.xyww; // w / w = 1.0 early depth testing
-}
-)";
-
-static const char* skyboxFs = R"(
-#version 410 core
-in vec3 TexDir;
-out vec4 FragColor;
-uniform samplerCube skybox;
-void main() {
-    FragColor = texture(skybox, TexDir);
-}
-)";
-
 // Load a cross-layout(putting all images on one png) cubemap PNG and upload
 // it as GL_TEXTURE_CUBE_MAP. Supports both horizontal cross (4:3, W>H) and
 // vertical cross (3:4, H>W).
@@ -3086,80 +3030,6 @@ std::unique_ptr<Texture> OpenGLDevice::createCubemapTexture(
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
     return std::make_unique<OpenGLTexture>(handle, width, height);
 }
-
-// Unit-cube VAO for skybox rendering
-GLuint OpenGLDevice::makeSkyboxVAO() {
-    static const float verts[] = {
-        -1, -1, -1, 1, -1, -1, 1, 1, -1, -1, 1, -1, // Back face vertices
-        -1, -1, 1,  1, -1, 1,  1, 1, 1,  -1, 1, 1   // Front face vertices
-    };
-    static const unsigned int indices[] = {
-        0, 1, 2, 2, 3, 0, // Front (looking from inside)
-        1, 5, 6, 6, 2, 1, // Right
-        5, 4, 7, 7, 6, 5, // Back
-        4, 0, 3, 3, 7, 4, // Left
-        3, 2, 6, 6, 7, 3, // Top
-        4, 5, 1, 1, 0, 4  // Bottom
-    };
-    GLuint vao, vbo, ebo;
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
-    glGenBuffers(1, &ebo);
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
-                 GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
-    glBindVertexArray(0);
-    return vao;
-}
-
-void OpenGLDevice::applySkyboxTex(GLuint tex, UpAxis upAxis) {
-    _skyboxUpAxis = upAxis;
-    if (_skyboxTex)
-        glDeleteTextures(1, &_skyboxTex);
-    if (!_skyboxVAO)
-        _skyboxVAO = makeSkyboxVAO();
-    if (!_skyboxShader)
-        _skyboxShader = createShader(skyboxVs, skyboxFs);
-    _skyboxTex = tex;
-    _skyboxShader->use();
-    _skyboxShader->setInt("skybox", 0);
-}
-
-void OpenGLDevice::setSkybox(const std::string& path, UpAxis upAxis) {
-    applySkyboxTex(loadCubemapCross(path), upAxis);
-}
-
-void OpenGLDevice::setSkybox(const std::vector<std::string>& paths,
-                             UpAxis upAxis) {
-    applySkyboxTex(loadCubemap(paths), upAxis);
-}
-
-void OpenGLDevice::drawSkybox(const glm::mat4& view, const glm::mat4& proj) {
-    if (!_skyboxTex || !_skyboxShader)
-        return;
-    glDepthFunc(GL_LEQUAL);
-    glDepthMask(GL_FALSE);
-    _skyboxShader->use();
-    _skyboxShader->setMat4("view", view);
-    _skyboxShader->setMat4("projection", proj);
-    _skyboxShader->setBool("zUp", _skyboxUpAxis == UpAxis::Z);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, _skyboxTex);
-    glBindVertexArray(_skyboxVAO);
-    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-    glBindVertexArray(0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-    glDepthMask(GL_TRUE);
-    glDepthFunc(GL_LESS);
-}
-
-// End Skybox
-// ---------------------------------------------------------------------------
 
 } // namespace Backend
 } // namespace KE

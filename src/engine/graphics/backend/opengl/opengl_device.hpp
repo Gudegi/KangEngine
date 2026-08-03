@@ -319,18 +319,10 @@ class OpenGLDevice : public GraphicsDevice {
     bool _validationEnabled = false;
     std::thread::id _renderThread;
 
-    // Skybox
-    GLuint _skyboxVAO = 0;
-    GLuint _skyboxTex = 0;
-    std::unique_ptr<Shader> _skyboxShader;
-    UpAxis _skyboxUpAxis = UpAxis::Y;
     // 6 individual face images: +X, -X, +Y, -Y, +Z, -Z(OpenGL Y up frame)
     GLuint loadCubemap(const std::vector<std::string>& paths);
     // Single cross-layout image (horizontal 4:3 or vertical 3:4)
     GLuint loadCubemapCross(const std::string& path);
-
-    GLuint makeSkyboxVAO();
-    void applySkyboxTex(GLuint tex, UpAxis upAxis);
 
   public:
     OpenGLDevice();
@@ -395,8 +387,6 @@ class OpenGLDevice : public GraphicsDevice {
     createSampler(const SamplerDesc& desc = {}) override;
     std::unique_ptr<RenderTarget>
     createRenderTarget(const RenderPassDesc& desc) override;
-    void beginLegacyRenderPass(RenderTarget* target) override;
-    void endLegacyRenderPass(RenderTarget* target) override;
     std::unique_ptr<GraphicsPipeline>
     createGraphicsPipeline(const GraphicsPipelineDesc& desc) override;
     std::unique_ptr<BindGroupLayout>
@@ -438,11 +428,6 @@ class OpenGLDevice : public GraphicsDevice {
 
     void bindUniformBuffer(Buffer* buffer, int slot) override;
 
-    // Skybox
-    void setSkybox(const std::string& path, UpAxis upAxis = UpAxis::Y) override;
-    void setSkybox(const std::vector<std::string>& paths,
-                   UpAxis upAxis = UpAxis::Y) override;
-    void drawSkybox(const glm::mat4& view, const glm::mat4& proj) override;
 };
 
 } // namespace Backend

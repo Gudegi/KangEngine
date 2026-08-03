@@ -64,11 +64,6 @@ void DebugRenderer::init(Backend::GraphicsDevice* device,
     if (!_device)
         return;
 
-    _ownedShader =
-        _device->createShaderFromFile(KE::getAssetPath("shaders/debug.vs"),
-                                      KE::getAssetPath("shaders/debug.fs"));
-    _shader = _ownedShader.get();
-    _shader->setUniformBlockBinding("cameraUBO", 0);
     _frameBindGroup = frameBindGroup;
     if (!frameGroupLayout || !_frameBindGroup)
         return;
@@ -138,20 +133,12 @@ void DebugRenderer::ensureLineBatchGpu(LineBatch& batch) {
     const size_t bytes = batch.vertices.size() * sizeof(LineVertex);
     if (batch.vertices.size() > batch.allocatedVertices) {
         batch.allocatedVertices = growVertexCapacity(batch.vertices.size());
-        batch.vao = _device->createVertexArray();
-        batch.vertexBuffer =
-            _device->createBuffer(Backend::BufferType::DynamicVertex,
-                                  batch.allocatedVertices * sizeof(LineVertex));
-
-        batch.vao->bind();
-        batch.vao->setVertexBuffer(batch.vertexBuffer.get());
-        batch.vao->setVertexAttribute(
-            {0, 3, Backend::VertexAttributeType::Float, false,
-             sizeof(LineVertex), offsetof(LineVertex, position), 0});
-        batch.vao->setVertexAttribute(
-            {1, 4, Backend::VertexAttributeType::Float, false,
-             sizeof(LineVertex), offsetof(LineVertex, color), 0});
-        batch.vao->unbind();
+        Backend::BufferDesc desc;
+        desc.size = batch.allocatedVertices * sizeof(LineVertex);
+        desc.usage = Backend::BufferUsage::Vertex |
+                     Backend::BufferUsage::CopyDst;
+        desc.label = "debug_line_vertices";
+        batch.vertexBuffer = _device->createBuffer(desc);
     }
 
     if (bytes > 0)
@@ -165,23 +152,12 @@ void DebugRenderer::ensurePointBatchGpu(PointBatch& batch) {
     const size_t bytes = batch.vertices.size() * sizeof(PointVertex);
     if (batch.vertices.size() > batch.allocatedVertices) {
         batch.allocatedVertices = growVertexCapacity(batch.vertices.size());
-        batch.vao = _device->createVertexArray();
-        batch.vertexBuffer = _device->createBuffer(
-            Backend::BufferType::DynamicVertex,
-            batch.allocatedVertices * sizeof(PointVertex));
-
-        batch.vao->bind();
-        batch.vao->setVertexBuffer(batch.vertexBuffer.get());
-        batch.vao->setVertexAttribute(
-            {0, 3, Backend::VertexAttributeType::Float, false,
-             sizeof(PointVertex), offsetof(PointVertex, position), 0});
-        batch.vao->setVertexAttribute(
-            {1, 4, Backend::VertexAttributeType::Float, false,
-             sizeof(PointVertex), offsetof(PointVertex, color), 0});
-        batch.vao->setVertexAttribute(
-            {2, 1, Backend::VertexAttributeType::Float, false,
-             sizeof(PointVertex), offsetof(PointVertex, size), 0});
-        batch.vao->unbind();
+        Backend::BufferDesc desc;
+        desc.size = batch.allocatedVertices * sizeof(PointVertex);
+        desc.usage = Backend::BufferUsage::Vertex |
+                     Backend::BufferUsage::CopyDst;
+        desc.label = "debug_point_vertices";
+        batch.vertexBuffer = _device->createBuffer(desc);
     }
 
     if (bytes > 0)
@@ -270,60 +246,6 @@ void DebugRenderer::clearPoints(const std::string& path) {
     if (it == _pointBatches.end())
         return;
     it->second.vertices.clear();
-}
-
-void DebugRenderer::render() {
-    if (!_device)
-        return;
-
-    bool hasRenderable = false;
-    for (auto& [path, batch] : _lineBatches) {
-        if (!batch.hidden && !batch.vertices.empty() && batch.vao) {
-            hasRenderable = true;
-            break;
-        }
-    }
-    if (!hasRenderable) {
-        for (auto& [path, batch] : _pointBatches) {
-            if (!batch.hidden && !batch.vertices.empty() && batch.vao) {
-                hasRenderable = true;
-                break;
-            }
-        }
-    }
-    if (!hasRenderable)
-        return;
-
-    _device->setCullFace(false);
-    _device->setBlend(true);
-    _device->setBlendFunc(Backend::BlendFactor::SrcAlpha,
-                          Backend::BlendFactor::OneMinusSrcAlpha);
-
-    if (_shader) {
-        _shader->use();
-        _shader->setBool("uRoundPoint", false);
-        for (auto& [path, batch] : _lineBatches) {
-            if (batch.hidden || batch.vertices.empty() || !batch.vao)
-                continue;
-            _device->setLineWidth(batch.width);
-            batch.vao->bind();
-            _device->drawLines(batch.vertices.size());
-            batch.vao->unbind();
-        }
-        _device->setLineWidth(1.0f);
-
-        _shader->setBool("uRoundPoint", true);
-        for (auto& [path, batch] : _pointBatches) {
-            if (batch.hidden || batch.vertices.empty() || !batch.vao)
-                continue;
-            batch.vao->bind();
-            _device->drawPoints(batch.vertices.size());
-            batch.vao->unbind();
-        }
-    }
-
-    _device->setBlend(false);
-    _device->setCullFace(true);
 }
 
 void DebugRenderer::render(Backend::RenderTarget* target, int viewportWidth,

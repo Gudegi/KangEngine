@@ -537,17 +537,25 @@ void App::renderFrameOnce() {
     const RendererSettings& settings = getRenderer().settings();
     const double renderStart = glfwGetTime();
 
-    // Main Scene Pipeline: legacy immediate passes temporarily coexist inside
-    // the RHI-owned 4x MSAA render target. Ending the pass resolves into
-    // _framebuffer's single-sample RGBA16F texture.
-    _graphicsDevice->beginLegacyRenderPass(_sceneRenderTarget.get());
     const glm::vec4& color = settings.background.backgroundColor;
-    _graphicsDevice->clear(color.r, color.g, color.b, color.a);
+    rebuildSceneClearTarget(color);
+    {
+        auto encoder = _graphicsDevice->createCommandEncoder();
+        auto pass = encoder->beginRenderPass(_sceneClearTarget.get());
+        pass->end();
+        auto commands = encoder->finish();
+        _graphicsDevice->submit(*commands);
+    }
 
     coreRender(); // records ImGui widgets, no GL ImGui draw yet
     this->render();
-    _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
-    _graphicsDevice->endLegacyRenderPass(_sceneRenderTarget.get());
+    {
+        auto encoder = _graphicsDevice->createCommandEncoder();
+        auto pass = encoder->beginRenderPass(_sceneRenderTarget.get());
+        pass->end();
+        auto commands = encoder->finish();
+        _graphicsDevice->submit(*commands);
+    }
 
     Backend::Texture* finalSource = _framebuffer->getColorTexture();
 
@@ -798,8 +806,7 @@ void App::coreRender() {
     if (_rasterizer) {
         getRenderer().applyBackgroundSettings();
         _rasterizer->render(_viewMatrix, _projectionMatrix,
-                            _sceneDrawTarget.get(),
-                            _sceneRenderTarget.get());
+                            _sceneDrawTarget.get());
     }
 }
 
@@ -809,6 +816,7 @@ void App::rebuildSceneRenderTarget() {
 
     _sceneRenderTarget.reset();
     _sceneDrawTarget.reset();
+    _sceneClearTarget.reset();
     _sceneMsaaDepthStencilView.reset();
     _sceneResolveColorView.reset();
     _sceneMsaaColorView.reset();
@@ -871,6 +879,30 @@ void App::rebuildSceneRenderTarget() {
     passDesc.label = "main_scene_msaa_draw_pass";
     passDesc.colorAttachments[0].resolveTarget = nullptr;
     _sceneDrawTarget = _graphicsDevice->createRenderTarget(passDesc);
+}
+
+void App::rebuildSceneClearTarget(const glm::vec4& clearColor) {
+    if (!_sceneMsaaColorView || !_sceneMsaaDepthStencilView)
+        return;
+    if (_sceneClearTarget) {
+        const auto& current =
+            _sceneClearTarget->getDesc().colorAttachments.front().clearValue;
+        if (current.r == clearColor.r && current.g == clearColor.g &&
+            current.b == clearColor.b && current.a == clearColor.a)
+            return;
+    }
+
+    Backend::RenderPassDesc passDesc;
+    passDesc.label = "main_scene_clear_pass";
+    passDesc.colorAttachments = {{
+        _sceneMsaaColorView.get(), nullptr, Backend::LoadOp::Clear,
+        Backend::StoreOp::Store,
+        {clearColor.r, clearColor.g, clearColor.b, clearColor.a}}};
+    passDesc.depthStencilAttachment = Backend::DepthStencilAttachmentDesc{
+        _sceneMsaaDepthStencilView.get(), Backend::LoadOp::Clear,
+        Backend::StoreOp::Store, 1.0f, Backend::LoadOp::Clear,
+        Backend::StoreOp::Store, 0};
+    _sceneClearTarget = _graphicsDevice->createRenderTarget(passDesc);
 }
 
 Scene::Prim* App::defaultDirectionalLightPrim() {

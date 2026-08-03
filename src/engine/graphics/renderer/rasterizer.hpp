@@ -295,7 +295,6 @@ class Rasterizer : public RenderPipeline {
     void initForwardRhi();
     void initSkyboxRhi();
     void rebuildSkyboxBinding(UpAxis upAxis);
-    bool usesRhiForward(const MeshInstancer& inst) const;
     bool usesRhiTexturedVertexColor(const MeshInstancer& inst) const;
     bool usesRhiCheckerboard(const MeshInstancer& inst) const;
     Backend::BindGroup* updatePhongRhiResources(PhongMaterial& material,
@@ -324,23 +323,15 @@ class Rasterizer : public RenderPipeline {
     void updateDebugRenderAABB();
     Backend::Texture* activeShadowTexture() const;
     void bindShadowTextures(Backend::Texture* shadowTexture);
-    void bindShadowSampler(Backend::Shader* shader,
-                           Backend::Texture* shadowTexture);
-    void renderSceneInstancer(MeshInstancer& inst, bool transparentPass,
-                              Backend::Texture* shadowTexture);
     void renderOpaquePass(Backend::Texture* shadowTexture,
-                          Backend::RenderTarget* sceneDrawTarget,
-                          Backend::RenderTarget* legacyResumeTarget);
+                          Backend::RenderTarget* sceneDrawTarget);
     void renderSkyboxPass(const glm::mat4& view, const glm::mat4& proj,
                           Backend::RenderTarget* sceneDrawTarget);
     void renderTransparentPass(Backend::Texture* shadowTexture,
-                               Backend::RenderTarget* sceneDrawTarget,
-                               Backend::RenderTarget* legacyResumeTarget);
-    void renderDebugOverlayPass(Backend::RenderTarget* sceneDrawTarget,
-                                Backend::RenderTarget* legacyResumeTarget);
+                               Backend::RenderTarget* sceneDrawTarget);
+    void renderDebugOverlayPass(Backend::RenderTarget* sceneDrawTarget);
     void recordRenderHooks(RenderHookPhase phase,
-                           Backend::RenderTarget* sceneDrawTarget,
-                           Backend::RenderTarget* legacyResumeTarget);
+                           Backend::RenderTarget* sceneDrawTarget);
 
   public:
     Rasterizer(Backend::GraphicsDevice* graphicsDevice);
@@ -544,10 +535,8 @@ class Rasterizer : public RenderPipeline {
     // Frame Rendering / Selection Pipeline API
     // =====================================================================
     void updateFrameData(const glm::mat4& view, const glm::mat4& proj);
-    void render(const glm::mat4& view, const glm::mat4& proj) override;
     void render(const glm::mat4& view, const glm::mat4& proj,
-                Backend::RenderTarget* sceneDrawTarget,
-                Backend::RenderTarget* legacyResumeTarget);
+                Backend::RenderTarget* sceneDrawTarget) override;
     bool buildPrimSelection(Scene::Prim* prim,
                             RayPickResult& outSelection) const;
     bool getPrimTransformSource(const Scene::Prim* prim,

@@ -104,9 +104,9 @@ class App {
     std::unique_ptr<Backend::TextureView> _sceneMsaaColorView;
     std::unique_ptr<Backend::TextureView> _sceneResolveColorView;
     std::unique_ptr<Backend::TextureView> _sceneMsaaDepthStencilView;
-    // RHI mesh passes append into the MSAA attachments without resolving.
-    // The coexistence target performs the single final resolve after the
-    // remaining legacy skybox/debug/transparent passes have finished.
+    std::unique_ptr<Backend::RenderTarget> _sceneClearTarget;
+    // RHI passes append into the MSAA attachments without resolving. A final
+    // empty pass performs the frame's single resolve.
     std::unique_ptr<Backend::RenderTarget> _sceneDrawTarget;
     std::unique_ptr<Backend::RenderTarget> _sceneRenderTarget;
     std::unique_ptr<Backend::Framebuffer> _selectionMaskFramebuffer;
@@ -157,6 +157,7 @@ class App {
     void checkError();
     void coreRender();
     void rebuildSceneRenderTarget();
+    void rebuildSceneClearTarget(const glm::vec4& clearColor);
 
     App();
     virtual ~App();

@@ -257,17 +257,6 @@ class GraphicsDevice {
     createSampler(const SamplerDesc& desc = {}) = 0;
     virtual std::unique_ptr<RenderTarget>
     createRenderTarget(const RenderPassDesc& desc) = 0;
-    // Temporary migration bridge: legacy immediate draws may target an RHI
-    // render pass while production passes are converted incrementally.
-    // Backends without an immediate API reject this explicitly.
-    virtual void beginLegacyRenderPass(RenderTarget*) {
-        throw std::runtime_error(
-            "legacy rendering into an RHI target is unsupported");
-    }
-    virtual void endLegacyRenderPass(RenderTarget*) {
-        throw std::runtime_error(
-            "legacy rendering into an RHI target is unsupported");
-    }
     virtual std::unique_ptr<GraphicsPipeline>
     createGraphicsPipeline(const GraphicsPipelineDesc& desc) = 0;
     virtual std::unique_ptr<BindGroupLayout>
@@ -325,12 +314,6 @@ class GraphicsDevice {
             "CUDA buffer unmap is unsupported by this graphics backend");
     }
 
-    // Skybox (optional — no-op on backends that don't support it)
-    virtual void setSkybox(const std::string& path, UpAxis upAxis = UpAxis::Y) {
-    }
-    virtual void setSkybox(const std::vector<std::string>& paths,
-                           UpAxis upAxis = UpAxis::Y) {}
-    virtual void drawSkybox(const glm::mat4& view, const glm::mat4& proj) {}
 };
 
 class Buffer {

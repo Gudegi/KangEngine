@@ -118,7 +118,6 @@ class TextRenderer {
     };
 
     struct InstanceBatch {
-        std::unique_ptr<Backend::VertexArray> vao;
         std::unique_ptr<Backend::Buffer> instanceBuffer;
         std::vector<GlyphInstance> instances;
         std::size_t allocatedInstances = 0;
@@ -127,7 +126,6 @@ class TextRenderer {
     Backend::GraphicsDevice* _device = nullptr;
     FontAtlasData _atlasData;
     std::unique_ptr<Backend::Texture> _atlasTexture;
-    std::unique_ptr<Backend::Shader> _shader;
     std::unique_ptr<Backend::Buffer> _quadVertexBuffer;
     std::unique_ptr<Backend::Buffer> _quadIndexBuffer;
     InstanceBatch _depthBatch;
@@ -164,8 +162,6 @@ class TextRenderer {
                            int viewportHeight,
                            std::vector<GlyphInstance>& instances) const;
     void rebuildDirtyInstances(int viewportWidth, int viewportHeight);
-    void renderBatch(InstanceBatch& batch, bool depthTest, int viewportWidth,
-                     int viewportHeight, bool screenSpace);
 
   public:
     TextRenderer() = default;
@@ -189,7 +185,6 @@ class TextRenderer {
     void setScreenHidden(const std::string& path, bool hidden);
     void removeScreenText(const std::string& path);
     void clearScreenText();
-    void render(int viewportWidth, int viewportHeight);
     void render(Backend::RenderTarget* target, int viewportWidth,
                 int viewportHeight);
 };

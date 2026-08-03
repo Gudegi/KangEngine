@@ -624,13 +624,8 @@ void Rasterizer::updateFrameData(const glm::mat4& view, const glm::mat4& proj) {
         inst.update();
 }
 
-void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
-    render(view, proj, nullptr, nullptr);
-}
-
 void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj,
-                        Backend::RenderTarget* sceneDrawTarget,
-                        Backend::RenderTarget* legacyResumeTarget) {
+                        Backend::RenderTarget* sceneDrawTarget) {
     _cullingTotalBatches = 0;
     _cullingCulledBatches = 0;
     _cullingTotalInstances = 0;
@@ -639,22 +634,13 @@ void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj,
     Backend::Texture* shadowTexture = activeShadowTexture();
     rebuildShadowSamplingBindings(shadowTexture);
     bindShadowTextures(shadowTexture);
-    renderOpaquePass(shadowTexture, sceneDrawTarget, legacyResumeTarget);
-    recordRenderHooks(RenderHookPhase::AfterOpaque, sceneDrawTarget,
-                      legacyResumeTarget);
-    // RHI submission does not retain the legacy framebuffer binding. Resume
-    // it for skybox, transparent, debug, and text compatibility passes.
-    if (legacyResumeTarget)
-        _graphicsDevice->beginLegacyRenderPass(legacyResumeTarget);
+    renderOpaquePass(shadowTexture, sceneDrawTarget);
+    recordRenderHooks(RenderHookPhase::AfterOpaque, sceneDrawTarget);
     renderSkyboxPass(view, proj, sceneDrawTarget);
-    renderTransparentPass(shadowTexture, sceneDrawTarget, legacyResumeTarget);
-    recordRenderHooks(RenderHookPhase::AfterTransparent, sceneDrawTarget,
-                      legacyResumeTarget);
-    renderDebugOverlayPass(sceneDrawTarget, legacyResumeTarget);
-    if (sceneDrawTarget)
-        _textRenderer.render(sceneDrawTarget, _viewportWidth, _viewportHeight);
-    else
-        _textRenderer.render(_viewportWidth, _viewportHeight);
+    renderTransparentPass(shadowTexture, sceneDrawTarget);
+    recordRenderHooks(RenderHookPhase::AfterTransparent, sceneDrawTarget);
+    renderDebugOverlayPass(sceneDrawTarget);
+    _textRenderer.render(sceneDrawTarget, _viewportWidth, _viewportHeight);
 }
 
 RenderHookHandle Rasterizer::addRenderHook(RenderHookPhase phase,
@@ -687,8 +673,7 @@ bool Rasterizer::removeRenderHook(RenderHookHandle handle) {
 }
 
 void Rasterizer::recordRenderHooks(
-    RenderHookPhase phase, Backend::RenderTarget* sceneDrawTarget,
-    Backend::RenderTarget* legacyResumeTarget) {
+    RenderHookPhase phase, Backend::RenderTarget* sceneDrawTarget) {
     if (!sceneDrawTarget)
         return;
     const size_t phaseIndex = static_cast<size_t>(phase);
@@ -705,8 +690,6 @@ void Rasterizer::recordRenderHooks(
     pass->end();
     auto commands = encoder->finish();
     _graphicsDevice->submit(*commands);
-    if (legacyResumeTarget)
-        _graphicsDevice->beginLegacyRenderPass(legacyResumeTarget);
 }
 
 Backend::Texture* Rasterizer::activeShadowTexture() const {
@@ -730,69 +713,11 @@ void Rasterizer::bindShadowTextures(Backend::Texture* shadowTexture) {
     }
 }
 
-void Rasterizer::bindShadowSampler(Backend::Shader* shader,
-                                   Backend::Texture* shadowTexture) {
-    if (!shadowTexture || !shader)
-        return;
-
-    shader->setInt("shadowMap0", SHADOW_TEXTURE_SLOT_BASE);
-    shader->setInt("shadowMap1", SHADOW_TEXTURE_SLOT_BASE + 1);
-    shader->setInt("shadowMap2", SHADOW_TEXTURE_SLOT_BASE + 2);
-    shader->setInt("shadowMap3", SHADOW_TEXTURE_SLOT_BASE + 3);
-    shader->setInt("debugCsmCascadeTint",
-                   (_debugCsmCascadeTint && _useCsm) ? 1 : 0);
-}
-
-void Rasterizer::renderSceneInstancer(MeshInstancer& inst, bool transparentPass,
-                                      Backend::Texture* shadowTexture) {
-    if (inst.hasTransparent() != transparentPass || inst.visibleCount() == 0)
-        return;
-
-    if (_frustumCullingEnabled) {
-        ++_cullingTotalBatches;
-        const int totalInstances = inst.instanceCount();
-        _cullingTotalInstances += totalInstances;
-        inst.applyFrustumCulling(&_viewFrustum);
-        const int culledInstances = totalInstances - inst.visibleCount();
-        _cullingCulledInstances += culledInstances;
-        if (inst.visibleCount() == 0) {
-            ++_cullingCulledBatches;
-            return;
-        }
-    }
-
-    if (inst.isDoubleSided())
-        _graphicsDevice->setCullFace(false);
-
-    if (inst.material()) {
-        inst.material()->bind();
-        bindShadowSampler(inst.shader(), shadowTexture);
-    } else {
-        inst.shader()->use();
-        bindShadowSampler(inst.shader(), shadowTexture);
-    }
-
-    inst.bindTextures();
-    if (transparentPass) {
-        bindShadowTextures(shadowTexture);
-        inst.uploadSkinningMatrices();
-    } else {
-        inst.uploadSkinningMatrices();
-        // Re-bind shadow map after bindTextures() to prevent slot 1 conflict
-        bindShadowTextures(shadowTexture);
-    }
-
-    inst.render();
-    if (inst.isDoubleSided())
-        _graphicsDevice->setCullFace(true);
-}
-
 // -------------------------------------------------------------------------
 // Opaque Scene Pipeline
 // -------------------------------------------------------------------------
 void Rasterizer::renderOpaquePass(Backend::Texture* shadowTexture,
-                                  Backend::RenderTarget* sceneDrawTarget,
-                                  Backend::RenderTarget* legacyResumeTarget) {
+                                  Backend::RenderTarget* sceneDrawTarget) {
     if (sceneDrawTarget && _forwardFrameBindGroup &&
         _shadowSamplingBindGroup) {
         auto encoder = _graphicsDevice->createCommandEncoder();
@@ -802,8 +727,7 @@ void Rasterizer::renderOpaquePass(Backend::Texture* shadowTexture,
                           static_cast<float>(_viewportHeight));
         for (auto& entry : _instancers) {
             MeshInstancer& inst = entry.second;
-            if (!usesRhiForward(inst) || inst.hasTransparent() ||
-                inst.visibleCount() == 0)
+            if (inst.hasTransparent() || inst.visibleCount() == 0)
                 continue;
             if (_frustumCullingEnabled) {
                 ++_cullingTotalBatches;
@@ -928,13 +852,6 @@ void Rasterizer::renderOpaquePass(Backend::Texture* shadowTexture,
         pass->end();
         auto commands = encoder->finish();
         _graphicsDevice->submit(*commands);
-        if (legacyResumeTarget)
-            _graphicsDevice->beginLegacyRenderPass(legacyResumeTarget);
-    }
-
-    for (auto& entry : _instancers) {
-        if (!sceneDrawTarget || !usesRhiForward(entry.second))
-            renderSceneInstancer(entry.second, false, shadowTexture);
     }
 }
 
@@ -946,7 +863,6 @@ void Rasterizer::renderSkyboxPass(const glm::mat4& view,
                                   Backend::RenderTarget* sceneDrawTarget) {
     // Drawn after opaque geometry so the skybox only fills empty pixels.
     if (!sceneDrawTarget || !_skyboxPipeline || !_skyboxTextureBindGroup) {
-        _graphicsDevice->drawSkybox(view, proj);
         return;
     }
     auto encoder = _graphicsDevice->createCommandEncoder();
@@ -969,8 +885,7 @@ void Rasterizer::renderSkyboxPass(const glm::mat4& view,
 // Transparent Scene Pipeline
 // -------------------------------------------------------------------------
 void Rasterizer::renderTransparentPass(
-    Backend::Texture* shadowTexture, Backend::RenderTarget* sceneDrawTarget,
-    Backend::RenderTarget* legacyResumeTarget) {
+    Backend::Texture* shadowTexture, Backend::RenderTarget* sceneDrawTarget) {
     if (sceneDrawTarget && _shadowSamplingBindGroup) {
         auto encoder = _graphicsDevice->createCommandEncoder();
         auto pass = encoder->beginRenderPass(sceneDrawTarget);
@@ -979,8 +894,7 @@ void Rasterizer::renderTransparentPass(
         std::vector<std::unique_ptr<Backend::BindGroup>> skinGroups;
         for (auto& entry : _instancers) {
             MeshInstancer& inst = entry.second;
-            if (!usesRhiForward(inst) || !inst.hasTransparent() ||
-                inst.visibleCount() == 0)
+            if (!inst.hasTransparent() || inst.visibleCount() == 0)
                 continue;
             size_t kind = 0;
             const bool texturedVertexColor =
@@ -1067,34 +981,16 @@ void Rasterizer::renderTransparentPass(
         pass->end();
         auto commands = encoder->finish();
         _graphicsDevice->submit(*commands);
-        if (legacyResumeTarget)
-            _graphicsDevice->beginLegacyRenderPass(legacyResumeTarget);
     }
-    _graphicsDevice->setBlend(true);
-    _graphicsDevice->setBlendFunc(Backend::BlendFactor::SrcAlpha,
-                                  Backend::BlendFactor::OneMinusSrcAlpha);
-    _graphicsDevice->setDepthWrite(false);
-    for (auto& entry : _instancers)
-        if (!sceneDrawTarget || !usesRhiForward(entry.second))
-            renderSceneInstancer(entry.second, true, shadowTexture);
-    _graphicsDevice->setDepthWrite(true);
-    _graphicsDevice->setBlend(false);
 }
 
 // -------------------------------------------------------------------------
 // Debug Overlay Pipeline
 // -------------------------------------------------------------------------
 void Rasterizer::renderDebugOverlayPass(
-    Backend::RenderTarget* sceneDrawTarget,
-    Backend::RenderTarget* legacyResumeTarget) {
+    Backend::RenderTarget* sceneDrawTarget) {
     updateDebugRenderAABB();
-    if (sceneDrawTarget) {
-        _debugRenderer.render(sceneDrawTarget, _viewportWidth, _viewportHeight);
-        if (legacyResumeTarget)
-            _graphicsDevice->beginLegacyRenderPass(legacyResumeTarget);
-    } else {
-        _debugRenderer.render();
-    }
+    _debugRenderer.render(sceneDrawTarget, _viewportWidth, _viewportHeight);
 }
 
 void Rasterizer::initSelectionMaskRhi() {
@@ -1998,39 +1894,6 @@ void Rasterizer::initForwardRhi() {
     }
 }
 
-bool Rasterizer::usesRhiForward(const MeshInstancer& inst) const {
-    if (!inst.shader() || !inst.material())
-        return false;
-    const std::string& name = inst.shader()->getName();
-    if (inst.material()->shadingModel() ==
-        MaterialShadingModel::VertexColor) {
-        const bool knownVertex = inst.hasSkinning()
-            ? name.find("shaders/skinned_mesh.vs|") != std::string::npos
-            : name.find("shaders/common.vs|") != std::string::npos;
-        const bool knownFragment =
-            name.find("shaders/common.fs") != std::string::npos ||
-            name.find("shaders/commonTex.fs") != std::string::npos ||
-            (!inst.hasSkinning() &&
-             name.find("shaders/checkerboard.fs") != std::string::npos);
-        return knownVertex && knownFragment;
-    }
-    if (inst.material()->shadingModel() == MaterialShadingModel::Phong) {
-        const bool knownVertex = inst.hasSkinning()
-            ? name.find("shaders/skinned_mesh.vs|") != std::string::npos
-            : name.find("shaders/common.vs|") != std::string::npos;
-        return knownVertex &&
-               name.find("shaders/phong.fs") != std::string::npos;
-    }
-    if (inst.material()->shadingModel() == MaterialShadingModel::PBR) {
-        const bool knownVertex = inst.hasSkinning()
-            ? name.find("shaders/skinned_mesh.vs|") != std::string::npos
-            : name.find("shaders/common.vs|") != std::string::npos;
-        return knownVertex &&
-               name.find("shaders/pbr_forward.fs") != std::string::npos;
-    }
-    return false;
-}
-
 bool Rasterizer::usesRhiTexturedVertexColor(
     const MeshInstancer& inst) const {
     return inst.material() &&
@@ -2166,14 +2029,12 @@ void Rasterizer::rebuildSkyboxBinding(UpAxis upAxis) {
 }
 
 void Rasterizer::setSkybox(const std::string& path, UpAxis upAxis) {
-    _graphicsDevice->setSkybox(path, upAxis);
     _skyboxTexture = _graphicsDevice->createCubemapTexture(path);
     rebuildSkyboxBinding(upAxis);
 }
 
 void Rasterizer::setSkybox(const std::vector<std::string>& paths,
                            UpAxis upAxis) {
-    _graphicsDevice->setSkybox(paths, upAxis);
     _skyboxTexture = _graphicsDevice->createCubemapTexture(paths);
     rebuildSkyboxBinding(upAxis);
 }

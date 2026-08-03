@@ -320,6 +320,7 @@ void Renderer::ensureOffscreenSceneTarget(Backend::Framebuffer* target,
     passDesc.label = "offscreen_scene_draw_pass";
     passDesc.colorAttachments[0].resolveTarget = nullptr;
     _offscreenDrawTarget = _device->createRenderTarget(passDesc);
+    _offscreenClearTarget.reset();
 
     if (_offscreenIntermediateColor)
         ensureOffscreenFormatConversion(resolvedColor);
@@ -328,6 +329,29 @@ void Renderer::ensureOffscreenSceneTarget(Backend::Framebuffer* target,
     _offscreenResolvedColor = resolvedColor;
     _offscreenWidth = width;
     _offscreenHeight = height;
+}
+
+void Renderer::ensureOffscreenClearTarget(const glm::vec4& clearColor) {
+    if (_offscreenClearTarget) {
+        const auto& current = _offscreenClearTarget->getDesc()
+                                  .colorAttachments.front()
+                                  .clearValue;
+        if (current.r == clearColor.r && current.g == clearColor.g &&
+            current.b == clearColor.b && current.a == clearColor.a)
+            return;
+    }
+
+    Backend::RenderPassDesc passDesc;
+    passDesc.label = "offscreen_scene_clear_pass";
+    passDesc.colorAttachments = {{
+        _offscreenMsaaColorView.get(), nullptr, Backend::LoadOp::Clear,
+        Backend::StoreOp::Store,
+        {clearColor.r, clearColor.g, clearColor.b, clearColor.a}}};
+    passDesc.depthStencilAttachment = Backend::DepthStencilAttachmentDesc{
+        _offscreenDepthStencilView.get(), Backend::LoadOp::Clear,
+        Backend::StoreOp::Store, 1.0f, Backend::LoadOp::Clear,
+        Backend::StoreOp::Store, 0};
+    _offscreenClearTarget = _device->createRenderTarget(passDesc);
 }
 
 void Renderer::ensureOffscreenFormatConversion(
@@ -438,16 +462,22 @@ void Renderer::renderSceneToFramebuffer(const glm::mat4& view,
     _rasterizer->updateFrameData(view, proj);
     _rasterizer->setViewportSize(width, height);
     ensureOffscreenSceneTarget(target, width, height);
-    _device->beginLegacyRenderPass(_offscreenResolveTarget.get());
-    _device->setViewport(0, 0, width, height);
     if (clear) {
-        const glm::vec4& color = _settings.background.backgroundColor;
-        _device->clear(color.r, color.g, color.b, color.a);
+        ensureOffscreenClearTarget(_settings.background.backgroundColor);
+        auto encoder = _device->createCommandEncoder();
+        auto pass = encoder->beginRenderPass(_offscreenClearTarget.get());
+        pass->end();
+        auto commands = encoder->finish();
+        _device->submit(*commands);
     }
-    _rasterizer->render(view, proj, _offscreenDrawTarget.get(),
-                        _offscreenResolveTarget.get());
-    _device->setPolygonMode(Backend::PolygonMode::Fill);
-    _device->endLegacyRenderPass(_offscreenResolveTarget.get());
+    _rasterizer->render(view, proj, _offscreenDrawTarget.get());
+    {
+        auto encoder = _device->createCommandEncoder();
+        auto pass = encoder->beginRenderPass(_offscreenResolveTarget.get());
+        pass->end();
+        auto commands = encoder->finish();
+        _device->submit(*commands);
+    }
     recordOffscreenFormatConversion(width, height);
     if (_viewportWidth > 0 && _viewportHeight > 0)
         _device->setViewport(0, 0, _viewportWidth, _viewportHeight);

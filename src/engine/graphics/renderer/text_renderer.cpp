@@ -203,65 +203,42 @@ void TextRenderer::createGPUResources() {
     };
     static constexpr uint32_t indices[] = {0, 1, 2, 0, 2, 3};
 
-    _quadVertexBuffer = _device->createBuffer(Backend::BufferType::Vertex,
-                                              sizeof(vertices), vertices);
-    _quadIndexBuffer = _device->createBuffer(Backend::BufferType::Index,
-                                             sizeof(indices), indices);
+    Backend::BufferDesc bufferDesc;
+    bufferDesc.size = sizeof(vertices);
+    bufferDesc.usage = Backend::BufferUsage::Vertex;
+    bufferDesc.label = "text_quad_vertices";
+    _quadVertexBuffer = _device->createBuffer(bufferDesc, vertices);
+    bufferDesc.size = sizeof(indices);
+    bufferDesc.usage = Backend::BufferUsage::Index;
+    bufferDesc.label = "text_quad_indices";
+    _quadIndexBuffer = _device->createBuffer(bufferDesc, indices);
 
-    Backend::TextureDesc textureDesc;
-    textureDesc.width = _atlasData.width();
-    textureDesc.height = _atlasData.height();
-    textureDesc.channels = 1;
-    textureDesc.data = _atlasData.pixels().data();
-    textureDesc.name = "Text Font Atlas";
-    Backend::SamplerDesc sampler;
-    sampler.wrapU = Backend::TextureWrap::ClampToEdge;
-    sampler.wrapV = Backend::TextureWrap::ClampToEdge;
-    sampler.minFilter = Backend::TextureFilter::Linear;
-    sampler.magFilter = Backend::TextureFilter::Linear;
-    _atlasTexture = _device->createTexture(textureDesc, sampler);
-    _shader =
-        _device->createShaderFromFile(KE::getAssetPath("shaders/text.vs"),
-                                      KE::getAssetPath("shaders/text.fs"));
-    _shader->setUniformBlockBinding("cameraUBO", 0);
+    Backend::TextureResourceDesc textureDesc;
+    textureDesc.extent = {static_cast<uint32_t>(_atlasData.width()),
+                          static_cast<uint32_t>(_atlasData.height()), 1};
+    textureDesc.format = Backend::TextureFormat::R8Unorm;
+    textureDesc.usage = Backend::TextureUsage::TextureBinding |
+                        Backend::TextureUsage::CopyDst;
+    textureDesc.label = "text_font_atlas";
+    Backend::TextureInitialData initialData;
+    initialData.data = _atlasData.pixels().data();
+    initialData.size = _atlasData.pixels().size();
+    initialData.bytesPerRow = static_cast<size_t>(_atlasData.width());
+    _atlasTexture = _device->createTexture(textureDesc, &initialData);
 }
 
 void TextRenderer::ensureBatchCapacity(InstanceBatch& batch,
                                        std::size_t count) {
-    if (count <= batch.allocatedInstances && batch.vao && batch.instanceBuffer)
+    if (count <= batch.allocatedInstances && batch.instanceBuffer)
         return;
 
     batch.allocatedInstances = growCapacity(count);
-    batch.instanceBuffer =
-        _device->createBuffer(Backend::BufferType::DynamicVertex,
-                              batch.allocatedInstances * sizeof(GlyphInstance));
-    batch.vao = _device->createVertexArray();
-    batch.vao->bind();
-    batch.vao->setVertexBuffer(_quadVertexBuffer.get());
-    batch.vao->setVertexAttribute({0, 2, Backend::VertexAttributeType::Float,
-                                   false, sizeof(QuadVertex),
-                                   offsetof(QuadVertex, position), 0});
-    batch.vao->setVertexAttribute({1, 2, Backend::VertexAttributeType::Float,
-                                   false, sizeof(QuadVertex),
-                                   offsetof(QuadVertex, uv), 0});
-    batch.vao->setVertexBuffer(batch.instanceBuffer.get());
-    batch.vao->setVertexAttribute({2, 3, Backend::VertexAttributeType::Float,
-                                   false, sizeof(GlyphInstance),
-                                   offsetof(GlyphInstance, origin), 1});
-    batch.vao->setVertexAttribute({3, 2, Backend::VertexAttributeType::Float,
-                                   false, sizeof(GlyphInstance),
-                                   offsetof(GlyphInstance, offset), 1});
-    batch.vao->setVertexAttribute({4, 2, Backend::VertexAttributeType::Float,
-                                   false, sizeof(GlyphInstance),
-                                   offsetof(GlyphInstance, size), 1});
-    batch.vao->setVertexAttribute({5, 4, Backend::VertexAttributeType::Float,
-                                   false, sizeof(GlyphInstance),
-                                   offsetof(GlyphInstance, uvRect), 1});
-    batch.vao->setVertexAttribute({6, 4, Backend::VertexAttributeType::Float,
-                                   false, sizeof(GlyphInstance),
-                                   offsetof(GlyphInstance, color), 1});
-    batch.vao->setIndexBuffer(_quadIndexBuffer.get());
-    batch.vao->unbind();
+    Backend::BufferDesc desc;
+    desc.size = batch.allocatedInstances * sizeof(GlyphInstance);
+    desc.usage = Backend::BufferUsage::Vertex |
+                 Backend::BufferUsage::CopyDst;
+    desc.label = "text_glyph_instances";
+    batch.instanceBuffer = _device->createBuffer(desc);
 }
 
 void TextRenderer::appendWorldEntry(
@@ -439,54 +416,6 @@ void TextRenderer::rebuildDirtyInstances(int viewportWidth,
     _worldDepthDirty = false;
     _worldOverlayDirty = false;
     _screenDirty = false;
-}
-
-void TextRenderer::renderBatch(InstanceBatch& batch, bool depthTest,
-                               int viewportWidth, int viewportHeight,
-                               bool screenSpace) {
-    if (batch.instances.empty() || !batch.vao)
-        return;
-
-    _device->setDepthTest(depthTest);
-    _shader->setVec2("uViewportSize", static_cast<float>(viewportWidth),
-                     static_cast<float>(viewportHeight));
-    _shader->setBool("uScreenSpace", screenSpace);
-    batch.vao->bind();
-    _device->drawIndexedInstanced(6, batch.instances.size());
-    batch.vao->unbind();
-}
-
-void TextRenderer::render(int viewportWidth, int viewportHeight) {
-    if (!_device || !_shader || !_atlasTexture || viewportWidth <= 0 ||
-        viewportHeight <= 0)
-        return;
-    if (viewportWidth != _lastViewportWidth ||
-        viewportHeight != _lastViewportHeight)
-        _screenDirty = true;
-    if (_worldDepthDirty || _worldOverlayDirty || _screenDirty)
-        rebuildDirtyInstances(viewportWidth, viewportHeight);
-    if (_depthBatch.instances.empty() && _overlayBatch.instances.empty() &&
-        _screenBatch.instances.empty())
-        return;
-
-    _device->setCullFace(false);
-    _device->setDepthWrite(false);
-    _device->setBlend(true);
-    _device->setBlendFunc(Backend::BlendFactor::SrcAlpha,
-                          Backend::BlendFactor::OneMinusSrcAlpha);
-    _shader->use();
-    _shader->setInt("uFontAtlas", 0);
-    _atlasTexture->bind(0);
-
-    renderBatch(_depthBatch, true, viewportWidth, viewportHeight, false);
-    renderBatch(_overlayBatch, false, viewportWidth, viewportHeight, false);
-    renderBatch(_screenBatch, false, viewportWidth, viewportHeight, true);
-
-    _atlasTexture->unbind();
-    _device->setBlend(false);
-    _device->setDepthWrite(true);
-    _device->setDepthTest(true);
-    _device->setCullFace(true);
 }
 
 void TextRenderer::render(Backend::RenderTarget* target, int viewportWidth,

@@ -170,6 +170,7 @@ class Renderer {
   private:
     void ensureOffscreenSceneTarget(Backend::Framebuffer* target, int width,
                                     int height);
+    void ensureOffscreenClearTarget(const glm::vec4& clearColor);
     void ensureOffscreenFormatConversion(Backend::Texture* targetColor);
     void recordOffscreenFormatConversion(int width, int height);
     Backend::GraphicsDevice* _device = nullptr;
@@ -186,6 +187,7 @@ class Renderer {
     std::unique_ptr<Backend::TextureView> _offscreenMsaaColorView;
     std::unique_ptr<Backend::TextureView> _offscreenResolveColorView;
     std::unique_ptr<Backend::TextureView> _offscreenDepthStencilView;
+    std::unique_ptr<Backend::RenderTarget> _offscreenClearTarget;
     std::unique_ptr<Backend::RenderTarget> _offscreenDrawTarget;
     std::unique_ptr<Backend::RenderTarget> _offscreenResolveTarget;
     std::unique_ptr<Backend::TextureView> _offscreenOutputView;

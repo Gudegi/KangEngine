@@ -28,7 +28,6 @@ class DebugRenderer {
     };
 
     struct LineBatch {
-        std::unique_ptr<Backend::VertexArray> vao;
         std::unique_ptr<Backend::Buffer> vertexBuffer;
         std::vector<LineVertex> vertices;
         size_t allocatedVertices = 0;
@@ -37,7 +36,6 @@ class DebugRenderer {
     };
 
     struct PointBatch {
-        std::unique_ptr<Backend::VertexArray> vao;
         std::unique_ptr<Backend::Buffer> vertexBuffer;
         std::vector<PointVertex> vertices;
         size_t allocatedVertices = 0;
@@ -45,8 +43,6 @@ class DebugRenderer {
     };
 
     Backend::GraphicsDevice* _device = nullptr;
-    Backend::Shader* _shader = nullptr;
-    std::unique_ptr<Backend::Shader> _ownedShader;
     std::map<std::string, LineBatch> _lineBatches;
     std::map<std::string, PointBatch> _pointBatches;
     Backend::BindGroup* _frameBindGroup = nullptr;
@@ -85,7 +81,6 @@ class DebugRenderer {
                    const std::vector<glm::vec4>& colors = {}, float size = 6.0f,
                    bool hidden = false);
     void clearPoints(const std::string& path);
-    void render();
     void render(Backend::RenderTarget* target, int viewportWidth,
                 int viewportHeight);
 };

@@ -112,8 +112,6 @@ class Phase1SceneSmoke final : public App {
         previewDesc.colorFormat = Backend::FramebufferColorFormat::RGBA16F;
         previewFramebuffer =
             getGraphicsDevice()->createFramebuffer(previewDesc);
-        legacyComparisonFramebuffer =
-            getGraphicsDevice()->createFramebuffer(previewDesc);
         previewDesc.colorFormat = Backend::FramebufferColorFormat::RGBA8;
         rgba8PreviewFramebuffer =
             getGraphicsDevice()->createFramebuffer(previewDesc);
@@ -219,8 +217,6 @@ class Phase1SceneSmoke final : public App {
             require(!rgba8.values.empty() &&
                         rgba8Energy / rgba8.values.size() > 0.01,
                     "RGBA8 offscreen RHI output is empty");
-            renderLegacyComparison(96, 64);
-            compareRhiAndLegacy();
             previewFramebuffer->resize(81, 53);
             getRenderer().renderSceneToFramebuffer(
                 getCamera(), previewFramebuffer.get(), 81, 53, true);
@@ -473,56 +469,6 @@ class Phase1SceneSmoke final : public App {
         return getGraphicsDevice()->readTexture(view.get());
     }
 
-    void renderLegacyComparison(int width, int height) {
-        const glm::mat4 view = getCamera().getViewMatrix();
-        const glm::mat4 proj = getCamera().getProjMatrix();
-        getRasterizer()->updateFrameData(view, proj);
-        getRasterizer()->setViewportSize(width, height);
-        legacyComparisonFramebuffer->bind();
-        getGraphicsDevice()->setViewport(0, 0, width, height);
-        const glm::vec4 clear =
-            getRenderer().settings().background.backgroundColor;
-        getGraphicsDevice()->clear(clear.r, clear.g, clear.b, clear.a);
-        // A target-less Rasterizer call intentionally exercises the retained
-        // legacy compatibility draw for the same scene.
-        getRasterizer()->render(view, proj);
-        legacyComparisonFramebuffer->resolve();
-        legacyComparisonFramebuffer->unbind();
-        getGraphicsDevice()->setViewport(0, 0, getWidth(), getHeight());
-        getRasterizer()->setViewportSize(getWidth(), getHeight());
-    }
-
-    void compareRhiAndLegacy() {
-        const auto rhi = readFramebuffer(*previewFramebuffer,
-                                         "phase1_rhi_comparison_view");
-        const auto legacy = readFramebuffer(
-            *legacyComparisonFramebuffer, "phase1_legacy_comparison_view");
-        require(rhi.width == legacy.width && rhi.height == legacy.height &&
-                    rhi.values.size() == legacy.values.size(),
-                "RHI/legacy comparison extent mismatch");
-        double difference = 0.0;
-        double rhiEnergy = 0.0;
-        size_t samples = 0;
-        for (size_t i = 0; i + 3 < rhi.values.size(); i += 4) {
-            for (size_t channel = 0; channel < 3; ++channel) {
-                const float a = rhi.values[i + channel];
-                const float b = legacy.values[i + channel];
-                require(std::isfinite(a) && std::isfinite(b),
-                        "RHI/legacy comparison contains non-finite pixels");
-                difference += std::abs(static_cast<double>(a - b));
-                rhiEnergy += std::abs(static_cast<double>(a));
-                ++samples;
-            }
-        }
-        require(samples > 0 && rhiEnergy / samples > 0.01,
-                "RHI scene comparison output is empty");
-        const double meanAbsoluteError = difference / samples;
-        require(meanAbsoluteError < 0.20,
-                "RHI scene diverges excessively from the legacy renderer");
-        std::cout << "RHI/legacy RGB mean absolute error: "
-                  << meanAbsoluteError << '\n';
-    }
-
     int frame = 0;
     Scene::Prim* selectedPrim = nullptr;
     Scene::Prim* visibilityPrim = nullptr;
@@ -551,7 +497,6 @@ class Phase1SceneSmoke final : public App {
     std::unique_ptr<PBRMaterial> skinnedPbr;
     std::unique_ptr<Backend::Framebuffer> previewFramebuffer;
     std::unique_ptr<Backend::Framebuffer> rgba8PreviewFramebuffer;
-    std::unique_ptr<Backend::Framebuffer> legacyComparisonFramebuffer;
     std::unique_ptr<Backend::Buffer> renderHookVertexBuffer;
     std::unique_ptr<Backend::GraphicsPipeline> renderHookPipeline;
     RenderHookHandle renderHook = InvalidRenderHook;
