@@ -85,19 +85,19 @@ class RagdollApp(ke.App):
 
     def reset(self):
         self.articulation.reset_root(
-            ke.vec3(0.0, 0.0, self.spawn_height_offset),
-            ke.quat(1.0, 0.0, 0.0, 0.0),
+            ke.Vec3(0.0, 0.0, self.spawn_height_offset),
+            ke.Quat(1.0, 0.0, 0.0, 0.0),
         )
 
-    def preUpdate(self):
+    def pre_update(self):
         if self.was_key_pressed(keys.R):
             self.reset()
 
-    def fixedUpdate(self, fixed_dt):
+    def fixed_update(self, fixed_dt):
         self.articulation.set_drive_targets(self.targets, self.kp, self.kd)
         self.physics.step()
 
-    def preRender(self):
+    def pre_render(self):
         self.physics_bridge.sync()
         self.check_error()
 
@@ -161,10 +161,10 @@ class RagdollApp(ke.App):
         for prim in self.robot.body_prims():
             color = prim.get_display_color_alpha()
             if color is None:
-                color = ke.vec4(0.15, 0.15, 0.15, 1.0)
-            prim.set_display_color_alpha(ke.vec4(color.x, color.y, color.z, alpha))
+                color = ke.Vec4(0.15, 0.15, 0.15, 1.0)
+            prim.set_display_color_alpha(ke.Vec4(color.x, color.y, color.z, alpha))
 
-    def postRender(self):
+    def post_render(self):
         pass
 
     def cleanup(self):

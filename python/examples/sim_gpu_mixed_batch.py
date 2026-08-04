@@ -411,7 +411,7 @@ class MixedGpuBatchViewer(ke.App):
         )
         self.check_error()
 
-    def preUpdate(self):
+    def pre_update(self):
         if self.was_key_pressed(keys.R):
             reset_scene(
                 self.world,
@@ -424,7 +424,7 @@ class MixedGpuBatchViewer(ke.App):
                 self.targets,
             )
 
-    def fixedUpdate(self, fixed_dt):
+    def fixed_update(self, fixed_dt):
         step_with_random_position_control(
             self.world,
             self.robots,
@@ -440,7 +440,7 @@ class MixedGpuBatchViewer(ke.App):
             substeps=self.args.substeps,
         )
 
-    def preRender(self):
+    def pre_render(self):
         self.visual.sync()
         self.check_error()
 

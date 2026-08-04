@@ -33,6 +33,20 @@ def _stub_function_parameters(stub_path: Path) -> dict[str, tuple[str, ...]]:
     }
 
 
+def _stub_class_attributes(stub_path: Path) -> dict[str, set[str]]:
+    tree = ast.parse(stub_path.read_text(), filename=str(stub_path))
+    return {
+        node.name: {
+            child.target.id
+            for child in node.body
+            if isinstance(child, ast.AnnAssign)
+            and isinstance(child.target, ast.Name)
+        }
+        for node in tree.body
+        if isinstance(node, ast.ClassDef)
+    }
+
+
 def _missing_public_docstrings(stub_path: Path, public_names: set[str]) -> list[str]:
     tree = ast.parse(stub_path.read_text(), filename=str(stub_path))
     missing: list[str] = []
@@ -69,7 +83,7 @@ def _native_function_parameters(function) -> tuple[str, ...]:
 
 def main() -> None:
     package_root = Path(ke.__file__).resolve().parent
-    for package_name in ("animation", "physics", "render"):
+    for package_name in ("animation", "material", "physics", "render"):
         module = getattr(ke, package_name)
         package_stub = package_root / package_name / "__init__.pyi"
         module_stub = package_root / f"{package_name}.pyi"
@@ -81,13 +95,27 @@ def main() -> None:
             raise AssertionError(
                 f"{package_name} stub is missing public exports: {sorted(missing)}"
             )
-        if package_name == "animation":
+        if package_name in {"animation", "material", "render"}:
             missing_docs = _missing_public_docstrings(stub_path, set(module.__all__))
             if missing_docs:
                 raise AssertionError(
-                    "animation stub is missing public docstrings: "
+                    f"{package_name} stub is missing public docstrings: "
                     f"{sorted(missing_docs)}"
                 )
+        if package_name in {"material", "render"}:
+            stub_attributes = _stub_class_attributes(stub_path)
+            for name in module.__all__:
+                public_type = getattr(module, name)
+                members = getattr(public_type, "__members__", None)
+                if members is None:
+                    continue
+                stub_members = stub_attributes.get(name, set())
+                if stub_members != set(members):
+                    raise AssertionError(
+                        f"render.{name} stub enum members {sorted(stub_members)} "
+                        f"do not match runtime members {sorted(members)}"
+                    )
+        if package_name == "animation":
             stub_parameters = _stub_function_parameters(stub_path)
             for name in module.__all__:
                 function = getattr(module, name)

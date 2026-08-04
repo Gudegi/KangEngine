@@ -1,7 +1,7 @@
 """Stress fixed-update catch-up behavior with a PhysX GPU simulation.
 
-The app deliberately stalls ``preRender()`` so the next rendered frame receives
-a large wall-clock delta. Physics still advances only from ``fixedUpdate()``.
+The app deliberately stalls ``pre_render()`` so the next rendered frame receives
+a large wall-clock delta. Physics still advances only from ``fixed_update()``.
 
 Example:
 
@@ -70,11 +70,11 @@ class FixedUpdateGpuStressApp(ke.App):
         self._gpu_ready = True
         self.world.step(substeps=0, refresh=False, apply_commands=False)
 
-    def fixedUpdate(self, fixed_dt):
+    def fixed_update(self, fixed_dt):
         self.world.advance(fixed_dt, refresh=False)
         self.fixed_updates += 1
 
-    def preRender(self):
+    def pre_render(self):
         updates_this_frame = self.fixed_updates - self._previous_fixed_updates
         self._previous_fixed_updates = self.fixed_updates
         self.fixed_updates_per_frame.append(updates_this_frame)

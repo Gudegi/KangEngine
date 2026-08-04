@@ -83,8 +83,8 @@ class FbxMotionViewer(ke.App):
         self.scene.add_ground(scale=20.0, material=self.ground_material)
 
         camera = self.get_camera()
-        camera.set_camera_pos(ke.vec3(0.0, 1.6, 3.8))
-        camera.set_target_pos(ke.vec3(0.0, 0.9, 0.0))
+        camera.set_camera_pos(ke.Vec3(0.0, 1.6, 3.8))
+        camera.set_target_pos(ke.Vec3(0.0, 0.9, 0.0))
 
         self._apply_time(0.0)
         print(
@@ -140,7 +140,7 @@ class FbxMotionViewer(ke.App):
         else:
             self.line_view.update_lines(starts_t, ends_t, colors_t)
 
-    def preRender(self):
+    def pre_render(self):
         if self.was_key_pressed(keys.SPACE):
             self.editor.player.playing = not self.editor.player.playing
         if self.was_key_pressed(keys.R):
@@ -159,7 +159,7 @@ class FbxMotionViewer(ke.App):
         if self.editor.render_panel(Path(self.fbx_file).name):
             self._apply_time(self.editor.player.time)
 
-    def postRender(self):
+    def post_render(self):
         pass
 
 

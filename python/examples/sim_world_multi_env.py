@@ -178,11 +178,11 @@ class MultiEnvSimWorldApp(ke.App):
         self.world.step(substeps=0, apply_commands=False)
         self.visual.sync()
 
-    def preUpdate(self):
+    def pre_update(self):
         if self.was_key_pressed(keys.R):
             self._reset()
 
-    def fixedUpdate(self, fixed_dt):
+    def fixed_update(self, fixed_dt):
         self.world.advance(fixed_dt)
         self.sim_time += fixed_dt
         if (
@@ -199,7 +199,7 @@ class MultiEnvSimWorldApp(ke.App):
                 f"total_updated_shapes={self.material_update_count}"
             )
 
-    def preRender(self):
+    def pre_render(self):
         self.visual.sync()
         self.check_error()
 
@@ -262,11 +262,11 @@ class MultiEnvSimWorldApp(ke.App):
             self.standard_materials.common,
             color=[0.45, 0.45, 0.5, 1.0],
         )
-        view.prim.set_local_translation(ke.vec3(self.ramp_pos))
-        # ke.quat constructor is (w, x, y, z), while PhysX binding args above
+        view.prim.set_local_translation(ke.Vec3(self.ramp_pos))
+        # ke.Quat constructor is (w, x, y, z), while PhysX binding args above
         # use xyzw lists.
         view.prim.set_local_rotation(
-            ke.quat(
+            ke.Quat(
                 self.ramp_rot_xyzw[3],
                 self.ramp_rot_xyzw[0],
                 self.ramp_rot_xyzw[1],

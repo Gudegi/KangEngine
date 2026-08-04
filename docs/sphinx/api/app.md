@@ -22,8 +22,6 @@ Application lifecycle, camera access, and viewport interaction.
 
 .. autoclass:: RenderablePrimView
 
-.. autoclass:: Camera
-
 .. autoclass:: RayPickResult
 ```
 

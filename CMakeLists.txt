@@ -292,6 +292,8 @@ if(IS_PYTHON_LIB)
     #file(GLOB_RECURSE PYBIND_SOURCE_FILES "${BIND_DIR}/*.cpp")
     file(GLOB PYBIND_SOURCE_FILES
         "${BIND_DIR}/bind_new.cpp"
+        "${BIND_DIR}/bind_material.cpp"
+        "${BIND_DIR}/bind_render.cpp"
         "${BIND_DIR}/bind_scene.cpp"
         "${BIND_DIR}/bind_animation.cpp"
         "${BIND_DIR}/bind_character.cpp"

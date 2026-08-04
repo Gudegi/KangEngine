@@ -44,9 +44,9 @@ class ProceduralTerrainViewer(ke.App):
 
     def setup(self):
         self.standard_materials = self.create_standard_materials()
-        self.set_light_direction(ke.vec3(-0.35, 0.82, -0.45))
+        self.set_light_direction(ke.Vec3(-0.35, 0.82, -0.45))
         self.set_light_intensity(1.25)
-        self.set_light_ambient(ke.vec3(0.32, 0.32, 0.32))
+        self.set_light_ambient(ke.Vec3(0.32, 0.32, 0.32))
 
         self.rng = np.random.default_rng(self.seed)
         self.grid = terrain.TerrainGrid(
@@ -61,10 +61,9 @@ class ProceduralTerrainViewer(ke.App):
         self.mesh = self.grid.to_mesh(up_axis=ke.UpAxis.Y, backend=self.backend)
 
         self.material = self.create_phong_material(
-            material=self.standard_materials.phong,
-            ambient=ke.vec3(0.10, 0.12, 0.10),
-            diffuse=ke.vec3(0.27, 0.28, 0.27),
-            specular=ke.vec3(0.06, 0.06, 0.06),
+            ambient=ke.Vec3(0.10, 0.12, 0.10),
+            diffuse=ke.Vec3(0.27, 0.28, 0.27),
+            specular=ke.Vec3(0.06, 0.06, 0.06),
             shininess=12.0,
         )
         self.view = self.scene.add_mesh("/procedural_terrain", self.mesh, self.material)
@@ -109,15 +108,15 @@ class ProceduralTerrainViewer(ke.App):
             f"test_bodies={len(self.test_bodies)}"
         )
 
-    def preUpdate(self):
+    def pre_update(self):
         if self.was_key_pressed(keys.R):
             self._reset_collision_test_bodies()
 
-    def fixedUpdate(self, fixed_dt):
+    def fixed_update(self, fixed_dt):
         if self.physics:
             self.physics.step()
 
-    def preRender(self):
+    def pre_render(self):
         if self.physics:
             self._sync_collision_test_bodies()
 
@@ -190,17 +189,15 @@ class ProceduralTerrainViewer(ke.App):
             return
 
         sphere_material = self.create_phong_material(
-            material=self.standard_materials.phong,
-            ambient=ke.vec3(0.12, 0.06, 0.03),
-            diffuse=ke.vec3(0.95, 0.32, 0.08),
-            specular=ke.vec3(0.08, 0.08, 0.08),
+            ambient=ke.Vec3(0.12, 0.06, 0.03),
+            diffuse=ke.Vec3(0.95, 0.32, 0.08),
+            specular=ke.Vec3(0.08, 0.08, 0.08),
             shininess=20.0,
         )
         box_material = self.create_phong_material(
-            material=self.standard_materials.phong,
-            ambient=ke.vec3(0.03, 0.07, 0.12),
-            diffuse=ke.vec3(0.12, 0.42, 0.95),
-            specular=ke.vec3(0.08, 0.08, 0.08),
+            ambient=ke.Vec3(0.03, 0.07, 0.12),
+            diffuse=ke.Vec3(0.12, 0.42, 0.95),
+            specular=ke.Vec3(0.08, 0.08, 0.08),
             shininess=20.0,
         )
 
@@ -246,7 +243,7 @@ class ProceduralTerrainViewer(ke.App):
         max_height = float(np.max(self.grid.height_meters()))
         drop_span = max(2.0, max(width, length) * 0.25)
         y = max_height + 1.0 + drop_span * (0.35 + 0.65 * index / max(total - 1, 1))
-        return ke.vec3(float(x), float(y), float(z))
+        return ke.Vec3(float(x), float(y), float(z))
 
     def _reset_collision_test_bodies(self):
         total = len(self.test_bodies)
@@ -265,10 +262,10 @@ class ProceduralTerrainViewer(ke.App):
             pos = actor.get_root_position()
             rot = actor.get_root_rotation()
             view.prim.set_local_translation(
-                ke.vec3(float(pos[0]), float(pos[1]), float(pos[2]))
+                ke.Vec3(float(pos[0]), float(pos[1]), float(pos[2]))
             )
             view.prim.set_local_rotation(
-                ke.quat(float(rot[3]), float(rot[0]), float(rot[1]), float(rot[2]))
+                ke.Quat(float(rot[3]), float(rot[0]), float(rot[1]), float(rot[2]))
             )
 
     def _setup_camera(self):
@@ -277,10 +274,10 @@ class ProceduralTerrainViewer(ke.App):
         camera.set_far_plane(1000.0)
         camera.set_fov(55.0)
         radius = max(self.grid.width, self.grid.length) * self.horizontal_scale
-        target = ke.vec3(0.0, 0.0, 0.0)
+        target = ke.Vec3(0.0, 0.0, 0.0)
         camera.set_target_pos(target)
         camera.set_camera_pos(
-            target + ke.vec3(radius * 0.45, radius * 0.55, radius * 0.85)
+            target + ke.Vec3(radius * 0.45, radius * 0.55, radius * 0.85)
         )
         self.set_camera_move_speed(max(1.0, radius * 0.35))
 

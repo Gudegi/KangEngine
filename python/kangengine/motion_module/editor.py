@@ -247,10 +247,10 @@ class MotionCameraFollower:
             camera_pos = old_camera * (1.0 - alpha) + camera_pos * alpha
 
         camera.set_target_pos(
-            _ke.vec3(float(target[0]), float(target[1]), float(target[2]))
+            _ke.Vec3(float(target[0]), float(target[1]), float(target[2]))
         )
         camera.set_camera_pos(
-            _ke.vec3(
+            _ke.Vec3(
                 float(camera_pos[0]),
                 float(camera_pos[1]),
                 float(camera_pos[2]),

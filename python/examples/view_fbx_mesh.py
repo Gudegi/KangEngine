@@ -83,7 +83,7 @@ class FBXMeshViewer(ke.App):
                     # FBX does not reliably describe alpha semantics. Atlas
                     # textures in these formats commonly use binary cutouts;
                     # Mask keeps depth writes and clips their empty texels.
-                    view.set_alpha_mode(ke.render.AlphaMode.Mask, 0.5)
+                    view.set_alpha_mode(ke.render.AlphaMode.MASK, 0.5)
                 textured_count += 1
             if diffuse_texture is not None and normal_texture is not None:
                 view.set_texture(normal_texture, 5)
@@ -100,7 +100,7 @@ class FBXMeshViewer(ke.App):
         )
         self.check_error()
 
-    def preRender(self):
+    def pre_render(self):
         pass
 
     def render(self):
@@ -122,14 +122,14 @@ class FBXMeshViewer(ke.App):
                 view.set_casts_shadow(self.cast_shadows)
         imgui.end()
 
-    def postRender(self):
+    def post_render(self):
         pass
 
     def _configure_lighting(self):
-        self.set_light_direction(ke.vec3(-0.35, 0.82, -0.45))
-        self.set_light_color(ke.vec3(1.0, 0.94, 0.86))
+        self.set_light_direction(ke.Vec3(-0.35, 0.82, -0.45))
+        self.set_light_color(ke.Vec3(1.0, 0.94, 0.86))
         self.set_light_intensity(1.1)
-        self.set_light_ambient(ke.vec3(0.36, 0.35, 0.32))
+        self.set_light_ambient(ke.Vec3(0.36, 0.35, 0.32))
 
     def _configure_camera(self):
         camera = self.get_camera()
@@ -137,8 +137,8 @@ class FBXMeshViewer(ke.App):
         camera.set_far_plane(100.0)
         camera.set_fov(48.0)
         self.set_camera_move_speed(1.0)
-        camera.set_camera_pos(ke.vec3(1.5, 1.0, 2.0))
-        camera.set_target_pos(ke.vec3(0.0, 0.4, 0.0))
+        camera.set_camera_pos(ke.Vec3(1.5, 1.0, 2.0))
+        camera.set_target_pos(ke.Vec3(0.0, 0.4, 0.0))
 
     def _load_texture(self, texture_path: str):
         if not texture_path:
@@ -172,9 +172,9 @@ def _unique_prim_name(name: str, used_names: set[str]) -> str:
 
 def _mesh_color(index: int):
     palette = [
-        ke.vec4(0.70, 0.58, 0.43, 1.0),
-        ke.vec4(0.54, 0.47, 0.38, 1.0),
-        ke.vec4(0.76, 0.70, 0.60, 1.0),
+        ke.Vec4(0.70, 0.58, 0.43, 1.0),
+        ke.Vec4(0.54, 0.47, 0.38, 1.0),
+        ke.Vec4(0.76, 0.70, 0.60, 1.0),
     ]
     return palette[index % len(palette)]
 
@@ -184,7 +184,7 @@ def _mesh_material_color(mesh, fallback):
     if material is None or material.diffuse_color is None:
         return fallback
     color = material.diffuse_color
-    return ke.vec4(float(color[0]), float(color[1]), float(color[2]), float(color[3]))
+    return ke.Vec4(float(color[0]), float(color[1]), float(color[2]), float(color[3]))
 
 
 def _primary_material(mesh):

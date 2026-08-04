@@ -5,11 +5,11 @@ render preparation. A simulation `App` should use this lifecycle:
 
 ```text
 rendered frame
-├─ preUpdate()             input and per-frame state changes
-├─ fixedUpdate(fixed_dt)   zero or more control/physics updates
-├─ preRender()             copy the latest state to visuals
+├─ pre_update()             input and per-frame state changes
+├─ fixed_update(fixed_dt)   zero or more control/physics updates
+├─ pre_render()             copy the latest state to visuals
 ├─ render()                ImGui and other drawing
-└─ postRender()            frame completion
+└─ post_render()            frame completion
 ```
 
 Configure the render, physics, and fixed-update rates together in `setup()`:
@@ -42,7 +42,7 @@ validate their integer decimation in their environment configuration.
 owners:
 
 - A native `App` passes `SimulationTimingConfig` to `configure_timing()`.
-  `App.start()` then schedules `fixedUpdate()` with its internal
+  `App.start()` then schedules `fixed_update()` with its internal
   `FixedStepClock`. It does not accept or use `SimulationRunConfig`.
 - An externally stepped runner, such as KELab, uses its timing configuration
   to determine `step_dt` and uses `SimulationRunConfig` independently to
@@ -71,10 +71,10 @@ Advance `KangSimWorld` by the callback duration instead of hard-coding a
 physics substep count:
 
 ```python
-def fixedUpdate(self, fixed_dt):
+def fixed_update(self, fixed_dt):
     self.world.advance(fixed_dt)
 
-def preRender(self):
+def pre_render(self):
     self.visual.sync()
 ```
 
@@ -83,7 +83,7 @@ duration into whole `world.sim_dt` steps and retains any fractional remainder.
 For example, a 120 Hz world performs two physics steps during one 60 Hz fixed
 update and four during one 30 Hz fixed update.
 
-Do not advance physics from `preRender()`. That couples simulation speed to
+Do not advance physics from `pre_render()`. That couples simulation speed to
 render frequency. Pure animation viewers may still update an interpolated
 visual pose once per rendered frame because they do not integrate physics.
 
@@ -105,7 +105,7 @@ The same key meanings are used by KELab and its MimicKit-style viewer.
 ## Slow frames and catch-up
 
 The fixed-step clock accumulates elapsed wall time. If a rendered frame is
-late, the next frame may call `fixedUpdate()` multiple times. Configure its
+late, the next frame may call `fixed_update()` multiple times. Configure its
 safety limits with the same timing object:
 
 ```python
@@ -148,7 +148,7 @@ python/.venv/bin/python \
   --max-catch-up-steps 8
 ```
 
-The test uses a PhysX GPU world and deliberately blocks `preRender()` to model
+The test uses a PhysX GPU world and deliberately blocks `pre_render()` to model
 slow rendering. It verifies that per-frame updates never exceed the configured
 limit and that GPU simulation time equals the number of executed fixed
 updates.

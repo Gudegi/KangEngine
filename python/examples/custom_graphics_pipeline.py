@@ -41,10 +41,10 @@ class CustomGraphicsPipelineApp(ke.App):
         vertex_layout.attributes = [
             # FLOAT32X2 at byte offset 0 -> vertex shader location 0
             # (`layout(location = 0) in vec2 aPosition`).
-            ke.render.VertexAttributeDesc(ke.render.VertexFormat.FLOAT32X2, 0, 0),
+            ke.render.VertexAttributeDesc(ke.render.VertexFormat.FLOAT32_X2, 0, 0),
             # FLOAT32X3 at byte offset 8(4*2) -> vertex shader location 1
             # (`layout(location = 1) in vec3 aColor`).
-            ke.render.VertexAttributeDesc(ke.render.VertexFormat.FLOAT32X3, 8, 1),
+            ke.render.VertexAttributeDesc(ke.render.VertexFormat.FLOAT32_X3, 8, 1),
         ]
 
         shader = ke.render.ShaderDesc()

@@ -97,7 +97,7 @@ class FbxCharacterApplyPoseViewer(ke.App):
         )
         if self.material_mode != "texture":
             self.character.set_color(
-                ke.vec4(*ke.preset_rgba(ke.ColorType.PASTEL_PURPLE))
+                ke.Vec4(*ke.preset_rgba(ke.ColorType.PASTEL_PURPLE))
             )
 
         self.motion = self.character.motion()
@@ -267,7 +267,7 @@ class FbxCharacterApplyPoseViewer(ke.App):
                 f"frame_rate={clip.frame_rate:g}{selected}"
             )
 
-    def preRender(self):
+    def pre_render(self):
         changed = False
         if self.was_key_pressed(keys.M):
             self.show_mesh = not self.show_mesh
@@ -314,7 +314,7 @@ class FbxCharacterApplyPoseViewer(ke.App):
             self._apply_pose_at_time(self.time)
         imgui.end()
 
-    def postRender(self):
+    def post_render(self):
         pass
 
 

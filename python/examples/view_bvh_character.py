@@ -66,7 +66,7 @@ class BVHCharacterViewer(ke.App):
         )
         self.check_error()
 
-    def preRender(self):
+    def pre_render(self):
         if self.editor.update(self.get_delta_time()):
             self._apply_motion_time()
 

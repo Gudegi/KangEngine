@@ -260,18 +260,18 @@ class GpuContactSensorViewer(ke.App):
         )
         self.check_error()
 
-    def preUpdate(self):
+    def pre_update(self):
         if self.was_key_pressed(keys.C):
             self.show_contact_debug = not self.show_contact_debug
         if self.was_key_pressed(keys.R):
             self.demo.reset()
             self._skip_fixed_updates_this_frame = True
 
-    def fixedUpdate(self, fixed_dt):
+    def fixed_update(self, fixed_dt):
         if not self._skip_fixed_updates_this_frame:
             self.demo.step(self.args.substeps)
 
-    def preRender(self):
+    def pre_render(self):
         self.visual.sync()
         self._update_contact_debug()
         self._skip_fixed_updates_this_frame = False

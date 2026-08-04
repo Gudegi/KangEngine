@@ -37,10 +37,10 @@ Advance at the fixed simulation rate and display the latest state once per
 rendered frame:
 
 ```python
-def fixedUpdate(self, fixed_dt):
+def fixed_update(self, fixed_dt):
     self.world.advance(fixed_dt)
 
-def preRender(self):
+def pre_render(self):
     self.visual.sync()
 ```
 

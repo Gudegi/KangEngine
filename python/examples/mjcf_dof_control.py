@@ -106,8 +106,8 @@ class MjcfDofControlApp(ke.App):
         self.print_summary()
 
     def configure_camera(self):
-        self.get_camera().set_camera_pos(ke.vec3(*self.camera_pos))
-        self.get_camera().set_target_pos(ke.vec3(*self.camera_target))
+        self.get_camera().set_camera_pos(ke.Vec3(*self.camera_pos))
+        self.get_camera().set_target_pos(ke.Vec3(*self.camera_target))
 
     def create_world(self):
         self.world = ke.sim.KangSimWorld(
@@ -218,13 +218,13 @@ class MjcfDofControlApp(ke.App):
             return -math.pi, math.pi
         return float(lo), float(hi)
 
-    def preUpdate(self):
+    def pre_update(self):
         if self.was_key_pressed(keys.R):
             self._reset()
         if self.was_key_pressed(keys.Q):
             self.animate = not self.animate
 
-    def fixedUpdate(self, fixed_dt):
+    def fixed_update(self, fixed_dt):
         self.elapsed += fixed_dt
         if self.animate:
             self.targets[:] = self._animated_targets()
@@ -239,13 +239,13 @@ class MjcfDofControlApp(ke.App):
         )
         self.world.advance(fixed_dt)
 
-    def preRender(self):
+    def pre_render(self):
         self.visual.sync()
         self._update_contact_force_arrows()
         self._update_drag_force_arrow()
         self.check_error()
 
-    def onForceDragBegin(self, result, target):
+    def on_force_drag_begin(self, result, target):
         if not self.drag_force_enabled or not result.hit:
             self._clear_drag_force()
             return
@@ -268,7 +268,7 @@ class MjcfDofControlApp(ke.App):
         self._apply_drag_force()
         self._update_drag_force_arrow()
 
-    def onForceDragUpdate(self, result, target):
+    def on_force_drag_update(self, result, target):
         if not self.drag_force_enabled or self._drag_force_body_id is None:
             self._clear_drag_force()
             return
@@ -276,7 +276,7 @@ class MjcfDofControlApp(ke.App):
         self._apply_drag_force()
         self._update_drag_force_arrow()
 
-    def onForceDragEnd(self):
+    def on_force_drag_end(self):
         self._clear_drag_force()
 
     def _apply_drag_force(self):

@@ -51,8 +51,8 @@ class ConfigBindingsTest(unittest.TestCase):
 
     def test_render_config_keyword_construction(self):
         sampler = ke.render.SamplerDesc(
-            wrap_u=ke.render.TextureWrap.ClampToEdge,
-            min_filter=ke.render.TextureFilter.Linear,
+            wrap_u=ke.render.TextureWrap.CLAMP_TO_EDGE,
+            min_filter=ke.render.TextureFilter.LINEAR,
         )
         descriptor = ke.render.ExternalBufferDesc(
             count=4,
@@ -60,15 +60,15 @@ class ConfigBindingsTest(unittest.TestCase):
             sync_policy=ke.render.ExternalSyncPolicy.VERSIONED,
         )
 
-        self.assertEqual(sampler.wrap_u, ke.render.TextureWrap.ClampToEdge)
-        self.assertEqual(sampler.min_filter, ke.render.TextureFilter.Linear)
+        self.assertEqual(sampler.wrap_u, ke.render.TextureWrap.CLAMP_TO_EDGE)
+        self.assertEqual(sampler.min_filter, ke.render.TextureFilter.LINEAR)
         self.assertEqual(descriptor.count, 4)
         self.assertEqual(descriptor.stride_bytes, 64)
         self.assertEqual(
             descriptor.sync_policy,
             ke.render.ExternalSyncPolicy.VERSIONED,
         )
-        self.assertIn("TextureWrap.ClampToEdge", repr(sampler))
+        self.assertIn("TextureWrap.CLAMP_TO_EDGE", repr(sampler))
         self.assertIn("sync_policy=ExternalSyncPolicy.VERSIONED", repr(descriptor))
 
     def test_keyword_only_and_default_construction(self):
@@ -83,7 +83,7 @@ class ConfigBindingsTest(unittest.TestCase):
         with self.assertRaises(TypeError):
             ke.physics.PhysicsConfig(1.0 / 120.0)
         with self.assertRaises(TypeError):
-            ke.render.SamplerDesc(ke.render.TextureWrap.Repeat)
+            ke.render.SamplerDesc(ke.render.TextureWrap.REPEAT)
 
 
     def test_skeletal_visual_config_keyword_construction(self):

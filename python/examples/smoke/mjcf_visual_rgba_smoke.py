@@ -82,7 +82,7 @@ def main():
         _close(geom.physics_material.dynamic_friction, 1.7)
         _close(geom.physics_material.restitution, 0.0)
 
-        scene = ke.scene.create_backend(ke.scene.BackendType.Native)
+        scene = ke.scene.create_backend(ke.scene.BackendType.NATIVE)
         bridge = ke.visual.ArticulationVisual.from_mjcf(str(mjcf), scene, "/robot")
         body = bridge.body_prim(0)
         if body is None:

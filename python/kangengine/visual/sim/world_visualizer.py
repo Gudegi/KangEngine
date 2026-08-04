@@ -521,15 +521,15 @@ class RigidVisual:
         )
         for prim, pos, rot in zip(self.body_prims, body_pos, body_rot):
             prim.set_world_translation(
-                _ke.vec3(float(pos[0]), float(pos[1]), float(pos[2]))
+                _ke.Vec3(float(pos[0]), float(pos[1]), float(pos[2]))
             )
             prim.set_world_rotation(
-                _ke.quat(float(rot[3]), float(rot[0]), float(rot[1]), float(rot[2]))
+                _ke.Quat(float(rot[3]), float(rot[0]), float(rot[1]), float(rot[2]))
             )
 
     def _define_shape_prim(self, base_path, idx, spec):
         path = f"{base_path}/{_safe_prim_name(spec.name)}_{idx}"
-        prim = self.scene.define_prim(path, _ke.scene.PrimType.Mesh)
+        prim = self.scene.define_prim(path, _ke.scene.PrimType.MESH)
         geom_type = spec.geom_type
         size = spec.size
         if geom_type == "Sphere":
@@ -806,7 +806,7 @@ class SimWorldVisualizer:
             )
         body_handles = [
             self.app._add_renderable(
-                material, prim, render_api.TransformSource.ExternalBuffer
+                material, prim, render_api.TransformSource.EXTERNAL_BUFFER
             )
             for prim in body_prims
         ]
@@ -881,7 +881,7 @@ class SimWorldVisualizer:
             )
         body_handles = [
             self.app._add_renderable(
-                material, prim, render_api.TransformSource.ExternalBuffer
+                material, prim, render_api.TransformSource.EXTERNAL_BUFFER
             )
             for prim in body_prims
         ]
@@ -949,7 +949,7 @@ class SimWorldVisualizer:
             )
         prim = rigid_visual.body_prims[0]
         handle = self.app._add_renderable(
-            material, prim, render_api.TransformSource.ExternalBuffer
+            material, prim, render_api.TransformSource.EXTERNAL_BUFFER
         )
         backend = RigidGPUExternalBackend(
             self.app, self.world, obj_id, env_ids, prim, handle
@@ -998,7 +998,7 @@ class SimWorldVisualizer:
         body_prims = list(rigid_visual.body_prims)
         body_handles = [
             self.app._add_renderable(
-                material, prim, render_api.TransformSource.ExternalBuffer
+                material, prim, render_api.TransformSource.EXTERNAL_BUFFER
             )
             for prim in body_prims
         ]
@@ -1223,7 +1223,7 @@ class SimWorldVisualizer:
         if body_pos is not None:
             for prim, pos in zip(record.body_prims, body_pos):
                 prim.set_world_translation(
-                    _ke.vec3(float(pos[0]), float(pos[1]), float(pos[2]))
+                    _ke.Vec3(float(pos[0]), float(pos[1]), float(pos[2]))
                 )
 
         if body_rot is not None:
@@ -1231,7 +1231,7 @@ class SimWorldVisualizer:
                 # MimicKit stores quaternions as xyzw; KangEngine's Python quat
                 # constructor takes wxyz.
                 prim.set_world_rotation(
-                    _ke.quat(
+                    _ke.Quat(
                         float(rot[3]), float(rot[0]), float(rot[1]), float(rot[2])
                     ),
                 )
@@ -1253,14 +1253,14 @@ class SimWorldVisualizer:
         if root_pos is not None:
             pos = root_pos
             record.articulation_visual.set_root_translation(
-                _ke.vec3(float(pos[0]), float(pos[1]), float(pos[2]))
+                _ke.Vec3(float(pos[0]), float(pos[1]), float(pos[2]))
             )
 
         if root_rot is not None:
             rot = root_rot
             record.articulation_visual.set_joint_rotation(
                 0,
-                _ke.quat(float(rot[3]), float(rot[0]), float(rot[1]), float(rot[2])),
+                _ke.Quat(float(rot[3]), float(rot[0]), float(rot[1]), float(rot[2])),
             )
 
         if root_pos is not None or root_rot is not None:

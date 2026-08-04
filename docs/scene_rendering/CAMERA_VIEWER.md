@@ -16,8 +16,8 @@ camera = self.get_camera()
 camera.set_near_plane(0.05)
 camera.set_far_plane(5000.0)
 camera.set_fov(58.0)
-camera.set_camera_pos(ke.vec3(0.0, 4.0, 14.0))
-camera.set_target_pos(ke.vec3(0.0, 1.0, 0.0))
+camera.set_camera_pos(ke.Vec3(0.0, 4.0, 14.0))
+camera.set_target_pos(ke.Vec3(0.0, 1.0, 0.0))
 ```
 
 Use `ke.keys` in lifecycle callbacks for keyboard interaction and `ke.imgui`

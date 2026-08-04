@@ -30,10 +30,9 @@ void bind_character(py::module& m) {
 
     py::enum_<SiteDesc::Type>(character, "SiteDescType",
                               "MJCF site geometry description type.")
-        .value("Sphere", SiteDesc::Type::Sphere)
-        .value("Capsule", SiteDesc::Type::Capsule)
-        .value("Box", SiteDesc::Type::Box)
-        .export_values();
+        .value("SPHERE", SiteDesc::Type::Sphere)
+        .value("CAPSULE", SiteDesc::Type::Capsule)
+        .value("BOX", SiteDesc::Type::Box);
 
     py::class_<SiteDesc>(
         character, "SiteDesc",
@@ -115,11 +114,10 @@ void bind_character(py::module& m) {
     py::enum_<CollisionGeomDesc::Type>(
         character, "CollisionGeomDescType",
         "Collision geometry description type imported from character assets.")
-        .value("Capsule", CollisionGeomDesc::Type::Capsule)
-        .value("Cylinder", CollisionGeomDesc::Type::Cylinder)
-        .value("Sphere", CollisionGeomDesc::Type::Sphere)
-        .value("Box", CollisionGeomDesc::Type::Box)
-        .export_values();
+        .value("CAPSULE", CollisionGeomDesc::Type::Capsule)
+        .value("CYLINDER", CollisionGeomDesc::Type::Cylinder)
+        .value("SPHERE", CollisionGeomDesc::Type::Sphere)
+        .value("BOX", CollisionGeomDesc::Type::Box);
 
     py::class_<CollisionGeomDesc>(
         character, "CollisionGeomDesc",

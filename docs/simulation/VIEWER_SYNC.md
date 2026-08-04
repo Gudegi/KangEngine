@@ -12,10 +12,10 @@ visual_batch = visual.add(
     material=material,
 )
 
-def fixedUpdate(self, fixed_dt):
+def fixed_update(self, fixed_dt):
     self.world.advance(fixed_dt)
 
-def preRender(self):
+def pre_render(self):
     self.visual.sync()
 ```
 
@@ -31,7 +31,7 @@ visual.add_rigid_scene_graph(...)
 Use one representation deliberately: ExternalBuffer for throughput,
 SceneGraph for inspectable prims and interaction.
 
-Keep physics in `fixedUpdate()` and synchronization in `preRender()` so slow
+Keep physics in `fixed_update()` and synchronization in `pre_render()` so slow
 rendering cannot change the physics rate.
 
 Examples:

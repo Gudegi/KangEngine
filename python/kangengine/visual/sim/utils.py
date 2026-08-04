@@ -15,7 +15,7 @@ def normalize_color(color):
     arr = normalize_color_array(color)
     if arr is None:
         return None
-    return _ke.vec4(float(arr[0]), float(arr[1]), float(arr[2]), float(arr[3]))
+    return _ke.Vec4(float(arr[0]), float(arr[1]), float(arr[2]), float(arr[3]))
 
 
 def normalize_color_array(color):

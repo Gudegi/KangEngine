@@ -64,7 +64,7 @@ class RobotViewer(ke.App):
         print(f"Robot loaded: {self.robot.num_bodies()} bodies")
         self.check_error()
 
-    def preRender(self):
+    def pre_render(self):
         if _motion_data is None:
             return
 
@@ -73,13 +73,13 @@ class RobotViewer(ke.App):
 
         root = root_trans[idx]
         self.robot.set_root_translation(
-            # ke.vec3(float(root[0]), float(root[1]), float(root[2]))
+            # ke.Vec3(float(root[0]), float(root[1]), float(root[2]))
             root
         )
         for i in range(self.robot.num_bodies()):
             q = local_rot[idx][i]
             self.robot.set_joint_rotation(
-                i, ke.quat(float(q[0]), float(q[1]), float(q[2]), float(q[3]))
+                i, ke.Quat(float(q[0]), float(q[1]), float(q[2]), float(q[3]))
             )
         self.robot.apply_pose()
 
@@ -89,7 +89,7 @@ class RobotViewer(ke.App):
     def render(self):
         pass
 
-    def postRender(self):
+    def post_render(self):
         pass
 
 

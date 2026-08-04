@@ -107,26 +107,18 @@ Color = _set_public_module(_ke.Color, __name__)
 MotionSequencerPanel = _set_public_module(_ke.MotionSequencerPanel, __name__)
 FixedStepClock = _set_public_module(_ke.FixedStepClock, __name__)
 # GLM-style math types and helpers exposed by the C++ extension.
-vec3 = _set_public_module(_ke.vec3, __name__)
-vec2 = _set_public_module(_ke.vec2, __name__)
-vec4 = _set_public_module(_ke.vec4, __name__)
-quat = _set_public_module(_ke.quat, __name__)
-mat3 = _set_public_module(_ke.mat3, __name__)
-mat4 = _set_public_module(_ke.mat4, __name__)
+Vec3 = _set_public_module(_ke.Vec3, __name__)
+Vec2 = _set_public_module(_ke.Vec2, __name__)
+Vec4 = _set_public_module(_ke.Vec4, __name__)
+Quat = _set_public_module(_ke.Quat, __name__)
+Mat3 = _set_public_module(_ke.Mat3, __name__)
+Mat4 = _set_public_module(_ke.Mat4, __name__)
 translate = _set_public_module(_ke.translate, __name__)
 scale = _set_public_module(_ke.scale, __name__)
 
 # Bound C++ submodules exposed through Python wrapper modules.
 imgui = _ke.imgui
 keys = _ke.keys
-
-# Enum values exported by pybind11's export_values().
-X = _ke.X
-Y = _ke.Y
-Z = _ke.Z
-OpenGL = _ke.OpenGL
-Vulkan = _ke.Vulkan
-WebGPU = _ke.WebGPU
 
 __all__ = [
     "App",
@@ -154,12 +146,12 @@ __all__ = [
     "UpAxis",
     "InteractionMode",
     "RayPickResult",
-    "vec3",
-    "vec2",
-    "vec4",
-    "quat",
-    "mat3",
-    "mat4",
+    "Vec3",
+    "Vec2",
+    "Vec4",
+    "Quat",
+    "Mat3",
+    "Mat4",
     "translate",
     "scale",
     "scene",
@@ -175,12 +167,6 @@ __all__ = [
     "sim",
     "imgui",
     "keys",
-    "X",
-    "Y",
-    "Z",
-    "OpenGL",
-    "Vulkan",
-    "WebGPU",
     "ColorLibrary",
     "ColorType",
     "Color",

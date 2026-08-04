@@ -29,10 +29,10 @@ def _quat_wxyz(value):
 
 
 def main():
-    scene = ke.scene.create_backend(ke.scene.BackendType.Native)
+    scene = ke.scene.create_backend(ke.scene.BackendType.NATIVE)
 
-    parent = scene.define_prim("/World/Parent", ke.scene.PrimType.Xform)
-    child = scene.define_prim("/World/Parent/Child", ke.scene.PrimType.Xform)
+    parent = scene.define_prim("/World/Parent", ke.scene.PrimType.XFORM)
+    child = scene.define_prim("/World/Parent/Child", ke.scene.PrimType.XFORM)
 
     parent_transform = parent.get_transform_component()
     child_transform = child.get_transform_component()
@@ -46,19 +46,19 @@ def main():
         raise AssertionError("TransformComponent repr missing type name")
 
     parent_version = parent_transform.version
-    parent.set_local_translation(ke.vec3(1.0, 0.0, 0.0))
+    parent.set_local_translation(ke.Vec3(1.0, 0.0, 0.0))
     if parent_transform.version != parent_version + 1:
         raise AssertionError(
             "set_local_translation should advance TransformComponent version once"
         )
-    child.set_local_translation(ke.vec3(0.0, 2.0, 0.0))
+    child.set_local_translation(ke.Vec3(0.0, 2.0, 0.0))
     _close_tuple(_vec3_tuple(child.get_local_translation()), (0.0, 2.0, 0.0))
     _close_tuple(_vec3_tuple(child.get_world_translation()), (1.0, 2.0, 0.0))
     _close_tuple(_translation(child.compute_world_matrix()), (1.0, 2.0, 0.0))
     _close_tuple(_translation(child_transform.compute_world_matrix()), (1.0, 2.0, 0.0))
 
     version = child_transform.version
-    parent.set_local_translation(ke.vec3(3.0, 0.0, 0.0))
+    parent.set_local_translation(ke.Vec3(3.0, 0.0, 0.0))
     if child_transform.version != version + 1:
         raise AssertionError(
             "parent transform change should advance child world version once"
@@ -66,7 +66,7 @@ def main():
     _close_tuple(_translation(child.compute_world_matrix()), (3.0, 2.0, 0.0))
 
     version = child_transform.version
-    child_transform.set_world_translation(ke.vec3(10.0, 5.0, 0.0))
+    child_transform.set_world_translation(ke.Vec3(10.0, 5.0, 0.0))
     if child_transform.version != version + 1:
         raise AssertionError(
             "set_world_translation should advance TransformComponent version once"
@@ -74,7 +74,7 @@ def main():
     _close_tuple(_translation(child.compute_world_matrix()), (10.0, 5.0, 0.0))
     _close_tuple(_translation(child.compute_local_matrix()), (7.0, 5.0, 0.0))
 
-    child.set_local_rotation_axis_angle(ke.vec3(0.0, 0.0, 1.0), math.pi / 2.0)
+    child.set_local_rotation_axis_angle(ke.Vec3(0.0, 0.0, 1.0), math.pi / 2.0)
     if not child.has_attribute("xformOp:rotateQuaternion"):
         raise AssertionError("quaternion rotation attribute was not authored")
     local = child.compute_local_matrix()
@@ -90,7 +90,7 @@ def main():
         local_rotation = tuple(-value for value in local_rotation)
     _close_tuple(local_rotation, expected_local_rotation)
 
-    child_transform.set_world_rotation_axis_angle(ke.vec3(0.0, 1.0, 0.0), math.pi / 4.0)
+    child_transform.set_world_rotation_axis_angle(ke.Vec3(0.0, 1.0, 0.0), math.pi / 4.0)
     expected_world_rotation = (
         math.cos(math.pi / 8.0),
         0.0,
@@ -102,7 +102,7 @@ def main():
         world_rotation = tuple(-value for value in world_rotation)
     _close_tuple(world_rotation, expected_world_rotation)
     try:
-        child.set_local_rotation_axis_angle(ke.vec3(0.0, 0.0, 0.0), 1.0)
+        child.set_local_rotation_axis_angle(ke.Vec3(0.0, 0.0, 0.0), 1.0)
     except ValueError:
         pass
     else:

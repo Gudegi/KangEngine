@@ -80,10 +80,10 @@ class VisualArticulationSceneGraph:
         for prim in self.render_prims:
             color = prim.get_display_color_alpha()
             if color is None:
-                prim.set_display_color_alpha(_ke.vec4(1.0, 1.0, 1.0, alpha))
+                prim.set_display_color_alpha(_ke.Vec4(1.0, 1.0, 1.0, alpha))
             else:
                 prim.set_display_color_alpha(
-                    _ke.vec4(float(color.x), float(color.y), float(color.z), alpha)
+                    _ke.Vec4(float(color.x), float(color.y), float(color.z), alpha)
                 )
         return self
 

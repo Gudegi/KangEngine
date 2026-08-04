@@ -89,10 +89,10 @@ class ObjSceneViewer(ke.App):
         self.show_ground = bool(show_ground)
         self.ground_size = None if ground_size is None else float(ground_size)
         self.ground_y = None if ground_y is None else float(ground_y)
-        self.light_direction = light_direction or ke.vec3(-0.35, 0.82, -0.45)
-        self.light_color = light_color or ke.vec3(1.0, 0.96, 0.9)
+        self.light_direction = light_direction or ke.Vec3(-0.35, 0.82, -0.45)
+        self.light_color = light_color or ke.Vec3(1.0, 0.96, 0.9)
         self.light_intensity = float(light_intensity)
-        self.light_ambient = light_ambient or ke.vec3(0.32, 0.32, 0.32)
+        self.light_ambient = light_ambient or ke.Vec3(0.32, 0.32, 0.32)
         self.camera_pos = camera_pos if camera_pos else None
         self.camera_fov = float(camera_fov)
 
@@ -111,7 +111,7 @@ class ObjSceneViewer(ke.App):
             double_sided=self.double_sided,
         )
         self.import_view.root.set_local_scale(
-            ke.vec3(self.scale, self.scale, self.scale)
+            ke.Vec3(self.scale, self.scale, self.scale)
         )
 
         for view in self.import_view:
@@ -178,12 +178,12 @@ class ObjSceneViewer(ke.App):
         camera.set_fov(self.camera_fov)
         if self.camera_pos:
             camera.set_camera_pos(self.camera_pos)
-            camera.set_target_pos(self.camera_pos + ke.vec3(-3.0, 0.0, 0.0))
+            camera.set_target_pos(self.camera_pos + ke.Vec3(-3.0, 0.0, 0.0))
             self.set_camera_move_speed(max(5.0, 20.0 * self.scale))
         else:
             if self.bounds_min is None or self.bounds_max is None:
-                camera.set_camera_pos(ke.vec3(0.0, 4.0, 14.0))
-                camera.set_target_pos(ke.vec3(0.0, 2.0, 0.0))
+                camera.set_camera_pos(ke.Vec3(0.0, 4.0, 14.0))
+                camera.set_target_pos(ke.Vec3(0.0, 2.0, 0.0))
                 self.set_camera_move_speed(max(1.0, 20.0 * self.scale))
                 return
 
@@ -191,10 +191,10 @@ class ObjSceneViewer(ke.App):
             size = self.bounds_max - self.bounds_min
             radius = max(float(math.sqrt(float((size * size).sum()))) * 0.5, 1.0)
             camera.set_target_pos(
-                ke.vec3(float(center[0]), float(center[1]), float(center[2]))
+                ke.Vec3(float(center[0]), float(center[1]), float(center[2]))
             )
             camera.set_camera_pos(
-                ke.vec3(
+                ke.Vec3(
                     float(center[0] + radius * 0.15),
                     float(center[1] + radius * 0.10),
                     float(center[2] + radius * 0.85),
@@ -222,7 +222,7 @@ class ObjSceneViewer(ke.App):
             scale=ground_size,
             material=self.standard_materials.ground,
         )
-        ground.prim.set_local_translation(ke.vec3(0.0, ground_y, 0.0))
+        ground.prim.set_local_translation(ke.Vec3(0.0, ground_y, 0.0))
 
     def _apply_normal_map_toggle(self):
         for material, texture in self.normal_texture_bindings:
@@ -296,11 +296,11 @@ def main():
                 1200.0 * scale if args.ground_size is None else args.ground_size
             ),
             ground_y=(-4.0 * scale if args.ground_y is None else args.ground_y),
-            light_direction=ke.vec3(-0.32, 0.93, -0.17),
-            light_color=ke.vec3(1.0, 0.94, 0.86),
+            light_direction=ke.Vec3(-0.32, 0.93, -0.17),
+            light_color=ke.Vec3(1.0, 0.94, 0.86),
             light_intensity=1.25,
-            light_ambient=ke.vec3(0.38, 0.36, 0.32),
-            camera_pos=ke.vec3(5.92, 4.87, -0.96),
+            light_ambient=ke.Vec3(0.38, 0.36, 0.32),
+            camera_pos=ke.Vec3(5.92, 4.87, -0.96),
             camera_fov=58.0,
         )
     else:

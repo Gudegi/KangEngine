@@ -73,14 +73,14 @@ class MinimalSimWorldApp(ke.App):
         self.world.step(substeps=0, apply_commands=False)
         self.visual.sync()
 
-    def preUpdate(self):
+    def pre_update(self):
         if self.was_key_pressed(keys.R):
             self._reset()
 
-    def fixedUpdate(self, fixed_dt):
+    def fixed_update(self, fixed_dt):
         self.world.advance(fixed_dt)
 
-    def preRender(self):
+    def pre_render(self):
         self.visual.sync()
         self.check_error()
 

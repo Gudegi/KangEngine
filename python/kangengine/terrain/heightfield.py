@@ -332,7 +332,7 @@ def height_field_to_mesh_python(
                 positions[index] = (x, z, h)
             else:
                 positions[index] = (x, h, z)
-            uvs.append(_ke.vec2(col / (cols - 1), v))
+            uvs.append(_ke.Vec2(col / (cols - 1), v))
 
     indices = []
     for row in range(rows - 1):
@@ -348,8 +348,8 @@ def height_field_to_mesh_python(
     normals = _height_field_normals(positions, indices)
 
     mesh = _ke.scene.MeshData()
-    mesh.vertices = [_ke.vec3(float(x), float(y), float(z)) for x, y, z in positions]
-    mesh.normals = [_ke.vec3(float(x), float(y), float(z)) for x, y, z in normals]
+    mesh.vertices = [_ke.Vec3(float(x), float(y), float(z)) for x, y, z in positions]
+    mesh.normals = [_ke.Vec3(float(x), float(y), float(z)) for x, y, z in normals]
     mesh.uvs = uvs
     mesh.indices = indices
     return mesh

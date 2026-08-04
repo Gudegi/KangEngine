@@ -74,7 +74,7 @@ class USDSceneViewer(ke.App):
                 prim_path,
                 mesh.mesh_data,
                 material,
-                color=ke.vec4(1.0, 1.0, 1.0, 1.0),
+                color=ke.Vec4(1.0, 1.0, 1.0, 1.0),
                 uri=f"{self.usd_file}#{getattr(mesh, 'prim_path', prim_path)}",
             )
             if diffuse_texture is not None:
@@ -92,7 +92,7 @@ class USDSceneViewer(ke.App):
             f"warnings={len(self.result.diagnostics.warnings)}"
         )
 
-    def preRender(self):
+    def pre_render(self):
         pass
 
     def render(self):
@@ -112,14 +112,14 @@ class USDSceneViewer(ke.App):
             imgui.text(f"bounds: {size[0]:.1f}, {size[1]:.1f}, {size[2]:.1f}")
         imgui.end()
 
-    def postRender(self):
+    def post_render(self):
         pass
 
     def _configure_lighting(self):
-        self.set_light_direction(ke.vec3(-0.35, 0.82, -0.45))
-        self.set_light_color(ke.vec3(1.0, 0.94, 0.86))
+        self.set_light_direction(ke.Vec3(-0.35, 0.82, -0.45))
+        self.set_light_color(ke.Vec3(1.0, 0.94, 0.86))
         self.set_light_intensity(1.15)
-        self.set_light_ambient(ke.vec3(0.42, 0.40, 0.36))
+        self.set_light_ambient(ke.Vec3(0.42, 0.40, 0.36))
 
     def _frame_camera(self):
         camera = self.get_camera()
@@ -129,8 +129,8 @@ class USDSceneViewer(ke.App):
         camera.set_fov(58.0)
 
         if self.bounds_min is None or self.bounds_max is None:
-            camera.set_camera_pos(ke.vec3(0.0, 35.0, 90.0))
-            camera.set_target_pos(ke.vec3(0.0, 8.0, 0.0))
+            camera.set_camera_pos(ke.Vec3(0.0, 35.0, 90.0))
+            camera.set_target_pos(ke.Vec3(0.0, 8.0, 0.0))
             return
 
         center = (self.bounds_min + self.bounds_max) * 0.5
@@ -138,10 +138,10 @@ class USDSceneViewer(ke.App):
         radius = max(float(math.sqrt(float((size * size).sum()))) * 0.5, 1.0)
         distance = radius * 1.15
         camera.set_target_pos(
-            ke.vec3(float(center[0]), float(center[1]), float(center[2]))
+            ke.Vec3(float(center[0]), float(center[1]), float(center[2]))
         )
         camera.set_camera_pos(
-            ke.vec3(
+            ke.Vec3(
                 float(center[0] + distance * 0.35),
                 float(center[1] + distance * 0.35),
                 float(center[2] + distance * 0.95),
@@ -167,24 +167,23 @@ class USDSceneViewer(ke.App):
         color = _mesh_color(index)
         has_diffuse = diffuse_texture is not None
         diffuse = (
-            ke.vec3(1.0, 1.0, 1.0)
+            ke.Vec3(1.0, 1.0, 1.0)
             if has_diffuse
-            else ke.vec3(float(color.x), float(color.y), float(color.z))
+            else ke.Vec3(float(color.x), float(color.y), float(color.z))
         )
         ambient = (
-            ke.vec3(0.72, 0.72, 0.72)
+            ke.Vec3(0.72, 0.72, 0.72)
             if has_diffuse
-            else ke.vec3(
+            else ke.Vec3(
                 float(color.x) * 0.65,
                 float(color.y) * 0.65,
                 float(color.z) * 0.65,
             )
         )
         return self.create_phong_material(
-            material=self.standard_materials.phong,
             ambient=ambient,
             diffuse=diffuse,
-            specular=ke.vec3(0.08, 0.08, 0.08),
+            specular=ke.Vec3(0.08, 0.08, 0.08),
             shininess=24.0,
             diffuse_map=diffuse_texture,
             normal_map=normal_texture if self.normal_maps_enabled else None,
@@ -205,10 +204,10 @@ def _mesh_color(index: int):
     # USD material import is still TODO, so use a restrained stone palette
     # instead of vivid per-mesh debug colors.
     palette = [
-        ke.vec4(0.74, 0.70, 0.62, 1.0),
-        ke.vec4(0.66, 0.63, 0.56, 1.0),
-        ke.vec4(0.80, 0.75, 0.66, 1.0),
-        ke.vec4(0.58, 0.56, 0.50, 1.0),
+        ke.Vec4(0.74, 0.70, 0.62, 1.0),
+        ke.Vec4(0.66, 0.63, 0.56, 1.0),
+        ke.Vec4(0.80, 0.75, 0.66, 1.0),
+        ke.Vec4(0.58, 0.56, 0.50, 1.0),
     ]
     return palette[index % len(palette)]
 

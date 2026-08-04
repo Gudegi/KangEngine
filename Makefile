@@ -3,7 +3,7 @@
         build_python_cuda build_usd_python build_usd_python_debug wheel wheel_cuda \
         validate_physx_gpu validate_physx_gpu_cpp validate_fixed_update_gpu \
         validate_sim_visual_batch \
-        validate_python_api validate_render_component validate_wheel validate_wheel_cuda \
+        check_python_api_style validate_python_api validate_render_component validate_wheel validate_wheel_cuda \
         docs docs_clean \
         run run2 run_debug run_release run_relWithDebInfo \
         clean_all clean_debug clean_release clean_relWithDebInfo
@@ -108,7 +108,10 @@ validate_fixed_update_gpu: build_python_cuda
 validate_sim_visual_batch: build_python
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/sim_visual_batch_smoke.py
 
-validate_python_api: build_python
+check_python_api_style:
+	$(PYTHON) python/scripts/check_binding_style.py
+
+validate_python_api: check_python_api_style build_python
 	PYTHONPYCACHEPREFIX=/tmp/kangengine-pycache $(PYTHON) -m py_compile \
 		python/kangengine/__init__.py \
 		python/kangengine/app/__init__.py \

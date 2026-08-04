@@ -11,7 +11,7 @@ result = self.scene.add_obj(
     obj_file,
     double_sided=True,
 )
-result.root.set_local_scale(ke.vec3(scale, scale, scale))
+result.root.set_local_scale(ke.Vec3(scale, scale, scale))
 ```
 
 Run:

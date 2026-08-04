@@ -26,16 +26,16 @@ print(f"t1.str(): {t1.str()}")
 
 # Test Prim creation
 print("\n=== Prim Test ===")
-cube_prim = scene.Prim("box", scene.PrimType.Mesh)
+cube_prim = scene.Prim("box", scene.PrimType.MESH)
 print(f"Prim name: {cube_prim.get_name()}")
 print(f"Prim path: {cube_prim.get_path()}")
 print(f"Prim type: {cube_prim.get_type()}")
 
 # Test vec3, vec4, quat types
 print("\n=== GLM Types Test ===")
-v3 = ke.vec3(1.0, 2.0, 3.0)
-v4 = ke.vec4(0.8, 0.3, 0.02, 1.0)
-q = ke.quat(1.0, 0.0, 0.0, 0.0)  # Identity quaternion (w, x, y, z)
+v3 = ke.Vec3(1.0, 2.0, 3.0)
+v4 = ke.Vec4(0.8, 0.3, 0.02, 1.0)
+q = ke.Quat(1.0, 0.0, 0.0, 0.0)  # Identity quaternion (w, x, y, z)
 
 print(f"vec3: {v3}")
 print(f"vec4: {v4}")
@@ -43,19 +43,19 @@ print(f"quat: {q}")
 
 # Test setAttribute/getAttribute
 print("\n=== Prim Attribute Test ===")
-box_pos = ke.vec3(0.0, 10.0, 0.0)
+box_pos = ke.Vec3(0.0, 10.0, 0.0)
 cube_prim.set_local_translation(box_pos)
-cube_prim.set_local_scale(ke.vec3(1.3, 1.3, 1.3))
-cube_prim.set_local_rotation(ke.quat(1.0, 0.0, 0.0, 0.0))
+cube_prim.set_local_scale(ke.Vec3(1.3, 1.3, 1.3))
+cube_prim.set_local_rotation(ke.Quat(1.0, 0.0, 0.0, 0.0))
 
 # Test display color
-cube_prim.set_display_color(ke.vec3(0.8, 0.3, 0.02))
+cube_prim.set_display_color(ke.Vec3(0.8, 0.3, 0.02))
 color = cube_prim.get_display_color()
 if color:
     print(f"Display color: {color}")
 
 # Test display color alpha
-cube_prim.set_display_color_alpha(ke.vec4(0.8, 0.3, 0.02, 1.0))
+cube_prim.set_display_color_alpha(ke.Vec4(0.8, 0.3, 0.02, 1.0))
 color_alpha = cube_prim.get_display_color_alpha()
 if color_alpha:
     print(f"Display color alpha: {color_alpha}")
@@ -91,9 +91,9 @@ print("(Skipping set_mesh_data test - requires shared_ptr wrapper)")
 
 # Test Prim hierarchy
 print("\n=== Prim Hierarchy Test ===")
-root = scene.Prim("World", scene.PrimType.Xform)
-child1 = root.add_child("Cube", scene.PrimType.Mesh)
-child2 = root.add_child("Sphere", scene.PrimType.Mesh)
+root = scene.Prim("World", scene.PrimType.XFORM)
+child1 = root.add_child("Cube", scene.PrimType.MESH)
+child2 = root.add_child("Sphere", scene.PrimType.MESH)
 
 print(f"Root path: {root.get_path()}")
 print(f"Child1 path: {child1.get_path()}")

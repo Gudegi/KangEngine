@@ -6,10 +6,10 @@ import kangengine as ke
 
 
 def main():
-    scene = ke.scene.create_backend(ke.scene.BackendType.Native)
+    scene = ke.scene.create_backend(ke.scene.BackendType.NATIVE)
 
     resource_prim = scene.define_prim(
-        "/.Resources/Materials/Gold", ke.scene.PrimType.Resource
+        "/.Resources/Materials/Gold", ke.scene.PrimType.RESOURCE
     )
     if resource_prim.get_transform_component() is not None:
         raise AssertionError("Resource prim should not own TransformComponent")
@@ -31,10 +31,10 @@ def main():
         raise AssertionError("ResourceComponent repr missing type name")
 
     version = component.version
-    component.type = ke.scene.ResourceType.Material
+    component.type = ke.scene.ResourceType.MATERIAL
     component.display_name = "Gold"
     component.uri = "material://presets/gold"
-    if component.type != ke.scene.ResourceType.Material:
+    if component.type != ke.scene.ResourceType.MATERIAL:
         raise AssertionError("ResourceType was not stored")
     if component.display_name != "Gold":
         raise AssertionError("display_name was not stored")
@@ -43,7 +43,7 @@ def main():
     if component.version <= version:
         raise AssertionError("ResourceComponent version did not advance")
 
-    mesh_prim = scene.define_prim("/World/not_resource", ke.scene.PrimType.Xform)
+    mesh_prim = scene.define_prim("/World/not_resource", ke.scene.PrimType.XFORM)
     try:
         mesh_prim.add_resource_component()
     except RuntimeError:
@@ -62,7 +62,7 @@ def main():
     else:
         raise AssertionError("detached ResourceComponent remained usable")
 
-    child = scene.define_prim("/.Resources/Textures/Wood", ke.scene.PrimType.Resource)
+    child = scene.define_prim("/.Resources/Textures/Wood", ke.scene.PrimType.RESOURCE)
     child_component = child.add_resource_component()
     if not scene.remove_prim("/.Resources/Textures"):
         raise AssertionError("failed to remove resource subtree")

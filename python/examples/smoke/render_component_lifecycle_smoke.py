@@ -4,7 +4,7 @@ import kangengine as ke
 
 
 def main():
-    prim = ke.scene.Prim("mesh", ke.scene.PrimType.Mesh)
+    prim = ke.scene.Prim("mesh", ke.scene.PrimType.MESH)
     component = prim.add_render_component()
 
     assert prim.has_render_component()
@@ -18,12 +18,12 @@ def main():
     component.double_sided = True
     component.casts_shadow = False
     component.visible = False
-    component.transform_source = ke.render.TransformSource.ExternalBuffer
+    component.transform_source = ke.render.TransformSource.EXTERNAL_BUFFER
 
     assert component.double_sided
     assert not component.casts_shadow
     assert not component.visible
-    assert component.transform_source == ke.render.TransformSource.ExternalBuffer
+    assert component.transform_source == ke.render.TransformSource.EXTERNAL_BUFFER
     assert not prim.is_visible()
     assert component.version > initial_version
 
@@ -57,9 +57,9 @@ def main():
     assert replacement.attached
     assert replacement.owner is prim
 
-    backend = ke.scene.create_backend(ke.scene.BackendType.Native)
-    backend.define_prim("/group", ke.scene.PrimType.Xform)
-    child = backend.define_prim("/group/mesh", ke.scene.PrimType.Mesh)
+    backend = ke.scene.create_backend(ke.scene.BackendType.NATIVE)
+    backend.define_prim("/group", ke.scene.PrimType.XFORM)
+    child = backend.define_prim("/group/mesh", ke.scene.PrimType.MESH)
     subtree_component = child.add_render_component()
     assert backend.remove_prim("/group")
     assert not subtree_component.attached

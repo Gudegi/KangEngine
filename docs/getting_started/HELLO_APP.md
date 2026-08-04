@@ -11,7 +11,7 @@ class HelloApp(ke.App):
     def setup(self):
         self.set_camera_view([3.0, -4.0, 2.0], [0.0, 0.0, 0.5])
 
-    def preRender(self):
+    def pre_render(self):
         pass
 
     def render(self):
@@ -33,11 +33,11 @@ Lifecycle callback names retain their C++ virtual spelling, while normal
 Python methods use snake_case.
 
 - `setup()`: create resources and scene objects once.
-- `preUpdate()`: process input and other once-per-rendered-frame state.
-- `fixedUpdate(fixed_dt)`: run zero or more fixed control/physics updates.
-- `preRender()`: synchronize the latest state and prepare visuals.
+- `pre_update()`: process input and other once-per-rendered-frame state.
+- `fixed_update(fixed_dt)`: run zero or more fixed control/physics updates.
+- `pre_render()`: synchronize the latest state and prepare visuals.
 - `render()`: build ImGui panels or other per-frame UI.
-- `postRender()`: perform work after drawing.
+- `post_render()`: perform work after drawing.
 - `cleanup()`: release explicitly owned simulation resources.
 
 See [Fixed Timestep and Rendering](../simulation/FIXED_TIMESTEP.md) before

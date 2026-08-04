@@ -17,11 +17,11 @@ class PBRViewer(ke.App):
         self._add_emissive_sphere()
         self._configure_local_lights()
 
-        self.set_light_direction(ke.vec3(-0.45, 0.55, 0.72))
-        self.set_light_color(ke.vec3(1.0, 0.96, 0.88))
+        self.set_light_direction(ke.Vec3(-0.45, 0.55, 0.72))
+        self.set_light_color(ke.Vec3(1.0, 0.96, 0.88))
         self.set_light_intensity(0.45)
-        self.set_light_ambient(ke.vec3(0.025, 0.028, 0.032))
-        self.set_tone_map(ke.render.ToneMapMode.AcesNarkowicz, 1.0)
+        self.set_light_ambient(ke.Vec3(0.025, 0.028, 0.032))
+        self.set_tone_map(ke.render.ToneMapMode.ACES_NARKOWICZ, 1.0)
         self.set_bloom(
             True,
             threshold=1.4,
@@ -43,7 +43,7 @@ class PBRViewer(ke.App):
             ke.geometry.create_sphere_data(radius, 48, 24),
             material,
         )
-        view.prim.set_local_translation(ke.vec3(*position))
+        view.prim.set_local_translation(ke.Vec3(*position))
         return view
 
     def _build_material_grid(self):
@@ -77,30 +77,30 @@ class PBRViewer(ke.App):
 
     def _configure_local_lights(self):
         warm_light = ke.scene.PointLight()
-        warm_light.position = ke.vec3(-1.45, -1.35, 1.25)
-        warm_light.color = ke.vec3(1.0, 0.55, 0.28)
+        warm_light.position = ke.Vec3(-1.45, -1.35, 1.25)
+        warm_light.color = ke.Vec3(1.0, 0.55, 0.28)
         warm_light.intensity = 85.0
         warm_light.range = 5.0
-        warm_prim = self.scene.define_prim("/lights/warm_point", scene.PrimType.Light)
+        warm_prim = self.scene.define_prim("/lights/warm_point", scene.PrimType.LIGHT)
         warm_prim.set_point_light(warm_light)
 
         cool_light = ke.scene.PointLight()
-        cool_light.position = ke.vec3(1.45, 0.95, 1.15)
-        cool_light.color = ke.vec3(0.25, 0.55, 1.0)
+        cool_light.position = ke.Vec3(1.45, 0.95, 1.15)
+        cool_light.color = ke.Vec3(0.25, 0.55, 1.0)
         cool_light.intensity = 70.0
         cool_light.range = 4.8
-        cool_prim = self.scene.define_prim("/lights/cool_point", scene.PrimType.Light)
+        cool_prim = self.scene.define_prim("/lights/cool_point", scene.PrimType.LIGHT)
         cool_prim.set_point_light(cool_light)
 
         spot_light = ke.scene.SpotLight()
-        spot_light.position = ke.vec3(0.0, -3.2, 2.8)
-        spot_light.direction = ke.vec3(0.0, 0.82, -0.58)
-        spot_light.color = ke.vec3(1.0, 0.92, 0.78)
+        spot_light.position = ke.Vec3(0.0, -3.2, 2.8)
+        spot_light.direction = ke.Vec3(0.0, 0.82, -0.58)
+        spot_light.color = ke.Vec3(1.0, 0.92, 0.78)
         spot_light.intensity = 90.0
         spot_light.range = 6.0
         spot_light.inner_cone_angle = 0.34
         spot_light.outer_cone_angle = 0.62
-        spot_prim = self.scene.define_prim("/lights/soft_spot", scene.PrimType.Light)
+        spot_prim = self.scene.define_prim("/lights/soft_spot", scene.PrimType.LIGHT)
         spot_prim.set_spot_light(spot_light)
 
         self.local_light_prims = [warm_prim, cool_prim, spot_prim]
