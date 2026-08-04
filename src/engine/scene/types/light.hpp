@@ -1,5 +1,5 @@
-#ifndef _LIGHT_HPP_
-#define _LIGHT_HPP_
+#ifndef _SCENE_TYPES_LIGHT_HPP_
+#define _SCENE_TYPES_LIGHT_HPP_
 
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>

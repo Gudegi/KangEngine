@@ -1,4 +1,4 @@
-#include "camera.hpp"
+#include "engine/scene/types/camera.hpp"
 #include <algorithm>
 #include <cmath>
 #include <glm/fwd.hpp>

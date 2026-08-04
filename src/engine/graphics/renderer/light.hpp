@@ -1,6 +1,6 @@
 #pragma once
 
-#include "engine/scene/light.hpp"
+#include "engine/scene/types/light.hpp"
 
 namespace KE {
 

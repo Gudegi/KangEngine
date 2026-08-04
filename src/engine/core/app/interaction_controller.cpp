@@ -4,7 +4,7 @@
 #include <ImGuizmo.h>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "engine/graphics/camera/camera.hpp"
+#include "engine/scene/types/camera.hpp"
 
 namespace KE {
 

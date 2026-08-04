@@ -2,8 +2,8 @@
 /// Author Kyungwon Kang, 2024/11
 ///
 
-#ifndef _CAMERA_HPP_
-#define _CAMERA_HPP_
+#ifndef _SCENE_TYPES_CAMERA_HPP_
+#define _SCENE_TYPES_CAMERA_HPP_
 
 #include <glm/glm.hpp>
 #include <vector>

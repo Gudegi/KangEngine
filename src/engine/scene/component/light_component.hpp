@@ -2,13 +2,13 @@
 #define _SCENE_LIGHT_COMPONENT_HPP_
 
 #include "engine/scene/component/component.hpp"
-#include "engine/scene/light.hpp"
+#include "engine/scene/types/light.hpp"
 
 namespace KE {
 namespace Scene {
 
-// Runtime light state attached to a Light prim. Prim owns identity/path/transform;
-// LightComponent owns renderer-independent light data.
+// Runtime light state attached to a Light prim. Prim owns
+// identity/path/transform; LightComponent owns renderer-independent light data.
 class LightComponent : public ComponentBase {
   public:
     LightType type() const;

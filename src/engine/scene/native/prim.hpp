@@ -15,7 +15,7 @@
 #include <map>
 #include <optional>
 #include "../scene_backend.hpp"
-#include "engine/scene/light.hpp"
+#include "engine/scene/types/light.hpp"
 #include "token.hpp"
 #include "utils/types.hpp"
 
@@ -67,7 +67,7 @@ class Prim {
     std::string _name; // "Cube"
     std::string _path; // "/World/Cube"
     PrimType _type;
-    Prim* _parent;                                // 부모 (소유하지 않음)
+    Prim* _parent; // 부모 (소유하지 않음)
     std::vector<std::unique_ptr<Prim>> _children; // 자식들
     std::map<std::string, Prim*> _childrenMap;    // 빠른 탐색용
 

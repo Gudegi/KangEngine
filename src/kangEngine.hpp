@@ -11,7 +11,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "engine/core/app/app.hpp"
-#include "engine/graphics/camera/camera.hpp"
+#include "engine/scene/types/camera.hpp"
 #include "engine/scene/debug_draw.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/core/ui/base_panel.hpp"

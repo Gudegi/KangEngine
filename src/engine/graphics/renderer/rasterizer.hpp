@@ -15,7 +15,7 @@
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "engine/graphics/material/material.hpp"
-#include "engine/graphics/camera/camera.hpp"
+#include "engine/scene/types/camera.hpp"
 #include "geometry/bounds.hpp"
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
