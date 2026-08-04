@@ -717,23 +717,23 @@ void bind_animation(py::module& m) {
         .def(py::init<>(), "Create an empty skeletal visual.")
         .def_static(
             "define",
-            [](App* app, Backend::Shader* shader, const std::string& basePath,
+            [](App* app, Material* material, const std::string& basePath,
                const SkeletonState& state, const SkeletalVisualConfig& config) {
-                return SkeletalVisualBridge::define(app, shader, basePath,
+                return SkeletalVisualBridge::define(app, material, basePath,
                                                     state, config);
             },
-            py::arg("app"), py::arg("shader"), py::arg("base_path"),
+            py::arg("app"), py::arg("material"), py::arg("base_path"),
             py::arg("state"), py::arg("config") = SkeletalVisualConfig{},
             "Create skeleton visuals from a SkeletonState.")
         .def_static(
             "define",
-            [](App* app, Backend::Shader* shader, const std::string& basePath,
+            [](App* app, Material* material, const std::string& basePath,
                const SkeletonMotion& motion, float time, bool loop,
                const SkeletalVisualConfig& config) {
-                return SkeletalVisualBridge::define(app, shader, basePath,
+                return SkeletalVisualBridge::define(app, material, basePath,
                                                     motion, time, loop, config);
             },
-            py::arg("app"), py::arg("shader"), py::arg("base_path"),
+            py::arg("app"), py::arg("material"), py::arg("base_path"),
             py::arg("motion"), py::arg("time") = 0.0f, py::arg("loop") = true,
             py::arg("config") = SkeletalVisualConfig{},
             "Create skeleton visuals by sampling a SkeletonMotion.")

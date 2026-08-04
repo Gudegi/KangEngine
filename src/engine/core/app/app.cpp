@@ -35,6 +35,7 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <unordered_map>
 #include <utility>
 
 namespace KE {
@@ -215,9 +216,12 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     sceneFramebufferDesc.width = _width;
     sceneFramebufferDesc.height = _height;
     sceneFramebufferDesc.stencil = true;
-    sceneFramebufferDesc.msaaSamples = 4;
+    // The legacy framebuffer owns only the resolved color used by post-process
+    // and readback. The RHI scene target owns the 4x MSAA attachments.
+    sceneFramebufferDesc.msaaSamples = 0;
     sceneFramebufferDesc.colorFormat = Backend::FramebufferColorFormat::RGBA16F;
     _framebuffer = _graphicsDevice->createFramebuffer(sceneFramebufferDesc);
+    rebuildSceneRenderTarget();
     _selectionMaskFramebuffer =
         _graphicsDevice->createFramebuffer({_width, _height, false, false, 0});
 
@@ -269,6 +273,7 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
                    _postProcessor.get(), _selectionOutlineProcessor.get());
     _renderer.setViewportSize(_width, _height);
     _sceneRenderSystem.bind(&_renderer);
+    registerBuiltinRenderResources();
 
     DirectionalLight defaultLight;
     defaultLight.direction = (_upAxis == UpAxis::Z)
@@ -279,6 +284,141 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     else
         getRenderer().setLight(defaultLight);
     _initialized = true;
+}
+
+void App::registerBuiltinRenderResources() {
+    struct BuiltinShader {
+        const char* name;
+        const char* path;
+        Backend::ShaderType stage;
+    };
+    static constexpr BuiltinShader shaders[] = {
+        {"ForwardVertexColorVS", "shaders/rhi/forward_vertex_color.vs",
+         Backend::ShaderType::Vertex},
+        {"ForwardSkinnedVertexColorVS",
+         "shaders/rhi/forward_skinned_vertex_color.vs",
+         Backend::ShaderType::Vertex},
+        {"ForwardMaterialVS", "shaders/rhi/forward_material.vs",
+         Backend::ShaderType::Vertex},
+        {"ForwardSkinnedMaterialVS", "shaders/rhi/forward_skinned_material.vs",
+         Backend::ShaderType::Vertex},
+        {"ForwardVertexColorFS", "shaders/rhi/forward_vertex_color.fs",
+         Backend::ShaderType::Fragment},
+        {"ForwardTexturedVertexColorFS",
+         "shaders/rhi/forward_textured_vertex_color.fs",
+         Backend::ShaderType::Fragment},
+        {"ForwardCheckerboardFS", "shaders/rhi/forward_checkerboard.fs",
+         Backend::ShaderType::Fragment},
+        {"ForwardDebugCheckerFS", "shaders/rhi/forward_debug_checker.fs",
+         Backend::ShaderType::Fragment},
+        {"ForwardPhongFS", "shaders/rhi/forward_phong.fs",
+         Backend::ShaderType::Fragment},
+        {"ForwardPBRFS", "shaders/rhi/forward_pbr.fs",
+         Backend::ShaderType::Fragment},
+        {"ShadowVS", "shaders/shadow.vs", Backend::ShaderType::Vertex},
+        {"SkinnedShadowVS", "shaders/skinned_shadow.vs",
+         Backend::ShaderType::Vertex},
+        {"ShadowFS", "shaders/shadow.fs", Backend::ShaderType::Fragment},
+        {"SelectionMaskVS", "shaders/selection_mask.vs",
+         Backend::ShaderType::Vertex},
+        {"SkinnedSelectionMaskVS", "shaders/skinned_selection_mask.vs",
+         Backend::ShaderType::Vertex},
+        {"SelectionMaskFS", "shaders/selection_mask.fs",
+         Backend::ShaderType::Fragment},
+        {"SkyboxVS", "shaders/rhi/skybox.vs", Backend::ShaderType::Vertex},
+        {"SkyboxFS", "shaders/rhi/skybox.fs", Backend::ShaderType::Fragment},
+        {"DebugVS", "shaders/rhi/debug.vs", Backend::ShaderType::Vertex},
+        {"DebugLineFS", "shaders/rhi/debug_line.fs",
+         Backend::ShaderType::Fragment},
+        {"DebugPointFS", "shaders/rhi/debug_point.fs",
+         Backend::ShaderType::Fragment},
+        {"TextVS", "shaders/rhi/text.vs", Backend::ShaderType::Vertex},
+        {"TextFS", "shaders/rhi/text.fs", Backend::ShaderType::Fragment},
+    };
+
+    std::unordered_map<std::string, Scene::ResourceHandle> shaderHandles;
+    shaderHandles.reserve(std::size(shaders));
+    for (const BuiltinShader& shader : shaders) {
+        const std::string path = KE::getAssetPath(shader.path);
+        Scene::ShaderSourceResource resource;
+        resource.stage = shader.stage;
+        resource.language = Scene::ShaderLanguage::GLSL;
+        resource.source = _rasterizer->shaderLibrary().load(path);
+        resource.entryPoint = "main";
+        shaderHandles.emplace(shader.name,
+                              _sceneResourceManager.registerShaderSource(
+                                  shader.name, std::move(resource), path));
+    }
+
+    const auto variants = [](bool skinned, bool transparent, bool doubleSided) {
+        std::vector<std::string> result;
+        for (int skin = 0; skin <= (skinned ? 1 : 0); ++skin)
+            for (int alpha = 0; alpha <= (transparent ? 1 : 0); ++alpha)
+                for (int sided = 0; sided <= (doubleSided ? 1 : 0); ++sided)
+                    result.push_back(std::string(skin ? "skinned" : "static") +
+                                     "/" + (alpha ? "transparent" : "opaque") +
+                                     "/" +
+                                     (sided ? "double-sided" : "back-face"));
+        return result;
+    };
+    const auto addPipeline =
+        [&](const char* name, std::initializer_list<const char*> shaderNames,
+            std::vector<std::string> pipelineVariants, const char* summary) {
+            Scene::PipelineResource resource;
+            resource.type = Scene::AuthoredPipelineType::Graphics;
+            for (const char* shaderName : shaderNames)
+                resource.shaderSources.push_back(shaderHandles.at(shaderName));
+            resource.variants = std::move(pipelineVariants);
+            resource.stateSummary = summary;
+            _sceneResourceManager.registerPipeline(
+                name, std::move(resource),
+                std::string("builtin://pipeline/") + name);
+        };
+
+    addPipeline("ForwardVertexColor",
+                {"ForwardVertexColorVS", "ForwardSkinnedVertexColorVS",
+                 "ForwardVertexColorFS"},
+                variants(true, true, true), "scene forward vertex color");
+    addPipeline("ForwardTexturedVertexColor",
+                {"ForwardMaterialVS", "ForwardSkinnedMaterialVS",
+                 "ForwardTexturedVertexColorFS"},
+                variants(true, true, true), "scene forward sampled color");
+    addPipeline("ForwardCheckerboard",
+                {"ForwardMaterialVS", "ForwardCheckerboardFS"},
+                variants(false, true, true), "procedural checkerboard");
+    addPipeline("ForwardDebugChecker",
+                {"ForwardMaterialVS", "ForwardSkinnedMaterialVS",
+                 "ForwardDebugCheckerFS"},
+                variants(true, true, true), "diagnostic UV checker/grid");
+    addPipeline(
+        "ForwardPhong",
+        {"ForwardMaterialVS", "ForwardSkinnedMaterialVS", "ForwardPhongFS"},
+        variants(true, true, true), "Phong material family");
+    addPipeline(
+        "ForwardPBR",
+        {"ForwardMaterialVS", "ForwardSkinnedMaterialVS", "ForwardPBRFS"},
+        variants(true, true, true), "PBR material family");
+    addPipeline("Shadow", {"ShadowVS", "SkinnedShadowVS", "ShadowFS"},
+                variants(true, true, true), "depth-only CSM family");
+    addPipeline(
+        "SelectionMask",
+        {"SelectionMaskVS", "SkinnedSelectionMaskVS", "SelectionMaskFS"},
+        variants(true, true, true), "selection binary mask");
+    addPipeline("Skybox", {"SkyboxVS", "SkyboxFS"}, {"default"},
+                "scene background cubemap");
+    addPipeline("DebugLines", {"DebugVS", "DebugLineFS"}, {"line-list"},
+                "debug overlay lines");
+    addPipeline("DebugPoints", {"DebugVS", "DebugPointFS"}, {"point-list"},
+                "debug overlay points");
+    addPipeline("Text", {"TextVS", "TextFS"}, {"world", "screen"},
+                "glyph atlas text");
+    addPipeline("SelectionOutline", {}, {"composite"},
+                "embedded fullscreen selection outline shader");
+    addPipeline("Bloom", {},
+                {"extract", "blur-horizontal", "blur-vertical", "composite"},
+                "embedded fullscreen bloom shaders");
+    addPipeline("FinalOutput", {}, {"tone-map/gamma"},
+                "embedded fullscreen final-output shader");
 }
 
 // for entire process in c++
@@ -369,20 +509,8 @@ Backend::Texture* App::renderActiveSceneCameraPreview(int width, int height,
     const RendererSettings& settings = getRenderer().settings();
 
     getRenderer().syncSceneLights(getScene());
-    getRenderer().applyBackgroundSettings();
-    _rasterizer->updateFrameData(view, proj);
-    _sceneCameraPreviewFramebuffer->bind();
-    _graphicsDevice->setViewport(0, 0, width, height);
-    _rasterizer->setViewportSize(width, height);
-    const glm::vec4& color = settings.background.backgroundColor;
-    _graphicsDevice->clear(color.r, color.g, color.b, color.a);
-    _rasterizer->render(view, proj);
-    _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
-    _sceneCameraPreviewFramebuffer->resolve();
-    _sceneCameraPreviewFramebuffer->unbind();
-
-    _graphicsDevice->setViewport(0, 0, _width, _height);
-    _rasterizer->setViewportSize(_width, _height);
+    getRenderer().renderSceneToFramebuffer(
+        view, proj, _sceneCameraPreviewFramebuffer.get(), width, height, true);
     if (_sceneCameraPreviewPostProcessor) {
         if (_sceneCameraPreviewPostWidth != width ||
             _sceneCameraPreviewPostHeight != height) {
@@ -546,16 +674,25 @@ void App::renderFrameOnce() {
     const RendererSettings& settings = getRenderer().settings();
     const double renderStart = glfwGetTime();
 
-    // Scene pass: render into FBO (MSAA if enabled)
-    _framebuffer->bind();
     const glm::vec4& color = settings.background.backgroundColor;
-    _graphicsDevice->clear(color.r, color.g, color.b, color.a);
+    rebuildSceneClearTarget(color);
+    {
+        auto encoder = _graphicsDevice->createCommandEncoder();
+        auto pass = encoder->beginRenderPass(_sceneClearTarget.get());
+        pass->end();
+        auto commands = encoder->finish();
+        _graphicsDevice->submit(*commands);
+    }
 
     coreRender(); // records ImGui widgets, no GL ImGui draw yet
     this->render();
-    _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
-    _framebuffer->resolve();
-    _framebuffer->unbind();
+    {
+        auto encoder = _graphicsDevice->createCommandEncoder();
+        auto pass = encoder->beginRenderPass(_sceneRenderTarget.get());
+        pass->end();
+        auto commands = encoder->finish();
+        _graphicsDevice->submit(*commands);
+    }
 
     Backend::Texture* finalSource = _framebuffer->getColorTexture();
 
@@ -797,16 +934,113 @@ void App::setCameraMoveSpeed(float speed) {
 }
 
 void App::coreRender() {
-    if (_renderWireframe == true) {
-        _graphicsDevice->setPolygonMode(Backend::PolygonMode::Line);
-    } else {
-        _graphicsDevice->setPolygonMode(Backend::PolygonMode::Fill);
+    if (_rasterizer) {
+        _rasterizer->setWireframeEnabled(_renderWireframe);
+        getRenderer().applyBackgroundSettings();
+        _rasterizer->render(_viewMatrix, _projectionMatrix,
+                            _sceneDrawTarget.get());
+    }
+}
+
+void App::rebuildSceneRenderTarget() {
+    if (!_graphicsDevice || !_framebuffer || _width <= 0 || _height <= 0)
+        return;
+
+    _sceneRenderTarget.reset();
+    _sceneDrawTarget.reset();
+    _sceneClearTarget.reset();
+    _sceneMsaaDepthStencilView.reset();
+    _sceneResolveColorView.reset();
+    _sceneMsaaColorView.reset();
+    _sceneMsaaDepthStencil.reset();
+    _sceneMsaaColor.reset();
+
+    Backend::TextureResourceDesc colorDesc;
+    colorDesc.extent = {static_cast<uint32_t>(_width),
+                        static_cast<uint32_t>(_height), 1};
+    colorDesc.format = Backend::TextureFormat::RGBA16Float;
+    colorDesc.usage = Backend::TextureUsage::RenderAttachment;
+    colorDesc.sampleCount = 4;
+    colorDesc.label = "main_scene_msaa_color";
+    _sceneMsaaColor = _graphicsDevice->createTexture(colorDesc);
+
+    Backend::TextureResourceDesc depthDesc;
+    depthDesc.extent = colorDesc.extent;
+    depthDesc.format = Backend::TextureFormat::Depth24Stencil8;
+    depthDesc.usage = Backend::TextureUsage::RenderAttachment;
+    depthDesc.sampleCount = 4;
+    depthDesc.label = "main_scene_msaa_depth_stencil";
+    _sceneMsaaDepthStencil = _graphicsDevice->createTexture(depthDesc);
+
+    Backend::TextureViewDesc colorViewDesc;
+    colorViewDesc.format = Backend::TextureFormat::RGBA16Float;
+    colorViewDesc.label = "main_scene_msaa_color_view";
+    _sceneMsaaColorView = _graphicsDevice->createTextureView(
+        _sceneMsaaColor.get(), colorViewDesc);
+
+    Backend::TextureViewDesc resolveViewDesc;
+    resolveViewDesc.format = Backend::TextureFormat::RGBA16Float;
+    resolveViewDesc.label = "main_scene_resolve_color_view";
+    _sceneResolveColorView = _graphicsDevice->createTextureView(
+        _framebuffer->getColorTexture(), resolveViewDesc);
+
+    Backend::TextureViewDesc depthViewDesc;
+    depthViewDesc.format = Backend::TextureFormat::Depth24Stencil8;
+    depthViewDesc.aspect = Backend::TextureAspect::All;
+    depthViewDesc.label = "main_scene_msaa_depth_stencil_view";
+    _sceneMsaaDepthStencilView = _graphicsDevice->createTextureView(
+        _sceneMsaaDepthStencil.get(), depthViewDesc);
+
+    Backend::RenderPassDesc passDesc;
+    passDesc.label = "main_scene_msaa_pass";
+    passDesc.colorAttachments = {{_sceneMsaaColorView.get(),
+                                  _sceneResolveColorView.get(),
+                                  Backend::LoadOp::Load,
+                                  Backend::StoreOp::Store,
+                                  {}}};
+    passDesc.depthStencilAttachment =
+        Backend::DepthStencilAttachmentDesc{_sceneMsaaDepthStencilView.get(),
+                                            Backend::LoadOp::Load,
+                                            Backend::StoreOp::Store,
+                                            1.0f,
+                                            Backend::LoadOp::Load,
+                                            Backend::StoreOp::Store,
+                                            0};
+    _sceneRenderTarget = _graphicsDevice->createRenderTarget(passDesc);
+
+    passDesc.label = "main_scene_msaa_draw_pass";
+    passDesc.colorAttachments[0].resolveTarget = nullptr;
+    _sceneDrawTarget = _graphicsDevice->createRenderTarget(passDesc);
+}
+
+void App::rebuildSceneClearTarget(const glm::vec4& clearColor) {
+    if (!_sceneMsaaColorView || !_sceneMsaaDepthStencilView)
+        return;
+    if (_sceneClearTarget) {
+        const auto& current =
+            _sceneClearTarget->getDesc().colorAttachments.front().clearValue;
+        if (current.r == clearColor.r && current.g == clearColor.g &&
+            current.b == clearColor.b && current.a == clearColor.a)
+            return;
     }
 
-    if (_rasterizer) {
-        getRenderer().applyBackgroundSettings();
-        _rasterizer->render(_viewMatrix, _projectionMatrix);
-    }
+    Backend::RenderPassDesc passDesc;
+    passDesc.label = "main_scene_clear_pass";
+    passDesc.colorAttachments = {
+        {_sceneMsaaColorView.get(),
+         nullptr,
+         Backend::LoadOp::Clear,
+         Backend::StoreOp::Store,
+         {clearColor.r, clearColor.g, clearColor.b, clearColor.a}}};
+    passDesc.depthStencilAttachment =
+        Backend::DepthStencilAttachmentDesc{_sceneMsaaDepthStencilView.get(),
+                                            Backend::LoadOp::Clear,
+                                            Backend::StoreOp::Store,
+                                            1.0f,
+                                            Backend::LoadOp::Clear,
+                                            Backend::StoreOp::Store,
+                                            0};
+    _sceneClearTarget = _graphicsDevice->createRenderTarget(passDesc);
 }
 
 Scene::Prim* App::defaultDirectionalLightPrim() {
@@ -849,28 +1083,6 @@ bool App::syncActiveSceneCameraView() {
 }
 
 void App::checkError() { _graphicsDevice->checkError(); }
-
-RenderableHandle App::addRenderable(Backend::Shader* shader, Scene::Prim* prim,
-                                    TransformSource transformSource) {
-    if (!prim)
-        return InvalidHandle;
-    auto component =
-        _sceneRenderSystem.addRenderable(*prim, shader, transformSource);
-    _sceneResourceManager.invalidateUsageCache();
-    return component ? _sceneRenderSystem.handle(*component) : InvalidHandle;
-}
-
-RenderableHandle
-App::addSkinnedRenderable(Backend::Shader* shader, Scene::Prim* prim,
-                          const Scene::SkinnedMeshData& skinnedMesh,
-                          TransformSource transformSource) {
-    if (!prim)
-        return InvalidHandle;
-    auto component = _sceneRenderSystem.addSkinnedRenderable(
-        *prim, shader, skinnedMesh, transformSource);
-    _sceneResourceManager.invalidateUsageCache();
-    return component ? _sceneRenderSystem.handle(*component) : InvalidHandle;
-}
 
 RenderableHandle App::addRenderable(Material* material, Scene::Prim* prim,
                                     TransformSource transformSource) {
@@ -947,7 +1159,7 @@ bool App::removePrim(const std::string& path) {
 
 App::MeshPrimResult App::addMeshPrim(MeshPrimDesc desc) {
     MeshPrimResult result;
-    if (!desc.shader || !_scene || desc.path.empty())
+    if (!desc.material || !_scene || desc.path.empty())
         return result;
 
     auto* prim = _scene->definePrim(desc.path, Scene::PrimType::Mesh);
@@ -958,7 +1170,7 @@ App::MeshPrimResult App::addMeshPrim(MeshPrimDesc desc) {
     prim->setLocalScale(desc.scale);
     prim->setDisplayColorAlpha(desc.color);
 
-    RenderableHandle handle = addRenderable(desc.shader, prim);
+    RenderableHandle handle = addRenderable(desc.material, prim);
     if (handle != InvalidHandle) {
         setRenderableDoubleSided(handle, desc.doubleSided);
         setRenderableCastsShadow(handle, desc.castsShadow);
@@ -969,28 +1181,13 @@ App::MeshPrimResult App::addMeshPrim(MeshPrimDesc desc) {
     return result;
 }
 
-App::MeshPrimResult App::addMeshPrim(Backend::Shader* shader,
-                                     const std::string& path,
-                                     Scene::MeshData meshData,
-                                     glm::vec3 position, glm::vec4 color,
-                                     bool castsShadow) {
-    MeshPrimDesc desc;
-    desc.shader = shader;
-    desc.path = path;
-    desc.meshData = std::move(meshData);
-    desc.position = position;
-    desc.color = color;
-    desc.castsShadow = castsShadow;
-    return addMeshPrim(std::move(desc));
-}
-
-App::MeshPrimResult App::addSkinnedMeshPrim(Backend::Shader* shader,
+App::MeshPrimResult App::addSkinnedMeshPrim(Material* material,
                                             const std::string& path,
                                             Scene::SkinnedMeshData skinnedMesh,
                                             glm::vec3 position, glm::vec4 color,
                                             bool castsShadow) {
     MeshPrimResult result;
-    if (!shader || !_scene || path.empty() ||
+    if (!material || !_scene || path.empty() ||
         !skinnedMesh.hasValidVertexSkinning())
         return result;
 
@@ -999,7 +1196,7 @@ App::MeshPrimResult App::addSkinnedMeshPrim(Backend::Shader* shader,
     prim->setLocalTranslation(position);
     prim->setDisplayColorAlpha(color);
 
-    RenderableHandle handle = addSkinnedRenderable(shader, prim, skinnedMesh);
+    RenderableHandle handle = addSkinnedRenderable(material, prim, skinnedMesh);
     if (handle != InvalidHandle) {
         setRenderableCastsShadow(handle, castsShadow);
     }
@@ -1085,18 +1282,6 @@ glm::quat App::axisQuat(glm::quat ori, UpAxis from, UpAxis to) const {
         return glm::quat(zUpOri.w, zUpOri.y, zUpOri.z, zUpOri.x);
     }
     return zUpOri;
-}
-
-void App::drawLine(const std::string& path, glm::vec3 start, glm::vec3 end,
-                   glm::vec4 color, float thickness, Backend::Shader* shader) {
-    Scene::DebugDraw::logLines(this, shader, path, {start}, {end}, {color},
-                               thickness);
-}
-
-void App::drawArrow(const std::string& path, glm::vec3 start, glm::vec3 end,
-                    glm::vec4 color, float thickness, Backend::Shader* shader) {
-    Scene::DebugDraw::logArrows(this, shader, path, {start}, {end}, {color},
-                                thickness);
 }
 
 void App::setLightDirection(const glm::vec3& dir) {
@@ -1428,8 +1613,10 @@ void App::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
     _graphicsDevice->setViewport(0, 0, _width, _height);
     _camera.updateProjMatrix(_width, _height);
     _sceneCamera.updateProjMatrix(_width, _height);
-    if (_framebuffer)
+    if (_framebuffer) {
         _framebuffer->resize(_width, _height);
+        rebuildSceneRenderTarget();
+    }
     if (_selectionMaskFramebuffer)
         _selectionMaskFramebuffer->resize(_width, _height);
     if (_postProcessor)

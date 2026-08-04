@@ -37,27 +37,10 @@ class FBXMeshViewer(ke.App):
         self.double_sided = True
         self.cast_shadows = True
 
-        device = self.get_renderer().device()
-        vs = package_asset_path("shaders", "common.vs")
-        fs = package_asset_path("shaders", "common.fs")
-        tex_fs = package_asset_path("shaders", "commonTex.fs")
-        checker_fs = package_asset_path("shaders", "checkerboard.fs")
-
-        self.mesh_shader = device.create_shader_from_file(vs, fs)
-        self.mesh_texture_shader = device.create_shader_from_file(vs, tex_fs)
-        self.ground_shader = device.create_shader_from_file(vs, checker_fs)
-
-        for shader in (self.mesh_shader, self.mesh_texture_shader, self.ground_shader):
-            shader.use()
-            shader.set_uniform_block_binding("cameraUBO", 0)
-            shader.set_uniform_block_binding("lightUBO", 1)
-            shader.set_uniform_block_binding("shadowUBO", 2)
-            shader.set_int("normalDebugMode", 0)
-
-        self.ground_shader.use()
-        self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
-        dark_green = ke.preset_rgba(ke.ColorType.DARK_GREEN)
-        self.ground_shader.set_vec4("checkerColor2", ke.vec4(*dark_green))
+        materials = self.create_standard_materials()
+        self.mesh_material = materials.common
+        self.mesh_texture_material = materials.common_texture
+        self.ground_material = materials.ground
 
         self._configure_lighting()
         self._configure_camera()
@@ -68,7 +51,7 @@ class FBXMeshViewer(ke.App):
             self.scene.add_mesh(
                 "/ground",
                 ke.geometry.create_plane_data(4.0, self.up_axis),
-                self.ground_shader,
+                self.ground_material,
             )
 
         textured_count = 0
@@ -84,9 +67,9 @@ class FBXMeshViewer(ke.App):
             diffuse_texture = self._load_texture(diffuse_path)
             normal_texture = self._load_texture(_material_texture_path(mesh, "normal"))
             shader = (
-                self.mesh_texture_shader
+                self.mesh_texture_material
                 if diffuse_texture is not None
-                else self.mesh_shader
+                else self.mesh_material
             )
             view = self.scene.add_mesh(
                 prim_path,

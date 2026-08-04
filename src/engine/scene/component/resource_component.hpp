@@ -14,7 +14,8 @@ enum class ResourceType {
     Mesh,
     Material,
     Texture,
-    Shader,
+    ShaderSource,
+    Pipeline,
 };
 
 using ResourceHandle = uint32_t;

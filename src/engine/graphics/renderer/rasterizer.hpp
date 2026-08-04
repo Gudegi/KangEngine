@@ -2,6 +2,11 @@
 #define _RASTERIZER_HPP_
 
 #include "engine/graphics/renderer/render_pipeline.hpp"
+#include "engine/graphics/renderer/selection_mask_pass.hpp"
+#include "engine/graphics/renderer/shader_library.hpp"
+#include "engine/graphics/renderer/forward_pass.hpp"
+#include "engine/graphics/renderer/shadow_pass.hpp"
+#include "engine/graphics/renderer/skybox_pass.hpp"
 #include "engine/graphics/renderer/debug_renderer.hpp"
 #include "engine/graphics/renderer/text_renderer.hpp"
 #include "engine/graphics/renderer/mesh_instancer.hpp"
@@ -54,15 +59,15 @@ class Rasterizer : public RenderPipeline {
     static constexpr int MaxShadowCascades = 4;
 
   private:
-    // Prim-based instanced rendering
+    // =====================================================================
+    // Scene Mesh Pipelines - batching and renderable registration
+    // =====================================================================
+    ShaderLibrary _shaderLibrary;
     struct InstancerKey {
-        Backend::Shader* shader;
         const Scene::MeshData* mesh;
         Material* material;
         TransformSource transformSource;
         bool operator<(const InstancerKey& o) const {
-            if (shader != o.shader)
-                return shader < o.shader;
             if (mesh != o.mesh)
                 return mesh < o.mesh;
             if (material != o.material)
@@ -83,11 +88,25 @@ class Rasterizer : public RenderPipeline {
         _primSourceRegistrations;
     void registerPrimSource(Scene::Prim* prim, TransformSource source);
     void unregisterPrimSource(Scene::Prim* prim, TransformSource source);
+
+    struct RenderHookEntry {
+        RenderHookHandle handle = InvalidRenderHook;
+        RenderHookCallback callback;
+    };
+    std::array<std::vector<RenderHookEntry>, 2> _renderHooks;
+    RenderHookHandle _nextRenderHook = 1;
+
+    // =====================================================================
+    // Debug Overlay / Text Pipelines
+    // =====================================================================
     DebugRenderer _debugRenderer;
     TextRenderer _textRenderer;
     int _viewportWidth = 1;
     int _viewportHeight = 1;
 
+    // =====================================================================
+    // Shared Frame Data - camera and lighting
+    // =====================================================================
     std::unique_ptr<Backend::Buffer> _cameraUBO;
     std::unique_ptr<Backend::Buffer> _lightUBO;
     std::unique_ptr<Backend::Buffer> _shadowUBO;
@@ -96,16 +115,33 @@ class Rasterizer : public RenderPipeline {
     std::vector<SpotLight> _spotLights;
     bool _lightDirty = true;
 
+    // =====================================================================
+    // Shadow Depth Pipeline - depth targets, CSM, and immutable variants
+    // =====================================================================
     std::unique_ptr<Backend::Framebuffer> _shadowFbo; // depth-only
     int _shadowMapWH = 4096;
     std::array<int, MaxShadowCascades> _cascadeMapSizes{4096, 2048, 1024, 1024};
     std::array<std::unique_ptr<Backend::Framebuffer>, MaxShadowCascades>
         _cascadeFbos;
     std::array<Backend::Texture*, MaxShadowCascades> _cascadeMaps{};
-    std::unique_ptr<Backend::Shader> _shadowShader;
-    std::unique_ptr<Backend::Shader> _skinnedShadowShader;
-    std::unique_ptr<Backend::Shader> _selectionMaskShader;
-    std::unique_ptr<Backend::Shader> _skinnedSelectionMaskShader;
+    ShadowPass _shadowPass;
+
+    // =====================================================================
+    // Opaque Vertex-Color Forward Pipeline - first main-scene RHI path
+    // =====================================================================
+    ForwardPass _forwardPass;
+
+    // =====================================================================
+    // Skybox Pipeline - cubemap resource and immutable background draw
+    // =====================================================================
+    SkyboxPass _skyboxPass;
+
+    // =====================================================================
+    // Selection Mask Pipeline - opaque, alpha-mask, and skinned variants
+    // =====================================================================
+    SelectionMaskPass _selectionMaskPass;
+
+    // Shadow configuration and per-frame cascade state.
     float _shadowRadius = 3.0f;
     int _shadowPcfSamples = 16;
     float _shadowDistance = 20.0f; // 0 = shadow disabled
@@ -122,36 +158,68 @@ class Rasterizer : public RenderPipeline {
     std::array<float, MaxShadowCascades> _cascadeSplits{};
     std::array<float, MaxShadowCascades> _cascadeOrthoHalfSizes{};
     std::array<glm::mat4, MaxShadowCascades> _cascadeLightMatrices{};
+
+    // =====================================================================
+    // Frustum Culling / Renderer Diagnostics
+    // =====================================================================
     Geometry::Frustum _viewFrustum;
     bool _frustumCullingEnabled = true;
+    bool _wireframeEnabled = false;
     bool _debugRenderAABB = false;
     int _cullingTotalBatches = 0;
     int _cullingCulledBatches = 0;
     int _cullingTotalInstances = 0;
     int _cullingCulledInstances = 0;
 
-    // shadow
+    // =====================================================================
+    // Shadow Depth Pipeline - private operations
+    // =====================================================================
     void updateShadowUBO(float activeOrthoHalfSize);
+    void initShadowRhi();
+    void rebuildShadowSamplingBindings(Backend::Texture* fallbackTexture);
+    void initForwardRhi();
+
+    // =====================================================================
+    // Selection Mask Pipeline - private operations
+    // =====================================================================
+
+    // Shadow matrix/caster operations.
     void updateShadowPassUBO(const glm::mat4& lightSpaceMatrix,
                              float activeOrthoHalfSize);
     void setShadowMap(Backend::Texture* tex, const glm::mat4& lightSpaceMat,
                       float radius, float distance);
-    void drawShadowCasters();
+    void drawShadowCasters(Backend::RenderTarget* target, int mapSize);
+
+    // =====================================================================
+    // Scene / Skybox / Transparent / Debug Pipelines - private operations
+    // =====================================================================
     void updateDebugRenderAABB();
     Backend::Texture* activeShadowTexture() const;
     void bindShadowTextures(Backend::Texture* shadowTexture);
-    void bindShadowSampler(Backend::Shader* shader,
-                           Backend::Texture* shadowTexture);
-    void renderSceneInstancer(MeshInstancer& inst, bool transparentPass,
-                              Backend::Texture* shadowTexture);
-    void renderOpaquePass(Backend::Texture* shadowTexture);
-    void renderSkyboxPass(const glm::mat4& view, const glm::mat4& proj);
-    void renderTransparentPass(Backend::Texture* shadowTexture);
-    void renderDebugOverlayPass();
+    void renderOpaquePass(Backend::Texture* shadowTexture,
+                          Backend::RenderTarget* sceneDrawTarget);
+    void renderSkyboxPass(const glm::mat4& view, const glm::mat4& proj,
+                          Backend::RenderTarget* sceneDrawTarget);
+    void renderTransparentPass(Backend::Texture* shadowTexture,
+                               Backend::RenderTarget* sceneDrawTarget);
+    void renderDebugOverlayPass(Backend::RenderTarget* sceneDrawTarget);
+    void recordRenderHooks(RenderHookPhase phase,
+                           Backend::RenderTarget* sceneDrawTarget);
 
   public:
     Rasterizer(Backend::GraphicsDevice* graphicsDevice);
+    Backend::BindGroupLayout* sceneFrameBindGroupLayout() const {
+        return _forwardPass.frameLayout();
+    }
+    ShaderLibrary& shaderLibrary() { return _shaderLibrary; }
+    const ShaderLibrary& shaderLibrary() const { return _shaderLibrary; }
+    RenderHookHandle addRenderHook(RenderHookPhase phase,
+                                   RenderHookCallback callback);
+    bool removeRenderHook(RenderHookHandle handle);
 
+    // =====================================================================
+    // Lighting API
+    // =====================================================================
     void setLight(const DirectionalLight& light) {
         _light = light;
         _lightDirty = true;
@@ -174,7 +242,9 @@ class Rasterizer : public RenderPipeline {
     }
     const std::vector<SpotLight>& getSpotLights() const { return _spotLights; }
 
-    // shadow
+    // =====================================================================
+    // Shadow Depth / CSM API
+    // =====================================================================
     void setShadowDistance(float distance) {
         _shadowDistance = std::max(0.0f, distance);
     }
@@ -216,10 +286,15 @@ class Rasterizer : public RenderPipeline {
                                       float shadowNear, float shadowFar);
     Backend::Framebuffer* getShadowFbo() { return _shadowFbo.get(); }
 
+    // =====================================================================
+    // Culling / Renderer Diagnostics API
+    // =====================================================================
     void setFrustumCullingEnabled(bool enabled) {
         _frustumCullingEnabled = enabled;
     }
+    void setWireframeEnabled(bool enabled) { _wireframeEnabled = enabled; }
     bool isFrustumCullingEnabled() const { return _frustumCullingEnabled; }
+    void setBackgroundSettings(const BackgroundSettings& settings);
     void setDebugRenderAABB(bool enabled) { _debugRenderAABB = enabled; }
     bool getDebugRenderAABB() const { return _debugRenderAABB; }
     int getCullingTotalBatches() const { return _cullingTotalBatches; }
@@ -227,6 +302,9 @@ class Rasterizer : public RenderPipeline {
     int getCullingTotalInstances() const { return _cullingTotalInstances; }
     int getCullingCulledInstances() const { return _cullingCulledInstances; }
 
+    // =====================================================================
+    // Renderable Registration / Simulation Buffer API
+    // =====================================================================
     RenderableHandle addRenderable(
         Material* material, Scene::Prim* prim,
         TransformSource transformSource = TransformSource::SceneGraph);
@@ -281,6 +359,9 @@ class Rasterizer : public RenderPipeline {
     void updateRenderableSkinningMatrices(
         RenderableHandle handle, const std::vector<glm::mat4>& boneMatrices);
 
+    // =====================================================================
+    // Debug Overlay API
+    // =====================================================================
     void logDebugLines(const std::string& path,
                        const std::vector<glm::vec3>& starts,
                        const std::vector<glm::vec3>& ends,
@@ -313,21 +394,25 @@ class Rasterizer : public RenderPipeline {
     void setScreenTextHidden(const std::string& path, bool hidden);
     void removeScreenText(const std::string& path);
     void clearScreenText();
+
+    // =====================================================================
+    // Viewport / Skybox API
+    // =====================================================================
     void setViewportSize(int width, int height) {
         _viewportWidth = std::max(width, 1);
         _viewportHeight = std::max(height, 1);
     }
 
-    void setSkybox(const std::string& path, UpAxis upAxis = UpAxis::Y) {
-        _graphicsDevice->setSkybox(path, upAxis);
-    }
+    void setSkybox(const std::string& path, UpAxis upAxis = UpAxis::Y);
     void setSkybox(const std::vector<std::string>& paths,
-                   UpAxis upAxis = UpAxis::Y) {
-        _graphicsDevice->setSkybox(paths, upAxis);
-    }
+                   UpAxis upAxis = UpAxis::Y);
 
+    // =====================================================================
+    // Frame Rendering / Selection Pipeline API
+    // =====================================================================
     void updateFrameData(const glm::mat4& view, const glm::mat4& proj);
-    void render(const glm::mat4& view, const glm::mat4& proj) override;
+    void render(const glm::mat4& view, const glm::mat4& proj,
+                Backend::RenderTarget* sceneDrawTarget) override;
     bool buildPrimSelection(Scene::Prim* prim,
                             RayPickResult& outSelection) const;
     bool getPrimTransformSource(const Scene::Prim* prim,

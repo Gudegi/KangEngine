@@ -11,11 +11,11 @@ def main():
     app = ke.App()
     app.initialize(width=64, height=64, hide_ui=True, headless=True)
 
-    shader = app.create_asset_shader("common.vs", "common.fs")
+    material = app.create_standard_materials().common
     view = app.scene.add_mesh(
         "/group/mesh",
         ke.scene.Prim.create_rectangle_data(1.0, 1.0, 1.0),
-        shader,
+        material,
         transform_source=ke.render.TransformSource.ExternalBuffer,
     )
     component = view.prim.get_render_component()
@@ -84,7 +84,7 @@ def main():
 
     debug_lines = app.scene.log_lines(
         "/debug/component_lines",
-        shader,
+        material,
         [[0.0, 0.0, 0.0], [0.0, 0.2, 0.0]],
         [[0.5, 0.0, 0.0], [0.0, 0.8, 0.0]],
         [[1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 0.0, 1.0]],
@@ -100,7 +100,7 @@ def main():
 
     debug_arrows = app.scene.log_arrows(
         "/debug/component_arrows",
-        shader,
+        material,
         [[0.0, 0.0, 0.0]],
         [[0.0, 1.0, 0.0]],
         [[1.0, 1.0, 0.0, 1.0]],
@@ -125,7 +125,7 @@ def main():
     temporary = app.scene.add_mesh(
         "/temporary",
         ke.scene.Prim.create_rectangle_data(0.5, 0.5, 0.5),
-        shader,
+        material,
     )
     temporary_component = temporary.component
     assert render_system.registration_count == 2

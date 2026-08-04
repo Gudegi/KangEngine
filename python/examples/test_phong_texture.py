@@ -24,7 +24,7 @@ class PhongTextureViewer(ke.App):
         self.textures = []
 
     def setup(self):
-        self.create_standard_shaders()
+        self.create_standard_materials()
 
         device = self.get_renderer().device()
         texture = device.create_texture(
@@ -34,14 +34,14 @@ class PhongTextureViewer(ke.App):
         self.textures.append(texture)
 
         white = self.create_phong_material(
-            shader=self.shaders.phong,
+            material=self.standard_materials.phong,
             diffuse=ke.vec3(1.0, 1.0, 1.0),
             specular=ke.vec3(0.05, 0.05, 0.05),
             shininess=16.0,
             diffuse_map=texture,
         )
         tinted = self.create_phong_material(
-            shader=self.shaders.phong,
+            material=self.standard_materials.phong,
             diffuse=ke.vec3(1.0, 0.35, 0.35),
             specular=ke.vec3(0.05, 0.05, 0.05),
             shininess=16.0,

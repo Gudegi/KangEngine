@@ -15,6 +15,7 @@ from .._public import NativeWrapper, set_public_module, unwrap_native
 
 PhongMaterialType = set_public_module(_ke.PhongMaterialType, __package__)
 PBRMaterialType = set_public_module(_ke.PBRMaterialType, __package__)
+VertexColorStyle = set_public_module(_ke.VertexColorStyle, __package__)
 
 NativeMaterial = set_public_module(_ke.Material, __package__)
 NativeVertexColorMaterial = set_public_module(_ke.VertexColorMaterial, __package__)
@@ -25,56 +26,38 @@ NativePBRMaterial = set_public_module(_ke.PBRMaterial, __package__)
 class Material(NativeWrapper):
     """Base wrapper for renderer materials."""
 
-    def __init__(self, native: Any | None = None, *, shader=None):
+    def __init__(self, native: Any | None = None):
         if native is None:
             raise TypeError(
                 "ke.material.Material wraps an existing native material; "
                 "construct VertexColorMaterial, PhongMaterial, or PBRMaterial instead."
             )
         super().__init__(native)
-        if shader is not None:
-            self.set_shader(shader)
-
-    def set_shader(self, shader):
-        self._native.set_shader(unwrap_native(shader))
-        return self
-
-    def get_shader(self):
-        return self._native.get_shader()
-
-    @property
-    def shader(self):
-        """Shader used by this material."""
-        return self.get_shader()
-
-    @shader.setter
-    def shader(self, value) -> None:
-        self.set_shader(value)
 
 
 class VertexColorMaterial(Material):
     """Material for vertex/display-color shaders."""
 
-    def __init__(self, shader=None, native: Any | None = None):
+    def __init__(self, style=VertexColorStyle.UNTEXTURED, native: Any | None = None):
         if native is None:
-            native = (
-                _ke.VertexColorMaterial()
-                if shader is None
-                else _ke.VertexColorMaterial(unwrap_native(shader))
-            )
+            native = _ke.VertexColorMaterial(style)
         super().__init__(native)
+
+    @property
+    def style(self):
+        return self._native.style
+
+    def set_style(self, style):
+        self._native.set_style(style)
+        return self
 
 
 class PhongMaterial(Material):
     """Phong material wrapper with optional preset initialization."""
 
-    def __init__(self, shader=None, preset=None, native: Any | None = None):
+    def __init__(self, preset=None, native: Any | None = None):
         if native is None:
-            native = (
-                _ke.PhongMaterial()
-                if shader is None
-                else _ke.PhongMaterial(unwrap_native(shader))
-            )
+            native = _ke.PhongMaterial()
         super().__init__(native)
         if preset is not None:
             self.load_from_preset(preset)
@@ -191,13 +174,9 @@ class PhongMaterial(Material):
 class PBRMaterial(Material):
     """PBR material wrapper with optional preset initialization."""
 
-    def __init__(self, shader=None, preset=None, native: Any | None = None):
+    def __init__(self, preset=None, native: Any | None = None):
         if native is None:
-            native = (
-                _ke.PBRMaterial()
-                if shader is None
-                else _ke.PBRMaterial(unwrap_native(shader))
-            )
+            native = _ke.PBRMaterial()
         super().__init__(native)
         if preset is not None:
             self.load_from_preset(preset)

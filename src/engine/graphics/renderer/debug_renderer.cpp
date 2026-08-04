@@ -1,5 +1,6 @@
 #include "engine/graphics/renderer/debug_renderer.hpp"
 #include "engine/graphics/material/colors.hpp"
+#include "engine/graphics/renderer/shader_library.hpp"
 #include "utils/asset_path.hpp"
 #include <algorithm>
 #include <cstddef>
@@ -57,16 +58,74 @@ void validatePointInputs(const char* functionName,
 
 } // namespace
 
-void DebugRenderer::init(Backend::GraphicsDevice* device) {
+void DebugRenderer::init(Backend::GraphicsDevice* device,
+                         Backend::BindGroupLayout* frameGroupLayout,
+                         Backend::BindGroup* frameBindGroup,
+                         ShaderLibrary* shaderLibrary) {
     _device = device;
     if (!_device)
         return;
 
-    _ownedShader =
-        _device->createShaderFromFile(KE::getAssetPath("shaders/debug.vs"),
-                                      KE::getAssetPath("shaders/debug.fs"));
-    _shader = _ownedShader.get();
-    _shader->setUniformBlockBinding("cameraUBO", 0);
+    _frameBindGroup = frameBindGroup;
+    if (!frameGroupLayout || !_frameBindGroup)
+        return;
+    if (!shaderLibrary)
+        throw std::invalid_argument("DebugRenderer requires ShaderLibrary");
+    for (size_t i = 0; i < _reservedGroupLayouts.size(); ++i) {
+        Backend::BindGroupLayoutDesc desc;
+        desc.label = "debug_reserved_group_" + std::to_string(i + 1);
+        _reservedGroupLayouts[i] = _device->createBindGroupLayout(desc);
+    }
+    Backend::PipelineLayoutDesc layoutDesc;
+    layoutDesc.label = "debug_pipeline_layout";
+    layoutDesc.bindGroupLayouts = {
+        frameGroupLayout, _reservedGroupLayouts[0].get(),
+        _reservedGroupLayouts[1].get(), _reservedGroupLayouts[2].get()};
+    _pipelineLayout = _device->createPipelineLayout(layoutDesc);
+
+    Backend::BlendState blend;
+    blend.color.srcFactor = Backend::BlendFactorValue::SrcAlpha;
+    blend.color.dstFactor = Backend::BlendFactorValue::OneMinusSrcAlpha;
+    blend.alpha.srcFactor = Backend::BlendFactorValue::SrcAlpha;
+    blend.alpha.dstFactor = Backend::BlendFactorValue::OneMinusSrcAlpha;
+    Backend::VertexBufferLayout lineLayout;
+    lineLayout.arrayStride = sizeof(LineVertex);
+    lineLayout.attributes = {
+        {Backend::VertexFormat::Float32x3, offsetof(LineVertex, position), 0},
+        {Backend::VertexFormat::Float32x4, offsetof(LineVertex, color), 1}};
+    Backend::GraphicsPipelineDesc desc;
+    desc.label = "debug_line_pipeline";
+    desc.shader.name = "debug_line_rhi";
+    desc.shader.stages = {
+        {shaderLibrary->load(KE::getAssetPath("shaders/rhi/debug.vs")),
+         Backend::ShaderType::Vertex, "main"},
+        {shaderLibrary->load(KE::getAssetPath("shaders/rhi/debug_line.fs")),
+         Backend::ShaderType::Fragment, "main"}};
+    desc.pipelineLayout = _pipelineLayout.get();
+    desc.vertexBuffers = {lineLayout};
+    desc.primitive.topology = Backend::PrimitiveTopology::LineList;
+    desc.primitive.cullMode = Backend::CullMode::None;
+    desc.depthStencil =
+        Backend::DepthStencilState{Backend::TextureFormat::Depth24Stencil8,
+                                   true, Backend::CompareFunction::Less};
+    desc.colorTargets = {{Backend::TextureFormat::RGBA16Float, blend}};
+    desc.sampleCount = 4;
+    _linePipeline = _device->createGraphicsPipeline(desc);
+
+    Backend::VertexBufferLayout pointLayout;
+    pointLayout.arrayStride = sizeof(PointVertex);
+    pointLayout.attributes = {
+        {Backend::VertexFormat::Float32x3, offsetof(PointVertex, position), 0},
+        {Backend::VertexFormat::Float32x4, offsetof(PointVertex, color), 1},
+        {Backend::VertexFormat::Float32, offsetof(PointVertex, size), 2}};
+    desc.label = "debug_point_pipeline";
+    desc.shader.name = "debug_point_rhi";
+    desc.shader.stages[1] = {
+        shaderLibrary->load(KE::getAssetPath("shaders/rhi/debug_point.fs")),
+        Backend::ShaderType::Fragment, "main"};
+    desc.vertexBuffers = {pointLayout};
+    desc.primitive.topology = Backend::PrimitiveTopology::PointList;
+    _pointPipeline = _device->createGraphicsPipeline(desc);
 }
 
 void DebugRenderer::ensureLineBatchGpu(LineBatch& batch) {
@@ -76,20 +135,12 @@ void DebugRenderer::ensureLineBatchGpu(LineBatch& batch) {
     const size_t bytes = batch.vertices.size() * sizeof(LineVertex);
     if (batch.vertices.size() > batch.allocatedVertices) {
         batch.allocatedVertices = growVertexCapacity(batch.vertices.size());
-        batch.vao = _device->createVertexArray();
-        batch.vertexBuffer =
-            _device->createBuffer(Backend::BufferType::DynamicVertex,
-                                  batch.allocatedVertices * sizeof(LineVertex));
-
-        batch.vao->bind();
-        batch.vao->setVertexBuffer(batch.vertexBuffer.get());
-        batch.vao->setVertexAttribute(
-            {0, 3, Backend::VertexAttributeType::Float, false,
-             sizeof(LineVertex), offsetof(LineVertex, position), 0});
-        batch.vao->setVertexAttribute(
-            {1, 4, Backend::VertexAttributeType::Float, false,
-             sizeof(LineVertex), offsetof(LineVertex, color), 0});
-        batch.vao->unbind();
+        Backend::BufferDesc desc;
+        desc.size = batch.allocatedVertices * sizeof(LineVertex);
+        desc.usage =
+            Backend::BufferUsage::Vertex | Backend::BufferUsage::CopyDst;
+        desc.label = "debug_line_vertices";
+        batch.vertexBuffer = _device->createBuffer(desc);
     }
 
     if (bytes > 0)
@@ -103,23 +154,12 @@ void DebugRenderer::ensurePointBatchGpu(PointBatch& batch) {
     const size_t bytes = batch.vertices.size() * sizeof(PointVertex);
     if (batch.vertices.size() > batch.allocatedVertices) {
         batch.allocatedVertices = growVertexCapacity(batch.vertices.size());
-        batch.vao = _device->createVertexArray();
-        batch.vertexBuffer = _device->createBuffer(
-            Backend::BufferType::DynamicVertex,
-            batch.allocatedVertices * sizeof(PointVertex));
-
-        batch.vao->bind();
-        batch.vao->setVertexBuffer(batch.vertexBuffer.get());
-        batch.vao->setVertexAttribute(
-            {0, 3, Backend::VertexAttributeType::Float, false,
-             sizeof(PointVertex), offsetof(PointVertex, position), 0});
-        batch.vao->setVertexAttribute(
-            {1, 4, Backend::VertexAttributeType::Float, false,
-             sizeof(PointVertex), offsetof(PointVertex, color), 0});
-        batch.vao->setVertexAttribute(
-            {2, 1, Backend::VertexAttributeType::Float, false,
-             sizeof(PointVertex), offsetof(PointVertex, size), 0});
-        batch.vao->unbind();
+        Backend::BufferDesc desc;
+        desc.size = batch.allocatedVertices * sizeof(PointVertex);
+        desc.usage =
+            Backend::BufferUsage::Vertex | Backend::BufferUsage::CopyDst;
+        desc.label = "debug_point_vertices";
+        batch.vertexBuffer = _device->createBuffer(desc);
     }
 
     if (bytes > 0)
@@ -210,58 +250,37 @@ void DebugRenderer::clearPoints(const std::string& path) {
     it->second.vertices.clear();
 }
 
-void DebugRenderer::render() {
-    if (!_device)
-        return;
-
+bool DebugRenderer::hasDraws() const {
     bool hasRenderable = false;
-    for (auto& [path, batch] : _lineBatches) {
-        if (!batch.hidden && !batch.vertices.empty() && batch.vao) {
-            hasRenderable = true;
-            break;
-        }
+    for (const auto& [path, batch] : _lineBatches)
+        hasRenderable =
+            hasRenderable ||
+            (!batch.hidden && !batch.vertices.empty() && batch.vertexBuffer);
+    for (const auto& [path, batch] : _pointBatches)
+        hasRenderable =
+            hasRenderable ||
+            (!batch.hidden && !batch.vertices.empty() && batch.vertexBuffer);
+    return hasRenderable;
+}
+
+void DebugRenderer::record(Backend::RenderPassEncoder& pass) const {
+    for (const auto& [path, batch] : _lineBatches) {
+        if (batch.hidden || batch.vertices.empty() || !batch.vertexBuffer)
+            continue;
+        pass.setPipeline(_linePipeline.get());
+        pass.setBindGroup(0, _frameBindGroup);
+        pass.setLineWidth(batch.width);
+        pass.setVertexBuffer(0, batch.vertexBuffer.get());
+        pass.draw(static_cast<uint32_t>(batch.vertices.size()));
     }
-    if (!hasRenderable) {
-        for (auto& [path, batch] : _pointBatches) {
-            if (!batch.hidden && !batch.vertices.empty() && batch.vao) {
-                hasRenderable = true;
-                break;
-            }
-        }
+    for (const auto& [path, batch] : _pointBatches) {
+        if (batch.hidden || batch.vertices.empty() || !batch.vertexBuffer)
+            continue;
+        pass.setPipeline(_pointPipeline.get());
+        pass.setBindGroup(0, _frameBindGroup);
+        pass.setVertexBuffer(0, batch.vertexBuffer.get());
+        pass.draw(static_cast<uint32_t>(batch.vertices.size()));
     }
-    if (!hasRenderable)
-        return;
-
-    _device->setCullFace(false);
-    _device->setBlend(true);
-    _device->setBlendFunc(Backend::BlendFactor::SrcAlpha,
-                          Backend::BlendFactor::OneMinusSrcAlpha);
-
-    if (_shader) {
-        _shader->use();
-        _shader->setBool("uRoundPoint", false);
-        for (auto& [path, batch] : _lineBatches) {
-            if (batch.hidden || batch.vertices.empty() || !batch.vao)
-                continue;
-            _device->setLineWidth(batch.width);
-            batch.vao->bind();
-            _device->drawLines(batch.vertices.size());
-            batch.vao->unbind();
-        }
-        _device->setLineWidth(1.0f);
-
-        _shader->setBool("uRoundPoint", true);
-        for (auto& [path, batch] : _pointBatches) {
-            if (batch.hidden || batch.vertices.empty() || !batch.vao)
-                continue;
-            batch.vao->bind();
-            _device->drawPoints(batch.vertices.size());
-            batch.vao->unbind();
-        }
-    }
-
-    _device->setBlend(false);
-    _device->setCullFace(true);
 }
 
 } // namespace KE

@@ -102,35 +102,64 @@ void WebGPUDevice::setClearColor(float, float, float, float) {
     throwNotImplemented("setClearColor");
 }
 
-std::unique_ptr<Buffer> WebGPUDevice::createBuffer(BufferType, size_t,
-                                                   const void*) {
-    throwNotImplemented("createBuffer");
+std::unique_ptr<Buffer> WebGPUDevice::createBuffer(const BufferDesc&,
+                                                    const void*) {
+    throwNotImplemented("createBuffer(BufferDesc)");
 }
 
 void WebGPUDevice::bindUniformBuffer(Buffer*, int) {
     throwNotImplemented("bindUniformBuffer");
 }
 
-std::unique_ptr<Shader> WebGPUDevice::createShader(const ShaderDesc&) {
-    throwNotImplemented("createShader");
-}
-
 std::unique_ptr<Texture> WebGPUDevice::createTexture(const TextureDesc&) {
     throwNotImplemented("createTexture");
 }
 
-std::unique_ptr<VertexArray> WebGPUDevice::createVertexArray() {
-    throwNotImplemented("createVertexArray");
+std::unique_ptr<Texture>
+WebGPUDevice::createTexture(const TextureResourceDesc&,
+                            const TextureInitialData*) {
+    throwNotImplemented("createTexture(TextureResourceDesc)");
 }
 
-std::unique_ptr<Shader> WebGPUDevice::createShader(const char*, const char*) {
-    throwNotImplemented("createShader");
+std::unique_ptr<TextureView>
+WebGPUDevice::createTextureView(Texture*, const TextureViewDesc&) {
+    throwNotImplemented("createTextureView");
 }
 
-std::unique_ptr<Shader> WebGPUDevice::createShader(const std::string&,
-                                                   const std::string&) {
-    throwNotImplemented("createShader");
+std::unique_ptr<Sampler> WebGPUDevice::createSampler(const SamplerDesc&) {
+    throwNotImplemented("createSampler");
 }
+
+std::unique_ptr<RenderTarget>
+WebGPUDevice::createRenderTarget(const RenderPassDesc&) {
+    throwNotImplemented("createRenderTarget");
+}
+
+std::unique_ptr<GraphicsPipeline>
+WebGPUDevice::createGraphicsPipeline(const GraphicsPipelineDesc&) {
+    throwNotImplemented("createGraphicsPipeline");
+}
+
+std::unique_ptr<BindGroupLayout>
+WebGPUDevice::createBindGroupLayout(const BindGroupLayoutDesc&) {
+    throwNotImplemented("createBindGroupLayout");
+}
+std::unique_ptr<PipelineLayout>
+WebGPUDevice::createPipelineLayout(const PipelineLayoutDesc&) {
+    throwNotImplemented("createPipelineLayout");
+}
+std::unique_ptr<BindGroup> WebGPUDevice::createBindGroup(const BindGroupDesc&) {
+    throwNotImplemented("createBindGroup");
+}
+TextureReadback WebGPUDevice::readTexture(TextureView*) {
+    throwNotImplemented("readTexture");
+}
+
+std::unique_ptr<CommandEncoder> WebGPUDevice::createCommandEncoder() {
+    throwNotImplemented("createCommandEncoder");
+}
+
+void WebGPUDevice::submit(CommandBuffer&) { throwNotImplemented("submit"); }
 
 std::unique_ptr<Texture> WebGPUDevice::createTexture(const std::string, bool) {
     throwNotImplemented("createTexture");

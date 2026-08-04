@@ -7,6 +7,8 @@
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
+#include <array>
+#include <memory>
 #include <vector>
 
 namespace KE {
@@ -25,8 +27,14 @@ struct SkinnedMeshData;
 namespace Backend {
 class Framebuffer;
 class GraphicsDevice;
-class Shader;
 class Texture;
+class TextureView;
+class RenderTarget;
+class Sampler;
+class BindGroupLayout;
+class PipelineLayout;
+class GraphicsPipeline;
+class BindGroup;
 } // namespace Backend
 
 struct RendererSettings {
@@ -37,11 +45,36 @@ struct RendererSettings {
     BackgroundSettings background;
 };
 
+enum class SceneHookBlendMode {
+    Opaque,
+    Alpha,
+    Additive,
+};
+
+// Convenience descriptor for experimental draws inserted with RenderHook.
+// It inherits the production scene target contract; callers only describe
+// shader inputs and the render state relevant to their experiment.
+struct SceneHookPipelineDesc {
+    Backend::ShaderDesc shader;
+    std::vector<Backend::VertexBufferLayout> vertexBuffers;
+    Backend::PrimitiveTopology topology =
+        Backend::PrimitiveTopology::TriangleList;
+    Backend::CullMode cullMode = Backend::CullMode::None;
+    SceneHookBlendMode blend = SceneHookBlendMode::Opaque;
+    bool depthTest = true;
+    bool depthWrite = false;
+    bool useSceneFrameBindings = false;
+    Backend::CompareFunction depthCompare = Backend::CompareFunction::Less;
+    Backend::PipelineLayout* pipelineLayout = nullptr;
+    std::string label = "scene_hook_pipeline";
+};
+
 // Facade for render-system access. App owns the concrete resources; Renderer
 // only groups the public rendering surface so App does not expose every member
 // directly as the primary API.
 class Renderer {
   public:
+    ~Renderer();
     void bind(Backend::GraphicsDevice* device, Rasterizer* rasterizer,
               PostProcessor* postProcessor,
               SelectionOutlineProcessor* selectionOutlineProcessor);
@@ -61,8 +94,6 @@ class Renderer {
     }
     RendererSettings& settings() { return _settings; }
     const RendererSettings& settings() const { return _settings; }
-    void setBackgroundShader(Backend::Shader* shader);
-    Backend::Shader* backgroundShader() const { return _backgroundShader; }
     void applyBackgroundSettings();
 
     void setLight(const DirectionalLight& light);
@@ -73,8 +104,16 @@ class Renderer {
     const std::vector<SpotLight>& spotLights() const;
     void syncSceneLights(Scene::SceneBackend* scene);
     Backend::Framebuffer* shadowFbo();
+    RenderHookHandle addRenderHook(RenderHookPhase phase,
+                                   RenderHookCallback callback);
+    bool removeRenderHook(RenderHookHandle handle);
+    std::unique_ptr<Backend::GraphicsPipeline>
+    createSceneHookPipeline(const SceneHookPipelineDesc& desc);
     void renderSceneToFramebuffer(Camera& camera, Backend::Framebuffer* target,
                                   int width, int height, bool clear = true);
+    void renderSceneToFramebuffer(const glm::mat4& view, const glm::mat4& proj,
+                                  Backend::Framebuffer* target, int width,
+                                  int height, bool clear = true);
 
     RenderableHandle addRenderable(
         Material* material, Scene::Prim* prim,
@@ -126,11 +165,40 @@ class Renderer {
         RenderableHandle handle, const std::vector<glm::mat4>& boneMatrices);
 
   private:
+    void ensureOffscreenSceneTarget(Backend::Framebuffer* target, int width,
+                                    int height);
+    void ensureOffscreenClearTarget(const glm::vec4& clearColor);
+    void ensureOffscreenFormatConversion(Backend::Texture* targetColor);
+    void recordOffscreenFormatConversion(int width, int height);
     Backend::GraphicsDevice* _device = nullptr;
     Rasterizer* _rasterizer = nullptr;
     PostProcessor* _postProcessor = nullptr;
     SelectionOutlineProcessor* _selectionOutlineProcessor = nullptr;
-    Backend::Shader* _backgroundShader = nullptr;
+    Backend::Framebuffer* _offscreenFramebuffer = nullptr;
+    Backend::Texture* _offscreenResolvedColor = nullptr;
+    int _offscreenWidth = 0;
+    int _offscreenHeight = 0;
+    std::unique_ptr<Backend::Texture> _offscreenMsaaColor;
+    std::unique_ptr<Backend::Texture> _offscreenIntermediateColor;
+    std::unique_ptr<Backend::Texture> _offscreenMsaaDepthStencil;
+    std::unique_ptr<Backend::TextureView> _offscreenMsaaColorView;
+    std::unique_ptr<Backend::TextureView> _offscreenResolveColorView;
+    std::unique_ptr<Backend::TextureView> _offscreenDepthStencilView;
+    std::unique_ptr<Backend::RenderTarget> _offscreenClearTarget;
+    std::unique_ptr<Backend::RenderTarget> _offscreenDrawTarget;
+    std::unique_ptr<Backend::RenderTarget> _offscreenResolveTarget;
+    std::unique_ptr<Backend::TextureView> _offscreenOutputView;
+    std::unique_ptr<Backend::RenderTarget> _offscreenOutputTarget;
+    std::array<std::unique_ptr<Backend::BindGroupLayout>, 4>
+        _offscreenCopyGroupLayouts;
+    std::unique_ptr<Backend::PipelineLayout> _offscreenCopyPipelineLayout;
+    std::unique_ptr<Backend::GraphicsPipeline> _offscreenCopyPipeline;
+    std::unique_ptr<Backend::Sampler> _offscreenCopySampler;
+    std::unique_ptr<Backend::BindGroup> _offscreenCopyBindGroup;
+    Backend::TextureFormat _offscreenOutputFormat =
+        Backend::TextureFormat::Undefined;
+    std::unique_ptr<Backend::PipelineLayout> _sceneHookDefaultPipelineLayout;
+    std::unique_ptr<Backend::PipelineLayout> _sceneHookFramePipelineLayout;
     RendererSettings _settings;
     int _viewportWidth = 0;
     int _viewportHeight = 0;

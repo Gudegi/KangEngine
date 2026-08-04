@@ -19,6 +19,7 @@
 #include <vector>
 
 constexpr int CAMERA_UBO_BIND_SLOT = 0;
+
 constexpr int LIGHT_UBO_BIND_SLOT = 1;
 constexpr int SHADOW_UBO_BIND_SLOT = 2;
 constexpr int SHADOW_TEXTURE_SLOT_BASE = KE::RendererTextureSlot::Shadow0;
@@ -58,18 +59,28 @@ namespace KE {
 
 Rasterizer::Rasterizer(Backend::GraphicsDevice* graphicsDevice) {
     _graphicsDevice = graphicsDevice;
-    _cameraUBO = _graphicsDevice->createBuffer(Backend::BufferType::Uniform,
-                                               2 * sizeof(glm::mat4));
+    _forwardPass.initialize(_graphicsDevice);
+    _shadowPass.initialize(_graphicsDevice);
+    _skyboxPass.initialize(_graphicsDevice);
+    _selectionMaskPass.initialize(_graphicsDevice);
+    Backend::BufferDesc uniformDesc;
+    uniformDesc.size = 2 * sizeof(glm::mat4);
+    uniformDesc.usage =
+        Backend::BufferUsage::Uniform | Backend::BufferUsage::CopyDst;
+    uniformDesc.label = "camera_uniforms";
+    _cameraUBO = _graphicsDevice->createBuffer(uniformDesc);
     _graphicsDevice->bindUniformBuffer(_cameraUBO.get(), CAMERA_UBO_BIND_SLOT);
-    _lightUBO = _graphicsDevice->createBuffer(
-        Backend::BufferType::Uniform, LIGHT_UBO_VEC4_COUNT * sizeof(glm::vec4));
+    uniformDesc.size = LIGHT_UBO_VEC4_COUNT * sizeof(glm::vec4);
+    uniformDesc.label = "light_uniforms";
+    _lightUBO = _graphicsDevice->createBuffer(uniformDesc);
     _graphicsDevice->bindUniformBuffer(_lightUBO.get(), LIGHT_UBO_BIND_SLOT);
     // std140 shadow data: mat4[4] cascade matrices, vec4 cascade splits,
     // vec4 cascade ortho half-sizes, vec4 cascade map sizes, vec4 params,
     // vec4 info.
-    _shadowUBO = _graphicsDevice->createBuffer(
-        Backend::BufferType::Uniform,
-        MaxShadowCascades * sizeof(glm::mat4) + 5 * sizeof(glm::vec4));
+    uniformDesc.size =
+        MaxShadowCascades * sizeof(glm::mat4) + 5 * sizeof(glm::vec4);
+    uniformDesc.label = "shadow_uniforms";
+    _shadowUBO = _graphicsDevice->createBuffer(uniformDesc);
     _graphicsDevice->bindUniformBuffer(_shadowUBO.get(), SHADOW_UBO_BIND_SLOT);
 
     _shadowFbo = _graphicsDevice->createFramebuffer(
@@ -80,22 +91,17 @@ Rasterizer::Rasterizer(Backend::GraphicsDevice* graphicsDevice) {
         fbo = _graphicsDevice->createFramebuffer(
             {mapSize, mapSize, true, false, 0});
     }
-    _shadowShader = _graphicsDevice->createShaderFromFile(
-        KE::getAssetPath("shaders/shadow.vs"),
-        KE::getAssetPath("shaders/shadow.fs"));
-    _skinnedShadowShader = _graphicsDevice->createShaderFromFile(
-        KE::getAssetPath("shaders/skinned_shadow.vs"),
-        KE::getAssetPath("shaders/shadow.fs"));
-    _selectionMaskShader = _graphicsDevice->createShaderFromFile(
-        KE::getAssetPath("shaders/selection_mask.vs"),
-        KE::getAssetPath("shaders/selection_mask.fs"));
-    _skinnedSelectionMaskShader = _graphicsDevice->createShaderFromFile(
-        KE::getAssetPath("shaders/skinned_selection_mask.vs"),
-        KE::getAssetPath("shaders/selection_mask.fs"));
-    _debugRenderer.init(_graphicsDevice);
+    _selectionMaskPass.initializeResources(_cameraUBO.get(), _shaderLibrary);
+    initShadowRhi();
+    initForwardRhi();
+    _skyboxPass.initializeResources(_forwardPass.frameLayout(), _shaderLibrary);
+    _debugRenderer.init(_graphicsDevice, _forwardPass.frameLayout(),
+                        _forwardPass.frameBindGroup(), &_shaderLibrary);
     _textRenderer.init(
         _graphicsDevice,
-        FontAtlasData::loadAscii(KE::getAssetPath("fonts/godoFont/GodoM.ttf")));
+        FontAtlasData::loadAscii(KE::getAssetPath("fonts/godoFont/GodoM.ttf")),
+        _forwardPass.frameLayout(), _forwardPass.frameBindGroup(),
+        &_shaderLibrary);
     updateShadowUBO(0.0f);
 }
 
@@ -148,13 +154,12 @@ Rasterizer::addSkinnedRenderable(Material* material, Scene::Prim* prim,
         meshData->indices.empty() || !skinnedMesh.hasValidVertexSkinning())
         return InvalidHandle;
 
-    auto* shader = material->getShader();
-    InstancerKey key{shader, meshData.get(), material, transformSource};
+    InstancerKey key{meshData.get(), material, transformSource};
     auto it = _instancers.find(key);
     if (it == _instancers.end()) {
         auto [newIt, inserted] = _instancers.emplace(key, MeshInstancer{});
-        newIt->second.init(_graphicsDevice, shader, skinnedMesh,
-                           transformSource, material);
+        newIt->second.init(_graphicsDevice, skinnedMesh, transformSource,
+                           material);
         it = newIt;
     }
     registerPrimSource(prim, transformSource);
@@ -178,12 +183,11 @@ RenderableHandle Rasterizer::addRenderable(Material* material,
         meshData->indices.empty())
         return InvalidHandle;
 
-    auto* shader = material->getShader();
-    InstancerKey key{shader, meshData.get(), material, transformSource};
+    InstancerKey key{meshData.get(), material, transformSource};
     auto it = _instancers.find(key);
     if (it == _instancers.end()) {
         auto [newIt, inserted] = _instancers.emplace(key, MeshInstancer{});
-        newIt->second.init(_graphicsDevice, shader, *meshData, transformSource,
+        newIt->second.init(_graphicsDevice, *meshData, transformSource,
                            material);
         it = newIt;
     }
@@ -449,8 +453,7 @@ void Rasterizer::setWorldText(const std::string& path,
     _textRenderer.setWorldText(path, desc);
 }
 
-void Rasterizer::setWorldTextString(const std::string& path,
-                                    std::string text) {
+void Rasterizer::setWorldTextString(const std::string& path, std::string text) {
     _textRenderer.setWorldString(path, std::move(text));
 }
 
@@ -613,19 +616,70 @@ void Rasterizer::updateFrameData(const glm::mat4& view, const glm::mat4& proj) {
         inst.update();
 }
 
-void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj) {
+void Rasterizer::render(const glm::mat4& view, const glm::mat4& proj,
+                        Backend::RenderTarget* sceneDrawTarget) {
     _cullingTotalBatches = 0;
     _cullingCulledBatches = 0;
     _cullingTotalInstances = 0;
     _cullingCulledInstances = 0;
 
     Backend::Texture* shadowTexture = activeShadowTexture();
+    rebuildShadowSamplingBindings(shadowTexture);
     bindShadowTextures(shadowTexture);
-    renderOpaquePass(shadowTexture);
-    renderSkyboxPass(view, proj);
-    renderTransparentPass(shadowTexture);
-    renderDebugOverlayPass();
-    _textRenderer.render(_viewportWidth, _viewportHeight);
+    renderOpaquePass(shadowTexture, sceneDrawTarget);
+    recordRenderHooks(RenderHookPhase::AfterOpaque, sceneDrawTarget);
+    renderSkyboxPass(view, proj, sceneDrawTarget);
+    renderTransparentPass(shadowTexture, sceneDrawTarget);
+    recordRenderHooks(RenderHookPhase::AfterTransparent, sceneDrawTarget);
+    renderDebugOverlayPass(sceneDrawTarget);
+}
+
+RenderHookHandle Rasterizer::addRenderHook(RenderHookPhase phase,
+                                           RenderHookCallback callback) {
+    if (!callback)
+        throw std::invalid_argument("render hook callback is empty");
+    const size_t phaseIndex = static_cast<size_t>(phase);
+    if (phaseIndex >= _renderHooks.size())
+        throw std::invalid_argument("render hook phase is invalid");
+    const RenderHookHandle handle = _nextRenderHook++;
+    _renderHooks[phaseIndex].push_back({handle, std::move(callback)});
+    return handle;
+}
+
+bool Rasterizer::removeRenderHook(RenderHookHandle handle) {
+    if (handle == InvalidRenderHook)
+        return false;
+    for (auto& hooks : _renderHooks) {
+        const auto found = std::find_if(hooks.begin(), hooks.end(),
+                                        [handle](const RenderHookEntry& entry) {
+                                            return entry.handle == handle;
+                                        });
+        if (found != hooks.end()) {
+            hooks.erase(found);
+            return true;
+        }
+    }
+    return false;
+}
+
+void Rasterizer::recordRenderHooks(RenderHookPhase phase,
+                                   Backend::RenderTarget* sceneDrawTarget) {
+    if (!sceneDrawTarget)
+        return;
+    const size_t phaseIndex = static_cast<size_t>(phase);
+    if (phaseIndex >= _renderHooks.size() || _renderHooks[phaseIndex].empty())
+        return;
+
+    auto encoder = _graphicsDevice->createCommandEncoder();
+    auto pass = encoder->beginRenderPass(sceneDrawTarget);
+    RenderHookContext context{*pass, *sceneDrawTarget,
+                              _forwardPass.frameBindGroup(), _viewportWidth,
+                              _viewportHeight};
+    for (const auto& hook : _renderHooks[phaseIndex])
+        hook.callback(context);
+    pass->end();
+    auto commands = encoder->finish();
+    _graphicsDevice->submit(*commands);
 }
 
 Backend::Texture* Rasterizer::activeShadowTexture() const {
@@ -649,90 +703,173 @@ void Rasterizer::bindShadowTextures(Backend::Texture* shadowTexture) {
     }
 }
 
-void Rasterizer::bindShadowSampler(Backend::Shader* shader,
-                                   Backend::Texture* shadowTexture) {
-    if (!shadowTexture || !shader)
+// -------------------------------------------------------------------------
+// Opaque Scene Pipeline
+// -------------------------------------------------------------------------
+void Rasterizer::renderOpaquePass(Backend::Texture* shadowTexture,
+                                  Backend::RenderTarget* sceneDrawTarget) {
+    if (!sceneDrawTarget || !_forwardPass.frameBindGroup() ||
+        !_shadowPass.samplingBindGroup())
         return;
 
-    shader->setInt("shadowMap0", SHADOW_TEXTURE_SLOT_BASE);
-    shader->setInt("shadowMap1", SHADOW_TEXTURE_SLOT_BASE + 1);
-    shader->setInt("shadowMap2", SHADOW_TEXTURE_SLOT_BASE + 2);
-    shader->setInt("shadowMap3", SHADOW_TEXTURE_SLOT_BASE + 3);
-    shader->setInt("debugCsmCascadeTint",
-                   (_debugCsmCascadeTint && _useCsm) ? 1 : 0);
-}
-
-void Rasterizer::renderSceneInstancer(MeshInstancer& inst, bool transparentPass,
-                                      Backend::Texture* shadowTexture) {
-    if (inst.hasTransparent() != transparentPass || inst.visibleCount() == 0)
-        return;
-
-    if (_frustumCullingEnabled) {
-        ++_cullingTotalBatches;
-        const int totalInstances = inst.instanceCount();
-        _cullingTotalInstances += totalInstances;
-        inst.applyFrustumCulling(&_viewFrustum);
-        const int culledInstances = totalInstances - inst.visibleCount();
-        _cullingCulledInstances += culledInstances;
-        if (inst.visibleCount() == 0) {
-            ++_cullingCulledBatches;
-            return;
+    std::vector<MeshInstancer*> drawables;
+    drawables.reserve(_instancers.size());
+    for (auto& entry : _instancers) {
+        MeshInstancer& inst = entry.second;
+        if (inst.hasTransparent() || inst.visibleCount() == 0)
+            continue;
+        if (_frustumCullingEnabled) {
+            ++_cullingTotalBatches;
+            const int total = inst.instanceCount();
+            _cullingTotalInstances += total;
+            inst.applyFrustumCulling(&_viewFrustum);
+            const int culled = total - inst.visibleCount();
+            _cullingCulledInstances += culled;
+            if (inst.visibleCount() == 0) {
+                ++_cullingCulledBatches;
+                continue;
+            }
         }
+        drawables.push_back(&inst);
     }
+    auto prepared = _forwardPass.prepare(drawables, false);
 
-    if (inst.isDoubleSided())
-        _graphicsDevice->setCullFace(false);
-
-    if (inst.material()) {
-        inst.material()->bind();
-        bindShadowSampler(inst.shader(), shadowTexture);
-    } else {
-        inst.shader()->use();
-        bindShadowSampler(inst.shader(), shadowTexture);
-    }
-
-    inst.bindTextures();
-    if (transparentPass) {
-        bindShadowTextures(shadowTexture);
-        inst.uploadSkinningMatrices();
-    } else {
-        inst.uploadSkinningMatrices();
-        // Re-bind shadow map after bindTextures() to prevent slot 1 conflict
-        bindShadowTextures(shadowTexture);
-    }
-
-    inst.render();
-    if (inst.isDoubleSided())
-        _graphicsDevice->setCullFace(true);
+    auto encoder = _graphicsDevice->createCommandEncoder();
+    auto pass = encoder->beginRenderPass(sceneDrawTarget);
+    pass->setViewport(0.0f, 0.0f, static_cast<float>(_viewportWidth),
+                      static_cast<float>(_viewportHeight));
+    pass->setPolygonMode(_wireframeEnabled ? Backend::PolygonMode::Line
+                                           : Backend::PolygonMode::Fill);
+    _forwardPass.record(*pass, prepared, _shadowPass.samplingBindGroup());
+    pass->end();
+    auto commands = encoder->finish();
+    _graphicsDevice->submit(*commands);
 }
 
-void Rasterizer::renderOpaquePass(Backend::Texture* shadowTexture) {
-    for (auto& entry : _instancers)
-        renderSceneInstancer(entry.second, false, shadowTexture);
-}
-
-void Rasterizer::renderSkyboxPass(const glm::mat4& view,
-                                  const glm::mat4& proj) {
+// -------------------------------------------------------------------------
+// Skybox Pipeline
+// -------------------------------------------------------------------------
+void Rasterizer::renderSkyboxPass(const glm::mat4& view, const glm::mat4& proj,
+                                  Backend::RenderTarget* sceneDrawTarget) {
     // Drawn after opaque geometry so the skybox only fills empty pixels.
-    _graphicsDevice->drawSkybox(view, proj);
+    if (!sceneDrawTarget || !_skyboxPass.ready()) {
+        return;
+    }
+    auto encoder = _graphicsDevice->createCommandEncoder();
+    auto pass = encoder->beginRenderPass(sceneDrawTarget);
+    pass->setViewport(0.0f, 0.0f, static_cast<float>(_viewportWidth),
+                      static_cast<float>(_viewportHeight));
+    _skyboxPass.record(*pass, _forwardPass.frameBindGroup());
+    pass->end();
+    auto commands = encoder->finish();
+    _graphicsDevice->submit(*commands);
 }
 
-void Rasterizer::renderTransparentPass(Backend::Texture* shadowTexture) {
-    _graphicsDevice->setBlend(true);
-    _graphicsDevice->setBlendFunc(Backend::BlendFactor::SrcAlpha,
-                                  Backend::BlendFactor::OneMinusSrcAlpha);
-    _graphicsDevice->setDepthWrite(false);
-    for (auto& entry : _instancers)
-        renderSceneInstancer(entry.second, true, shadowTexture);
-    _graphicsDevice->setDepthWrite(true);
-    _graphicsDevice->setBlend(false);
+// -------------------------------------------------------------------------
+// Transparent Scene Pipeline
+// -------------------------------------------------------------------------
+void Rasterizer::renderTransparentPass(Backend::Texture* shadowTexture,
+                                       Backend::RenderTarget* sceneDrawTarget) {
+    if (!sceneDrawTarget || !_forwardPass.frameBindGroup() ||
+        !_shadowPass.samplingBindGroup())
+        return;
+
+    std::vector<MeshInstancer*> drawables;
+    drawables.reserve(_instancers.size());
+    for (auto& entry : _instancers) {
+        MeshInstancer& inst = entry.second;
+        if (inst.hasTransparent() && inst.visibleCount() > 0)
+            drawables.push_back(&inst);
+    }
+    auto prepared = _forwardPass.prepare(drawables, true);
+
+    auto encoder = _graphicsDevice->createCommandEncoder();
+    auto pass = encoder->beginRenderPass(sceneDrawTarget);
+    pass->setViewport(0.0f, 0.0f, static_cast<float>(_viewportWidth),
+                      static_cast<float>(_viewportHeight));
+    pass->setPolygonMode(_wireframeEnabled ? Backend::PolygonMode::Line
+                                           : Backend::PolygonMode::Fill);
+    _forwardPass.record(*pass, prepared, _shadowPass.samplingBindGroup());
+    pass->end();
+    auto commands = encoder->finish();
+    _graphicsDevice->submit(*commands);
 }
 
-void Rasterizer::renderDebugOverlayPass() {
+// -------------------------------------------------------------------------
+// Debug Overlay Pipeline
+// -------------------------------------------------------------------------
+void Rasterizer::renderDebugOverlayPass(
+    Backend::RenderTarget* sceneDrawTarget) {
     updateDebugRenderAABB();
-    _debugRenderer.render();
+    _textRenderer.prepare(_viewportWidth, _viewportHeight);
+    if (!sceneDrawTarget ||
+        (!_debugRenderer.hasDraws() && !_textRenderer.hasDraws()))
+        return;
+    auto encoder = _graphicsDevice->createCommandEncoder();
+    auto pass = encoder->beginRenderPass(sceneDrawTarget);
+    pass->setViewport(0.0f, 0.0f, static_cast<float>(_viewportWidth),
+                      static_cast<float>(_viewportHeight));
+    _debugRenderer.record(*pass);
+    _textRenderer.record(*pass);
+    pass->end();
+    auto commands = encoder->finish();
+    _graphicsDevice->submit(*commands);
 }
 
+void Rasterizer::initShadowRhi() {
+    // =====================================================================
+    // Shadow Depth Pipeline
+    // Records single-map and CSM depth passes. The 8 immutable variants cover
+    // static/skinned, opaque/alpha-mask, and culled/double-sided casters.
+    // =====================================================================
+    _shadowPass.initializeResources(_shadowUBO.get(), _shaderLibrary);
+
+    // ShadowPass owns the RHI views and render targets. Framebuffers remain
+    // here temporarily as the OpenGL shadow-texture allocation boundary.
+    std::array<Backend::Framebuffer*, MaxShadowCascades> cascadeFbos{};
+    for (size_t i = 0; i < cascadeFbos.size(); ++i)
+        cascadeFbos[i] = _cascadeFbos[i].get();
+    _shadowPass.initializeDepthTargets(_shadowFbo.get(), cascadeFbos);
+
+    // Forward and deferred lighting consume shadow maps through this group.
+    _shadowPass.initializeSampling();
+    rebuildShadowSamplingBindings(activeShadowTexture());
+}
+
+void Rasterizer::rebuildShadowSamplingBindings(
+    Backend::Texture* fallbackTexture) {
+    if (!fallbackTexture)
+        return;
+    const bool hasShadow = _shadowMap && _shadowDistance > 0.0f;
+    std::array<Backend::Texture*, MaxShadowCascades> textures{};
+    for (size_t i = 0; i < textures.size(); ++i)
+        textures[i] = (_useCsm && hasShadow && _cascadeMaps[i])
+                          ? _cascadeMaps[i]
+                          : fallbackTexture;
+    _shadowPass.rebuildSampling(textures, _debugCsmCascadeTint && _useCsm);
+}
+
+void Rasterizer::initForwardRhi() {
+    _forwardPass.initializeResources(
+        _cameraUBO.get(), _lightUBO.get(), _shadowUBO.get(),
+        _shadowPass.samplingLayout(), _shaderLibrary);
+}
+void Rasterizer::setBackgroundSettings(const BackgroundSettings& settings) {
+    _forwardPass.setBackgroundSettings(settings);
+}
+
+void Rasterizer::setSkybox(const std::string& path, UpAxis upAxis) {
+    _skyboxPass.setTexture(path, upAxis);
+}
+
+void Rasterizer::setSkybox(const std::vector<std::string>& paths,
+                           UpAxis upAxis) {
+    _skyboxPass.setTexture(paths, upAxis);
+}
+
+// -------------------------------------------------------------------------
+// Selection Mask Pipeline - target lifetime and command submission
+// -------------------------------------------------------------------------
 void Rasterizer::renderSelectionMaskPass(const RayPickResult& selection,
                                          Backend::Framebuffer* target,
                                          int width, int height) {
@@ -743,34 +880,23 @@ void Rasterizer::renderSelectionMaskPass(const RayPickResult& selection,
     if (!inst || selection.instanceIndex < 0)
         return;
 
-    Backend::Shader* maskShader = inst->hasSkinning()
-                                      ? _skinnedSelectionMaskShader.get()
-                                      : _selectionMaskShader.get();
-    if (!maskShader)
+    if (width <= 0 || height <= 0)
         return;
-
-    target->bind();
-    _graphicsDevice->setViewport(0, 0, width, height);
-    _graphicsDevice->clear(0.0f, 0.0f, 0.0f, 1.0f);
-    _graphicsDevice->setDepthTest(false);
-    _graphicsDevice->setDepthWrite(false);
-    _graphicsDevice->setStencilTest(false);
-
-    maskShader->use();
-    inst->bindAlphaState(maskShader);
-    inst->uploadSkinningMatrices(maskShader);
-    if (inst->isDoubleSided())
-        _graphicsDevice->setCullFace(false);
-    inst->renderInstanceMask(selection.instanceIndex);
-    if (inst->isDoubleSided())
-        _graphicsDevice->setCullFace(true);
-
-    _graphicsDevice->setDepthWrite(true);
-    _graphicsDevice->setDepthTest(true);
-    target->unbind();
+    auto prepared =
+        _selectionMaskPass.prepare(inst, selection.instanceIndex, target);
+    auto encoder = _graphicsDevice->createCommandEncoder();
+    auto pass = encoder->beginRenderPass(_selectionMaskPass.target());
+    pass->setViewport(0.0f, 0.0f, static_cast<float>(width),
+                      static_cast<float>(height));
+    _selectionMaskPass.record(*pass, prepared);
+    pass->end();
+    auto commands = encoder->finish();
+    _graphicsDevice->submit(*commands);
 }
 
-/////////////// Shadow Pass //////////////
+// -------------------------------------------------------------------------
+// Shadow Depth Pipeline - frame data, CSM setup, and command submission
+// -------------------------------------------------------------------------
 
 void Rasterizer::updateShadowUBO(float activeOrthoHalfSize) {
     std::array<glm::mat4, MaxShadowCascades> matrices{};
@@ -982,7 +1108,7 @@ glm::mat4 Rasterizer::computeLightSpaceMatrix(Camera& camera,
 
 void Rasterizer::renderShadowMap(Camera& camera, UpAxis upAxis,
                                  int viewportWidth, int viewportHeight) {
-    if (!_shadowFbo || !_shadowShader || _shadowDistance <= 0.0f) {
+    if (!_shadowPass.singleDepthTarget() || _shadowDistance <= 0.0f) {
         _shadowMap = nullptr;
         updateShadowUBO(0.0f);
         return;
@@ -1016,56 +1142,41 @@ void Rasterizer::renderShadowMap(Camera& camera, UpAxis upAxis,
             updateShadowPassUBO(_cascadeLightMatrices[static_cast<size_t>(i)],
                                 _cascadeOrthoHalfSizes[static_cast<size_t>(i)]);
 
-            _cascadeFbos[static_cast<size_t>(i)]->bind();
             const int mapSize = _cascadeMapSizes[static_cast<size_t>(i)];
-            _graphicsDevice->setViewport(0, 0, mapSize, mapSize);
-            _graphicsDevice->clear(0, 0, 0, 1);
-            drawShadowCasters();
-            _cascadeFbos[static_cast<size_t>(i)]->unbind();
+            drawShadowCasters(
+                _shadowPass.cascadeDepthTarget(static_cast<size_t>(i)),
+                mapSize);
         }
         _lightSpaceMatrix = _cascadeLightMatrices[0];
         _shadowMap = _cascadeMaps[0];
         updateShadowUBO(_shadowMap ? _activeShadowOrthoHalfSize : 0.0f);
     } else {
         updateShadowPassUBO(_lightSpaceMatrix, _activeShadowOrthoHalfSize);
-        _shadowFbo->bind();
-        _graphicsDevice->setViewport(0, 0, _shadowMapWH, _shadowMapWH);
-        _graphicsDevice->clear(0, 0, 0, 1);
-        drawShadowCasters();
-        _shadowFbo->unbind();
+        drawShadowCasters(_shadowPass.singleDepthTarget(), _shadowMapWH);
     }
     _graphicsDevice->setViewport(0, 0, viewportWidth, viewportHeight);
 }
 
-void Rasterizer::drawShadowCasters() {
-    // Front-face culling avoids storing the same front surfaces that receive
-    // the shadow, reducing acne on closed meshes.
-    // _graphicsDevice->setCullFaceMode(Backend::CullFaceMode::Front);
-    // Store the light-facing surface so caster silhouettes remain attached at
-    // contact points. Receiver/depth bias handles self-shadowing acne.
-    _graphicsDevice->setCullFaceMode(Backend::CullFaceMode::Back);
+void Rasterizer::drawShadowCasters(Backend::RenderTarget* target, int mapSize) {
+    if (!target || mapSize <= 0)
+        return;
+
+    std::vector<MeshInstancer*> casters;
+    casters.reserve(_instancers.size());
     for (auto& [key, inst] : _instancers) {
-        if (inst.visibleCount() == 0)
-            continue;
-        if (!inst.castsShadow())
-            continue;
-        // Shadow pass runs after updateFrameData() uploads all instances and
-        // before scene-pass frustum culling compacts the visible buffer.
-        if (inst.hasSkinning() && _skinnedShadowShader) {
-            _skinnedShadowShader->use();
-            inst.bindAlphaState(_skinnedShadowShader.get());
-            inst.uploadSkinningMatrices(_skinnedShadowShader.get());
-        } else {
-            _shadowShader->use();
-            inst.bindAlphaState(_shadowShader.get());
-        }
-        if (inst.isDoubleSided())
-            _graphicsDevice->setCullFace(false);
-        inst.render();
-        if (inst.isDoubleSided())
-            _graphicsDevice->setCullFace(true);
+        if (inst.visibleCount() > 0 && inst.castsShadow())
+            casters.push_back(&inst);
     }
-    // _graphicsDevice->setCullFaceMode(Backend::CullFaceMode::Back);
+    auto prepared = _shadowPass.prepare(casters);
+
+    auto encoder = _graphicsDevice->createCommandEncoder();
+    auto pass = encoder->beginRenderPass(target);
+    pass->setViewport(0.0f, 0.0f, static_cast<float>(mapSize),
+                      static_cast<float>(mapSize));
+    _shadowPass.record(*pass, prepared);
+    pass->end();
+    auto commands = encoder->finish();
+    _graphicsDevice->submit(*commands);
 }
 
 } // namespace KE

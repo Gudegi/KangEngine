@@ -28,8 +28,8 @@ static PhysicsConfig makeGPUBoxConfig() {
 
 class GpuBoxInstancingApp : public App {
   public:
-    std::unique_ptr<Backend::Shader> commonShader;
-    std::unique_ptr<Backend::Shader> groundShader;
+    VertexColorMaterial commonMaterial;
+    VertexColorMaterial groundMaterial{VertexColorStyle::Checkerboard};
 
     PhysicsWorld physics{makeGPUBoxConfig()};
     std::unique_ptr<PhysicsGpuSystem> gpuSystem;
@@ -57,29 +57,12 @@ class GpuBoxInstancingApp : public App {
     void setup() override {
         this->getCamera().setCameraPos(glm::vec3(10.f, 0.f, 5.f));
 
-        commonShader = getRenderer().device()->createShaderFromFile(
-            KE::getAssetPath("shaders/common.vs"),
-            KE::getAssetPath("shaders/common.fs"));
-        groundShader = getRenderer().device()->createShaderFromFile(
-            KE::getAssetPath("shaders/common.vs"),
-            KE::getAssetPath("shaders/checkerboard.fs"));
-        getRenderer().setBackgroundShader(groundShader.get());
-
-        commonShader->use();
-        commonShader->setUniformBlockBinding("cameraUBO", 0);
-        commonShader->setUniformBlockBinding("lightUBO", 1);
-        commonShader->setUniformBlockBinding("shadowUBO", 2);
-
-        groundShader->use();
-        groundShader->setUniformBlockBinding("cameraUBO", 0);
-        groundShader->setUniformBlockBinding("lightUBO", 1);
-        groundShader->setUniformBlockBinding("shadowUBO", 2);
         auto white = ColorLibrary::get(KE::ColorType::WHITE);
         auto pG = ColorLibrary::get(KE::ColorType::PASTEL_GREEN);
-        groundShader->setVec4("checkerColor1",
-                              glm::vec4(white.r, white.g, white.b, white.a));
-        groundShader->setVec4("checkerColor2",
-                              glm::vec4(pG.r, pG.g, pG.b, pG.a));
+        getRenderer().settings().background.checkerColor1 =
+            glm::vec4(white.r, white.g, white.b, white.a);
+        getRenderer().settings().background.checkerColor2 =
+            glm::vec4(pG.r, pG.g, pG.b, pG.a);
 
         setSkybox(
             KE::getAssetPath("external/skybox/Cubemap_Sky_08-512x512.png"));
@@ -89,7 +72,7 @@ class GpuBoxInstancingApp : public App {
         auto* gnd = getScene()->definePrim("/ground", Scene::PrimType::Mesh);
         gnd->setMeshData(std::make_shared<Scene::MeshData>(
             Scene::Prim::createPlaneData(100.f, UpAxis::Z)));
-        addRenderable(groundShader.get(), gnd);
+        addRenderable(&groundMaterial, gnd);
 
         _boxMesh = std::make_shared<Scene::MeshData>(
             Scene::Prim::createSphereData(BOX_HALF, 32, 16));
@@ -175,7 +158,7 @@ class GpuBoxInstancingApp : public App {
             getScene()->definePrim("/gpu_boxes", Scene::PrimType::MeshInstance);
         owner->setMeshSourcePath("/mesh_assets/gpu_box");
         owner->setDisplayColorAlpha(glm::vec4(1.0f));
-        _boxHandle = addRenderable(commonShader.get(), owner,
+        _boxHandle = addRenderable(&commonMaterial, owner,
                                    TransformSource::ExternalBuffer);
         setRenderableColors(_boxHandle, _colors);
     }

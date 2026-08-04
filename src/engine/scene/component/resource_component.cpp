@@ -76,8 +76,10 @@ const char* resourceTypeLabel(ResourceType type) {
         return "Material";
     case ResourceType::Texture:
         return "Texture";
-    case ResourceType::Shader:
-        return "Shader";
+    case ResourceType::ShaderSource:
+        return "Shader Source";
+    case ResourceType::Pipeline:
+        return "Pipeline";
     }
     return "Unknown";
 }

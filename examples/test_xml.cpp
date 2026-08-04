@@ -64,7 +64,7 @@ void main() {
 
 class MyApp : public App {
   public:
-    std::unique_ptr<Backend::Shader> meshShader;
+    PhongMaterial meshMaterial;
 
     float lightColor[3] = {1.0f, 1.0f, 1.0f};
     glm::vec3 lightPos = glm::vec3(-2.0f, 5.0f, 3.0f);
@@ -77,15 +77,15 @@ class MyApp : public App {
 
     void setup() override {
         KE_TRACE_FUNCTION();
-        meshShader = getRenderer().device()->createShader(phongVs, phongFs);
-        meshShader->setUniformBlockBinding("CameraUBO", 0);
+        getRenderer().setLight({glm::normalize(lightPos), glm::vec3(1.0f),
+                                1.0f, glm::vec3(0.15f)});
 
         const std::string mjcfPath =
             KE::getAssetPath("external/retargetted/unitree_h1/unitree_h1.xml");
         robot = Bridge::ArticulationVisualBridge::fromMJCF(mjcfPath, getScene());
         for (auto* prim : robot.bodyPrims()) {
             if (prim)
-                getSceneRenderSystem().addRenderable(*prim, meshShader.get());
+                getSceneRenderSystem().addRenderable(*prim, &meshMaterial);
         }
 
         checkError();
@@ -93,14 +93,6 @@ class MyApp : public App {
 
     void preRender() override {
         KE_TRACE_FUNCTION();
-        auto view = this->getViewMatrix();
-
-        meshShader->use();
-        meshShader->setVec3("lightColor", lightColor[0], lightColor[1],
-                            lightColor[2]);
-        meshShader->setVec3("lightPos",
-                            glm::vec3(view * glm::vec4(lightPos, 1.0f)));
-
         checkError();
     }
 

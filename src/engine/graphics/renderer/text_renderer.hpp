@@ -15,6 +15,8 @@
 
 namespace KE {
 
+class ShaderLibrary;
+
 enum class TextAlignment {
     Left,
     Center,
@@ -94,6 +96,8 @@ struct ScreenTextDesc {
     bool hidden = false;
 };
 
+// Text pass owner. prepare() updates dirty glyph instances on the render
+// thread; record() only emits commands into its caller's overlay render pass.
 class TextRenderer {
   private:
     struct QuadVertex {
@@ -118,7 +122,6 @@ class TextRenderer {
     };
 
     struct InstanceBatch {
-        std::unique_ptr<Backend::VertexArray> vao;
         std::unique_ptr<Backend::Buffer> instanceBuffer;
         std::vector<GlyphInstance> instances;
         std::size_t allocatedInstances = 0;
@@ -127,7 +130,6 @@ class TextRenderer {
     Backend::GraphicsDevice* _device = nullptr;
     FontAtlasData _atlasData;
     std::unique_ptr<Backend::Texture> _atlasTexture;
-    std::unique_ptr<Backend::Shader> _shader;
     std::unique_ptr<Backend::Buffer> _quadVertexBuffer;
     std::unique_ptr<Backend::Buffer> _quadIndexBuffer;
     InstanceBatch _depthBatch;
@@ -140,6 +142,21 @@ class TextRenderer {
     bool _screenDirty = true;
     int _lastViewportWidth = 0;
     int _lastViewportHeight = 0;
+    Backend::BindGroup* _frameBindGroup = nullptr;
+    std::unique_ptr<Backend::BindGroupLayout> _passGroupLayout;
+    std::unique_ptr<Backend::BindGroupLayout> _reservedObjectGroupLayout;
+    std::unique_ptr<Backend::BindGroupLayout> _atlasGroupLayout;
+    std::unique_ptr<Backend::PipelineLayout> _rhiPipelineLayout;
+    std::unique_ptr<Backend::GraphicsPipeline> _worldDepthPipeline;
+    std::unique_ptr<Backend::GraphicsPipeline> _worldOverlayPipeline;
+    std::unique_ptr<Backend::GraphicsPipeline> _screenPipeline;
+    std::unique_ptr<Backend::Buffer> _worldPassParams;
+    std::unique_ptr<Backend::Buffer> _screenPassParams;
+    std::unique_ptr<Backend::BindGroup> _worldPassBindGroup;
+    std::unique_ptr<Backend::BindGroup> _screenPassBindGroup;
+    std::unique_ptr<Backend::TextureView> _atlasView;
+    std::unique_ptr<Backend::Sampler> _atlasSampler;
+    std::unique_ptr<Backend::BindGroup> _atlasBindGroup;
 
     void createGPUResources();
     void ensureBatchCapacity(InstanceBatch& batch, std::size_t count);
@@ -149,8 +166,6 @@ class TextRenderer {
                            int viewportHeight,
                            std::vector<GlyphInstance>& instances) const;
     void rebuildDirtyInstances(int viewportWidth, int viewportHeight);
-    void renderBatch(InstanceBatch& batch, bool depthTest, int viewportWidth,
-                     int viewportHeight, bool screenSpace);
 
   public:
     TextRenderer() = default;
@@ -159,7 +174,10 @@ class TextRenderer {
     TextRenderer(const TextRenderer&) = delete;
     TextRenderer& operator=(const TextRenderer&) = delete;
 
-    void init(Backend::GraphicsDevice* device, FontAtlasData atlasData);
+    void init(Backend::GraphicsDevice* device, FontAtlasData atlasData,
+              Backend::BindGroupLayout* frameGroupLayout = nullptr,
+              Backend::BindGroup* frameBindGroup = nullptr,
+              ShaderLibrary* shaderLibrary = nullptr);
     void setWorldText(const std::string& path, const WorldTextDesc& desc);
     void setWorldString(const std::string& path, std::string text);
     void setWorldPosition(const std::string& path, const glm::vec3& position);
@@ -172,7 +190,9 @@ class TextRenderer {
     void setScreenHidden(const std::string& path, bool hidden);
     void removeScreenText(const std::string& path);
     void clearScreenText();
-    void render(int viewportWidth, int viewportHeight);
+    void prepare(int viewportWidth, int viewportHeight);
+    bool hasDraws() const;
+    void record(Backend::RenderPassEncoder& pass) const;
 };
 
 } // namespace KE

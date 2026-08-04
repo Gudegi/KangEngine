@@ -555,10 +555,6 @@ void drawMaterialInspector(Scene::Prim& prim) {
         return;
     }
 
-    Backend::Shader* shader = material->getShader();
-    ImGui::TextDisabled("Shader*");
-    ImGui::SameLine();
-    ImGui::Text("%p", static_cast<void*>(shader));
     drawSharedMaterialHint();
 
     if (auto* phong = dynamic_cast<PhongMaterial*>(material)) {
@@ -608,7 +604,7 @@ void drawResourceComponentEditor(App* app, Scene::Prim& prim) {
     ImGui::Text("Handle: %u", resource->handle());
 
     const char* kindLabels[] = {"Unknown", "Mesh", "Material", "Texture",
-                                "Shader"};
+                                "Shader Source", "Pipeline"};
     int kind = static_cast<int>(resource->type());
     if (ImGui::Combo("Kind", &kind, kindLabels,
                      static_cast<int>(std::size(kindLabels)))) {
@@ -626,6 +622,59 @@ void drawResourceComponentEditor(App* app, Scene::Prim& prim) {
     if (ImGui::InputText("URI", uri, sizeof(uri)))
         resource->setUri(uri);
     ImGui::EndDisabled();
+
+    if (app && resource->handle() != Scene::InvalidResourceHandle) {
+        const auto& manager = app->getSceneResourceManager();
+        if (const auto* shader = manager.shaderSource(resource->handle())) {
+            const char* stage = "Vertex";
+            switch (shader->stage) {
+            case Backend::ShaderType::Vertex: stage = "Vertex"; break;
+            case Backend::ShaderType::Fragment: stage = "Fragment"; break;
+            case Backend::ShaderType::Geometry: stage = "Geometry"; break;
+            case Backend::ShaderType::Compute: stage = "Compute"; break;
+            }
+            ImGui::SeparatorText("Shader Source");
+            ImGui::Text("Language: %s",
+                        shader->language == Scene::ShaderLanguage::WGSL
+                            ? "WGSL"
+                            : "GLSL");
+            ImGui::Text("Stage: %s", stage);
+            ImGui::Text("Entry point: %s", shader->entryPoint.c_str());
+            if (ImGui::CollapsingHeader("Source"))
+                ImGui::TextUnformatted(shader->source.c_str());
+        } else if (const auto* pipeline =
+                       manager.pipeline(resource->handle())) {
+            ImGui::SeparatorText("Pipeline");
+            ImGui::Text("Type: %s",
+                        pipeline->type == Scene::AuthoredPipelineType::Compute
+                            ? "Compute"
+                            : "Graphics");
+            ImGui::Text("Shader stages: %zu", pipeline->shaderSources.size());
+            if (!pipeline->shaderSources.empty() &&
+                ImGui::CollapsingHeader(
+                    ("Shader Sources (" +
+                     std::to_string(pipeline->shaderSources.size()) + ")")
+                        .c_str())) {
+                for (Scene::ResourceHandle handle :
+                     pipeline->shaderSources) {
+                    const auto* entry = manager.entry(handle);
+                    ImGui::BulletText("%s",
+                                      entry ? entry->name.c_str() : "<missing>");
+                }
+            }
+            if (!pipeline->stateSummary.empty())
+                ImGui::TextWrapped("State: %s",
+                                   pipeline->stateSummary.c_str());
+            if (!pipeline->variants.empty() &&
+                ImGui::CollapsingHeader(
+                    ("Variants (" +
+                     std::to_string(pipeline->variants.size()) + ")")
+                        .c_str())) {
+                for (const std::string& variant : pipeline->variants)
+                    ImGui::BulletText("%s", variant.c_str());
+            }
+        }
+    }
 
     ImGui::SeparatorText("Usage");
     if (!app || resource->handle() == Scene::InvalidResourceHandle) {

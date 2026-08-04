@@ -441,6 +441,12 @@ PYBIND11_MODULE(_kangengine, m) {
         .value("WebGPU", Backend::BackendType::WebGPU)
         .export_values();
 
+    py::enum_<Backend::ShaderType>(m, "ShaderType")
+        .value("VERTEX", Backend::ShaderType::Vertex)
+        .value("FRAGMENT", Backend::ShaderType::Fragment)
+        .value("GEOMETRY", Backend::ShaderType::Geometry)
+        .value("COMPUTE", Backend::ShaderType::Compute);
+
     py::enum_<TransformSource>(m, "TransformSource")
         .value("SceneGraph", TransformSource::SceneGraph)
         .value("ExternalBuffer", TransformSource::ExternalBuffer);
@@ -714,34 +720,27 @@ PYBIND11_MODULE(_kangengine, m) {
     py::class_<ColorLibrary>(m, "ColorLibrary")
         .def_static("get", &ColorLibrary::get, py::arg("type"));
 
-    py::class_<Material>(m, "Material", "Base class for renderer materials.")
-        .def(
-            "set_shader",
-            [](Material& self, Backend::Shader* shader) -> Material& {
-                self.setShader(shader);
-                return self;
-            },
-            py::arg("shader"), py::return_value_policy::reference_internal,
-            "Attach the shader used when this material is bound and return "
-            "this material.")
-        .def("get_shader", &Material::getShader,
-             py::return_value_policy::reference,
-             "Return the shader currently attached to this material.");
+    py::class_<Material>(m, "Material", "Base class for renderer materials.");
+
+    py::enum_<VertexColorStyle>(m, "VertexColorStyle")
+        .value("UNTEXTURED", VertexColorStyle::Untextured)
+        .value("TEXTURED", VertexColorStyle::Textured)
+        .value("CHECKERBOARD", VertexColorStyle::Checkerboard)
+        .value("DEBUG_CHECKER", VertexColorStyle::DebugChecker);
 
     py::class_<VertexColorMaterial, Material>(
         m, "VertexColorMaterial",
-        "Compatibility material for vertex/display-color shader rendering.")
-        .def(py::init<>(), "Create a vertex-color material without a shader.")
-        .def(py::init<Backend::Shader*>(), py::arg("shader"),
-             "Create a vertex-color material attached to a shader.");
+        "Vertex/display-color material with a built-in rendering style.")
+        .def(py::init<VertexColorStyle>(),
+             py::arg("style") = VertexColorStyle::Untextured)
+        .def("set_style", &VertexColorMaterial::setStyle, py::arg("style"))
+        .def_property_readonly("style", &VertexColorMaterial::vertexColorStyle);
 
     py::class_<PhongMaterial, Material>(
         m, "PhongMaterial",
         "Classic Blinn-Phong material with diffuse/specular factors and "
         "optional textures.")
         .def(py::init<>(), "Create a Phong material with default factors.")
-        .def(py::init<Backend::Shader*>(), py::arg("shader"),
-             "Create a Phong material attached to a shader.")
         .def(
             "load_from_preset",
             [](PhongMaterial& self, PhongMaterialType type) -> PhongMaterial& {
@@ -788,8 +787,6 @@ PYBIND11_MODULE(_kangengine, m) {
         m, "PBRMaterial",
         "Physically based material using metallic-roughness parameters.")
         .def(py::init<>(), "Create a PBR material with default factors.")
-        .def(py::init<Backend::Shader*>(), py::arg("shader"),
-             "Create a PBR material attached to a shader.")
         .def(
             "load_from_preset",
             [](PBRMaterial& self, PBRMaterialType type) -> PBRMaterial& {
@@ -855,69 +852,6 @@ PYBIND11_MODULE(_kangengine, m) {
                        "Optional packed occlusion-roughness-metallic texture.")
         .def_readwrite("emissive_texture", &PBRMaterial::emissiveTexture,
                        "Optional emissive texture.");
-
-    // Backend::Shader
-    py::class_<Backend::Shader>(
-        m, "Shader", "Compiled GPU shader program used by renderer materials.")
-        .def("use", &Backend::Shader::use,
-             "Bind this shader program for subsequent draw or uniform calls.")
-        .def("bind", &Backend::Shader::bind, "Bind this shader program.")
-        .def("unbind", &Backend::Shader::unbind,
-             "Unbind the current shader program.")
-        .def("set_bool", &Backend::Shader::setBool, py::arg("name"),
-             py::arg("value"), "Set a boolean uniform.")
-        .def("set_int", &Backend::Shader::setInt, py::arg("name"),
-             py::arg("value"), "Set an integer uniform.")
-        .def("set_float", &Backend::Shader::setFloat, py::arg("name"),
-             py::arg("value"), "Set a float uniform.")
-        .def("set_color", &Backend::Shader::setColor, py::arg("name"),
-             py::arg("r"), py::arg("g"), py::arg("b"), py::arg("a"),
-             "Set a color uniform from RGBA components.")
-        .def(
-            "set_color",
-            [](Backend::Shader& self, const std::string& name,
-               const glm::vec4& value) {
-                self.setColor(name, value.r, value.g, value.b, value.a);
-            },
-            py::arg("name"), py::arg("value"),
-            "Set a color uniform from an RGBA vector.")
-        .def("set_vec2",
-             py::overload_cast<const std::string&, const glm::vec2&>(
-                 &Backend::Shader::setVec2),
-             py::arg("name"), py::arg("value"), "Set a vec2 uniform.")
-        .def("set_vec2",
-             py::overload_cast<const std::string&, float, float>(
-                 &Backend::Shader::setVec2),
-             py::arg("name"), py::arg("x"), py::arg("y"),
-             "Set a vec2 uniform from components.")
-        .def("set_vec3",
-             py::overload_cast<const std::string&, const glm::vec3&>(
-                 &Backend::Shader::setVec3),
-             py::arg("name"), py::arg("value"), "Set a vec3 uniform.")
-        .def("set_vec3",
-             py::overload_cast<const std::string&, float, float, float>(
-                 &Backend::Shader::setVec3),
-             py::arg("name"), py::arg("x"), py::arg("y"), py::arg("z"),
-             "Set a vec3 uniform from components.")
-        .def("set_vec4",
-             py::overload_cast<const std::string&, const glm::vec4&>(
-                 &Backend::Shader::setVec4),
-             py::arg("name"), py::arg("value"), "Set a vec4 uniform.")
-        .def("set_vec4",
-             py::overload_cast<const std::string&, float, float, float, float>(
-                 &Backend::Shader::setVec4),
-             py::arg("name"), py::arg("x"), py::arg("y"), py::arg("z"),
-             py::arg("w"), "Set a vec4 uniform from components.")
-        .def("set_mat2", &Backend::Shader::setMat2, py::arg("name"),
-             py::arg("value"), "Set a mat2 uniform.")
-        .def("set_mat3", &Backend::Shader::setMat3, py::arg("name"),
-             py::arg("value"), "Set a mat3 uniform.")
-        .def("set_mat4", &Backend::Shader::setMat4, py::arg("name"),
-             py::arg("value"), "Set a mat4 uniform.")
-        .def("set_uniform_block_binding",
-             &Backend::Shader::setUniformBlockBinding, py::arg("block_name"),
-             py::arg("binding_point"),
-             "Bind a named uniform block to a binding point.");
 
     // Backend::Texture
     py::class_<Backend::Texture>(
@@ -986,22 +920,142 @@ PYBIND11_MODULE(_kangengine, m) {
                                 config.magFilter);
         });
 
+    py::enum_<Backend::BufferUsage>(m, "BufferUsage", py::arithmetic())
+        .value("NONE", Backend::BufferUsage::None)
+        .value("VERTEX", Backend::BufferUsage::Vertex)
+        .value("INDEX", Backend::BufferUsage::Index)
+        .value("UNIFORM", Backend::BufferUsage::Uniform)
+        .value("COPY_SRC", Backend::BufferUsage::CopySrc)
+        .value("COPY_DST", Backend::BufferUsage::CopyDst)
+        .def("__or__",
+             [](Backend::BufferUsage lhs, Backend::BufferUsage rhs) {
+                 return lhs | rhs;
+             },
+             py::is_operator());
+    py::enum_<Backend::VertexFormat>(m, "VertexFormat")
+        .value("FLOAT32", Backend::VertexFormat::Float32)
+        .value("FLOAT32X2", Backend::VertexFormat::Float32x2)
+        .value("FLOAT32X3", Backend::VertexFormat::Float32x3)
+        .value("FLOAT32X4", Backend::VertexFormat::Float32x4)
+        .value("SINT32X4", Backend::VertexFormat::Sint32x4);
+    py::enum_<Backend::VertexStepMode>(m, "VertexStepMode")
+        .value("VERTEX", Backend::VertexStepMode::Vertex)
+        .value("INSTANCE", Backend::VertexStepMode::Instance);
+    py::enum_<Backend::PrimitiveTopology>(m, "PrimitiveTopology")
+        .value("POINT_LIST", Backend::PrimitiveTopology::PointList)
+        .value("LINE_LIST", Backend::PrimitiveTopology::LineList)
+        .value("LINE_STRIP", Backend::PrimitiveTopology::LineStrip)
+        .value("TRIANGLE_LIST", Backend::PrimitiveTopology::TriangleList)
+        .value("TRIANGLE_STRIP", Backend::PrimitiveTopology::TriangleStrip);
+    py::enum_<Backend::CullMode>(m, "CullMode")
+        .value("NONE", Backend::CullMode::None)
+        .value("FRONT", Backend::CullMode::Front)
+        .value("BACK", Backend::CullMode::Back);
+    py::enum_<Backend::CompareFunction>(m, "CompareFunction")
+        .value("NEVER", Backend::CompareFunction::Never)
+        .value("LESS", Backend::CompareFunction::Less)
+        .value("LESS_EQUAL", Backend::CompareFunction::LessEqual)
+        .value("GREATER", Backend::CompareFunction::Greater)
+        .value("GREATER_EQUAL", Backend::CompareFunction::GreaterEqual)
+        .value("EQUAL", Backend::CompareFunction::Equal)
+        .value("NOT_EQUAL", Backend::CompareFunction::NotEqual)
+        .value("ALWAYS", Backend::CompareFunction::Always);
+    py::enum_<Backend::IndexFormat>(m, "IndexFormat")
+        .value("UINT16", Backend::IndexFormat::Uint16)
+        .value("UINT32", Backend::IndexFormat::Uint32);
+    py::enum_<SceneHookBlendMode>(m, "SceneHookBlendMode")
+        .value("OPAQUE", SceneHookBlendMode::Opaque)
+        .value("ALPHA", SceneHookBlendMode::Alpha)
+        .value("ADDITIVE", SceneHookBlendMode::Additive);
+    py::enum_<RenderHookPhase>(m, "RenderHookPhase")
+        .value("AFTER_OPAQUE", RenderHookPhase::AfterOpaque)
+        .value("AFTER_TRANSPARENT", RenderHookPhase::AfterTransparent);
+
+    py::class_<Backend::ShaderStage>(m, "ShaderStage")
+        .def(py::init<>())
+        .def(py::init<std::string, Backend::ShaderType, std::string>(),
+             py::arg("source"), py::arg("stage"),
+             py::arg("entry_point") = "main")
+        .def_readwrite("source", &Backend::ShaderStage::source)
+        .def_readwrite("stage", &Backend::ShaderStage::type)
+        .def_readwrite("entry_point", &Backend::ShaderStage::entryPoint);
+    py::class_<Backend::ShaderDesc>(m, "ShaderDesc")
+        .def(py::init<>())
+        .def_readwrite("stages", &Backend::ShaderDesc::stages)
+        .def_readwrite("name", &Backend::ShaderDesc::name);
+    py::class_<Backend::VertexAttributeDesc>(m, "VertexAttributeDesc")
+        .def(py::init<>())
+        .def(py::init<Backend::VertexFormat, uint64_t, uint32_t>(),
+             py::arg("format"), py::arg("offset"),
+             py::arg("shader_location"))
+        .def_readwrite("format", &Backend::VertexAttributeDesc::format)
+        .def_readwrite("offset", &Backend::VertexAttributeDesc::offset)
+        .def_readwrite("shader_location",
+                       &Backend::VertexAttributeDesc::shaderLocation);
+    py::class_<Backend::VertexBufferLayout>(m, "VertexBufferLayout")
+        .def(py::init<>())
+        .def_readwrite("array_stride", &Backend::VertexBufferLayout::arrayStride)
+        .def_readwrite("step_mode", &Backend::VertexBufferLayout::stepMode)
+        .def_readwrite("attributes", &Backend::VertexBufferLayout::attributes);
+    py::class_<SceneHookPipelineDesc>(m, "SceneHookPipelineDesc")
+        .def(py::init<>())
+        .def_readwrite("shader", &SceneHookPipelineDesc::shader)
+        .def_readwrite("vertex_buffers", &SceneHookPipelineDesc::vertexBuffers)
+        .def_readwrite("topology", &SceneHookPipelineDesc::topology)
+        .def_readwrite("cull_mode", &SceneHookPipelineDesc::cullMode)
+        .def_readwrite("blend", &SceneHookPipelineDesc::blend)
+        .def_readwrite("depth_test", &SceneHookPipelineDesc::depthTest)
+        .def_readwrite("depth_write", &SceneHookPipelineDesc::depthWrite)
+        .def_readwrite("use_scene_frame_bindings",
+                       &SceneHookPipelineDesc::useSceneFrameBindings)
+        .def_readwrite("depth_compare", &SceneHookPipelineDesc::depthCompare)
+        .def_readwrite("label", &SceneHookPipelineDesc::label);
+
+    py::class_<Backend::Buffer>(m, "Buffer")
+        .def_property_readonly("size", &Backend::Buffer::getSize)
+        .def_property_readonly("usage", &Backend::Buffer::getUsage)
+        .def("set_data",
+             [](Backend::Buffer& buffer, py::buffer data, size_t offset) {
+                 const py::buffer_info info = data.request();
+                 const size_t size =
+                     static_cast<size_t>(info.size) * info.itemsize;
+                 if (offset + size > buffer.getSize())
+                     throw py::value_error("buffer upload exceeds allocation");
+                 buffer.setData(info.ptr, size, offset);
+             },
+             py::arg("data"), py::arg("offset") = 0);
+    py::class_<Backend::GraphicsPipeline>(m, "GraphicsPipeline");
+    py::class_<Backend::RenderPassEncoder>(m, "RenderPassEncoder")
+        .def("set_viewport", &Backend::RenderPassEncoder::setViewport,
+             py::arg("x"), py::arg("y"), py::arg("width"),
+             py::arg("height"), py::arg("min_depth") = 0.0f,
+             py::arg("max_depth") = 1.0f)
+        .def("set_pipeline", &Backend::RenderPassEncoder::setPipeline,
+             py::arg("pipeline"))
+        .def("set_vertex_buffer", &Backend::RenderPassEncoder::setVertexBuffer,
+             py::arg("slot"), py::arg("buffer"), py::arg("offset") = 0)
+        .def("set_index_buffer", &Backend::RenderPassEncoder::setIndexBuffer,
+             py::arg("buffer"), py::arg("format"), py::arg("offset") = 0)
+        .def("draw", &Backend::RenderPassEncoder::draw,
+             py::arg("vertex_count"), py::arg("instance_count") = 1,
+             py::arg("first_vertex") = 0, py::arg("first_instance") = 0)
+        .def("draw_indexed", &Backend::RenderPassEncoder::drawIndexed,
+             py::arg("index_count"), py::arg("instance_count") = 1,
+             py::arg("first_index") = 0, py::arg("base_vertex") = 0,
+             py::arg("first_instance") = 0);
+    py::class_<RenderHookContext>(m, "RenderHookContext")
+        .def_property_readonly(
+            "pass_encoder", [](RenderHookContext& context) {
+                return &context.pass;
+            }, py::return_value_policy::reference)
+        .def_readonly("width", &RenderHookContext::width)
+        .def_readonly("height", &RenderHookContext::height);
+
     // Backend::GraphicsDevice
     py::class_<Backend::GraphicsDevice,
                std::shared_ptr<Backend::GraphicsDevice>>(
         m, "GraphicsDevice",
-        "Factory for backend graphics resources such as shaders and textures.")
-        .def("create_shader",
-             py::overload_cast<const std::string&, const std::string&>(
-                 &Backend::GraphicsDevice::createShader),
-             py::arg("vertex_source"), py::arg("fragment_source"),
-             py::return_value_policy::take_ownership,
-             "Create a shader from vertex and fragment shader source strings.")
-        .def("create_shader_from_file",
-             &Backend::GraphicsDevice::createShaderFromFile,
-             py::arg("vert_path"), py::arg("frag_path"),
-             py::return_value_policy::take_ownership,
-             "Create a shader from vertex and fragment shader files.")
+        "Factory for backend graphics resources such as textures and buffers.")
         .def(
             "create_texture",
             [](Backend::GraphicsDevice& device, const std::string& path,
@@ -1011,7 +1065,20 @@ PYBIND11_MODULE(_kangengine, m) {
             py::arg("path"), py::arg("flip") = false,
             py::arg("sampler") = Backend::SamplerDesc(),
             py::return_value_policy::take_ownership,
-            "Load a texture from an image file.");
+            "Load a texture from an image file.")
+        .def(
+            "create_buffer",
+            [](Backend::GraphicsDevice& device, py::buffer data,
+               Backend::BufferUsage usage, const std::string& label) {
+                const py::buffer_info info = data.request();
+                Backend::BufferDesc desc;
+                desc.size = static_cast<size_t>(info.size) * info.itemsize;
+                desc.usage = usage;
+                desc.label = label;
+                return device.createBuffer(desc, info.ptr);
+            },
+            py::arg("data"), py::arg("usage"), py::arg("label") = "",
+            "Create a GPU buffer initialized from a contiguous Python buffer.");
 
     py::class_<DirectionalLight>(
         m, "DirectionalLight",
@@ -1051,6 +1118,26 @@ PYBIND11_MODULE(_kangengine, m) {
             "device", [](Renderer& self) { return self.device(); },
             py::return_value_policy::reference,
             "Return the graphics device owned by this renderer.")
+        .def("create_scene_hook_pipeline",
+             &Renderer::createSceneHookPipeline, py::arg("desc"),
+             py::return_value_policy::take_ownership,
+             "Create a custom graphics pipeline compatible with the scene "
+             "render targets.")
+        .def(
+            "add_render_hook",
+            [](Renderer& self, RenderHookPhase phase, py::function callback) {
+                return self.addRenderHook(
+                    phase, [callback = std::move(callback)](
+                               RenderHookContext& context) {
+                        py::gil_scoped_acquire acquire;
+                        callback(&context);
+                    });
+            },
+            py::arg("phase"), py::arg("callback"),
+            "Run a Python command-recording callback at a scene render phase. "
+            "Keep all referenced pipelines and buffers alive until removal.")
+        .def("remove_render_hook", &Renderer::removeRenderHook,
+             py::arg("handle"), "Remove a previously registered render hook.")
         .def("set_point_lights", &Renderer::setPointLights, py::arg("lights"),
              "Store point lights for renderers/shaders that support them.")
         .def("point_lights", &Renderer::pointLights,
@@ -1778,32 +1865,6 @@ py::class_<glm::vec3>(m, "vec3")
             "Return the scene-scoped resource manager used by Resource prim "
             "mirrors.")
         .def(
-            "add_renderable",
-            [](App* self, Backend::Shader* shader, Scene::Prim* prim,
-               TransformSource transformSource) {
-                return self->addRenderable(shader, prim, transformSource);
-            },
-            py::arg("shader"), py::arg("prim"),
-            py::arg("transform_source") = TransformSource::SceneGraph,
-            "Compatibility/low-level path: create a renderable for a scene "
-            "prim using a shader and return its internal renderer handle. "
-            "Prefer app.scene.add_renderable(...) for authored scene objects.")
-        .def(
-            "add_skinned_renderable",
-            [](App* self, Backend::Shader* shader, Scene::Prim* prim,
-               std::shared_ptr<Scene::SkinnedMeshData> skinnedMesh,
-               TransformSource transformSource) {
-                if (!skinnedMesh)
-                    throw py::value_error("skinned_mesh_data is None");
-                return self->addSkinnedRenderable(shader, prim, *skinnedMesh,
-                                                  transformSource);
-            },
-            py::arg("shader"), py::arg("prim"), py::arg("skinned_mesh_data"),
-            py::arg("transform_source") = TransformSource::SceneGraph,
-            "Compatibility/low-level path: create a skinned renderable and "
-            "return its internal renderer handle. Prefer higher-level "
-            "character bridges for authored scene use.")
-        .def(
             "add_skinned_renderable",
             [](App* self, Material* material, Scene::Prim* prim,
                std::shared_ptr<Scene::SkinnedMeshData> skinnedMesh,
@@ -2122,14 +2183,6 @@ py::class_<glm::vec3>(m, "vec3")
             py::arg("enabled"), py::arg("threshold") = 1.0f,
             py::arg("intensity") = 0.08f, py::arg("iterations") = 6,
             py::arg("downsample") = 2, "Configure bloom post processing.")
-        .def(
-            "set_background_shader",
-            [](App& self, Backend::Shader* shader) {
-                self.getRenderer().setBackgroundShader(shader);
-            },
-            py::arg("shader"),
-            "Register the checker/grid background shader controlled by "
-            "renderer background settings.")
         .def("check_error", &App::checkError,
              "Check and report backend graphics errors.")
         .def(
@@ -2307,7 +2360,7 @@ py::class_<glm::vec3>(m, "vec3")
         "Skinned-character visual bridge created from an FBX asset.")
         .def_static(
             "from_fbx",
-            [](App* app, Backend::Shader* shader, const std::string& fbxPath,
+            [](App* app, Material* material, const std::string& fbxPath,
                const std::optional<std::string>& bindFbxPath,
                const std::string& primBasePath, int clipIndex, float fps,
                float scale, bool useMaterials) {
@@ -2315,10 +2368,10 @@ py::class_<glm::vec3>(m, "vec3")
                     bindFbxPath.has_value() ? bindFbxPath.value() : fbxPath;
                 return std::make_unique<Bridge::SkinVisualBridge>(
                     Bridge::SkinVisualBridge::fromFBXWithBind(
-                        app, shader, fbxPath, resolvedBindPath, primBasePath,
+                        app, material, fbxPath, resolvedBindPath, primBasePath,
                         clipIndex, fps, scale, useMaterials));
             },
-            py::arg("app"), py::arg("shader"), py::arg("fbx_path"),
+            py::arg("app"), py::arg("material"), py::arg("fbx_path"),
             py::arg("bind_fbx_path") = py::none(),
             py::arg("prim_base_path") = "/fbx_character",
             py::arg("clip_index") = -1, py::arg("fps") = -1.0f,

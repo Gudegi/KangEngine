@@ -159,9 +159,9 @@ static const BoxSpawn boxSpawns[NUM_BOXES] = {
 
 class MyApp : public App {
   public:
-    std::unique_ptr<Backend::Shader> cubeShader;
-    std::unique_ptr<Backend::Shader> lightShader;
-    std::unique_ptr<Backend::Shader> planeShader;
+    PhongMaterial cubeMaterial;
+    VertexColorMaterial lightMaterial;
+    VertexColorMaterial planeMaterial{VertexColorStyle::Checkerboard};
 
     float size = 1.3f;
     float lightColor[3] = {1.0f, 1.0f, 1.0f};
@@ -186,28 +186,16 @@ class MyApp : public App {
 
     void setup() override {
         KE_TRACE_FUNCTION();
-        cubeShader = getRenderer().device()->createShader(phongVs, phongFs);
-        lightShader = getRenderer().device()->createShader(phongVs, lightFs);
-        planeShader =
-            getRenderer().device()->createShader(groundVs, checkerBoardFs);
-
-        cubeShader->setUniformBlockBinding("CameraUBO", 0);
-        lightShader->setUniformBlockBinding("CameraUBO", 0);
-        planeShader->setUniformBlockBinding("CameraUBO", 0);
-
-        // Light shader
-        lightShader->use();
-        lightShader->setVec3("lightColor", lightColor[0], lightColor[1],
-                             lightColor[2]);
+        getRenderer().setLight({glm::normalize(lightPos), glm::vec3(1.0f),
+                                1.0f, glm::vec3(0.15f)});
 
         // Plane shader
         const Color& pastelGreen =
             ColorLibrary::get(KE::ColorType::PASTEL_GREEN);
-        planeShader->use();
-        planeShader->setVec4("checkerColor1", glm::vec4(1.f, 1.f, 1.f, 1.0f));
-        planeShader->setVec4("checkerColor2",
-                             glm::vec4(pastelGreen.r, pastelGreen.g,
-                                       pastelGreen.b, pastelGreen.a));
+        getRenderer().settings().background.checkerColor1 = glm::vec4(1.0f);
+        getRenderer().settings().background.checkerColor2 =
+            glm::vec4(pastelGreen.r, pastelGreen.g, pastelGreen.b,
+                      pastelGreen.a);
 
         // Light sphere
         lightPrim = getScene()->definePrim("/light", Scene::PrimType::Mesh);
@@ -215,13 +203,13 @@ class MyApp : public App {
             Scene::Prim::createSphereData(1.0f, 12, 11)));
         lightPrim->setLocalTranslation(lightPos);
         lightPrim->setLocalScale(glm::vec3(size));
-        addRenderable(lightShader.get(), lightPrim);
+        addRenderable(&lightMaterial, lightPrim);
 
         // Ground plane
         groundPrim = getScene()->definePrim("/ground", Scene::PrimType::Mesh);
         groundPrim->setMeshData(std::make_shared<Scene::MeshData>(
             Scene::Prim::createPlaneData(30.f, UpAxis::Y)));
-        addRenderable(planeShader.get(), groundPrim);
+        addRenderable(&planeMaterial, groundPrim);
 
         // Create box mesh data (shared by all boxes)
         auto boxMesh = Scene::Prim::createSquareData(1.0f);
@@ -238,7 +226,7 @@ class MyApp : public App {
                                boxSpawns[i].color);
             prim->setWorldTranslation(boxSpawns[i].pos);
 
-            addRenderable(cubeShader.get(), prim);
+            addRenderable(&cubeMaterial, prim);
             physics.addBox(boxSpawns[i].pos.x, boxSpawns[i].pos.y,
                            boxSpawns[i].pos.z);
             boxPrims[i] = prim;
@@ -249,13 +237,6 @@ class MyApp : public App {
 
     void preRender() override {
         KE_TRACE_FUNCTION();
-
-        auto view = this->getViewMatrix();
-        cubeShader->use();
-        cubeShader->setVec3("lightColor", lightColor[0], lightColor[1],
-                            lightColor[2]);
-        cubeShader->setVec3("lightPos",
-                            glm::vec3(view * glm::vec4(lightPos, 1.0f)));
 
         // Spacebar toggle
         bool spaceDown = glfwGetKey(getWindow(), GLFW_KEY_SPACE) == GLFW_PRESS;
@@ -293,14 +274,6 @@ class MyApp : public App {
             lightPrim->setAttribute("xformOp:scale", glm::vec3(size));
         }
         ImGui::End();
-
-        // Ground lighting
-        auto view = this->getViewMatrix();
-        planeShader->use();
-        planeShader->setVec3("lightPos",
-                             glm::vec3(view * glm::vec4(lightPos, 1.0f)));
-        planeShader->setVec3("lightColor", lightColor[0], lightColor[1],
-                             lightColor[2]);
 
         checkError();
     }

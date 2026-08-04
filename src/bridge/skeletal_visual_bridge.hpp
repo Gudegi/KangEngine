@@ -20,10 +20,9 @@
 
 namespace KE {
 
+class Material;
+
 class App;
-namespace Backend {
-class Shader;
-}
 
 namespace Bridge {
 
@@ -46,12 +45,12 @@ class SkeletalVisualBridge {
   public:
     SkeletalVisualBridge() = default;
 
-    static SkeletalVisualBridge define(App* app, Backend::Shader* shader,
+    static SkeletalVisualBridge define(App* app, Material* material,
                                        const std::string& basePath,
                                        const Animation::SkeletonState& state,
                                        const SkeletalVisualConfig& config = {});
 
-    static SkeletalVisualBridge define(App* app, Backend::Shader* shader,
+    static SkeletalVisualBridge define(App* app, Material* material,
                                        const std::string& basePath,
                                        const Animation::SkeletonMotion& motion,
                                        float time, bool loop = true,
@@ -69,7 +68,7 @@ class SkeletalVisualBridge {
 
   private:
     App* _app = nullptr;                // non-owning
-    Backend::Shader* _shader = nullptr; // non-owning
+    Material* _material = nullptr;      // non-owning
     std::string _basePath;
     SkeletalVisualConfig _config;
     std::optional<Animation::SkeletonState> _lastState;

@@ -2,6 +2,7 @@
 #define _RENDERER_TYPES_HPP_
 
 #include <cstdint>
+#include <functional>
 #include <utility>
 
 #include <glm/vec3.hpp>
@@ -13,12 +14,38 @@
 
 namespace KE {
 
+namespace Backend {
+class BindGroup;
+class RenderPassEncoder;
+class RenderTarget;
+} // namespace Backend
+
 namespace Scene {
 class Prim;
 } // namespace Scene
 
 using RenderableHandle = uint32_t;
 static constexpr RenderableHandle InvalidHandle = ~0u;
+
+// Lightweight RHI escape hatch for examples and renderer experiments. Hooks
+// only record draw commands; create pipelines and resources outside callbacks.
+enum class RenderHookPhase : uint8_t {
+    AfterOpaque,
+    AfterTransparent,
+};
+
+using RenderHookHandle = uint64_t;
+static constexpr RenderHookHandle InvalidRenderHook = 0;
+
+struct RenderHookContext {
+    Backend::RenderPassEncoder& pass;
+    Backend::RenderTarget& target;
+    Backend::BindGroup* frameBindings = nullptr;
+    int width = 0;
+    int height = 0;
+};
+
+using RenderHookCallback = std::function<void(RenderHookContext&)>;
 
 enum class TransformSource {
     SceneGraph,     // Prim/scene graph owns transforms.

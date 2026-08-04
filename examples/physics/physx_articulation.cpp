@@ -151,8 +151,8 @@ static PhysicsConfig makeScissorConfig() {
 
 class ScissorLiftApp : public App {
   public:
-    std::unique_ptr<Backend::Shader> cubeShader;
-    std::unique_ptr<Backend::Shader> planeShader;
+    VertexColorMaterial cubeMaterial;
+    VertexColorMaterial planeMaterial{VertexColorStyle::Checkerboard};
 
     PhysicsWorld physics{makeScissorConfig()};
 
@@ -186,7 +186,7 @@ class ScissorLiftApp : public App {
         auto* prim = getScene()->definePrim(path, Scene::PrimType::Mesh);
         prim->setMeshData(meshPtr);
         prim->setAttribute("primvars:displaycolorAlpha", color);
-        addRenderable(cubeShader.get(), prim);
+        addRenderable(&cubeMaterial, prim);
         return prim;
     }
 
@@ -472,24 +472,13 @@ class ScissorLiftApp : public App {
 
     // -----------------------------------------------------------------------
     void setup() override {
-        cubeShader = getRenderer().device()->createShader(stlVs, stlFs);
-        planeShader = getRenderer().device()->createShader(groundVs, groundFs);
-
-        cubeShader->use();
-        cubeShader->setUniformBlockBinding("cameraUBO", 0);
-        cubeShader->setUniformBlockBinding("lightUBO", 1);
-
-        planeShader->use();
-        planeShader->setUniformBlockBinding("cameraUBO", 0);
-        planeShader->setUniformBlockBinding("lightUBO", 1);
-
         // Ground
         physics.addDefaultGround();
         auto* planePrim =
             getScene()->definePrim("/ground", Scene::PrimType::Mesh);
         planePrim->setMeshData(std::make_shared<Scene::MeshData>(
             Scene::Prim::createPlaneData(30.f)));
-        addRenderable(planeShader.get(), planePrim);
+        addRenderable(&planeMaterial, planePrim);
 
         getRenderer().setLight(DirectionalLight{
             .direction = glm::normalize(glm::vec3(0.5f, 1.f, 0.2f)),

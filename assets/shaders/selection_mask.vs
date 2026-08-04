@@ -6,16 +6,16 @@ layout(location = 4) in vec4 aInstanceTransform1;
 layout(location = 5) in vec4 aInstanceTransform2;
 layout(location = 6) in vec4 aInstanceTransform3;
 
-layout(std140) uniform cameraUBO {
+layout(std140) uniform ke_g0_b0 {
     mat4 view;
     mat4 projection;
 };
 
-out vec2 TexCoord;
+out vec2 vTexCoord;
 
 void main() {
     mat4 model = mat4(aInstanceTransform0, aInstanceTransform1,
                       aInstanceTransform2, aInstanceTransform3);
     gl_Position = projection * view * model * vec4(aPos, 1.0);
-    TexCoord = aTexCoord;
+    vTexCoord = aTexCoord;
 }

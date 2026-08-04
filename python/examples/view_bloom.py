@@ -17,8 +17,8 @@ class BloomViewer(ke.App):
         self.bloom_downsample = 2
         self.exposure = 1.0
 
-        self.shaders = self.create_standard_shaders()
-        self.add_ground(shader=self.shaders.ground, scale=18.0)
+        self.standard_materials = self.create_standard_materials()
+        self.add_ground(material=self.standard_materials.ground, scale=18.0)
 
         self._add_glow_sphere(
             "/glow/core", [-1.4, 0.0, 1.2], 0.45, [70.0, 4.8, 1.3, 1.0]
@@ -47,7 +47,7 @@ class BloomViewer(ke.App):
         view = self.scene.add_mesh(
             path,
             ke.geometry.create_sphere_data(radius, 32, 16),
-            self.shaders.common,
+            self.standard_materials.common,
             color=ke.vec4(*color),
         )
         view.prim.set_local_translation(ke.vec3(*pos))

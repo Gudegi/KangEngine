@@ -17,10 +17,7 @@ class Material;
 class Renderer;
 class App;
 
-namespace Backend {
-class Shader;
-class Texture;
-} // namespace Backend
+namespace Backend { class Texture; }
 
 namespace Scene {
 
@@ -40,13 +37,6 @@ class SceneRenderSystem {
 
     void bind(Renderer* renderer);
 
-    std::shared_ptr<RenderComponent>
-    addRenderable(Prim& prim, Backend::Shader* shader,
-                  TransformSource source = TransformSource::SceneGraph);
-    std::shared_ptr<RenderComponent>
-    addSkinnedRenderable(Prim& prim, Backend::Shader* shader,
-                         const SkinnedMeshData& skinnedMesh,
-                         TransformSource source = TransformSource::SceneGraph);
     std::shared_ptr<RenderComponent>
     addRenderable(Prim& prim, Material* material,
                   TransformSource source = TransformSource::SceneGraph);
@@ -104,7 +94,6 @@ class SceneRenderSystem {
     registerSkinnedRenderable(const std::shared_ptr<RenderComponent>& component,
                               Material* material,
                               const SkinnedMeshData& skinnedMesh);
-    Material* vertexColorMaterialForShader(Backend::Shader* shader);
     const Registration&
     requireRegistration(const RenderComponent& component) const;
     void syncState(RenderComponent& component);
@@ -117,8 +106,6 @@ class SceneRenderSystem {
 
     Renderer* _renderer = nullptr;
     std::unordered_map<const RenderComponent*, Registration> _registrations;
-    std::unordered_map<Backend::Shader*, std::unique_ptr<Material>>
-        _vertexColorMaterialsByShader;
 };
 
 } // namespace Scene

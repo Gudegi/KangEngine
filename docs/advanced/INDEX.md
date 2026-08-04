@@ -4,6 +4,7 @@ These pages are for source builds and workflows that expose backend details.
 
 - [Build from Source](BUILD_FROM_SOURCE.md)
 - [Runtime Architecture](RUNTIME_ARCHITECTURE.md)
+- [Custom Graphics Pipelines](CUSTOM_GRAPHICS_PIPELINES.md)
 - [PhysX GPU Simulation](PHYSX_GPU.md)
 
 Most Python users should begin with [Getting Started](../getting_started/INSTALLATION.md)

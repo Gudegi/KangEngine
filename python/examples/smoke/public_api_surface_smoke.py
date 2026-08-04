@@ -54,8 +54,8 @@ def main() -> None:
     # under the stable public package path.
     assert ke.render.Renderer is _ke.Renderer
     assert ke.render.GraphicsDevice is _ke.GraphicsDevice
-    assert ke.render.Shader is _ke.Shader
     assert ke.render.Texture is _ke.Texture
+    assert not hasattr(ke.render, "Shader")
     assert not hasattr(ke.render, "NativeRenderer")
     assert not hasattr(ke.render, "NativeTexture")
     assert hasattr(ke.render.Texture, "width")

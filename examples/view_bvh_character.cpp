@@ -33,8 +33,8 @@ class BvhCharacterCppApp : public App {
     std::string bvhPath = defaultBvhPath();
     float importScale = 1.0f;
 
-    std::unique_ptr<Backend::Shader> skeletonShader;
-    std::unique_ptr<Backend::Shader> groundShader;
+    VertexColorMaterial skeletonMaterial;
+    VertexColorMaterial groundMaterial{VertexColorStyle::Checkerboard};
     Animation::SkeletonMotion motion;
     SkeletalVisualBridge skeletonVisualBridge;
     MotionSequencerPanel motionPanel;
@@ -54,31 +54,13 @@ class BvhCharacterCppApp : public App {
             DirectionalLight{glm::normalize(glm::vec3(0.25f, 0.8f, 0.5f)),
                              glm::vec3(1.0f), 0.9f, glm::vec3(0.18f)});
 
-        const std::string commonVS = KE::getAssetPath("shaders/common.vs");
-        const std::string commonFS = KE::getAssetPath("shaders/common.fs");
-        const std::string checkerFS =
-            KE::getAssetPath("shaders/checkerboard.fs");
-
-        skeletonShader =
-            getRenderer().device()->createShaderFromFile(commonVS, commonFS);
-        groundShader =
-            getRenderer().device()->createShaderFromFile(commonVS, checkerFS);
-        getRenderer().setBackgroundShader(groundShader.get());
-
-        for (auto* shader : {skeletonShader.get(), groundShader.get()}) {
-            shader->use();
-            shader->setUniformBlockBinding("cameraUBO", 0);
-            shader->setUniformBlockBinding("lightUBO", 1);
-            shader->setUniformBlockBinding("shadowUBO", 2);
-        }
-
-        groundShader->use();
-        groundShader->setVec4("checkerColor1", presetColor(ColorType::WHITE));
-        groundShader->setVec4("checkerColor2",
-                              presetColor(ColorType::PASTEL_GREEN));
+        getRenderer().settings().background.checkerColor1 =
+            presetColor(ColorType::WHITE);
+        getRenderer().settings().background.checkerColor2 =
+            presetColor(ColorType::PASTEL_GREEN);
 
         MeshPrimDesc ground;
-        ground.shader = groundShader.get();
+        ground.material = &groundMaterial;
         ground.path = "/ground";
         ground.meshData = Scene::Prim::createPlaneData(20.0f, _upAxis);
         ground.doubleSided = true;
@@ -105,7 +87,7 @@ class BvhCharacterCppApp : public App {
         visualConfig.visible = showSkeleton;
         visualConfig.showJoints = showJoints;
         skeletonVisualBridge = SkeletalVisualBridge::define(
-            this, skeletonShader.get(), "/bvh_skeleton", motion, 0.0f, true,
+            this, &skeletonMaterial, "/bvh_skeleton", motion, 0.0f, true,
             visualConfig);
 
         std::cout << "BVH C++ character loaded: " << bvhPath << "\n";

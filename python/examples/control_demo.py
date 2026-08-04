@@ -43,23 +43,10 @@ class ControlDemo(ke.App):
         self.force_arrow_view = None
         self.force_arrow_visible = False
 
-        device = self.get_renderer().device()
-        vs = asset_path("shaders", "common.vs")
-        fs = asset_path("shaders", "common.fs")
-        checker_fs = asset_path("shaders", "checkerboard.fs")
-
-        self.robot_shader = device.create_shader_from_file(vs, fs)
-        self.rigid_shader = device.create_shader_from_file(vs, fs)
-        self.ground_shader = device.create_shader_from_file(vs, checker_fs)
-        for shader in (self.robot_shader, self.rigid_shader, self.ground_shader):
-            shader.use()
-            shader.set_uniform_block_binding("cameraUBO", 0)
-            shader.set_uniform_block_binding("lightUBO", 1)
-            shader.set_uniform_block_binding("shadowUBO", 2)
-
-        self.ground_shader.use()
-        self.ground_shader.set_vec4("checkerColor1", ke.vec4([1.0, 1.0, 1.0, 1.0]))
-        self.ground_shader.set_vec4("checkerColor2", ke.vec4([0.77, 0.93, 0.78, 1.0]))
+        materials = self.create_standard_materials()
+        self.robot_material = materials.common
+        self.rigid_material = materials.common
+        self.ground_material = materials.ground
 
         self.world = ke.sim.KangSimWorld(
             num_envs=1,
@@ -68,7 +55,7 @@ class ControlDemo(ke.App):
         )
         self.visual = ke.visual.sim.SimWorldVisualizer(self, self.world)
 
-        self.scene.add_ground(scale=100.0, shader=self.ground_shader)
+        self.scene.add_ground(scale=100.0, material=self.ground_material)
 
         self.robot_xml = asset_path("characters", "kw", "kw5.xml")
         self.ball_xml = asset_path("objects", "ball.xml")
@@ -100,7 +87,7 @@ class ControlDemo(ke.App):
             self.robot_xml,
             prim_base_path="/robot",
             order="DFS",
-            shader=self.robot_shader,
+            material=self.robot_material,
             color=torch.tensor([0.25, 0.42, 0.95, 1.0], dtype=torch.float32),
         )
         self.visual.add_rigid_scene_graph(
@@ -109,7 +96,7 @@ class ControlDemo(ke.App):
             self.ball_xml,
             prim_base_path="/ball",
             order="DFS",
-            shader=self.rigid_shader,
+            material=self.rigid_material,
             color=torch.tensor([0.95, 0.18, 0.12, 1.0], dtype=torch.float32),
         )
 
@@ -205,7 +192,7 @@ class ControlDemo(ke.App):
         if self.force_arrow_view is None:
             self.force_arrow_view = self.scene.log_arrows(
                 "/debug/force_arrow",
-                self.rigid_shader,
+                self.rigid_material,
                 starts,
                 ends,
                 self.arrow_color,

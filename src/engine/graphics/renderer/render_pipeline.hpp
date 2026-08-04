@@ -13,7 +13,8 @@ class RenderPipeline {
     Backend::GraphicsDevice* _graphicsDevice = nullptr;
     Scene::SceneBackend* _scene = nullptr;
 
-    virtual void render(const glm::mat4& view, const glm::mat4& proj) = 0;
+    virtual void render(const glm::mat4& view, const glm::mat4& proj,
+                        Backend::RenderTarget* target) = 0;
     virtual ~RenderPipeline() = default;
 };
 

@@ -94,7 +94,7 @@ class MultiEnvSimWorldApp(ke.App):
         self.low_friction_material = ke.physics.PhysicsMaterialDesc([0.05, 0.05, 0.0])
         self.high_friction_material = ke.physics.PhysicsMaterialDesc([3.0, 2.5, 0.0])
 
-        self.shaders = self.create_standard_shaders()
+        self.standard_materials = self.create_standard_materials()
         self.set_camera_view([3.6, -5.0, 2.8], [0.0, 0.0, 0.6])
 
         self.world = ke.sim.KangSimWorld(
@@ -133,7 +133,7 @@ class MultiEnvSimWorldApp(ke.App):
             self.box,
             self.box_xml,
             prim_base_path="/group/box",
-            shader=self.shaders.common,
+            material=self.standard_materials.common,
             color=[friction_group_color(env_id) for env_id in range(self.num_envs)],
         )
 
@@ -259,7 +259,7 @@ class MultiEnvSimWorldApp(ke.App):
         view = self.add_mesh(
             "/terrain/inclined_box",
             mesh_data,
-            self.shaders.common,
+            self.standard_materials.common,
             color=[0.45, 0.45, 0.5, 1.0],
         )
         view.prim.set_local_translation(ke.vec3(self.ramp_pos))

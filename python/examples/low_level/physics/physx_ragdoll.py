@@ -24,23 +24,9 @@ class RagdollApp(ke.App):
         self.kd = 5.0
         self.show_collision = False
 
-        device = self.get_renderer().device()
-
-        vs = asset_path("shaders", "common.vs")
-        fs = asset_path("shaders", "common.fs")
-        checker_fs = asset_path("shaders", "checkerboard.fs")
-
-        self.robot_shader = device.create_shader_from_file(vs, fs)
-        self.ground_shader = device.create_shader_from_file(vs, checker_fs)
-
-        for shader in (self.robot_shader, self.ground_shader):
-            shader.use()
-            shader.set_uniform_block_binding("cameraUBO", 0)
-            shader.set_uniform_block_binding("lightUBO", 1)
-
-        self.ground_shader.use()
-        self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
-        self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
+        materials = self.create_standard_materials()
+        self.robot_material = materials.common
+        self.ground_material = materials.ground
 
         physics_config = ke.physics.PhysicsConfig.z_up()
         self.physics = ke.physics.PhysicsWorld(physics_config)
@@ -54,7 +40,7 @@ class RagdollApp(ke.App):
         self.set_simulation_hotkeys_enabled(True)
         self.physics.add_default_ground()
 
-        self.scene.add_ground(scale=100.0, shader=self.ground_shader)
+        self.scene.add_ground(scale=100.0, material=self.ground_material)
 
         mjcf = asset_path("external", "retargetted", "kw", "kw5.xml")
         mjcf_data = asset.MJCFLoader.load(mjcf)
@@ -77,7 +63,7 @@ class RagdollApp(ke.App):
         self.physics_bridge.add(self.articulation, self.robot)
 
         for prim in self.robot.body_prims():
-            self.scene.add_renderable(prim, self.robot_shader)
+            self.scene.add_renderable(prim, self.robot_material)
 
         collision_prims = self.physics_bridge.add_collision_visuals(
             self.articulation,
@@ -86,7 +72,7 @@ class RagdollApp(ke.App):
             self.show_collision,
         )
         for prim in collision_prims:
-            self.scene.add_renderable(prim, self.robot_shader)
+            self.scene.add_renderable(prim, self.robot_material)
 
         self.targets = [0.0] * self.articulation.num_dofs()
         self.reset()

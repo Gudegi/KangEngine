@@ -79,7 +79,16 @@ void bind_scene(py::module& m) {
         .value("Mesh", KE::Scene::ResourceType::Mesh)
         .value("Material", KE::Scene::ResourceType::Material)
         .value("Texture", KE::Scene::ResourceType::Texture)
-        .value("Shader", KE::Scene::ResourceType::Shader)
+        .value("ShaderSource", KE::Scene::ResourceType::ShaderSource)
+        .value("Pipeline", KE::Scene::ResourceType::Pipeline)
+        .export_values();
+    py::enum_<KE::Scene::ShaderLanguage>(scene, "ShaderLanguage")
+        .value("GLSL", KE::Scene::ShaderLanguage::GLSL)
+        .value("WGSL", KE::Scene::ShaderLanguage::WGSL)
+        .export_values();
+    py::enum_<KE::Scene::AuthoredPipelineType>(scene, "PipelineType")
+        .value("Graphics", KE::Scene::AuthoredPipelineType::Graphics)
+        .value("Compute", KE::Scene::AuthoredPipelineType::Compute)
         .export_values();
     scene.attr("InvalidResourceHandle") =
         py::int_(KE::Scene::InvalidResourceHandle);
@@ -509,6 +518,23 @@ void bind_scene(py::module& m) {
                    " geom_index=" + std::to_string(c.sourceGeomIndex()) + ">";
         });
 
+    py::class_<KE::Scene::ShaderSourceResource>(scene, "ShaderSourceResource")
+        .def(py::init<>())
+        .def_readwrite("stage", &KE::Scene::ShaderSourceResource::stage)
+        .def_readwrite("language", &KE::Scene::ShaderSourceResource::language)
+        .def_readwrite("source", &KE::Scene::ShaderSourceResource::source)
+        .def_readwrite("entry_point",
+                       &KE::Scene::ShaderSourceResource::entryPoint);
+
+    py::class_<KE::Scene::PipelineResource>(scene, "PipelineResource")
+        .def(py::init<>())
+        .def_readwrite("type", &KE::Scene::PipelineResource::type)
+        .def_readwrite("shader_sources",
+                       &KE::Scene::PipelineResource::shaderSources)
+        .def_readwrite("variants", &KE::Scene::PipelineResource::variants)
+        .def_readwrite("state_summary",
+                       &KE::Scene::PipelineResource::stateSummary);
+
     py::class_<KE::Scene::SceneResourceManager>(
         scene, "SceneResourceManager",
         "Scene resource manager mirrored into metadata-only /.Resources prims.")
@@ -528,10 +554,15 @@ void bind_scene(py::module& m) {
              &KE::Scene::SceneResourceManager::registerTexture, py::arg("name"),
              py::arg("texture"), py::arg("uri") = "",
              "Register a non-owned texture and return a resource handle.")
-        .def("register_shader",
-             &KE::Scene::SceneResourceManager::registerShader, py::arg("name"),
-             py::arg("shader"), py::arg("uri") = "",
-             "Register a non-owned shader and return a resource handle.")
+        .def("register_shader_source",
+             &KE::Scene::SceneResourceManager::registerShaderSource,
+             py::arg("name"), py::arg("shader_source"), py::arg("uri") = "",
+             "Register authored shader source metadata and return a resource "
+             "handle.")
+        .def("register_pipeline",
+             &KE::Scene::SceneResourceManager::registerPipeline,
+             py::arg("name"), py::arg("pipeline"), py::arg("uri") = "",
+             "Register an authored graphics or compute pipeline definition.")
         .def("mesh", &KE::Scene::SceneResourceManager::mesh, py::arg("handle"),
              "Return mesh data for a handle, or None.")
         .def("material", &KE::Scene::SceneResourceManager::material,
@@ -540,9 +571,12 @@ void bind_scene(py::module& m) {
         .def("texture", &KE::Scene::SceneResourceManager::texture,
              py::arg("handle"), py::return_value_policy::reference,
              "Return texture for a handle, or None.")
-        .def("shader", &KE::Scene::SceneResourceManager::shader,
-             py::arg("handle"), py::return_value_policy::reference,
-             "Return shader for a handle, or None.")
+        .def("shader_source", &KE::Scene::SceneResourceManager::shaderSource,
+             py::arg("handle"), py::return_value_policy::reference_internal,
+             "Return authored shader source metadata, or None.")
+        .def("pipeline", &KE::Scene::SceneResourceManager::pipeline,
+             py::arg("handle"), py::return_value_policy::reference_internal,
+             "Return authored pipeline metadata, or None.")
         .def("resource_prim", &KE::Scene::SceneResourceManager::resourcePrim,
              py::arg("handle"), py::return_value_policy::reference,
              "Return mirrored Resource prim for a handle, or None.")
@@ -553,6 +587,14 @@ void bind_scene(py::module& m) {
         .def("usage_paths", &KE::Scene::SceneResourceManager::usagePaths,
              py::arg("handle"),
              "Return scene prim paths that currently reference this resource.")
+        .def("add_external_usage",
+             &KE::Scene::SceneResourceManager::addExternalUsage,
+             py::arg("handle"), py::arg("path"),
+             "Track a non-scene consumer of a resource.")
+        .def("remove_external_usage",
+             &KE::Scene::SceneResourceManager::removeExternalUsage,
+             py::arg("handle"), py::arg("path"),
+             "Stop tracking a non-scene consumer of a resource.")
         .def("is_used", &KE::Scene::SceneResourceManager::isUsed,
              py::arg("handle"),
              "Return whether at least one scene prim binding references this "
@@ -1267,10 +1309,9 @@ void bind_scene(py::module& m) {
             "line.")
         .def_static(
             "log_component_lines",
-            [](KE::App* app, KE::Backend::Shader* shader,
-               const std::string& path, const FloatArray& starts,
-               const FloatArray& ends, py::object colors, float radius,
-               int segments) {
+            [](KE::App* app, KE::Material* material, const std::string& path,
+               const FloatArray& starts, const FloatArray& ends,
+               py::object colors, float radius, int segments) {
                 auto s = vec3Array(starts, "starts");
                 auto e = vec3Array(ends, "ends");
                 std::vector<glm::vec4> c;
@@ -1286,9 +1327,9 @@ void bind_scene(py::module& m) {
                         "length");
                 }
                 return KE::Scene::DebugDraw::logLineComponent(
-                    app, shader, path, s, e, c, radius, segments);
+                    app, material, path, s, e, c, radius, segments);
             },
-            py::arg("app"), py::arg("shader"), py::arg("path"),
+            py::arg("app"), py::arg("material"), py::arg("path"),
             py::arg("starts"), py::arg("ends"), py::arg("colors") = py::none(),
             py::arg("radius") = 0.005f, py::arg("segments") = 8,
             "Create instanced debug line geometry and return its "
@@ -1319,10 +1360,9 @@ void bind_scene(py::module& m) {
             "Update component-backed debug line geometry.")
         .def_static(
             "log_component_arrows",
-            [](KE::App* app, KE::Backend::Shader* shader,
-               const std::string& path, const FloatArray& starts,
-               const FloatArray& ends, py::object colors, float radius,
-               int segments) {
+            [](KE::App* app, KE::Material* material, const std::string& path,
+               const FloatArray& starts, const FloatArray& ends,
+               py::object colors, float radius, int segments) {
                 auto s = vec3Array(starts, "starts");
                 auto e = vec3Array(ends, "ends");
                 std::vector<glm::vec4> c;
@@ -1338,9 +1378,9 @@ void bind_scene(py::module& m) {
                         "length");
                 }
                 return KE::Scene::DebugDraw::logArrowComponent(
-                    app, shader, path, s, e, c, radius, segments);
+                    app, material, path, s, e, c, radius, segments);
             },
-            py::arg("app"), py::arg("shader"), py::arg("path"),
+            py::arg("app"), py::arg("material"), py::arg("path"),
             py::arg("starts"), py::arg("ends"), py::arg("colors") = py::none(),
             py::arg("radius") = 0.02f, py::arg("segments") = 12,
             "Create instanced debug arrow geometry and return its "
@@ -1371,14 +1411,14 @@ void bind_scene(py::module& m) {
             "Update component-backed debug arrow geometry.")
         .def_static(
             "log_coordinate_axes",
-            [](KE::App* app, KE::Backend::Shader* shader,
-               const std::string& path, glm::vec3 origin, glm::quat orientation,
-               float length, float radius, int segments) {
+            [](KE::App* app, KE::Material* material, const std::string& path,
+               glm::vec3 origin, glm::quat orientation, float length,
+               float radius, int segments) {
                 return KE::Scene::DebugDraw::logCoordinateAxes(
-                    app, shader, path, origin, orientation, length, radius,
+                    app, material, path, origin, orientation, length, radius,
                     segments);
             },
-            py::arg("app"), py::arg("shader"), py::arg("path"),
+            py::arg("app"), py::arg("material"), py::arg("path"),
             py::arg("origin"), py::arg("orientation"), py::arg("length") = 1.0f,
             py::arg("radius") = 0.005f, py::arg("segments") = 8,
             "Create instanced XYZ coordinate axes.")

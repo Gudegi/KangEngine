@@ -64,36 +64,13 @@ class FbxCharacterViewer(ke.App):
         self.skeleton_colors = None
         self.skinned_meshes = []
 
-        device = self.get_renderer().device()
-        vs = package_asset_path("shaders", "common.vs")
-        skinned_vs = package_asset_path("shaders", "skinned_mesh.vs")
-        fs = package_asset_path("shaders", "common.fs")
-        tex_fs = package_asset_path("shaders", "commonTex.fs")
-        checker_fs = package_asset_path("shaders", "checkerboard.fs")
+        materials = self.create_standard_materials()
+        self.mesh_material = materials.common
+        self.textured_mesh_material = materials.common_texture
+        self.skeleton_material = materials.common
+        self.ground_material = materials.ground
 
-        self.mesh_shader = device.create_shader_from_file(skinned_vs, fs)
-        self.textured_mesh_shader = device.create_shader_from_file(skinned_vs, tex_fs)
-        self.skeleton_shader = device.create_shader_from_file(vs, fs)
-        self.ground_shader = device.create_shader_from_file(vs, checker_fs)
-
-        for shader in (
-            self.mesh_shader,
-            self.textured_mesh_shader,
-            self.skeleton_shader,
-            self.ground_shader,
-        ):
-            shader.use()
-            shader.set_uniform_block_binding("cameraUBO", 0)
-            shader.set_uniform_block_binding("lightUBO", 1)
-            shader.set_uniform_block_binding("shadowUBO", 2)
-        self.textured_mesh_shader.use()
-        self.textured_mesh_shader.set_int("uTexture", 0)
-
-        self.ground_shader.use()
-        self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
-        self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
-
-        self.scene.add_ground(scale=20.0, shader=self.ground_shader)
+        self.scene.add_ground(scale=20.0, material=self.ground_material)
 
         camera = self.get_camera()
         camera.set_camera_pos(ke.vec3(0.0, 1.45, 3.2))
@@ -187,7 +164,7 @@ class FbxCharacterViewer(ke.App):
             texture = self._load_mesh_texture(mesh)
             normal_texture = self._load_mesh_normal_texture(mesh)
             shader = (
-                self.textured_mesh_shader if texture is not None else self.mesh_shader
+                self.textured_mesh_material if texture is not None else self.mesh_material
             )
             view = self.add_skinned_mesh(prim, shader, mesh.skinned_mesh_data)
             if texture is not None:
@@ -400,7 +377,7 @@ class FbxCharacterViewer(ke.App):
         if self.line_view is None:
             self.line_view = self.scene.log_lines(
                 "/debug/fbx_character_skeleton",
-                self.skeleton_shader,
+                self.skeleton_material,
                 starts_t,
                 ends_t,
                 colors_t,

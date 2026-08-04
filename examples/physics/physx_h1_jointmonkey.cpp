@@ -153,8 +153,8 @@ void main() {
 
 class H1PhysicsApp : public App {
   public:
-    std::unique_ptr<Backend::Shader> stlShader;
-    std::unique_ptr<Backend::Shader> groundShader;
+    VertexColorMaterial stlMaterial;
+    VertexColorMaterial groundMaterial{VertexColorStyle::Checkerboard};
 
     glm::vec3 lightPos = {0.f, -2.f, 4.f};
 
@@ -174,23 +174,12 @@ class H1PhysicsApp : public App {
 
     // -----------------------------------------------------------------------
     void setup() override {
-        stlShader = getRenderer().device()->createShader(stlVs, stlFs);
-        groundShader = getRenderer().device()->createShader(groundVs, groundFs);
-        getRenderer().setBackgroundShader(groundShader.get());
-
-        stlShader->use();
-        stlShader->setUniformBlockBinding("cameraUBO", 0);
-        stlShader->setUniformBlockBinding("lightUBO", 1);
-        groundShader->use();
-        groundShader->setUniformBlockBinding("cameraUBO", 0);
-        groundShader->setUniformBlockBinding("lightUBO", 1);
-
         // Ground
         physics.addDefaultGround();
         auto* gnd = getScene()->definePrim("/ground", Scene::PrimType::Mesh);
         gnd->setMeshData(std::make_shared<Scene::MeshData>(
             Scene::Prim::createPlaneData(10.f, UpAxis::Z)));
-        addRenderable(groundShader.get(), gnd);
+        addRenderable(&groundMaterial, gnd);
 
         // Load H1 visual (Robot handles Prim creation + STL mesh upload)
         const std::string mjcfPath =
@@ -198,7 +187,7 @@ class H1PhysicsApp : public App {
         const auto mjcfData = MJCFLoader::load(mjcfPath);
         robot = ArticulationVisualBridge::fromData(mjcfData, getScene());
         for (auto* prim : robot.bodyPrims())
-            addRenderable(stlShader.get(), prim);
+            addRenderable(&stlMaterial, prim);
 
         artic = Articulation::build(physics, mjcfData.skeletonTree,
                                     mjcfData.collisionGeoms, mjcfData.joints,

@@ -688,9 +688,7 @@ class SceneContext:
 
         This is the preferred public path for authored scene objects. It
         returns a RenderablePrimView facade instead of exposing the native
-        renderer handle. Pass a Material for material-first rendering; raw
-        Shader objects are still accepted as a compatibility path and are
-        wrapped internally by the native SceneRenderSystem.
+        renderer handle. Pass a Material describing the render surface.
         """
         if transform_source is None:
             transform_source = render_api.TransformSource.SceneGraph
@@ -794,16 +792,8 @@ class SceneContext:
         path: str = "/ground",
         scale: float = 20.0,
         material=None,
-        *,
-        shader=None,
     ):
-        """Add a checkerboard ground plane.
-
-        ``material`` is the canonical surface input. ``shader`` remains as a
-        compatibility keyword for older callers.
-        """
-        if material is None:
-            material = shader
+        """Add a checkerboard ground plane."""
         if material is None:
             material = self._app.create_standard_materials().ground
         return self.add_mesh(
@@ -912,6 +902,8 @@ class App(_NativeApp):
         self._resource_handles_by_object_id = {}
         self._resource_counter = 0
         self._textures_by_uri = {}
+        self._scene_hook_resource_handles = {}
+        self._render_hook_resource_usage = {}
 
     def get_native_scene(self):
         """Return the native SceneBackend escape hatch.
@@ -934,96 +926,97 @@ class App(_NativeApp):
         """Return the native renderer exposed through ``ke.render``."""
         return super().get_renderer()
 
+    def create_scene_hook_pipeline(
+        self, desc, *, shader_uris=None, shader_languages=None
+    ):
+        """Create a custom scene pipeline and mirror its authored definition.
+
+        The returned backend pipeline remains caller-owned. Shader sources and
+        the pipeline definition are copied into ``/.Resources`` for editor
+        inspection; compiled backend objects are not scene resources.
+        """
+        pipeline = self.get_renderer().create_scene_hook_pipeline(desc)
+        uris = list(shader_uris or ())
+        languages = list(shader_languages or ())
+        shader_handles = []
+        for index, stage in enumerate(desc.shader.stages):
+            source = scene.ShaderSourceResource()
+            source.stage = stage.stage
+            source.language = (
+                languages[index]
+                if index < len(languages)
+                else scene.ShaderLanguage.GLSL
+            )
+            source.source = stage.source
+            source.entry_point = stage.entry_point
+            stage_name = str(stage.stage).rsplit(".", 1)[-1].lower()
+            uri = uris[index] if index < len(uris) else ""
+            shader_handles.append(
+                self.resources.register_shader_source(
+                    f"{desc.shader.name or desc.label}_{stage_name}", source, uri
+                )
+            )
+
+        authored = scene.PipelineResource()
+        authored.type = scene.PipelineType.Graphics
+        authored.shader_sources = shader_handles
+        authored.state_summary = (
+            f"topology={desc.topology}, cull={desc.cull_mode}, "
+            f"blend={desc.blend}, depth_test={desc.depth_test}, "
+            f"depth_write={desc.depth_write}"
+        )
+        pipeline_handle = self.resources.register_pipeline(
+            desc.label, authored, f"python://pipeline/{desc.label}"
+        )
+        self._scene_hook_resource_handles[id(pipeline)] = (
+            tuple(shader_handles),
+            pipeline_handle,
+        )
+        return pipeline
+
+    def add_render_hook(self, phase, callback, *, pipeline=None):
+        """Register a custom draw callback and optionally track its pipeline."""
+        pipeline_record = None
+        if pipeline is not None:
+            pipeline_record = self._scene_hook_resource_handles.get(id(pipeline))
+            if pipeline_record is None:
+                raise ValueError(
+                    "pipeline was not created by App.create_scene_hook_pipeline()"
+                )
+
+        handle = self.get_renderer().add_render_hook(phase, callback)
+        if pipeline_record is not None:
+            _, pipeline_handle = pipeline_record
+            usage_path = f"render-hook://{handle}"
+            self.resources.add_external_usage(pipeline_handle, usage_path)
+            self._render_hook_resource_usage[handle] = (
+                pipeline_handle,
+                usage_path,
+            )
+        return handle
+
+    def remove_render_hook(self, handle):
+        """Remove a custom scene draw callback."""
+        removed = self.get_renderer().remove_render_hook(handle)
+        if removed:
+            usage = self._render_hook_resource_usage.pop(handle, None)
+            if usage is not None:
+                pipeline_handle, usage_path = usage
+                self.resources.remove_external_usage(
+                    pipeline_handle, usage_path
+                )
+        return removed
+
     def package_asset_path(self, *parts: str) -> str:
         return str(Path(_ke.__file__).resolve().parent / "assets" / Path(*parts))
 
-    ############# Shaders ###########################################
-    def _bind_common_ubos(self, *shaders):
-        for shader in shaders:
-            shader.use()
-            shader.set_uniform_block_binding("cameraUBO", 0)
-            shader.set_uniform_block_binding("lightUBO", 1)
-            shader.set_uniform_block_binding("shadowUBO", 2)
-        return shaders[0] if len(shaders) == 1 else shaders
-
-    def create_asset_shader(self, vertex_shader: str, fragment_shader: str):
-        renderer = self.get_renderer()
-        device = renderer.device() if renderer is not None else None
-        if device is None:
-            raise RuntimeError(
-                "shader creation requires an initialized graphics device; "
-                "call this after initialize(), usually from setup()."
-            )
-        shader = device.create_shader_from_file(
-            self.package_asset_path("shaders", vertex_shader),
-            self.package_asset_path("shaders", fragment_shader),
-        )
-        self._bind_common_ubos(shader)
-        if str(fragment_shader).endswith("checkerboard.fs"):
-            self.set_background_shader(unwrap_native(shader))
-        self._register_shader_resource(
-            shader,
-            f"{vertex_shader}+{fragment_shader}",
-            f"asset://shaders/{vertex_shader}+{fragment_shader}",
-        )
-        return shader
-
-    def set_texture_uniform(self, shader, unit: int = 0, name: str = "uTexture"):
-        shader.use()
-        shader.set_int(name, int(unit))
-        return shader
-
-    def configure_checker_shader(
-        self,
-        shader,
-        color1=None,
-        color2=None,
-    ):
-        if color1 is None:
-            color1 = _ke.vec4(1.0, 1.0, 1.0, 1.0)
-        if color2 is None:
-            preset = _ke.ColorLibrary.get(_ke.ColorType.DARK_GREEN)
-            color2 = _ke.vec4(preset.r, preset.g, preset.b, preset.a)
-        shader.use()
-        shader.set_vec4("checkerColor1", color1)
-        shader.set_vec4("checkerColor2", color2)
-        return shader
-
     def create_standard_shaders(self, *, force: bool = False):
-        """Create or return the cached standard shader bundle.
+        """Compatibility alias for the built-in material bundle.
 
-        This intentionally stays lazy: pure compute/headless apps do not pay for
-        shader creation, while offscreen render/headless apps can call this
-        after initialize() once a graphics context exists.
+        Standard render paths no longer expose backend Shader objects. New code
+        should call :meth:`create_standard_materials` directly.
         """
-        if self.shaders is not None and not force:
-            return self.shaders
-
-        self.shaders = SimpleNamespace(
-            common=self.create_asset_shader("common.vs", "common.fs"),
-            common_texture=self.create_asset_shader("common.vs", "commonTex.fs"),
-            phong=self.create_asset_shader("common.vs", "phong.fs"),
-            pbr=self.create_asset_shader("common.vs", "pbr_forward.fs"),
-            common_debug=self.create_asset_shader("common.vs", "debug_checker.fs"),
-            skinned=self.create_asset_shader("skinned_mesh.vs", "common.fs"),
-            skinned_texture=self.create_asset_shader(
-                "skinned_mesh.vs",
-                "commonTex.fs",
-            ),
-            skinned_phong=self.create_asset_shader("skinned_mesh.vs", "phong.fs"),
-            skinned_pbr=self.create_asset_shader(
-                "skinned_mesh.vs",
-                "pbr_forward.fs",
-            ),
-            skinned_debug=self.create_asset_shader(
-                "skinned_mesh.vs",
-                "debug_checker.fs",
-            ),
-            ground=self.create_asset_shader("common.vs", "checkerboard.fs"),
-        )
-        self.set_texture_uniform(self.shaders.common_texture)
-        self.set_texture_uniform(self.shaders.skinned_texture)
-        self.configure_checker_shader(self.shaders.ground)
+        self.shaders = self.create_standard_materials(force=force)
         return self.shaders
 
     def create_standard_materials(self, *, force: bool = False):
@@ -1036,25 +1029,30 @@ class App(_NativeApp):
         if self.standard_materials is not None and not force:
             return self.standard_materials
 
-        shaders = self.create_standard_shaders(force=force)
         self.standard_materials = SimpleNamespace(
-            common=self.create_vertex_color_material(shader=shaders.common),
+            common=self.create_vertex_color_material(),
             common_texture=self.create_vertex_color_material(
-                shader=shaders.common_texture
+                style=material_api.VertexColorStyle.TEXTURED
             ),
-            ground=self.create_vertex_color_material(shader=shaders.ground),
-            debug=self.create_vertex_color_material(shader=shaders.common_debug),
-            skinned=self.create_vertex_color_material(shader=shaders.skinned),
+            ground=self.create_vertex_color_material(
+                style=material_api.VertexColorStyle.CHECKERBOARD
+            ),
+            debug_checker=self.create_vertex_color_material(
+                style=material_api.VertexColorStyle.DEBUG_CHECKER
+            ),
+            debug=self.create_vertex_color_material(),
+            skinned=self.create_vertex_color_material(),
             skinned_texture=self.create_vertex_color_material(
-                shader=shaders.skinned_texture
+                style=material_api.VertexColorStyle.TEXTURED
             ),
-            skinned_debug=self.create_vertex_color_material(
-                shader=shaders.skinned_debug
+            skinned_debug=self.create_vertex_color_material(),
+            skinned_debug_checker=self.create_vertex_color_material(
+                style=material_api.VertexColorStyle.DEBUG_CHECKER
             ),
-            phong=self.create_phong_material(shader=shaders.phong),
-            pbr=self.create_pbr_material(shader=shaders.pbr),
-            skinned_phong=self.create_phong_material(shader=shaders.skinned_phong),
-            skinned_pbr=self.create_pbr_material(shader=shaders.skinned_pbr),
+            phong=self.create_phong_material(),
+            pbr=self.create_pbr_material(),
+            skinned_phong=self.create_phong_material(),
+            skinned_pbr=self.create_pbr_material(),
         )
         return self.standard_materials
 
@@ -1088,15 +1086,6 @@ class App(_NativeApp):
     def _next_resource_name(self, obj, prefix: str):
         self._resource_counter += 1
         return f"{prefix}_{type(obj).__name__}_{self._resource_counter}"
-
-    def _register_shader_resource(self, shader, display_name, uri):
-        existing = self._existing_resource_handle(shader)
-        if existing is not None:
-            return existing
-        handle = self.resources.register_shader(
-            str(display_name), unwrap_native(shader), str(uri)
-        )
-        return self._remember_resource_handle(shader, handle)
 
     def _register_material_resource(self, material):
         existing = self._existing_resource_handle(material)
@@ -1149,12 +1138,10 @@ class App(_NativeApp):
         return material
 
     def create_vertex_color_material(
-        self, *, shader=None
+        self, *, style=material_api.VertexColorStyle.UNTEXTURED
     ) -> material_api.VertexColorMaterial:
-        """Create and retain a material for display/vertex-color shaders."""
-        if shader is None:
-            shader = self.create_standard_shaders().common
-        return self._remember_material(material_api.VertexColorMaterial(shader))
+        """Create and retain a built-in vertex/display-color material."""
+        return self._remember_material(material_api.VertexColorMaterial(style))
 
     def _remember_textures(self, *textures):
         """Keep Python-created native textures alive while materials use them."""
@@ -1184,7 +1171,6 @@ class App(_NativeApp):
         self,
         preset=None,
         *,
-        shader=None,
         ambient=None,
         diffuse=None,
         specular=None,
@@ -1199,9 +1185,7 @@ class App(_NativeApp):
         Each call returns a distinct material, so two meshes can share the same
         shader while carrying different colors/textures and batching keys.
         """
-        if shader is None:
-            shader = self.create_standard_shaders().phong
-        material = material_api.PhongMaterial(shader)
+        material = material_api.PhongMaterial()
         if preset is not None:
             material.load_from_preset(preset)
         if ambient is not None:
@@ -1227,7 +1211,6 @@ class App(_NativeApp):
         self,
         preset=None,
         *,
-        shader=None,
         base_color=None,
         metallic=None,
         roughness=None,
@@ -1248,9 +1231,7 @@ class App(_NativeApp):
         shares its parameters, while separate materials can use the same shader
         with different factors/textures.
         """
-        if shader is None:
-            shader = self.create_standard_shaders().pbr
-        material = material_api.PBRMaterial(shader)
+        material = material_api.PBRMaterial()
         if preset is not None:
             material.load_from_preset(preset)
         if base_color is not None:
@@ -1317,7 +1298,6 @@ class App(_NativeApp):
         material_info = self._obj_material_info(info, subset.material_index)
         if material_info is None:
             return self.create_phong_material(
-                shader=self.create_standard_shaders().phong,
                 diffuse=_ke.vec3(1.0, 1.0, 1.0),
                 specular=_ke.vec3(0.05, 0.05, 0.05),
                 shininess=16.0,
@@ -1345,7 +1325,6 @@ class App(_NativeApp):
                 normal_map = self.load_texture(normal_path, flip=True)
 
         return self.create_phong_material(
-            shader=self.create_standard_shaders().phong,
             ambient=_ke.vec3(
                 float(material_info.ambient_color[0]),
                 float(material_info.ambient_color[1]),
@@ -1368,17 +1347,15 @@ class App(_NativeApp):
             normal_map=normal_map,
         )
 
-    def _add_renderable(self, material_or_shader, prim, transform_source=None):
+    def _add_renderable(self, material, prim, transform_source=None):
         """Low-level renderer handle path used by internal bridges."""
         if transform_source is None:
             transform_source = render_api.TransformSource.SceneGraph
-        return super().add_renderable(
-            unwrap_native(material_or_shader), prim, transform_source
-        )
+        return super().add_renderable(unwrap_native(material), prim, transform_source)
 
     def _add_skinned_renderable(
         self,
-        material_or_shader,
+        material,
         prim,
         skinned_mesh_data,
         transform_source=None,
@@ -1387,7 +1364,7 @@ class App(_NativeApp):
         if transform_source is None:
             transform_source = render_api.TransformSource.SceneGraph
         return super().add_skinned_renderable(
-            unwrap_native(material_or_shader),
+            unwrap_native(material),
             prim,
             skinned_mesh_data,
             transform_source,
@@ -1398,10 +1375,8 @@ class App(_NativeApp):
         path: str = "/ground",
         scale: float = 20.0,
         material=None,
-        *,
-        shader=None,
     ):
-        return self.scene.add_ground(path, scale, material, shader=shader)
+        return self.scene.add_ground(path, scale, material)
 
     def add_mesh(
         self,
@@ -1410,13 +1385,10 @@ class App(_NativeApp):
         material=None,
         color=None,
         *,
-        shader=None,
         uri=None,
     ):
         if material is None:
-            material = shader
-        if material is None:
-            raise ValueError("add_mesh requires a material or compatibility shader")
+            raise ValueError("add_mesh requires a material")
         return self.scene.add_mesh(path, mesh_data, material, color=color, uri=uri)
 
     def add_obj(self, path: str, obj_path, **kwargs):
@@ -1431,7 +1403,7 @@ class App(_NativeApp):
     ):
         """Register a skinned mesh prim and return a RenderablePrimView.
 
-        Prefer a Material. Shader input remains accepted for compatibility.
+        The material selects the built-in or custom RHI rendering path.
         """
         if transform_source is None:
             transform_source = render_api.TransformSource.SceneGraph

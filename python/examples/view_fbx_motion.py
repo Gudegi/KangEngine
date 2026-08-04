@@ -52,23 +52,9 @@ class FbxMotionViewer(ke.App):
         self.parents = self.motion.parent_indices()
         self.names = self.motion.node_names()
 
-        device = self.get_renderer().device()
-        vs = package_asset_path("shaders", "common.vs")
-        fs = package_asset_path("shaders", "common.fs")
-        checker_fs = package_asset_path("shaders", "checkerboard.fs")
-
-        self.skeleton_shader = device.create_shader_from_file(vs, fs)
-        self.ground_shader = device.create_shader_from_file(vs, checker_fs)
-
-        for shader in (self.skeleton_shader, self.ground_shader):
-            shader.use()
-            shader.set_uniform_block_binding("cameraUBO", 0)
-            shader.set_uniform_block_binding("lightUBO", 1)
-            shader.set_uniform_block_binding("shadowUBO", 2)
-
-        self.ground_shader.use()
-        self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
-        self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
+        materials = self.create_standard_materials()
+        self.skeleton_material = materials.common
+        self.ground_material = materials.ground
 
         self.editor.add_module(
             ke.motion_module.RootTrajectoryModule(
@@ -94,7 +80,7 @@ class FbxMotionViewer(ke.App):
             )
         )
 
-        self.scene.add_ground(scale=20.0, shader=self.ground_shader)
+        self.scene.add_ground(scale=20.0, material=self.ground_material)
 
         camera = self.get_camera()
         camera.set_camera_pos(ke.vec3(0.0, 1.6, 3.8))
@@ -144,7 +130,7 @@ class FbxMotionViewer(ke.App):
         if self.line_view is None:
             self.line_view = self.scene.log_lines(
                 "/debug/fbx_skeleton",
-                self.skeleton_shader,
+                self.skeleton_material,
                 starts_t,
                 ends_t,
                 colors_t,

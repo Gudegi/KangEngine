@@ -14,12 +14,12 @@ def _translate(prim, x, y, z):
 def main():
     app = ke.App()
     app.initialize(width=64, height=64, hide_ui=True, headless=True)
-    shader = app.create_asset_shader("common.vs", "common.fs")
+    material = app.create_standard_materials().common
     render_system = app.get_scene_render_system()
 
     mesh = ke.scene.Prim.create_rectangle_data(1.0, 1.0, 1.0)
-    first = app.scene.add_mesh("/shared/first", mesh, shader)
-    second = app.scene.add_mesh("/shared/second", mesh, shader)
+    first = app.scene.add_mesh("/shared/first", mesh, material)
+    second = app.scene.add_mesh("/shared/second", mesh, material)
     _translate(first.prim, -2.0, 0.0, 0.0)
     _translate(second.prim, 2.0, 0.0, 0.0)
     second.prim.set_manipulation_policy(ke.scene.ManipulationPolicy.Self)
@@ -46,7 +46,7 @@ def main():
     batch = app.scene.add_mesh(
         "/external/batch",
         mesh,
-        shader,
+        material,
         transform_source=ke.render.TransformSource.ExternalBuffer,
     )
     transforms = torch.eye(4, dtype=torch.float32).repeat(3, 1, 1)

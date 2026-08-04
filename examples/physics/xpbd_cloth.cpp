@@ -30,8 +30,8 @@ bool isXPBD = true;
 
 class PBDClothApp : public App {
   public:
-    std::unique_ptr<Backend::Shader> clothShader;
-    std::unique_ptr<Backend::Shader> groundShader;
+    VertexColorMaterial clothMaterial{VertexColorStyle::Textured};
+    VertexColorMaterial groundMaterial{VertexColorStyle::Checkerboard};
     std::unique_ptr<Backend::Texture> texture = nullptr;
 
     ClothModel model;
@@ -56,28 +56,12 @@ class PBDClothApp : public App {
     // -----------------------------------------------------------------------
     void setup() override {
         this->getCamera().setCameraPos(glm::vec3(3.f, 3.f, 1.f));
-        auto commonVSPath = KE::getAssetPath("shaders/common.vs");
-        auto commonFSPath = KE::getAssetPath("shaders/common.fs");
-        auto commonTexFSPath = KE::getAssetPath("shaders/commonTex.fs");
-        auto groundFSPath = KE::getAssetPath("shaders/checkerboard.fs");
-        clothShader = getRenderer().device()->createShaderFromFile(
-            commonVSPath, commonTexFSPath);
-        clothShader->use();
-        clothShader->setUniformBlockBinding("cameraUBO", 0);
-        clothShader->setUniformBlockBinding("lightUBO", 1);
-
-        groundShader = getRenderer().device()->createShaderFromFile(
-            commonVSPath, groundFSPath);
-        getRenderer().setBackgroundShader(groundShader.get());
-        groundShader->use();
-        groundShader->setUniformBlockBinding("cameraUBO", 0);
-        groundShader->setUniformBlockBinding("lightUBO", 1);
         auto white = ColorLibrary::get(KE::ColorType::WHITE);
         auto pG = ColorLibrary::get(KE::ColorType::PASTEL_GREEN);
-        groundShader->setVec4("checkerColor1",
-                              glm::vec4(white.r, white.g, white.b, white.a));
-        groundShader->setVec4("checkerColor2",
-                              glm::vec4(pG.r, pG.g, pG.b, pG.a));
+        getRenderer().settings().background.checkerColor1 =
+            glm::vec4(white.r, white.g, white.b, white.a);
+        getRenderer().settings().background.checkerColor2 =
+            glm::vec4(pG.r, pG.g, pG.b, pG.a);
 
         setSkybox(
             KE::getAssetPath("external/skybox/Cubemap_Sky_08-512x512.png"));
@@ -85,11 +69,10 @@ class PBDClothApp : public App {
         auto* gnd = getScene()->definePrim("/ground", Scene::PrimType::Mesh);
         gnd->setMeshData(std::make_shared<Scene::MeshData>(
             Scene::Prim::createPlaneData(20.f, UpAxis::Z)));
-        addRenderable(groundShader.get(), gnd);
+        addRenderable(&groundMaterial, gnd);
 
         texture = getRenderer().device()->createTexture(
             KE::getAssetPath("textures/awesomeface.png"));
-        clothShader->setInt("uTexture", 0);
 
         if (isXPBD) {
             solver = std::make_unique<ClothXPBDSolver>();
@@ -123,7 +106,7 @@ class PBDClothApp : public App {
         clothPrim->setMeshData(std::make_shared<Scene::MeshData>(meshData));
         clothPrim->setDisplayColorAlpha(glm::vec4(0.3f, 0.6f, 1.0f, 1.0f));
 
-        clothHandle = addRenderable(clothShader.get(), clothPrim);
+        clothHandle = addRenderable(&clothMaterial, clothPrim);
         setRenderableDoubleSided(clothHandle);
         if (texture != nullptr)
             setRenderableTexture(clothHandle, texture.get(), 0);

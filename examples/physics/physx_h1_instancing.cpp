@@ -37,8 +37,8 @@ class H1InstancingApp : public App {
     static constexpr float SPACING = 1.8f;
     static constexpr float SPAWN_HEIGHT = 1.5f;
 
-    std::unique_ptr<Backend::Shader> commonShader;
-    std::unique_ptr<Backend::Shader> groundShader;
+    VertexColorMaterial commonMaterial;
+    VertexColorMaterial groundMaterial{VertexColorStyle::Checkerboard};
 
     PhysicsWorld physics{PhysicsConfig::zUp()};
     ArticulationVisualBridge refRobot; // MeshInstance prims used for instancer setup
@@ -59,29 +59,12 @@ class H1InstancingApp : public App {
 
     // -----------------------------------------------------------------------
     void setup() override {
-        auto commonVSPath = KE::getAssetPath("shaders/common.vs");
-        auto commonFSPath = KE::getAssetPath("shaders/common.fs");
-        auto groundFSPath = KE::getAssetPath("shaders/checkerboard.fs");
-
-        commonShader = getRenderer().device()->createShaderFromFile(
-            commonVSPath, commonFSPath);
-        groundShader = getRenderer().device()->createShaderFromFile(
-            commonVSPath, groundFSPath);
-        getRenderer().setBackgroundShader(groundShader.get());
-
-        commonShader->use();
-        commonShader->setUniformBlockBinding("cameraUBO", 0);
-        commonShader->setUniformBlockBinding("lightUBO", 1);
-
-        groundShader->use();
-        groundShader->setUniformBlockBinding("cameraUBO", 0);
-        groundShader->setUniformBlockBinding("lightUBO", 1);
         auto white = ColorLibrary::get(KE::ColorType::WHITE);
         auto pG = ColorLibrary::get(KE::ColorType::PASTEL_GREEN);
-        groundShader->setVec4("checkerColor1",
-                              glm::vec4(white.r, white.g, white.b, white.a));
-        groundShader->setVec4("checkerColor2",
-                              glm::vec4(pG.r, pG.g, pG.b, pG.a));
+        getRenderer().settings().background.checkerColor1 =
+            glm::vec4(white.r, white.g, white.b, white.a);
+        getRenderer().settings().background.checkerColor2 =
+            glm::vec4(pG.r, pG.g, pG.b, pG.a);
 
         setSkybox(
             KE::getAssetPath("external/skybox/Cubemap_Sky_08-512x512.png"));
@@ -90,7 +73,7 @@ class H1InstancingApp : public App {
         auto* gnd = getScene()->definePrim("/ground", Scene::PrimType::Mesh);
         gnd->setMeshData(std::make_shared<Scene::MeshData>(
             Scene::Prim::createPlaneData(100.f, UpAxis::Z)));
-        addRenderable(groundShader.get(), gnd);
+        addRenderable(&groundMaterial, gnd);
 
         // Load MJCF once.
         const std::string mjcfPath =
@@ -112,7 +95,7 @@ class H1InstancingApp : public App {
         // One handle per body type — each instancer will hold N transforms
         for (auto* prim : refRobot.bodyPrims())
             _bodyHandles.push_back(addRenderable(
-                commonShader.get(), prim, TransformSource::ExternalBuffer));
+                &commonMaterial, prim, TransformSource::ExternalBuffer));
         _simModel.setBodyRenderables(_bodyHandles);
         _visualBatch.setModel(&_simModel);
 

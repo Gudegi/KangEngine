@@ -3,10 +3,12 @@
 
 #include "engine/scene/component/resource_component.hpp"
 #include "engine/scene/scene_backend.hpp"
+#include "engine/graphics/backend/base/graphics_device.hpp"
 
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace KE {
@@ -14,11 +16,27 @@ namespace KE {
 class Material;
 
 namespace Backend {
-class Shader;
 class Texture;
 } // namespace Backend
 
 namespace Scene {
+
+enum class ShaderLanguage { GLSL, WGSL };
+enum class AuthoredPipelineType { Graphics, Compute };
+
+struct ShaderSourceResource {
+    Backend::ShaderType stage = Backend::ShaderType::Vertex;
+    ShaderLanguage language = ShaderLanguage::GLSL;
+    std::string source;
+    std::string entryPoint = "main";
+};
+
+struct PipelineResource {
+    AuthoredPipelineType type = AuthoredPipelineType::Graphics;
+    std::vector<ResourceHandle> shaderSources;
+    std::vector<std::string> variants;
+    std::string stateSummary;
+};
 
 // Scene-owned manager for shared resource identities and editor mirrors.
 //
@@ -27,7 +45,7 @@ namespace Scene {
 // scene as `/.Resources/...` prims with ResourceComponent metadata.
 //
 // Resource ownership model:
-// - The manager is the conceptual owner/catalog for mesh/material/texture/shader
+// - The manager is the conceptual owner/catalog for mesh/material/texture
 //   resources in scene scope: handles, names, URIs, retention pointers, and
 //   editor-visible Resource Prim mirrors.
 // - Renderable prims do not render Resource Prim payloads. They bind resources
@@ -46,7 +64,8 @@ class SceneResourceManager {
         std::shared_ptr<MeshData> mesh;
         Material* material = nullptr;
         Backend::Texture* texture = nullptr;
-        Backend::Shader* shader = nullptr;
+        std::shared_ptr<ShaderSourceResource> shaderSource;
+        std::shared_ptr<PipelineResource> pipeline;
     };
 
     explicit SceneResourceManager(SceneBackend* scene = nullptr);
@@ -62,9 +81,12 @@ class SceneResourceManager {
     ResourceHandle registerTexture(const std::string& name,
                                    Backend::Texture* texture,
                                    const std::string& uri = {});
-    ResourceHandle registerShader(const std::string& name,
-                                  Backend::Shader* shader,
-                                  const std::string& uri = {});
+    ResourceHandle registerShaderSource(
+        const std::string& name, ShaderSourceResource shaderSource,
+        const std::string& uri = {});
+    ResourceHandle registerPipeline(const std::string& name,
+                                    PipelineResource pipeline,
+                                    const std::string& uri = {});
 
     const Entry* entry(ResourceHandle handle) const;
     Entry* entry(ResourceHandle handle);
@@ -72,11 +94,14 @@ class SceneResourceManager {
     std::shared_ptr<MeshData> mesh(ResourceHandle handle) const;
     Material* material(ResourceHandle handle) const;
     Backend::Texture* texture(ResourceHandle handle) const;
-    Backend::Shader* shader(ResourceHandle handle) const;
+    const ShaderSourceResource* shaderSource(ResourceHandle handle) const;
+    const PipelineResource* pipeline(ResourceHandle handle) const;
     Prim* resourcePrim(ResourceHandle handle) const;
     std::size_t usageCount(ResourceHandle handle) const;
     const std::vector<std::string>& usagePaths(ResourceHandle handle) const;
     bool isUsed(ResourceHandle handle) const { return usageCount(handle) > 0; }
+    void addExternalUsage(ResourceHandle handle, const std::string& path);
+    void removeExternalUsage(ResourceHandle handle, const std::string& path);
     void invalidateUsageCache() const;
 
     std::size_t size() const { return _entries.size(); }
@@ -96,6 +121,8 @@ class SceneResourceManager {
     mutable std::unordered_map<ResourceHandle, std::size_t> _usageCache;
     mutable std::unordered_map<ResourceHandle, std::vector<std::string>>
         _usagePathCache;
+    std::unordered_map<ResourceHandle, std::unordered_set<std::string>>
+        _externalUsagePaths;
     mutable std::vector<std::string> _emptyUsagePaths;
 };
 

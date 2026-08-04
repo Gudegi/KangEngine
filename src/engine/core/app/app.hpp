@@ -96,7 +96,19 @@ class App {
 
   private:
     std::unique_ptr<Backend::GraphicsDevice> _graphicsDevice;
+    // Main Scene Pipeline: RHI-owned 4x MSAA attachments resolve into the
+    // legacy framebuffer's single-sample color texture during migration.
     std::unique_ptr<Backend::Framebuffer> _framebuffer;
+    std::unique_ptr<Backend::Texture> _sceneMsaaColor;
+    std::unique_ptr<Backend::Texture> _sceneMsaaDepthStencil;
+    std::unique_ptr<Backend::TextureView> _sceneMsaaColorView;
+    std::unique_ptr<Backend::TextureView> _sceneResolveColorView;
+    std::unique_ptr<Backend::TextureView> _sceneMsaaDepthStencilView;
+    std::unique_ptr<Backend::RenderTarget> _sceneClearTarget;
+    // RHI passes append into the MSAA attachments without resolving. A final
+    // empty pass performs the frame's single resolve.
+    std::unique_ptr<Backend::RenderTarget> _sceneDrawTarget;
+    std::unique_ptr<Backend::RenderTarget> _sceneRenderTarget;
     std::unique_ptr<Backend::Framebuffer> _selectionMaskFramebuffer;
     std::unique_ptr<Backend::Framebuffer> _sceneCameraPreviewFramebuffer;
     std::unique_ptr<PostProcessor> _sceneCameraPreviewPostProcessor;
@@ -134,6 +146,7 @@ class App {
     bool setPickTransform(const RayPickResult& result,
                           const glm::mat4& transform);
     void processSimulationHotkeys();
+    void registerBuiltinRenderResources();
 
   public:
     void initialize(
@@ -144,6 +157,8 @@ class App {
     void processInput();
     void checkError();
     void coreRender();
+    void rebuildSceneRenderTarget();
+    void rebuildSceneClearTarget(const glm::vec4& clearColor);
 
     App();
     virtual ~App();
@@ -311,13 +326,6 @@ class App {
     Backend::Framebuffer* getShadowFbo() { return getRenderer().shadowFbo(); }
 
     RenderableHandle addRenderable(
-        Backend::Shader* shader, Scene::Prim* prim,
-        TransformSource transformSource = TransformSource::SceneGraph);
-    RenderableHandle addSkinnedRenderable(
-        Backend::Shader* shader, Scene::Prim* prim,
-        const Scene::SkinnedMeshData& skinnedMesh,
-        TransformSource transformSource = TransformSource::SceneGraph);
-    RenderableHandle addRenderable(
         Material* material, Scene::Prim* prim,
         TransformSource transformSource = TransformSource::SceneGraph);
     RenderableHandle addSkinnedRenderable(
@@ -329,7 +337,7 @@ class App {
     bool removePrim(const std::string& path);
 
     struct MeshPrimDesc {
-        Backend::Shader* shader = nullptr;
+        Material* material = nullptr;
         std::string path;
         Scene::MeshData meshData;
         glm::vec3 position = glm::vec3(0.0f);
@@ -346,12 +354,7 @@ class App {
     };
 
     MeshPrimResult addMeshPrim(MeshPrimDesc desc);
-    MeshPrimResult addMeshPrim(Backend::Shader* shader, const std::string& path,
-                               Scene::MeshData meshData,
-                               glm::vec3 position = glm::vec3(0.0f),
-                               glm::vec4 color = glm::vec4(1.0f),
-                               bool castsShadow = true);
-    MeshPrimResult addSkinnedMeshPrim(Backend::Shader* shader,
+    MeshPrimResult addSkinnedMeshPrim(Material* material,
                                       const std::string& path,
                                       Scene::SkinnedMeshData skinnedMesh,
                                       glm::vec3 position = glm::vec3(0.0f),
@@ -470,13 +473,6 @@ class App {
                        UpAxis to) const;
 
     // Debug Drawing Helpers
-    void drawLine(const std::string& path, glm::vec3 start, glm::vec3 end,
-                  glm::vec4 color = glm::vec4(1.0f), float thickness = 0.02f,
-                  Backend::Shader* shader = nullptr);
-    void drawArrow(const std::string& path, glm::vec3 start, glm::vec3 end,
-                   glm::vec4 color = glm::vec4(1.0f), float thickness = 0.02f,
-                   Backend::Shader* shader = nullptr);
-
     // Lighting & Environment Controls
     void setLightDirection(const glm::vec3& dir);
     void setLightColor(const glm::vec3& color);

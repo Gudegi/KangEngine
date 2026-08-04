@@ -495,7 +495,6 @@ class RigidVisual:
         data,
         prim_base_path: str,
         material=None,
-        shader=None,
         add_shapes: bool = True,
         color=None,
     ):
@@ -510,8 +509,6 @@ class RigidVisual:
         for idx, spec in enumerate(self.specs):
             prim = self._define_shape_prim(prim_base_path, idx, spec)
             _apply_prim_color([prim], color)
-            if material is None and shader is not None:
-                material = app.create_vertex_color_material(shader=shader)
             if add_shapes and material is not None:
                 self.body_handles.append(app._add_renderable(material, prim))
             self.body_prims.append(prim)
@@ -639,11 +636,9 @@ class SimWorldVisualizer:
             "scale",
             "order",
             "material",
-            "shader",
             "color",
             "collision_base_path",
             "collision_material",
-            "collision_shader",
             "show_collision",
         }
         if unexpected:
@@ -682,11 +677,9 @@ class SimWorldVisualizer:
         scale: float = 1.0,
         order: str = "DFS",
         material=None,
-        shader=None,
         add_shapes: bool = True,
         collision_base_path: str | None = None,
         collision_material=None,
-        collision_shader=None,
         show_collision: bool = False,
         color=None,
         _debug_registration: bool = True,
@@ -721,7 +714,7 @@ class SimWorldVisualizer:
             int(i) for i in articulation_visual.render_prim_body_indices()
         ]
         _apply_prim_color(render_prims, color)
-        material = self._resolve_visual_material(material, shader)
+        material = self._resolve_visual_material(material)
         body_handles = []
         handle_body_ids = {}
         if add_shapes and material is not None:
@@ -752,8 +745,8 @@ class SimWorldVisualizer:
             )
             shape_material = (
                 material
-                if collision_material is None and collision_shader is None
-                else self._resolve_visual_material(collision_material, collision_shader)
+                if collision_material is None
+                else self._resolve_visual_material(collision_material)
             )
             if add_shapes and shape_material is not None:
                 for prim in collision_prims:
@@ -780,18 +773,16 @@ class SimWorldVisualizer:
         scale: float = 1.0,
         order: str = "DFS",
         material=None,
-        shader=None,
         color=None,
         collision_base_path: str | None = None,
         collision_material=None,
-        collision_shader=None,
         show_collision: bool = False,
     ) -> VisualBatch:
         """Create one renderable per link backed by CUDA instance transforms."""
         self._require_valid()
-        material = self._resolve_visual_material(material, shader)
+        material = self._resolve_visual_material(material)
         if material is None:
-            raise ValueError("_add_gpu_articulation requires a material or shader")
+            raise ValueError("_add_gpu_articulation requires a material")
         if not hasattr(_ke, "articulation_link_state_to_mat4_cuda"):
             raise RuntimeError("KangEngine was built without CUDA transform kernels")
 
@@ -824,8 +815,8 @@ class SimWorldVisualizer:
             collision_base_path,
             (
                 material
-                if collision_material is None and collision_shader is None
-                else self._resolve_visual_material(collision_material, collision_shader)
+                if collision_material is None
+                else self._resolve_visual_material(collision_material)
             ),
             show_collision,
         )
@@ -853,19 +844,17 @@ class SimWorldVisualizer:
         scale: float = 1.0,
         order: str = "DFS",
         material=None,
-        shader=None,
         color=None,
         collision_base_path: str | None = None,
         collision_material=None,
-        collision_shader=None,
         show_collision: bool = False,
     ) -> VisualBatch:
         """Create one renderable per link backed by CPU ExternalBuffer."""
         self._require_valid()
-        material = self._resolve_visual_material(material, shader)
+        material = self._resolve_visual_material(material)
         if material is None:
             raise ValueError(
-                "_add_cpu_external_articulation requires a material or shader"
+                "_add_cpu_external_articulation requires a material"
             )
 
         obj_id = int(sim_view.obj_id)
@@ -901,8 +890,8 @@ class SimWorldVisualizer:
             collision_base_path,
             (
                 material
-                if collision_material is None and collision_shader is None
-                else self._resolve_visual_material(collision_material, collision_shader)
+                if collision_material is None
+                else self._resolve_visual_material(collision_material)
             ),
             show_collision,
         )
@@ -930,14 +919,13 @@ class SimWorldVisualizer:
         scale: float = 1.0,
         order: str = "DFS",
         material=None,
-        shader=None,
         color=None,
     ) -> VisualBatch:
         """Create a single-shape rigid batch backed by CUDA transforms."""
         self._require_valid()
-        material = self._resolve_visual_material(material, shader)
+        material = self._resolve_visual_material(material)
         if material is None:
-            raise ValueError("_add_gpu_rigid requires a material or shader")
+            raise ValueError("_add_gpu_rigid requires a material")
         if not hasattr(_ke, "indexed_rigid_state_to_mat4_cuda"):
             raise RuntimeError("KangEngine was built without CUDA transform kernels")
 
@@ -981,14 +969,13 @@ class SimWorldVisualizer:
         scale: float = 1.0,
         order: str = "DFS",
         material=None,
-        shader=None,
         color=None,
     ) -> VisualBatch:
         """Create a rigid shape batch backed by CPU ExternalBuffer."""
         self._require_valid()
-        material = self._resolve_visual_material(material, shader)
+        material = self._resolve_visual_material(material)
         if material is None:
-            raise ValueError("_add_cpu_external_rigid requires a material or shader")
+            raise ValueError("_add_cpu_external_rigid requires a material")
 
         obj_id = int(sim_view.obj_id)
         env_ids = tuple(int(env_id) for env_id in sim_view.env_ids)
@@ -1041,7 +1028,6 @@ class SimWorldVisualizer:
         scale: float = 1.0,
         order: str = "DFS",
         material=None,
-        shader=None,
         add_shapes: bool = True,
         color=None,
         _debug_registration: bool = True,
@@ -1070,7 +1056,7 @@ class SimWorldVisualizer:
             rigid,
             data,
             prim_base_path,
-            material=self._resolve_visual_material(material, shader),
+            material=self._resolve_visual_material(material),
             add_shapes=add_shapes,
             color=color,
         )
@@ -1104,7 +1090,6 @@ class SimWorldVisualizer:
         scale: float = 1.0,
         order: str = "DFS",
         material=None,
-        shader=None,
         add_shapes: bool = True,
         color=None,
     ) -> VisualArticulationSceneGraph:
@@ -1131,7 +1116,7 @@ class SimWorldVisualizer:
             int(i) for i in articulation_visual.render_prim_body_indices()
         ]
         _apply_prim_color(render_prims, color)
-        material = self._resolve_visual_material(material, shader)
+        material = self._resolve_visual_material(material)
         body_handles = []
         handle_body_ids = {}
         if add_shapes and material is not None:
@@ -1315,11 +1300,9 @@ class SimWorldVisualizer:
         self._articulation_visual_assets[key] = record
         return record
 
-    def _resolve_visual_material(self, material=None, shader=None, *, fallback=None):
+    def _resolve_visual_material(self, material=None, *, fallback=None):
         if material is not None:
             return material
-        if shader is not None:
-            return self.app.create_vertex_color_material(shader=shader)
         return fallback
 
     def _add_articulation_collision_visuals(

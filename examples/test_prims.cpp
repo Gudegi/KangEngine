@@ -16,8 +16,8 @@ using namespace KE::Scene;
 
 class PrimShowcaseApp : public App {
   public:
-    std::unique_ptr<Backend::Shader> phongShader;
-    std::unique_ptr<Backend::Shader> groundShader;
+    VertexColorMaterial commonMaterial;
+    VertexColorMaterial groundMaterial{VertexColorStyle::Checkerboard};
 
     struct ShapeEntry {
         Prim* prim;
@@ -34,36 +34,17 @@ class PrimShowcaseApp : public App {
         getRenderer().setLight(DirectionalLight{
             defaultSunDirection(), glm::vec3(1.0f), 0.75f, glm::vec3(0.10f)});
 
-        auto commonVSPath = KE::getAssetPath("shaders/common.vs");
-        auto commonFSPath = KE::getAssetPath("shaders/common.fs");
-        auto groundFSPath = KE::getAssetPath("shaders/checkerboard.fs");
-
-        phongShader = getRenderer().device()->createShaderFromFile(
-            commonVSPath, commonFSPath);
-        groundShader = getRenderer().device()->createShaderFromFile(
-            commonVSPath, groundFSPath);
-        getRenderer().setBackgroundShader(groundShader.get());
-
-        phongShader->setUniformBlockBinding("cameraUBO", 0);
-        phongShader->setUniformBlockBinding("lightUBO", 1);
-        phongShader->setUniformBlockBinding("shadowUBO", 2);
-
-        groundShader->setUniformBlockBinding("cameraUBO", 0);
-        groundShader->setUniformBlockBinding("lightUBO", 1);
-        groundShader->setUniformBlockBinding("shadowUBO", 2);
-
         auto white = ColorLibrary::get(KE::ColorType::WHITE);
         auto pG = ColorLibrary::get(KE::ColorType::PASTEL_GREEN);
-        groundShader->use();
-        groundShader->setVec4("checkerColor1",
-                              glm::vec4(white.r, white.g, white.b, white.a));
-        groundShader->setVec4("checkerColor2",
-                              glm::vec4(pG.r, pG.g, pG.b, pG.a));
+        getRenderer().settings().background.checkerColor1 =
+            glm::vec4(white.r, white.g, white.b, white.a);
+        getRenderer().settings().background.checkerColor2 =
+            glm::vec4(pG.r, pG.g, pG.b, pG.a);
 
         // Ground
         {
             MeshPrimDesc desc;
-            desc.shader = groundShader.get();
+            desc.material = &groundMaterial;
             desc.path = "/ground";
             desc.meshData = Geometry::createPlane(20.f, _upAxis);
             addMeshPrim(std::move(desc));
@@ -75,7 +56,7 @@ class PrimShowcaseApp : public App {
                        glm::quat ori = {1.0f, 0.0f, 0.0f, 0.0f},
                        bool doubleSided = false) {
             MeshPrimDesc desc;
-            desc.shader = phongShader.get();
+            desc.material = &commonMaterial;
             desc.path = path;
             desc.meshData = std::move(meshData);
             desc.position = pos;
@@ -91,7 +72,7 @@ class PrimShowcaseApp : public App {
             getScene(), "/shapes/coordinate_axes", upPos(0.f, 0.f, 0.02f),
             glm::quat(1.f, 0.f, 0.f, 0.f), 1.8f, 0.04f, 16);
         for (auto* p : prims)
-            getSceneRenderSystem().addRenderable(*p, phongShader.get());
+            getSceneRenderSystem().addRenderable(*p, &commonMaterial);
         if (!prims.empty())
             entries.push_back({prims[0], "Scene Axes (arrow prims)"});
 
@@ -111,7 +92,7 @@ class PrimShowcaseApp : public App {
                 {0.20f, 0.90f, 0.35f, 1.0f},
                 {0.25f, 0.45f, 1.0f, 1.0f},
             };
-            DebugDraw::logLines(this, phongShader.get(), "/debug/sample_lines",
+            DebugDraw::logLines(this, &commonMaterial, "/debug/sample_lines",
                                 starts, ends, colors, 0.02f, 8);
         }
 
@@ -138,7 +119,7 @@ class PrimShowcaseApp : public App {
                 colors.push_back({1.0f - t, 0.35f + 0.4f * t, t, 1.0f});
             }
 
-            DebugDraw::logLines(this, phongShader.get(),
+            DebugDraw::logLines(this, &commonMaterial,
                                 "/debug/radial_log_lines", starts, ends, colors,
                                 0.012f, 8);
         }
@@ -166,7 +147,7 @@ class PrimShowcaseApp : public App {
                 colors.push_back({t, 1.0f - t, 0.25f + 0.5f * t, 1.0f});
             }
 
-            DebugDraw::logArrows(this, phongShader.get(),
+            DebugDraw::logArrows(this, &commonMaterial,
                                  "/debug/radial_log_arrows", starts, ends,
                                  colors, 0.035f, 12);
         }
@@ -179,7 +160,7 @@ class PrimShowcaseApp : public App {
             {0.95f, 0.35f, 0.35f, 1.f}, "Square",
             upQuat(squareOri.w, squareOri.x, squareOri.y, squareOri.z));
         DebugDraw::logCoordinateAxes(
-            this, phongShader.get(), "/debug/square_axis",
+            this, &commonMaterial, "/debug/square_axis",
             upPos(squarePos.x, squarePos.y, squarePos.z),
             upQuat(squareOri.w, squareOri.x, squareOri.y, squareOri.z), 1.8f,
             0.01f);
@@ -294,7 +275,7 @@ class PrimShowcaseApp : public App {
                 DebugDraw::logLines(getScene(), "/shapes/lines", starts, ends,
                                     {{0.35f, 0.75f, 0.95f, 1.f}}, 0.04f, 8);
             for (auto* p : prims)
-                getSceneRenderSystem().addRenderable(*p, phongShader.get());
+                getSceneRenderSystem().addRenderable(*p, &commonMaterial);
             if (!prims.empty())
                 entries.push_back({prims[0], "Lines (5 capsule prims)"});
         }
