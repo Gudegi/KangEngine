@@ -47,7 +47,7 @@ class OpenGLBuffer : public Buffer {
     size_t size() const { return _size; }
 };
 
-class OpenGLShader : public Shader {
+class OpenGLShader {
   private:
     GLuint _shaderProgram;
     ShaderDesc _desc;
@@ -60,38 +60,9 @@ class OpenGLShader : public Shader {
 
   public:
     OpenGLShader(const ShaderDesc& desc);
-    ~OpenGLShader() override;
+    ~OpenGLShader();
 
-    const std::string& getName() const override { return _desc.name; }
-    const ShaderDesc& getDesc() const override { return _desc; }
-
-    void bind() override;
-    void unbind() override;
-
-    // KE::Shader compatibility
-    void use() override;
-
-    // Uniform setters - KE::Shader compatible
-    void setBool(const std::string& name, bool value) override;
-    void setInt(const std::string& name, int value) override;
-    void setFloat(const std::string& name, float value) override;
-    void setColor(const std::string& name, float r, float g, float b,
-                  float a) override;
-
-    void setVec2(const std::string& name, const glm::vec2& value) override;
-    void setVec2(const std::string& name, float x, float y) override;
-    void setVec3(const std::string& name, const glm::vec3& value) override;
-    void setVec3(const std::string& name, float x, float y, float z) override;
-    void setVec4(const std::string& name, const glm::vec4& value) override;
-    void setVec4(const std::string& name, float x, float y, float z,
-                 float w) override;
-    void setMat2(const std::string& name, const glm::mat2& value) override;
-    void setMat3(const std::string& name, const glm::mat3& value) override;
-    void setMat4(const std::string& name, const glm::mat4& value) override;
-    void setMat4Array(const std::string& name, const glm::mat4* values,
-                      size_t count) override;
-    void setUniformBlockBinding(const std::string& blockName,
-                                int slot) override;
+    void bind();
     GLuint getHandle() const { return _shaderProgram; }
 };
 
@@ -349,7 +320,6 @@ class OpenGLDevice : public GraphicsDevice {
     // Resource creation
     std::unique_ptr<Buffer>
     createBuffer(const BufferDesc& desc, const void* data = nullptr) override;
-    std::unique_ptr<Shader> createShader(const ShaderDesc& desc) override;
     std::unique_ptr<Texture> createTexture(const TextureDesc& desc) override;
     std::unique_ptr<Texture> createTexture(const TextureDesc& desc,
                                            const SamplerDesc& sampler) override;
@@ -378,12 +348,6 @@ class OpenGLDevice : public GraphicsDevice {
     TextureReadback readTexture(TextureView* view) override;
     std::unique_ptr<CommandEncoder> createCommandEncoder() override;
     void submit(CommandBuffer& commandBuffer) override;
-    // Convenience shader creation methods (KE::Shader compatible)
-    std::unique_ptr<Shader> createShader(const char* vertexSource,
-                                         const char* fragmentSource) override;
-    std::unique_ptr<Shader>
-    createShader(const std::string& vertexSource,
-                 const std::string& fragmentSource) override;
     std::unique_ptr<Texture> createTexture(const std::string path,
                                            bool flip = false) override;
     std::unique_ptr<Texture> createTexture(const std::string path, bool flip,

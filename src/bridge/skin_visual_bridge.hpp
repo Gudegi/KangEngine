@@ -15,9 +15,9 @@
 namespace KE {
 
 class App;
+class Material;
 
 namespace Backend {
-class Shader;
 class Texture;
 } // namespace Backend
 namespace Scene {
@@ -50,13 +50,13 @@ class SkinVisualBridge {
     };
 
     static SkinVisualBridge
-    fromFBX(App* app, Backend::Shader* shader, const std::string& fbxPath,
+    fromFBX(App* app, Material* material, const std::string& fbxPath,
             const std::string& primBasePath = "/fbx_character",
             int clipIndex = -1, float fps = -1.0f, float scale = 0.01f,
             bool useMaterials = true);
 
     static SkinVisualBridge fromFBXWithBind(
-        App* app, Backend::Shader* shader, const std::string& motionFbxPath,
+        App* app, Material* material, const std::string& motionFbxPath,
         const std::string& bindFbxPath,
         const std::string& primBasePath = "/fbx_character", int clipIndex = -1,
         float fps = -1.0f, float scale = 0.01f, bool useMaterials = true);

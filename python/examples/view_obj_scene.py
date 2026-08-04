@@ -97,7 +97,7 @@ class ObjSceneViewer(ke.App):
         self.camera_fov = float(camera_fov)
 
     def setup(self):
-        self.shaders = self.create_standard_shaders()
+        self.standard_materials = self.create_standard_materials()
         self.normal_maps_enabled = True
         self.normal_texture_bindings = []
         self.specular_texture_count = 0
@@ -220,7 +220,7 @@ class ObjSceneViewer(ke.App):
         ground = self.add_ground(
             "/ground",
             scale=ground_size,
-            shader=self.shaders.ground,
+            material=self.standard_materials.ground,
         )
         ground.prim.set_local_translation(ke.vec3(0.0, ground_y, 0.0))
 

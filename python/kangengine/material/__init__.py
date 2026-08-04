@@ -14,6 +14,7 @@ from .materials import (
     PhongMaterial,
     PhongMaterialType,
     VertexColorMaterial,
+    VertexColorStyle,
     unwrap_native,
 )
 
@@ -33,5 +34,6 @@ __all__ = [
     "PhongMaterial",
     "PhongMaterialType",
     "VertexColorMaterial",
+    "VertexColorStyle",
     "unwrap_native",
 ]

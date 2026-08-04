@@ -169,6 +169,12 @@ class Rasterizer : public RenderPipeline {
     // [Opaque, Transparent][BackFace, DoubleSided]
     std::array<std::array<std::unique_ptr<Backend::GraphicsPipeline>, 2>, 2>
         _checkerboardPipelines;
+    // [Static, Skinned][Opaque, Transparent][BackFace, DoubleSided]
+    std::array<
+        std::array<std::array<std::unique_ptr<Backend::GraphicsPipeline>, 2>,
+                   2>,
+        2>
+        _debugCheckerPipelines;
     std::unique_ptr<Backend::Buffer> _checkerboardParamsBuffer;
     std::unique_ptr<Backend::BindGroup> _checkerboardBindGroup;
     std::unique_ptr<Backend::BindGroupLayout> _phongMaterialGroupLayout;
@@ -298,6 +304,7 @@ class Rasterizer : public RenderPipeline {
     void rebuildSkyboxBinding(UpAxis upAxis);
     bool usesRhiTexturedVertexColor(const MeshInstancer& inst) const;
     bool usesRhiCheckerboard(const MeshInstancer& inst) const;
+    bool usesRhiDebugChecker(const MeshInstancer& inst) const;
     Backend::BindGroup* updatePhongRhiResources(PhongMaterial& material,
                                                 const MeshInstancer& inst);
     Backend::BindGroup* updatePbrRhiResources(PBRMaterial& material,

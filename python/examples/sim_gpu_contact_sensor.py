@@ -237,8 +237,8 @@ class GpuContactSensorViewer(ke.App):
             )
         )
         self.set_simulation_hotkeys_enabled(True)
-        self.shaders = self.create_standard_shaders()
-        self.add_ground(scale=16.0, shader=self.shaders.ground)
+        self.standard_materials = self.create_standard_materials()
+        self.add_ground(scale=16.0, material=self.standard_materials.ground)
         self.set_camera_view([3.5, -5.5, 3.4], [2.0, 1.2, 0.8])
 
         self.visual = ke.visual.sim.SimWorldVisualizer(self, self.demo.world)
@@ -248,14 +248,14 @@ class GpuContactSensorViewer(ke.App):
             self.demo.left,
             rigid_xml,
             prim_base_path="/gpu_contact/left",
-            shader=self.shaders.common,
+            material=self.standard_materials.common,
             color=group_colors,
         )
         self.visual.add(
             self.demo.right,
             rigid_xml,
             prim_base_path="/gpu_contact/right",
-            shader=self.shaders.common,
+            material=self.standard_materials.common,
             color=group_colors,
         )
         self.check_error()
@@ -341,7 +341,7 @@ class GpuContactSensorViewer(ke.App):
         if self.contact_marker_view is None:
             self.contact_marker_view = self.scene.log_lines(
                 "/debug/gpu_contact_points",
-                self.shaders.common,
+                self.standard_materials.common,
                 starts,
                 ends,
                 colors,
@@ -375,7 +375,7 @@ class GpuContactSensorViewer(ke.App):
         if self.force_arrow_view is None:
             self.force_arrow_view = self.scene.log_arrows(
                 "/debug/gpu_contact_forces",
-                self.shaders.common,
+                self.standard_materials.common,
                 starts,
                 ends,
                 colors,

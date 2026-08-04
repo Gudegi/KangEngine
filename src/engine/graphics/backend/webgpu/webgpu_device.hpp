@@ -51,7 +51,6 @@ class WebGPUDevice : public GraphicsDevice {
     std::unique_ptr<Buffer> createBuffer(const BufferDesc& desc,
                                          const void* data = nullptr) override;
     void bindUniformBuffer(Buffer* buffer, int slot) override;
-    std::unique_ptr<Shader> createShader(const ShaderDesc& desc) override;
     std::unique_ptr<Texture> createTexture(const TextureDesc& desc) override;
     std::unique_ptr<Texture>
     createTexture(const TextureResourceDesc& desc,
@@ -75,11 +74,6 @@ class WebGPUDevice : public GraphicsDevice {
     std::unique_ptr<CommandEncoder> createCommandEncoder() override;
     void submit(CommandBuffer& commandBuffer) override;
 
-    std::unique_ptr<Shader> createShader(const char* vertexSource,
-                                         const char* fragmentSource) override;
-    std::unique_ptr<Shader>
-    createShader(const std::string& vertexSource,
-                 const std::string& fragmentSource) override;
     std::unique_ptr<Texture> createTexture(const std::string path,
                                            bool flip = false) override;
     std::unique_ptr<Texture> createTexture(const std::string path, bool flip,

@@ -111,10 +111,6 @@ void WebGPUDevice::bindUniformBuffer(Buffer*, int) {
     throwNotImplemented("bindUniformBuffer");
 }
 
-std::unique_ptr<Shader> WebGPUDevice::createShader(const ShaderDesc&) {
-    throwNotImplemented("createShader");
-}
-
 std::unique_ptr<Texture> WebGPUDevice::createTexture(const TextureDesc&) {
     throwNotImplemented("createTexture");
 }
@@ -164,15 +160,6 @@ std::unique_ptr<CommandEncoder> WebGPUDevice::createCommandEncoder() {
 }
 
 void WebGPUDevice::submit(CommandBuffer&) { throwNotImplemented("submit"); }
-
-std::unique_ptr<Shader> WebGPUDevice::createShader(const char*, const char*) {
-    throwNotImplemented("createShader");
-}
-
-std::unique_ptr<Shader> WebGPUDevice::createShader(const std::string&,
-                                                   const std::string&) {
-    throwNotImplemented("createShader");
-}
 
 std::unique_ptr<Texture> WebGPUDevice::createTexture(const std::string, bool) {
     throwNotImplemented("createTexture");

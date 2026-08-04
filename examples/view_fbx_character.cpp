@@ -57,9 +57,9 @@ class FbxCharacterCppApp : public App {
     float fps = -1.0f;
     float importScale = 0.01f;
 
-    std::unique_ptr<Backend::Shader> skinnedShader;
-    std::unique_ptr<Backend::Shader> lineShader;
-    std::unique_ptr<Backend::Shader> groundShader;
+    VertexColorMaterial skinnedMaterial{VertexColorStyle::Textured};
+    VertexColorMaterial lineMaterial;
+    VertexColorMaterial groundMaterial{VertexColorStyle::Checkerboard};
     SkinVisualBridge character;
     MotionSequencerPanel motionPanel;
 
@@ -87,42 +87,19 @@ class FbxCharacterCppApp : public App {
             DirectionalLight{glm::normalize(glm::vec3(0.25f, 0.75f, 0.55f)),
                              glm::vec3(1.0f), 0.85f, glm::vec3(0.12f)});
 
-        auto commonVSPath = KE::getAssetPath("shaders/common.vs");
-        auto skinnedVSPath = KE::getAssetPath("shaders/skinned_mesh.vs");
-        auto commonFSPath = KE::getAssetPath("shaders/common.fs");
-        auto commonTexFSPath = KE::getAssetPath("shaders/commonTex.fs");
-        auto checkerFSPath = KE::getAssetPath("shaders/checkerboard.fs");
-
-        skinnedShader = getRenderer().device()->createShaderFromFile(
-            skinnedVSPath, commonTexFSPath);
-        lineShader = getRenderer().device()->createShaderFromFile(commonVSPath,
-                                                                  commonFSPath);
-        groundShader = getRenderer().device()->createShaderFromFile(
-            commonVSPath, checkerFSPath);
-        getRenderer().setBackgroundShader(groundShader.get());
-
-        for (auto* shader :
-             {skinnedShader.get(), lineShader.get(), groundShader.get()}) {
-            shader->use();
-            shader->setUniformBlockBinding("cameraUBO", 0);
-            shader->setUniformBlockBinding("lightUBO", 1);
-            shader->setUniformBlockBinding("shadowUBO", 2);
-        }
-
-        groundShader->use();
-        groundShader->setVec4("checkerColor1",
-                              glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-        groundShader->setVec4("checkerColor2",
-                              glm::vec4(0.77f, 0.93f, 0.78f, 1.0f));
+        getRenderer().settings().background.checkerColor1 =
+            glm::vec4(1.0f);
+        getRenderer().settings().background.checkerColor2 =
+            glm::vec4(0.77f, 0.93f, 0.78f, 1.0f);
 
         MeshPrimDesc ground;
-        ground.shader = groundShader.get();
+        ground.material = &groundMaterial;
         ground.path = "/ground";
         ground.meshData = Scene::Prim::createPlaneData(20.0f, _upAxis);
         addMeshPrim(std::move(ground));
 
         character = SkinVisualBridge::fromFBX(
-            this, skinnedShader.get(), fbxPath, "/fbx_character", clipIndex,
+            this, &skinnedMaterial, fbxPath, "/fbx_character", clipIndex,
             fps, importScale);
         Scene::Prim::defineManipulationGroup(getScene(), "/fbx_character");
         character.setCastsShadow(castShadows);
@@ -168,7 +145,7 @@ class FbxCharacterCppApp : public App {
         lineColors = skeletonColors(names, parents, showSkeleton);
         if (skeletonHandle == InvalidHandle) {
             skeletonHandle = Scene::DebugDraw::logLines(
-                this, lineShader.get(), "/debug/fbx_skeleton", lineStarts,
+                this, &lineMaterial, "/debug/fbx_skeleton", lineStarts,
                 lineEnds, lineColors, 0.008f, 8);
         } else {
             Scene::DebugDraw::updateLines(this, skeletonHandle, lineStarts,

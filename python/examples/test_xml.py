@@ -46,28 +46,12 @@ def asset_path(*parts):
 class RobotViewer(ke.App):
     def setup(self):
         self.frame_idx = 0
-        device = self.get_renderer().device()
-
-        vs = asset_path("shaders", "common.vs")
-        fs = asset_path("shaders", "common.fs")
-        checker_fs = asset_path("shaders", "checkerboard.fs")
-
-        self.robot_shader = device.create_shader_from_file(vs, fs)
-        self.ground_shader = device.create_shader_from_file(vs, checker_fs)
-
-        # Bind UBO slots (cameraUBO=0, lightUBO=1 — managed by App)
-        for shader in (self.robot_shader, self.ground_shader):
-            shader.use()
-            shader.set_uniform_block_binding("cameraUBO", 0)
-            shader.set_uniform_block_binding("lightUBO", 1)
-
-        # Checker color for ground (regular uniforms, not UBO)
-        self.ground_shader.use()
-        self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
-        self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
+        materials = self.create_standard_materials()
+        self.robot_material = materials.common
+        self.ground_material = materials.ground
 
         # Ground plane (Z-up)
-        self.scene.add_ground(scale=100.0, shader=self.ground_shader)
+        self.scene.add_ground(scale=100.0, material=self.ground_material)
 
         # Robot
         mjcf = asset_path("external", "retargetted", "unitree_h1", "unitree_h1.xml")
@@ -75,7 +59,7 @@ class RobotViewer(ke.App):
             mjcf, self.scene.native, "/robot", 1.0, "BFS"
         )
         for prim in self.robot.body_prims():
-            self.scene.add_renderable(prim, self.robot_shader)
+            self.scene.add_renderable(prim, self.robot_material)
 
         print(f"Robot loaded: {self.robot.num_bodies()} bodies")
         self.check_error()

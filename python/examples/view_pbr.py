@@ -8,11 +8,11 @@ from kangengine import imgui, scene
 
 class PBRViewer(ke.App):
     def setup(self):
-        self.shaders = self.create_standard_shaders()
+        self.standard_materials = self.create_standard_materials()
         self.local_lights_enabled = True
         self.local_light_prims = []
 
-        self.add_ground(shader=self.shaders.ground, scale=16.0)
+        self.add_ground(material=self.standard_materials.ground, scale=16.0)
         self._build_material_grid()
         self._add_emissive_sphere()
         self._configure_local_lights()

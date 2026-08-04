@@ -745,6 +745,7 @@ void Rasterizer::renderOpaquePass(Backend::Texture* shadowTexture,
             }
             const bool texturedVertexColor = usesRhiTexturedVertexColor(inst);
             const bool checkerboard = usesRhiCheckerboard(inst);
+            const bool debugChecker = usesRhiDebugChecker(inst);
             const bool skinnedTexturedVertexColor =
                 inst.hasSkinning() && texturedVertexColor;
             const bool skinnedVertexColor =
@@ -758,7 +759,12 @@ void Rasterizer::renderOpaquePass(Backend::Texture* shadowTexture,
                      MaterialShadingModel::Phong ||
                  inst.material()->shadingModel() == MaterialShadingModel::PBR);
             Backend::GraphicsPipeline* pipeline = nullptr;
-            if (checkerboard)
+            if (debugChecker)
+                pipeline =
+                    _debugCheckerPipelines[inst.hasSkinning() ? 1 : 0][0]
+                                          [inst.isDoubleSided() ? 1 : 0]
+                                              .get();
+            else if (checkerboard)
                 pipeline =
                     _checkerboardPipelines[0][inst.isDoubleSided() ? 1 : 0]
                         .get();
@@ -813,6 +819,8 @@ void Rasterizer::renderOpaquePass(Backend::Texture* shadowTexture,
                     inst.recordSkinnedMaterialDraw(
                         *pass, inst.textureAtSlot(
                                    RendererTextureSlot::Normal) != nullptr);
+                } else if (debugChecker) {
+                    inst.recordSkinnedMaterialDraw(*pass, false);
                 } else if (skinnedVertexColor) {
                     inst.recordSkinnedForwardDraw(*pass);
                 } else if (inst.material()->shadingModel() ==
@@ -830,6 +838,8 @@ void Rasterizer::renderOpaquePass(Backend::Texture* shadowTexture,
                     inst.recordSkinnedMaterialDraw(
                         *pass, material->normalTexture != nullptr);
                 }
+            } else if (debugChecker) {
+                inst.recordMaterialDraw(*pass, true, false);
             } else if (checkerboard) {
                 pass->setBindGroup(3, _checkerboardBindGroup.get());
                 inst.recordMaterialDraw(*pass, true, false);
@@ -907,6 +917,7 @@ void Rasterizer::renderTransparentPass(Backend::Texture* shadowTexture,
             size_t kind = 0;
             const bool texturedVertexColor = usesRhiTexturedVertexColor(inst);
             const bool checkerboard = usesRhiCheckerboard(inst);
+            const bool debugChecker = usesRhiDebugChecker(inst);
             const bool skinnedMaterial =
                 inst.hasSkinning() &&
                 (inst.material()->shadingModel() ==
@@ -920,7 +931,12 @@ void Rasterizer::renderTransparentPass(Backend::Texture* shadowTexture,
             else if (inst.material()->shadingModel() ==
                      MaterialShadingModel::PBR)
                 kind = 3;
-            if (checkerboard) {
+            if (debugChecker) {
+                pass->setPipeline(
+                    _debugCheckerPipelines[inst.hasSkinning() ? 1 : 0][1]
+                                          [inst.isDoubleSided() ? 1 : 0]
+                                              .get());
+            } else if (checkerboard) {
                 pass->setPipeline(
                     _checkerboardPipelines[1][inst.isDoubleSided() ? 1 : 0]
                         .get());
@@ -960,6 +976,8 @@ void Rasterizer::renderTransparentPass(Backend::Texture* shadowTexture,
                     inst.recordSkinnedMaterialDraw(
                         *pass, inst.textureAtSlot(
                                    RendererTextureSlot::Normal) != nullptr);
+                } else if (debugChecker) {
+                    inst.recordSkinnedMaterialDraw(*pass, false);
                 } else if (!skinnedMaterial) {
                     inst.recordSkinnedForwardDraw(*pass);
                 } else if (inst.material()->shadingModel() ==
@@ -977,6 +995,8 @@ void Rasterizer::renderTransparentPass(Backend::Texture* shadowTexture,
                     inst.recordSkinnedMaterialDraw(
                         *pass, material->normalTexture != nullptr);
                 }
+            } else if (debugChecker) {
+                inst.recordMaterialDraw(*pass, true, false);
             } else if (checkerboard) {
                 pass->setBindGroup(3, _checkerboardBindGroup.get());
                 inst.recordMaterialDraw(*pass, true, false);
@@ -1906,6 +1926,49 @@ void Rasterizer::initForwardRhi() {
                 _graphicsDevice->createGraphicsPipeline(desc);
         }
     }
+
+    const std::string debugCheckerFs = Backend::loadShaderSource(
+        KE::getAssetPath("shaders/rhi/forward_debug_checker.fs"));
+    for (size_t skin = 0; skin < 2; ++skin) {
+        for (size_t transparent = 0; transparent < 2; ++transparent) {
+            Backend::GraphicsPipelineDesc desc;
+            const std::string baseLabel =
+                std::string("forward_") + (skin ? "skinned_" : "") +
+                "debug_checker_" +
+                (transparent ? "transparent" : "opaque");
+            desc.label = baseLabel + "_pipeline";
+            desc.shader.name = baseLabel + "_rhi";
+            desc.shader.stages = {
+                {skin ? skinnedMaterialVs : materialVs,
+                 Backend::ShaderType::Vertex, "main"},
+                {debugCheckerFs, Backend::ShaderType::Fragment, "main"}};
+            desc.pipelineLayout = skin ? _forwardSkinPipelineLayout.get()
+                                       : _forwardPipelineLayout.get();
+            desc.vertexBuffers = {position, transform, normal, texCoord,
+                                  color};
+            if (skin) {
+                // Preserve the shared mesh slot numbering without requiring
+                // the unused tangent stream.
+                desc.vertexBuffers.push_back({});
+                desc.vertexBuffers.push_back(boneIndices);
+                desc.vertexBuffers.push_back(boneWeights);
+            }
+            desc.depthStencil = Backend::DepthStencilState{
+                Backend::TextureFormat::Depth24Stencil8, !transparent,
+                Backend::CompareFunction::Less};
+            desc.colorTargets = {{Backend::TextureFormat::RGBA16Float}};
+            if (transparent)
+                desc.colorTargets[0].blend = alphaBlend;
+            desc.sampleCount = 4;
+            desc.primitive.cullMode = Backend::CullMode::Back;
+            _debugCheckerPipelines[skin][transparent][0] =
+                _graphicsDevice->createGraphicsPipeline(desc);
+            desc.label = baseLabel + "_double_sided_pipeline";
+            desc.primitive.cullMode = Backend::CullMode::None;
+            _debugCheckerPipelines[skin][transparent][1] =
+                _graphicsDevice->createGraphicsPipeline(desc);
+        }
+    }
 }
 
 bool Rasterizer::usesRhiTexturedVertexColor(const MeshInstancer& inst) const {
@@ -1921,6 +1984,14 @@ bool Rasterizer::usesRhiCheckerboard(const MeshInstancer& inst) const {
         return false;
     return inst.material()->vertexColorStyle() ==
            VertexColorStyle::Checkerboard;
+}
+
+bool Rasterizer::usesRhiDebugChecker(const MeshInstancer& inst) const {
+    return inst.material() &&
+           inst.material()->shadingModel() ==
+               MaterialShadingModel::VertexColor &&
+           inst.material()->vertexColorStyle() ==
+               VertexColorStyle::DebugChecker;
 }
 
 void Rasterizer::setBackgroundSettings(const BackgroundSettings& settings) {

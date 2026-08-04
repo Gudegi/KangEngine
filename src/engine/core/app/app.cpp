@@ -35,6 +35,7 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <unordered_map>
 #include <utility>
 
 namespace KE {
@@ -272,6 +273,7 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
                    _postProcessor.get(), _selectionOutlineProcessor.get());
     _renderer.setViewportSize(_width, _height);
     _sceneRenderSystem.bind(&_renderer);
+    registerBuiltinRenderResources();
 
     DirectionalLight defaultLight;
     defaultLight.direction = (_upAxis == UpAxis::Z)
@@ -282,6 +284,141 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
     else
         getRenderer().setLight(defaultLight);
     _initialized = true;
+}
+
+void App::registerBuiltinRenderResources() {
+    struct BuiltinShader {
+        const char* name;
+        const char* path;
+        Backend::ShaderType stage;
+    };
+    static constexpr BuiltinShader shaders[] = {
+        {"ForwardVertexColorVS", "shaders/rhi/forward_vertex_color.vs",
+         Backend::ShaderType::Vertex},
+        {"ForwardSkinnedVertexColorVS",
+         "shaders/rhi/forward_skinned_vertex_color.vs",
+         Backend::ShaderType::Vertex},
+        {"ForwardMaterialVS", "shaders/rhi/forward_material.vs",
+         Backend::ShaderType::Vertex},
+        {"ForwardSkinnedMaterialVS", "shaders/rhi/forward_skinned_material.vs",
+         Backend::ShaderType::Vertex},
+        {"ForwardVertexColorFS", "shaders/rhi/forward_vertex_color.fs",
+         Backend::ShaderType::Fragment},
+        {"ForwardTexturedVertexColorFS",
+         "shaders/rhi/forward_textured_vertex_color.fs",
+         Backend::ShaderType::Fragment},
+        {"ForwardCheckerboardFS", "shaders/rhi/forward_checkerboard.fs",
+         Backend::ShaderType::Fragment},
+        {"ForwardDebugCheckerFS", "shaders/rhi/forward_debug_checker.fs",
+         Backend::ShaderType::Fragment},
+        {"ForwardPhongFS", "shaders/rhi/forward_phong.fs",
+         Backend::ShaderType::Fragment},
+        {"ForwardPBRFS", "shaders/rhi/forward_pbr.fs",
+         Backend::ShaderType::Fragment},
+        {"ShadowVS", "shaders/shadow.vs", Backend::ShaderType::Vertex},
+        {"SkinnedShadowVS", "shaders/skinned_shadow.vs",
+         Backend::ShaderType::Vertex},
+        {"ShadowFS", "shaders/shadow.fs", Backend::ShaderType::Fragment},
+        {"SelectionMaskVS", "shaders/selection_mask.vs",
+         Backend::ShaderType::Vertex},
+        {"SkinnedSelectionMaskVS", "shaders/skinned_selection_mask.vs",
+         Backend::ShaderType::Vertex},
+        {"SelectionMaskFS", "shaders/selection_mask.fs",
+         Backend::ShaderType::Fragment},
+        {"SkyboxVS", "shaders/rhi/skybox.vs", Backend::ShaderType::Vertex},
+        {"SkyboxFS", "shaders/rhi/skybox.fs", Backend::ShaderType::Fragment},
+        {"DebugVS", "shaders/rhi/debug.vs", Backend::ShaderType::Vertex},
+        {"DebugLineFS", "shaders/rhi/debug_line.fs",
+         Backend::ShaderType::Fragment},
+        {"DebugPointFS", "shaders/rhi/debug_point.fs",
+         Backend::ShaderType::Fragment},
+        {"TextVS", "shaders/rhi/text.vs", Backend::ShaderType::Vertex},
+        {"TextFS", "shaders/rhi/text.fs", Backend::ShaderType::Fragment},
+    };
+
+    std::unordered_map<std::string, Scene::ResourceHandle> shaderHandles;
+    shaderHandles.reserve(std::size(shaders));
+    for (const BuiltinShader& shader : shaders) {
+        const std::string path = KE::getAssetPath(shader.path);
+        Scene::ShaderSourceResource resource;
+        resource.stage = shader.stage;
+        resource.language = Scene::ShaderLanguage::GLSL;
+        resource.source = Backend::loadShaderSource(path);
+        resource.entryPoint = "main";
+        shaderHandles.emplace(shader.name,
+                              _sceneResourceManager.registerShaderSource(
+                                  shader.name, std::move(resource), path));
+    }
+
+    const auto variants = [](bool skinned, bool transparent, bool doubleSided) {
+        std::vector<std::string> result;
+        for (int skin = 0; skin <= (skinned ? 1 : 0); ++skin)
+            for (int alpha = 0; alpha <= (transparent ? 1 : 0); ++alpha)
+                for (int sided = 0; sided <= (doubleSided ? 1 : 0); ++sided)
+                    result.push_back(std::string(skin ? "skinned" : "static") +
+                                     "/" + (alpha ? "transparent" : "opaque") +
+                                     "/" +
+                                     (sided ? "double-sided" : "back-face"));
+        return result;
+    };
+    const auto addPipeline =
+        [&](const char* name, std::initializer_list<const char*> shaderNames,
+            std::vector<std::string> pipelineVariants, const char* summary) {
+            Scene::PipelineResource resource;
+            resource.type = Scene::AuthoredPipelineType::Graphics;
+            for (const char* shaderName : shaderNames)
+                resource.shaderSources.push_back(shaderHandles.at(shaderName));
+            resource.variants = std::move(pipelineVariants);
+            resource.stateSummary = summary;
+            _sceneResourceManager.registerPipeline(
+                name, std::move(resource),
+                std::string("builtin://pipeline/") + name);
+        };
+
+    addPipeline("ForwardVertexColor",
+                {"ForwardVertexColorVS", "ForwardSkinnedVertexColorVS",
+                 "ForwardVertexColorFS"},
+                variants(true, true, true), "scene forward vertex color");
+    addPipeline("ForwardTexturedVertexColor",
+                {"ForwardMaterialVS", "ForwardSkinnedMaterialVS",
+                 "ForwardTexturedVertexColorFS"},
+                variants(true, true, true), "scene forward sampled color");
+    addPipeline("ForwardCheckerboard",
+                {"ForwardMaterialVS", "ForwardCheckerboardFS"},
+                variants(false, true, true), "procedural checkerboard");
+    addPipeline("ForwardDebugChecker",
+                {"ForwardMaterialVS", "ForwardSkinnedMaterialVS",
+                 "ForwardDebugCheckerFS"},
+                variants(true, true, true), "diagnostic UV checker/grid");
+    addPipeline(
+        "ForwardPhong",
+        {"ForwardMaterialVS", "ForwardSkinnedMaterialVS", "ForwardPhongFS"},
+        variants(true, true, true), "Phong material family");
+    addPipeline(
+        "ForwardPBR",
+        {"ForwardMaterialVS", "ForwardSkinnedMaterialVS", "ForwardPBRFS"},
+        variants(true, true, true), "PBR material family");
+    addPipeline("Shadow", {"ShadowVS", "SkinnedShadowVS", "ShadowFS"},
+                variants(true, true, true), "depth-only CSM family");
+    addPipeline(
+        "SelectionMask",
+        {"SelectionMaskVS", "SkinnedSelectionMaskVS", "SelectionMaskFS"},
+        variants(true, true, true), "selection binary mask");
+    addPipeline("Skybox", {"SkyboxVS", "SkyboxFS"}, {"default"},
+                "scene background cubemap");
+    addPipeline("DebugLines", {"DebugVS", "DebugLineFS"}, {"line-list"},
+                "debug overlay lines");
+    addPipeline("DebugPoints", {"DebugVS", "DebugPointFS"}, {"point-list"},
+                "debug overlay points");
+    addPipeline("Text", {"TextVS", "TextFS"}, {"world", "screen"},
+                "glyph atlas text");
+    addPipeline("SelectionOutline", {}, {"composite"},
+                "embedded fullscreen selection outline shader");
+    addPipeline("Bloom", {},
+                {"extract", "blur-horizontal", "blur-vertical", "composite"},
+                "embedded fullscreen bloom shaders");
+    addPipeline("FinalOutput", {}, {"tone-map/gamma"},
+                "embedded fullscreen final-output shader");
 }
 
 // for entire process in c++
@@ -947,28 +1084,6 @@ bool App::syncActiveSceneCameraView() {
 
 void App::checkError() { _graphicsDevice->checkError(); }
 
-RenderableHandle App::addRenderable(Backend::Shader* shader, Scene::Prim* prim,
-                                    TransformSource transformSource) {
-    if (!prim)
-        return InvalidHandle;
-    auto component =
-        _sceneRenderSystem.addRenderable(*prim, shader, transformSource);
-    _sceneResourceManager.invalidateUsageCache();
-    return component ? _sceneRenderSystem.handle(*component) : InvalidHandle;
-}
-
-RenderableHandle
-App::addSkinnedRenderable(Backend::Shader* shader, Scene::Prim* prim,
-                          const Scene::SkinnedMeshData& skinnedMesh,
-                          TransformSource transformSource) {
-    if (!prim)
-        return InvalidHandle;
-    auto component = _sceneRenderSystem.addSkinnedRenderable(
-        *prim, shader, skinnedMesh, transformSource);
-    _sceneResourceManager.invalidateUsageCache();
-    return component ? _sceneRenderSystem.handle(*component) : InvalidHandle;
-}
-
 RenderableHandle App::addRenderable(Material* material, Scene::Prim* prim,
                                     TransformSource transformSource) {
     if (!prim)
@@ -1044,7 +1159,7 @@ bool App::removePrim(const std::string& path) {
 
 App::MeshPrimResult App::addMeshPrim(MeshPrimDesc desc) {
     MeshPrimResult result;
-    if (!desc.shader || !_scene || desc.path.empty())
+    if (!desc.material || !_scene || desc.path.empty())
         return result;
 
     auto* prim = _scene->definePrim(desc.path, Scene::PrimType::Mesh);
@@ -1055,7 +1170,7 @@ App::MeshPrimResult App::addMeshPrim(MeshPrimDesc desc) {
     prim->setLocalScale(desc.scale);
     prim->setDisplayColorAlpha(desc.color);
 
-    RenderableHandle handle = addRenderable(desc.shader, prim);
+    RenderableHandle handle = addRenderable(desc.material, prim);
     if (handle != InvalidHandle) {
         setRenderableDoubleSided(handle, desc.doubleSided);
         setRenderableCastsShadow(handle, desc.castsShadow);
@@ -1066,28 +1181,13 @@ App::MeshPrimResult App::addMeshPrim(MeshPrimDesc desc) {
     return result;
 }
 
-App::MeshPrimResult App::addMeshPrim(Backend::Shader* shader,
-                                     const std::string& path,
-                                     Scene::MeshData meshData,
-                                     glm::vec3 position, glm::vec4 color,
-                                     bool castsShadow) {
-    MeshPrimDesc desc;
-    desc.shader = shader;
-    desc.path = path;
-    desc.meshData = std::move(meshData);
-    desc.position = position;
-    desc.color = color;
-    desc.castsShadow = castsShadow;
-    return addMeshPrim(std::move(desc));
-}
-
-App::MeshPrimResult App::addSkinnedMeshPrim(Backend::Shader* shader,
+App::MeshPrimResult App::addSkinnedMeshPrim(Material* material,
                                             const std::string& path,
                                             Scene::SkinnedMeshData skinnedMesh,
                                             glm::vec3 position, glm::vec4 color,
                                             bool castsShadow) {
     MeshPrimResult result;
-    if (!shader || !_scene || path.empty() ||
+    if (!material || !_scene || path.empty() ||
         !skinnedMesh.hasValidVertexSkinning())
         return result;
 
@@ -1096,7 +1196,7 @@ App::MeshPrimResult App::addSkinnedMeshPrim(Backend::Shader* shader,
     prim->setLocalTranslation(position);
     prim->setDisplayColorAlpha(color);
 
-    RenderableHandle handle = addSkinnedRenderable(shader, prim, skinnedMesh);
+    RenderableHandle handle = addSkinnedRenderable(material, prim, skinnedMesh);
     if (handle != InvalidHandle) {
         setRenderableCastsShadow(handle, castsShadow);
     }
@@ -1182,18 +1282,6 @@ glm::quat App::axisQuat(glm::quat ori, UpAxis from, UpAxis to) const {
         return glm::quat(zUpOri.w, zUpOri.y, zUpOri.z, zUpOri.x);
     }
     return zUpOri;
-}
-
-void App::drawLine(const std::string& path, glm::vec3 start, glm::vec3 end,
-                   glm::vec4 color, float thickness, Backend::Shader* shader) {
-    Scene::DebugDraw::logLines(this, shader, path, {start}, {end}, {color},
-                               thickness);
-}
-
-void App::drawArrow(const std::string& path, glm::vec3 start, glm::vec3 end,
-                    glm::vec4 color, float thickness, Backend::Shader* shader) {
-    Scene::DebugDraw::logArrows(this, shader, path, {start}, {end}, {color},
-                                thickness);
 }
 
 void App::setLightDirection(const glm::vec3& dir) {

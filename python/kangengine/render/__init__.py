@@ -2,7 +2,7 @@
 
 General scene workflows should prefer kangengine.App,
 ``app.scene``, and renderable views. This package owns the stable public paths
-for lower-level renderer, graphics-device, shader, texture, and external-buffer
+for lower-level renderer, graphics-device, texture, and external-buffer
 APIs; the runtime objects themselves remain pybind types.
 """
 
@@ -27,30 +27,64 @@ ExternalBufferDesc = set_public_module(_ke.ExternalBufferDesc, __name__)
 TextureWrap = set_public_module(_ke.TextureWrap, __name__)
 TextureFilter = set_public_module(_ke.TextureFilter, __name__)
 SamplerDesc = set_public_module(_ke.SamplerDesc, __name__)
+ShaderType = set_public_module(_ke.ShaderType, __name__)
+ShaderStage = set_public_module(_ke.ShaderStage, __name__)
+ShaderDesc = set_public_module(_ke.ShaderDesc, __name__)
+BufferUsage = set_public_module(_ke.BufferUsage, __name__)
+VertexFormat = set_public_module(_ke.VertexFormat, __name__)
+VertexStepMode = set_public_module(_ke.VertexStepMode, __name__)
+VertexAttributeDesc = set_public_module(_ke.VertexAttributeDesc, __name__)
+VertexBufferLayout = set_public_module(_ke.VertexBufferLayout, __name__)
+PrimitiveTopology = set_public_module(_ke.PrimitiveTopology, __name__)
+CullMode = set_public_module(_ke.CullMode, __name__)
+CompareFunction = set_public_module(_ke.CompareFunction, __name__)
+IndexFormat = set_public_module(_ke.IndexFormat, __name__)
+SceneHookBlendMode = set_public_module(_ke.SceneHookBlendMode, __name__)
+SceneHookPipelineDesc = set_public_module(_ke.SceneHookPipelineDesc, __name__)
+RenderHookPhase = set_public_module(_ke.RenderHookPhase, __name__)
+RenderHookContext = set_public_module(_ke.RenderHookContext, __name__)
 
 Renderer = set_public_module(_ke.Renderer, __name__)
 GraphicsDevice = set_public_module(_ke.GraphicsDevice, __name__)
-Shader = set_public_module(_ke.Shader, __name__)
 Texture = set_public_module(_ke.Texture, __name__)
+Buffer = set_public_module(_ke.Buffer, __name__)
+GraphicsPipeline = set_public_module(_ke.GraphicsPipeline, __name__)
 
 
 __all__ = [
     "AlphaMode",
     "BackendType",
+    "Buffer",
+    "BufferUsage",
+    "CompareFunction",
+    "CullMode",
     "ExternalBufferDesc",
     "ExternalBufferFormat",
     "ExternalSyncPolicy",
     "GraphicsDevice",
+    "GraphicsPipeline",
+    "IndexFormat",
+    "PrimitiveTopology",
+    "RenderHookContext",
+    "RenderHookPhase",
     "Renderer",
     "SamplerDesc",
+    "SceneHookBlendMode",
+    "SceneHookPipelineDesc",
     "ScreenAnchor",
-    "Shader",
     "Texture",
     "TextureFilter",
     "TextureRole",
     "TextureWrap",
+    "ShaderDesc",
+    "ShaderStage",
+    "ShaderType",
     "TextAlignment",
     "TextDepthMode",
     "ToneMapMode",
     "TransformSource",
+    "VertexAttributeDesc",
+    "VertexBufferLayout",
+    "VertexFormat",
+    "VertexStepMode",
 ]

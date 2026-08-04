@@ -33,11 +33,11 @@ jointTransforms(const std::vector<glm::vec3>& positions, float radius) {
 }
 
 SkeletalVisualBridge SkeletalVisualBridge::define(
-    App* app, Backend::Shader* shader, const std::string& basePath,
+    App* app, Material* material, const std::string& basePath,
     const Animation::SkeletonState& state, const SkeletalVisualConfig& config) {
     SkeletalVisualBridge bridge;
     bridge._app = app;
-    bridge._shader = shader;
+    bridge._material = material;
     bridge._basePath = basePath;
     bridge._config = config;
     bridge.applyState(state);
@@ -45,15 +45,15 @@ SkeletalVisualBridge SkeletalVisualBridge::define(
 }
 
 SkeletalVisualBridge SkeletalVisualBridge::define(
-    App* app, Backend::Shader* shader, const std::string& basePath,
+    App* app, Material* material, const std::string& basePath,
     const Animation::SkeletonMotion& motion, float time, bool loop,
     const SkeletalVisualConfig& config) {
-    return define(app, shader, basePath, motion.sample(time, loop), config);
+    return define(app, material, basePath, motion.sample(time, loop), config);
 }
 
 void SkeletalVisualBridge::applyState(const Animation::SkeletonState& state) {
     _lastState = state;
-    if (!_app || !_shader)
+    if (!_app || !_material)
         return;
 
     const Animation::SkeletonBoneLines bones = Animation::boneLines(state);
@@ -63,7 +63,7 @@ void SkeletalVisualBridge::applyState(const Animation::SkeletonState& state) {
 
     if (_boneHandle == InvalidHandle) {
         _boneHandle = Scene::DebugDraw::logLines(
-            _app, _shader, _basePath + "/bones", bones.starts, bones.ends,
+            _app, _material, _basePath + "/bones", bones.starts, bones.ends,
             boneColors, _config.boneRadius, _config.segments);
         _app->setRenderableCastsShadow(_boneHandle, false);
     } else {
@@ -80,7 +80,7 @@ void SkeletalVisualBridge::applyState(const Animation::SkeletonState& state) {
 
         if (_jointHandle == InvalidHandle) {
             App::MeshPrimDesc desc;
-            desc.shader = _shader;
+            desc.material = _material;
             desc.path = _basePath + "/joints";
             desc.meshData = Scene::Prim::createSphereData(1.0f, 16, 8);
             desc.castsShadow = false;

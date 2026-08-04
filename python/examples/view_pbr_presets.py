@@ -24,9 +24,9 @@ PRESETS = [
 
 class PBRPresetViewer(ke.App):
     def setup(self):
-        self.shaders = self.create_standard_shaders()
+        self.standard_materials = self.create_standard_materials()
 
-        self.add_ground(shader=self.shaders.ground, scale=12.0)
+        self.add_ground(material=self.standard_materials.ground, scale=12.0)
         self._build_preset_grid()
 
         self.set_light_direction(ke.vec3(-0.35, 0.45, 0.82))

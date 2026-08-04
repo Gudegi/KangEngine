@@ -51,31 +51,17 @@ class KwMotionTrackingApp(ke.App):
         self.track_root = True
         self.show_collision = False
 
-        device = self.get_renderer().device()
-        vs = package_asset_path("shaders", "common.vs")
-        fs = package_asset_path("shaders", "common.fs")
-        checker_fs = package_asset_path("shaders", "checkerboard.fs")
-
-        self.robot_shader = device.create_shader_from_file(vs, fs)
-        self.ghost_shader = device.create_shader_from_file(vs, fs)
-        self.ground_shader = device.create_shader_from_file(vs, checker_fs)
-
-        for shader in (self.robot_shader, self.ghost_shader, self.ground_shader):
-            shader.use()
-            shader.set_uniform_block_binding("cameraUBO", 0)
-            shader.set_uniform_block_binding("lightUBO", 1)
-            shader.set_uniform_block_binding("shadowUBO", 2)
-
-        self.ground_shader.use()
-        self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
-        self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
+        materials = self.create_standard_materials()
+        self.robot_material = materials.common
+        self.ghost_material = materials.common
+        self.ground_material = materials.ground
 
         self.sim_world = ke.sim.KangSimWorld(
             sim_dt=self.timing.physics_dt,
             add_ground=True,
         )
 
-        self.scene.add_ground(scale=100.0, shader=self.ground_shader)
+        self.scene.add_ground(scale=100.0, material=self.ground_material)
 
         mjcf_data = asset.MJCFLoader.load(self.char_file, order=self.order)
         sim_record = self.sim_world.add_articulation(
@@ -95,7 +81,7 @@ class KwMotionTrackingApp(ke.App):
             self.char_file,
             prim_base_path="/robot",
             order=self.order,
-            shader=self.robot_shader,
+            material=self.robot_material,
             collision_base_path="/collision",
             show_collision=self.show_collision,
         )
@@ -109,7 +95,7 @@ class KwMotionTrackingApp(ke.App):
         )
         for prim in self.ghost.body_prims():
             prim.set_display_color_alpha(ke.vec4(0.2, 0.6, 1.0, 0.35))
-            self.scene.add_renderable(prim, self.ghost_shader)
+            self.scene.add_renderable(prim, self.ghost_material)
 
         self.body_axes: dict[int, list[np.ndarray]] = {}
         for body_idx, joints in self.articulation.joints().items():

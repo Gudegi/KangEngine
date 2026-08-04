@@ -1,5 +1,11 @@
 # Examples
 
+## Custom rendering
+
+- `python/examples/custom_graphics_pipeline.py` draws an interactive gradient
+  triangle through a custom graphics pipeline and exposes its shader and
+  pipeline definitions in the Resource panel.
+
 ## Recommended first runs
 
 | Goal | Command from the repository root | Requirements | Expected result |

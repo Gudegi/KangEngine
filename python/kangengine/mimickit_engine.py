@@ -134,8 +134,8 @@ class _KangEngineViewer(App):
         self.world = world
         self.headless = bool(headless)
         self.visual_bridge = None
-        self.robot_shader = None
-        self.ground_shader = None
+        self.robot_material = None
+        self.ground_material = None
         self._setup_done = False
         self._debug_line_views = {}
 
@@ -145,26 +145,10 @@ class _KangEngineViewer(App):
         if headless is None:
             headless = self.headless
         self.initialize(width, height, False, _ke.UpAxis.Z, headless=bool(headless))
-        device = self.get_renderer().device()
-        vs = _asset_path("shaders", "common.vs")
-        fs = _asset_path("shaders", "common.fs")
-        checker_fs = _asset_path("shaders", "checkerboard.fs")
-        self.robot_shader = device.create_shader_from_file(vs, fs)
-        self.ground_shader = device.create_shader_from_file(vs, checker_fs)
-        for shader in (self.robot_shader, self.ground_shader):
-            shader.use()
-            shader.set_uniform_block_binding("cameraUBO", 0)
-            shader.set_uniform_block_binding("lightUBO", 1)
-            shader.set_uniform_block_binding("shadowUBO", 2)
-
-        self.ground_shader.use()
-        self.ground_shader.set_vec4("checkerColor1", _ke.vec4(1.0, 1.0, 1.0, 1.0))
-        self.ground_shader.set_vec4(
-            "checkerColor2",
-            _ke.vec4(*preset_rgba(_ke.ColorType.DARK_GREEN)),
-        )
-
-        self.scene.add_ground(scale=100.0, shader=self.ground_shader)
+        materials = self.create_standard_materials()
+        self.robot_material = materials.common
+        self.ground_material = materials.ground
+        self.scene.add_ground(scale=100.0, material=self.ground_material)
         self.visual_bridge = visual_sim.SimWorldVisualizer(self, self.world)
         self._setup_done = True
 
@@ -178,7 +162,7 @@ class _KangEngineViewer(App):
             asset_file,
             prim_base_path=f"/env_{env_id}/obj_{obj_id}",
             order=order,
-            shader=self.robot_shader,
+            material=self.robot_material,
             color=color,
         )
 
@@ -190,7 +174,7 @@ class _KangEngineViewer(App):
             asset_file,
             prim_base_path=f"/env_{env_id}/visual_obj_{obj_id}",
             order=order,
-            shader=self.robot_shader,
+            material=self.robot_material,
             color=color,
         )
 
@@ -201,7 +185,7 @@ class _KangEngineViewer(App):
         asset_file,
         prim_base_path,
         order,
-        shader=None,
+        material=None,
         color=None,
     ):
         self.setup_viewer()
@@ -211,7 +195,7 @@ class _KangEngineViewer(App):
             asset_file,
             prim_base_path=prim_base_path,
             order=order,
-            shader=self.robot_shader if shader is None else shader,
+            material=self.robot_material if material is None else material,
             color=color,
         )
 
@@ -230,7 +214,7 @@ class _KangEngineViewer(App):
         if view is None:
             view = self.scene.log_lines(
                 path,
-                self.robot_shader,
+                self.robot_material,
                 starts,
                 ends,
                 colors,
@@ -569,7 +553,7 @@ class KangEngineEngine(_BaseEngine):
                 first.asset_file,
                 prim_base_path=f"/sim_obj_{obj_id}",
                 order=mjcf_order,
-                shader=self._viewer.robot_shader,
+                material=self._viewer.robot_material,
                 color=self._visual_batch_color(obj_id),
             )
 

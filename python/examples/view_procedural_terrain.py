@@ -43,7 +43,7 @@ class ProceduralTerrainViewer(ke.App):
         self.test_bodies_per_type = int(test_bodies_per_type)
 
     def setup(self):
-        self.shaders = self.create_standard_shaders()
+        self.standard_materials = self.create_standard_materials()
         self.set_light_direction(ke.vec3(-0.35, 0.82, -0.45))
         self.set_light_intensity(1.25)
         self.set_light_ambient(ke.vec3(0.32, 0.32, 0.32))
@@ -61,7 +61,7 @@ class ProceduralTerrainViewer(ke.App):
         self.mesh = self.grid.to_mesh(up_axis=ke.UpAxis.Y, backend=self.backend)
 
         self.material = self.create_phong_material(
-            shader=self.shaders.phong,
+            material=self.standard_materials.phong,
             ambient=ke.vec3(0.10, 0.12, 0.10),
             diffuse=ke.vec3(0.27, 0.28, 0.27),
             specular=ke.vec3(0.06, 0.06, 0.06),
@@ -190,14 +190,14 @@ class ProceduralTerrainViewer(ke.App):
             return
 
         sphere_material = self.create_phong_material(
-            shader=self.shaders.phong,
+            material=self.standard_materials.phong,
             ambient=ke.vec3(0.12, 0.06, 0.03),
             diffuse=ke.vec3(0.95, 0.32, 0.08),
             specular=ke.vec3(0.08, 0.08, 0.08),
             shininess=20.0,
         )
         box_material = self.create_phong_material(
-            shader=self.shaders.phong,
+            material=self.standard_materials.phong,
             ambient=ke.vec3(0.03, 0.07, 0.12),
             diffuse=ke.vec3(0.12, 0.42, 0.95),
             specular=ke.vec3(0.08, 0.08, 0.08),

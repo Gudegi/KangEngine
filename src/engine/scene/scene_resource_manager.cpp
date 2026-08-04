@@ -7,6 +7,7 @@
 #include "engine/scene/native/prim.hpp"
 
 #include <cctype>
+#include <stdexcept>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -94,14 +95,25 @@ ResourceHandle SceneResourceManager::registerTexture(const std::string& name,
     return registerEntry(std::move(entry));
 }
 
-ResourceHandle SceneResourceManager::registerShader(const std::string& name,
-                                                    Backend::Shader* shader,
-                                                    const std::string& uri) {
+ResourceHandle SceneResourceManager::registerShaderSource(
+    const std::string& name, ShaderSourceResource shaderSource,
+    const std::string& uri) {
     Entry entry;
-    entry.type = ResourceType::Shader;
+    entry.type = ResourceType::ShaderSource;
     entry.name = name;
     entry.uri = uri;
-    entry.shader = shader;
+    entry.shaderSource =
+        std::make_shared<ShaderSourceResource>(std::move(shaderSource));
+    return registerEntry(std::move(entry));
+}
+
+ResourceHandle SceneResourceManager::registerPipeline(
+    const std::string& name, PipelineResource pipeline, const std::string& uri) {
+    Entry entry;
+    entry.type = ResourceType::Pipeline;
+    entry.name = name;
+    entry.uri = uri;
+    entry.pipeline = std::make_shared<PipelineResource>(std::move(pipeline));
     return registerEntry(std::move(entry));
 }
 
@@ -142,9 +154,16 @@ Backend::Texture* SceneResourceManager::texture(ResourceHandle handle) const {
     return e ? e->texture : nullptr;
 }
 
-Backend::Shader* SceneResourceManager::shader(ResourceHandle handle) const {
+const ShaderSourceResource*
+SceneResourceManager::shaderSource(ResourceHandle handle) const {
     const Entry* e = entry(handle);
-    return e ? e->shader : nullptr;
+    return e && e->shaderSource ? e->shaderSource.get() : nullptr;
+}
+
+const PipelineResource*
+SceneResourceManager::pipeline(ResourceHandle handle) const {
+    const Entry* e = entry(handle);
+    return e && e->pipeline ? e->pipeline.get() : nullptr;
 }
 
 Prim* SceneResourceManager::resourcePrim(ResourceHandle handle) const {
@@ -171,6 +190,27 @@ SceneResourceManager::usagePaths(ResourceHandle handle) const {
     return it->second;
 }
 
+void SceneResourceManager::addExternalUsage(ResourceHandle handle,
+                                            const std::string& path) {
+    if (entry(handle) == nullptr)
+        throw std::invalid_argument("external usage references unknown resource");
+    if (path.empty())
+        throw std::invalid_argument("external usage path must not be empty");
+    _externalUsagePaths[handle].insert(path);
+    invalidateUsageCache();
+}
+
+void SceneResourceManager::removeExternalUsage(ResourceHandle handle,
+                                               const std::string& path) {
+    auto it = _externalUsagePaths.find(handle);
+    if (it == _externalUsagePaths.end())
+        return;
+    it->second.erase(path);
+    if (it->second.empty())
+        _externalUsagePaths.erase(it);
+    invalidateUsageCache();
+}
+
 void SceneResourceManager::invalidateUsageCache() const {
     _usageCacheDirty = true;
 }
@@ -186,8 +226,6 @@ void SceneResourceManager::rebuildUsageCache() const {
     std::unordered_map<Material*, std::vector<ResourceHandle>> materialHandles;
     std::unordered_map<Backend::Texture*, std::vector<ResourceHandle>>
         textureHandles;
-    std::unordered_map<Backend::Shader*, std::vector<ResourceHandle>>
-        shaderHandles;
 
     for (const auto& [handle, e] : _entries) {
         _usageCache[handle] = 0;
@@ -205,12 +243,35 @@ void SceneResourceManager::rebuildUsageCache() const {
             if (e.texture)
                 textureHandles[e.texture].push_back(handle);
             break;
-        case ResourceType::Shader:
-            if (e.shader)
-                shaderHandles[e.shader].push_back(handle);
-            break;
+        case ResourceType::ShaderSource:
+        case ResourceType::Pipeline:
         case ResourceType::Unknown:
             break;
+        }
+    }
+
+    // Authored pipeline definitions reference shader-source resources even
+    // though neither is attached to a renderable scene prim.
+    for (const auto& [pipelineHandle, e] : _entries) {
+        (void)pipelineHandle;
+        if (e.type != ResourceType::Pipeline || !e.pipeline)
+            continue;
+        const std::string pipelinePath =
+            e.prim ? e.prim->getPath() : std::string("<pipeline>");
+        for (ResourceHandle shaderHandle : e.pipeline->shaderSources) {
+            if (_usageCache.find(shaderHandle) == _usageCache.end())
+                continue;
+            ++_usageCache[shaderHandle];
+            _usagePathCache[shaderHandle].push_back(pipelinePath);
+        }
+    }
+
+    for (const auto& [handle, paths] : _externalUsagePaths) {
+        if (_usageCache.find(handle) == _usageCache.end())
+            continue;
+        for (const std::string& path : paths) {
+            ++_usageCache[handle];
+            _usagePathCache[handle].push_back(path);
         }
     }
 
@@ -247,7 +308,6 @@ void SceneResourceManager::rebuildUsageCache() const {
         Material* material = prim->getMaterial();
         addHandles(usedByPrim, materialHandles, material);
         if (material) {
-            addHandles(usedByPrim, shaderHandles, material->getShader());
             std::vector<Backend::Texture*> textures;
             collectMaterialTextures(material, textures);
             for (Backend::Texture* texture : textures)
@@ -278,6 +338,7 @@ void SceneResourceManager::clear() {
     _entries.clear();
     _usageCache.clear();
     _usagePathCache.clear();
+    _externalUsagePaths.clear();
     invalidateUsageCache();
     _nextHandle = 1;
 }
@@ -323,8 +384,10 @@ const char* SceneResourceManager::folderForType(ResourceType type) {
         return "Materials";
     case ResourceType::Texture:
         return "Textures";
-    case ResourceType::Shader:
-        return "Shaders";
+    case ResourceType::ShaderSource:
+        return "ShaderSources";
+    case ResourceType::Pipeline:
+        return "Pipelines";
     case ResourceType::Unknown:
         return "Unknown";
     }

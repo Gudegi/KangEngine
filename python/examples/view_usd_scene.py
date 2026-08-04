@@ -40,7 +40,7 @@ class USDSceneViewer(ke.App):
         self.normal_texture_bindings = []
         self.bounds_min = None
         self.bounds_max = None
-        self.shaders = self.create_standard_shaders()
+        self.standard_materials = self.create_standard_materials()
 
         self._configure_lighting()
 
@@ -52,7 +52,7 @@ class USDSceneViewer(ke.App):
             self.scene.add_mesh(
                 "/ground",
                 ke.geometry.create_plane_data(50.0, ke.UpAxis.Y),
-                self.shaders.ground,
+                self.standard_materials.ground,
             )
 
         textured_count = 0
@@ -181,7 +181,7 @@ class USDSceneViewer(ke.App):
             )
         )
         return self.create_phong_material(
-            shader=self.shaders.phong,
+            material=self.standard_materials.phong,
             ambient=ambient,
             diffuse=diffuse,
             specular=ke.vec3(0.08, 0.08, 0.08),

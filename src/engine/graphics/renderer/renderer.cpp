@@ -56,24 +56,9 @@ void Renderer::setViewportSize(int width, int height) {
         _rasterizer->setViewportSize(width, height);
 }
 
-void Renderer::setBackgroundShader(Backend::Shader* shader) {
-    _backgroundShader = shader;
-    applyBackgroundSettings();
-}
-
 void Renderer::applyBackgroundSettings() {
     if (_rasterizer)
         _rasterizer->setBackgroundSettings(_settings.background);
-    if (!_backgroundShader)
-        return;
-
-    _backgroundShader->use();
-    _backgroundShader->setVec4("checkerColor1",
-                               _settings.background.checkerColor1);
-    _backgroundShader->setVec4("checkerColor2",
-                               _settings.background.checkerColor2);
-    _backgroundShader->setBool("uShowGrid", _settings.background.showGrid);
-    _backgroundShader->setVec4("gridColor", _settings.background.gridColor);
 }
 
 void Renderer::setLight(const DirectionalLight& light) {
@@ -180,6 +165,12 @@ Renderer::createSceneHookPipeline(const SceneHookPipelineDesc& hookDesc) {
     if (hookDesc.shader.stages.empty())
         throw std::invalid_argument(
             "scene hook pipeline requires shader stages");
+    for (const Backend::ShaderStage& stage : hookDesc.shader.stages) {
+        if (stage.type == Backend::ShaderType::Compute)
+            throw std::invalid_argument(
+                "compute shaders require a compute pipeline; scene hook "
+                "pipelines are graphics-only");
+    }
 
     Backend::PipelineLayout* pipelineLayout = hookDesc.pipelineLayout;
     if (!pipelineLayout && hookDesc.useSceneFrameBindings) {

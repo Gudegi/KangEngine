@@ -96,24 +96,11 @@ class MotionViewer(ke.App):
         self.playback_speed = 1.0
         self._frame_accum = 0.0
 
-        device = self.get_renderer().device()
-        vs = package_asset_path("shaders", "common.vs")
-        fs = package_asset_path("shaders", "common.fs")
-        checker_fs = package_asset_path("shaders", "checkerboard.fs")
+        materials = self.create_standard_materials()
+        self.robot_material = materials.common
+        self.ground_material = materials.ground
 
-        self.robot_shader = device.create_shader_from_file(vs, fs)
-        self.ground_shader = device.create_shader_from_file(vs, checker_fs)
-
-        for shader in (self.robot_shader, self.ground_shader):
-            shader.use()
-            shader.set_uniform_block_binding("cameraUBO", 0)
-            shader.set_uniform_block_binding("lightUBO", 1)
-
-        self.ground_shader.use()
-        self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
-        self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.77, 0.93, 0.78, 1.0))
-
-        self.scene.add_ground(scale=100.0, shader=self.ground_shader)
+        self.scene.add_ground(scale=100.0, material=self.ground_material)
 
         self.robot = visual.ArticulationVisual.from_mjcf(
             self.char_file,
@@ -123,7 +110,7 @@ class MotionViewer(ke.App):
             "DFS",
         )
         for prim in self.robot.body_prims():
-            self.scene.add_renderable(prim, self.robot_shader)
+            self.scene.add_renderable(prim, self.robot_material)
 
         self._apply_frame(0)
         print(

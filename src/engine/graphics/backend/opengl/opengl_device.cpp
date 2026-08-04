@@ -407,94 +407,6 @@ void OpenGLShader::checkLinkError(GLuint shaderProgram) {
 
 void OpenGLShader::bind() { glUseProgram(_shaderProgram); }
 
-void OpenGLShader::unbind() { glUseProgram(0); }
-
-void OpenGLShader::setInt(const std::string& name, int value) {
-    glUniform1i(glGetUniformLocation(_shaderProgram, name.c_str()), value);
-}
-
-void OpenGLShader::setFloat(const std::string& name, float value) {
-    glUniform1f(glGetUniformLocation(_shaderProgram, name.c_str()), value);
-}
-
-void OpenGLShader::setVec2(const std::string& name, const glm::vec2& value) {
-    glUniform2fv(glGetUniformLocation(_shaderProgram, name.c_str()), 1,
-                 &value[0]);
-}
-
-void OpenGLShader::setVec3(const std::string& name, const glm::vec3& value) {
-    glUniform3fv(glGetUniformLocation(_shaderProgram, name.c_str()), 1,
-                 &value[0]);
-}
-
-void OpenGLShader::setVec4(const std::string& name, const glm::vec4& value) {
-    glUniform4fv(glGetUniformLocation(_shaderProgram, name.c_str()), 1,
-                 &value[0]);
-}
-
-void OpenGLShader::setMat3(const std::string& name, const glm::mat3& value) {
-    glUniformMatrix3fv(glGetUniformLocation(_shaderProgram, name.c_str()), 1,
-                       GL_FALSE, &value[0][0]);
-}
-
-void OpenGLShader::setMat4(const std::string& name, const glm::mat4& value) {
-    glUniformMatrix4fv(glGetUniformLocation(_shaderProgram, name.c_str()), 1,
-                       GL_FALSE, &value[0][0]);
-}
-
-void OpenGLShader::setMat4Array(const std::string& name,
-                                const glm::mat4* values, size_t count) {
-    if (!values || count == 0)
-        return;
-    glUniformMatrix4fv(glGetUniformLocation(_shaderProgram, name.c_str()),
-                       static_cast<GLsizei>(count), GL_FALSE, &values[0][0][0]);
-}
-
-// KE::Shader compatibility methods
-void OpenGLShader::use() {
-    bind(); // Alias for bind()
-}
-
-void OpenGLShader::setBool(const std::string& name, bool value) {
-    glUniform1i(glGetUniformLocation(_shaderProgram, name.c_str()),
-                static_cast<int>(value));
-}
-
-void OpenGLShader::setColor(const std::string& name, float r, float g, float b,
-                            float a) {
-    glUniform4f(glGetUniformLocation(_shaderProgram, name.c_str()), r, g, b, a);
-}
-
-void OpenGLShader::setVec2(const std::string& name, float x, float y) {
-    glUniform2f(glGetUniformLocation(_shaderProgram, name.c_str()), x, y);
-}
-
-void OpenGLShader::setVec3(const std::string& name, float x, float y, float z) {
-    glUniform3f(glGetUniformLocation(_shaderProgram, name.c_str()), x, y, z);
-}
-
-void OpenGLShader::setVec4(const std::string& name, float x, float y, float z,
-                           float w) {
-    glUniform4f(glGetUniformLocation(_shaderProgram, name.c_str()), x, y, z, w);
-}
-
-void OpenGLShader::setMat2(const std::string& name, const glm::mat2& value) {
-    glUniformMatrix2fv(glGetUniformLocation(_shaderProgram, name.c_str()), 1,
-                       GL_FALSE, &value[0][0]);
-}
-
-void OpenGLShader::setUniformBlockBinding(const std::string& blockName,
-                                          int slot) {
-    GLuint uniformBlockIndex =
-        glGetUniformBlockIndex(_shaderProgram, blockName.c_str());
-    if (uniformBlockIndex == GL_INVALID_INDEX) {
-        std::cerr << "OpenGLShader::setUniformBlockBinding: block '"
-                  << blockName << "' not found in shader\n";
-        return;
-    }
-    glUniformBlockBinding(_shaderProgram, uniformBlockIndex, slot);
-}
-
 // OpenGLTexture Implementation
 OpenGLTexture::OpenGLTexture(const TextureDesc& desc)
     : _width(desc.width), _height(desc.height), _channels(desc.channels),
@@ -1978,10 +1890,6 @@ void OpenGLDevice::bindUniformBuffer(Buffer* buffer, int slot) {
     glBindBufferBase(GL_UNIFORM_BUFFER, slot, glBuf->getHandle());
 }
 
-std::unique_ptr<Shader> OpenGLDevice::createShader(const ShaderDesc& desc) {
-    return std::make_unique<OpenGLShader>(desc);
-}
-
 std::unique_ptr<Texture> OpenGLDevice::createTexture(const TextureDesc& desc) {
     return std::make_unique<OpenGLTexture>(desc);
 }
@@ -2372,21 +2280,6 @@ void OpenGLDevice::submit(CommandBuffer& commandBuffer) {
                 "OpenGL validation error after command submission: " +
                 std::to_string(static_cast<uint32_t>(error)));
     }
-}
-
-std::unique_ptr<Shader> OpenGLDevice::createShader(const char* vertexSource,
-                                                   const char* fragmentSource) {
-    ShaderDesc desc;
-    desc.name = "ConvenienceShader";
-    desc.stages = {{std::string(vertexSource), ShaderType::Vertex},
-                   {std::string(fragmentSource), ShaderType::Fragment}};
-    return std::make_unique<OpenGLShader>(desc);
-}
-
-std::unique_ptr<Shader>
-OpenGLDevice::createShader(const std::string& vertexSource,
-                           const std::string& fragmentSource) {
-    return createShader(vertexSource.c_str(), fragmentSource.c_str());
 }
 
 std::unique_ptr<Texture> OpenGLDevice::createTexture(const std::string path,

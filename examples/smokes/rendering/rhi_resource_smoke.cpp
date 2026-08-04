@@ -39,7 +39,7 @@ TextureResourceDesc textureDesc(TextureFormat format, TextureUsage usage,
     return desc;
 }
 
-std::unique_ptr<Shader> createSamplingShader(OpenGLDevice& device) {
+std::unique_ptr<OpenGLShader> createSamplingShader() {
     constexpr const char* vertexSource = R"(
 #version 410 core
 out vec2 vUV;
@@ -58,11 +58,14 @@ uniform sampler2D uTexture;
 out vec4 outColor;
 void main() { outColor = texture(uTexture, vUV); }
 )";
-    return device.createShader(vertexSource, fragmentSource);
+    ShaderDesc desc;
+    desc.stages = {{vertexSource, ShaderType::Vertex, "main"},
+                   {fragmentSource, ShaderType::Fragment, "main"}};
+    return std::make_unique<OpenGLShader>(desc);
 }
 
 void expectSample(OpenGLTexture* texture, OpenGLSampler* sampler,
-                  Shader* shader, GLuint vao,
+                  OpenGLShader* shader, GLuint vao,
                   const std::array<uint8_t, 4>& expected, int tolerance = 2) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, 64, 64);
@@ -71,8 +74,8 @@ void expectSample(OpenGLTexture* texture, OpenGLSampler* sampler,
     glDisable(GL_FRAMEBUFFER_SRGB);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
-    shader->use();
-    shader->setInt("uTexture", 0);
+    shader->bind();
+    glUniform1i(glGetUniformLocation(shader->getHandle(), "uTexture"), 0);
     texture->bind(0);
     glBindSampler(0, sampler->getHandle());
     glBindVertexArray(vao);
@@ -132,9 +135,8 @@ int main() {
     auto srgb = device.createTexture(srgbDesc, &initialRgba);
     expectInternalFormat(srgb.get(), GL_SRGB8_ALPHA8);
 
-    auto rgba16f = device.createTexture(
-        textureDesc(TextureFormat::RGBA16Float, sampledAttachment,
-                    "rhi_smoke_rgba16f"));
+    auto rgba16f = device.createTexture(textureDesc(
+        TextureFormat::RGBA16Float, sampledAttachment, "rhi_smoke_rgba16f"));
     expectInternalFormat(rgba16f.get(), GL_RGBA16F);
 
     std::array<uint8_t, 4 * 4> redData{};
@@ -146,22 +148,21 @@ int main() {
         &initialRed);
     expectInternalFormat(r8.get(), GL_R8);
 
-    auto depth32 = device.createTexture(textureDesc(
-        TextureFormat::Depth32Float, TextureUsage::RenderAttachment,
-        "rhi_smoke_depth32"));
+    auto depth32 = device.createTexture(
+        textureDesc(TextureFormat::Depth32Float, TextureUsage::RenderAttachment,
+                    "rhi_smoke_depth32"));
     expectInternalFormat(depth32.get(), GL_DEPTH_COMPONENT32F);
     TextureViewDesc depthViewDesc;
     depthViewDesc.format = TextureFormat::Depth32Float;
     depthViewDesc.aspect = TextureAspect::DepthOnly;
     depthViewDesc.label = "rhi_smoke_depth_view";
-    auto depthView =
-        device.createTextureView(depth32.get(), depthViewDesc);
+    auto depthView = device.createTextureView(depth32.get(), depthViewDesc);
     require(depthView->getTexture() == depth32.get(),
             "depth view references the wrong texture");
 
-    auto depthStencil = device.createTexture(textureDesc(
-        TextureFormat::Depth24Stencil8, TextureUsage::RenderAttachment,
-        "rhi_smoke_depth_stencil"));
+    auto depthStencil = device.createTexture(
+        textureDesc(TextureFormat::Depth24Stencil8,
+                    TextureUsage::RenderAttachment, "rhi_smoke_depth_stencil"));
     expectInternalFormat(depthStencil.get(), GL_DEPTH24_STENCIL8);
 
     SamplerDesc samplerDesc;
@@ -175,7 +176,7 @@ int main() {
     require(glSampler != nullptr && glSampler->getHandle() != 0,
             "OpenGL sampler creation failed");
 
-    auto samplingShader = createSamplingShader(device);
+    auto samplingShader = createSamplingShader();
     GLuint samplingVao = 0;
     glGenVertexArrays(1, &samplingVao);
     expectSample(dynamic_cast<OpenGLTexture*>(rgba8.get()), glSampler,
@@ -200,8 +201,7 @@ int main() {
     expectSample(glRgba16f, glSampler, samplingShader.get(), samplingVao,
                  {64, 128, 191, 255}, 3);
 
-    auto* glDepthStencil =
-        dynamic_cast<OpenGLTexture*>(depthStencil.get());
+    auto* glDepthStencil = dynamic_cast<OpenGLTexture*>(depthStencil.get());
     require(glDepthStencil != nullptr,
             "depth-stencil texture is not OpenGL-backed");
     GLuint depthFbo = 0;
@@ -256,8 +256,8 @@ int main() {
     // Cubemap resource/view contract used by the RHI skybox pipeline.
     std::array<std::string, 6> cubeFacePaths{};
     for (size_t face = 0; face < cubeFacePaths.size(); ++face) {
-        cubeFacePaths[face] = "/tmp/kang_rhi_cube_face_" +
-                              std::to_string(face) + ".ppm";
+        cubeFacePaths[face] =
+            "/tmp/kang_rhi_cube_face_" + std::to_string(face) + ".ppm";
         std::ofstream file(cubeFacePaths[face], std::ios::binary);
         file << "P6\n1 1\n255\n";
         const std::array<unsigned char, 3> pixel{
@@ -265,7 +265,7 @@ int main() {
         file.write(reinterpret_cast<const char*>(pixel.data()), pixel.size());
     }
     const std::vector<std::string> cubeFaces(cubeFacePaths.begin(),
-                                              cubeFacePaths.end());
+                                             cubeFacePaths.end());
     auto cube = device.createCubemapTexture(cubeFaces);
     auto* glCube = dynamic_cast<OpenGLTexture*>(cube.get());
     require(glCube && glCube->getTarget() == GL_TEXTURE_CUBE_MAP &&
@@ -285,9 +285,8 @@ int main() {
     auto cubeLayout = device.createBindGroupLayout(cubeLayoutDesc);
     BindGroupDesc cubeGroupDesc;
     cubeGroupDesc.layout = cubeLayout.get();
-    cubeGroupDesc.entries = {
-        {0, nullptr, 0, 0, cubeView.get(), nullptr},
-        {1, nullptr, 0, 0, nullptr, sampler.get()}};
+    cubeGroupDesc.entries = {{0, nullptr, 0, 0, cubeView.get(), nullptr},
+                             {1, nullptr, 0, 0, nullptr, sampler.get()}};
     auto cubeGroup = device.createBindGroup(cubeGroupDesc);
     require(cubeGroup != nullptr, "cubemap bind group creation failed");
     for (const std::string& path : cubeFacePaths)
@@ -296,11 +295,12 @@ int main() {
     for (int iteration = 0; iteration < 32; ++iteration) {
         GLuint releasedHandle = 0;
         {
-            auto temporary = device.createTexture(textureDesc(
-                TextureFormat::RGBA8Unorm, sampledAttachment,
-                "rhi_smoke_recreate"));
+            auto temporary = device.createTexture(
+                textureDesc(TextureFormat::RGBA8Unorm, sampledAttachment,
+                            "rhi_smoke_recreate"));
             auto* glTemporary = dynamic_cast<OpenGLTexture*>(temporary.get());
-            require(glTemporary != nullptr, "temporary texture creation failed");
+            require(glTemporary != nullptr,
+                    "temporary texture creation failed");
             releasedHandle = glTemporary->getHandle();
             require(glIsTexture(releasedHandle) == GL_TRUE,
                     "created texture handle is not live");

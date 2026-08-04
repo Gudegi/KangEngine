@@ -8,15 +8,6 @@ import kangengine as ke
 from kangengine import imgui
 
 
-NORMAL_DEBUG_MODES = [
-    "off",
-    "vertex normal",
-    "tangent",
-    "normal map",
-    "final normal",
-]
-
-
 def repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
@@ -32,37 +23,24 @@ def brickwall_dir() -> Path:
 class BrickwallNormalMapViewer(ke.App):
     def setup(self):
         self.normal_maps_enabled = True
-        self.normal_debug_mode = 0
-
         device = self.get_renderer().device()
-        vs = package_asset_path("shaders", "common.vs")
-        tex_fs = package_asset_path("shaders", "commonTex.fs")
-        checker_fs = package_asset_path("shaders", "checkerboard.fs")
-
-        self.wall_shader = device.create_shader_from_file(vs, tex_fs)
-        self.ground_shader = device.create_shader_from_file(vs, checker_fs)
-
-        for shader in (self.wall_shader, self.ground_shader):
-            shader.use()
-            shader.set_uniform_block_binding("cameraUBO", 0)
-            shader.set_uniform_block_binding("lightUBO", 1)
-            shader.set_uniform_block_binding("shadowUBO", 2)
-            shader.set_int("normalDebugMode", 0)
-
-        self.ground_shader.use()
-        self.ground_shader.set_vec4("checkerColor1", ke.vec4(1.0, 1.0, 1.0, 1.0))
-        self.ground_shader.set_vec4("checkerColor2", ke.vec4(0.62, 0.82, 0.68, 1.0))
+        materials = self.create_standard_materials()
+        self.ground_material = materials.ground
 
         root = brickwall_dir()
         self.diffuse_texture = device.create_texture(str(root / "brickwall.jpg"), True)
         self.normal_texture = device.create_texture(
             str(root / "brickwall_normal.jpg"), True
         )
+        self.wall_material = self.create_phong_material(
+            diffuse_map=self.diffuse_texture,
+            normal_map=self.normal_texture,
+        )
 
         self.wall_view = self.scene.add_mesh(
             "/brickwall",
             ke.geometry.create_plane_data(4.0, ke.UpAxis.Z),
-            self.wall_shader,
+            self.wall_material,
             color=ke.vec4(1.0, 1.0, 1.0, 1.0),
         )
         self.wall_view.set_texture(self.diffuse_texture, 0)
@@ -72,7 +50,7 @@ class BrickwallNormalMapViewer(ke.App):
         ground_view = self.scene.add_mesh(
             "/ground",
             ke.geometry.create_plane_data(6.0, ke.UpAxis.Y),
-            self.ground_shader,
+            self.ground_material,
         )
         ground_view.prim.set_local_translation(ke.vec3(0.0, -2.0, 0.0))
 
@@ -103,17 +81,10 @@ class BrickwallNormalMapViewer(ke.App):
             "normal map", self.normal_maps_enabled
         )
         if changed:
-            self.wall_view.set_texture(
-                self.normal_texture if self.normal_maps_enabled else None,
-                5,
+            self.wall_material.normal_map = (
+                self.normal_texture if self.normal_maps_enabled else None
             )
-        if imgui.button(f"debug: {NORMAL_DEBUG_MODES[self.normal_debug_mode]}"):
-            self.normal_debug_mode = (self.normal_debug_mode + 1) % len(
-                NORMAL_DEBUG_MODES
-            )
-            self.wall_shader.use()
-            self.wall_shader.set_int("normalDebugMode", self.normal_debug_mode)
-        imgui.text("Use the debug modes to inspect tangent-space data.")
+        imgui.text("Toggle the tangent-space normal map.")
         imgui.end()
 
     def postRender(self):

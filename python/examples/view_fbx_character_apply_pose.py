@@ -73,15 +73,15 @@ class FbxCharacterApplyPoseViewer(ke.App):
         self.skeleton_ends = None
         self.skeleton_colors = None
 
-        self.shaders = self.create_standard_shaders()
+        self.standard_materials = self.create_standard_materials()
         self.mesh_shader = (
-            self.shaders.skinned_texture
+            self.standard_materials.skinned_texture
             if self.material_mode == "texture"
-            else self.shaders.skinned_debug
+            else self.standard_materials.skinned_debug_checker
         )
-        self.skeleton_shader = self.shaders.common
+        self.skeleton_shader = self.standard_materials.common
 
-        self.add_ground(shader=self.shaders.ground)
+        self.add_ground(material=self.standard_materials.ground)
         self.set_camera_view([0.0, 1.45, 3.2], [0.0, 0.85, 0.0])
 
         self.character = ke.visual.SkinVisual.from_fbx(

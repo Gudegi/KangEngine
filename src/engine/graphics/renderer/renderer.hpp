@@ -27,7 +27,6 @@ struct SkinnedMeshData;
 namespace Backend {
 class Framebuffer;
 class GraphicsDevice;
-class Shader;
 class Texture;
 class TextureView;
 class RenderTarget;
@@ -95,8 +94,6 @@ class Renderer {
     }
     RendererSettings& settings() { return _settings; }
     const RendererSettings& settings() const { return _settings; }
-    void setBackgroundShader(Backend::Shader* shader);
-    Backend::Shader* backgroundShader() const { return _backgroundShader; }
     void applyBackgroundSettings();
 
     void setLight(const DirectionalLight& light);
@@ -202,7 +199,6 @@ class Renderer {
         Backend::TextureFormat::Undefined;
     std::unique_ptr<Backend::PipelineLayout> _sceneHookDefaultPipelineLayout;
     std::unique_ptr<Backend::PipelineLayout> _sceneHookFramePipelineLayout;
-    Backend::Shader* _backgroundShader = nullptr;
     RendererSettings _settings;
     int _viewportWidth = 0;
     int _viewportHeight = 0;

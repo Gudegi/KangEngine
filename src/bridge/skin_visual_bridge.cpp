@@ -70,24 +70,24 @@ void validateBoneSlots(const SkinVisualBridge::MeshBinding& mesh,
 } // namespace
 
 SkinVisualBridge
-SkinVisualBridge::fromFBX(App* app, Backend::Shader* shader,
+SkinVisualBridge::fromFBX(App* app, Material* material,
                                 const std::string& fbxPath,
                                 const std::string& primBasePath, int clipIndex,
                                 float fps, float scale, bool useMaterials) {
-    return fromFBXWithBind(app, shader, fbxPath, fbxPath, primBasePath,
+    return fromFBXWithBind(app, material, fbxPath, fbxPath, primBasePath,
                            clipIndex, fps, scale, useMaterials);
 }
 
 SkinVisualBridge SkinVisualBridge::fromFBXWithBind(
-    App* app, Backend::Shader* shader, const std::string& motionFbxPath,
+    App* app, Material* material, const std::string& motionFbxPath,
     const std::string& bindFbxPath, const std::string& primBasePath,
     int clipIndex, float fps, float scale, bool useMaterials) {
     if (!app)
         throw std::runtime_error(
             "SkinVisualBridge::fromFBX requires App");
-    if (!shader)
+    if (!material)
         throw std::runtime_error(
-            "SkinVisualBridge::fromFBX requires Shader");
+            "SkinVisualBridge::fromFBX requires Material");
 
     SkinVisualBridge bridge;
     bridge._app = app;
@@ -119,8 +119,6 @@ SkinVisualBridge SkinVisualBridge::fromFBXWithBind(
     whiteDesc.name = "fbx_white_fallback";
     bridge._fallbackWhiteTexture =
         app->getRenderer().device()->createTexture(whiteDesc);
-    shader->use();
-    shader->setInt("uTexture", 0);
 
     for (int i = 0; i < static_cast<int>(meshes.size()); ++i) {
         auto& imported = meshes[static_cast<size_t>(i)];
@@ -148,7 +146,7 @@ SkinVisualBridge SkinVisualBridge::fromFBXWithBind(
         binding.baseColor = color;
 
         App::MeshPrimResult result = app->addSkinnedMeshPrim(
-            shader, path, std::move(imported.skinnedMeshData), glm::vec3(0.0f),
+            material, path, std::move(imported.skinnedMeshData), glm::vec3(0.0f),
             color, true);
         binding.prim = result.prim;
         binding.component =

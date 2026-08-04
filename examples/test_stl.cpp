@@ -125,8 +125,8 @@ void main() {
 
 class MyApp : public App {
   public:
-    std::unique_ptr<Backend::Shader> meshShader;
-    std::unique_ptr<Backend::Shader> planeShader;
+    PhongMaterial meshMaterial;
+    VertexColorMaterial planeMaterial{VertexColorStyle::Checkerboard};
 
     float lightColor[3] = {1.0f, 1.0f, 1.0f};
     glm::vec3 lightPos = glm::vec3(-2.0f, 5.0f, 3.0f);
@@ -142,25 +142,19 @@ class MyApp : public App {
 
     void setup() override {
         KE_TRACE_FUNCTION();
-        meshShader = getRenderer().device()->createShader(phongVs, phongFs);
-        planeShader =
-            getRenderer().device()->createShader(groundVs, checkerBoardFs);
-
-        meshShader->setUniformBlockBinding("CameraUBO", 0);
-        planeShader->setUniformBlockBinding("CameraUBO", 0);
-
         const Color& pastelGreen =
             ColorLibrary::get(KE::ColorType::PASTEL_GREEN);
-        planeShader->use();
-        planeShader->setVec4("checkerColor1", glm::vec4(1.f, 1.f, 1.f, 1.0f));
-        planeShader->setVec4("checkerColor2",
-                             glm::vec4(pastelGreen.r, pastelGreen.g,
-                                       pastelGreen.b, pastelGreen.a));
+        getRenderer().settings().background.checkerColor1 = glm::vec4(1.0f);
+        getRenderer().settings().background.checkerColor2 =
+            glm::vec4(pastelGreen.r, pastelGreen.g, pastelGreen.b,
+                      pastelGreen.a);
+        getRenderer().setLight({glm::normalize(lightPos), glm::vec3(1.0f),
+                                1.0f, glm::vec3(0.15f)});
 
         groundPrim = getScene()->definePrim("/ground", Scene::PrimType::Mesh);
         groundPrim->setMeshData(std::make_shared<Scene::MeshData>(
             Scene::Prim::createPlaneData(30.f, UpAxis::Y)));
-        getSceneRenderSystem().addRenderable(*groundPrim, planeShader.get());
+        getSceneRenderSystem().addRenderable(*groundPrim, &planeMaterial);
 
         std::string stlPath =
             std::string(KANGENGINE_ASSETS_ROOT) +
@@ -181,7 +175,7 @@ class MyApp : public App {
             stlPrim->setLocalScale(glm::vec3(10.f));
             stlPrim->setLocalTranslation(glm::vec3(0.0f, 1.0f, 0.0f));
 
-            getSceneRenderSystem().addRenderable(*stlPrim, meshShader.get());
+            getSceneRenderSystem().addRenderable(*stlPrim, &meshMaterial);
         } catch (const std::exception& e) {
             std::cerr << "STL 로드 실패: " << e.what() << "\n";
         }
@@ -207,7 +201,7 @@ class MyApp : public App {
             objPrim->setLocalTranslation(
                 glm::vec3(2.0f, 1.0f, 0.0f)); // STL 옆에 배치
 
-            getSceneRenderSystem().addRenderable(*objPrim, meshShader.get());
+            getSceneRenderSystem().addRenderable(*objPrim, &meshMaterial);
         } catch (const std::exception& e) {
             std::cerr << "OBJ 로드 실패: " << e.what() << "\n";
         }
@@ -217,21 +211,6 @@ class MyApp : public App {
 
     void preRender() override {
         KE_TRACE_FUNCTION();
-        auto view = this->getViewMatrix();
-
-        // 렌더링 전 조명 위치 (View Space 변환) 업데이트
-        meshShader->use();
-        meshShader->setVec3("lightColor", lightColor[0], lightColor[1],
-                            lightColor[2]);
-        meshShader->setVec3("lightPos",
-                            glm::vec3(view * glm::vec4(lightPos, 1.0f)));
-
-        planeShader->use();
-        planeShader->setVec3("lightColor", lightColor[0], lightColor[1],
-                             lightColor[2]);
-        planeShader->setVec3("lightPos",
-                             glm::vec3(view * glm::vec4(lightPos, 1.0f)));
-
         checkError();
     }
 

@@ -10,8 +10,10 @@ assets, and interactive tools.
 - [Debug Visualization and Text Rendering](DEBUG_VISUALIZATION.md)
 
 Most application code should use `app.scene` and prim-backed views. Use
-`ke.render` directly only for custom shaders, textures, buffers, or renderer
-experiments.
+`ke.render` directly only for textures, buffers, or renderer experiments.
+Custom graphics pipelines are exposed through the C++ and Python renderer
+hook APIs. Python-authored definitions created with
+`App.create_scene_hook_pipeline()` appear in the Resource panel.
 
 Primitive mesh factories live under `ke.geometry`:
 

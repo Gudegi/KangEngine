@@ -20,7 +20,6 @@ def main():
     app._existing_resource_handle = App._existing_resource_handle.__get__(app)
     app._next_resource_name = App._next_resource_name.__get__(app)
     app._register_material_resource = App._register_material_resource.__get__(app)
-    app._register_shader_resource = App._register_shader_resource.__get__(app)
 
     material = ke.material.PhongMaterial()
     handle = app._register_material_resource(material)
@@ -39,13 +38,18 @@ def main():
     if same != handle:
         raise AssertionError("registering same material should return same handle")
 
-    shader = object()
-    try:
-        app._register_shader_resource(shader, "Bad", "memory://bad")
-    except TypeError:
-        pass
-    else:
-        raise AssertionError("C++ registry accepted a non-native shader object")
+    shader = ke.scene.ShaderSourceResource()
+    shader.stage = ke.render.ShaderType.FRAGMENT
+    shader.language = ke.scene.ShaderLanguage.GLSL
+    shader.source = "#version 410 core\nvoid main() {}"
+    shader_handle = app.resources.register_shader_source(
+        "Smoke Fragment", shader, "memory://smoke.fs"
+    )
+    shader_prim = app.resources.resource_prim(shader_handle)
+    if shader_prim is None or not shader_prim.get_path().startswith(
+        "/.Resources/ShaderSources/"
+    ):
+        raise AssertionError("shader source resource was not mirrored")
 
     print("PASS: Python resource manager smoke completed")
 

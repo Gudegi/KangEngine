@@ -13,7 +13,7 @@ ROOT = Path("assets/external/PBR/woods/oak-wood-bare-bl")
 
 class PBROakWoodViewer(ke.App):
     def setup(self):
-        self.shaders = self.create_standard_shaders()
+        self.standard_materials = self.create_standard_materials()
         self.textures = []
         self.texture_flags = {
             "albedo": True,

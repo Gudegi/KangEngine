@@ -32,9 +32,9 @@ class BVHCharacterViewer(ke.App):
         self.show_skeleton = True
         self.show_joints = True
 
-        self.shaders = self.create_standard_shaders()
-        self.skeleton_shader = self.shaders.common
-        self.add_ground(shader=self.shaders.ground)
+        self.standard_materials = self.create_standard_materials()
+        self.skeleton_shader = self.standard_materials.common
+        self.add_ground(material=self.standard_materials.ground)
         self.set_camera_view([0.0, 1.2, 3.0], [0.0, 0.9, 0.0])
 
         self.motion = asset.BVHLoader.load_motion(self.bvh_file, self.scale)

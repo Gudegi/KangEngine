@@ -58,7 +58,7 @@ class HeightmapTerrainViewer(ke.App):
         self.title = title or f"Heightmap Terrain: {self.heightmap_path.name}"
 
     def setup(self):
-        self.shaders = self.create_standard_shaders()
+        self.standard_materials = self.create_standard_materials()
         self.set_light_direction(ke.vec3(-0.35, 0.82, -0.45))
         self.set_light_color(ke.vec3(1.0, 0.96, 0.9))
         self.set_light_intensity(1.25)
@@ -73,7 +73,7 @@ class HeightmapTerrainViewer(ke.App):
             sample_stride=self.sample_stride,
         )
         self.material = self.create_phong_material(
-            shader=self.shaders.phong,
+            material=self.standard_materials.phong,
             ambient=ke.vec3(0.12, 0.16, 0.12),
             diffuse=ke.vec3(0.35, 0.55, 0.32),
             specular=ke.vec3(0.08, 0.08, 0.08),
@@ -183,7 +183,7 @@ class HeightmapTerrainViewer(ke.App):
             1.0,
         )
         test_mat = self.create_phong_material(
-            shader=self.shaders.phong,
+            material=self.standard_materials.phong,
             ambient=ke.vec3(0.18, 0.08, 0.04),
             diffuse=ke.vec3(0.95, 0.35, 0.08),
             specular=ke.vec3(0.1, 0.1, 0.1),

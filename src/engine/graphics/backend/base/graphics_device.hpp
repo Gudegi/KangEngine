@@ -172,7 +172,6 @@ struct FramebufferDesc {
 
 // Forward declarations
 class Buffer;
-class Shader;
 class Texture;
 class TextureView;
 class Sampler;
@@ -227,7 +226,6 @@ class GraphicsDevice {
     virtual std::unique_ptr<Buffer>
     createBuffer(const BufferDesc& desc, const void* data = nullptr) = 0;
     virtual void bindUniformBuffer(Buffer* buffer, int slot) = 0;
-    virtual std::unique_ptr<Shader> createShader(const ShaderDesc& desc) = 0;
     virtual std::unique_ptr<Texture> createTexture(const TextureDesc& desc) = 0;
     virtual std::unique_ptr<Texture> createTexture(const TextureDesc& desc,
                                                    const SamplerDesc&) {
@@ -262,25 +260,6 @@ class GraphicsDevice {
     virtual std::unique_ptr<CommandEncoder> createCommandEncoder() = 0;
     virtual void submit(CommandBuffer& commandBuffer) = 0;
 
-    // Legacy shader convenience path for OpenGL/debug shaders.
-    // New backend-neutral features should use typed buffers and material/pass
-    // bindings instead of expanding name-based uniforms.
-    virtual std::unique_ptr<Shader>
-    createShader(const char* vertexSource, const char* fragmentSource) = 0;
-    virtual std::unique_ptr<Shader>
-    createShader(const std::string& vertexSource,
-                 const std::string& fragmentSource) = 0;
-
-    std::unique_ptr<Shader> createShaderFromFile(const std::string& vertPath,
-                                                 const std::string& fragPath) {
-        ShaderDesc desc;
-        desc.name = vertPath + "|" + fragPath;
-        desc.stages = {
-            {loadShaderSource(vertPath), ShaderType::Vertex, "main"},
-            {loadShaderSource(fragPath), ShaderType::Fragment, "main"},
-        };
-        return createShader(desc);
-    }
     virtual std::unique_ptr<Texture> createTexture(const std::string path,
                                                    bool flip = false) = 0;
     virtual std::unique_ptr<Texture>
@@ -382,53 +361,6 @@ class Framebuffer {
     virtual Texture* getDepthTexture() = 0;
     virtual Texture* getStencilTexture() = 0;
     virtual Texture* getDepthStencilTexture() = 0;
-};
-
-class Shader {
-  public:
-    virtual ~Shader() = default;
-    // Stable diagnostic identity and backend-neutral source descriptor.
-    // Materials use the descriptor to request cached RHI pipeline variants;
-    // render code must not infer shader behavior from file names.
-    virtual const std::string& getName() const = 0;
-    virtual const ShaderDesc& getDesc() const = 0;
-    virtual void bind() = 0;
-    virtual void unbind() = 0;
-
-    // Legacy immediate-uniform API.
-    //
-    // This maps naturally to OpenGL uniform calls and remains useful for
-    // debug shaders and the existing forward renderer. WebGPU/Vulkan-style
-    // paths should treat it as compatibility glue, not as the long-term
-    // material/pass binding model.
-
-    // KE::Shader compatibility
-    virtual void use() = 0; // Alias for bind()
-
-    // Uniform setters - KE::Shader compatible
-    virtual void setBool(const std::string& name, bool value) = 0;
-    virtual void setInt(const std::string& name, int value) = 0;
-    virtual void setFloat(const std::string& name, float value) = 0;
-    virtual void setColor(const std::string& name, float r, float g, float b,
-                          float a) = 0;
-
-    virtual void setVec2(const std::string& name, const glm::vec2& value) = 0;
-    virtual void setVec2(const std::string& name, float x, float y) = 0;
-    virtual void setVec3(const std::string& name, const glm::vec3& value) = 0;
-    virtual void setVec3(const std::string& name, float x, float y,
-                         float z) = 0;
-    virtual void setVec4(const std::string& name, const glm::vec4& value) = 0;
-    virtual void setVec4(const std::string& name, float x, float y, float z,
-                         float w) = 0;
-    virtual void setMat2(const std::string& name, const glm::mat2& value) = 0;
-    virtual void setMat3(const std::string& name, const glm::mat3& value) = 0;
-    virtual void setMat4(const std::string& name, const glm::mat4& value) = 0;
-    virtual void setMat4Array(const std::string& name, const glm::mat4* values,
-                              size_t count) = 0;
-
-    // Legacy OpenGL-style UBO binding by shader block name.
-    virtual void setUniformBlockBinding(const std::string& blockName,
-                                        int slot) = 0;
 };
 
 class Texture {

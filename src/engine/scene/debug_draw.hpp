@@ -11,9 +11,7 @@
 
 namespace KE {
 class App;
-namespace Backend {
-class Shader;
-}
+class Material;
 namespace Scene {
 
 class RenderComponent;
@@ -49,20 +47,20 @@ class DebugDraw {
 
     // Instanced debug lines, closer to Newton viewer.log_lines(). Debug
     // geometry is excluded from the shadow pass.
-    static RenderableHandle logLines(App* app, Backend::Shader* shader,
+    static RenderableHandle logLines(App* app, Material* material,
                                      const std::string& path,
                                      const std::vector<glm::vec3>& starts,
                                      const std::vector<glm::vec3>& ends,
                                      const std::vector<glm::vec4>& colors = {},
                                      float radius = 0.005f, int segments = 8);
     static std::shared_ptr<RenderComponent>
-    logLineComponent(App* app, Backend::Shader* shader, const std::string& path,
+    logLineComponent(App* app, Material* material, const std::string& path,
                      const std::vector<glm::vec3>& starts,
                      const std::vector<glm::vec3>& ends,
                      const std::vector<glm::vec4>& colors = {},
                      float radius = 0.005f, int segments = 8);
 
-    static RenderableHandle logLines(App* app, Backend::Shader* shader,
+    static RenderableHandle logLines(App* app, Material* material,
                                      const std::string& path,
                                      const float* starts, const float* ends,
                                      const float* colors, size_t count,
@@ -83,21 +81,21 @@ class DebugDraw {
                             const float* colors, size_t count,
                             size_t colorCount);
 
-    static RenderableHandle logArrows(App* app, Backend::Shader* shader,
+    static RenderableHandle logArrows(App* app, Material* material,
                                       const std::string& path,
                                       const std::vector<glm::vec3>& starts,
                                       const std::vector<glm::vec3>& ends,
                                       const std::vector<glm::vec4>& colors = {},
                                       float radius = 0.02f, int segments = 12);
     static std::shared_ptr<RenderComponent>
-    logArrowComponent(App* app, Backend::Shader* shader,
+    logArrowComponent(App* app, Material* material,
                       const std::string& path,
                       const std::vector<glm::vec3>& starts,
                       const std::vector<glm::vec3>& ends,
                       const std::vector<glm::vec4>& colors = {},
                       float radius = 0.02f, int segments = 12);
 
-    static RenderableHandle logArrows(App* app, Backend::Shader* shader,
+    static RenderableHandle logArrows(App* app, Material* material,
                                       const std::string& path,
                                       const float* starts, const float* ends,
                                       const float* colors, size_t count,
@@ -119,7 +117,7 @@ class DebugDraw {
                              size_t colorCount);
 
     static RenderableHandle logCoordinateAxes(
-        App* app, Backend::Shader* shader, const std::string& path,
+        App* app, Material* material, const std::string& path,
         glm::vec3 origin = glm::vec3(0.0f),
         glm::quat orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
         float length = 1.0f, float radius = 0.005f, int segments = 8);

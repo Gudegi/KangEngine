@@ -348,8 +348,8 @@ class MixedGpuBatchViewer(ke.App):
         self.args = args
 
     def setup(self):
-        self.shaders = self.create_standard_shaders()
-        self.add_ground(scale=16.0, shader=self.shaders.ground)
+        self.standard_materials = self.create_standard_materials()
+        self.add_ground(scale=16.0, material=self.standard_materials.ground)
         self.set_camera_view([6.0, -9.0, 5.5], [4.0, 1.5, 0.8])
 
         (
@@ -393,7 +393,7 @@ class MixedGpuBatchViewer(ke.App):
             self.balls,
             asset_path("objects", "ball.xml"),
             prim_base_path="/gpu_batch/balls",
-            shader=self.shaders.common,
+            material=self.standard_materials.common,
             color=[
                 env_color(env_id, self.args.num_envs, warm=True)
                 for env_id in range(self.args.num_envs)
@@ -403,7 +403,7 @@ class MixedGpuBatchViewer(ke.App):
             self.robots,
             asset_path("characters", "kw", "kw5.xml"),
             prim_base_path="/gpu_batch/robots",
-            shader=self.shaders.common,
+            material=self.standard_materials.common,
             color=[
                 env_color(env_id, self.args.num_envs)
                 for env_id in range(self.args.num_envs)

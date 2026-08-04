@@ -219,8 +219,8 @@ buildClassifiedAABBLines(const std::vector<DebugBoundsObject>& objects,
 
 class CameraFrustumDebugApp : public App {
   public:
-    std::unique_ptr<Backend::Shader> shader;
-    std::unique_ptr<Backend::Shader> groundShader;
+    VertexColorMaterial material;
+    VertexColorMaterial groundMaterial{VertexColorStyle::Checkerboard};
     std::unique_ptr<Backend::Framebuffer> subjectPreviewFbo;
     PostProcessor subjectPreviewPost;
 
@@ -259,32 +259,13 @@ class CameraFrustumDebugApp : public App {
             DirectionalLight{glm::normalize(glm::vec3(0.35f, 0.85f, 0.45f)),
                              glm::vec3(1.0f), 0.75f, glm::vec3(0.14f)});
 
-        const std::string commonVS = KE::getAssetPath("shaders/common.vs");
-        const std::string commonFS = KE::getAssetPath("shaders/common.fs");
-        const std::string checkerFS =
-            KE::getAssetPath("shaders/checkerboard.fs");
-
-        shader =
-            getRenderer().device()->createShaderFromFile(commonVS, commonFS);
-        groundShader =
-            getRenderer().device()->createShaderFromFile(commonVS, checkerFS);
-        getRenderer().setBackgroundShader(groundShader.get());
-
-        for (Backend::Shader* s : {shader.get(), groundShader.get()}) {
-            s->use();
-            s->setUniformBlockBinding("cameraUBO", 0);
-            s->setUniformBlockBinding("lightUBO", 1);
-            s->setUniformBlockBinding("shadowUBO", 2);
-        }
-
-        groundShader->use();
-        groundShader->setVec4("checkerColor1",
-                              glm::vec4(0.9f, 0.9f, 0.9f, 1.0f));
-        groundShader->setVec4("checkerColor2",
-                              glm::vec4(0.55f, 0.65f, 0.58f, 1.0f));
+        getRenderer().settings().background.checkerColor1 =
+            glm::vec4(0.9f, 0.9f, 0.9f, 1.0f);
+        getRenderer().settings().background.checkerColor2 =
+            glm::vec4(0.55f, 0.65f, 0.58f, 1.0f);
 
         MeshPrimDesc ground;
-        ground.shader = groundShader.get();
+        ground.material = &groundMaterial;
         ground.path = "/debug/ground";
         ground.meshData = Scene::Prim::createPlaneData(360.0f, _upAxis);
         ground.doubleSided = false;
@@ -292,7 +273,7 @@ class CameraFrustumDebugApp : public App {
         addMeshPrim(std::move(ground));
 
         Scene::DebugDraw::logCoordinateAxes(
-            this, shader.get(), "/debug/axis", glm::vec3(0, 0, 0),
+            this, &material, "/debug/axis", glm::vec3(0, 0, 0),
             glm::quat(1.0, 0.f, 0.f, 0.f), 1.8f, 0.11f);
 
         addSceneObjects();
@@ -374,7 +355,7 @@ class CameraFrustumDebugApp : public App {
                 const glm::quat& orientation, const glm::vec4& color) {
                 Scene::MeshData mesh = Scene::Prim::createCubeData(size);
                 MeshPrimDesc desc;
-                desc.shader = shader.get();
+                desc.material = &material;
                 desc.path = path;
                 desc.meshData = mesh;
                 desc.position = position;
@@ -392,7 +373,7 @@ class CameraFrustumDebugApp : public App {
             Scene::MeshData mesh =
                 Scene::Prim::createSphereData(radius, 32, 16);
             MeshPrimDesc desc;
-            desc.shader = shader.get();
+            desc.material = &material;
             desc.path = path;
             desc.meshData = mesh;
             desc.position = position;
@@ -497,7 +478,7 @@ class CameraFrustumDebugApp : public App {
         updateFrustumDebug();
 
         MeshPrimDesc subjectBody;
-        subjectBody.shader = shader.get();
+        subjectBody.material = &material;
         subjectBody.path = "/debug/subject_camera_body";
         subjectBody.meshData = Scene::Prim::createSphereData(0.12f, 32, 16);
         subjectBody.position = subjectCamera.getCameraPos();

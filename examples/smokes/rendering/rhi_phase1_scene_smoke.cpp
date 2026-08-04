@@ -45,41 +45,6 @@ class Phase1SceneSmoke final : public App {
         setLight({glm::normalize(glm::vec3(0.4f, 1.0f, 0.25f)),
                   glm::vec3(1.0f), 1.0f, glm::vec3(0.12f)});
 
-        auto* device = getGraphicsDevice();
-        commonShader = device->createShaderFromFile(
-            getAssetPath("shaders/common.vs"),
-            getAssetPath("shaders/common.fs"));
-        phongShader = device->createShaderFromFile(
-            getAssetPath("shaders/common.vs"),
-            getAssetPath("shaders/phong.fs"));
-        pbrShader = device->createShaderFromFile(
-            getAssetPath("shaders/common.vs"),
-            getAssetPath("shaders/pbr_forward.fs"));
-        skinnedPhongShader = device->createShaderFromFile(
-            getAssetPath("shaders/skinned_mesh.vs"),
-            getAssetPath("shaders/phong.fs"));
-        skinnedPbrShader = device->createShaderFromFile(
-            getAssetPath("shaders/skinned_mesh.vs"),
-            getAssetPath("shaders/pbr_forward.fs"));
-        texturedShader = device->createShaderFromFile(
-            getAssetPath("shaders/common.vs"),
-            getAssetPath("shaders/commonTex.fs"));
-        skinnedTexturedShader = device->createShaderFromFile(
-            getAssetPath("shaders/skinned_mesh.vs"),
-            getAssetPath("shaders/commonTex.fs"));
-        checkerShader = device->createShaderFromFile(
-            getAssetPath("shaders/common.vs"),
-            getAssetPath("shaders/checkerboard.fs"));
-        for (auto* shader : {commonShader.get(), phongShader.get(),
-                             pbrShader.get(), skinnedPhongShader.get(),
-                             skinnedPbrShader.get(), texturedShader.get(),
-                             skinnedTexturedShader.get(), checkerShader.get()}) {
-            shader->setUniformBlockBinding("cameraUBO", 0);
-            shader->setUniformBlockBinding("lightUBO", 1);
-            shader->setUniformBlockBinding("shadowUBO", 2);
-        }
-        getRenderer().setBackgroundShader(checkerShader.get());
-
         createMaterialTexture();
         createMaterials();
         createStaticScene();
@@ -303,14 +268,14 @@ class Phase1SceneSmoke final : public App {
     }
 
     void createMaterials() {
-        phong = std::make_unique<PhongMaterial>(phongShader.get());
+        phong = std::make_unique<PhongMaterial>();
         phong->setDiffuse({0.8f, 0.35f, 0.2f})
             ->setDiffuseMap(materialTexture.get())
             ->setSpecularMap(materialTexture.get())
             ->setAlphaMap(materialTexture.get())
             ->setNormalMap(materialTexture.get());
 
-        pbr = std::make_unique<PBRMaterial>(pbrShader.get());
+        pbr = std::make_unique<PBRMaterial>();
         pbr->setBaseColor({0.2f, 0.65f, 0.9f, 1.0f})
             ->setMetallic(0.25f)
             ->setRoughness(0.55f)
@@ -323,11 +288,11 @@ class Phase1SceneSmoke final : public App {
             ->setOrmTexture(materialTexture.get())
             ->setEmissiveTexture(materialTexture.get());
 
-        skinnedPhong = std::make_unique<PhongMaterial>(skinnedPhongShader.get());
+        skinnedPhong = std::make_unique<PhongMaterial>();
         skinnedPhong->setDiffuseMap(materialTexture.get())
             ->setAlphaMap(materialTexture.get())
             ->setNormalMap(materialTexture.get());
-        skinnedPbr = std::make_unique<PBRMaterial>(skinnedPbrShader.get());
+        skinnedPbr = std::make_unique<PBRMaterial>();
         skinnedPbr->setBaseColorTexture(materialTexture.get())
             ->setNormalTexture(materialTexture.get())
             ->setOrmTexture(materialTexture.get());
@@ -335,7 +300,7 @@ class Phase1SceneSmoke final : public App {
 
     void createStaticScene() {
         MeshPrimDesc ground;
-        ground.shader = checkerShader.get();
+        ground.material = &checkerMaterial;
         ground.path = "/smoke/checkerboard_ground";
         ground.meshData = Scene::Prim::createPlaneData(12.0f, UpAxis::Y);
         ground.doubleSided = true;
@@ -349,6 +314,8 @@ class Phase1SceneSmoke final : public App {
                         false, AlphaMode::Mask);
         addMaterialPrim("/smoke/pbr_blend", pbr.get(), {0.0f, 0.5f, 1.5f},
                         true, AlphaMode::Blend);
+        addMaterialPrim("/smoke/debug_checker", &debugCheckerMaterial,
+                        {-2.8f, 0.5f, 1.5f}, true, AlphaMode::Opaque);
     }
 
     void createSkinnedScene() {
@@ -361,6 +328,9 @@ class Phase1SceneSmoke final : public App {
             "/smoke/skinned_pbr_blend", skinnedPbr.get(),
             {1.1f, 1.5f, 0.0f}, AlphaMode::Blend);
         skinnedPbrHandle = pbrResult.second;
+        addSkinnedMaterialPrim("/smoke/skinned_debug_checker",
+                               &debugCheckerMaterial, {2.8f, 1.5f, 1.5f},
+                               AlphaMode::Opaque);
     }
 
     void createTexturedVertexColorScene() {
@@ -370,7 +340,7 @@ class Phase1SceneSmoke final : public App {
         staticPrim->setMeshData(std::make_shared<Scene::MeshData>(
             Scene::Prim::createCubeData(0.65f)));
         staticPrim->setLocalTranslation({-2.8f, 1.4f, 0.0f});
-        const auto staticHandle = addRenderable(texturedShader.get(), staticPrim);
+        const auto staticHandle = addRenderable(&texturedMaterial, staticPrim);
         require(staticHandle != InvalidHandle,
                 "textured vertex-color registration failed");
         setRenderableTexture(staticHandle, materialTexture.get(),
@@ -389,7 +359,7 @@ class Phase1SceneSmoke final : public App {
         skinPrim->setMeshData(std::make_shared<Scene::MeshData>(skin.mesh));
         skinPrim->setLocalTranslation({2.8f, 1.4f, 0.0f});
         const auto skinHandle =
-            addSkinnedRenderable(skinnedTexturedShader.get(), skinPrim, skin);
+            addSkinnedRenderable(&texturedMaterial, skinPrim, skin);
         require(skinHandle != InvalidHandle,
                 "skinned textured vertex-color registration failed");
         setRenderableTexture(skinHandle, materialTexture.get(),
@@ -405,7 +375,8 @@ class Phase1SceneSmoke final : public App {
         prim->setMeshData(std::make_shared<Scene::MeshData>(
             Scene::Prim::createCubeData(0.3f)));
         externalHandle =
-            addRenderable(commonShader.get(), prim, TransformSource::ExternalBuffer);
+            addRenderable(&commonMaterial, prim,
+                          TransformSource::ExternalBuffer);
         require(externalHandle != InvalidHandle,
                 "external-buffer renderable registration failed");
         const std::vector<glm::mat4> transforms = {
@@ -420,7 +391,7 @@ class Phase1SceneSmoke final : public App {
 
     void createVisualBridgeScene() {
         skinBridge = Bridge::SkinVisualBridge::fromFBX(
-            this, skinnedTexturedShader.get(),
+            this, &texturedMaterial,
             getAssetPath("external/Capoeira.fbx"), "/smoke/skin_bridge", -1,
             -1.0f, 0.01f, true);
         require(!skinBridge.meshes().empty(),
@@ -434,7 +405,7 @@ class Phase1SceneSmoke final : public App {
         config.visible = true;
         config.showJoints = true;
         skeletalBridge = Bridge::SkeletalVisualBridge::define(
-            this, commonShader.get(), "/smoke/skeletal_bridge", bvhMotion,
+            this, &commonMaterial, "/smoke/skeletal_bridge", bvhMotion,
             0.0f, true, config);
         require(skeletalBridge.boneHandle() != InvalidHandle &&
                     skeletalBridge.jointHandle() != InvalidHandle,
@@ -453,7 +424,7 @@ class Phase1SceneSmoke final : public App {
                 "ArticulationVisualBridge imported no body prims");
         for (auto* body : articulationBridge.bodyPrims()) {
             const auto handle = addRenderable(
-                commonShader.get(), body, TransformSource::ExternalBuffer);
+                &commonMaterial, body, TransformSource::ExternalBuffer);
             require(handle != InvalidHandle,
                     "ArticulationVisualBridge external registration failed");
             updateRenderableTransforms(handle, {glm::mat4(1.0f)});
@@ -486,14 +457,10 @@ class Phase1SceneSmoke final : public App {
     std::vector<RenderableHandle> articulationHandles;
     Animation::SkeletonMotion bvhMotion;
 
-    std::unique_ptr<Backend::Shader> commonShader;
-    std::unique_ptr<Backend::Shader> phongShader;
-    std::unique_ptr<Backend::Shader> pbrShader;
-    std::unique_ptr<Backend::Shader> skinnedPhongShader;
-    std::unique_ptr<Backend::Shader> skinnedPbrShader;
-    std::unique_ptr<Backend::Shader> texturedShader;
-    std::unique_ptr<Backend::Shader> skinnedTexturedShader;
-    std::unique_ptr<Backend::Shader> checkerShader;
+    VertexColorMaterial commonMaterial;
+    VertexColorMaterial texturedMaterial{VertexColorStyle::Textured};
+    VertexColorMaterial checkerMaterial{VertexColorStyle::Checkerboard};
+    VertexColorMaterial debugCheckerMaterial{VertexColorStyle::DebugChecker};
     std::unique_ptr<Backend::Texture> materialTexture;
     std::unique_ptr<PhongMaterial> phong;
     std::unique_ptr<PBRMaterial> pbr;
