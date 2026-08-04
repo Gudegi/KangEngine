@@ -367,9 +367,8 @@ class DebugGeometry:
         """Add instanced line meshes and return a DebugPrimitiveView."""
         if material is None:
             material = self._scene._app.create_standard_materials().debug
-        shader = getattr(material, "shader", material)
         return self._scene.log_lines(
-            path, shader, starts, ends, colors, radius, segments
+            path, material, starts, ends, colors, radius, segments
         )
 
     def add_arrows(
@@ -386,9 +385,8 @@ class DebugGeometry:
         """Add instanced arrow meshes and return a DebugPrimitiveView."""
         if material is None:
             material = self._scene._app.create_standard_materials().debug
-        shader = getattr(material, "shader", material)
         return self._scene.log_arrows(
-            path, shader, starts, ends, colors, radius, segments
+            path, material, starts, ends, colors, radius, segments
         )
 
     def add_axes(
@@ -805,7 +803,7 @@ class SceneContext:
     def log_lines(
         self,
         path: str,
-        shader,
+        material,
         starts,
         ends,
         colors=None,
@@ -814,7 +812,7 @@ class SceneContext:
     ):
         component = scene.DebugDraw.log_component_lines(
             self._app,
-            shader,
+            unwrap_native(material),
             path,
             starts,
             ends,
@@ -829,7 +827,7 @@ class SceneContext:
     def log_arrows(
         self,
         path: str,
-        shader,
+        material,
         starts,
         ends,
         colors=None,
@@ -838,7 +836,7 @@ class SceneContext:
     ):
         component = scene.DebugDraw.log_component_arrows(
             self._app,
-            shader,
+            unwrap_native(material),
             path,
             starts,
             ends,

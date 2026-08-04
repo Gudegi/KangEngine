@@ -79,7 +79,7 @@ class FbxCharacterApplyPoseViewer(ke.App):
             if self.material_mode == "texture"
             else self.standard_materials.skinned_debug_checker
         )
-        self.skeleton_shader = self.standard_materials.common
+        self.skeleton_material = self.standard_materials.common
 
         self.add_ground(material=self.standard_materials.ground)
         self.set_camera_view([0.0, 1.45, 3.2], [0.0, 0.85, 0.0])
@@ -220,7 +220,7 @@ class FbxCharacterApplyPoseViewer(ke.App):
         if self.line_view is None:
             self.line_view = self.scene.log_lines(
                 "/debug/fbx_apply_pose_skeleton",
-                self.skeleton_shader,
+                self.skeleton_material,
                 starts_t,
                 ends_t,
                 colors_t,

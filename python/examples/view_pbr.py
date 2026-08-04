@@ -76,7 +76,7 @@ class PBRViewer(ke.App):
         view.set_casts_shadow(False)
 
     def _configure_local_lights(self):
-        warm_light = ke.PointLight()
+        warm_light = ke.scene.PointLight()
         warm_light.position = ke.vec3(-1.45, -1.35, 1.25)
         warm_light.color = ke.vec3(1.0, 0.55, 0.28)
         warm_light.intensity = 85.0
@@ -84,7 +84,7 @@ class PBRViewer(ke.App):
         warm_prim = self.scene.define_prim("/lights/warm_point", scene.PrimType.Light)
         warm_prim.set_point_light(warm_light)
 
-        cool_light = ke.PointLight()
+        cool_light = ke.scene.PointLight()
         cool_light.position = ke.vec3(1.45, 0.95, 1.15)
         cool_light.color = ke.vec3(0.25, 0.55, 1.0)
         cool_light.intensity = 70.0
@@ -92,7 +92,7 @@ class PBRViewer(ke.App):
         cool_prim = self.scene.define_prim("/lights/cool_point", scene.PrimType.Light)
         cool_prim.set_point_light(cool_light)
 
-        spot_light = ke.SpotLight()
+        spot_light = ke.scene.SpotLight()
         spot_light.position = ke.vec3(0.0, -3.2, 2.8)
         spot_light.direction = ke.vec3(0.0, 0.82, -0.58)
         spot_light.color = ke.vec3(1.0, 0.92, 0.78)

@@ -18,7 +18,7 @@ def main():
     scene = ke.scene.create_backend(ke.scene.BackendType.Native)
 
     point_prim = scene.define_prim("/lights/test_point", ke.scene.PrimType.Light)
-    point = ke.PointLight()
+    point = ke.scene.PointLight()
     point.position = ke.vec3(1.0, 2.0, 3.0)
     point.color = ke.vec3(0.25, 0.5, 1.0)
     point.intensity = 2.5
@@ -46,7 +46,7 @@ def main():
         raise AssertionError("LightComponent version did not advance")
 
     spot_prim = scene.define_prim("/lights/test_spot", ke.scene.PrimType.Light)
-    spot = ke.SpotLight()
+    spot = ke.scene.SpotLight()
     spot.position = ke.vec3(-1.0, 0.0, 2.0)
     spot.direction = ke.vec3(0.0, -1.0, 0.0)
     spot.color = ke.vec3(1.0, 0.5, 0.25)
@@ -63,7 +63,7 @@ def main():
     directional_prim = scene.define_prim(
         "/lights/test_directional", ke.scene.PrimType.Light
     )
-    directional = ke.DirectionalLight()
+    directional = ke.scene.DirectionalLight()
     directional.direction = ke.vec3(0.0, 0.0, -1.0)
     directional.color = ke.vec3(1.0, 1.0, 0.75)
     directional.intensity = 0.8

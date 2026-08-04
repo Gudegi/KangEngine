@@ -98,13 +98,9 @@ def __getattr__(name):
 
 # Core engine API. Keep top-level exports focused on common viewer/app usage;
 # heavier simulation and MimicKit APIs stay lazy via _LAZY_IMPORTS.
-Camera = _set_public_module(_ke.Camera, __name__)
 UpAxis = _set_public_module(_ke.UpAxis, __name__)
 InteractionMode = _set_public_module(_ke.InteractionMode, __name__)
 RayPickResult = _set_public_module(_ke.RayPickResult, __name__)
-DirectionalLight = _set_public_module(_ke.DirectionalLight, __name__)
-PointLight = _set_public_module(_ke.PointLight, __name__)
-SpotLight = _set_public_module(_ke.SpotLight, __name__)
 ColorLibrary = _set_public_module(_ke.ColorLibrary, __name__)
 ColorType = _set_public_module(_ke.ColorType, __name__)
 Color = _set_public_module(_ke.Color, __name__)
@@ -155,13 +151,9 @@ __all__ = [
     "KangEngineEngine",
     "build_mimickit_engine",
     "install_mimickit_engine_builder",
-    "Camera",
     "UpAxis",
     "InteractionMode",
     "RayPickResult",
-    "DirectionalLight",
-    "PointLight",
-    "SpotLight",
     "vec3",
     "vec2",
     "vec4",

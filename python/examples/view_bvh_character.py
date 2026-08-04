@@ -33,7 +33,7 @@ class BVHCharacterViewer(ke.App):
         self.show_joints = True
 
         self.standard_materials = self.create_standard_materials()
-        self.skeleton_shader = self.standard_materials.common
+        self.skeleton_material = self.standard_materials.common
         self.add_ground(material=self.standard_materials.ground)
         self.set_camera_view([0.0, 1.2, 3.0], [0.0, 0.9, 0.0])
 
@@ -50,7 +50,7 @@ class BVHCharacterViewer(ke.App):
         config.show_joints = self.show_joints
         self.skeleton_visual = visual.SkeletalVisual.define(
             self,
-            self.skeleton_shader,
+            self.skeleton_material,
             "/bvh_skeleton",
             self.motion,
             0.0,

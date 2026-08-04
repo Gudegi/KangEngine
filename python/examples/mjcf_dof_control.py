@@ -99,8 +99,7 @@ class MjcfDofControlApp(ke.App):
 
         self.configure_camera()
         self.standard_materials = self.create_standard_materials()
-        # DebugDraw is a low-level renderer path and still consumes a Shader.
-        self.debug_shader = self.standard_materials.common.get_shader()
+        self.debug_material = self.standard_materials.common
         self.create_world()
         self.load_articulation()
         self._reset()
@@ -442,7 +441,7 @@ class MjcfDofControlApp(ke.App):
         if self.contact_force_view is None:
             self.contact_force_view = self.scene.log_arrows(
                 "/debug/contact_forces",
-                self.debug_shader,
+                self.debug_material,
                 starts,
                 ends,
                 colors,

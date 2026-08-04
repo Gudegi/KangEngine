@@ -1080,37 +1080,6 @@ PYBIND11_MODULE(_kangengine, m) {
             py::arg("data"), py::arg("usage"), py::arg("label") = "",
             "Create a GPU buffer initialized from a contiguous Python buffer.");
 
-    py::class_<DirectionalLight>(
-        m, "DirectionalLight",
-        "Infinite-distance light used as the renderer's main sun light.")
-        .def(py::init<>())
-        .def_readwrite("direction", &DirectionalLight::direction)
-        .def_readwrite("color", &DirectionalLight::color)
-        .def_readwrite("intensity", &DirectionalLight::intensity)
-        .def_readwrite("ambient", &DirectionalLight::ambient);
-
-    py::class_<PointLight>(
-        m, "PointLight",
-        "Finite local light with position, color, intensity, and range.")
-        .def(py::init<>())
-        .def_readwrite("position", &PointLight::position)
-        .def_readwrite("color", &PointLight::color)
-        .def_readwrite("intensity", &PointLight::intensity)
-        .def_readwrite("range", &PointLight::range);
-
-    py::class_<SpotLight>(
-        m, "SpotLight",
-        "Finite cone light with position, direction, color, intensity, and "
-        "range.")
-        .def(py::init<>())
-        .def_readwrite("position", &SpotLight::position)
-        .def_readwrite("direction", &SpotLight::direction)
-        .def_readwrite("color", &SpotLight::color)
-        .def_readwrite("intensity", &SpotLight::intensity)
-        .def_readwrite("range", &SpotLight::range)
-        .def_readwrite("inner_cone_angle", &SpotLight::innerConeAngle)
-        .def_readwrite("outer_cone_angle", &SpotLight::outerConeAngle);
-
     py::class_<Renderer>(
         m, "Renderer",
         "Renderer facade for updating renderable resources and draw settings.")
@@ -1662,35 +1631,6 @@ py::class_<glm::vec3>(m, "vec3")
             return glm::scale(mat, vec);
         },
         "Scale a matrix by a vector");
-
-    py::class_<Camera>(m, "Camera",
-                       "View camera used by KangEngine applications.")
-        .def("get_camera_pos", &Camera::getCameraPos,
-             "Return the camera position.")
-        .def("get_target_pos", &Camera::getTargetPos,
-             "Return the current camera target point.")
-        .def("get_camera_look_dir", &Camera::getCameraLookDir,
-             "Return the normalized forward/look direction.")
-        .def("get_camera_up_dir", &Camera::getCameraUpDir,
-             "Return the normalized up direction.")
-        .def("get_camera_right_dir", &Camera::getCameraRightDir,
-             "Return the normalized right direction.")
-        .def("get_fov", &Camera::getFoV,
-             "Return the vertical field of view in degrees.")
-        .def("get_near_plane", &Camera::getNearPlane,
-             "Return the near clipping distance.")
-        .def("get_far_plane", &Camera::getFarPlane,
-             "Return the far clipping distance.")
-        .def("set_camera_pos", &Camera::setCameraPos, py::arg("camera_pos"),
-             "Set the camera position.")
-        .def("set_target_pos", &Camera::setTargetPos, py::arg("target_pos"),
-             "Set the camera target point.")
-        .def("set_fov", &Camera::setFoV, py::arg("fov"),
-             "Set the vertical field of view in degrees.")
-        .def("set_near_plane", &Camera::setNearPlane, py::arg("distance"),
-             "Set the near clipping distance.")
-        .def("set_far_plane", &Camera::setFarPlane, py::arg("distance"),
-             "Set the far clipping distance.");
 
     py::class_<FixedStepClock>(
         m, "FixedStepClock",

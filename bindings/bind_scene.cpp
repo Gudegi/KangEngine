@@ -12,6 +12,8 @@
 #include "engine/core/app/app.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/scene/debug_draw.hpp"
+#include "engine/scene/types/camera.hpp"
+#include "engine/scene/types/light.hpp"
 #include "engine/scene/component/transform_component.hpp"
 #include "engine/scene/component/mesh_component.hpp"
 #include "engine/scene/component/render_component.hpp"
@@ -44,6 +46,66 @@ void bind_scene(py::module& m) {
     py::module geometry = m.def_submodule(
         "geometry", "Geometry algorithms and procedural mesh factories.");
 
+    // Scene-owned viewport and light value types.
+    py::class_<KE::Camera>(scene, "Camera",
+                           "View camera used by KangEngine applications.")
+        .def("get_camera_pos", &KE::Camera::getCameraPos,
+             "Return the camera position.")
+        .def("get_target_pos", &KE::Camera::getTargetPos,
+             "Return the current camera target point.")
+        .def("get_camera_look_dir", &KE::Camera::getCameraLookDir,
+             "Return the normalized forward/look direction.")
+        .def("get_camera_up_dir", &KE::Camera::getCameraUpDir,
+             "Return the normalized up direction.")
+        .def("get_camera_right_dir", &KE::Camera::getCameraRightDir,
+             "Return the normalized right direction.")
+        .def("get_fov", &KE::Camera::getFoV,
+             "Return the vertical field of view in degrees.")
+        .def("get_near_plane", &KE::Camera::getNearPlane,
+             "Return the near clipping distance.")
+        .def("get_far_plane", &KE::Camera::getFarPlane,
+             "Return the far clipping distance.")
+        .def("set_camera_pos", &KE::Camera::setCameraPos,
+             py::arg("camera_pos"), "Set the camera position.")
+        .def("set_target_pos", &KE::Camera::setTargetPos,
+             py::arg("target_pos"), "Set the camera target point.")
+        .def("set_fov", &KE::Camera::setFoV, py::arg("fov"),
+             "Set the vertical field of view in degrees.")
+        .def("set_near_plane", &KE::Camera::setNearPlane,
+             py::arg("distance"), "Set the near clipping distance.")
+        .def("set_far_plane", &KE::Camera::setFarPlane,
+             py::arg("distance"), "Set the far clipping distance.");
+
+    py::class_<KE::Scene::DirectionalLight>(
+        scene, "DirectionalLight",
+        "Infinite-distance light used as the scene's main sun light.")
+        .def(py::init<>())
+        .def_readwrite("direction", &KE::Scene::DirectionalLight::direction)
+        .def_readwrite("color", &KE::Scene::DirectionalLight::color)
+        .def_readwrite("intensity", &KE::Scene::DirectionalLight::intensity)
+        .def_readwrite("ambient", &KE::Scene::DirectionalLight::ambient);
+
+    py::class_<KE::Scene::PointLight>(scene, "PointLight",
+                                      "Finite local scene light.")
+        .def(py::init<>())
+        .def_readwrite("position", &KE::Scene::PointLight::position)
+        .def_readwrite("color", &KE::Scene::PointLight::color)
+        .def_readwrite("intensity", &KE::Scene::PointLight::intensity)
+        .def_readwrite("range", &KE::Scene::PointLight::range);
+
+    py::class_<KE::Scene::SpotLight>(scene, "SpotLight",
+                                     "Finite cone-shaped scene light.")
+        .def(py::init<>())
+        .def_readwrite("position", &KE::Scene::SpotLight::position)
+        .def_readwrite("direction", &KE::Scene::SpotLight::direction)
+        .def_readwrite("color", &KE::Scene::SpotLight::color)
+        .def_readwrite("intensity", &KE::Scene::SpotLight::intensity)
+        .def_readwrite("range", &KE::Scene::SpotLight::range)
+        .def_readwrite("inner_cone_angle",
+                       &KE::Scene::SpotLight::innerConeAngle)
+        .def_readwrite("outer_cone_angle",
+                       &KE::Scene::SpotLight::outerConeAngle);
+
     // Token class
     py::class_<KE::Scene::Token>(
         scene, "Token", "Interned-style attribute key used by scene prims.")
@@ -69,8 +131,7 @@ void bind_scene(py::module& m) {
         .value("MeshInstance", KE::Scene::PrimType::MeshInstance)
         .value("Camera", KE::Scene::PrimType::Camera)
         .value("Light", KE::Scene::PrimType::Light)
-        .value("Resource", KE::Scene::PrimType::Resource)
-        .export_values();
+        .value("Resource", KE::Scene::PrimType::Resource);
 
     py::enum_<KE::Scene::ResourceType>(
         scene, "ResourceType",
@@ -1607,4 +1668,5 @@ void bind_scene(py::module& m) {
         return false;
 #endif
     });
+
 }
