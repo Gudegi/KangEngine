@@ -23,7 +23,7 @@ REQUIRED_TEXT = {
         "native fallback": "PhysX world configuration including timestep, up axis, and reporting.",
     },
     "rendering.html": {
-        "native fallback": "Factory for backend graphics resources such as shaders and textures.",
+        "native fallback": "Factory for backend graphics resources such as textures and buffers.",
     },
     "visual.html": {
         "simulation visual section": "Simulation visual sync",

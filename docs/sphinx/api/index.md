@@ -64,8 +64,11 @@ utils
 
     Renderer
     GraphicsDevice
-    Shader
     Texture
+    Buffer
+    GraphicsPipeline
+    ShaderDesc
+    SceneHookPipelineDesc
 ```
 
 ### Materials
