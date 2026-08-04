@@ -34,16 +34,14 @@ class PhongTextureViewer(ke.App):
         self.textures.append(texture)
 
         white = self.create_phong_material(
-            material=self.standard_materials.phong,
-            diffuse=ke.vec3(1.0, 1.0, 1.0),
-            specular=ke.vec3(0.05, 0.05, 0.05),
+            diffuse=ke.Vec3(1.0, 1.0, 1.0),
+            specular=ke.Vec3(0.05, 0.05, 0.05),
             shininess=16.0,
             diffuse_map=texture,
         )
         tinted = self.create_phong_material(
-            material=self.standard_materials.phong,
-            diffuse=ke.vec3(1.0, 0.35, 0.35),
-            specular=ke.vec3(0.05, 0.05, 0.05),
+            diffuse=ke.Vec3(1.0, 0.35, 0.35),
+            specular=ke.Vec3(0.05, 0.05, 0.05),
             shininess=16.0,
             diffuse_map=texture,
         )
@@ -53,25 +51,25 @@ class PhongTextureViewer(ke.App):
             "/phong_texture/white_diffuse",
             mesh_data,
             white,
-            color=ke.vec4(1.0, 1.0, 1.0, 1.0),
+            color=ke.Vec4(1.0, 1.0, 1.0, 1.0),
         )
-        left.prim.set_local_translation(ke.vec3(-1.15, 0.0, 0.0))
-        left.set_alpha_mode(ke.render.AlphaMode.Blend)
+        left.prim.set_local_translation(ke.Vec3(-1.15, 0.0, 0.0))
+        left.set_alpha_mode(ke.render.AlphaMode.BLEND)
 
         right = self.scene.add_mesh(
             "/phong_texture/red_tint",
             mesh_data,
             tinted,
-            color=ke.vec4(1.0, 1.0, 1.0, 1.0),
+            color=ke.Vec4(1.0, 1.0, 1.0, 1.0),
         )
-        right.prim.set_local_translation(ke.vec3(1.15, 0.0, 0.0))
-        right.set_alpha_mode(ke.render.AlphaMode.Blend)
+        right.prim.set_local_translation(ke.Vec3(1.15, 0.0, 0.0))
+        right.set_alpha_mode(ke.render.AlphaMode.BLEND)
 
-        self.set_light_direction(ke.vec3(0.0, 0.0, 1.0))
-        self.set_light_color(ke.vec3(1.0, 1.0, 1.0))
+        self.set_light_direction(ke.Vec3(0.0, 0.0, 1.0))
+        self.set_light_color(ke.Vec3(1.0, 1.0, 1.0))
         self.set_light_intensity(1.0)
-        self.set_light_ambient(ke.vec3(0.35, 0.35, 0.35))
-        self.set_tone_map(ke.render.ToneMapMode.Off, 1.0)
+        self.set_light_ambient(ke.Vec3(0.35, 0.35, 0.35))
+        self.set_tone_map(ke.render.ToneMapMode.OFF, 1.0)
         self.set_bloom(False)
         self.set_camera_view([0.0, 0.0, 4.0], [0.0, 0.0, 0.0])
         self.set_camera_move_speed(1.0)

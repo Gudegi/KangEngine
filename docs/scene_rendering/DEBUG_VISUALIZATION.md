@@ -66,7 +66,7 @@ Create the entry once, then update only the values that change:
 self.world_text.set(
     path="/labels/box",
     text="Box",
-    position=ke.vec3(0.0, 1.2, 0.0),
+    position=ke.Vec3(0.0, 1.2, 0.0),
     pixel_size=28.0,
 )
 
@@ -88,8 +88,8 @@ down from the top-left corner:
 self.screen_text.set(
     path="/status",
     text="Ready",
-    position=ke.vec2(24.0, 24.0),
-    anchor=ke.render.ScreenAnchor.TopLeft,
+    position=ke.Vec2(24.0, 24.0),
+    anchor=ke.render.ScreenAnchor.TOP_LEFT,
 )
 
 self.screen_text.set_text("/status", "Running")

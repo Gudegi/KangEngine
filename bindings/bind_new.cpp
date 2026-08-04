@@ -35,6 +35,8 @@ void bind_asset(py::module& m);
 void bind_sim(py::module& m);
 void bind_physics(py::module& m);
 void bind_physics_gpu(py::module& m);
+void bind_render(py::module& m);
+void bind_material(py::module& m);
 
 // Trampoline class for App - allows Python to override virtual methods
 class PyApp : public App {
@@ -42,35 +44,42 @@ class PyApp : public App {
     using App::App;
 
     void setup() override { PYBIND11_OVERRIDE_PURE(void, App, setup); }
-    void preUpdate() override { PYBIND11_OVERRIDE(void, App, preUpdate); }
-    void fixedUpdate(double fixedDt) override {
-        PYBIND11_OVERRIDE(void, App, fixedUpdate, fixedDt);
+    void preUpdate() override {
+        PYBIND11_OVERRIDE_NAME(void, App, "pre_update", preUpdate);
     }
-    void preRender() override { PYBIND11_OVERRIDE_PURE(void, App, preRender); }
+    void fixedUpdate(double fixedDt) override {
+        PYBIND11_OVERRIDE_NAME(void, App, "fixed_update", fixedUpdate, fixedDt);
+    }
+    void preRender() override {
+        PYBIND11_OVERRIDE_NAME(void, App, "pre_render", preRender);
+    }
     void render() override { PYBIND11_OVERRIDE_PURE(void, App, render); }
     void postRender() override {
-        PYBIND11_OVERRIDE_PURE(void, App, postRender);
+        PYBIND11_OVERRIDE_NAME(void, App, "post_render", postRender);
     }
     void onFrameRenderedInternal() override {
         PYBIND11_OVERRIDE_NAME(void, App, "_on_frame_rendered_internal",
                                onFrameRenderedInternal);
     }
     void onRayPicked(const RayPickResult& result) override {
-        PYBIND11_OVERRIDE(void, App, onRayPicked, result);
+        PYBIND11_OVERRIDE_NAME(void, App, "on_ray_picked", onRayPicked, result);
     }
     void onRayPickHover(const RayPickResult& result) override {
-        PYBIND11_OVERRIDE(void, App, onRayPickHover, result);
+        PYBIND11_OVERRIDE_NAME(void, App, "on_ray_pick_hover", onRayPickHover,
+                               result);
     }
     void onForceDragBegin(const RayPickResult& result,
                           const glm::vec3& target) override {
-        PYBIND11_OVERRIDE(void, App, onForceDragBegin, result, target);
+        PYBIND11_OVERRIDE_NAME(void, App, "on_force_drag_begin",
+                               onForceDragBegin, result, target);
     }
     void onForceDragUpdate(const RayPickResult& result,
                            const glm::vec3& target) override {
-        PYBIND11_OVERRIDE(void, App, onForceDragUpdate, result, target);
+        PYBIND11_OVERRIDE_NAME(void, App, "on_force_drag_update",
+                               onForceDragUpdate, result, target);
     }
     void onForceDragEnd() override {
-        PYBIND11_OVERRIDE(void, App, onForceDragEnd);
+        PYBIND11_OVERRIDE_NAME(void, App, "on_force_drag_end", onForceDragEnd);
     }
 };
 
@@ -427,186 +436,19 @@ PYBIND11_MODULE(_kangengine, m) {
 
     // External render descriptors below depend on GpuArrayView registration.
     bind_sim(m);
+    bind_render(m);
+    bind_material(m);
 
     // Enums first — submodule bindings may use them as default arguments
     py::enum_<UpAxis>(m, "UpAxis")
         .value("X", UpAxis::X)
         .value("Y", UpAxis::Y)
-        .value("Z", UpAxis::Z)
-        .export_values();
-
-    py::enum_<Backend::BackendType>(m, "BackendType")
-        .value("OpenGL", Backend::BackendType::OpenGL)
-        .value("Vulkan", Backend::BackendType::Vulkan)
-        .value("WebGPU", Backend::BackendType::WebGPU)
-        .export_values();
-
-    py::enum_<Backend::ShaderType>(m, "ShaderType")
-        .value("VERTEX", Backend::ShaderType::Vertex)
-        .value("FRAGMENT", Backend::ShaderType::Fragment)
-        .value("GEOMETRY", Backend::ShaderType::Geometry)
-        .value("COMPUTE", Backend::ShaderType::Compute);
-
-    py::enum_<TransformSource>(m, "TransformSource")
-        .value("SceneGraph", TransformSource::SceneGraph)
-        .value("ExternalBuffer", TransformSource::ExternalBuffer);
-
-    py::enum_<ExternalBufferFormat>(m, "ExternalBufferFormat")
-        .value("MAT4", ExternalBufferFormat::Mat4)
-        .value("POSITION_ROTATION", ExternalBufferFormat::PositionRotation)
-        .value("POSITION_ROTATION_SCALE",
-               ExternalBufferFormat::PositionRotationScale)
-        .value("CUSTOM", ExternalBufferFormat::Custom);
-
-    py::enum_<ExternalSyncPolicy>(m, "ExternalSyncPolicy")
-        .value("NONE", ExternalSyncPolicy::None)
-        .value("VERSIONED", ExternalSyncPolicy::Versioned)
-        .value("FENCE", ExternalSyncPolicy::Fence)
-        .value("EVENT", ExternalSyncPolicy::Event);
-
-    py::class_<ExternalBufferDesc>(
-        m, "ExternalBufferDesc",
-        "Descriptor for renderer buffers whose storage is owned externally.")
-        .def(py::init([](const Sim::GpuArrayView& view,
-                         ExternalBufferFormat format, int count,
-                         int stride_bytes, ExternalSyncPolicy sync_policy) {
-                 ExternalBufferDesc config;
-                 config.view = view;
-                 config.format = format;
-                 config.count = count;
-                 config.strideBytes = stride_bytes;
-                 config.syncPolicy = sync_policy;
-                 return config;
-             }),
-             py::kw_only(),
-             py::arg_v("view", Sim::GpuArrayView{}, "GpuArrayView()"),
-             py::arg_v("format", ExternalBufferDesc{}.format,
-                       "ExternalBufferFormat.MAT4"),
-             py::arg("count") = ExternalBufferDesc{}.count,
-             py::arg("stride_bytes") = ExternalBufferDesc{}.strideBytes,
-             py::arg_v("sync_policy", ExternalBufferDesc{}.syncPolicy,
-                       "ExternalSyncPolicy.NONE"),
-             "Create an external buffer descriptor from keyword arguments.")
-        .def_readwrite("view", &ExternalBufferDesc::view,
-                       "External array metadata and ownership view.")
-        .def_readwrite("format", &ExternalBufferDesc::format,
-                       "Element layout used to decode the external buffer.")
-        .def_readwrite("count", &ExternalBufferDesc::count,
-                       "Element count; zero derives it from the view shape.")
-        .def_readwrite(
-            "stride_bytes", &ExternalBufferDesc::strideBytes,
-            "Element stride in bytes; zero derives it from the view.")
-        .def_readwrite("sync_policy", &ExternalBufferDesc::syncPolicy,
-                       "Synchronization policy for external producer updates.")
-        .def("__repr__", [](const ExternalBufferDesc& config) {
-            return py::str(
-                       "ExternalBufferDesc(view={!r}, format={}, count={!r}, "
-                       "stride_bytes={!r}, sync_policy={})")
-                .attr("format")(config.view, config.format, config.count,
-                                config.strideBytes, config.syncPolicy);
-        });
+        .value("Z", UpAxis::Z);
 
     py::enum_<InteractionMode>(m, "InteractionMode")
-        .value("Inspect", InteractionMode::Inspect)
-        .value("Edit", InteractionMode::Edit)
-        .value("Force", InteractionMode::Force)
-        .export_values();
-
-    py::enum_<ToneMapMode>(m, "ToneMapMode")
-        .value("Off", ToneMapMode::None)
-        .value("Reinhard", ToneMapMode::Reinhard)
-        .value("Exponential", ToneMapMode::Exponential)
-        .value("AcesNarkowicz", ToneMapMode::AcesNarkowicz)
-        .value("AcesFitted", ToneMapMode::AcesFitted)
-        .export_values();
-
-    py::enum_<TextureRole>(
-        m, "TextureRole",
-        "Renderer texture binding roles used by material shaders.")
-        .value("BaseColor", TextureRole::BaseColor)
-        .value("Diffuse", TextureRole::Diffuse)
-        .value("Normal", TextureRole::Normal)
-        .value("MetallicRoughness", TextureRole::MetallicRoughness)
-        .value("AmbientOcclusion", TextureRole::AmbientOcclusion)
-        .value("Emissive", TextureRole::Emissive)
-        .value("Metallic", TextureRole::Metallic)
-        .value("Roughness", TextureRole::Roughness)
-        .value("OcclusionRoughnessMetallic",
-               TextureRole::OcclusionRoughnessMetallic)
-        .export_values();
-
-    py::enum_<AlphaMode>(
-        m, "AlphaMode",
-        "How a renderable handles fragment alpha in scene and depth passes.")
-        .value("Opaque", AlphaMode::Opaque)
-        .value("Mask", AlphaMode::Mask)
-        .value("Blend", AlphaMode::Blend)
-        .export_values();
-
-    py::enum_<TextAlignment>(m, "TextAlignment")
-        .value("Left", TextAlignment::Left)
-        .value("Center", TextAlignment::Center)
-        .value("Right", TextAlignment::Right);
-
-    py::enum_<TextDepthMode>(m, "TextDepthMode")
-        .value("DepthTested", TextDepthMode::DepthTested)
-        .value("Overlay", TextDepthMode::Overlay);
-
-    py::enum_<ScreenAnchor>(m, "ScreenAnchor")
-        .value("TopLeft", ScreenAnchor::TopLeft)
-        .value("TopCenter", ScreenAnchor::TopCenter)
-        .value("TopRight", ScreenAnchor::TopRight)
-        .value("CenterLeft", ScreenAnchor::CenterLeft)
-        .value("Center", ScreenAnchor::Center)
-        .value("CenterRight", ScreenAnchor::CenterRight)
-        .value("BottomLeft", ScreenAnchor::BottomLeft)
-        .value("BottomCenter", ScreenAnchor::BottomCenter)
-        .value("BottomRight", ScreenAnchor::BottomRight);
-
-    py::enum_<PhongMaterialType>(m, "PhongMaterialType",
-                                 "Built-in blin-phong based material presets.")
-        .value("EMERALD", PhongMaterialType::EMERALD)
-        .value("JADE", PhongMaterialType::JADE)
-        .value("OBSIDIAN", PhongMaterialType::OBSIDIAN)
-        .value("PEARL", PhongMaterialType::PEARL)
-        .value("RUBY", PhongMaterialType::RUBY)
-        .value("TURQUOISE", PhongMaterialType::TURQUOISE)
-        .value("BRASS", PhongMaterialType::BRASS)
-        .value("BRONZE", PhongMaterialType::BRONZE)
-        .value("CHROME", PhongMaterialType::CHROME)
-        .value("COPPER", PhongMaterialType::COPPER)
-        .value("GOLD", PhongMaterialType::GOLD)
-        .value("SILVER", PhongMaterialType::SILVER)
-        .value("BLACK_PLASTIC", PhongMaterialType::BLACK_PLASTIC)
-        .value("CYAN_PLASTIC", PhongMaterialType::CYAN_PLASTIC)
-        .value("GREEN_PLASTIC", PhongMaterialType::GREEN_PLASTIC)
-        .value("RED_PLASTIC", PhongMaterialType::RED_PLASTIC)
-        .value("WHITE_PLASTIC", PhongMaterialType::WHITE_PLASTIC)
-        .value("YELLOW_PLASTIC", PhongMaterialType::YELLOW_PLASTIC)
-        .value("BLACK_RUBBER", PhongMaterialType::BLACK_RUBBER)
-        .value("CYAN_RUBBER", PhongMaterialType::CYAN_RUBBER)
-        .value("GREEN_RUBBER", PhongMaterialType::GREEN_RUBBER)
-        .value("RED_RUBBER", PhongMaterialType::RED_RUBBER)
-        .value("WHITE_RUBBER", PhongMaterialType::WHITE_RUBBER)
-        .value("YELLOW_RUBBER", PhongMaterialType::YELLOW_RUBBER)
-        .export_values();
-
-    py::enum_<PBRMaterialType>(m, "PBRMaterialType",
-                               "Built-in physically based material presets.")
-        .value("GRAY_CARD", PBRMaterialType::GRAY_CARD)
-        .value("WHITE_PLASTIC", PBRMaterialType::WHITE_PLASTIC)
-        .value("BLACK_PLASTIC", PBRMaterialType::BLACK_PLASTIC)
-        .value("BLACK_RUBBER", PBRMaterialType::BLACK_RUBBER)
-        .value("CHARCOAL", PBRMaterialType::CHARCOAL)
-        .value("CARROT", PBRMaterialType::CARROT)
-        .value("CONCRETE", PBRMaterialType::CONCRETE)
-        .value("RED_BRICK", PBRMaterialType::RED_BRICK)
-        .value("ALUMINUM", PBRMaterialType::ALUMINUM)
-        .value("CHROME", PBRMaterialType::CHROME)
-        .value("COPPER", PBRMaterialType::COPPER)
-        .value("GOLD", PBRMaterialType::GOLD)
-        .value("EMISSIVE_BLUE", PBRMaterialType::EMISSIVE_BLUE)
-        .export_values();
+        .value("INSPECT", InteractionMode::Inspect)
+        .value("EDIT", InteractionMode::Edit)
+        .value("FORCE", InteractionMode::Force);
 
     py::class_<RayPickResult>(m, "RayPickResult")
         .def_readonly("hit", &RayPickResult::hit)
@@ -651,606 +493,11 @@ PYBIND11_MODULE(_kangengine, m) {
         .def("set_show_progress_bar", &MotionSequencerPanel::setShowProgressBar)
         .def("build_panel", &MotionSequencerPanel::buildPanel);
 
-    // Materials & Colors
-    py::class_<Color>(m, "Color")
-        .def(py::init<>())
-        .def_readwrite("r", &Color::r)
-        .def_readwrite("g", &Color::g)
-        .def_readwrite("b", &Color::b)
-        .def_readwrite("a", &Color::a);
-
-    py::enum_<ColorType>(m, "ColorType")
-        .value("WHITE", ColorType::WHITE)
-        .value("BLACK", ColorType::BLACK)
-        .value("RED", ColorType::RED)
-        .value("GREEN", ColorType::GREEN)
-        .value("BLUE", ColorType::BLUE)
-        .value("YELLOW", ColorType::YELLOW)
-        .value("CYAN", ColorType::CYAN)
-        .value("MAGENTA", ColorType::MAGENTA)
-        .value("ORANGE", ColorType::ORANGE)
-        .value("PURPLE", ColorType::PURPLE)
-        .value("PINK", ColorType::PINK)
-        .value("BROWN", ColorType::BROWN)
-        .value("GRAY", ColorType::GRAY)
-        .value("LIGHT_GRAY", ColorType::LIGHT_GRAY)
-        .value("DARK_GRAY", ColorType::DARK_GRAY)
-        .value("CORAL", ColorType::CORAL)
-        .value("SALMON", ColorType::SALMON)
-        .value("TOMATO", ColorType::TOMATO)
-        .value("CRIMSON", ColorType::CRIMSON)
-        .value("FOREST_GREEN", ColorType::FOREST_GREEN)
-        .value("LIME_GREEN", ColorType::LIME_GREEN)
-        .value("SEA_GREEN", ColorType::SEA_GREEN)
-        .value("TEAL", ColorType::TEAL)
-        .value("NAVY", ColorType::NAVY)
-        .value("SKY_BLUE", ColorType::SKY_BLUE)
-        .value("STEEL_BLUE", ColorType::STEEL_BLUE)
-        .value("ROYAL_BLUE", ColorType::ROYAL_BLUE)
-        .value("INDIGO", ColorType::INDIGO)
-        .value("VIOLET", ColorType::VIOLET)
-        .value("ORCHID", ColorType::ORCHID)
-        .value("GOLD", ColorType::GOLD)
-        .value("KHAKI", ColorType::KHAKI)
-        .value("OLIVE", ColorType::OLIVE)
-        .value("MAROON", ColorType::MAROON)
-        .value("BEIGE", ColorType::BEIGE)
-        .value("IVORY", ColorType::IVORY)
-        .value("MINT", ColorType::MINT)
-        .value("LAVENDER", ColorType::LAVENDER)
-        .value("SLATE_GRAY", ColorType::SLATE_GRAY)
-        .value("PASTEL_RED", ColorType::PASTEL_RED)
-        .value("PASTEL_ORANGE", ColorType::PASTEL_ORANGE)
-        .value("PASTEL_YELLOW", ColorType::PASTEL_YELLOW)
-        .value("PASTEL_GREEN", ColorType::PASTEL_GREEN)
-        .value("PASTEL_MINT", ColorType::PASTEL_MINT)
-        .value("PASTEL_CYAN", ColorType::PASTEL_CYAN)
-        .value("PASTEL_BLUE", ColorType::PASTEL_BLUE)
-        .value("PASTEL_PURPLE", ColorType::PASTEL_PURPLE)
-        .value("PASTEL_PINK", ColorType::PASTEL_PINK)
-        .value("PASTEL_ROSE", ColorType::PASTEL_ROSE)
-        .value("PASTEL_PEACH", ColorType::PASTEL_PEACH)
-        .value("PASTEL_LAVENDER", ColorType::PASTEL_LAVENDER)
-        .value("PASTEL_LILAC", ColorType::PASTEL_LILAC)
-        .value("PASTEL_CORAL", ColorType::PASTEL_CORAL)
-        .value("PASTEL_CREAM", ColorType::PASTEL_CREAM)
-        .value("PASTEL_SKY", ColorType::PASTEL_SKY)
-        .value("DARK_GREEN", ColorType::DARK_GREEN);
-
-    py::class_<ColorLibrary>(m, "ColorLibrary")
-        .def_static("get", &ColorLibrary::get, py::arg("type"));
-
-    py::class_<Material>(m, "Material", "Base class for renderer materials.");
-
-    py::enum_<VertexColorStyle>(m, "VertexColorStyle")
-        .value("UNTEXTURED", VertexColorStyle::Untextured)
-        .value("TEXTURED", VertexColorStyle::Textured)
-        .value("CHECKERBOARD", VertexColorStyle::Checkerboard)
-        .value("DEBUG_CHECKER", VertexColorStyle::DebugChecker);
-
-    py::class_<VertexColorMaterial, Material>(
-        m, "VertexColorMaterial",
-        "Vertex/display-color material with a built-in rendering style.")
-        .def(py::init<VertexColorStyle>(),
-             py::arg("style") = VertexColorStyle::Untextured)
-        .def("set_style", &VertexColorMaterial::setStyle, py::arg("style"))
-        .def_property_readonly("style", &VertexColorMaterial::vertexColorStyle);
-
-    py::class_<PhongMaterial, Material>(
-        m, "PhongMaterial",
-        "Classic Blinn-Phong material with diffuse/specular factors and "
-        "optional textures.")
-        .def(py::init<>(), "Create a Phong material with default factors.")
-        .def(
-            "load_from_preset",
-            [](PhongMaterial& self, PhongMaterialType type) -> PhongMaterial& {
-                self.loadFromPreset(type);
-                return self;
-            },
-            py::arg("type"), py::return_value_policy::reference_internal,
-            "Load material factors from a built-in Phong preset and return "
-            "this material.")
-        .def("set_ambient", &PhongMaterial::setAmbient, py::arg("ambient"),
-             py::return_value_policy::reference_internal)
-        .def("set_diffuse", &PhongMaterial::setDiffuse, py::arg("diffuse"),
-             py::return_value_policy::reference_internal)
-        .def("set_specular", &PhongMaterial::setSpecular, py::arg("specular"),
-             py::return_value_policy::reference_internal)
-        .def("set_shininess", &PhongMaterial::setShininess,
-             py::arg("shininess"), py::return_value_policy::reference_internal)
-        .def("set_diffuse_map", &PhongMaterial::setDiffuseMap,
-             py::arg("texture"), py::return_value_policy::reference_internal)
-        .def("set_specular_map", &PhongMaterial::setSpecularMap,
-             py::arg("texture"), py::return_value_policy::reference_internal)
-        .def("set_alpha_map", &PhongMaterial::setAlphaMap, py::arg("texture"),
-             py::return_value_policy::reference_internal)
-        .def("set_normal_map", &PhongMaterial::setNormalMap, py::arg("texture"),
-             py::return_value_policy::reference_internal)
-        .def_readwrite("ambient", &PhongMaterial::ambient,
-                       "Ambient RGB factor.")
-        .def_readwrite("diffuse", &PhongMaterial::diffuse,
-                       "Diffuse RGB factor.")
-        .def_readwrite("specular", &PhongMaterial::specular,
-                       "Specular RGB factor.")
-        .def_readwrite("shininess", &PhongMaterial::shininess,
-                       "Specular highlight exponent.")
-        .def_readwrite("diffuse_map", &PhongMaterial::diffuseMap,
-                       "Optional diffuse texture.")
-        .def_readwrite("specular_map", &PhongMaterial::specularMap,
-                       "Optional specular texture.")
-        .def_readwrite("alpha_map", &PhongMaterial::alphaMap,
-                       "Optional alpha mask texture, such as OBJ map_d.")
-        .def_readwrite("normal_map", &PhongMaterial::normalMap,
-                       "Optional tangent-space normal map.");
-
-    py::class_<PBRMaterial, Material>(
-        m, "PBRMaterial",
-        "Physically based material using metallic-roughness parameters.")
-        .def(py::init<>(), "Create a PBR material with default factors.")
-        .def(
-            "load_from_preset",
-            [](PBRMaterial& self, PBRMaterialType type) -> PBRMaterial& {
-                self.loadFromPreset(type);
-                return self;
-            },
-            py::arg("type"), py::return_value_policy::reference_internal,
-            "Load material factors from a built-in PBR preset and return "
-            "this material.")
-        .def("set_base_color", &PBRMaterial::setBaseColor,
-             py::arg("base_color"), py::return_value_policy::reference_internal)
-        .def("set_metallic", &PBRMaterial::setMetallic, py::arg("metallic"),
-             py::return_value_policy::reference_internal)
-        .def("set_roughness", &PBRMaterial::setRoughness, py::arg("roughness"),
-             py::return_value_policy::reference_internal)
-        .def("set_emissive_color", &PBRMaterial::setEmissiveColor,
-             py::arg("emissive_color"),
-             py::return_value_policy::reference_internal)
-        .def("set_emissive_strength", &PBRMaterial::setEmissiveStrength,
-             py::arg("emissive_strength"),
-             py::return_value_policy::reference_internal)
-        .def("set_base_color_texture", &PBRMaterial::setBaseColorTexture,
-             py::arg("texture"), py::return_value_policy::reference_internal)
-        .def("set_normal_texture", &PBRMaterial::setNormalTexture,
-             py::arg("texture"), py::return_value_policy::reference_internal)
-        .def("set_metallic_roughness_texture",
-             &PBRMaterial::setMetallicRoughnessTexture, py::arg("texture"),
-             py::return_value_policy::reference_internal)
-        .def("set_metallic_texture", &PBRMaterial::setMetallicTexture,
-             py::arg("texture"), py::return_value_policy::reference_internal)
-        .def("set_roughness_texture", &PBRMaterial::setRoughnessTexture,
-             py::arg("texture"), py::return_value_policy::reference_internal)
-        .def("set_ao_texture", &PBRMaterial::setAoTexture, py::arg("texture"),
-             py::return_value_policy::reference_internal)
-        .def("set_orm_texture", &PBRMaterial::setOrmTexture, py::arg("texture"),
-             py::return_value_policy::reference_internal)
-        .def("set_emissive_texture", &PBRMaterial::setEmissiveTexture,
-             py::arg("texture"), py::return_value_policy::reference_internal)
-        .def_readwrite("base_color", &PBRMaterial::baseColor,
-                       "Base color factor as RGBA.")
-        .def_readwrite("metallic", &PBRMaterial::metallic,
-                       "Metallic factor in the range 0..1.")
-        .def_readwrite("roughness", &PBRMaterial::roughness,
-                       "Roughness factor in the range 0..1.")
-        .def_readwrite("emissive_color", &PBRMaterial::emissiveColor,
-                       "Emissive RGB color factor.")
-        .def_readwrite("emissive_strength", &PBRMaterial::emissiveStrength,
-                       "Multiplier for emissive_color.")
-        .def_readwrite("base_color_texture", &PBRMaterial::baseColorTexture,
-                       "Optional base color texture.")
-        .def_readwrite("normal_texture", &PBRMaterial::normalTexture,
-                       "Optional tangent-space normal texture.")
-        .def_readwrite("metallic_roughness_texture",
-                       &PBRMaterial::metallicRoughnessTexture,
-                       "Optional packed metallic-roughness texture.")
-        .def_readwrite("metallic_texture", &PBRMaterial::metallicTexture,
-                       "Optional single-channel metallic texture.")
-        .def_readwrite("roughness_texture", &PBRMaterial::roughnessTexture,
-                       "Optional single-channel roughness texture.")
-        .def_readwrite("ao_texture", &PBRMaterial::aoTexture,
-                       "Optional ambient occlusion texture.")
-        .def_readwrite("orm_texture", &PBRMaterial::ormTexture,
-                       "Optional packed occlusion-roughness-metallic texture.")
-        .def_readwrite("emissive_texture", &PBRMaterial::emissiveTexture,
-                       "Optional emissive texture.");
-
-    // Backend::Texture
-    py::class_<Backend::Texture>(
-        m, "Texture", "GPU texture object created by a GraphicsDevice.")
-        .def("bind", &Backend::Texture::bind, py::arg("slot") = 0,
-             "Bind this texture to a texture unit.")
-        .def("unbind", &Backend::Texture::unbind,
-             "Unbind this texture from the active context.")
-        .def("get_width", &Backend::Texture::getWidth,
-             "Return the texture width in pixels.")
-        .def("get_height", &Backend::Texture::getHeight,
-             "Return the texture height in pixels.")
-        .def_property_readonly("width", &Backend::Texture::getWidth,
-                               "Texture width in pixels.")
-        .def_property_readonly("height", &Backend::Texture::getHeight,
-                               "Texture height in pixels.");
-
-    py::enum_<Backend::TextureWrap>(
-        m, "TextureWrap", "Backend-neutral texture coordinate wrapping mode.")
-        .value("Repeat", Backend::TextureWrap::Repeat)
-        .value("ClampToEdge", Backend::TextureWrap::ClampToEdge)
-        .value("MirroredRepeat", Backend::TextureWrap::MirroredRepeat);
-
-    py::enum_<Backend::TextureFilter>(
-        m, "TextureFilter", "Backend-neutral texture sampling filter.")
-        .value("Nearest", Backend::TextureFilter::Nearest)
-        .value("Linear", Backend::TextureFilter::Linear)
-        .value("LinearMipmapLinear",
-               Backend::TextureFilter::LinearMipmapLinear);
-
-    py::class_<Backend::SamplerDesc>(
-        m, "SamplerDesc", "Texture sampler settings independent of GL/WebGPU.")
-        .def(py::init([](Backend::TextureWrap wrap_u,
-                         Backend::TextureWrap wrap_v,
-                         Backend::TextureFilter min_filter,
-                         Backend::TextureFilter mag_filter) {
-                 Backend::SamplerDesc config;
-                 config.wrapU = wrap_u;
-                 config.wrapV = wrap_v;
-                 config.minFilter = min_filter;
-                 config.magFilter = mag_filter;
-                 return config;
-             }),
-             py::kw_only(),
-             py::arg_v("wrap_u", Backend::SamplerDesc{}.wrapU,
-                       "TextureWrap.Repeat"),
-             py::arg_v("wrap_v", Backend::SamplerDesc{}.wrapV,
-                       "TextureWrap.Repeat"),
-             py::arg_v("min_filter", Backend::SamplerDesc{}.minFilter,
-                       "TextureFilter.LinearMipmapLinear"),
-             py::arg_v("mag_filter", Backend::SamplerDesc{}.magFilter,
-                       "TextureFilter.Linear"),
-             "Create texture sampler settings from keyword arguments.")
-        .def_readwrite("wrap_u", &Backend::SamplerDesc::wrapU,
-                       "Texture coordinate wrapping mode on the U axis.")
-        .def_readwrite("wrap_v", &Backend::SamplerDesc::wrapV,
-                       "Texture coordinate wrapping mode on the V axis.")
-        .def_readwrite("min_filter", &Backend::SamplerDesc::minFilter,
-                       "Texture minification filter.")
-        .def_readwrite("mag_filter", &Backend::SamplerDesc::magFilter,
-                       "Texture magnification filter.")
-        .def("__repr__", [](const Backend::SamplerDesc& config) {
-            return py::str("SamplerDesc(wrap_u={}, wrap_v={}, "
-                           "min_filter={}, mag_filter={})")
-                .attr("format")(config.wrapU, config.wrapV, config.minFilter,
-                                config.magFilter);
-        });
-
-    py::enum_<Backend::BufferUsage>(m, "BufferUsage", py::arithmetic())
-        .value("NONE", Backend::BufferUsage::None)
-        .value("VERTEX", Backend::BufferUsage::Vertex)
-        .value("INDEX", Backend::BufferUsage::Index)
-        .value("UNIFORM", Backend::BufferUsage::Uniform)
-        .value("COPY_SRC", Backend::BufferUsage::CopySrc)
-        .value("COPY_DST", Backend::BufferUsage::CopyDst)
-        .def("__or__",
-             [](Backend::BufferUsage lhs, Backend::BufferUsage rhs) {
-                 return lhs | rhs;
-             },
-             py::is_operator());
-    py::enum_<Backend::VertexFormat>(m, "VertexFormat")
-        .value("FLOAT32", Backend::VertexFormat::Float32)
-        .value("FLOAT32X2", Backend::VertexFormat::Float32x2)
-        .value("FLOAT32X3", Backend::VertexFormat::Float32x3)
-        .value("FLOAT32X4", Backend::VertexFormat::Float32x4)
-        .value("SINT32X4", Backend::VertexFormat::Sint32x4);
-    py::enum_<Backend::VertexStepMode>(m, "VertexStepMode")
-        .value("VERTEX", Backend::VertexStepMode::Vertex)
-        .value("INSTANCE", Backend::VertexStepMode::Instance);
-    py::enum_<Backend::PrimitiveTopology>(m, "PrimitiveTopology")
-        .value("POINT_LIST", Backend::PrimitiveTopology::PointList)
-        .value("LINE_LIST", Backend::PrimitiveTopology::LineList)
-        .value("LINE_STRIP", Backend::PrimitiveTopology::LineStrip)
-        .value("TRIANGLE_LIST", Backend::PrimitiveTopology::TriangleList)
-        .value("TRIANGLE_STRIP", Backend::PrimitiveTopology::TriangleStrip);
-    py::enum_<Backend::CullMode>(m, "CullMode")
-        .value("NONE", Backend::CullMode::None)
-        .value("FRONT", Backend::CullMode::Front)
-        .value("BACK", Backend::CullMode::Back);
-    py::enum_<Backend::CompareFunction>(m, "CompareFunction")
-        .value("NEVER", Backend::CompareFunction::Never)
-        .value("LESS", Backend::CompareFunction::Less)
-        .value("LESS_EQUAL", Backend::CompareFunction::LessEqual)
-        .value("GREATER", Backend::CompareFunction::Greater)
-        .value("GREATER_EQUAL", Backend::CompareFunction::GreaterEqual)
-        .value("EQUAL", Backend::CompareFunction::Equal)
-        .value("NOT_EQUAL", Backend::CompareFunction::NotEqual)
-        .value("ALWAYS", Backend::CompareFunction::Always);
-    py::enum_<Backend::IndexFormat>(m, "IndexFormat")
-        .value("UINT16", Backend::IndexFormat::Uint16)
-        .value("UINT32", Backend::IndexFormat::Uint32);
-    py::enum_<SceneHookBlendMode>(m, "SceneHookBlendMode")
-        .value("OPAQUE", SceneHookBlendMode::Opaque)
-        .value("ALPHA", SceneHookBlendMode::Alpha)
-        .value("ADDITIVE", SceneHookBlendMode::Additive);
-    py::enum_<RenderHookPhase>(m, "RenderHookPhase")
-        .value("AFTER_OPAQUE", RenderHookPhase::AfterOpaque)
-        .value("AFTER_TRANSPARENT", RenderHookPhase::AfterTransparent);
-
-    py::class_<Backend::ShaderStage>(m, "ShaderStage")
-        .def(py::init<>())
-        .def(py::init<std::string, Backend::ShaderType, std::string>(),
-             py::arg("source"), py::arg("stage"),
-             py::arg("entry_point") = "main")
-        .def_readwrite("source", &Backend::ShaderStage::source)
-        .def_readwrite("stage", &Backend::ShaderStage::type)
-        .def_readwrite("entry_point", &Backend::ShaderStage::entryPoint);
-    py::class_<Backend::ShaderDesc>(m, "ShaderDesc")
-        .def(py::init<>())
-        .def_readwrite("stages", &Backend::ShaderDesc::stages)
-        .def_readwrite("name", &Backend::ShaderDesc::name);
-    py::class_<Backend::VertexAttributeDesc>(m, "VertexAttributeDesc")
-        .def(py::init<>())
-        .def(py::init<Backend::VertexFormat, uint64_t, uint32_t>(),
-             py::arg("format"), py::arg("offset"),
-             py::arg("shader_location"))
-        .def_readwrite("format", &Backend::VertexAttributeDesc::format)
-        .def_readwrite("offset", &Backend::VertexAttributeDesc::offset)
-        .def_readwrite("shader_location",
-                       &Backend::VertexAttributeDesc::shaderLocation);
-    py::class_<Backend::VertexBufferLayout>(m, "VertexBufferLayout")
-        .def(py::init<>())
-        .def_readwrite("array_stride", &Backend::VertexBufferLayout::arrayStride)
-        .def_readwrite("step_mode", &Backend::VertexBufferLayout::stepMode)
-        .def_readwrite("attributes", &Backend::VertexBufferLayout::attributes);
-    py::class_<SceneHookPipelineDesc>(m, "SceneHookPipelineDesc")
-        .def(py::init<>())
-        .def_readwrite("shader", &SceneHookPipelineDesc::shader)
-        .def_readwrite("vertex_buffers", &SceneHookPipelineDesc::vertexBuffers)
-        .def_readwrite("topology", &SceneHookPipelineDesc::topology)
-        .def_readwrite("cull_mode", &SceneHookPipelineDesc::cullMode)
-        .def_readwrite("blend", &SceneHookPipelineDesc::blend)
-        .def_readwrite("depth_test", &SceneHookPipelineDesc::depthTest)
-        .def_readwrite("depth_write", &SceneHookPipelineDesc::depthWrite)
-        .def_readwrite("use_scene_frame_bindings",
-                       &SceneHookPipelineDesc::useSceneFrameBindings)
-        .def_readwrite("depth_compare", &SceneHookPipelineDesc::depthCompare)
-        .def_readwrite("label", &SceneHookPipelineDesc::label);
-
-    py::class_<Backend::Buffer>(m, "Buffer")
-        .def_property_readonly("size", &Backend::Buffer::getSize)
-        .def_property_readonly("usage", &Backend::Buffer::getUsage)
-        .def("set_data",
-             [](Backend::Buffer& buffer, py::buffer data, size_t offset) {
-                 const py::buffer_info info = data.request();
-                 const size_t size =
-                     static_cast<size_t>(info.size) * info.itemsize;
-                 if (offset + size > buffer.getSize())
-                     throw py::value_error("buffer upload exceeds allocation");
-                 buffer.setData(info.ptr, size, offset);
-             },
-             py::arg("data"), py::arg("offset") = 0);
-    py::class_<Backend::GraphicsPipeline>(m, "GraphicsPipeline");
-    py::class_<Backend::RenderPassEncoder>(m, "RenderPassEncoder")
-        .def("set_viewport", &Backend::RenderPassEncoder::setViewport,
-             py::arg("x"), py::arg("y"), py::arg("width"),
-             py::arg("height"), py::arg("min_depth") = 0.0f,
-             py::arg("max_depth") = 1.0f)
-        .def("set_pipeline", &Backend::RenderPassEncoder::setPipeline,
-             py::arg("pipeline"))
-        .def("set_vertex_buffer", &Backend::RenderPassEncoder::setVertexBuffer,
-             py::arg("slot"), py::arg("buffer"), py::arg("offset") = 0)
-        .def("set_index_buffer", &Backend::RenderPassEncoder::setIndexBuffer,
-             py::arg("buffer"), py::arg("format"), py::arg("offset") = 0)
-        .def("draw", &Backend::RenderPassEncoder::draw,
-             py::arg("vertex_count"), py::arg("instance_count") = 1,
-             py::arg("first_vertex") = 0, py::arg("first_instance") = 0)
-        .def("draw_indexed", &Backend::RenderPassEncoder::drawIndexed,
-             py::arg("index_count"), py::arg("instance_count") = 1,
-             py::arg("first_index") = 0, py::arg("base_vertex") = 0,
-             py::arg("first_instance") = 0);
-    py::class_<RenderHookContext>(m, "RenderHookContext")
-        .def_property_readonly(
-            "pass_encoder", [](RenderHookContext& context) {
-                return &context.pass;
-            }, py::return_value_policy::reference)
-        .def_readonly("width", &RenderHookContext::width)
-        .def_readonly("height", &RenderHookContext::height);
-
-    // Backend::GraphicsDevice
-    py::class_<Backend::GraphicsDevice,
-               std::shared_ptr<Backend::GraphicsDevice>>(
-        m, "GraphicsDevice",
-        "Factory for backend graphics resources such as textures and buffers.")
-        .def(
-            "create_texture",
-            [](Backend::GraphicsDevice& device, const std::string& path,
-               bool flip, const Backend::SamplerDesc& sampler) {
-                return device.createTexture(path, flip, sampler);
-            },
-            py::arg("path"), py::arg("flip") = false,
-            py::arg("sampler") = Backend::SamplerDesc(),
-            py::return_value_policy::take_ownership,
-            "Load a texture from an image file.")
-        .def(
-            "create_buffer",
-            [](Backend::GraphicsDevice& device, py::buffer data,
-               Backend::BufferUsage usage, const std::string& label) {
-                const py::buffer_info info = data.request();
-                Backend::BufferDesc desc;
-                desc.size = static_cast<size_t>(info.size) * info.itemsize;
-                desc.usage = usage;
-                desc.label = label;
-                return device.createBuffer(desc, info.ptr);
-            },
-            py::arg("data"), py::arg("usage"), py::arg("label") = "",
-            "Create a GPU buffer initialized from a contiguous Python buffer.");
-
-    py::class_<DirectionalLight>(
-        m, "DirectionalLight",
-        "Infinite-distance light used as the renderer's main sun light.")
-        .def(py::init<>())
-        .def_readwrite("direction", &DirectionalLight::direction)
-        .def_readwrite("color", &DirectionalLight::color)
-        .def_readwrite("intensity", &DirectionalLight::intensity)
-        .def_readwrite("ambient", &DirectionalLight::ambient);
-
-    py::class_<PointLight>(
-        m, "PointLight",
-        "Finite local light with position, color, intensity, and range.")
-        .def(py::init<>())
-        .def_readwrite("position", &PointLight::position)
-        .def_readwrite("color", &PointLight::color)
-        .def_readwrite("intensity", &PointLight::intensity)
-        .def_readwrite("range", &PointLight::range);
-
-    py::class_<SpotLight>(
-        m, "SpotLight",
-        "Finite cone light with position, direction, color, intensity, and "
-        "range.")
-        .def(py::init<>())
-        .def_readwrite("position", &SpotLight::position)
-        .def_readwrite("direction", &SpotLight::direction)
-        .def_readwrite("color", &SpotLight::color)
-        .def_readwrite("intensity", &SpotLight::intensity)
-        .def_readwrite("range", &SpotLight::range)
-        .def_readwrite("inner_cone_angle", &SpotLight::innerConeAngle)
-        .def_readwrite("outer_cone_angle", &SpotLight::outerConeAngle);
-
-    py::class_<Renderer>(
-        m, "Renderer",
-        "Renderer facade for updating renderable resources and draw settings.")
-        .def(
-            "device", [](Renderer& self) { return self.device(); },
-            py::return_value_policy::reference,
-            "Return the graphics device owned by this renderer.")
-        .def("create_scene_hook_pipeline",
-             &Renderer::createSceneHookPipeline, py::arg("desc"),
-             py::return_value_policy::take_ownership,
-             "Create a custom graphics pipeline compatible with the scene "
-             "render targets.")
-        .def(
-            "add_render_hook",
-            [](Renderer& self, RenderHookPhase phase, py::function callback) {
-                return self.addRenderHook(
-                    phase, [callback = std::move(callback)](
-                               RenderHookContext& context) {
-                        py::gil_scoped_acquire acquire;
-                        callback(&context);
-                    });
-            },
-            py::arg("phase"), py::arg("callback"),
-            "Run a Python command-recording callback at a scene render phase. "
-            "Keep all referenced pipelines and buffers alive until removal.")
-        .def("remove_render_hook", &Renderer::removeRenderHook,
-             py::arg("handle"), "Remove a previously registered render hook.")
-        .def("set_point_lights", &Renderer::setPointLights, py::arg("lights"),
-             "Store point lights for renderers/shaders that support them.")
-        .def("point_lights", &Renderer::pointLights,
-             py::return_value_policy::reference_internal,
-             "Return stored point lights.")
-        .def("set_spot_lights", &Renderer::setSpotLights, py::arg("lights"),
-             "Store spot lights for renderers/shaders that support them.")
-        .def("spot_lights", &Renderer::spotLights,
-             py::return_value_policy::reference_internal,
-             "Return stored spot lights.")
-        .def("sync_scene_lights", &Renderer::syncSceneLights, py::arg("scene"),
-             "Sync renderer lights from /lights scene prims. Intended for "
-             "diagnostics and tests.")
-        .def(
-            "update_renderable_transforms",
-            [](Renderer& self, uint32_t handle, const FloatArray& transforms,
-               py::object colors) {
-                auto transformVec = mat4Array(transforms, "transforms");
-                std::vector<glm::vec4> colorVec;
-                const std::vector<glm::vec4>* colorPtr = nullptr;
-                if (!colors.is_none()) {
-                    auto colorArray = colors.cast<FloatArray>();
-                    colorVec = vec4Array(colorArray, "colors");
-                    if (colorVec.size() != 1 &&
-                        colorVec.size() != transformVec.size()) {
-                        throw py::value_error(
-                            "colors must have length 1 or match transforms");
-                    }
-                    if (colorVec.size() == 1 && transformVec.size() > 1)
-                        colorVec.resize(transformVec.size(), colorVec[0]);
-                    colorPtr = &colorVec;
-                }
-                self.updateRenderableTransforms(handle, transformVec, colorPtr);
-            },
-            py::arg("handle"), py::arg("transforms"),
-            py::arg("colors") = py::none(),
-            "Replace instance transforms, optionally with per-instance colors.")
-        .def(
-            "set_renderable_colors",
-            [](Renderer& self, uint32_t handle, const FloatArray& colors) {
-                self.setRenderableColors(handle, vec4Array(colors, "colors"));
-            },
-            py::arg("handle"), py::arg("colors"),
-            "Set per-instance colors for a renderable.")
-        .def("set_renderable_external_buffer",
-             &Renderer::setRenderableExternalBuffer, py::arg("handle"),
-             py::arg("descriptor"),
-             "Attach an external CPU/GPU transform buffer to a renderable.")
-        .def("map_renderable_cuda_transform_buffers",
-             &Renderer::mapRenderableCudaTransformBuffers, py::arg("handles"),
-             py::arg("count"), py::arg("device_id"),
-             py::arg("stream_handle") = 0,
-             "Map multiple renderable transform VBOs for direct CUDA writes.")
-        .def("unmap_renderable_cuda_transform_buffers",
-             &Renderer::unmapRenderableCudaTransformBuffers, py::arg("handles"),
-             py::arg("device_id"), py::arg("stream_handle") = 0,
-             "Unmap transform VBOs after direct CUDA writes.")
-        .def("set_renderable_double_sided", &Renderer::setRenderableDoubleSided,
-             py::arg("handle"), py::arg("double_sided") = true,
-             "Enable or disable double-sided rendering for a renderable.")
-        .def("set_renderable_casts_shadow", &Renderer::setRenderableCastsShadow,
-             py::arg("handle"), py::arg("casts_shadow") = true,
-             "Enable or disable shadow casting for a renderable.")
-        .def("set_renderable_alpha_mode", &Renderer::setRenderableAlphaMode,
-             py::arg("handle"), py::arg("mode"), py::arg("cutoff") = 0.5f,
-             "Select opaque, alpha-mask, or alpha-blend rendering.")
-        .def(
-            "set_renderable_texture",
-            [](Renderer& self, uint32_t handle, Backend::Texture* texture,
-               TextureRole role) {
-                self.setRenderableTexture(handle, texture, role);
-            },
-            py::arg("handle"), py::arg("texture"), py::arg("role"),
-            "Attach a texture to a renderable using a material texture role.")
-        .def(
-            "set_renderable_texture",
-            [](Renderer& self, uint32_t handle, Backend::Texture* texture,
-               int slot) { self.setRenderableTexture(handle, texture, slot); },
-            py::arg("handle"), py::arg("texture"), py::arg("slot") = 0,
-            "Attach a texture to a renderable using a raw texture slot.")
-        .def(
-            "update_renderable_geometry",
-            [](Renderer& self, uint32_t handle, const FloatArray& positions,
-               py::object normals) {
-                auto positionVec = vec3Array(positions, "positions");
-                std::vector<glm::vec3> normalVec;
-                if (!normals.is_none()) {
-                    auto normalArray = normals.cast<FloatArray>();
-                    normalVec = vec3Array(normalArray, "normals");
-                    if (normalVec.size() != positionVec.size()) {
-                        throw py::value_error(
-                            "normals must match positions length");
-                    }
-                }
-                self.updateRenderableGeometry(handle, positionVec, normalVec);
-            },
-            py::arg("handle"), py::arg("positions"),
-            py::arg("normals") = py::none(),
-            "Update dynamic vertex positions and optional normals.")
-        .def(
-            "update_renderable_skinning_matrices",
-            [](Renderer& self, uint32_t handle, const FloatArray& matrices) {
-                self.updateRenderableSkinningMatrices(
-                    handle, mat4RowMajorArray(matrices, "bone_matrices"));
-            },
-            py::arg("handle"), py::arg("bone_matrices"),
-            "Update bone matrices for a skinned renderable.");
-
     // GLM types for matrix operations
     // Support implicit conversion from PyGLM types (tuple/list with x,y,z or
     // indexable)
     /*
-py::class_<glm::vec3>(m, "vec3")
+py::class_<glm::vec3>(m, "Vec3")
     .def(py::init<float, float, float>())
     .def(py::init([](py::object obj) {
         // Accept PyGLM vec3 or any object with x, y, z attributes
@@ -1276,13 +523,13 @@ py::class_<glm::vec3>(m, "vec3")
                ", " + std::to_string(v.z) + ")";
     });
     */
-    py::class_<glm::vec2>(m, "vec2", py::buffer_protocol())
+    py::class_<glm::vec2>(m, "Vec2", py::buffer_protocol())
         .def(py::init<float, float>(), py::arg("x") = 0.0f, py::arg("y") = 0.0f)
         .def(py::init([](py::handle obj) {
             if (py::isinstance<glm::vec2>(obj))
                 return obj.cast<glm::vec2>();
 
-            if (auto values = fixedFloatArray<2>(obj, "vec2"))
+            if (auto values = fixedFloatArray<2>(obj, "Vec2"))
                 return glm::vec2((*values)[0], (*values)[1]);
 
             if (py::hasattr(obj, "x") && py::hasattr(obj, "y"))
@@ -1317,7 +564,7 @@ py::class_<glm::vec3>(m, "vec3")
 
     py::implicitly_convertible<py::object, glm::vec2>();
 
-    py::class_<glm::vec3>(m, "vec3", py::buffer_protocol())
+    py::class_<glm::vec3>(m, "Vec3", py::buffer_protocol())
         .def(py::init<float, float, float>(), py::arg("x") = 0.0f,
              py::arg("y") = 0.0f, py::arg("z") = 0.0f)
         .def(py::init([](py::handle obj) {
@@ -1325,7 +572,7 @@ py::class_<glm::vec3>(m, "vec3")
                 return obj.cast<glm::vec3>();
 
             // Buffer protocol: numpy (float32 or float64), PyGLM, etc.
-            if (auto values = fixedFloatArray<3>(obj, "vec3"))
+            if (auto values = fixedFloatArray<3>(obj, "Vec3"))
                 return glm::vec3((*values)[0], (*values)[1], (*values)[2]);
 
             // Attribute access (PyGLM objects, etc.)
@@ -1369,11 +616,11 @@ py::class_<glm::vec3>(m, "vec3")
     // 암시적 형변환 등록
     py::implicitly_convertible<py::object, glm::vec3>();
 
-    py::class_<glm::vec4>(m, "vec4", py::buffer_protocol())
+    py::class_<glm::vec4>(m, "Vec4", py::buffer_protocol())
         .def(py::init<float, float, float, float>())
         .def(py::init([](py::object obj) {
             // Buffer protocol
-            if (auto values = fixedFloatArray<4>(obj, "vec4"))
+            if (auto values = fixedFloatArray<4>(obj, "Vec4"))
                 return glm::vec4((*values)[0], (*values)[1], (*values)[2],
                                  (*values)[3]);
             // Attribute access
@@ -1414,13 +661,13 @@ py::class_<glm::vec3>(m, "vec3")
 
     py::implicitly_convertible<py::object, glm::vec4>();
 
-    py::class_<glm::quat>(m, "quat")
+    py::class_<glm::quat>(m, "Quat")
         .def(py::init<float, float, float, float>(), py::arg("w"), py::arg("x"),
              py::arg("y"), py::arg("z"))
         .def(py::init([](py::object obj) {
             // Python quaternion values consistently use wxyz order,
             // independent of GLM's internal memory layout.
-            if (auto values = fixedFloatArray<4>(obj, "quat"))
+            if (auto values = fixedFloatArray<4>(obj, "Quat"))
                 return glm::quat((*values)[0], (*values)[1], (*values)[2],
                                  (*values)[3]);
             // Attribute access
@@ -1532,13 +779,13 @@ py::class_<glm::vec3>(m, "vec3")
 
     py::implicitly_convertible<py::object, glm::quat>();
 
-    py::class_<glm::mat3>(m, "mat3", py::buffer_protocol())
+    py::class_<glm::mat3>(m, "Mat3", py::buffer_protocol())
         .def(py::init<float>(), py::arg("value") = 1.0f)
         .def(py::init([](py::handle obj) {
             glm::mat3 m(1.0f);
 
             // A. Buffer Protocol (PyGLM, Numpy 등)
-            if (auto values = fixedFloatArray<9>(obj, "mat3")) {
+            if (auto values = fixedFloatArray<9>(obj, "Mat3")) {
                 std::copy(values->begin(), values->end(), &m[0][0]);
                 return m;
             }
@@ -1578,7 +825,7 @@ py::class_<glm::vec3>(m, "vec3")
     py::implicitly_convertible<py::object, glm::mat3>();
 
     // 1. mat4 클래스 정의 및 버퍼 프로토콜 활성화
-    py::class_<glm::mat4>(m, "mat4", py::buffer_protocol())
+    py::class_<glm::mat4>(m, "Mat4", py::buffer_protocol())
         // 기본 생성자 (Identity)
         .def(py::init<float>(), py::arg("value") = 1.0f)
 
@@ -1589,7 +836,7 @@ py::class_<glm::vec3>(m, "vec3")
             // 1. Buffer Protocol 시도 (PyGLM, Numpy 등)
             // obj.cast<py::object>()를 통해 handle을 object로 변환 후 buffer로
             // 접근합니다.
-            if (auto values = fixedFloatArray<16>(obj, "mat4")) {
+            if (auto values = fixedFloatArray<16>(obj, "Mat4")) {
                 std::copy(values->begin(), values->end(), &m[0][0]);
                 return m;
             }
@@ -1663,35 +910,6 @@ py::class_<glm::vec3>(m, "vec3")
         },
         "Scale a matrix by a vector");
 
-    py::class_<Camera>(m, "Camera",
-                       "View camera used by KangEngine applications.")
-        .def("get_camera_pos", &Camera::getCameraPos,
-             "Return the camera position.")
-        .def("get_target_pos", &Camera::getTargetPos,
-             "Return the current camera target point.")
-        .def("get_camera_look_dir", &Camera::getCameraLookDir,
-             "Return the normalized forward/look direction.")
-        .def("get_camera_up_dir", &Camera::getCameraUpDir,
-             "Return the normalized up direction.")
-        .def("get_camera_right_dir", &Camera::getCameraRightDir,
-             "Return the normalized right direction.")
-        .def("get_fov", &Camera::getFoV,
-             "Return the vertical field of view in degrees.")
-        .def("get_near_plane", &Camera::getNearPlane,
-             "Return the near clipping distance.")
-        .def("get_far_plane", &Camera::getFarPlane,
-             "Return the far clipping distance.")
-        .def("set_camera_pos", &Camera::setCameraPos, py::arg("camera_pos"),
-             "Set the camera position.")
-        .def("set_target_pos", &Camera::setTargetPos, py::arg("target_pos"),
-             "Set the camera target point.")
-        .def("set_fov", &Camera::setFoV, py::arg("fov"),
-             "Set the vertical field of view in degrees.")
-        .def("set_near_plane", &Camera::setNearPlane, py::arg("distance"),
-             "Set the near clipping distance.")
-        .def("set_far_plane", &Camera::setFarPlane, py::arg("distance"),
-             "Set the far clipping distance.");
-
     py::class_<FixedStepClock>(
         m, "FixedStepClock",
         "Wall-clock accumulator that schedules bounded fixed updates.")
@@ -1719,10 +937,10 @@ py::class_<glm::vec3>(m, "vec3")
         "Native application shell with a window, scene, renderer, and input.")
         .def(py::init<>(), "Create an uninitialized application.")
         .def("initialize", &App::initialize, py::arg("width"),
-             py::arg("height"), py::arg("hideUi") = false,
-             py::arg("upAxis") = UpAxis::Y,
-             py::arg("graphicsBackendType") = Backend::BackendType::OpenGL,
-             py::arg("sceneBackendType") = Scene::BackendType::Native,
+             py::arg("height"), py::arg("hide_ui") = false,
+             py::arg("up_axis") = UpAxis::Y,
+             py::arg("graphics_backend_type") = Backend::BackendType::OpenGL,
+             py::arg("scene_backend_type") = Scene::BackendType::Native,
              py::arg("headless") = false,
              "Initialize the window, renderer, input, and scene backend.")
         .def("set_render_hz", &App::setRenderHz, py::arg("render_hz"),
@@ -1808,27 +1026,27 @@ py::class_<glm::vec3>(m, "vec3")
              "Request a clean exit from the application loop.")
         .def("setup", &App::setup,
              "User override called once after initialization.")
-        .def("preUpdate", &App::preUpdate,
+        .def("pre_update", &App::preUpdate,
              "User override called once before fixed updates each frame.")
-        .def("fixedUpdate", &App::fixedUpdate, py::arg("fixed_dt"),
+        .def("fixed_update", &App::fixedUpdate, py::arg("fixed_dt"),
              "User override called zero or more times at a fixed timestep.")
-        .def("preRender", &App::preRender,
+        .def("pre_render", &App::preRender,
              "User override called before each frame is rendered.")
         .def("render", &App::render,
              "User override called during each frame render.")
-        .def("postRender", &App::postRender,
+        .def("post_render", &App::postRender,
              "User override called after each frame is rendered.")
-        .def("onRayPicked", &App::onRayPicked, py::arg("result"),
+        .def("on_ray_picked", &App::onRayPicked, py::arg("result"),
              "User override called when ray picking selects an object.")
-        .def("onRayPickHover", &App::onRayPickHover, py::arg("result"),
+        .def("on_ray_pick_hover", &App::onRayPickHover, py::arg("result"),
              "User override called when ray picking hovers an object.")
-        .def("onForceDragBegin", &App::onForceDragBegin, py::arg("result"),
+        .def("on_force_drag_begin", &App::onForceDragBegin, py::arg("result"),
              py::arg("target"),
              "User override called when force dragging begins.")
-        .def("onForceDragUpdate", &App::onForceDragUpdate, py::arg("result"),
+        .def("on_force_drag_update", &App::onForceDragUpdate, py::arg("result"),
              py::arg("target"),
              "User override called while force dragging updates.")
-        .def("onForceDragEnd", &App::onForceDragEnd,
+        .def("on_force_drag_end", &App::onForceDragEnd,
              "User override called when force dragging ends.")
         .def("get_interaction_mode", &App::getInteractionMode,
              "Return the active viewport interaction mode.")

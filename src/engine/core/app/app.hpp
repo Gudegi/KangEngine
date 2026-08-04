@@ -17,7 +17,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "engine/graphics/camera/camera.hpp"
+#include "engine/scene/types/camera.hpp"
 #include "engine/core/ui/panel_manager.hpp"
 #include "engine/core/ui/ui_scale.hpp"
 #include "utils/asset_path.hpp"
@@ -249,8 +249,8 @@ class App {
     virtual void setup() {}     // 처음에 사용
     virtual void preUpdate() {} // input/state changes before fixed updates
     virtual void fixedUpdate(double fixedDt) {}
-    virtual void preRender() {}  // 루프 안에서 사용됨. 렌더 전에 사용
-    virtual void render() {}     // overrideable 실제 렌더링
+    virtual void preRender() {} // 루프 안에서 사용됨. 렌더 전에 사용
+    virtual void render() {}    // overrideable 실제 렌더링
     virtual void postRender() {} // 렌더링 이후 마무리
     // Internal Python service hook. It is skipped while frame capture is idle.
     virtual void onFrameRenderedInternal() {}
@@ -481,8 +481,8 @@ class App {
 
     // Record
     std::vector<uint8_t> readRgbPixels(bool flipY = true);
-    std::vector<uint8_t>
-    readRgbPixelsResized(int width, int height, bool flipY = true);
+    std::vector<uint8_t> readRgbPixelsResized(int width, int height,
+                                              bool flipY = true);
     bool writePixelsPNG(const std::string& path, bool flipY = true);
 };
 

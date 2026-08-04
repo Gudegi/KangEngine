@@ -101,7 +101,7 @@ def _check_articulation_root(
 def _check_collision_shape(component):
     if component is None:
         raise AssertionError("missing CollisionShapeComponent")
-    if component.shape_type != ke.scene.CollisionShapeType.Box:
+    if component.shape_type != ke.scene.CollisionShapeType.BOX:
         raise AssertionError(f"shape type mismatch: {component.shape_type}")
     if component.source_geom_index != 0:
         raise AssertionError(
@@ -130,7 +130,7 @@ def main():
         mjcf = root / "robot.xml"
         _write_mjcf(mjcf, mesh_dir)
 
-        scene = ke.scene.create_backend(ke.scene.BackendType.Native)
+        scene = ke.scene.create_backend(ke.scene.BackendType.NATIVE)
         asset = ke.visual.ArticulationVisualAsset.from_mjcf(str(mjcf))
 
         merged = asset.instantiate(scene, "/merged_robot", "", False)
@@ -145,7 +145,7 @@ def main():
         body = merged.body_prim(0)
         _check_binding(
             body.get_articulation_binding_component(),
-            ke.scene.ArticulationPrimRole.BodyFrame,
+            ke.scene.ArticulationPrimRole.BODY_FRAME,
             0,
             "body",
             "/merged_robot",
@@ -166,7 +166,7 @@ def main():
         split_body = split.body_prim(0)
         _check_binding(
             split_body.get_articulation_binding_component(),
-            ke.scene.ArticulationPrimRole.BodyFrame,
+            ke.scene.ArticulationPrimRole.BODY_FRAME,
             0,
             "body",
             "/split_robot",
@@ -174,7 +174,7 @@ def main():
         split_render = list(split.render_prims())[0]
         _check_binding(
             split_render.get_articulation_binding_component(),
-            ke.scene.ArticulationPrimRole.VisualGeom,
+            ke.scene.ArticulationPrimRole.VISUAL_GEOM,
             0,
             "body",
             "/split_robot",
@@ -197,7 +197,7 @@ def main():
             )
         _check_binding(
             collision_prims[0].get_articulation_binding_component(),
-            ke.scene.ArticulationPrimRole.CollisionGeom,
+            ke.scene.ArticulationPrimRole.COLLISION_GEOM,
             0,
             "body",
             "/split_robot",

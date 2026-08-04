@@ -28,7 +28,7 @@ class SceneHookSmoke(ke.App):
         layout = render.VertexBufferLayout()
         layout.array_stride = 8
         layout.attributes = [
-            render.VertexAttributeDesc(render.VertexFormat.FLOAT32X2, 0, 0)
+            render.VertexAttributeDesc(render.VertexFormat.FLOAT32_X2, 0, 0)
         ]
 
         shader = render.ShaderDesc()
@@ -77,7 +77,7 @@ void main() { outColor = vec4(0.15, 0.8, 1.0, 1.0); }
         draw.set_vertex_buffer(0, self.vertex_buffer)
         draw.draw(3)
 
-    def preRender(self):
+    def pre_render(self):
         if self.records >= 2:
             self.request_close()
 

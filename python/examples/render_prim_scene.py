@@ -28,21 +28,21 @@ class MyApp(ke.App):
             "/box",
             ke.geometry.create_cube_data(1.0),
             self.standard_materials.common,
-            color=ke.vec4(0.8, 0.3, 0.02, 1.0),
+            color=ke.Vec4(0.8, 0.3, 0.02, 1.0),
         )
-        box.set_local_translation(ke.vec3(0.0, 2.0, 0.0))
-        box.set_local_rotation_axis_angle(ke.vec3(0.0, 1.0, 0.0), np.deg2rad(25.0))
+        box.set_local_translation(ke.Vec3(0.0, 2.0, 0.0))
+        box.set_local_rotation_axis_angle(ke.Vec3(0.0, 1.0, 0.0), np.deg2rad(25.0))
 
         # Box2
         box2 = self.scene.add_mesh(
             "/box/box2",
             ke.geometry.create_cube_data(1.0),
             self.standard_materials.common,
-            color=ke.vec4(0.3, 0.3, 0.02, 1.0),
+            color=ke.Vec4(0.3, 0.3, 0.02, 1.0),
         )
-        box2.set_local_translation(ke.vec3(0.0, 1.5, 0.0))
+        box2.set_local_translation(ke.Vec3(0.0, 1.5, 0.0))
         box2.set_local_rotation(np.array([0.924, 0, 0, 0.383]))
-        box2.set_local_scale(ke.vec3(0.5, 0.5, 0.5))
+        box2.set_local_scale(ke.Vec3(0.5, 0.5, 0.5))
 
         w_trans = box2.get_world_translation()
         w_ori = box2.get_world_rotation()
@@ -69,19 +69,19 @@ class MyApp(ke.App):
             "/sphere",
             ke.geometry.create_sphere_data(0.5, 16, 12),
             self.standard_materials.common,
-            color=ke.vec4(0.2, 0.4, 0.9, 1.0),
+            color=ke.Vec4(0.2, 0.4, 0.9, 1.0),
         )
-        sphere.set_local_translation(ke.vec3(2.5, 0.5, 0.0))
+        sphere.set_local_translation(ke.Vec3(2.5, 0.5, 0.0))
 
         self.check_error()
 
-    def preRender(self):
+    def pre_render(self):
         self.check_error()
 
     def render(self):
         pass
 
-    def postRender(self):
+    def post_render(self):
         pass
 
 

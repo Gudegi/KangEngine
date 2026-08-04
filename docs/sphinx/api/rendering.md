@@ -1,6 +1,6 @@
 # ke.render
 
-Graphics resources, renderer controls, and color helpers.
+Graphics resources, renderer controls, and custom pipeline APIs.
 
 ## API overview
 

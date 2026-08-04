@@ -59,10 +59,10 @@ class HeightmapTerrainViewer(ke.App):
 
     def setup(self):
         self.standard_materials = self.create_standard_materials()
-        self.set_light_direction(ke.vec3(-0.35, 0.82, -0.45))
-        self.set_light_color(ke.vec3(1.0, 0.96, 0.9))
+        self.set_light_direction(ke.Vec3(-0.35, 0.82, -0.45))
+        self.set_light_color(ke.Vec3(1.0, 0.96, 0.9))
         self.set_light_intensity(1.25)
-        self.set_light_ambient(ke.vec3(0.34, 0.34, 0.34))
+        self.set_light_ambient(ke.Vec3(0.34, 0.34, 0.34))
 
         self.mesh = ke.asset.load_heightmap_terrain(
             str(self.heightmap_path),
@@ -73,10 +73,9 @@ class HeightmapTerrainViewer(ke.App):
             sample_stride=self.sample_stride,
         )
         self.material = self.create_phong_material(
-            material=self.standard_materials.phong,
-            ambient=ke.vec3(0.12, 0.16, 0.12),
-            diffuse=ke.vec3(0.35, 0.55, 0.32),
-            specular=ke.vec3(0.08, 0.08, 0.08),
+            ambient=ke.Vec3(0.12, 0.16, 0.12),
+            diffuse=ke.Vec3(0.35, 0.55, 0.32),
+            specular=ke.Vec3(0.08, 0.08, 0.08),
             shininess=16.0,
         )
         self.terrain = self.scene.add_mesh("/terrain", self.mesh, self.material)
@@ -125,11 +124,11 @@ class HeightmapTerrainViewer(ke.App):
             f"collision={'yes' if self.collision_added else 'no'}"
         )
 
-    def fixedUpdate(self, fixed_dt):
+    def fixed_update(self, fixed_dt):
         if self.physics:
             self.physics.step()
 
-    def preRender(self):
+    def pre_render(self):
         if self.physics:
             self._sync_collision_test_sphere()
 
@@ -161,8 +160,8 @@ class HeightmapTerrainViewer(ke.App):
         vertices = list(self.mesh.vertices)
         if not vertices:
             return None, None
-        min_v = ke.vec3(vertices[0].x, vertices[0].y, vertices[0].z)
-        max_v = ke.vec3(vertices[0].x, vertices[0].y, vertices[0].z)
+        min_v = ke.Vec3(vertices[0].x, vertices[0].y, vertices[0].z)
+        max_v = ke.Vec3(vertices[0].x, vertices[0].y, vertices[0].z)
         for v in vertices[1:]:
             min_v.x = min(min_v.x, v.x)
             min_v.y = min(min_v.y, v.y)
@@ -183,10 +182,9 @@ class HeightmapTerrainViewer(ke.App):
             1.0,
         )
         test_mat = self.create_phong_material(
-            material=self.standard_materials.phong,
-            ambient=ke.vec3(0.18, 0.08, 0.04),
-            diffuse=ke.vec3(0.95, 0.35, 0.08),
-            specular=ke.vec3(0.1, 0.1, 0.1),
+            ambient=ke.Vec3(0.18, 0.08, 0.04),
+            diffuse=ke.Vec3(0.95, 0.35, 0.08),
+            specular=ke.Vec3(0.1, 0.1, 0.1),
             shininess=24.0,
         )
         sphere_mesh_data = ke.geometry.create_sphere_data(self.test_radius, 24, 12)
@@ -198,10 +196,10 @@ class HeightmapTerrainViewer(ke.App):
     def _collision_test_spawn_position(self):
         center = (self.bounds_min + self.bounds_max) * 0.5
         if self.up_axis == ke.UpAxis.Z:
-            return ke.vec3(
+            return ke.Vec3(
                 center.x, center.y, self.bounds_max.z + self.test_radius * 6.0
             )
-        return ke.vec3(center.x, self.bounds_max.y + self.test_radius * 6.0, center.z)
+        return ke.Vec3(center.x, self.bounds_max.y + self.test_radius * 6.0, center.z)
 
     def _reset_collision_test_sphere(self):
         if self.test_actor is None:
@@ -221,10 +219,10 @@ class HeightmapTerrainViewer(ke.App):
         pos = self.test_actor.get_root_position()
         rot = self.test_actor.get_root_rotation()
         self.test_view.prim.set_local_translation(
-            ke.vec3(float(pos[0]), float(pos[1]), float(pos[2]))
+            ke.Vec3(float(pos[0]), float(pos[1]), float(pos[2]))
         )
         self.test_view.prim.set_local_rotation(
-            ke.quat(float(rot[3]), float(rot[1]), float(rot[2]), float(rot[0]))
+            ke.Quat(float(rot[3]), float(rot[1]), float(rot[2]), float(rot[0]))
         )
 
     def _setup_camera(self):
@@ -233,8 +231,8 @@ class HeightmapTerrainViewer(ke.App):
         camera.set_far_plane(10000.0)
         camera.set_fov(55.0)
         if self.bounds_min is None:
-            camera.set_target_pos(ke.vec3(0.0, 0.0, 0.0))
-            camera.set_camera_pos(ke.vec3(0.0, 120.0, 240.0))
+            camera.set_target_pos(ke.Vec3(0.0, 0.0, 0.0))
+            camera.set_camera_pos(ke.Vec3(0.0, 120.0, 240.0))
             return
 
         center = (self.bounds_min + self.bounds_max) * 0.5
@@ -243,12 +241,12 @@ class HeightmapTerrainViewer(ke.App):
         if self.up_axis == ke.UpAxis.Z:
             camera.set_target_pos(center)
             camera.set_camera_pos(
-                center + ke.vec3(radius * 0.35, -radius * 0.75, radius * 0.45)
+                center + ke.Vec3(radius * 0.35, -radius * 0.75, radius * 0.45)
             )
         else:
             camera.set_target_pos(center)
             camera.set_camera_pos(
-                center + ke.vec3(radius * 0.35, radius * 0.45, radius * 0.75)
+                center + ke.Vec3(radius * 0.35, radius * 0.45, radius * 0.75)
             )
         self.set_camera_move_speed(max(10.0, radius * 0.2))
 

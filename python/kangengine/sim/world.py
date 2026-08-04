@@ -2535,7 +2535,7 @@ class KangSimWorld:
         ``duration`` never changes the PhysX timestep. The method converts it
         into as many whole ``sim_dt`` steps as are currently due and retains
         any fractional remainder for the next call. This is useful from an app
-        ``fixedUpdate(fixed_dt)`` callback whose control frequency may differ
+        ``fixed_update(fixed_dt)`` callback whose control frequency may differ
         from the world's physics frequency.
 
         For example, a 120 Hz world advances 2 substeps for ``1 / 60`` seconds

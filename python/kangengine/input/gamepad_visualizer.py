@@ -85,18 +85,18 @@ class GamepadVisualizer:
         self.width = 0.0 if width is None else float(width)
         self._responsive = width is None
         self.opacity = min(1.0, max(0.0, float(opacity)))
-        self._active_glow = _ke.vec4(
+        self._active_glow = _ke.Vec4(
             *preset_rgba(_ke.ColorType.SKY_BLUE, 0.18 * self.opacity)
         )
-        self._active = _ke.vec4(
+        self._active = _ke.Vec4(
             *preset_rgba(_ke.ColorType.SKY_BLUE, 0.98 * self.opacity)
         )
-        self._stick = _ke.vec4(
+        self._stick = _ke.Vec4(
             *preset_rgba(_ke.ColorType.PASTEL_SKY, 0.98 * self.opacity)
         )
-        self._inactive = _ke.vec4(*preset_rgba(_ke.ColorType.SLATE_GRAY, self.opacity))
-        self._stick_cap = _ke.vec4(*preset_rgba(_ke.ColorType.DARK_GRAY, self.opacity))
-        self.anchor = _ke.ScreenAnchor.BottomLeft if anchor is None else anchor
+        self._inactive = _ke.Vec4(*preset_rgba(_ke.ColorType.SLATE_GRAY, self.opacity))
+        self._stick_cap = _ke.Vec4(*preset_rgba(_ke.ColorType.DARK_GRAY, self.opacity))
+        self.anchor = _ke.ScreenAnchor.BOTTOM_LEFT if anchor is None else anchor
         self.offset = (float(offset[0]), float(offset[1]))
         asset = (
             Path(__file__).resolve().parents[1]
@@ -133,30 +133,30 @@ class GamepadVisualizer:
         anchor = self.anchor
 
         if anchor in (
-            _ke.ScreenAnchor.TopLeft,
-            _ke.ScreenAnchor.CenterLeft,
-            _ke.ScreenAnchor.BottomLeft,
+            _ke.ScreenAnchor.TOP_LEFT,
+            _ke.ScreenAnchor.CENTER_LEFT,
+            _ke.ScreenAnchor.BOTTOM_LEFT,
         ):
             px = x + offset_x
         elif anchor in (
-            _ke.ScreenAnchor.TopCenter,
-            _ke.ScreenAnchor.Center,
-            _ke.ScreenAnchor.BottomCenter,
+            _ke.ScreenAnchor.TOP_CENTER,
+            _ke.ScreenAnchor.CENTER,
+            _ke.ScreenAnchor.BOTTOM_CENTER,
         ):
             px = x + (width - window_width) * 0.5 + offset_x
         else:
             px = x + width - window_width - offset_x
 
         if anchor in (
-            _ke.ScreenAnchor.TopLeft,
-            _ke.ScreenAnchor.TopCenter,
-            _ke.ScreenAnchor.TopRight,
+            _ke.ScreenAnchor.TOP_LEFT,
+            _ke.ScreenAnchor.TOP_CENTER,
+            _ke.ScreenAnchor.TOP_RIGHT,
         ):
             py = y + offset_y
         elif anchor in (
-            _ke.ScreenAnchor.CenterLeft,
-            _ke.ScreenAnchor.Center,
-            _ke.ScreenAnchor.CenterRight,
+            _ke.ScreenAnchor.CENTER_LEFT,
+            _ke.ScreenAnchor.CENTER,
+            _ke.ScreenAnchor.CENTER_RIGHT,
         ):
             py = y + (height - window_height) * 0.5 + offset_y
         else:

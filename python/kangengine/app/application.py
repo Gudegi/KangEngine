@@ -130,7 +130,7 @@ class RenderablePrimView:
         return self.prim.get_path()
 
     def _require_scene_graph_transform(self):
-        if self.component.transform_source != render_api.TransformSource.SceneGraph:
+        if self.component.transform_source != render_api.TransformSource.SCENE_GRAPH:
             raise RuntimeError(
                 f"{self.path} uses an external transform buffer; "
                 "Prim local/world transforms do not drive this renderable"
@@ -246,7 +246,7 @@ class RenderablePrimView:
         """Return the per-instance base-color multiplier."""
         return self.prim.get_display_color_alpha()
 
-    def set_texture(self, texture, role_or_slot=render_api.TextureRole.BaseColor):
+    def set_texture(self, texture, role_or_slot=render_api.TextureRole.BASE_COLOR):
         self._render_system.set_texture(
             self.component, unwrap_native(texture), role_or_slot
         )
@@ -367,9 +367,8 @@ class DebugGeometry:
         """Add instanced line meshes and return a DebugPrimitiveView."""
         if material is None:
             material = self._scene._app.create_standard_materials().debug
-        shader = getattr(material, "shader", material)
         return self._scene.log_lines(
-            path, shader, starts, ends, colors, radius, segments
+            path, material, starts, ends, colors, radius, segments
         )
 
     def add_arrows(
@@ -386,9 +385,8 @@ class DebugGeometry:
         """Add instanced arrow meshes and return a DebugPrimitiveView."""
         if material is None:
             material = self._scene._app.create_standard_materials().debug
-        shader = getattr(material, "shader", material)
         return self._scene.log_arrows(
-            path, shader, starts, ends, colors, radius, segments
+            path, material, starts, ends, colors, radius, segments
         )
 
     def add_axes(
@@ -536,13 +534,13 @@ class WorldText:
         hidden: bool = False,
     ):
         if color is None:
-            color = _ke.vec4(1.0, 1.0, 1.0, 1.0)
+            color = _ke.Vec4(1.0, 1.0, 1.0, 1.0)
         if alignment is None:
-            alignment = render_api.TextAlignment.Center
+            alignment = render_api.TextAlignment.CENTER
         depth_mode = (
-            render_api.TextDepthMode.DepthTested
+            render_api.TextDepthMode.DEPTH_TESTED
             if depth_test
-            else render_api.TextDepthMode.Overlay
+            else render_api.TextDepthMode.OVERLAY
         )
         self._app.set_world_text(
             path,
@@ -596,24 +594,24 @@ class ScreenText:
         hidden: bool = False,
     ):
         if color is None:
-            color = _ke.vec4(1.0, 1.0, 1.0, 1.0)
+            color = _ke.Vec4(1.0, 1.0, 1.0, 1.0)
         if anchor is None:
-            anchor = render_api.ScreenAnchor.TopLeft
+            anchor = render_api.ScreenAnchor.TOP_LEFT
         if alignment is None:
             if anchor in (
-                render_api.ScreenAnchor.TopCenter,
-                render_api.ScreenAnchor.Center,
-                render_api.ScreenAnchor.BottomCenter,
+                render_api.ScreenAnchor.TOP_CENTER,
+                render_api.ScreenAnchor.CENTER,
+                render_api.ScreenAnchor.BOTTOM_CENTER,
             ):
-                alignment = render_api.TextAlignment.Center
+                alignment = render_api.TextAlignment.CENTER
             elif anchor in (
-                render_api.ScreenAnchor.TopRight,
-                render_api.ScreenAnchor.CenterRight,
-                render_api.ScreenAnchor.BottomRight,
+                render_api.ScreenAnchor.TOP_RIGHT,
+                render_api.ScreenAnchor.CENTER_RIGHT,
+                render_api.ScreenAnchor.BOTTOM_RIGHT,
             ):
-                alignment = render_api.TextAlignment.Right
+                alignment = render_api.TextAlignment.RIGHT
             else:
-                alignment = render_api.TextAlignment.Left
+                alignment = render_api.TextAlignment.LEFT
         self._app.set_screen_text(
             path,
             text,
@@ -691,7 +689,7 @@ class SceneContext:
         renderer handle. Pass a Material describing the render surface.
         """
         if transform_source is None:
-            transform_source = render_api.TransformSource.SceneGraph
+            transform_source = render_api.TransformSource.SCENE_GRAPH
         self._app._add_renderable(material, prim, transform_source)
         component = prim.get_render_component()
         if component is None:
@@ -707,7 +705,7 @@ class SceneContext:
         transform_source=None,
         uri=None,
     ):
-        prim = self.define_prim(path, scene.PrimType.Mesh)
+        prim = self.define_prim(path, scene.PrimType.MESH)
         mesh_handle = self._app._register_mesh_resource(
             mesh_data,
             display_name=Path(path).name or "Mesh",
@@ -742,7 +740,7 @@ class SceneContext:
         """
         obj_path = Path(obj_path)
         info = _ke.asset.load_obj_with_materials(str(obj_path))
-        root = self.define_prim(path, scene.PrimType.Xform)
+        root = self.define_prim(path, scene.PrimType.XFORM)
 
         subsets = list(info.subsets)
         if not subsets:
@@ -780,9 +778,9 @@ class SceneContext:
             if double_sided:
                 view.set_double_sided(True)
             if self._app._obj_subset_has_alpha_texture(info, subset):
-                view.set_alpha_mode(render_api.AlphaMode.Mask)
+                view.set_alpha_mode(render_api.AlphaMode.MASK)
             elif self._app._obj_subset_alpha(info, subset) < 1.0:
-                view.set_alpha_mode(render_api.AlphaMode.Blend)
+                view.set_alpha_mode(render_api.AlphaMode.BLEND)
             views.append(view)
 
         return ObjImportView(root, views, info)
@@ -805,7 +803,7 @@ class SceneContext:
     def log_lines(
         self,
         path: str,
-        shader,
+        material,
         starts,
         ends,
         colors=None,
@@ -814,7 +812,7 @@ class SceneContext:
     ):
         component = scene.DebugDraw.log_component_lines(
             self._app,
-            shader,
+            unwrap_native(material),
             path,
             starts,
             ends,
@@ -829,7 +827,7 @@ class SceneContext:
     def log_arrows(
         self,
         path: str,
-        shader,
+        material,
         starts,
         ends,
         colors=None,
@@ -838,7 +836,7 @@ class SceneContext:
     ):
         component = scene.DebugDraw.log_component_arrows(
             self._app,
-            shader,
+            unwrap_native(material),
             path,
             starts,
             ends,
@@ -860,11 +858,11 @@ class App(_NativeApp):
     This mirrors the C++ App lifecycle:
 
     - `setup()` runs once before the loop starts.
-    - `preUpdate()` handles per-frame input before simulation updates.
-    - `fixedUpdate(dt)` runs zero or more fixed updates per rendered frame.
-    - `preRender()` runs before scene rendering each frame.
+    - `pre_update()` handles per-frame input before simulation updates.
+    - `fixed_update(dt)` runs zero or more fixed updates per rendered frame.
+    - `pre_render()` runs before scene rendering each frame.
     - `render()` runs while the ImGui frame is active.
-    - `postRender()` runs after UI rendering and buffer swap setup.
+    - `post_render()` runs after UI rendering and buffer swap setup.
 
     The C++ implementation still handles the default camera controls:
     WASD/mouse navigation, H to hide UI, Escape to close, framebuffer updates,
@@ -890,8 +888,8 @@ class App(_NativeApp):
         self.materials = []
         self.textures = []
         self.up_axis = _ke.UpAxis.Y
-        self.graphics_backend_type = render_api.BackendType.OpenGL
-        self.scene_backend_type = scene.BackendType.Native
+        self.graphics_backend_type = render_api.BackendType.OPENGL
+        self.scene_backend_type = scene.BackendType.NATIVE
         self.headless = False
         self.scene = SceneContext(self)
         self.input = input_api.Input(self)
@@ -958,7 +956,7 @@ class App(_NativeApp):
             )
 
         authored = scene.PipelineResource()
-        authored.type = scene.PipelineType.Graphics
+        authored.type = scene.PipelineType.GRAPHICS
         authored.shader_sources = shader_handles
         authored.state_summary = (
             f"topology={desc.topology}, cull={desc.cull_mode}, "
@@ -1292,14 +1290,14 @@ class App(_NativeApp):
     def _obj_subset_display_color(self, info, subset):
         material = self._obj_material_info(info, subset.material_index)
         alpha = 1.0 if material is None else float(material.diffuse_color[3])
-        return _ke.vec4(1.0, 1.0, 1.0, alpha)
+        return _ke.Vec4(1.0, 1.0, 1.0, alpha)
 
     def _create_obj_subset_material(self, info, subset):
         material_info = self._obj_material_info(info, subset.material_index)
         if material_info is None:
             return self.create_phong_material(
-                diffuse=_ke.vec3(1.0, 1.0, 1.0),
-                specular=_ke.vec3(0.05, 0.05, 0.05),
+                diffuse=_ke.Vec3(1.0, 1.0, 1.0),
+                specular=_ke.Vec3(0.05, 0.05, 0.05),
                 shininess=16.0,
             )
 
@@ -1325,17 +1323,17 @@ class App(_NativeApp):
                 normal_map = self.load_texture(normal_path, flip=True)
 
         return self.create_phong_material(
-            ambient=_ke.vec3(
+            ambient=_ke.Vec3(
                 float(material_info.ambient_color[0]),
                 float(material_info.ambient_color[1]),
                 float(material_info.ambient_color[2]),
             ),
-            diffuse=_ke.vec3(
+            diffuse=_ke.Vec3(
                 float(material_info.diffuse_color[0]),
                 float(material_info.diffuse_color[1]),
                 float(material_info.diffuse_color[2]),
             ),
-            specular=_ke.vec3(
+            specular=_ke.Vec3(
                 float(material_info.specular_color[0]),
                 float(material_info.specular_color[1]),
                 float(material_info.specular_color[2]),
@@ -1350,7 +1348,7 @@ class App(_NativeApp):
     def _add_renderable(self, material, prim, transform_source=None):
         """Low-level renderer handle path used by internal bridges."""
         if transform_source is None:
-            transform_source = render_api.TransformSource.SceneGraph
+            transform_source = render_api.TransformSource.SCENE_GRAPH
         return super().add_renderable(unwrap_native(material), prim, transform_source)
 
     def _add_skinned_renderable(
@@ -1362,7 +1360,7 @@ class App(_NativeApp):
     ):
         """Low-level skinned renderer handle path used by internal bridges."""
         if transform_source is None:
-            transform_source = render_api.TransformSource.SceneGraph
+            transform_source = render_api.TransformSource.SCENE_GRAPH
         return super().add_skinned_renderable(
             unwrap_native(material),
             prim,
@@ -1406,7 +1404,7 @@ class App(_NativeApp):
         The material selects the built-in or custom RHI rendering path.
         """
         if transform_source is None:
-            transform_source = render_api.TransformSource.SceneGraph
+            transform_source = render_api.TransformSource.SCENE_GRAPH
         self._add_skinned_renderable(
             material,
             prim,
@@ -1421,13 +1419,13 @@ class App(_NativeApp):
         return RenderablePrimView(self, prim, component)
 
     def as_vec3(self, value):
-        if isinstance(value, _ke.vec3):
+        if isinstance(value, _ke.Vec3):
             return value
         if hasattr(value, "tolist"):
             value = value.tolist()
         if len(value) != 3:
             raise ValueError("vec3 value expected 3 elements")
-        return _ke.vec3(float(value[0]), float(value[1]), float(value[2]))
+        return _ke.Vec3(float(value[0]), float(value[1]), float(value[2]))
 
     def set_camera_view(self, position, target):
         camera = self.get_camera()
@@ -1514,19 +1512,19 @@ class App(_NativeApp):
     def setup(self):
         pass
 
-    def preUpdate(self):
+    def pre_update(self):
         pass
 
-    def fixedUpdate(self, fixed_dt):
+    def fixed_update(self, fixed_dt):
         pass
 
-    def preRender(self):
+    def pre_render(self):
         pass
 
     def render(self):
         pass
 
-    def postRender(self):
+    def post_render(self):
         pass
 
     def cleanup(self):
@@ -1558,9 +1556,9 @@ class App(_NativeApp):
 
         self.up_axis = _ke.UpAxis.Y if up_axis is None else up_axis
         if graphics_backend_type is None:
-            graphics_backend_type = render_api.BackendType.OpenGL
+            graphics_backend_type = render_api.BackendType.OPENGL
         if scene_backend_type is None:
-            scene_backend_type = scene.BackendType.Native
+            scene_backend_type = scene.BackendType.NATIVE
         self.graphics_backend_type = graphics_backend_type
         self.scene_backend_type = scene_backend_type
 

@@ -10,7 +10,7 @@ class GamepadVisualizerApp(ke.App):
         self.attach_camera = True
         self.gamepad = self.input.gamepad()
         self.gamepad_visualizer = ke.input.GamepadVisualizer(
-            self, width=400, anchor=ke.render.ScreenAnchor.BottomCenter
+            self, width=400, anchor=ke.render.ScreenAnchor.BOTTOM_CENTER
         )
         self.gamepad_state = self.gamepad.state()
         self.standard_materials = self.create_standard_materials()
@@ -20,7 +20,7 @@ class GamepadVisualizerApp(ke.App):
             "/controlled_sphere",
             ke.geometry.create_sphere_data(0.5, 32, 16),
             self.standard_materials.common,
-            color=ke.vec4(0.25, 0.72, 0.95, 1.0),
+            color=ke.Vec4(0.25, 0.72, 0.95, 1.0),
         )
         self.sphere_pos = np.array([0.0, -0.3, 0.7])
         self.previous_sphere_pos = self.sphere_pos.copy()
@@ -43,7 +43,7 @@ class GamepadVisualizerApp(ke.App):
             camera.set_camera_pos(self.sphere_pos + offset)
             camera.set_target_pos(self.sphere_pos)
 
-    def preRender(self):
+    def pre_render(self):
         self.gamepad_state = self.gamepad.state()
         joystick = self.gamepad.get_left_joystick(
             camera_relative=True,

@@ -14,16 +14,16 @@ def _close_vec3(actual, expected, eps=1.0e-5):
 
 
 def main():
-    scene = ke.scene.create_backend(ke.scene.BackendType.Native)
+    scene = ke.scene.create_backend(ke.scene.BackendType.NATIVE)
 
-    camera_prim = scene.define_prim("/cameras/main", ke.scene.PrimType.Camera)
-    camera_prim.set_local_translation(ke.vec3(1.0, 2.0, 3.0))
+    camera_prim = scene.define_prim("/cameras/main", ke.scene.PrimType.CAMERA)
+    camera_prim.set_local_translation(ke.Vec3(1.0, 2.0, 3.0))
     component = camera_prim.add_camera_component()
     if component is None or not component.attached:
         raise AssertionError("add_camera_component did not attach CameraComponent")
     if component.owner.get_path() != camera_prim.get_path():
         raise AssertionError("CameraComponent owner mismatch")
-    if component.projection_type != ke.scene.CameraProjectionType.Perspective:
+    if component.projection_type != ke.scene.CameraProjectionType.PERSPECTIVE:
         raise AssertionError("unexpected default projection type")
     if "CameraComponent" not in repr(component):
         raise AssertionError("CameraComponent repr missing type name")
@@ -50,7 +50,7 @@ def main():
         raise AssertionError("camera matrices were not returned")
 
     component.set_orthographic(4.0, 0.1, 50.0)
-    if component.projection_type != ke.scene.CameraProjectionType.Orthographic:
+    if component.projection_type != ke.scene.CameraProjectionType.ORTHOGRAPHIC:
         raise AssertionError("orthographic projection type was not stored")
     if abs(component.orthographic_size() - 4.0) > 1.0e-5:
         raise AssertionError("orthographic size was not stored")
@@ -66,7 +66,7 @@ def main():
     else:
         raise AssertionError("detached CameraComponent remained usable")
 
-    mesh_prim = scene.define_prim("/not_a_camera", ke.scene.PrimType.Xform)
+    mesh_prim = scene.define_prim("/not_a_camera", ke.scene.PrimType.XFORM)
     try:
         mesh_prim.add_camera_component()
     except RuntimeError:
@@ -74,7 +74,7 @@ def main():
     else:
         raise AssertionError("non-Camera prim accepted CameraComponent")
 
-    child = scene.define_prim("/cameras/subtree/child", ke.scene.PrimType.Camera)
+    child = scene.define_prim("/cameras/subtree/child", ke.scene.PrimType.CAMERA)
     child_component = child.add_camera_component()
     if not scene.remove_prim("/cameras/subtree"):
         raise AssertionError("failed to remove camera subtree")

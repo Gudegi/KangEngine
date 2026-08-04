@@ -94,7 +94,7 @@ class KwMotionTrackingApp(ke.App):
             self.order,
         )
         for prim in self.ghost.body_prims():
-            prim.set_display_color_alpha(ke.vec4(0.2, 0.6, 1.0, 0.35))
+            prim.set_display_color_alpha(ke.Vec4(0.2, 0.6, 1.0, 0.35))
             self.scene.add_renderable(prim, self.ghost_material)
 
         self.body_axes: dict[int, list[np.ndarray]] = {}
@@ -137,14 +137,14 @@ class KwMotionTrackingApp(ke.App):
     def _apply_ghost(self, idx: int):
         root = self.root_pos[idx]
         self.ghost.set_root_translation(
-            ke.vec3(float(root[0]), float(root[1]), float(root[2]))
+            ke.Vec3(float(root[0]), float(root[1]), float(root[2]))
         )
         num_bodies = min(self.ghost.num_bodies(), self.local_rot.shape[1])
         for body_idx in range(num_bodies):
             q = self.local_rot[idx][body_idx]
             self.ghost.set_joint_rotation(
                 body_idx,
-                ke.quat(float(q[0]), float(q[1]), float(q[2]), float(q[3])),
+                ke.Quat(float(q[0]), float(q[1]), float(q[2]), float(q[3])),
             )
         self.ghost.apply_pose()
 
@@ -166,11 +166,11 @@ class KwMotionTrackingApp(ke.App):
         self.sim_world.step(substeps=0, apply_commands=False)
         self.visual_bridge.sync()
 
-    def preUpdate(self):
+    def pre_update(self):
         if self.was_key_pressed(keys.R):
             self._reset()
 
-    def fixedUpdate(self, fixed_dt):
+    def fixed_update(self, fixed_dt):
         idx = self.frame_idx
         self._apply_ghost(idx)
 
@@ -192,7 +192,7 @@ class KwMotionTrackingApp(ke.App):
 
         self.frame_idx = (self.frame_idx + 1) % self.root_pos.shape[0]
 
-    def preRender(self):
+    def pre_render(self):
         self.visual_bridge.sync()
         self.check_error()
 
@@ -217,7 +217,7 @@ class KwMotionTrackingApp(ke.App):
             self.visual_bridge.set_collision_visible(self.show_collision)
         imgui.end()
 
-    def postRender(self):
+    def post_render(self):
         pass
 
     def cleanup(self):

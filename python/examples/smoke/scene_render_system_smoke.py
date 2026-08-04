@@ -16,7 +16,7 @@ def main():
         "/group/mesh",
         ke.scene.Prim.create_rectangle_data(1.0, 1.0, 1.0),
         material,
-        transform_source=ke.render.TransformSource.ExternalBuffer,
+        transform_source=ke.render.TransformSource.EXTERNAL_BUFFER,
     )
     component = view.prim.get_render_component()
     mesh_component = view.prim.get_mesh_component()
@@ -45,7 +45,7 @@ def main():
     assert component.version > direct_version
 
     try:
-        component.transform_source = ke.render.TransformSource.SceneGraph
+        component.transform_source = ke.render.TransformSource.SCENE_GRAPH
     except RuntimeError:
         pass
     else:
@@ -53,10 +53,10 @@ def main():
 
     view.set_double_sided(True)
     view.set_casts_shadow(False)
-    view.set_alpha_mode(ke.render.AlphaMode.Mask, 0.4)
+    view.set_alpha_mode(ke.render.AlphaMode.MASK, 0.4)
     assert component.double_sided
     assert not component.casts_shadow
-    assert component.alpha_mode == ke.render.AlphaMode.Mask
+    assert component.alpha_mode == ke.render.AlphaMode.MASK
     assert abs(component.alpha_cutoff - 0.4) < 1.0e-6
     view.update_geometry(
         [

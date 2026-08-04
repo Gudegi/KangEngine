@@ -143,13 +143,13 @@ class ControlDemo(ke.App):
             targets[dof_id] = self.drive_amp * math.sin(phase)
         return targets
 
-    def preUpdate(self):
+    def pre_update(self):
         if self.was_key_pressed(keys.R):
             self._reset()
         if self.was_key_pressed(keys.F):
             self.force_time_left = self.force_duration
 
-    def fixedUpdate(self, fixed_dt):
+    def fixed_update(self, fixed_dt):
         self.elapsed += fixed_dt
         self.world.set_cmd(
             None,
@@ -168,7 +168,7 @@ class ControlDemo(ke.App):
 
         self.world.advance(fixed_dt)
 
-    def preRender(self):
+    def pre_render(self):
         self.visual.sync()
         if self.force_time_left > 0.0:
             self._log_force_arrow(self.force_vector, self.ball_obj_id)

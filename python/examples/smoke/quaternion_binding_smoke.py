@@ -13,16 +13,16 @@ def _close(actual, expected):
 
 
 def main():
-    identity = ke.quat(np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float32))
+    identity = ke.Quat(np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float32))
     _close(identity.to_wxyz(), [1.0, 0.0, 0.0, 0.0])
     _close(np.asarray(identity), [1.0, 0.0, 0.0, 0.0])
 
-    identity_xyzw = ke.quat.from_xyzw([0.0, 0.0, 0.0, 1.0])
+    identity_xyzw = ke.Quat.from_xyzw([0.0, 0.0, 0.0, 1.0])
     _close(identity_xyzw.to_wxyz(), [1.0, 0.0, 0.0, 0.0])
     _close(identity_xyzw.to_xyzw(), [0.0, 0.0, 0.0, 1.0])
 
-    scene = ke.scene.create_backend(ke.scene.BackendType.Native)
-    prim = scene.define_prim("/World/Test", ke.scene.PrimType.Xform)
+    scene = ke.scene.create_backend(ke.scene.BackendType.NATIVE)
+    prim = scene.define_prim("/World/Test", ke.scene.PrimType.XFORM)
     prim.set_local_rotation(np.array([1.0, 0.0, 0.0, 0.0]))
     _close(prim.get_local_rotation(), [1.0, 0.0, 0.0, 0.0])
 

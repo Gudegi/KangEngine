@@ -38,7 +38,7 @@ layout = ke.render.VertexBufferLayout()
 layout.array_stride = 2 * np.dtype(np.float32).itemsize
 layout.attributes = [
     ke.render.VertexAttributeDesc(
-        ke.render.VertexFormat.FLOAT32X2,
+        ke.render.VertexFormat.FLOAT32_X2,
         0,  # byte offset inside one vertex
         0,  # shader layout location
     )

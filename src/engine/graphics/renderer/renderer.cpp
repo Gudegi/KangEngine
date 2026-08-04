@@ -1,7 +1,7 @@
 #include "renderer.hpp"
 
 #include "engine/graphics/backend/base/graphics_device.hpp"
-#include "engine/graphics/camera/camera.hpp"
+#include "engine/scene/types/camera.hpp"
 #include "engine/graphics/renderer/fullscreen_pass.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
 #include "engine/scene/native/prim.hpp"
@@ -148,9 +148,8 @@ Backend::Framebuffer* Renderer::shadowFbo() {
 
 RenderHookHandle Renderer::addRenderHook(RenderHookPhase phase,
                                          RenderHookCallback callback) {
-    return _rasterizer
-               ? _rasterizer->addRenderHook(phase, std::move(callback))
-               : InvalidRenderHook;
+    return _rasterizer ? _rasterizer->addRenderHook(phase, std::move(callback))
+                       : InvalidRenderHook;
 }
 
 bool Renderer::removeRenderHook(RenderHookHandle handle) {
@@ -212,10 +211,8 @@ Renderer::createSceneHookPipeline(const SceneHookPipelineDesc& hookDesc) {
         blend.color.srcFactor = Backend::BlendFactorValue::SrcAlpha;
         blend.alpha.srcFactor = Backend::BlendFactorValue::One;
         if (hookDesc.blend == SceneHookBlendMode::Alpha) {
-            blend.color.dstFactor =
-                Backend::BlendFactorValue::OneMinusSrcAlpha;
-            blend.alpha.dstFactor =
-                Backend::BlendFactorValue::OneMinusSrcAlpha;
+            blend.color.dstFactor = Backend::BlendFactorValue::OneMinusSrcAlpha;
+            blend.alpha.dstFactor = Backend::BlendFactorValue::OneMinusSrcAlpha;
         } else {
             blend.color.dstFactor = Backend::BlendFactorValue::One;
             blend.alpha.dstFactor = Backend::BlendFactorValue::One;
@@ -236,7 +233,8 @@ void Renderer::renderSceneToFramebuffer(Camera& camera,
 
 void Renderer::ensureOffscreenSceneTarget(Backend::Framebuffer* target,
                                           int width, int height) {
-    Backend::Texture* resolvedColor = target ? target->getColorTexture() : nullptr;
+    Backend::Texture* resolvedColor =
+        target ? target->getColorTexture() : nullptr;
     if (!resolvedColor)
         throw std::runtime_error("offscreen scene target has no color texture");
     if (_offscreenDrawTarget && _offscreenFramebuffer == target &&
@@ -300,13 +298,19 @@ void Renderer::ensureOffscreenSceneTarget(Backend::Framebuffer* target,
 
     Backend::RenderPassDesc passDesc;
     passDesc.label = "offscreen_scene_resolve_pass";
-    passDesc.colorAttachments = {{
-        _offscreenMsaaColorView.get(), _offscreenResolveColorView.get(),
-        Backend::LoadOp::Load, Backend::StoreOp::Store, {}}};
-    passDesc.depthStencilAttachment = Backend::DepthStencilAttachmentDesc{
-        _offscreenDepthStencilView.get(), Backend::LoadOp::Load,
-        Backend::StoreOp::Store, 1.0f, Backend::LoadOp::Load,
-        Backend::StoreOp::Store, 0};
+    passDesc.colorAttachments = {{_offscreenMsaaColorView.get(),
+                                  _offscreenResolveColorView.get(),
+                                  Backend::LoadOp::Load,
+                                  Backend::StoreOp::Store,
+                                  {}}};
+    passDesc.depthStencilAttachment =
+        Backend::DepthStencilAttachmentDesc{_offscreenDepthStencilView.get(),
+                                            Backend::LoadOp::Load,
+                                            Backend::StoreOp::Store,
+                                            1.0f,
+                                            Backend::LoadOp::Load,
+                                            Backend::StoreOp::Store,
+                                            0};
     _offscreenResolveTarget = _device->createRenderTarget(passDesc);
     passDesc.label = "offscreen_scene_draw_pass";
     passDesc.colorAttachments[0].resolveTarget = nullptr;
@@ -334,19 +338,24 @@ void Renderer::ensureOffscreenClearTarget(const glm::vec4& clearColor) {
 
     Backend::RenderPassDesc passDesc;
     passDesc.label = "offscreen_scene_clear_pass";
-    passDesc.colorAttachments = {{
-        _offscreenMsaaColorView.get(), nullptr, Backend::LoadOp::Clear,
-        Backend::StoreOp::Store,
-        {clearColor.r, clearColor.g, clearColor.b, clearColor.a}}};
-    passDesc.depthStencilAttachment = Backend::DepthStencilAttachmentDesc{
-        _offscreenDepthStencilView.get(), Backend::LoadOp::Clear,
-        Backend::StoreOp::Store, 1.0f, Backend::LoadOp::Clear,
-        Backend::StoreOp::Store, 0};
+    passDesc.colorAttachments = {
+        {_offscreenMsaaColorView.get(),
+         nullptr,
+         Backend::LoadOp::Clear,
+         Backend::StoreOp::Store,
+         {clearColor.r, clearColor.g, clearColor.b, clearColor.a}}};
+    passDesc.depthStencilAttachment =
+        Backend::DepthStencilAttachmentDesc{_offscreenDepthStencilView.get(),
+                                            Backend::LoadOp::Clear,
+                                            Backend::StoreOp::Store,
+                                            1.0f,
+                                            Backend::LoadOp::Clear,
+                                            Backend::StoreOp::Store,
+                                            0};
     _offscreenClearTarget = _device->createRenderTarget(passDesc);
 }
 
-void Renderer::ensureOffscreenFormatConversion(
-    Backend::Texture* targetColor) {
+void Renderer::ensureOffscreenFormatConversion(Backend::Texture* targetColor) {
     const Backend::TextureFormat outputFormat = targetColor->getFormat();
     if (outputFormat != Backend::TextureFormat::RGBA8Unorm &&
         outputFormat != Backend::TextureFormat::RGBA8UnormSrgb) {
@@ -357,8 +366,7 @@ void Renderer::ensureOffscreenFormatConversion(
     if (!_offscreenCopyPipelineLayout) {
         for (size_t i = 0; i < 3; ++i) {
             Backend::BindGroupLayoutDesc emptyDesc;
-            emptyDesc.label =
-                "offscreen_copy_empty_group_" + std::to_string(i);
+            emptyDesc.label = "offscreen_copy_empty_group_" + std::to_string(i);
             _offscreenCopyGroupLayouts[i] =
                 _device->createBindGroupLayout(emptyDesc);
         }
@@ -401,8 +409,7 @@ void Renderer::ensureOffscreenFormatConversion(
         pipelineDesc.primitive.cullMode = Backend::CullMode::None;
         pipelineDesc.colorTargets = {{outputFormat}};
         pipelineDesc.pipelineLayout = _offscreenCopyPipelineLayout.get();
-        _offscreenCopyPipeline =
-            _device->createGraphicsPipeline(pipelineDesc);
+        _offscreenCopyPipeline = _device->createGraphicsPipeline(pipelineDesc);
         _offscreenOutputFormat = outputFormat;
     }
 
@@ -413,9 +420,11 @@ void Renderer::ensureOffscreenFormatConversion(
         _device->createTextureView(targetColor, outputViewDesc);
     Backend::RenderPassDesc outputPassDesc;
     outputPassDesc.label = "offscreen_copy_pass";
-    outputPassDesc.colorAttachments = {{
-        _offscreenOutputView.get(), nullptr, Backend::LoadOp::Clear,
-        Backend::StoreOp::Store, {0.0f, 0.0f, 0.0f, 1.0f}}};
+    outputPassDesc.colorAttachments = {{_offscreenOutputView.get(),
+                                        nullptr,
+                                        Backend::LoadOp::Clear,
+                                        Backend::StoreOp::Store,
+                                        {0.0f, 0.0f, 0.0f, 1.0f}}};
     _offscreenOutputTarget = _device->createRenderTarget(outputPassDesc);
 
     Backend::BindGroupDesc bindDesc;
@@ -433,10 +442,9 @@ void Renderer::recordOffscreenFormatConversion(int width, int height) {
         return;
     auto encoder = _device->createCommandEncoder();
     auto pass = encoder->beginRenderPass(_offscreenOutputTarget.get());
-    FullscreenPass::record(*pass, _offscreenCopyPipeline.get(),
-                           static_cast<uint32_t>(width),
-                           static_cast<uint32_t>(height),
-                           _offscreenCopyBindGroup.get());
+    FullscreenPass::record(
+        *pass, _offscreenCopyPipeline.get(), static_cast<uint32_t>(width),
+        static_cast<uint32_t>(height), _offscreenCopyBindGroup.get());
     pass->end();
     auto commands = encoder->finish();
     _device->submit(*commands);
@@ -482,10 +490,10 @@ RenderableHandle Renderer::addRenderable(Material* material, Scene::Prim* prim,
                : InvalidHandle;
 }
 
-RenderableHandle Renderer::addSkinnedRenderable(
-    Material* material, Scene::Prim* prim,
-    const Scene::SkinnedMeshData& skinnedMesh,
-    TransformSource transformSource) {
+RenderableHandle
+Renderer::addSkinnedRenderable(Material* material, Scene::Prim* prim,
+                               const Scene::SkinnedMeshData& skinnedMesh,
+                               TransformSource transformSource) {
     return _rasterizer ? _rasterizer->addSkinnedRenderable(
                              material, prim, skinnedMesh, transformSource)
                        : InvalidHandle;

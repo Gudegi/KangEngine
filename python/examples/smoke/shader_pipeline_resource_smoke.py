@@ -7,7 +7,7 @@ from kangengine import render
 
 
 def main():
-    backend = ke.scene.create_backend(ke.scene.BackendType.Native)
+    backend = ke.scene.create_backend(ke.scene.BackendType.NATIVE)
     resources = ke.scene.SceneResourceManager(backend)
 
     shader = ke.scene.ShaderSourceResource()
@@ -20,7 +20,7 @@ def main():
     )
 
     pipeline = ke.scene.PipelineResource()
-    pipeline.type = ke.scene.PipelineType.Compute
+    pipeline.type = ke.scene.PipelineType.COMPUTE
     pipeline.shader_sources = [shader_handle]
     pipeline.state_summary = "workgroup_size=64"
     pipeline_handle = resources.register_pipeline("particle_compute", pipeline)

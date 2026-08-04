@@ -12,6 +12,8 @@
 #include "engine/core/app/app.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/scene/debug_draw.hpp"
+#include "engine/scene/types/camera.hpp"
+#include "engine/scene/types/light.hpp"
 #include "engine/scene/component/transform_component.hpp"
 #include "engine/scene/component/mesh_component.hpp"
 #include "engine/scene/component/render_component.hpp"
@@ -44,6 +46,66 @@ void bind_scene(py::module& m) {
     py::module geometry = m.def_submodule(
         "geometry", "Geometry algorithms and procedural mesh factories.");
 
+    // Scene-owned viewport and light value types.
+    py::class_<KE::Camera>(scene, "Camera",
+                           "View camera used by KangEngine applications.")
+        .def("get_camera_pos", &KE::Camera::getCameraPos,
+             "Return the camera position.")
+        .def("get_target_pos", &KE::Camera::getTargetPos,
+             "Return the current camera target point.")
+        .def("get_camera_look_dir", &KE::Camera::getCameraLookDir,
+             "Return the normalized forward/look direction.")
+        .def("get_camera_up_dir", &KE::Camera::getCameraUpDir,
+             "Return the normalized up direction.")
+        .def("get_camera_right_dir", &KE::Camera::getCameraRightDir,
+             "Return the normalized right direction.")
+        .def("get_fov", &KE::Camera::getFoV,
+             "Return the vertical field of view in degrees.")
+        .def("get_near_plane", &KE::Camera::getNearPlane,
+             "Return the near clipping distance.")
+        .def("get_far_plane", &KE::Camera::getFarPlane,
+             "Return the far clipping distance.")
+        .def("set_camera_pos", &KE::Camera::setCameraPos,
+             py::arg("camera_pos"), "Set the camera position.")
+        .def("set_target_pos", &KE::Camera::setTargetPos,
+             py::arg("target_pos"), "Set the camera target point.")
+        .def("set_fov", &KE::Camera::setFoV, py::arg("fov"),
+             "Set the vertical field of view in degrees.")
+        .def("set_near_plane", &KE::Camera::setNearPlane,
+             py::arg("distance"), "Set the near clipping distance.")
+        .def("set_far_plane", &KE::Camera::setFarPlane,
+             py::arg("distance"), "Set the far clipping distance.");
+
+    py::class_<KE::Scene::DirectionalLight>(
+        scene, "DirectionalLight",
+        "Infinite-distance light used as the scene's main sun light.")
+        .def(py::init<>())
+        .def_readwrite("direction", &KE::Scene::DirectionalLight::direction)
+        .def_readwrite("color", &KE::Scene::DirectionalLight::color)
+        .def_readwrite("intensity", &KE::Scene::DirectionalLight::intensity)
+        .def_readwrite("ambient", &KE::Scene::DirectionalLight::ambient);
+
+    py::class_<KE::Scene::PointLight>(scene, "PointLight",
+                                      "Finite local scene light.")
+        .def(py::init<>())
+        .def_readwrite("position", &KE::Scene::PointLight::position)
+        .def_readwrite("color", &KE::Scene::PointLight::color)
+        .def_readwrite("intensity", &KE::Scene::PointLight::intensity)
+        .def_readwrite("range", &KE::Scene::PointLight::range);
+
+    py::class_<KE::Scene::SpotLight>(scene, "SpotLight",
+                                     "Finite cone-shaped scene light.")
+        .def(py::init<>())
+        .def_readwrite("position", &KE::Scene::SpotLight::position)
+        .def_readwrite("direction", &KE::Scene::SpotLight::direction)
+        .def_readwrite("color", &KE::Scene::SpotLight::color)
+        .def_readwrite("intensity", &KE::Scene::SpotLight::intensity)
+        .def_readwrite("range", &KE::Scene::SpotLight::range)
+        .def_readwrite("inner_cone_angle",
+                       &KE::Scene::SpotLight::innerConeAngle)
+        .def_readwrite("outer_cone_angle",
+                       &KE::Scene::SpotLight::outerConeAngle);
+
     // Token class
     py::class_<KE::Scene::Token>(
         scene, "Token", "Interned-style attribute key used by scene prims.")
@@ -63,78 +125,69 @@ void bind_scene(py::module& m) {
     py::enum_<KE::Scene::PrimType>(
         scene, "PrimType",
         "Scene prim categories used by KangEngine's scene graph.")
-        .value("Root", KE::Scene::PrimType::Root)
-        .value("Xform", KE::Scene::PrimType::Xform)
-        .value("Mesh", KE::Scene::PrimType::Mesh)
-        .value("MeshInstance", KE::Scene::PrimType::MeshInstance)
-        .value("Camera", KE::Scene::PrimType::Camera)
-        .value("Light", KE::Scene::PrimType::Light)
-        .value("Resource", KE::Scene::PrimType::Resource)
-        .export_values();
+        .value("ROOT", KE::Scene::PrimType::Root)
+        .value("XFORM", KE::Scene::PrimType::Xform)
+        .value("MESH", KE::Scene::PrimType::Mesh)
+        .value("MESH_INSTANCE", KE::Scene::PrimType::MeshInstance)
+        .value("CAMERA", KE::Scene::PrimType::Camera)
+        .value("LIGHT", KE::Scene::PrimType::Light)
+        .value("RESOURCE", KE::Scene::PrimType::Resource);
 
     py::enum_<KE::Scene::ResourceType>(
         scene, "ResourceType",
         "Kind of shared resource represented by a ResourceComponent.")
-        .value("Unknown", KE::Scene::ResourceType::Unknown)
-        .value("Mesh", KE::Scene::ResourceType::Mesh)
-        .value("Material", KE::Scene::ResourceType::Material)
-        .value("Texture", KE::Scene::ResourceType::Texture)
-        .value("ShaderSource", KE::Scene::ResourceType::ShaderSource)
-        .value("Pipeline", KE::Scene::ResourceType::Pipeline)
-        .export_values();
+        .value("UNKNOWN", KE::Scene::ResourceType::Unknown)
+        .value("MESH", KE::Scene::ResourceType::Mesh)
+        .value("MATERIAL", KE::Scene::ResourceType::Material)
+        .value("TEXTURE", KE::Scene::ResourceType::Texture)
+        .value("SHADER_SOURCE", KE::Scene::ResourceType::ShaderSource)
+        .value("PIPELINE", KE::Scene::ResourceType::Pipeline);
     py::enum_<KE::Scene::ShaderLanguage>(scene, "ShaderLanguage")
         .value("GLSL", KE::Scene::ShaderLanguage::GLSL)
-        .value("WGSL", KE::Scene::ShaderLanguage::WGSL)
-        .export_values();
+        .value("WGSL", KE::Scene::ShaderLanguage::WGSL);
     py::enum_<KE::Scene::AuthoredPipelineType>(scene, "PipelineType")
-        .value("Graphics", KE::Scene::AuthoredPipelineType::Graphics)
-        .value("Compute", KE::Scene::AuthoredPipelineType::Compute)
-        .export_values();
+        .value("GRAPHICS", KE::Scene::AuthoredPipelineType::Graphics)
+        .value("COMPUTE", KE::Scene::AuthoredPipelineType::Compute);
     scene.attr("InvalidResourceHandle") =
         py::int_(KE::Scene::InvalidResourceHandle);
 
     py::enum_<KE::Scene::ArticulationPrimRole>(
         scene, "ArticulationPrimRole",
         "Role of a Prim inside an articulated character/robot.")
-        .value("Root", KE::Scene::ArticulationPrimRole::Root)
-        .value("BodyFrame", KE::Scene::ArticulationPrimRole::BodyFrame)
-        .value("VisualGeom", KE::Scene::ArticulationPrimRole::VisualGeom)
-        .value("CollisionGeom", KE::Scene::ArticulationPrimRole::CollisionGeom)
-        .export_values();
+        .value("ROOT", KE::Scene::ArticulationPrimRole::Root)
+        .value("BODY_FRAME", KE::Scene::ArticulationPrimRole::BodyFrame)
+        .value("VISUAL_GEOM", KE::Scene::ArticulationPrimRole::VisualGeom)
+        .value("COLLISION_GEOM", KE::Scene::ArticulationPrimRole::CollisionGeom);
 
     py::enum_<KE::Scene::CollisionShapeType>(
         scene, "CollisionShapeType",
         "Primitive collision shape type mirrored onto debug collision prims.")
-        .value("Sphere", KE::Scene::CollisionShapeType::Sphere)
-        .value("Capsule", KE::Scene::CollisionShapeType::Capsule)
-        .value("Cylinder", KE::Scene::CollisionShapeType::Cylinder)
-        .value("Box", KE::Scene::CollisionShapeType::Box)
-        .export_values();
+        .value("SPHERE", KE::Scene::CollisionShapeType::Sphere)
+        .value("CAPSULE", KE::Scene::CollisionShapeType::Capsule)
+        .value("CYLINDER", KE::Scene::CollisionShapeType::Cylinder)
+        .value("BOX", KE::Scene::CollisionShapeType::Box);
 
     py::enum_<KE::Scene::ManipulationPolicy>(
         scene, "ManipulationPolicy",
         "How viewport manipulation resolves from a picked prim.")
-        .value("Inherit", KE::Scene::ManipulationPolicy::Inherit)
-        .value("Self", KE::Scene::ManipulationPolicy::Self)
-        .value("Parent", KE::Scene::ManipulationPolicy::Parent)
-        .value("Root", KE::Scene::ManipulationPolicy::Root)
-        .value("Disabled", KE::Scene::ManipulationPolicy::Disabled)
-        .export_values();
+        .value("INHERIT", KE::Scene::ManipulationPolicy::Inherit)
+        .value("SELF", KE::Scene::ManipulationPolicy::Self)
+        .value("PARENT", KE::Scene::ManipulationPolicy::Parent)
+        .value("ROOT", KE::Scene::ManipulationPolicy::Root)
+        .value("DISABLED", KE::Scene::ManipulationPolicy::Disabled);
 
     py::enum_<KE::Scene::LightType>(
         scene, "LightType",
         "Light prim subtype used by renderer scene-light sync.")
-        .value("Directional", KE::Scene::LightType::Directional)
-        .value("Point", KE::Scene::LightType::Point)
-        .value("Spot", KE::Scene::LightType::Spot)
-        .export_values();
+        .value("DIRECTIONAL", KE::Scene::LightType::Directional)
+        .value("POINT", KE::Scene::LightType::Point)
+        .value("SPOT", KE::Scene::LightType::Spot);
 
     py::enum_<KE::Scene::CameraProjectionType>(
         scene, "CameraProjectionType",
         "Projection mode used by scene CameraComponent.")
-        .value("Perspective", KE::Scene::CameraProjectionType::Perspective)
-        .value("Orthographic", KE::Scene::CameraProjectionType::Orthographic)
-        .export_values();
+        .value("PERSPECTIVE", KE::Scene::CameraProjectionType::Perspective)
+        .value("ORTHOGRAPHIC", KE::Scene::CameraProjectionType::Orthographic);
 
     py::class_<KE::Scene::RenderComponent,
                std::shared_ptr<KE::Scene::RenderComponent>>(
@@ -1174,9 +1227,8 @@ void bind_scene(py::module& m) {
     // BackendType enum
     py::enum_<KE::Scene::BackendType>(scene, "BackendType",
                                       "Scene backend implementation type.")
-        .value("Native", KE::Scene::BackendType::Native)
-        .value("USD", KE::Scene::BackendType::USD)
-        .export_values();
+        .value("NATIVE", KE::Scene::BackendType::Native)
+        .value("USD", KE::Scene::BackendType::USD);
 
     // MeshData struct (with shared_ptr holder for set_mesh_data compatibility)
     py::class_<KE::Scene::MeshData, std::shared_ptr<KE::Scene::MeshData>>(
@@ -1607,4 +1659,5 @@ void bind_scene(py::module& m) {
         return false;
 #endif
     });
+
 }

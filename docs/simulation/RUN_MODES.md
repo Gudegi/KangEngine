@@ -75,13 +75,13 @@ bursts in an externally stepped loop.
 
 `SimulationRunConfig` does not select the native `App` scheduler. `App.start()`
 uses `FixedStepClock`, which accumulates wall time and may invoke
-`fixedUpdate()` zero or more times per rendered frame. This is appropriate for
+`fixed_update()` zero or more times per rendered frame. This is appropriate for
 interactive simulations whose physics should remain independent of rendering.
 
-Do not use `SimulationPacer` inside an App `fixedUpdate()` callback. Keep App
-physics in `fixedUpdate()` and let `FixedStepClock` schedule it.
+Do not use `SimulationPacer` inside an App `fixed_update()` callback. Keep App
+physics in `fixed_update()` and let `FixedStepClock` schedule it.
 
 `renderFrameOnce()` is supported for manually driven rendering. Despite its
 name, it currently processes input and advances App frame scheduling in
 addition to drawing. Do not treat it as a render-only function or call it from
-inside `fixedUpdate()`.
+inside `fixed_update()`.

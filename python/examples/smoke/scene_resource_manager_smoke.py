@@ -6,7 +6,7 @@ import kangengine as ke
 
 
 def main():
-    backend = ke.scene.create_backend(ke.scene.BackendType.Native)
+    backend = ke.scene.create_backend(ke.scene.BackendType.NATIVE)
     registry = ke.scene.SceneResourceManager(backend)
 
     mesh = ke.scene.Prim.create_plane_data(1.0)
@@ -21,7 +21,7 @@ def main():
     prim = registry.resource_prim(handle)
     if prim is None:
         raise AssertionError("SceneResourceManager did not mirror a Resource prim")
-    if prim.get_type() != ke.scene.PrimType.Resource:
+    if prim.get_type() != ke.scene.PrimType.RESOURCE:
         raise AssertionError("mirrored prim is not a Resource prim")
     if not prim.get_path().startswith("/.Resources/Meshes/"):
         raise AssertionError("mirrored Resource prim path mismatch")
@@ -36,7 +36,7 @@ def main():
         raise AssertionError("mirrored Resource prim has no ResourceComponent")
     if component.handle != handle:
         raise AssertionError("ResourceComponent handle mismatch")
-    if component.type != ke.scene.ResourceType.Mesh:
+    if component.type != ke.scene.ResourceType.MESH:
         raise AssertionError("ResourceComponent type mismatch")
     if component.display_name != "Unit Plane":
         raise AssertionError("ResourceComponent display name mismatch")

@@ -11,6 +11,10 @@ Scene graph, prim hierarchy, components, resource mirrors, and debug drawing.
    :nosignatures:
 
    Prim
+   Camera
+   DirectionalLight
+   PointLight
+   SpotLight
    SceneBackend
    SceneResourceManager
    MeshData
@@ -24,6 +28,14 @@ Scene graph, prim hierarchy, components, resource mirrors, and debug drawing.
 .. autoclass:: Token
 
 .. autoclass:: Prim
+
+.. autoclass:: Camera
+
+.. autoclass:: DirectionalLight
+
+.. autoclass:: PointLight
+
+.. autoclass:: SpotLight
 
 .. autoclass:: TransformComponent
 

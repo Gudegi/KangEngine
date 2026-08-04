@@ -6,10 +6,10 @@ import kangengine as ke
 
 
 def main():
-    scene = ke.scene.create_backend(ke.scene.BackendType.Native)
+    scene = ke.scene.create_backend(ke.scene.BackendType.NATIVE)
 
     mesh = ke.scene.Prim.create_plane_data(1.0, ke.UpAxis.Z)
-    source = scene.define_prim("/Assets/Plane", ke.scene.PrimType.Mesh)
+    source = scene.define_prim("/Assets/Plane", ke.scene.PrimType.MESH)
     source.set_mesh_data(mesh)
 
     component = source.get_mesh_component()
@@ -33,7 +33,7 @@ def main():
     if component.version != version + 1:
         raise AssertionError("resource_handle change should advance version once")
 
-    inst = scene.define_prim("/World/PlaneInstance", ke.scene.PrimType.MeshInstance)
+    inst = scene.define_prim("/World/PlaneInstance", ke.scene.PrimType.MESH_INSTANCE)
     inst.set_mesh_source_path("/Assets/Plane")
     inst_component = inst.get_mesh_component()
     if inst_component is None:
@@ -43,7 +43,7 @@ def main():
     if inst.resolve_mesh_data() is not mesh:
         raise AssertionError("MeshInstance did not resolve source mesh")
 
-    xform = scene.define_prim("/World/Group", ke.scene.PrimType.Xform)
+    xform = scene.define_prim("/World/Group", ke.scene.PrimType.XFORM)
     try:
         xform.add_mesh_component()
     except RuntimeError:
@@ -64,7 +64,7 @@ def main():
     if resource_prim.get_mesh_data() is not None:
         raise AssertionError("resource mirror prim should not own mesh data")
 
-    by_identity = scene.define_prim("/World/ByIdentity", ke.scene.PrimType.Mesh)
+    by_identity = scene.define_prim("/World/ByIdentity", ke.scene.PrimType.MESH)
     by_identity.set_mesh_data(registered_mesh)
     by_identity_component = by_identity.get_mesh_component()
     by_identity_component.resource_handle = handle

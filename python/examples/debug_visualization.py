@@ -18,9 +18,9 @@ class DebugVisualizationApp(ke.App):
             "/box",
             ke.geometry.create_cube_data(1.0),
             materials.common,
-            color=ke.vec4(0.8, 0.3, 0.05, 1.0),
+            color=ke.Vec4(0.8, 0.3, 0.05, 1.0),
         )
-        self.box.set_local_translation(ke.vec3(0.0, 0.5, 0.0))
+        self.box.set_local_translation(ke.Vec3(0.0, 0.5, 0.0))
 
         # Lightweight overlay: no SceneGraph prims are created.
         self.debug_overlay.lines(
@@ -116,54 +116,54 @@ class DebugVisualizationApp(ke.App):
         self.world_text.set(
             "/labels/overlay",
             "Debug overlay",
-            ke.vec3(-2.3, 1.5, 0.0),
+            ke.Vec3(-2.3, 1.5, 0.0),
             pixel_size=24.0,
             depth_test=False,
         )
         self.world_text.set(
             "/labels/geometry",
             "Scene debug geometry",
-            ke.vec3(2.3, 1.5, 0.0),
+            ke.Vec3(2.3, 1.5, 0.0),
             pixel_size=24.0,
         )
         self.world_text.set(
             "/labels/box",
             "Moving box",
-            ke.vec3(0.0, 1.7, 0.0),
+            ke.Vec3(0.0, 1.7, 0.0),
             pixel_size=24.0,
         )
         self.screen_text.set(
             "/screen/title",
             "Debug Visualization {}".format(self.count),
-            ke.vec2(30.0, 30.0),
+            ke.Vec2(30.0, 30.0),
             pixel_size=28.0,
         )
         self.screen_text.set(
             "/screen/anchor",
             "TopCenter",
-            ke.vec2(30.0, 30.0),
-            alignment=ke.render.TextAlignment.Center,
-            anchor=ke.render.ScreenAnchor.TopCenter,
-            color=ke.vec4(0.3, 0.9, 1.0, 1.0),
+            ke.Vec2(30.0, 30.0),
+            alignment=ke.render.TextAlignment.CENTER,
+            anchor=ke.render.ScreenAnchor.TOP_CENTER,
+            color=ke.Vec4(0.3, 0.9, 1.0, 1.0),
             pixel_size=25.0,
         )
         self.screen_text.set(
             "/screen/anchor2",
             "CenterLeft",
-            ke.vec2(0.0, 0.0),
-            anchor=ke.render.ScreenAnchor.CenterLeft,
-            color=ke.vec4(0.3, 0.9, 1.0, 1.0),
+            ke.Vec2(0.0, 0.0),
+            anchor=ke.render.ScreenAnchor.CENTER_LEFT,
+            color=ke.Vec4(0.3, 0.9, 1.0, 1.0),
             pixel_size=25.0,
         )
 
         # self.set_camera_view([7.0, -9.0, 6.0], [0.0, 0.0, 0.8])
 
-    def preRender(self):
+    def pre_render(self):
         self.orbit_angle = (
             self.orbit_angle + math.radians(120.0) * self.get_delta_time()
         ) % (2.0 * math.pi)
         self.box.set_local_translation(
-            ke.vec3(
+            ke.Vec3(
                 math.cos(self.orbit_angle),
                 0.5,
                 math.sin(self.orbit_angle),
@@ -174,7 +174,7 @@ class DebugVisualizationApp(ke.App):
         box_quat = self.box.get_world_rotation()
         self.world_text.set_position(
             "/labels/box",
-            box_pos + box_quat * ke.vec3(0.0, 1.2, 0.0),
+            box_pos + box_quat * ke.Vec3(0.0, 1.2, 0.0),
         )
 
         sphere_centers = self.debug_sphere_centers.copy()

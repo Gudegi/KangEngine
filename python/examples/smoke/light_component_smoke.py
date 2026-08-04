@@ -15,12 +15,12 @@ def _close_vec3(actual, expected, eps=1.0e-5):
 
 
 def main():
-    scene = ke.scene.create_backend(ke.scene.BackendType.Native)
+    scene = ke.scene.create_backend(ke.scene.BackendType.NATIVE)
 
-    point_prim = scene.define_prim("/lights/test_point", ke.scene.PrimType.Light)
-    point = ke.PointLight()
-    point.position = ke.vec3(1.0, 2.0, 3.0)
-    point.color = ke.vec3(0.25, 0.5, 1.0)
+    point_prim = scene.define_prim("/lights/test_point", ke.scene.PrimType.LIGHT)
+    point = ke.scene.PointLight()
+    point.position = ke.Vec3(1.0, 2.0, 3.0)
+    point.color = ke.Vec3(0.25, 0.5, 1.0)
     point.intensity = 2.5
     point.range = 12.0
     point_prim.set_point_light(point)
@@ -28,7 +28,7 @@ def main():
     component = point_prim.get_light_component()
     if component is None or not component.attached:
         raise AssertionError("set_point_light did not attach LightComponent")
-    if component.type != ke.scene.LightType.Point:
+    if component.type != ke.scene.LightType.POINT:
         raise AssertionError("unexpected LightComponent type")
     if component.owner is not point_prim:
         raise AssertionError("LightComponent owner mismatch")
@@ -45,32 +45,32 @@ def main():
     if component.version <= version:
         raise AssertionError("LightComponent version did not advance")
 
-    spot_prim = scene.define_prim("/lights/test_spot", ke.scene.PrimType.Light)
-    spot = ke.SpotLight()
-    spot.position = ke.vec3(-1.0, 0.0, 2.0)
-    spot.direction = ke.vec3(0.0, -1.0, 0.0)
-    spot.color = ke.vec3(1.0, 0.5, 0.25)
+    spot_prim = scene.define_prim("/lights/test_spot", ke.scene.PrimType.LIGHT)
+    spot = ke.scene.SpotLight()
+    spot.position = ke.Vec3(-1.0, 0.0, 2.0)
+    spot.direction = ke.Vec3(0.0, -1.0, 0.0)
+    spot.color = ke.Vec3(1.0, 0.5, 0.25)
     spot.intensity = 1.5
     spot.range = 8.0
     spot.inner_cone_angle = math.radians(10.0)
     spot.outer_cone_angle = math.radians(25.0)
     spot_prim.set_spot_light(spot)
     spot_component = spot_prim.get_light_component()
-    if spot_component.type != ke.scene.LightType.Spot:
+    if spot_component.type != ke.scene.LightType.SPOT:
         raise AssertionError("unexpected spot LightComponent type")
     _close_vec3(spot_component.spot_light().position, [-1.0, 0.0, 2.0])
 
     directional_prim = scene.define_prim(
-        "/lights/test_directional", ke.scene.PrimType.Light
+        "/lights/test_directional", ke.scene.PrimType.LIGHT
     )
-    directional = ke.DirectionalLight()
-    directional.direction = ke.vec3(0.0, 0.0, -1.0)
-    directional.color = ke.vec3(1.0, 1.0, 0.75)
+    directional = ke.scene.DirectionalLight()
+    directional.direction = ke.Vec3(0.0, 0.0, -1.0)
+    directional.color = ke.Vec3(1.0, 1.0, 0.75)
     directional.intensity = 0.8
-    directional.ambient = ke.vec3(0.1, 0.1, 0.12)
+    directional.ambient = ke.Vec3(0.1, 0.1, 0.12)
     directional_prim.set_directional_light(directional)
     directional_component = directional_prim.get_light_component()
-    if directional_component.type != ke.scene.LightType.Directional:
+    if directional_component.type != ke.scene.LightType.DIRECTIONAL:
         raise AssertionError("unexpected directional LightComponent type")
     _close_vec3(directional_component.directional_light().direction, [0.0, 0.0, -1.0])
 
@@ -85,7 +85,7 @@ def main():
     else:
         raise AssertionError("detached LightComponent remained usable")
 
-    mesh_prim = scene.define_prim("/not_a_light", ke.scene.PrimType.Xform)
+    mesh_prim = scene.define_prim("/not_a_light", ke.scene.PrimType.XFORM)
     try:
         mesh_prim.add_light_component()
     except RuntimeError:
@@ -93,7 +93,7 @@ def main():
     else:
         raise AssertionError("non-Light prim accepted LightComponent")
 
-    child = scene.define_prim("/lights/subtree/child", ke.scene.PrimType.Light)
+    child = scene.define_prim("/lights/subtree/child", ke.scene.PrimType.LIGHT)
     child_component = child.add_light_component()
     if not scene.remove_prim("/lights/subtree"):
         raise AssertionError("failed to remove light subtree")

@@ -124,18 +124,18 @@ class MotionViewer(ke.App):
     def _apply_frame(self, idx: int):
         root = self.root_pos[idx]
         self.robot.set_root_translation(
-            ke.vec3(float(root[0]), float(root[1]), float(root[2]))
+            ke.Vec3(float(root[0]), float(root[1]), float(root[2]))
         )
         num_bodies = min(self.robot.num_bodies(), self.local_rot.shape[1])
         for body_idx in range(num_bodies):
             q = self.local_rot[idx][body_idx]  # wxyz
             self.robot.set_joint_rotation(
                 body_idx,
-                ke.quat(float(q[0]), float(q[1]), float(q[2]), float(q[3])),
+                ke.Quat(float(q[0]), float(q[1]), float(q[2]), float(q[3])),
             )
         self.robot.apply_pose()
 
-    def preRender(self):
+    def pre_render(self):
         if self.was_key_pressed(keys.SPACE):
             self.paused = not self.paused
         if self.was_key_pressed(keys.R):
@@ -170,7 +170,7 @@ class MotionViewer(ke.App):
         )
         imgui.end()
 
-    def postRender(self):
+    def post_render(self):
         pass
 
 

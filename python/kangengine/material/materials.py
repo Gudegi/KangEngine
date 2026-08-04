@@ -150,7 +150,7 @@ class PhongMaterial(Material):
         self._native.set_specular(specular)
         return self
 
-    def set_shininess(self, shininess: float):
+    def set_shininess(self, shininess: float) -> PhongMaterial:
         self._native.set_shininess(float(shininess))
         return self
 
@@ -298,11 +298,11 @@ class PBRMaterial(Material):
         self._native.set_base_color(base_color)
         return self
 
-    def set_metallic(self, metallic: float):
+    def set_metallic(self, metallic: float) -> PBRMaterial:
         self._native.set_metallic(float(metallic))
         return self
 
-    def set_roughness(self, roughness: float):
+    def set_roughness(self, roughness: float) -> PBRMaterial:
         self._native.set_roughness(float(roughness))
         return self
 
@@ -310,7 +310,7 @@ class PBRMaterial(Material):
         self._native.set_emissive_color(emissive_color)
         return self
 
-    def set_emissive_strength(self, emissive_strength: float):
+    def set_emissive_strength(self, emissive_strength: float) -> PBRMaterial:
         self._native.set_emissive_strength(float(emissive_strength))
         return self
 

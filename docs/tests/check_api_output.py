@@ -15,6 +15,11 @@ FORBIDDEN_TEXT = {
     "empty base-class row": "<p>Bases:</p>",
 }
 
+FORBIDDEN_BY_PAGE = {
+    "material.html": {"private C++ namespace": "KE::"},
+    "rendering.html": {"private C++ namespace": "KE::"},
+}
+
 REQUIRED_TEXT = {
     "animation.html": {
         "stub docstring": "Shapes use V=vertices, B=skin bones, and S=skeleton nodes.",
@@ -23,7 +28,11 @@ REQUIRED_TEXT = {
         "native fallback": "PhysX world configuration including timestep, up axis, and reporting.",
     },
     "rendering.html": {
-        "native fallback": "Factory for backend graphics resources such as textures and buffers.",
+        "stub docstring": "Factory for backend graphics resources.",
+    },
+    "material.html": {
+        "stub docstring": "Metallic-roughness PBR material with factors and optional textures.",
+        "stub method typing": "set_metallic(metallic: float) → PBRMaterial",
     },
     "visual.html": {
         "simulation visual section": "Simulation visual sync",
@@ -48,6 +57,9 @@ def main() -> int:
         html = path.read_text(encoding="utf-8")
         text = unescape(re.sub(r"<[^>]+>", "", html))
         for label, forbidden in FORBIDDEN_TEXT.items():
+            if forbidden in html or forbidden in text:
+                failures.append(f"{path}: {label}")
+        for label, forbidden in FORBIDDEN_BY_PAGE.get(path.name, {}).items():
             if forbidden in html or forbidden in text:
                 failures.append(f"{path}: {label}")
         for label, required in REQUIRED_TEXT.get(path.name, {}).items():

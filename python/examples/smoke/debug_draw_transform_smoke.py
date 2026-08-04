@@ -16,8 +16,8 @@ def _close(actual, expected, eps=1.0e-6):
 
 
 def main():
-    start = ke.vec3(1.0, 2.0, 3.0)
-    end = ke.vec3(1.0, 4.0, 3.0)
+    start = ke.Vec3(1.0, 2.0, 3.0)
+    end = ke.Vec3(1.0, 4.0, 3.0)
 
     arrow = ke.scene.DebugDraw.make_arrow_transform(start, end)
     line = ke.scene.DebugDraw.make_line_transform(start, end)

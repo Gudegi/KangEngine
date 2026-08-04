@@ -81,8 +81,8 @@ class FbxCharacterBridgeViewer(ke.App):
         self.scene.add_ground(scale=20.0, material=self.ground_material)
 
         camera = self.get_camera()
-        camera.set_camera_pos(ke.vec3(0.0, 1.45, 3.2))
-        camera.set_target_pos(ke.vec3(0.0, 0.85, 0.0))
+        camera.set_camera_pos(ke.Vec3(0.0, 1.45, 3.2))
+        camera.set_target_pos(ke.Vec3(0.0, 0.85, 0.0))
 
         self.character = ke.visual.SkinVisual.from_fbx(
             self,
@@ -157,7 +157,7 @@ class FbxCharacterBridgeViewer(ke.App):
         self.names = self.motion.node_names()
         self._update_skeleton_lines(self.motion.sample(0.0, loop=True))
         if not self.use_materials or self.material_mode == "debug_checker":
-            self.character.set_color(ke.vec4(*self.mesh_color))
+            self.character.set_color(ke.Vec4(*self.mesh_color))
         self._apply_visibility()
 
         print(
@@ -231,7 +231,7 @@ class FbxCharacterBridgeViewer(ke.App):
         state = self.character.apply_time(self.editor.player.time)
         self._update_skeleton_lines(state)
 
-    def preRender(self):
+    def pre_render(self):
         # self.character.set_casts_shadow(False)
         changed = False
         if self.was_key_pressed(keys.M):
@@ -287,7 +287,7 @@ class FbxCharacterBridgeViewer(ke.App):
         if mesh_changed or skeleton_changed:
             self._apply_visibility()
         if color_changed:
-            self.character.set_color(ke.vec4(*self.mesh_color))
+            self.character.set_color(ke.Vec4(*self.mesh_color))
             self._apply_visibility()
         if self.editor.render_modules_ui():
             self.editor.update_modules()

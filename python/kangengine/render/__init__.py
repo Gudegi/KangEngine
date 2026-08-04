@@ -43,6 +43,7 @@ SceneHookBlendMode = set_public_module(_ke.SceneHookBlendMode, __name__)
 SceneHookPipelineDesc = set_public_module(_ke.SceneHookPipelineDesc, __name__)
 RenderHookPhase = set_public_module(_ke.RenderHookPhase, __name__)
 RenderHookContext = set_public_module(_ke.RenderHookContext, __name__)
+RenderPassEncoder = set_public_module(_ke.RenderPassEncoder, __name__)
 
 Renderer = set_public_module(_ke.Renderer, __name__)
 GraphicsDevice = set_public_module(_ke.GraphicsDevice, __name__)
@@ -67,6 +68,7 @@ __all__ = [
     "PrimitiveTopology",
     "RenderHookContext",
     "RenderHookPhase",
+    "RenderPassEncoder",
     "Renderer",
     "SamplerDesc",
     "SceneHookBlendMode",

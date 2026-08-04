@@ -73,8 +73,8 @@ class FbxCharacterViewer(ke.App):
         self.scene.add_ground(scale=20.0, material=self.ground_material)
 
         camera = self.get_camera()
-        camera.set_camera_pos(ke.vec3(0.0, 1.45, 3.2))
-        camera.set_target_pos(ke.vec3(0.0, 0.85, 0.0))
+        camera.set_camera_pos(ke.Vec3(0.0, 1.45, 3.2))
+        camera.set_target_pos(ke.Vec3(0.0, 0.85, 0.0))
 
         self.clips = asset.FBXLoader.load_animation_clip_infos(self.fbx_file)
         if self.clip_index == -1 and self.fps <= 0.0 and self.scale == 0.01:
@@ -147,16 +147,16 @@ class FbxCharacterViewer(ke.App):
 
     def _create_mesh_prims(self):
         palette = [
-            ke.vec4(0.82, 0.78, 0.68, 1.0),
-            ke.vec4(0.42, 0.58, 0.92, 1.0),
-            ke.vec4(0.88, 0.45, 0.34, 1.0),
-            ke.vec4(0.55, 0.78, 0.48, 1.0),
+            ke.Vec4(0.82, 0.78, 0.68, 1.0),
+            ke.Vec4(0.42, 0.58, 0.92, 1.0),
+            ke.Vec4(0.88, 0.45, 0.34, 1.0),
+            ke.Vec4(0.55, 0.78, 0.48, 1.0),
         ]
         for idx, mesh in enumerate(self.meshes):
             name = prim_safe_name(mesh.name, f"mesh_{idx}")
             prim = self.scene.define_prim(
                 f"/fbx_character/{idx}_{name}",
-                scene.PrimType.Mesh,
+                scene.PrimType.MESH,
             )
             prim.set_mesh_data(mesh.mesh_data)
             color = self._mesh_material_color(mesh, palette[idx % len(palette)])
@@ -209,7 +209,7 @@ class FbxCharacterViewer(ke.App):
         color = material.diffuse_color
         if color is None:
             return fallback
-        return ke.vec4(
+        return ke.Vec4(
             float(color[0]), float(color[1]), float(color[2]), float(color[3])
         )
 
@@ -392,7 +392,7 @@ class FbxCharacterViewer(ke.App):
 
         for prim, color in zip(self.mesh_prims, self.mesh_colors):
             prim.set_display_color_alpha(
-                ke.vec4(float(color.x), float(color.y), float(color.z), mesh_alpha)
+                ke.Vec4(float(color.x), float(color.y), float(color.z), mesh_alpha)
             )
         self._apply_skeleton_visibility()
 
@@ -417,7 +417,7 @@ class FbxCharacterViewer(ke.App):
             colors,
         )
 
-    def preRender(self):
+    def pre_render(self):
         changed = False
         if self.was_key_pressed(keys.M):
             self.show_mesh = not self.show_mesh
@@ -467,7 +467,7 @@ class FbxCharacterViewer(ke.App):
             self._apply_shadow_casting()
         imgui.end()
 
-    def postRender(self):
+    def post_render(self):
         pass
 
 

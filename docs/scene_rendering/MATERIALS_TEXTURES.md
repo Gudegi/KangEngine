@@ -69,8 +69,8 @@ specular, and shininess values.
 
 ```python
 material = self.create_phong_material(
-    diffuse=ke.vec3(0.8, 0.3, 0.1),
-    specular=ke.vec3(0.2, 0.2, 0.2),
+    diffuse=ke.Vec3(0.8, 0.3, 0.1),
+    specular=ke.Vec3(0.2, 0.2, 0.2),
     shininess=32.0,
 )
 
@@ -88,7 +88,7 @@ respond more consistently to different lighting environments.
 
 ```python
 material = self.create_pbr_material(
-    base_color=ke.vec4(0.8, 0.3, 0.1, 1.0),
+    base_color=ke.Vec4(0.8, 0.3, 0.1, 1.0),
     metallic=0.0,
     roughness=0.6,
 )
@@ -113,7 +113,7 @@ diffuse = self.load_texture("assets/wood_base_color.png")
 normal = self.load_texture("assets/wood_normal.png")
 
 material = self.create_phong_material(
-    diffuse=ke.vec3(1.0, 1.0, 1.0),
+    diffuse=ke.Vec3(1.0, 1.0, 1.0),
     diffuse_map=diffuse,
     normal_map=normal,
 )
@@ -126,7 +126,7 @@ base_color = self.load_texture("assets/metal_base_color.png")
 orm = self.load_texture("assets/metal_orm.png")
 
 material = self.create_pbr_material(
-    base_color=ke.vec4(1.0, 1.0, 1.0, 1.0),
+    base_color=ke.Vec4(1.0, 1.0, 1.0, 1.0),
     base_color_texture=base_color,
     orm_texture=orm,
 )
@@ -148,12 +148,12 @@ not to the material itself:
 mesh = self.scene.add_mesh("/mesh", mesh_data, material)
 mesh.set_casts_shadow(True)
 mesh.set_double_sided(False)
-mesh.set_alpha_mode(ke.render.AlphaMode.Opaque)
+mesh.set_alpha_mode(ke.render.AlphaMode.OPAQUE)
 ```
 
 Use double-sided rendering for surfaces that must be visible from both sides.
-For cutout textures use `AlphaMode.Mask`; for partial transparency use
-`AlphaMode.Blend`.
+For cutout textures use `AlphaMode.MASK`; for partial transparency use
+`AlphaMode.BLEND`.
 
 ## Vertex-color styles
 

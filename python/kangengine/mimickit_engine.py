@@ -614,8 +614,8 @@ class KangEngineEngine(_BaseEngine):
         camera = self._viewer.get_camera()
         p = self._as_numpy(pos).reshape(3)
         t = self._as_numpy(look_at).reshape(3)
-        camera.set_camera_pos(_ke.vec3(float(p[0]), float(p[1]), float(p[2])))
-        camera.set_target_pos(_ke.vec3(float(t[0]), float(t[1]), float(t[2])))
+        camera.set_camera_pos(_ke.Vec3(float(p[0]), float(p[1]), float(p[2])))
+        camera.set_target_pos(_ke.Vec3(float(t[0]), float(t[1]), float(t[2])))
 
     def get_camera_pos(self):
         if self._viewer is None:
@@ -916,10 +916,10 @@ class KangEngineEngine(_BaseEngine):
                 [colors_np, np.ones((colors_np.shape[0], 1), dtype=np.float32)],
                 axis=-1,
             )
-        starts = [_ke.vec3(float(v[0]), float(v[1]), float(v[2])) for v in starts_np]
-        ends = [_ke.vec3(float(v[0]), float(v[1]), float(v[2])) for v in ends_np]
+        starts = [_ke.Vec3(float(v[0]), float(v[1]), float(v[2])) for v in starts_np]
+        ends = [_ke.Vec3(float(v[0]), float(v[1]), float(v[2])) for v in ends_np]
         colors = [
-            _ke.vec4(float(c[0]), float(c[1]), float(c[2]), float(c[3]))
+            _ke.Vec4(float(c[0]), float(c[1]), float(c[2]), float(c[3]))
             for c in colors_np
         ]
         self._viewer.draw_lines(

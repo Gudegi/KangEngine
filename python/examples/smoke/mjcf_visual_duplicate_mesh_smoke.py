@@ -68,7 +68,7 @@ def main():
                 f"expected one visual mesh info, got {len(data.mesh_infos)}"
             )
 
-        scene = ke.scene.create_backend(ke.scene.BackendType.Native)
+        scene = ke.scene.create_backend(ke.scene.BackendType.NATIVE)
         asset = ke.visual.ArticulationVisualAsset.from_mjcf(str(mjcf))
         bridge = asset.instantiate(scene, "/robot", "", True)
         render_prims = list(bridge.render_prims())

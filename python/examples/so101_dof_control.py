@@ -139,9 +139,9 @@ class SO101DofControlApp(MjcfDofControlApp):
             self.animate = False
             self._connect_lerobot_robot()
 
-    def preRender(self):
+    def pre_render(self):
         self._update_ik_ball_follow()
-        super().preRender()
+        super().pre_render()
         self._send_lerobot_action_if_due()
 
     def render(self):
@@ -278,12 +278,12 @@ class SO101DofControlApp(MjcfDofControlApp):
 
     def _create_target_ball(self):
         self.target_ball_prim = self.scene.define_prim(
-            "/ik_target_ball", ke.scene.PrimType.Mesh
+            "/ik_target_ball", ke.scene.PrimType.MESH
         )
         self.target_ball_prim.set_mesh_data(
             ke.geometry.create_sphere_data(float(self.target_ball_radius), 32, 16)
         )
-        self.target_ball_prim.set_display_color_alpha(ke.vec4(0.95, 0.18, 0.12, 1.0))
+        self.target_ball_prim.set_display_color_alpha(ke.Vec4(0.95, 0.18, 0.12, 1.0))
         self._sync_target_ball_prim()
         self.scene.add_renderable(self.target_ball_prim, self.robot_shader)
 
@@ -291,7 +291,7 @@ class SO101DofControlApp(MjcfDofControlApp):
         if self.target_ball_prim is None:
             return
         self.target_ball_prim.set_world_translation(
-            ke.vec3(
+            ke.Vec3(
                 float(self.ik_target[0]),
                 float(self.ik_target[1]),
                 float(self.ik_target[2]),

@@ -11,12 +11,19 @@ from docutils import nodes
 CONF_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(CONF_DIR))
 
-from stub_docstrings import load_stub_docstrings, stub_docstring_fingerprint
+from stub_docstrings import (
+    load_stub_docstrings,
+    load_stub_signatures,
+    stub_docstring_fingerprint,
+    stub_signature_fingerprint,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 PYTHON_DIR = ROOT / "python"
 _STUB_DOCSTRINGS = load_stub_docstrings(PYTHON_DIR)
+_STUB_SIGNATURES = load_stub_signatures(PYTHON_DIR)
 stub_docstrings_fingerprint = stub_docstring_fingerprint(_STUB_DOCSTRINGS)
+stub_signatures_fingerprint = stub_signature_fingerprint(_STUB_SIGNATURES)
 
 sys.path.insert(0, str(PYTHON_DIR))
 
@@ -78,7 +85,9 @@ copybutton_prompt_is_regexp = True
 
 autosummary_generate = False
 autodoc_member_order = "bysource"
-autodoc_typehints = "description"
+autodoc_typehints = "none"
+typehints_use_signature = True
+typehints_use_signature_return = True
 python_maximum_signature_line_length = 88
 python_trailing_comma_in_multi_line_signatures = True
 python_use_unqualified_type_names = True
@@ -121,6 +130,8 @@ _PUBLIC_SIGNATURE_REPLACEMENTS = (
     ("kangengine._kangengine.asset.", "kangengine.asset."),
     ("kangengine._core._ke.physics.", "kangengine.physics."),
     ("kangengine._kangengine.physics.", "kangengine.physics."),
+    ("KE::Scene::PointLight", "Any"),
+    ("KE::Scene::SpotLight", "Any"),
     ("kangengine._core._ke.", "kangengine."),
     ("kangengine._kangengine.", "kangengine."),
 )
@@ -135,6 +146,12 @@ def _public_signature(text: str | None) -> str | None:
 
 
 def process_signature(app, what, name, obj, options, signature, return_annotation):
+    stub_signature = _STUB_SIGNATURES.get(_public_signature(name) or name)
+    is_native = inspect.isbuiltin(obj) or type(obj).__module__ == "pybind11_builtins"
+    if stub_signature is not None and not is_native:
+        signature, return_annotation = stub_signature
+        if what == "class":
+            return_annotation = None
     signature = _public_signature(signature)
     return_annotation = _public_signature(return_annotation)
 
@@ -245,7 +262,12 @@ def setup(app):
     app.add_config_value(
         "stub_docstrings_fingerprint", stub_docstrings_fingerprint, "env"
     )
-    app.connect("autodoc-process-signature", process_signature)
+    app.add_config_value(
+        "stub_signatures_fingerprint", stub_signatures_fingerprint, "env"
+    )
+    # Run after sphinx-autodoc-typehints so the public stub remains the final
+    # authority for facade signatures instead of partial runtime annotations.
+    app.connect("autodoc-process-signature", process_signature, priority=900)
     app.connect("autodoc-process-bases", process_bases)
     app.connect("object-description-transform", process_object_description)
     # Run before Napoleon so Google-style Args/Returns sections sourced from

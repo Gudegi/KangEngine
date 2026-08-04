@@ -41,7 +41,7 @@ class BrickwallNormalMapViewer(ke.App):
             "/brickwall",
             ke.geometry.create_plane_data(4.0, ke.UpAxis.Z),
             self.wall_material,
-            color=ke.vec4(1.0, 1.0, 1.0, 1.0),
+            color=ke.Vec4(1.0, 1.0, 1.0, 1.0),
         )
         self.wall_view.set_texture(self.diffuse_texture, 0)
         self.wall_view.set_texture(self.normal_texture, 5)
@@ -52,16 +52,16 @@ class BrickwallNormalMapViewer(ke.App):
             ke.geometry.create_plane_data(6.0, ke.UpAxis.Y),
             self.ground_material,
         )
-        ground_view.prim.set_local_translation(ke.vec3(0.0, -2.0, 0.0))
+        ground_view.prim.set_local_translation(ke.Vec3(0.0, -2.0, 0.0))
 
-        self.set_light_direction(ke.vec3(-0.45, 0.35, 0.82))
-        self.set_light_color(ke.vec3(1.0, 0.96, 0.88))
+        self.set_light_direction(ke.Vec3(-0.45, 0.35, 0.82))
+        self.set_light_color(ke.Vec3(1.0, 0.96, 0.88))
         self.set_light_intensity(1.4)
-        self.set_light_ambient(ke.vec3(0.22, 0.22, 0.22))
+        self.set_light_ambient(ke.Vec3(0.22, 0.22, 0.22))
 
         camera = self.get_camera()
-        camera.set_camera_pos(ke.vec3(0.0, 0.0, 5.0))
-        camera.set_target_pos(ke.vec3(0.0, 0.0, 0.0))
+        camera.set_camera_pos(ke.Vec3(0.0, 0.0, 5.0))
+        camera.set_target_pos(ke.Vec3(0.0, 0.0, 0.0))
         camera.set_near_plane(0.01)
         camera.set_far_plane(50.0)
         camera.set_fov(45.0)
@@ -72,7 +72,7 @@ class BrickwallNormalMapViewer(ke.App):
         print(f"  normal : {root / 'brickwall_normal.jpg'}")
         self.check_error()
 
-    def preRender(self):
+    def pre_render(self):
         self.check_error()
 
     def render(self):
@@ -87,7 +87,7 @@ class BrickwallNormalMapViewer(ke.App):
         imgui.text("Toggle the tangent-space normal map.")
         imgui.end()
 
-    def postRender(self):
+    def post_render(self):
         pass
 
 

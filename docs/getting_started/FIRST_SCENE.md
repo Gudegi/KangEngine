@@ -16,11 +16,11 @@ class MyApp(ke.App):
             "/box",
             ke.geometry.create_cube_data(1.0),
             self.standard_materials.common,
-            color=ke.vec4(0.8, 0.3, 0.02, 1.0),
+            color=ke.Vec4(0.8, 0.3, 0.02, 1.0),
         )
-        box.set_local_translation(ke.vec3(0.0, 2.0, 0.0))
+        box.set_local_translation(ke.Vec3(0.0, 2.0, 0.0))
         box.set_local_rotation_axis_angle(
-            ke.vec3(0.0, 1.0, 0.0), np.deg2rad(25.0)
+            ke.Vec3(0.0, 1.0, 0.0), np.deg2rad(25.0)
         )
 ```
 
@@ -42,8 +42,8 @@ box2 = self.scene.add_mesh(
     ke.geometry.create_cube_data(1.0),
     self.standard_materials.common,
 )
-box2.set_local_translation(ke.vec3(0.0, 1.5, 0.0))
-box2.set_local_scale(ke.vec3(0.5, 0.5, 0.5))
+box2.set_local_translation(ke.Vec3(0.0, 1.5, 0.0))
+box2.set_local_scale(ke.Vec3(0.5, 0.5, 0.5))
 
 local_position = box2.get_local_translation()
 world_position = box2.get_world_translation()
@@ -55,7 +55,7 @@ parent naturally.
 
 ## Quaternion ordering
 
-`ke.quat` and NumPy inputs to quaternion object APIs use `wxyz` ordering.
+`ke.Quat` and NumPy inputs to quaternion object APIs use `wxyz` ordering.
 
 ```python
 # Approximately 45 degrees around Z, in wxyz order.
@@ -69,7 +69,7 @@ rotation_xyzw = rotation.to_xyzw()
 ```
 
 Physics and simulation state arrays named `rot_xyzw` retain `xyzw` ordering.
-Use `ke.quat.from_xyzw(...)` when moving such a value into a scene quaternion
+Use `ke.Quat.from_xyzw(...)` when moving such a value into a scene quaternion
 API.
 
 ## Inspect transform axes
