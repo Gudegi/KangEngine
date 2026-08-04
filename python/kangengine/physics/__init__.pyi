@@ -38,6 +38,10 @@ class PhysicsConfig:
     gpu_dynamics: PhysicsGpuDynamicsConfig
     enable_contact_reports: bool
     cpu_dispatcher_threads: int
+    bounce_threshold_velocity: float
+    friction_offset_threshold: float
+    friction_correlation_distance: float
+    enable_stabilization: bool
     def __init__(
         self,
         *,
@@ -50,6 +54,10 @@ class PhysicsConfig:
         gpu_dynamics: PhysicsGpuDynamicsConfig = ...,
         enable_contact_reports: bool = True,
         cpu_dispatcher_threads: int = 4,
+        bounce_threshold_velocity: float = 2.0,
+        friction_offset_threshold: float = 0.04,
+        friction_correlation_distance: float = 0.025,
+        enable_stabilization: bool = False,
     ) -> None: ...
     def __repr__(self) -> str: ...
     @staticmethod
@@ -244,6 +252,10 @@ class ArticulationConfig:
     link_linear_damping: float
     link_angular_damping: float
     max_angular_velocity: float
+    max_depenetration_velocity: float
+    sleep_threshold: float
+    stabilization_threshold: float
+    enable_gyroscopic_forces: bool
     contact_offset: float
     rest_offset: float
     enable_ccd: bool
@@ -262,6 +274,10 @@ class ArticulationConfig:
         link_linear_damping: float = 0.0,
         link_angular_damping: float = 0.05,
         max_angular_velocity: float = 100.0,
+        max_depenetration_velocity: float = 1e32,
+        sleep_threshold: float = 0.005,
+        stabilization_threshold: float = 0.0005,
+        enable_gyroscopic_forces: bool = False,
         contact_offset: float = 0.02,
         rest_offset: float = 0.0,
         material_overrides: Sequence[CollisionMaterialOverride] = ...,

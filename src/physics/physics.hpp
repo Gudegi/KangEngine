@@ -51,6 +51,10 @@ struct PhysicsConfig {
     uint32_t cpuDispatcherThreads = 4;
     // PxSolverType::Enum solverType = PxSolverType::ePGS;
     PxSolverType::Enum solverType = PxSolverType::eTGS;
+    float bounceThresholdVelocity = 2.0f;
+    float frictionOffsetThreshold = 0.04f;
+    float frictionCorrelationDistance = 0.025f;
+    bool enableStabilization = false;
     PhysicsGpuDynamicsConfig gpuDynamics;
     bool enableGPU = false;
 

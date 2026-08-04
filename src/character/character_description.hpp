@@ -40,6 +40,7 @@ struct JointDesc {
     float hiLimit = 3.14159f;
     float kp = 0.f;
     float kd = 0.f;
+    float armature = 0.f;
     float effortLimit = FLT_MAX;
 };
 

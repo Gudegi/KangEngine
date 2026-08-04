@@ -162,6 +162,13 @@ struct DefaultSiteAttrs {
     std::string parentClass;
 };
 
+struct DefaultJointAttrs {
+    float stiffness = -1.f;
+    float damping = -1.f;
+    float armature = -1.f;
+    std::string parentClass;
+};
+
 void readGeomDefaults(tinyxml2::XMLElement* defElem, DefaultGeomAttrs& out) {
     auto* g = defElem->FirstChildElement("geom");
     if (!g)
@@ -213,6 +220,15 @@ void readSiteDefaults(tinyxml2::XMLElement* defElem, DefaultSiteAttrs& out) {
         out.rgba = rgba;
 }
 
+void readJointDefaults(tinyxml2::XMLElement* defElem, DefaultJointAttrs& out) {
+    auto* joint = defElem->FirstChildElement("joint");
+    if (!joint)
+        return;
+    joint->QueryFloatAttribute("stiffness", &out.stiffness);
+    joint->QueryFloatAttribute("damping", &out.damping);
+    joint->QueryFloatAttribute("armature", &out.armature);
+}
+
 bool geomHasZeroContact(tinyxml2::XMLElement* geom) {
     int contype = 1;
     int conaffinity = 1;
@@ -232,7 +248,8 @@ bool meshGeomIsVisualOnly(tinyxml2::XMLElement* geom,
 void collectDefaults(
     tinyxml2::XMLElement* elem, const std::string& parentClass,
     std::unordered_map<std::string, DefaultGeomAttrs>& geomMap,
-    std::unordered_map<std::string, DefaultSiteAttrs>& siteMap) {
+    std::unordered_map<std::string, DefaultSiteAttrs>& siteMap,
+    std::unordered_map<std::string, DefaultJointAttrs>& jointMap) {
     for (auto* def = elem->FirstChildElement("default"); def;
          def = def->NextSiblingElement("default")) {
         const char* cls = def->Attribute("class");
@@ -248,8 +265,34 @@ void collectDefaults(
         readSiteDefaults(def, siteAttrs);
         siteMap[cls] = siteAttrs;
 
-        collectDefaults(def, cls, geomMap, siteMap);
+        DefaultJointAttrs jointAttrs;
+        jointAttrs.parentClass = parentClass;
+        readJointDefaults(def, jointAttrs);
+        jointMap[cls] = jointAttrs;
+
+        collectDefaults(def, cls, geomMap, siteMap, jointMap);
     }
+}
+
+DefaultJointAttrs resolveJointClass(
+    const std::string& cls,
+    const std::unordered_map<std::string, DefaultJointAttrs>& map) {
+    DefaultJointAttrs out;
+    std::string cur = cls;
+    while (!cur.empty()) {
+        auto it = map.find(cur);
+        if (it == map.end())
+            break;
+        const auto& attrs = it->second;
+        if (out.stiffness < 0.f && attrs.stiffness >= 0.f)
+            out.stiffness = attrs.stiffness;
+        if (out.damping < 0.f && attrs.damping >= 0.f)
+            out.damping = attrs.damping;
+        if (out.armature < 0.f && attrs.armature >= 0.f)
+            out.armature = attrs.armature;
+        cur = attrs.parentClass;
+    }
+    return out;
 }
 
 // Walk class -> parent chain; first occurrence of each field wins.
@@ -561,8 +604,9 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
     // 4. Default class maps for collision geoms and named sites
     std::unordered_map<std::string, DefaultGeomAttrs> defaultMap;
     std::unordered_map<std::string, DefaultSiteAttrs> siteDefaultMap;
+    std::unordered_map<std::string, DefaultJointAttrs> jointDefaultMap;
     if (auto* def = root->FirstChildElement("default"))
-        collectDefaults(def, "", defaultMap, siteDefaultMap);
+        collectDefaults(def, "", defaultMap, siteDefaultMap, jointDefaultMap);
 
     // 5. Single traversal — mesh info, joints, collision, inertial
     traverseBodies(
@@ -698,6 +742,16 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
                 jd.name =
                     jElem->Attribute("name") ? jElem->Attribute("name") : "";
                 jd.type = JointDesc::Type::Revolute;
+                if (!inheritedClass.empty()) {
+                    const auto defaults =
+                        resolveJointClass(inheritedClass, jointDefaultMap);
+                    if (defaults.stiffness >= 0.f)
+                        jd.kp = defaults.stiffness;
+                    if (defaults.damping >= 0.f)
+                        jd.kd = defaults.damping;
+                    if (defaults.armature >= 0.f)
+                        jd.armature = defaults.armature;
+                }
                 auto axisVals = splitFloats(jElem->Attribute("axis"));
                 if (axisVals.size() >= 3)
                     jd.axis =
@@ -710,6 +764,7 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
                 }
                 jElem->QueryFloatAttribute("stiffness", &jd.kp);
                 jElem->QueryFloatAttribute("damping", &jd.kd);
+                jElem->QueryFloatAttribute("armature", &jd.armature);
                 auto forceRangeVals =
                     splitFloats(jElem->Attribute("actuatorfrcrange"));
                 if (forceRangeVals.size() >= 2) {

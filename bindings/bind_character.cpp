@@ -24,6 +24,7 @@ void bind_character(py::module& m) {
         .def_readonly("name", &JointDesc::name, "Joint name.")
         .def_readonly("lo_limit", &JointDesc::loLimit, "Lower joint limit.")
         .def_readonly("hi_limit", &JointDesc::hiLimit, "Upper joint limit.")
+        .def_readonly("armature", &JointDesc::armature, "Joint-space armature.")
         .def_property_readonly(
             "axis", [](const JointDesc& j) { return Animation::toGlm(j.axis); },
             "Joint axis.");
@@ -64,9 +65,8 @@ void bind_character(py::module& m) {
             [](const SiteDesc& s) { return Animation::toGlm(s.zaxis); },
             "Explicit site z-axis if present.");
 
-    py::class_<InertialDesc>(
-        character, "InertialDesc",
-        "Imported body-local inertial properties.")
+    py::class_<InertialDesc>(character, "InertialDesc",
+                             "Imported body-local inertial properties.")
         .def_readonly("mass", &InertialDesc::mass, "Body mass.")
         .def_property_readonly(
             "com",
@@ -88,8 +88,7 @@ void bind_character(py::module& m) {
         "Visual mesh description imported from a character asset.")
         .def_readonly("body_name", &VisualGeomDesc::bodyName,
                       "Owning body name.")
-        .def_readonly("mesh_file", &VisualGeomDesc::meshFile,
-                      "Mesh file path.")
+        .def_readonly("mesh_file", &VisualGeomDesc::meshFile, "Mesh file path.")
         .def_readonly("body_index", &VisualGeomDesc::bodyIndex,
                       "Owning body index.")
         .def_property_readonly(
@@ -144,9 +143,7 @@ void bind_character(py::module& m) {
                       "Whether capsule-style from/to endpoints are present.")
         .def_property_readonly(
             "from_pos",
-            [](const CollisionGeomDesc& g) {
-                return Animation::toGlm(g.from);
-            },
+            [](const CollisionGeomDesc& g) { return Animation::toGlm(g.from); },
             "Collision endpoint start position.")
         .def_property_readonly(
             "to_pos",

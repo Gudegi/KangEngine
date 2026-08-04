@@ -282,6 +282,12 @@ PhysicsWorld::PhysicsWorld(PhysicsConfig config) {
             sceneDesc.filterShader = contactReportFilterShader;
     }
     sceneDesc.solverType = config.solverType;
+    sceneDesc.bounceThresholdVelocity = config.bounceThresholdVelocity;
+    sceneDesc.frictionOffsetThreshold = config.frictionOffsetThreshold;
+    sceneDesc.frictionCorrelationDistance = config.frictionCorrelationDistance;
+    if (config.enableStabilization) {
+        sceneDesc.flags |= PxSceneFlag::eENABLE_STABILIZATION;
+    }
     if (config.enableGPU) {
 #ifdef __APPLE__
         fmt::print(

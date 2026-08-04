@@ -585,7 +585,7 @@ std::shared_ptr<ArticulationTemplate> ArticulationTemplate::create(
                 axisAlignQuat(jd.axis);
             result->_dofs.push_back({i, jd.name, PxArticulationAxis::eTWIST,
                                      jd.loLimit, jd.hiLimit, jd.kp, jd.kd,
-                                     jd.effortLimit});
+                                     jd.armature, jd.effortLimit});
             continue;
         }
 
@@ -596,7 +596,8 @@ std::shared_ptr<ArticulationTemplate> ArticulationTemplate::create(
             const auto& jd = jit->second[jointIndex];
             const auto axis = frame.axes[jointIndex];
             result->_dofs.push_back({i, jd.name, axis, jd.loLimit, jd.hiLimit,
-                                     jd.kp, jd.kd, jd.effortLimit});
+                                     jd.kp, jd.kd, jd.armature,
+                                     jd.effortLimit});
         }
     }
     for (int i = 0; i < n; ++i) {
@@ -645,6 +646,8 @@ Articulation::build(PhysicsWorld& physics,
     artic._artic->setSolverIterationCounts(
         static_cast<PxU32>(cfg.solverPositionIterations),
         static_cast<PxU32>(cfg.solverVelocityIterations));
+    artic._artic->setSleepThreshold(cfg.sleepThreshold);
+    artic._artic->setStabilizationThreshold(cfg.stabilizationThreshold);
     artic._links.resize(n, nullptr);
 
     artic._links[0] = artic._artic->createLink(nullptr, globals[0]);
@@ -657,6 +660,9 @@ Articulation::build(PhysicsWorld& physics,
     applyInertial(artic._links[0], inertials, 0, cfg.defaultRootMass);
     artic._links[0]->setLinearDamping(cfg.rootLinearDamping);
     artic._links[0]->setAngularDamping(cfg.rootAngularDamping);
+    artic._links[0]->setMaxDepenetrationVelocity(cfg.maxDepenetrationVelocity);
+    artic._links[0]->setRigidBodyFlag(
+        PxRigidBodyFlag::eENABLE_GYROSCOPIC_FORCES, cfg.enableGyroscopicForces);
     if (cfg.enableCCD)
         artic._links[0]->setRigidBodyFlag(PxRigidBodyFlag::eENABLE_CCD, true);
 
@@ -676,6 +682,11 @@ Articulation::build(PhysicsWorld& physics,
         applyInertial(artic._links[i], inertials, i, cfg.defaultLinkMass);
         artic._links[i]->setLinearDamping(cfg.linkLinearDamping);
         artic._links[i]->setAngularDamping(cfg.linkAngularDamping);
+        artic._links[i]->setMaxDepenetrationVelocity(
+            cfg.maxDepenetrationVelocity);
+        artic._links[i]->setRigidBodyFlag(
+            PxRigidBodyFlag::eENABLE_GYROSCOPIC_FORCES,
+            cfg.enableGyroscopicForces);
         if (cfg.maxAngularVelocity > 0.f)
             artic._links[i]->setMaxAngularVelocity(cfg.maxAngularVelocity);
 
@@ -716,6 +727,10 @@ Articulation::build(PhysicsWorld& physics,
                 PhysXCompat::setArticulationLimit(*joint, dof.axis, dof.loLimit,
                                                   dof.hiLimit);
             }
+        }
+        for (const auto& dof : artic._template->_dofs) {
+            if (dof.linkIndex == i)
+                joint->setArmature(dof.axis, dof.armature);
         }
     }
 

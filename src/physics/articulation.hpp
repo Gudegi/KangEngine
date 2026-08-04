@@ -20,12 +20,16 @@ struct ArticulationConfig {
     float defaultRootMass = 8.f;
     float defaultLinkMass = 1.5f;
 
-    // PhysX defaults: linearDamping=0, angularDamping=0.05, maxAngVel=100
+    // PhysX defaults for PxTolerancesScale(length=1, speed=10).
     float rootLinearDamping = 0.f;
     float rootAngularDamping = 0.05f;
     float linkLinearDamping = 0.f;
     float linkAngularDamping = 0.05f;
     float maxAngularVelocity = 100.f;
+    float maxDepenetrationVelocity = 1e32f;
+    float sleepThreshold = 0.005f;
+    float stabilizationThreshold = 0.0005f;
+    bool enableGyroscopicForces = false;
     bool enableCCD = false;
     PxU32 collisionGroup = 0;
     float contactOffset = 0.02f;
@@ -71,6 +75,7 @@ class ArticulationTemplate {
         float hiLimit = 0.f;
         float kp = 0.f;
         float kd = 0.f;
+        float armature = 0.f;
         float effortLimit = PX_MAX_F32;
     };
 

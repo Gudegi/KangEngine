@@ -160,7 +160,11 @@ void bind_physics(py::module& m) {
                          bool enable_gpu,
                          const PhysicsGpuDynamicsConfig& gpu_dynamics,
                          bool enable_contact_reports,
-                         uint32_t cpu_dispatcher_threads) {
+                         uint32_t cpu_dispatcher_threads,
+                         float bounce_threshold_velocity,
+                         float friction_offset_threshold,
+                         float friction_correlation_distance,
+                         bool enable_stabilization) {
                  PhysicsConfig config;
                  config.dt = dt;
                  if (solver_type == 0) {
@@ -178,6 +182,11 @@ void bind_physics(py::module& m) {
                  config.gpuDynamics = gpu_dynamics;
                  config.enableContactReports = enable_contact_reports;
                  config.cpuDispatcherThreads = cpu_dispatcher_threads;
+                 config.bounceThresholdVelocity = bounce_threshold_velocity;
+                 config.frictionOffsetThreshold = friction_offset_threshold;
+                 config.frictionCorrelationDistance =
+                     friction_correlation_distance;
+                 config.enableStabilization = enable_stabilization;
                  return config;
              }),
              py::kw_only(), py::arg_v("dt", PhysicsConfig{}.dt, "1.0 / 60.0"),
@@ -192,6 +201,14 @@ void bind_physics(py::module& m) {
                  PhysicsConfig{}.enableContactReports,
              py::arg("cpu_dispatcher_threads") =
                  PhysicsConfig{}.cpuDispatcherThreads,
+             py::arg("bounce_threshold_velocity") =
+                 PhysicsConfig{}.bounceThresholdVelocity,
+             py::arg("friction_offset_threshold") =
+                 PhysicsConfig{}.frictionOffsetThreshold,
+             py::arg("friction_correlation_distance") =
+                 PhysicsConfig{}.frictionCorrelationDistance,
+             py::arg("enable_stabilization") =
+                 PhysicsConfig{}.enableStabilization,
              "Create physics configuration from keyword arguments.")
         .def_static("y_up", &PhysicsConfig::yUp,
                     "Create configuration for a Y-up world.")
@@ -223,6 +240,18 @@ void bind_physics(py::module& m) {
         .def_readwrite("cpu_dispatcher_threads",
                        &PhysicsConfig::cpuDispatcherThreads,
                        "Worker threads used by the PhysX CPU dispatcher.")
+        .def_readwrite("bounce_threshold_velocity",
+                       &PhysicsConfig::bounceThresholdVelocity,
+                       "Relative speed below which contacts do not bounce.")
+        .def_readwrite("friction_offset_threshold",
+                       &PhysicsConfig::frictionOffsetThreshold,
+                       "Contact separation threshold for friction anchors.")
+        .def_readwrite("friction_correlation_distance",
+                       &PhysicsConfig::frictionCorrelationDistance,
+                       "Distance used to correlate friction patches.")
+        .def_readwrite("enable_stabilization",
+                       &PhysicsConfig::enableStabilization,
+                       "Enable the PhysX scene stabilization pass.")
         .def_property(
             "solver_type",
             [](const PhysicsConfig& c) {
@@ -246,12 +275,19 @@ void bind_physics(py::module& m) {
                            "static_friction={:g}, dynamic_friction={:g}, "
                            "restitution={:g}, enable_gpu={!r}, "
                            "gpu_dynamics={!r}, enable_contact_reports={!r}, "
-                           "cpu_dispatcher_threads={!r})")
-                .attr("format")(config.dt, solver_type, config.friction[0],
-                                config.friction[1], config.friction[2],
-                                config.enableGPU, config.gpuDynamics,
-                                config.enableContactReports,
-                                config.cpuDispatcherThreads);
+                           "cpu_dispatcher_threads={!r}, "
+                           "bounce_threshold_velocity={:g}, "
+                           "friction_offset_threshold={:g}, "
+                           "friction_correlation_distance={:g}, "
+                           "enable_stabilization={!r})")
+                .attr("format")(
+                    config.dt, solver_type, config.friction[0],
+                    config.friction[1], config.friction[2], config.enableGPU,
+                    config.gpuDynamics, config.enableContactReports,
+                    config.cpuDispatcherThreads, config.bounceThresholdVelocity,
+                    config.frictionOffsetThreshold,
+                    config.frictionCorrelationDistance,
+                    config.enableStabilization);
         });
 
     py::class_<PhysicsMaterialDesc>(
@@ -828,7 +864,10 @@ void bind_physics(py::module& m) {
                         uint32_t collision_group, float root_linear_damping,
                         float root_angular_damping, float link_linear_damping,
                         float link_angular_damping, float max_angular_velocity,
-                        float contact_offset, float rest_offset,
+                        float max_depenetration_velocity, float sleep_threshold,
+                        float stabilization_threshold,
+                        bool enable_gyroscopic_forces, float contact_offset,
+                        float rest_offset,
                         const std::vector<CollisionMaterialOverride>&
                             material_overrides,
                         bool enable_ccd) {
@@ -846,6 +885,10 @@ void bind_physics(py::module& m) {
                 config.linkLinearDamping = link_linear_damping;
                 config.linkAngularDamping = link_angular_damping;
                 config.maxAngularVelocity = max_angular_velocity;
+                config.maxDepenetrationVelocity = max_depenetration_velocity;
+                config.sleepThreshold = sleep_threshold;
+                config.stabilizationThreshold = stabilization_threshold;
+                config.enableGyroscopicForces = enable_gyroscopic_forces;
                 config.contactOffset = contact_offset;
                 config.restOffset = rest_offset;
                 config.materialOverrides = material_overrides;
@@ -871,6 +914,13 @@ void bind_physics(py::module& m) {
                 ArticulationConfig{}.linkAngularDamping,
             py::arg("max_angular_velocity") =
                 ArticulationConfig{}.maxAngularVelocity,
+            py::arg("max_depenetration_velocity") =
+                ArticulationConfig{}.maxDepenetrationVelocity,
+            py::arg("sleep_threshold") = ArticulationConfig{}.sleepThreshold,
+            py::arg("stabilization_threshold") =
+                ArticulationConfig{}.stabilizationThreshold,
+            py::arg("enable_gyroscopic_forces") =
+                ArticulationConfig{}.enableGyroscopicForces,
             py::arg("contact_offset") = ArticulationConfig{}.contactOffset,
             py::arg("rest_offset") = ArticulationConfig{}.restOffset,
             py::arg("material_overrides") =
@@ -921,6 +971,17 @@ void bind_physics(py::module& m) {
         .def_readwrite("max_angular_velocity",
                        &ArticulationConfig::maxAngularVelocity,
                        "Maximum angular velocity for links.")
+        .def_readwrite("max_depenetration_velocity",
+                       &ArticulationConfig::maxDepenetrationVelocity,
+                       "Maximum depenetration velocity for links.")
+        .def_readwrite("sleep_threshold", &ArticulationConfig::sleepThreshold,
+                       "Articulation sleep threshold.")
+        .def_readwrite("stabilization_threshold",
+                       &ArticulationConfig::stabilizationThreshold,
+                       "Articulation stabilization threshold.")
+        .def_readwrite("enable_gyroscopic_forces",
+                       &ArticulationConfig::enableGyroscopicForces,
+                       "Enable gyroscopic forces on articulation links.")
         .def_readwrite("contact_offset", &ArticulationConfig::contactOffset,
                        "PhysX contact offset.")
         .def_readwrite("rest_offset", &ArticulationConfig::restOffset,
@@ -957,7 +1018,11 @@ void bind_physics(py::module& m) {
                        "collision_group={!r}, root_linear_damping={:g}, "
                        "root_angular_damping={:g}, link_linear_damping={:g}, "
                        "link_angular_damping={:g}, "
-                       "max_angular_velocity={:g}, contact_offset={:g}, "
+                       "max_angular_velocity={:g}, "
+                       "max_depenetration_velocity={:g}, "
+                       "sleep_threshold={:g}, "
+                       "stabilization_threshold={:g}, "
+                       "enable_gyroscopic_forces={!r}, contact_offset={:g}, "
                        "rest_offset={:g}, material_overrides={!r}, "
                        "enable_ccd={!r})")
                 .attr("format")(
@@ -966,7 +1031,9 @@ void bind_physics(py::module& m) {
                     config.solverVelocityIterations, config.collisionGroup,
                     config.rootLinearDamping, config.rootAngularDamping,
                     config.linkLinearDamping, config.linkAngularDamping,
-                    config.maxAngularVelocity, config.contactOffset,
+                    config.maxAngularVelocity, config.maxDepenetrationVelocity,
+                    config.sleepThreshold, config.stabilizationThreshold,
+                    config.enableGyroscopicForces, config.contactOffset,
                     config.restOffset, config.materialOverrides,
                     config.enableCCD);
         });
