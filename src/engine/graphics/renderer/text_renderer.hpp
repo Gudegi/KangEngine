@@ -94,6 +94,8 @@ struct ScreenTextDesc {
     bool hidden = false;
 };
 
+// Text pass owner. prepare() updates dirty glyph instances on the render
+// thread; record() only emits commands into its caller's overlay render pass.
 class TextRenderer {
   private:
     struct QuadVertex {
@@ -185,8 +187,9 @@ class TextRenderer {
     void setScreenHidden(const std::string& path, bool hidden);
     void removeScreenText(const std::string& path);
     void clearScreenText();
-    void render(Backend::RenderTarget* target, int viewportWidth,
-                int viewportHeight);
+    void prepare(int viewportWidth, int viewportHeight);
+    bool hasDraws() const;
+    void record(Backend::RenderPassEncoder& pass) const;
 };
 
 } // namespace KE

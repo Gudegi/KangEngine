@@ -1,7 +1,9 @@
 #ifndef _DEBUG_RENDERER_HPP_
 #define _DEBUG_RENDERER_HPP_
 
-// Non-mesh debug overlay renderer for transient lines, points, and axes.
+// Non-mesh debug overlay pass owner for transient lines, points, and axes.
+// Resource updates happen while authoring batches; record() only emits
+// commands.
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
@@ -81,8 +83,8 @@ class DebugRenderer {
                    const std::vector<glm::vec4>& colors = {}, float size = 6.0f,
                    bool hidden = false);
     void clearPoints(const std::string& path);
-    void render(Backend::RenderTarget* target, int viewportWidth,
-                int viewportHeight);
+    bool hasDraws() const;
+    void record(Backend::RenderPassEncoder& pass) const;
 };
 
 } // namespace KE

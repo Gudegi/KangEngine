@@ -102,9 +102,9 @@ void DebugRenderer::init(Backend::GraphicsDevice* device,
     desc.vertexBuffers = {lineLayout};
     desc.primitive.topology = Backend::PrimitiveTopology::LineList;
     desc.primitive.cullMode = Backend::CullMode::None;
-    desc.depthStencil = Backend::DepthStencilState{
-        Backend::TextureFormat::Depth24Stencil8, true,
-        Backend::CompareFunction::Less};
+    desc.depthStencil =
+        Backend::DepthStencilState{Backend::TextureFormat::Depth24Stencil8,
+                                   true, Backend::CompareFunction::Less};
     desc.colorTargets = {{Backend::TextureFormat::RGBA16Float, blend}};
     desc.sampleCount = 4;
     _linePipeline = _device->createGraphicsPipeline(desc);
@@ -117,10 +117,9 @@ void DebugRenderer::init(Backend::GraphicsDevice* device,
         {Backend::VertexFormat::Float32, offsetof(PointVertex, size), 2}};
     desc.label = "debug_point_pipeline";
     desc.shader.name = "debug_point_rhi";
-    desc.shader.stages[1] =
-        {Backend::loadShaderSource(
-             KE::getAssetPath("shaders/rhi/debug_point.fs")),
-         Backend::ShaderType::Fragment, "main"};
+    desc.shader.stages[1] = {Backend::loadShaderSource(KE::getAssetPath(
+                                 "shaders/rhi/debug_point.fs")),
+                             Backend::ShaderType::Fragment, "main"};
     desc.vertexBuffers = {pointLayout};
     desc.primitive.topology = Backend::PrimitiveTopology::PointList;
     _pointPipeline = _device->createGraphicsPipeline(desc);
@@ -135,8 +134,8 @@ void DebugRenderer::ensureLineBatchGpu(LineBatch& batch) {
         batch.allocatedVertices = growVertexCapacity(batch.vertices.size());
         Backend::BufferDesc desc;
         desc.size = batch.allocatedVertices * sizeof(LineVertex);
-        desc.usage = Backend::BufferUsage::Vertex |
-                     Backend::BufferUsage::CopyDst;
+        desc.usage =
+            Backend::BufferUsage::Vertex | Backend::BufferUsage::CopyDst;
         desc.label = "debug_line_vertices";
         batch.vertexBuffer = _device->createBuffer(desc);
     }
@@ -154,8 +153,8 @@ void DebugRenderer::ensurePointBatchGpu(PointBatch& batch) {
         batch.allocatedVertices = growVertexCapacity(batch.vertices.size());
         Backend::BufferDesc desc;
         desc.size = batch.allocatedVertices * sizeof(PointVertex);
-        desc.usage = Backend::BufferUsage::Vertex |
-                     Backend::BufferUsage::CopyDst;
+        desc.usage =
+            Backend::BufferUsage::Vertex | Backend::BufferUsage::CopyDst;
         desc.label = "debug_point_vertices";
         batch.vertexBuffer = _device->createBuffer(desc);
     }
@@ -248,45 +247,37 @@ void DebugRenderer::clearPoints(const std::string& path) {
     it->second.vertices.clear();
 }
 
-void DebugRenderer::render(Backend::RenderTarget* target, int viewportWidth,
-                           int viewportHeight) {
-    if (!target || !_device || !_linePipeline || !_pointPipeline ||
-        !_frameBindGroup || viewportWidth <= 0 || viewportHeight <= 0)
-        return;
+bool DebugRenderer::hasDraws() const {
     bool hasRenderable = false;
     for (const auto& [path, batch] : _lineBatches)
-        hasRenderable = hasRenderable ||
+        hasRenderable =
+            hasRenderable ||
             (!batch.hidden && !batch.vertices.empty() && batch.vertexBuffer);
     for (const auto& [path, batch] : _pointBatches)
-        hasRenderable = hasRenderable ||
+        hasRenderable =
+            hasRenderable ||
             (!batch.hidden && !batch.vertices.empty() && batch.vertexBuffer);
-    if (!hasRenderable)
-        return;
+    return hasRenderable;
+}
 
-    auto encoder = _device->createCommandEncoder();
-    auto pass = encoder->beginRenderPass(target);
-    pass->setViewport(0.0f, 0.0f, static_cast<float>(viewportWidth),
-                      static_cast<float>(viewportHeight));
-    for (auto& [path, batch] : _lineBatches) {
+void DebugRenderer::record(Backend::RenderPassEncoder& pass) const {
+    for (const auto& [path, batch] : _lineBatches) {
         if (batch.hidden || batch.vertices.empty() || !batch.vertexBuffer)
             continue;
-        pass->setPipeline(_linePipeline.get());
-        pass->setBindGroup(0, _frameBindGroup);
-        pass->setLineWidth(batch.width);
-        pass->setVertexBuffer(0, batch.vertexBuffer.get());
-        pass->draw(static_cast<uint32_t>(batch.vertices.size()));
+        pass.setPipeline(_linePipeline.get());
+        pass.setBindGroup(0, _frameBindGroup);
+        pass.setLineWidth(batch.width);
+        pass.setVertexBuffer(0, batch.vertexBuffer.get());
+        pass.draw(static_cast<uint32_t>(batch.vertices.size()));
     }
-    for (auto& [path, batch] : _pointBatches) {
+    for (const auto& [path, batch] : _pointBatches) {
         if (batch.hidden || batch.vertices.empty() || !batch.vertexBuffer)
             continue;
-        pass->setPipeline(_pointPipeline.get());
-        pass->setBindGroup(0, _frameBindGroup);
-        pass->setVertexBuffer(0, batch.vertexBuffer.get());
-        pass->draw(static_cast<uint32_t>(batch.vertices.size()));
+        pass.setPipeline(_pointPipeline.get());
+        pass.setBindGroup(0, _frameBindGroup);
+        pass.setVertexBuffer(0, batch.vertexBuffer.get());
+        pass.draw(static_cast<uint32_t>(batch.vertices.size()));
     }
-    pass->end();
-    auto commands = encoder->finish();
-    _device->submit(*commands);
 }
 
 } // namespace KE
