@@ -231,6 +231,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="advanced/INDEX.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="advanced/BUILD_FROM_SOURCE.html">Build Guide</a></li>
 <li class="toctree-l3"><a class="reference internal" href="advanced/RUNTIME_ARCHITECTURE.html">Runtime Architecture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="advanced/CUSTOM_GRAPHICS_PIPELINES.html">Custom Graphics Pipelines</a></li>
 <li class="toctree-l3"><a class="reference internal" href="advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
@@ -319,9 +320,9 @@
 <h1>API Overview<a class="headerlink" href="#api-overview" title="Link to this heading">¶</a></h1>
 <section id="quaternion-ordering">
 <h2>Quaternion ordering<a class="headerlink" href="#quaternion-ordering" title="Link to this heading">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">ke.quat</span></code> objects consistently use <code class="docutils literal notranslate"><span class="pre">wxyz</span></code> ordering, including construction
+<p><code class="docutils literal notranslate"><span class="pre">ke.Quat</span></code> objects consistently use <code class="docutils literal notranslate"><span class="pre">wxyz</span></code> ordering, including construction
 from Python or NumPy values and conversion with <code class="docutils literal notranslate"><span class="pre">np.asarray(q)</span></code>. Use
-<code class="docutils literal notranslate"><span class="pre">ke.quat.from_xyzw(...)</span></code> and <code class="docutils literal notranslate"><span class="pre">q.to_xyzw()</span></code> at APIs that explicitly use
+<code class="docutils literal notranslate"><span class="pre">ke.Quat.from_xyzw(...)</span></code> and <code class="docutils literal notranslate"><span class="pre">q.to_xyzw()</span></code> at APIs that explicitly use
 <code class="docutils literal notranslate"><span class="pre">rot_xyzw</span></code> arrays. Physics and simulation state arrays retain their documented
 <code class="docutils literal notranslate"><span class="pre">xyzw</span></code> ordering.</p>
 <p>KangEngine’s Python API is organized by task and domain. Start with the user

@@ -231,6 +231,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../advanced/INDEX.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/BUILD_FROM_SOURCE.html">Build Guide</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/RUNTIME_ARCHITECTURE.html">Runtime Architecture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/CUSTOM_GRAPHICS_PIPELINES.html">Custom Graphics Pipelines</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
@@ -320,11 +321,11 @@
 <p>KangEngine separates wall-clock scheduling, fixed simulation updates, and
 render preparation. A simulation <code class="docutils literal notranslate"><span class="pre">App</span></code> should use this lifecycle:</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>rendered frame
-├─ preUpdate()             input and per-frame state changes
-├─ fixedUpdate(fixed_dt)   zero or more control/physics updates
-├─ preRender()             copy the latest state to visuals
+├─ pre_update()             input and per-frame state changes
+├─ fixed_update(fixed_dt)   zero or more control/physics updates
+├─ pre_render()             copy the latest state to visuals
 ├─ render()                ImGui and other drawing
-└─ postRender()            frame completion
+└─ post_render()            frame completion
 </pre></div>
 </div>
 <p>Configure the render, physics, and fixed-update rates together in <code class="docutils literal notranslate"><span class="pre">setup()</span></code>:</p>
@@ -354,7 +355,7 @@ validate their integer decimation in their environment configuration.</p>
 owners:</p>
 <ul class="simple">
 <li><p>A native <code class="docutils literal notranslate"><span class="pre">App</span></code> passes <code class="docutils literal notranslate"><span class="pre">SimulationTimingConfig</span></code> to <code class="docutils literal notranslate"><span class="pre">configure_timing()</span></code>.
-<code class="docutils literal notranslate"><span class="pre">App.start()</span></code> then schedules <code class="docutils literal notranslate"><span class="pre">fixedUpdate()</span></code> with its internal
+<code class="docutils literal notranslate"><span class="pre">App.start()</span></code> then schedules <code class="docutils literal notranslate"><span class="pre">fixed_update()</span></code> with its internal
 <code class="docutils literal notranslate"><span class="pre">FixedStepClock</span></code>. It does not accept or use <code class="docutils literal notranslate"><span class="pre">SimulationRunConfig</span></code>.</p></li>
 <li><p>An externally stepped runner, such as KELab, uses its timing configuration
 to determine <code class="docutils literal notranslate"><span class="pre">step_dt</span></code> and uses <code class="docutils literal notranslate"><span class="pre">SimulationRunConfig</span></code> independently to
@@ -378,10 +379,10 @@ See <a class="reference internal" href="RUN_MODES.html"><span class="std std-doc
 behavior.</p>
 <p>Advance <code class="docutils literal notranslate"><span class="pre">KangSimWorld</span></code> by the callback duration instead of hard-coding a
 physics substep count:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">fixedUpdate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fixed_dt</span><span class="p">):</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">fixed_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fixed_dt</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">world</span><span class="o">.</span><span class="n">advance</span><span class="p">(</span><span class="n">fixed_dt</span><span class="p">)</span>
 
-<span class="k">def</span><span class="w"> </span><span class="nf">preRender</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">pre_render</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -389,7 +390,7 @@ physics substep count:</p>
 duration into whole <code class="docutils literal notranslate"><span class="pre">world.sim_dt</span></code> steps and retains any fractional remainder.
 For example, a 120 Hz world performs two physics steps during one 60 Hz fixed
 update and four during one 30 Hz fixed update.</p>
-<p>Do not advance physics from <code class="docutils literal notranslate"><span class="pre">preRender()</span></code>. That couples simulation speed to
+<p>Do not advance physics from <code class="docutils literal notranslate"><span class="pre">pre_render()</span></code>. That couples simulation speed to
 render frequency. Pure animation viewers may still update an interpolated
 visual pose once per rendered frame because they do not integrate physics.</p>
 </section>
@@ -410,7 +411,7 @@ visual pose once per rendered frame because they do not integrate physics.</p>
 <section id="slow-frames-and-catch-up">
 <h2>Slow frames and catch-up<a class="headerlink" href="#slow-frames-and-catch-up" title="Link to this heading">¶</a></h2>
 <p>The fixed-step clock accumulates elapsed wall time. If a rendered frame is
-late, the next frame may call <code class="docutils literal notranslate"><span class="pre">fixedUpdate()</span></code> multiple times. Configure its
+late, the next frame may call <code class="docutils literal notranslate"><span class="pre">fixed_update()</span></code> multiple times. Configure its
 safety limits with the same timing object:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">timing</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">SimulationTimingConfig</span><span class="p">(</span>
     <span class="n">max_catch_up_steps</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
@@ -447,7 +448,7 @@ python/.venv/bin/python<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--max-catch-up-steps<span class="w"> </span><span class="m">8</span>
 </pre></div>
 </div>
-<p>The test uses a PhysX GPU world and deliberately blocks <code class="docutils literal notranslate"><span class="pre">preRender()</span></code> to model
+<p>The test uses a PhysX GPU world and deliberately blocks <code class="docutils literal notranslate"><span class="pre">pre_render()</span></code> to model
 slow rendering. It verifies that per-frame updates never exceed the configured
 limit and that GPU simulation time equals the number of executed fixed
 updates.</p>

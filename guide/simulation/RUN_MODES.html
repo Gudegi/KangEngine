@@ -231,6 +231,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../advanced/INDEX.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/BUILD_FROM_SOURCE.html">Build Guide</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/RUNTIME_ARCHITECTURE.html">Runtime Architecture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/CUSTOM_GRAPHICS_PIPELINES.html">Custom Graphics Pipelines</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
@@ -424,14 +425,14 @@ bursts in an externally stepped loop.</p>
 <h2>Native App scheduling<a class="headerlink" href="#native-app-scheduling" title="Link to this heading">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">SimulationRunConfig</span></code> does not select the native <code class="docutils literal notranslate"><span class="pre">App</span></code> scheduler. <code class="docutils literal notranslate"><span class="pre">App.start()</span></code>
 uses <code class="docutils literal notranslate"><span class="pre">FixedStepClock</span></code>, which accumulates wall time and may invoke
-<code class="docutils literal notranslate"><span class="pre">fixedUpdate()</span></code> zero or more times per rendered frame. This is appropriate for
+<code class="docutils literal notranslate"><span class="pre">fixed_update()</span></code> zero or more times per rendered frame. This is appropriate for
 interactive simulations whose physics should remain independent of rendering.</p>
-<p>Do not use <code class="docutils literal notranslate"><span class="pre">SimulationPacer</span></code> inside an App <code class="docutils literal notranslate"><span class="pre">fixedUpdate()</span></code> callback. Keep App
-physics in <code class="docutils literal notranslate"><span class="pre">fixedUpdate()</span></code> and let <code class="docutils literal notranslate"><span class="pre">FixedStepClock</span></code> schedule it.</p>
+<p>Do not use <code class="docutils literal notranslate"><span class="pre">SimulationPacer</span></code> inside an App <code class="docutils literal notranslate"><span class="pre">fixed_update()</span></code> callback. Keep App
+physics in <code class="docutils literal notranslate"><span class="pre">fixed_update()</span></code> and let <code class="docutils literal notranslate"><span class="pre">FixedStepClock</span></code> schedule it.</p>
 <p><code class="docutils literal notranslate"><span class="pre">renderFrameOnce()</span></code> is supported for manually driven rendering. Despite its
 name, it currently processes input and advances App frame scheduling in
 addition to drawing. Do not treat it as a render-only function or call it from
-inside <code class="docutils literal notranslate"><span class="pre">fixedUpdate()</span></code>.</p>
+inside <code class="docutils literal notranslate"><span class="pre">fixed_update()</span></code>.</p>
 </section>
 </section>
 

@@ -231,6 +231,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/advanced/INDEX.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/BUILD_FROM_SOURCE.html">Build Guide</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/RUNTIME_ARCHITECTURE.html">Runtime Architecture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/advanced/CUSTOM_GRAPHICS_PIPELINES.html">Custom Graphics Pipelines</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
@@ -359,23 +360,22 @@
 <p id="module-kangengine.terrain">Height-field terrain construction and mesh conversion.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.terrain.SubTerrain">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.terrain.</span></span><span class="sig-name descname"><span class="pre">SubTerrain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">width</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">horizontal_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vertical_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.005</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.terrain.SubTerrain" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.terrain.</span></span><span class="sig-name descname"><span class="pre">SubTerrain</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">horizontal_scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">vertical_scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.005</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.terrain.SubTerrain" title="Link to this definition">¶</a></dt>
 <dd><p>Discrete height-field terrain buffer.</p>
 <p><code class="docutils literal notranslate"><span class="pre">height_field_raw</span></code> stores integer height units.  Convert to meters with
 height_meters() before building render/physics meshes.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>width</strong> (<em>int</em>)</p></li>
-<li><p><strong>length</strong> (<em>int</em>)</p></li>
-<li><p><strong>horizontal_scale</strong> (<em>float</em>)</p></li>
-<li><p><strong>vertical_scale</strong> (<em>float</em>)</p></li>
-</ul>
-</dd>
-</dl>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.terrain.SubTerrain.height_meters">
-<span class="sig-name descname"><span class="pre">height_meters</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.terrain.SubTerrain.height_meters" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">height_meters</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#kangengine.terrain.SubTerrain.height_meters" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></span></p>
@@ -385,35 +385,27 @@ height_meters() before building render/physics meshes.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.terrain.SubTerrain.horizontal_scale">
-<span class="sig-name descname"><span class="pre">horizontal_scale</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.05</span></span><a class="headerlink" href="#kangengine.terrain.SubTerrain.horizontal_scale" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">horizontal_scale</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.05</span></span><a class="headerlink" href="#kangengine.terrain.SubTerrain.horizontal_scale" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.terrain.SubTerrain.to_mesh">
-<span class="sig-name descname"><span class="pre">to_mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;UpAxis.Y:</span> <span class="pre">1&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">center</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">backend</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cpp'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.terrain.SubTerrain.to_mesh" title="Link to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>center</strong> (<em>bool</em>)</p></li>
-<li><p><strong>backend</strong> (<em>str</em>)</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
+<span class="sig-name descname"><span class="pre">to_mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;UpAxis.Y:</span> <span class="pre">1&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">center</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">backend</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cpp'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.terrain.SubTerrain.to_mesh" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.terrain.SubTerrain.vertical_scale">
-<span class="sig-name descname"><span class="pre">vertical_scale</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.005</span></span><a class="headerlink" href="#kangengine.terrain.SubTerrain.vertical_scale" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">vertical_scale</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.005</span></span><a class="headerlink" href="#kangengine.terrain.SubTerrain.vertical_scale" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.terrain.SubTerrain.width">
-<span class="sig-name descname"><span class="pre">width</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kangengine.terrain.SubTerrain.width" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">width</span></span><a class="headerlink" href="#kangengine.terrain.SubTerrain.width" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.terrain.SubTerrain.length">
-<span class="sig-name descname"><span class="pre">length</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kangengine.terrain.SubTerrain.length" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">length</span></span><a class="headerlink" href="#kangengine.terrain.SubTerrain.length" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
@@ -423,45 +415,34 @@ height_meters() before building render/physics meshes.</p>
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.terrain.</span></span><span class="sig-name descname"><span class="pre">TerrainGrid</span></span><span class="sig-paren">(</span>
 
 <dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">rows</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">cols</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">tile_width</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">tile_length</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">rows</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">cols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">tile_width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">tile_length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">horizontal_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.05</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">vertical_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.005</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">horizontal_scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">vertical_scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.005</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.terrain.TerrainGrid" title="Link to this definition">¶</a></dt>
 <dd><p>Large height-field assembled from multiple overlapping sub-terrains.</p>
 <p>Adjacent tiles share one vertex row/column, so the final mesh is continuous
 instead of being a set of separate islands.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>rows</strong> (<em>int</em>)</p></li>
-<li><p><strong>cols</strong> (<em>int</em>)</p></li>
-<li><p><strong>tile_width</strong> (<em>int</em>)</p></li>
-<li><p><strong>tile_length</strong> (<em>int</em>)</p></li>
-<li><p><strong>horizontal_scale</strong> (<em>float</em>)</p></li>
-<li><p><strong>vertical_scale</strong> (<em>float</em>)</p></li>
-</ul>
-</dd>
-</dl>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.terrain.TerrainGrid.fill">
-<span class="sig-name descname"><span class="pre">fill</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">generator</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.terrain.TerrainGrid.fill" title="Link to this definition">¶</a></dt>
-<dd><p>Generate every tile with <code class="docutils literal notranslate"><span class="pre">generator(tile,</span> <span class="pre">row,</span> <span class="pre">col)</span></code>.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>generator</strong> (<em>Callable</em><em>[</em><em>[</em><a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><em>SubTerrain</em></a><em>, </em><em>int</em><em>, </em><em>int</em><em>]</em><em>, </em><a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><em>SubTerrain</em></a><em>]</em>)</p>
-</dd>
+<span class="sig-name descname"><span class="pre">fill</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">generator</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><span class="pre">SubTerrain</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><span class="pre">SubTerrain</span></a><span class="p"><span class="pre">]</span></span></span></em>,</dd>
 </dl>
+
+<span class="sig-paren">)</span><a class="headerlink" href="#kangengine.terrain.TerrainGrid.fill" title="Link to this definition">¶</a></dt>
+<dd><p>Generate every tile with <code class="docutils literal notranslate"><span class="pre">generator(tile,</span> <span class="pre">row,</span> <span class="pre">col)</span></code>.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.terrain.TerrainGrid.height_meters">
-<span class="sig-name descname"><span class="pre">height_meters</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.terrain.TerrainGrid.height_meters" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">height_meters</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#kangengine.terrain.TerrainGrid.height_meters" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></span></p>
@@ -471,56 +452,33 @@ instead of being a set of separate islands.</p>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.terrain.TerrainGrid.length">
-<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">length</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kangengine.terrain.TerrainGrid.length" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">length</span></span><a class="headerlink" href="#kangengine.terrain.TerrainGrid.length" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.terrain.TerrainGrid.set_tile">
-<span class="sig-name descname"><span class="pre">set_tile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">row</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tile</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.terrain.TerrainGrid.set_tile" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">set_tile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">row</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tile</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><span class="pre">SubTerrain</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.terrain.TerrainGrid.set_tile" title="Link to this definition">¶</a></dt>
 <dd><p>Copy a sub-terrain into the grid at tile coordinates.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>row</strong> (<em>int</em>)</p></li>
-<li><p><strong>col</strong> (<em>int</em>)</p></li>
-<li><p><strong>tile</strong> (<a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><em>SubTerrain</em></a>)</p></li>
-</ul>
-</dd>
-</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.terrain.TerrainGrid.tile_origin">
-<span class="sig-name descname"><span class="pre">tile_origin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">row</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.terrain.TerrainGrid.tile_origin" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">tile_origin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">row</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.terrain.TerrainGrid.tile_origin" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]</span></p>
-</dd>
-<dt class="field-even">Parameters<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>row</strong> (<em>int</em>)</p></li>
-<li><p><strong>col</strong> (<em>int</em>)</p></li>
-</ul>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.terrain.TerrainGrid.to_mesh">
-<span class="sig-name descname"><span class="pre">to_mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;UpAxis.Y:</span> <span class="pre">1&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">center</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">backend</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cpp'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.terrain.TerrainGrid.to_mesh" title="Link to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>center</strong> (<em>bool</em>)</p></li>
-<li><p><strong>backend</strong> (<em>str</em>)</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
+<span class="sig-name descname"><span class="pre">to_mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;UpAxis.Y:</span> <span class="pre">1&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">center</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">backend</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cpp'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.terrain.TerrainGrid.to_mesh" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.terrain.TerrainGrid.width">
-<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">width</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kangengine.terrain.TerrainGrid.width" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">width</span></span><a class="headerlink" href="#kangengine.terrain.TerrainGrid.width" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
@@ -530,30 +488,20 @@ instead of being a set of separate islands.</p>
 <span class="sig-prename descclassname"><span class="pre">kangengine.terrain.</span></span><span class="sig-name descname"><span class="pre">discrete_obstacles_terrain</span></span><span class="sig-paren">(</span>
 
 <dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">terrain</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">max_height</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">min_size</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">max_size</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">num_rects</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">platform_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">terrain</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><span class="pre">SubTerrain</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">max_height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">min_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">max_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">num_rects</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">platform_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">rng</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 </dl>
 
-<span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.terrain.discrete_obstacles_terrain" title="Link to this definition">¶</a></dt>
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><span class="pre">SubTerrain</span></a></span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.terrain.discrete_obstacles_terrain" title="Link to this definition">¶</a></dt>
 <dd><p>Scatter axis-aligned rectangular height obstacles.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><code class="xref py py-class docutils literal notranslate"><span class="pre">SubTerrain</span></code></a></span></p>
-</dd>
-<dt class="field-even">Parameters<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>terrain</strong> (<a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><em>SubTerrain</em></a>)</p></li>
-<li><p><strong>max_height</strong> (<em>float</em>)</p></li>
-<li><p><strong>min_size</strong> (<em>float</em>)</p></li>
-<li><p><strong>max_size</strong> (<em>float</em>)</p></li>
-<li><p><strong>num_rects</strong> (<em>int</em>)</p></li>
-<li><p><strong>platform_size</strong> (<em>float</em>)</p></li>
-</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -565,23 +513,14 @@ instead of being a set of separate islands.</p>
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">heights</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">horizontal_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">horizontal_scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;UpAxis.Y:</span> <span class="pre">1&gt;</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">center</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">backend</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cpp'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">center</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">backend</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cpp'</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.terrain.height_field_to_mesh" title="Link to this definition">¶</a></dt>
 <dd><p>Convert a 2D height array in meters to <code class="docutils literal notranslate"><span class="pre">scene.MeshData</span></code>.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>horizontal_scale</strong> (<em>float</em>)</p></li>
-<li><p><strong>center</strong> (<em>bool</em>)</p></li>
-<li><p><strong>backend</strong> (<em>str</em>)</p></li>
-</ul>
-</dd>
-</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -591,9 +530,9 @@ instead of being a set of separate islands.</p>
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">heights</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">horizontal_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">horizontal_scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;UpAxis.Y:</span> <span class="pre">1&gt;</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">center</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">center</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.terrain.height_field_to_mesh_python" title="Link to this definition">¶</a></dt>
@@ -601,102 +540,100 @@ instead of being a set of separate islands.</p>
 <p>This is useful for prototyping terrain generators without adding new C++
 bindings. Use height_field_to_mesh() with the default <code class="docutils literal notranslate"><span class="pre">backend=&quot;cpp&quot;</span></code>
 when mesh generation itself becomes a hot path.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>horizontal_scale</strong> (<em>float</em>)</p></li>
-<li><p><strong>center</strong> (<em>bool</em>)</p></li>
-</ul>
-</dd>
-</dl>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.terrain.pyramid_sloped_terrain">
-<span class="sig-prename descclassname"><span class="pre">kangengine.terrain.</span></span><span class="sig-name descname"><span class="pre">pyramid_sloped_terrain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">terrain</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">platform_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.terrain.pyramid_sloped_terrain" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">kangengine.terrain.</span></span><span class="sig-name descname"><span class="pre">pyramid_sloped_terrain</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">terrain</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><span class="pre">SubTerrain</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">slope</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">platform_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><span class="pre">SubTerrain</span></a></span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.terrain.pyramid_sloped_terrain" title="Link to this definition">¶</a></dt>
 <dd><p>Add a pyramid slope clipped to a flat center platform.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><code class="xref py py-class docutils literal notranslate"><span class="pre">SubTerrain</span></code></a></span></p>
-</dd>
-<dt class="field-even">Parameters<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>terrain</strong> (<a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><em>SubTerrain</em></a>)</p></li>
-<li><p><strong>slope</strong> (<em>float</em>)</p></li>
-<li><p><strong>platform_size</strong> (<em>float</em>)</p></li>
-</ul>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.terrain.random_uniform_terrain">
-<span class="sig-prename descclassname"><span class="pre">kangengine.terrain.</span></span><span class="sig-name descname"><span class="pre">random_uniform_terrain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">terrain</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_height</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_height</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.02</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rng</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.terrain.random_uniform_terrain" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">kangengine.terrain.</span></span><span class="sig-name descname"><span class="pre">random_uniform_terrain</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">terrain</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><span class="pre">SubTerrain</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">min_height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">max_height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">step</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.02</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">rng</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><span class="pre">SubTerrain</span></a></span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.terrain.random_uniform_terrain" title="Link to this definition">¶</a></dt>
 <dd><p>Add discrete uniform random heights to the terrain.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><code class="xref py py-class docutils literal notranslate"><span class="pre">SubTerrain</span></code></a></span></p>
-</dd>
-<dt class="field-even">Parameters<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>terrain</strong> (<a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><em>SubTerrain</em></a>)</p></li>
-<li><p><strong>min_height</strong> (<em>float</em>)</p></li>
-<li><p><strong>max_height</strong> (<em>float</em>)</p></li>
-<li><p><strong>step</strong> (<em>float</em>)</p></li>
-</ul>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.terrain.sloped_terrain">
-<span class="sig-prename descclassname"><span class="pre">kangengine.terrain.</span></span><span class="sig-name descname"><span class="pre">sloped_terrain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">terrain</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.terrain.sloped_terrain" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">kangengine.terrain.</span></span><span class="sig-name descname"><span class="pre">sloped_terrain</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">terrain</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><span class="pre">SubTerrain</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">slope</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><span class="pre">SubTerrain</span></a></span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.terrain.sloped_terrain" title="Link to this definition">¶</a></dt>
 <dd><p>Add a linear slope along the terrain width axis.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><code class="xref py py-class docutils literal notranslate"><span class="pre">SubTerrain</span></code></a></span></p>
-</dd>
-<dt class="field-even">Parameters<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>terrain</strong> (<a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><em>SubTerrain</em></a>)</p></li>
-<li><p><strong>slope</strong> (<em>float</em>)</p></li>
-</ul>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.terrain.stairs_terrain">
-<span class="sig-prename descclassname"><span class="pre">kangengine.terrain.</span></span><span class="sig-name descname"><span class="pre">stairs_terrain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">terrain</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step_width</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step_height</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.terrain.stairs_terrain" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">kangengine.terrain.</span></span><span class="sig-name descname"><span class="pre">stairs_terrain</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">terrain</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><span class="pre">SubTerrain</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">step_width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">step_height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><span class="pre">SubTerrain</span></a></span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.terrain.stairs_terrain" title="Link to this definition">¶</a></dt>
 <dd><p>Add stairs along the terrain width axis.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><code class="xref py py-class docutils literal notranslate"><span class="pre">SubTerrain</span></code></a></span></p>
-</dd>
-<dt class="field-even">Parameters<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>terrain</strong> (<a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><em>SubTerrain</em></a>)</p></li>
-<li><p><strong>step_width</strong> (<em>float</em>)</p></li>
-<li><p><strong>step_height</strong> (<em>float</em>)</p></li>
-</ul>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.terrain.wave_terrain">
-<span class="sig-prename descclassname"><span class="pre">kangengine.terrain.</span></span><span class="sig-name descname"><span class="pre">wave_terrain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">terrain</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_waves</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">amplitude</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.terrain.wave_terrain" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">kangengine.terrain.</span></span><span class="sig-name descname"><span class="pre">wave_terrain</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">terrain</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><span class="pre">SubTerrain</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">num_waves</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">amplitude</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.2</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><span class="pre">SubTerrain</span></a></span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.terrain.wave_terrain" title="Link to this definition">¶</a></dt>
 <dd><p>Add sinusoidal waves along both terrain axes.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><code class="xref py py-class docutils literal notranslate"><span class="pre">SubTerrain</span></code></a></span></p>
-</dd>
-<dt class="field-even">Parameters<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>terrain</strong> (<a class="reference internal" href="#kangengine.terrain.SubTerrain" title="kangengine.terrain.SubTerrain"><em>SubTerrain</em></a>)</p></li>
-<li><p><strong>num_waves</strong> (<em>float</em>)</p></li>
-<li><p><strong>amplitude</strong> (<em>float</em>)</p></li>
-</ul>
 </dd>
 </dl>
 </dd></dl>

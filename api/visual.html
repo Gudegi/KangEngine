@@ -231,6 +231,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/advanced/INDEX.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/BUILD_FROM_SOURCE.html">Build Guide</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/RUNTIME_ARCHITECTURE.html">Runtime Architecture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/advanced/CUSTOM_GRAPHICS_PIPELINES.html">Custom Graphics Pipelines</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
@@ -589,7 +590,7 @@ state visualization.</p>
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">app</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="python.html#kangengine.App" title="kangengine.App"><span class="pre">App</span></a></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">shader</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Shader</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Material</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">bind_fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">prim_base_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/fbx_character'</span></span></em>,</dd>
@@ -619,7 +620,7 @@ state visualization.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.SkinVisual.set_color">
-<span class="sig-name descname"><span class="pre">set_color</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.SkinVisual</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.vec4</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.visual.SkinVisual.set_color" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">set_color</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.SkinVisual</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Vec4</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.visual.SkinVisual.set_color" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -743,11 +744,11 @@ state visualization.</p>
 <span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">define</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.SkeletalVisual.define" title="Link to this definition">¶</a></dt>
 <dd><p>Overloaded function.</p>
 <ol class="arabic simple">
-<li><p>define(app: KE::App, shader: KE::Backend::Shader, base_path: str, state: kangengine.animation.SkeletonState, config: kangengine.animation.SkeletalVisualConfig = SkeletalVisualConfig(bone_color=(0.686, 0.867, 1, 1), joint_color=(1, 0.745, 0.675, 1), bone_radius=0.006, joint_radius=0.025, segments=8, visible=True, show_joints=True)) -&gt; kangengine.animation.SkeletalVisual</p></li>
+<li><p>define(app: KE::App, material: kangengine.Material, base_path: str, state: kangengine.animation.SkeletonState, config: kangengine.animation.SkeletalVisualConfig = SkeletalVisualConfig(bone_color=(0.686, 0.867, 1, 1), joint_color=(1, 0.745, 0.675, 1), bone_radius=0.006, joint_radius=0.025, segments=8, visible=True, show_joints=True)) -&gt; kangengine.animation.SkeletalVisual</p></li>
 </ol>
 <p>Create skeleton visuals from a SkeletonState.</p>
 <ol class="arabic simple" start="2">
-<li><p>define(app: KE::App, shader: KE::Backend::Shader, base_path: str, motion: kangengine.animation.SkeletonMotion, time: float = 0.0, loop: bool = True, config: kangengine.animation.SkeletalVisualConfig = SkeletalVisualConfig(bone_color=(0.686, 0.867, 1, 1), joint_color=(1, 0.745, 0.675, 1), bone_radius=0.006, joint_radius=0.025, segments=8, visible=True, show_joints=True)) -&gt; kangengine.animation.SkeletalVisual</p></li>
+<li><p>define(app: KE::App, material: kangengine.Material, base_path: str, motion: kangengine.animation.SkeletonMotion, time: float = 0.0, loop: bool = True, config: kangengine.animation.SkeletalVisualConfig = SkeletalVisualConfig(bone_color=(0.686, 0.867, 1, 1), joint_color=(1, 0.745, 0.675, 1), bone_radius=0.006, joint_radius=0.025, segments=8, visible=True, show_joints=True)) -&gt; kangengine.animation.SkeletalVisual</p></li>
 </ol>
 <p>Create skeleton visuals by sampling a SkeletonMotion.</p>
 </dd></dl>
@@ -822,22 +823,22 @@ canonical state owner; use <code class="docutils literal notranslate"><span clas
 state consumed by policy or training code.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.SimWorldVisualizer.add">
-<span class="sig-name descname"><span class="pre">add</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sim_handle</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prim_base_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.add" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">add</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">sim_handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="simulation.html#kangengine.sim.SimRigid" title="kangengine.sim.SimRigid"><span class="pre">SimRigid</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="simulation.html#kangengine.sim.SimArticulation" title="kangengine.sim.SimArticulation"><span class="pre">SimArticulation</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="simulation.html#kangengine.sim.SimRigidBatch" title="kangengine.sim.SimRigidBatch"><span class="pre">SimRigidBatch</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="simulation.html#kangengine.sim.SimArticulationBatch" title="kangengine.sim.SimArticulationBatch"><span class="pre">SimArticulationBatch</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">prim_base_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.add" title="Link to this definition">¶</a></dt>
 <dd><p>Create one CPU or GPU ExternalBuffer VisualBatch.</p>
 <p><code class="docutils literal notranslate"><span class="pre">sim_handle</span></code> may be a single <code class="docutils literal notranslate"><span class="pre">SimRigid</span></code> / <code class="docutils literal notranslate"><span class="pre">SimArticulation</span></code> or a
 <code class="docutils literal notranslate"><span class="pre">SimRigidBatch</span></code> / <code class="docutils literal notranslate"><span class="pre">SimArticulationBatch</span></code>. Single objects are treated
 as a one-env visual batch. Per-environment SceneGraph visuals remain
 available through the explicit <code class="docutils literal notranslate"><span class="pre">add_articulation_scene_graph</span></code> and
 <code class="docutils literal notranslate"><span class="pre">add_rigid_scene_graph</span></code> methods.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>sim_handle</strong> (<a class="reference internal" href="simulation.html#kangengine.sim.SimRigid" title="kangengine.sim.SimRigid"><em>SimRigid</em></a><em> | </em><a class="reference internal" href="simulation.html#kangengine.sim.SimArticulation" title="kangengine.sim.SimArticulation"><em>SimArticulation</em></a><em> | </em><a class="reference internal" href="simulation.html#kangengine.sim.SimRigidBatch" title="kangengine.sim.SimRigidBatch"><em>SimRigidBatch</em></a><em> | </em><a class="reference internal" href="simulation.html#kangengine.sim.SimArticulationBatch" title="kangengine.sim.SimArticulationBatch"><em>SimArticulationBatch</em></a>)</p></li>
-<li><p><strong>mjcf_path</strong> (<em>str</em>)</p></li>
-<li><p><strong>prim_base_path</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
-</ul>
-</dd>
-</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -845,24 +846,22 @@ available through the explicit <code class="docutils literal notranslate"><span 
 <span class="sig-name descname"><span class="pre">add_articulation_scene_graph</span></span><span class="sig-paren">(</span>
 
 <dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">prim_base_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/robot'</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">prim_base_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/robot'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">shader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">add_shapes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">collision_base_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">add_shapes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">collision_base_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">collision_material</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">collision_shader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">show_collision</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">show_collision</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">_debug_registration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">_debug_registration</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
 </dl>
 
-<span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.add_articulation_scene_graph" title="Link to this definition">¶</a></dt>
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.sim.VisualArticulationSceneGraph" title="kangengine.visual.sim.VisualArticulationSceneGraph"><span class="pre">VisualArticulationSceneGraph</span></a></span></span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.add_articulation_scene_graph" title="Link to this definition">¶</a></dt>
 <dd><p>Register one articulation through the small-scene SceneGraph path.</p>
 <p>Prefer <code class="docutils literal notranslate"><span class="pre">add(sim_handle,</span> <span class="pre">...)</span></code> for normal simulation viewers. This path
 is kept for editor/debug tools, collision visual inspection, and
@@ -870,20 +869,6 @@ MimicKit-style per-body SceneGraph control.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.sim.VisualArticulationSceneGraph" title="kangengine.visual.sim.VisualArticulationSceneGraph"><code class="xref py py-class docutils literal notranslate"><span class="pre">VisualArticulationSceneGraph</span></code></a></span></p>
-</dd>
-<dt class="field-even">Parameters<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>env_id</strong> (<em>int</em>)</p></li>
-<li><p><strong>obj_id</strong> (<em>int</em>)</p></li>
-<li><p><strong>mjcf_path</strong> (<em>str</em>)</p></li>
-<li><p><strong>prim_base_path</strong> (<em>str</em>)</p></li>
-<li><p><strong>scale</strong> (<em>float</em>)</p></li>
-<li><p><strong>order</strong> (<em>str</em>)</p></li>
-<li><p><strong>add_shapes</strong> (<em>bool</em>)</p></li>
-<li><p><strong>collision_base_path</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
-<li><p><strong>show_collision</strong> (<em>bool</em>)</p></li>
-<li><p><strong>_debug_registration</strong> (<em>bool</em>)</p></li>
-</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -893,34 +878,22 @@ MimicKit-style per-body SceneGraph control.</p>
 <span class="sig-name descname"><span class="pre">add_articulation_skin</span></span><span class="sig-paren">(</span>
 
 <dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">prim_base_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/robot'</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">prim_base_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/robot'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">shader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">add_shapes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">add_shapes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 </dl>
 
-<span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.add_articulation_skin" title="Link to this definition">¶</a></dt>
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.sim.VisualArticulationSceneGraph" title="kangengine.visual.sim.VisualArticulationSceneGraph"><span class="pre">VisualArticulationSceneGraph</span></a></span></span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.add_articulation_skin" title="Link to this definition">¶</a></dt>
 <dd><p>Create an adapter/debug articulation skin without PhysX ownership.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.sim.VisualArticulationSceneGraph" title="kangengine.visual.sim.VisualArticulationSceneGraph"><code class="xref py py-class docutils literal notranslate"><span class="pre">VisualArticulationSceneGraph</span></code></a></span></p>
-</dd>
-<dt class="field-even">Parameters<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>env_id</strong> (<em>int</em>)</p></li>
-<li><p><strong>obj_id</strong> (<em>int</em>)</p></li>
-<li><p><strong>mjcf_path</strong> (<em>str</em>)</p></li>
-<li><p><strong>prim_base_path</strong> (<em>str</em>)</p></li>
-<li><p><strong>scale</strong> (<em>float</em>)</p></li>
-<li><p><strong>order</strong> (<em>str</em>)</p></li>
-<li><p><strong>add_shapes</strong> (<em>bool</em>)</p></li>
-</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -930,20 +903,19 @@ MimicKit-style per-body SceneGraph control.</p>
 <span class="sig-name descname"><span class="pre">add_rigid_scene_graph</span></span><span class="sig-paren">(</span>
 
 <dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">prim_base_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'/rigid'</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">prim_base_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/rigid'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">shader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">add_shapes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">add_shapes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">_debug_registration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">_debug_registration</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
 </dl>
 
-<span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.add_rigid_scene_graph" title="Link to this definition">¶</a></dt>
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.sim.VisualRigidSceneGraph" title="kangengine.visual.sim.VisualRigidSceneGraph"><span class="pre">VisualRigidSceneGraph</span></a></span></span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.add_rigid_scene_graph" title="Link to this definition">¶</a></dt>
 <dd><p>Register one rigid object through the small-scene SceneGraph path.</p>
 <p>Prefer <code class="docutils literal notranslate"><span class="pre">add(sim_handle,</span> <span class="pre">...)</span></code> for normal simulation viewers. This path
 remains for editor/debug tools and adapter code that needs direct prim
@@ -952,34 +924,24 @@ access.</p>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.sim.VisualRigidSceneGraph" title="kangengine.visual.sim.VisualRigidSceneGraph"><code class="xref py py-class docutils literal notranslate"><span class="pre">VisualRigidSceneGraph</span></code></a></span></p>
 </dd>
-<dt class="field-even">Parameters<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>env_id</strong> (<em>int</em>)</p></li>
-<li><p><strong>obj_id</strong> (<em>int</em>)</p></li>
-<li><p><strong>mjcf_path</strong> (<em>str</em>)</p></li>
-<li><p><strong>prim_base_path</strong> (<em>str</em>)</p></li>
-<li><p><strong>scale</strong> (<em>float</em>)</p></li>
-<li><p><strong>order</strong> (<em>str</em>)</p></li>
-<li><p><strong>add_shapes</strong> (<em>bool</em>)</p></li>
-<li><p><strong>_debug_registration</strong> (<em>bool</em>)</p></li>
-</ul>
-</dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.SimWorldVisualizer.body_id_from_render_handle_scene_graph">
-<span class="sig-name descname"><span class="pre">body_id_from_render_handle_scene_graph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">handle</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.body_id_from_render_handle_scene_graph" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">body_id_from_render_handle_scene_graph</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">handle</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.body_id_from_render_handle_scene_graph" title="Link to this definition">¶</a></dt>
 <dd><p>Low-level scene-graph handle lookup; prefer pick_body(selection).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
-</dd>
-<dt class="field-even">Parameters<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>env_id</strong> (<em>int</em>)</p></li>
-<li><p><strong>obj_id</strong> (<em>int</em>)</p></li>
-</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -991,73 +953,79 @@ access.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.SimWorldVisualizer.get_visual_articulation_scene_graph">
-<span class="sig-name descname"><span class="pre">get_visual_articulation_scene_graph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.get_visual_articulation_scene_graph" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">get_visual_articulation_scene_graph</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.sim.VisualArticulationSceneGraph" title="kangengine.visual.sim.VisualArticulationSceneGraph"><span class="pre">VisualArticulationSceneGraph</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.get_visual_articulation_scene_graph" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.sim.VisualArticulationSceneGraph" title="kangengine.visual.sim.VisualArticulationSceneGraph"><code class="xref py py-class docutils literal notranslate"><span class="pre">VisualArticulationSceneGraph</span></code></a> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
-</dd>
-<dt class="field-even">Parameters<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>env_id</strong> (<em>int</em>)</p></li>
-<li><p><strong>obj_id</strong> (<em>int</em>)</p></li>
-</ul>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.SimWorldVisualizer.get_visual_batch">
-<span class="sig-name descname"><span class="pre">get_visual_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.get_visual_batch" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">get_visual_batch</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.sim.VisualBatch" title="kangengine.visual.sim.VisualBatch"><span class="pre">VisualBatch</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.get_visual_batch" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.sim.VisualBatch" title="kangengine.visual.sim.VisualBatch"><code class="xref py py-class docutils literal notranslate"><span class="pre">VisualBatch</span></code></a> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
-</dd>
-<dt class="field-even">Parameters<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>obj_id</strong> (<em>int</em>)</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.SimWorldVisualizer.get_visual_rigid_scene_graph">
-<span class="sig-name descname"><span class="pre">get_visual_rigid_scene_graph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.get_visual_rigid_scene_graph" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">get_visual_rigid_scene_graph</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.sim.VisualRigidSceneGraph" title="kangengine.visual.sim.VisualRigidSceneGraph"><span class="pre">VisualRigidSceneGraph</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.get_visual_rigid_scene_graph" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.sim.VisualRigidSceneGraph" title="kangengine.visual.sim.VisualRigidSceneGraph"><code class="xref py py-class docutils literal notranslate"><span class="pre">VisualRigidSceneGraph</span></code></a> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
-</dd>
-<dt class="field-even">Parameters<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>env_id</strong> (<em>int</em>)</p></li>
-<li><p><strong>obj_id</strong> (<em>int</em>)</p></li>
-</ul>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.SimWorldVisualizer.get_visual_scene_graph">
-<span class="sig-name descname"><span class="pre">get_visual_scene_graph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.get_visual_scene_graph" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">get_visual_scene_graph</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.sim.VisualArticulationSceneGraph" title="kangengine.visual.sim.VisualArticulationSceneGraph"><span class="pre">VisualArticulationSceneGraph</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#kangengine.visual.sim.VisualRigidSceneGraph" title="kangengine.visual.sim.VisualRigidSceneGraph"><span class="pre">VisualRigidSceneGraph</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.get_visual_scene_graph" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.sim.VisualArticulationSceneGraph" title="kangengine.visual.sim.VisualArticulationSceneGraph"><code class="xref py py-class docutils literal notranslate"><span class="pre">VisualArticulationSceneGraph</span></code></a> | <a class="reference internal" href="#kangengine.visual.sim.VisualRigidSceneGraph" title="kangengine.visual.sim.VisualRigidSceneGraph"><code class="xref py py-class docutils literal notranslate"><span class="pre">VisualRigidSceneGraph</span></code></a> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
-</dd>
-<dt class="field-even">Parameters<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>env_id</strong> (<em>int</em>)</p></li>
-<li><p><strong>obj_id</strong> (<em>int</em>)</p></li>
-</ul>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.visual.sim.SimWorldVisualizer.is_valid">
-<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">is_valid</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.is_valid" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">is_valid</span></span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.is_valid" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.SimWorldVisualizer.pick_body">
-<span class="sig-name descname"><span class="pre">pick_body</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">selection</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.pick_body" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">pick_body</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">selection</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.sim.VisualBodyPick" title="kangengine.visual.sim.VisualBodyPick"><span class="pre">VisualBodyPick</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.pick_body" title="Link to this definition">¶</a></dt>
 <dd><p>Resolve a renderer selection to visual env/object/body metadata.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
@@ -1073,24 +1041,16 @@ access.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.SimWorldVisualizer.set_articulation_color_scene_graph">
-<span class="sig-name descname"><span class="pre">set_articulation_color_scene_graph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.set_articulation_color_scene_graph" title="Link to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>env_id</strong> (<em>int</em>)</p></li>
-<li><p><strong>obj_id</strong> (<em>int</em>)</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
+<span class="sig-name descname"><span class="pre">set_articulation_color_scene_graph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.set_articulation_color_scene_graph" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.SimWorldVisualizer.set_body_transforms_scene_graph">
 <span class="sig-name descname"><span class="pre">set_body_transforms_scene_graph</span></span><span class="sig-paren">(</span>
 
 <dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">body_pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">body_rot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 </dl>
@@ -1099,33 +1059,20 @@ access.</p>
 <dd><p>Override rendered body prim transforms with world-space FK poses.</p>
 <p>This is used by MimicKit view_motion, where the environment computes the
 reference pose itself and expects the engine viewer to draw that pose.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>env_id</strong> (<em>int</em>)</p></li>
-<li><p><strong>obj_id</strong> (<em>int</em>)</p></li>
-</ul>
-</dd>
-</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.SimWorldVisualizer.set_collision_visible">
-<span class="sig-name descname"><span class="pre">set_collision_visible</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">visible</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.set_collision_visible" title="Link to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>visible</strong> (<em>bool</em>)</p>
-</dd>
-</dl>
-</dd></dl>
+<span class="sig-name descname"><span class="pre">set_collision_visible</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">visible</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.set_collision_visible" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.SimWorldVisualizer.set_root_transform_scene_graph">
 <span class="sig-name descname"><span class="pre">set_root_transform_scene_graph</span></span><span class="sig-paren">(</span>
 
 <dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">root_pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">root_rot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 </dl>
@@ -1136,14 +1083,6 @@ reference pose itself and expects the engine viewer to draw that pose.</p>
 still drive them through root setters before or instead of body setters.
 ArticulationVisual keeps a zero-pose FK model that can at least move the
 whole rendered character with that root pose.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>env_id</strong> (<em>int</em>)</p></li>
-<li><p><strong>obj_id</strong> (<em>int</em>)</p></li>
-</ul>
-</dd>
-</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -1177,7 +1116,7 @@ exposed as <code class="docutils literal notranslate"><span class="pre">kangengi
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualBatch.is_valid">
-<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">is_valid</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualBatch.is_valid" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">is_valid</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualBatch.is_valid" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py property">
@@ -1187,17 +1126,17 @@ exposed as <code class="docutils literal notranslate"><span class="pre">kangengi
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualBatch.num_bodies">
-<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">num_bodies</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualBatch.num_bodies" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">num_bodies</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualBatch.num_bodies" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualBatch.num_envs">
-<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">num_envs</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualBatch.num_envs" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">num_envs</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualBatch.num_envs" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualBatch.pick_body">
-<span class="sig-name descname"><span class="pre">pick_body</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">selection</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.VisualBatch.pick_body" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">pick_body</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">selection</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.sim.VisualBodyPick" title="kangengine.visual.sim.VisualBodyPick"><span class="pre">VisualBodyPick</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.visual.sim.VisualBatch.pick_body" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.sim.VisualBodyPick" title="kangengine.visual.sim.VisualBodyPick"><code class="xref py py-class docutils literal notranslate"><span class="pre">VisualBodyPick</span></code></a> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
@@ -1217,13 +1156,8 @@ exposed as <code class="docutils literal notranslate"><span class="pre">kangengi
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualBatch.set_collision_visible">
-<span class="sig-name descname"><span class="pre">set_collision_visible</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">visible</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.VisualBatch.set_collision_visible" title="Link to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>visible</strong> (<em>bool</em>)</p>
-</dd>
-</dl>
-</dd></dl>
+<span class="sig-name descname"><span class="pre">set_collision_visible</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">visible</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.VisualBatch.set_collision_visible" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualBatch.set_color">
@@ -1232,13 +1166,8 @@ exposed as <code class="docutils literal notranslate"><span class="pre">kangengi
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualBatch.set_visible">
-<span class="sig-name descname"><span class="pre">set_visible</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">visible</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.VisualBatch.set_visible" title="Link to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>visible</strong> (<em>bool</em>)</p>
-</dd>
-</dl>
-</dd></dl>
+<span class="sig-name descname"><span class="pre">set_visible</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">visible</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.VisualBatch.set_visible" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualBatch.sync">
@@ -1249,89 +1178,78 @@ exposed as <code class="docutils literal notranslate"><span class="pre">kangengi
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualBodyPick">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.visual.sim.</span></span><span class="sig-name descname"><span class="pre">VisualBodyPick</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">body_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">visual</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualBodyPick" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.visual.sim.</span></span><span class="sig-name descname"><span class="pre">VisualBodyPick</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">body_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">visual</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualBodyPick" title="Link to this definition">¶</a></dt>
 <dd><p>High-level body pick result resolved from a renderer selection.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>env_id</strong> (<em>int</em><em> | </em><em>None</em>)</p></li>
-<li><p><strong>obj_id</strong> (<em>int</em>)</p></li>
-<li><p><strong>body_id</strong> (<em>int</em>)</p></li>
-<li><p><strong>visual</strong> (<em>object</em>)</p></li>
-</ul>
-</dd>
-</dl>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualBodyPick.env_id">
-<span class="sig-name descname"><span class="pre">env_id</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualBodyPick.env_id" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">env_id</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualBodyPick.env_id" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualBodyPick.obj_id">
-<span class="sig-name descname"><span class="pre">obj_id</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualBodyPick.obj_id" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">obj_id</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualBodyPick.obj_id" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualBodyPick.body_id">
-<span class="sig-name descname"><span class="pre">body_id</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualBodyPick.body_id" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">body_id</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualBodyPick.body_id" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualBodyPick.visual">
-<span class="sig-name descname"><span class="pre">visual</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">object</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualBodyPick.visual" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">visual</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualBodyPick.visual" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualRigidSceneGraph">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.visual.sim.</span></span><span class="sig-name descname"><span class="pre">VisualRigidSceneGraph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rigid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rigid_visual</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">body_prims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">body_handles</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualRigidSceneGraph" title="Link to this definition">¶</a></dt>
-<dd><p>Viewer-side visual wrapper for one rigid object.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>env_id</strong> (<em>int</em>)</p></li>
-<li><p><strong>obj_id</strong> (<em>int</em>)</p></li>
-<li><p><strong>rigid</strong> (<em>object</em>)</p></li>
-<li><p><strong>rigid_visual</strong> (<em>object</em>)</p></li>
-<li><p><strong>body_prims</strong> (<em>list</em><em>[</em><em>object</em><em>]</em>)</p></li>
-<li><p><strong>body_handles</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>)</p></li>
-</ul>
-</dd>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.visual.sim.</span></span><span class="sig-name descname"><span class="pre">VisualRigidSceneGraph</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">rigid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">rigid_visual</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">body_prims</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">object</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">body_handles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
 </dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualRigidSceneGraph" title="Link to this definition">¶</a></dt>
+<dd><p>Viewer-side visual wrapper for one rigid object.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualRigidSceneGraph.env_id">
-<span class="sig-name descname"><span class="pre">env_id</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualRigidSceneGraph.env_id" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">env_id</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualRigidSceneGraph.env_id" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualRigidSceneGraph.obj_id">
-<span class="sig-name descname"><span class="pre">obj_id</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualRigidSceneGraph.obj_id" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">obj_id</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualRigidSceneGraph.obj_id" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualRigidSceneGraph.rigid">
-<span class="sig-name descname"><span class="pre">rigid</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">object</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualRigidSceneGraph.rigid" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">rigid</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualRigidSceneGraph.rigid" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualRigidSceneGraph.rigid_visual">
-<span class="sig-name descname"><span class="pre">rigid_visual</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">object</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualRigidSceneGraph.rigid_visual" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">rigid_visual</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualRigidSceneGraph.rigid_visual" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualRigidSceneGraph.body_prims">
-<span class="sig-name descname"><span class="pre">body_prims</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">object</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#kangengine.visual.sim.VisualRigidSceneGraph.body_prims" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">body_prims</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualRigidSceneGraph.body_prims" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualRigidSceneGraph.body_handles">
-<span class="sig-name descname"><span class="pre">body_handles</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#kangengine.visual.sim.VisualRigidSceneGraph.body_handles" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">body_handles</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualRigidSceneGraph.body_handles" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualRigidSceneGraph.body_id_from_render_handle">
-<span class="sig-name descname"><span class="pre">body_id_from_render_handle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">handle</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.VisualRigidSceneGraph.body_id_from_render_handle" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">body_id_from_render_handle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">handle</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.visual.sim.VisualRigidSceneGraph.body_id_from_render_handle" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
@@ -1346,12 +1264,18 @@ exposed as <code class="docutils literal notranslate"><span class="pre">kangengi
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualRigidSceneGraph.num_bodies">
-<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">num_bodies</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualRigidSceneGraph.num_bodies" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">num_bodies</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualRigidSceneGraph.num_bodies" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualRigidSceneGraph.pick_body">
-<span class="sig-name descname"><span class="pre">pick_body</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">selection</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.VisualRigidSceneGraph.pick_body" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">pick_body</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">selection</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.sim.VisualBodyPick" title="kangengine.visual.sim.VisualBodyPick"><span class="pre">VisualBodyPick</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.visual.sim.VisualRigidSceneGraph.pick_body" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.sim.VisualBodyPick" title="kangengine.visual.sim.VisualBodyPick"><code class="xref py py-class docutils literal notranslate"><span class="pre">VisualBodyPick</span></code></a> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
@@ -1371,13 +1295,8 @@ exposed as <code class="docutils literal notranslate"><span class="pre">kangengi
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualRigidSceneGraph.set_visible">
-<span class="sig-name descname"><span class="pre">set_visible</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">visible</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.VisualRigidSceneGraph.set_visible" title="Link to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>visible</strong> (<em>bool</em>)</p>
-</dd>
-</dl>
-</dd></dl>
+<span class="sig-name descname"><span class="pre">set_visible</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">visible</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.VisualRigidSceneGraph.set_visible" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
 
 </dd></dl>
 
@@ -1386,75 +1305,61 @@ exposed as <code class="docutils literal notranslate"><span class="pre">kangengi
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.visual.sim.</span></span><span class="sig-name descname"><span class="pre">VisualArticulationSceneGraph</span></span><span class="sig-paren">(</span>
 
 <dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">articulation_visual</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">body_prims</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">render_prims</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">collision_prims</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">body_handles</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">handle_body_ids</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">articulation_visual</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">body_prims</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">object</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">render_prims</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">object</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">collision_prims</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">object</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">body_handles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">handle_body_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 </dl>
 
-<span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph" title="Link to this definition">¶</a></dt>
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph" title="Link to this definition">¶</a></dt>
 <dd><p>Viewer-side visual wrapper for one articulation.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>env_id</strong> (<em>int</em>)</p></li>
-<li><p><strong>obj_id</strong> (<em>int</em>)</p></li>
-<li><p><strong>articulation_visual</strong> (<em>object</em>)</p></li>
-<li><p><strong>body_prims</strong> (<em>list</em><em>[</em><em>object</em><em>]</em>)</p></li>
-<li><p><strong>render_prims</strong> (<em>list</em><em>[</em><em>object</em><em>]</em>)</p></li>
-<li><p><strong>collision_prims</strong> (<em>list</em><em>[</em><em>object</em><em>]</em>)</p></li>
-<li><p><strong>body_handles</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>)</p></li>
-<li><p><strong>handle_body_ids</strong> (<em>dict</em><em>[</em><em>int</em><em>, </em><em>int</em><em>] </em><em>| </em><em>None</em>)</p></li>
-</ul>
-</dd>
-</dl>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualArticulationSceneGraph.env_id">
-<span class="sig-name descname"><span class="pre">env_id</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.env_id" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">env_id</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.env_id" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualArticulationSceneGraph.obj_id">
-<span class="sig-name descname"><span class="pre">obj_id</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.obj_id" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">obj_id</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.obj_id" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualArticulationSceneGraph.articulation_visual">
-<span class="sig-name descname"><span class="pre">articulation_visual</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">object</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.articulation_visual" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">articulation_visual</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.articulation_visual" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualArticulationSceneGraph.body_prims">
-<span class="sig-name descname"><span class="pre">body_prims</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">object</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.body_prims" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">body_prims</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.body_prims" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualArticulationSceneGraph.render_prims">
-<span class="sig-name descname"><span class="pre">render_prims</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">object</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.render_prims" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">render_prims</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.render_prims" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualArticulationSceneGraph.collision_prims">
-<span class="sig-name descname"><span class="pre">collision_prims</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">object</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.collision_prims" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">collision_prims</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.collision_prims" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualArticulationSceneGraph.body_handles">
-<span class="sig-name descname"><span class="pre">body_handles</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.body_handles" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">body_handles</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.body_handles" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualArticulationSceneGraph.handle_body_ids">
-<span class="sig-name descname"><span class="pre">handle_body_ids</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.handle_body_ids" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">handle_body_ids</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.handle_body_ids" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualArticulationSceneGraph.body_id_from_render_handle">
-<span class="sig-name descname"><span class="pre">body_id_from_render_handle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">handle</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.body_id_from_render_handle" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">body_id_from_render_handle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">handle</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.body_id_from_render_handle" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
@@ -1474,12 +1379,18 @@ exposed as <code class="docutils literal notranslate"><span class="pre">kangengi
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualArticulationSceneGraph.num_bodies">
-<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">num_bodies</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.num_bodies" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">num_bodies</span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.num_bodies" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualArticulationSceneGraph.pick_body">
-<span class="sig-name descname"><span class="pre">pick_body</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">selection</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.pick_body" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">pick_body</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">selection</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.sim.VisualBodyPick" title="kangengine.visual.sim.VisualBodyPick"><span class="pre">VisualBodyPick</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.pick_body" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.sim.VisualBodyPick" title="kangengine.visual.sim.VisualBodyPick"><code class="xref py py-class docutils literal notranslate"><span class="pre">VisualBodyPick</span></code></a> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
@@ -1494,23 +1405,13 @@ exposed as <code class="docutils literal notranslate"><span class="pre">kangengi
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualArticulationSceneGraph.set_alpha">
-<span class="sig-name descname"><span class="pre">set_alpha</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alpha</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.set_alpha" title="Link to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>alpha</strong> (<em>float</em>)</p>
-</dd>
-</dl>
-</dd></dl>
+<span class="sig-name descname"><span class="pre">set_alpha</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.set_alpha" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualArticulationSceneGraph.set_collision_visible">
-<span class="sig-name descname"><span class="pre">set_collision_visible</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">visible</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.set_collision_visible" title="Link to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>visible</strong> (<em>bool</em>)</p>
-</dd>
-</dl>
-</dd></dl>
+<span class="sig-name descname"><span class="pre">set_collision_visible</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">visible</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.set_collision_visible" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualArticulationSceneGraph.set_color">
@@ -1519,13 +1420,8 @@ exposed as <code class="docutils literal notranslate"><span class="pre">kangengi
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualArticulationSceneGraph.set_visible">
-<span class="sig-name descname"><span class="pre">set_visible</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">visible</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.set_visible" title="Link to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>visible</strong> (<em>bool</em>)</p>
-</dd>
-</dl>
-</dd></dl>
+<span class="sig-name descname"><span class="pre">set_visible</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">visible</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.VisualArticulationSceneGraph.set_visible" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.visual.sim.VisualArticulationSceneGraph.visual_prims">

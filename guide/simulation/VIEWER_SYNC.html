@@ -231,6 +231,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../advanced/INDEX.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/BUILD_FROM_SOURCE.html">Build Guide</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/RUNTIME_ARCHITECTURE.html">Runtime Architecture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/CUSTOM_GRAPHICS_PIPELINES.html">Custom Graphics Pipelines</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
@@ -327,10 +328,10 @@ render representation and synchronizes it after simulation steps.</p>
     <span class="n">material</span><span class="o">=</span><span class="n">material</span><span class="p">,</span>
 <span class="p">)</span>
 
-<span class="k">def</span><span class="w"> </span><span class="nf">fixedUpdate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fixed_dt</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">fixed_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fixed_dt</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">world</span><span class="o">.</span><span class="n">advance</span><span class="p">(</span><span class="n">fixed_dt</span><span class="p">)</span>
 
-<span class="k">def</span><span class="w"> </span><span class="nf">preRender</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">pre_render</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -343,7 +344,7 @@ or a small authored robot, use the explicit scene-graph helpers:</p>
 </div>
 <p>Use one representation deliberately: ExternalBuffer for throughput,
 SceneGraph for inspectable prims and interaction.</p>
-<p>Keep physics in <code class="docutils literal notranslate"><span class="pre">fixedUpdate()</span></code> and synchronization in <code class="docutils literal notranslate"><span class="pre">preRender()</span></code> so slow
+<p>Keep physics in <code class="docutils literal notranslate"><span class="pre">fixed_update()</span></code> and synchronization in <code class="docutils literal notranslate"><span class="pre">pre_render()</span></code> so slow
 rendering cannot change the physics rate.</p>
 <p>Examples:</p>
 <ul class="simple">

@@ -3,10 +3,10 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="First Scene" href="FIRST_SCENE.html"><link rel="prev" title="Verify Installation" href="VERIFY_INSTALLATION.html">
+<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="PhysX GPU Simulation" href="PHYSX_GPU.html"><link rel="prev" title="Runtime Architecture" href="RUNTIME_ARCHITECTURE.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
-        <title>Hello App - KangEngine Docs</title>
+        <title>Custom Graphics Pipelines - KangEngine Docs</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
@@ -174,7 +174,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
       </label>
     </div>
@@ -196,12 +196,12 @@
 <ul class="current">
 <li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">User Guide</a><input aria-label="Toggle navigation of User Guide" checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../API_OVERVIEW.html">API Overview</a></li>
-<li class="toctree-l2 current has-children"><a class="reference internal" href="index.html">Getting Started</a><input aria-label="Toggle navigation of Getting Started" checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="INSTALLATION.html">Installation</a></li>
-<li class="toctree-l3"><a class="reference internal" href="VERIFY_INSTALLATION.html">Verify Installation</a></li>
-<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Hello App</a></li>
-<li class="toctree-l3"><a class="reference internal" href="FIRST_SCENE.html">First Scene</a></li>
-<li class="toctree-l3"><a class="reference internal" href="FIRST_SIMULATION.html">First Simulation</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../getting_started/index.html">Getting Started</a><input aria-label="Toggle navigation of Getting Started" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../getting_started/INSTALLATION.html">Installation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../getting_started/VERIFY_INSTALLATION.html">Verify Installation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../getting_started/HELLO_APP.html">Hello App</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../getting_started/FIRST_SCENE.html">First Scene</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../getting_started/FIRST_SIMULATION.html">First Simulation</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../scene_rendering/INDEX.html">Scene and Rendering</a><input aria-label="Toggle navigation of Scene and Rendering" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -228,11 +228,11 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../MIMICKIT.html">RL With MimicKit</a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="../advanced/INDEX.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l3"><a class="reference internal" href="../advanced/BUILD_FROM_SOURCE.html">Build Guide</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../advanced/RUNTIME_ARCHITECTURE.html">Runtime Architecture</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../advanced/CUSTOM_GRAPHICS_PIPELINES.html">Custom Graphics Pipelines</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
+<li class="toctree-l2 current has-children"><a class="reference internal" href="INDEX.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" checked="" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="BUILD_FROM_SOURCE.html">Build Guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="RUNTIME_ARCHITECTURE.html">Runtime Architecture</a></li>
+<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Custom Graphics Pipelines</a></li>
+<li class="toctree-l3"><a class="reference internal" href="PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
 </ul>
@@ -299,7 +299,7 @@
   </a>
 </div>
 <div class="view-this-page">
-  <a class="muted-link" href="../../_sources/guide/getting_started/HELLO_APP.md.txt" title="View this page">
+  <a class="muted-link" href="../../_sources/guide/advanced/CUSTOM_GRAPHICS_PIPELINES.md.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -311,54 +311,138 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="hello-app">
-<h1>Hello App<a class="headerlink" href="#hello-app" title="Link to this heading">¶</a></h1>
-<p><code class="docutils literal notranslate"><span class="pre">ke.App</span></code> owns the window, render loop, camera, scene facade, and renderer. A
-Python application subclasses it and implements lifecycle callbacks.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ke</span>
+          <section id="custom-graphics-pipelines">
+<h1>Custom Graphics Pipelines<a class="headerlink" href="#custom-graphics-pipelines" title="Link to this heading">¶</a></h1>
+<p>Use a custom graphics pipeline when you need to draw geometry that does not fit
+the normal scene-mesh path, such as an experimental particle or procedural
+draw. Most applications do not need this API.</p>
+<p>A render-hook draw does not receive automatic scene transforms, batching,
+visibility, or frustum culling. The caller owns its buffers, pipeline, draw
+commands, and resource lifetime.</p>
+<p>Examples on this page assume <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">kangengine</span> <span class="pre">as</span> <span class="pre">ke</span></code> and run inside an <code class="docutils literal notranslate"><span class="pre">App</span></code>
+subclass after graphics initialization.</p>
+<section id="minimal-triangle">
+<h2>Minimal triangle<a class="headerlink" href="#minimal-triangle" title="Link to this heading">¶</a></h2>
+<p>Create a GPU vertex buffer containing three clip-space positions:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ke</span>
 
-
-<span class="k">class</span><span class="w"> </span><span class="nc">HelloApp</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">App</span><span class="p">):</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">set_camera_view</span><span class="p">([</span><span class="mf">3.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">4.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">])</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">pre_render</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">pass</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">pass</span>
-
-
-<span class="n">app</span> <span class="o">=</span> <span class="n">HelloApp</span><span class="p">()</span>
-<span class="n">app</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="mi">1280</span><span class="p">,</span> <span class="mi">720</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="n">ke</span><span class="o">.</span><span class="n">UpAxis</span><span class="o">.</span><span class="n">Y</span><span class="p">)</span>
-<span class="n">app</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+<span class="n">vertices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+    <span class="p">[[</span><span class="o">-</span><span class="mf">0.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.4</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.4</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span>
+<span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">custom_vertex_buffer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_renderer</span><span class="p">()</span><span class="o">.</span><span class="n">device</span><span class="p">()</span><span class="o">.</span><span class="n">create_buffer</span><span class="p">(</span>
+    <span class="n">vertices</span><span class="p">,</span>
+    <span class="n">ke</span><span class="o">.</span><span class="n">render</span><span class="o">.</span><span class="n">BufferUsage</span><span class="o">.</span><span class="n">VERTEX</span><span class="p">,</span>
+    <span class="n">label</span><span class="o">=</span><span class="s2">&quot;custom_triangle&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 </pre></div>
 </div>
-<p>Save this as <code class="docutils literal notranslate"><span class="pre">hello_app.py</span></code> and run:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>hello_app.py
+<p>Describe how one vertex is stored. Each vertex contains two <code class="docutils literal notranslate"><span class="pre">float32</span></code> values,
+so its stride is 8 bytes. The attribute starts at byte offset 0 and is passed
+to shader location 0:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">layout</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">render</span><span class="o">.</span><span class="n">VertexBufferLayout</span><span class="p">()</span>
+<span class="n">layout</span><span class="o">.</span><span class="n">array_stride</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">itemsize</span>
+<span class="n">layout</span><span class="o">.</span><span class="n">attributes</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">ke</span><span class="o">.</span><span class="n">render</span><span class="o">.</span><span class="n">VertexAttributeDesc</span><span class="p">(</span>
+        <span class="n">ke</span><span class="o">.</span><span class="n">render</span><span class="o">.</span><span class="n">VertexFormat</span><span class="o">.</span><span class="n">FLOAT32_X2</span><span class="p">,</span>
+        <span class="mi">0</span><span class="p">,</span>  <span class="c1"># byte offset inside one vertex</span>
+        <span class="mi">0</span><span class="p">,</span>  <span class="c1"># shader layout location</span>
+    <span class="p">)</span>
+<span class="p">]</span>
 </pre></div>
 </div>
-<p>Lifecycle callback names retain their C++ virtual spelling, while normal
-Python methods use snake_case.</p>
+<p>Provide the vertex and fragment stages:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">shader</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">render</span><span class="o">.</span><span class="n">ShaderDesc</span><span class="p">()</span>
+<span class="n">shader</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;custom_triangle&quot;</span>
+<span class="n">shader</span><span class="o">.</span><span class="n">stages</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">ke</span><span class="o">.</span><span class="n">render</span><span class="o">.</span><span class="n">ShaderStage</span><span class="p">(</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;#version 410 core</span>
+<span class="sd">layout(location = 0) in vec2 aPosition;</span>
+<span class="sd">void main() { gl_Position = vec4(aPosition, 0.0, 1.0); }</span>
+<span class="sd">&quot;&quot;&quot;</span><span class="p">,</span>
+        <span class="n">ke</span><span class="o">.</span><span class="n">render</span><span class="o">.</span><span class="n">ShaderType</span><span class="o">.</span><span class="n">VERTEX</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="n">ke</span><span class="o">.</span><span class="n">render</span><span class="o">.</span><span class="n">ShaderStage</span><span class="p">(</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;#version 410 core</span>
+<span class="sd">layout(location = 0) out vec4 outColor;</span>
+<span class="sd">void main() { outColor = vec4(0.15, 0.8, 1.0, 1.0); }</span>
+<span class="sd">&quot;&quot;&quot;</span><span class="p">,</span>
+        <span class="n">ke</span><span class="o">.</span><span class="n">render</span><span class="o">.</span><span class="n">ShaderType</span><span class="o">.</span><span class="n">FRAGMENT</span><span class="p">,</span>
+    <span class="p">),</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<p>Create a pipeline compatible with the scene render targets:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">desc</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">render</span><span class="o">.</span><span class="n">SceneHookPipelineDesc</span><span class="p">()</span>
+<span class="n">desc</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="s2">&quot;custom_triangle&quot;</span>
+<span class="n">desc</span><span class="o">.</span><span class="n">shader</span> <span class="o">=</span> <span class="n">shader</span>
+<span class="n">desc</span><span class="o">.</span><span class="n">vertex_buffers</span> <span class="o">=</span> <span class="p">[</span><span class="n">layout</span><span class="p">]</span>
+<span class="n">desc</span><span class="o">.</span><span class="n">depth_test</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">custom_pipeline</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_scene_hook_pipeline</span><span class="p">(</span><span class="n">desc</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Record the draw after the normal transparent pass:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">record_triangle</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+    <span class="n">draw</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">pass_encoder</span>
+    <span class="n">draw</span><span class="o">.</span><span class="n">set_viewport</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">context</span><span class="o">.</span><span class="n">width</span><span class="p">,</span> <span class="n">context</span><span class="o">.</span><span class="n">height</span><span class="p">)</span>
+    <span class="n">draw</span><span class="o">.</span><span class="n">set_pipeline</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">custom_pipeline</span><span class="p">)</span>
+    <span class="n">draw</span><span class="o">.</span><span class="n">set_vertex_buffer</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">custom_vertex_buffer</span><span class="p">)</span>
+    <span class="n">draw</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+
+<span class="bp">self</span><span class="o">.</span><span class="n">custom_hook</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_render_hook</span><span class="p">(</span>
+    <span class="n">ke</span><span class="o">.</span><span class="n">render</span><span class="o">.</span><span class="n">RenderHookPhase</span><span class="o">.</span><span class="n">AFTER_TRANSPARENT</span><span class="p">,</span>
+    <span class="n">record_triangle</span><span class="p">,</span>
+    <span class="n">pipeline</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">custom_pipeline</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>The two pipeline references have different roles:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">setup()</span></code>: create resources and scene objects once.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pre_update()</span></code>: process input and other once-per-rendered-frame state.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">fixed_update(fixed_dt)</span></code>: run zero or more fixed control/physics updates.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pre_render()</span></code>: synchronize the latest state and prepare visuals.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">render()</span></code>: build ImGui panels or other per-frame UI.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">post_render()</span></code>: perform work after drawing.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">cleanup()</span></code>: release explicitly owned simulation resources.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">draw.set_pipeline(self.custom_pipeline)</span></code> records the GPU pipeline selection
+for this draw and is required before <code class="docutils literal notranslate"><span class="pre">draw()</span></code> or <code class="docutils literal notranslate"><span class="pre">draw_indexed()</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pipeline=self.custom_pipeline</span></code> on <code class="docutils literal notranslate"><span class="pre">add_render_hook()</span></code> tracks the
+hook-to-pipeline relationship in the Resource panel. It increments usage and
+records a <code class="docutils literal notranslate"><span class="pre">render-hook://...</span></code> usage path.</p></li>
 </ul>
-<p>See <a class="reference internal" href="../simulation/FIXED_TIMESTEP.html"><span class="std std-doc">Fixed Timestep and Rendering</span></a> before
-adding physics to an application.</p>
-<p>The complete scene example used by the next page is
-<code class="docutils literal notranslate"><span class="pre">python/examples/render_prim_scene.py</span></code>.</p>
-<p>Next: <a class="reference internal" href="FIRST_SCENE.html"><span class="std std-doc">First Scene</span></a>.</p>
+<p>Omitting the tracking argument does not stop rendering, but the Resource panel
+cannot infer which pipeline an arbitrary Python callback uses and reports zero
+hook usage.</p>
+</section>
+<section id="lifetime-and-cleanup">
+<h2>Lifetime and cleanup<a class="headerlink" href="#lifetime-and-cleanup" title="Link to this heading">¶</a></h2>
+<p>Keep the buffer, pipeline, and callback alive while the hook is registered.
+The callback <code class="docutils literal notranslate"><span class="pre">context</span></code> and its <code class="docutils literal notranslate"><span class="pre">pass_encoder</span></code> are valid only during that
+callback and must not be stored for later use.</p>
+<p>Remove the hook during application cleanup:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="bp">self</span><span class="o">.</span><span class="n">remove_render_hook</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">custom_hook</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Removing it also removes the tracked pipeline usage.</p>
+</section>
+<section id="resource-panel">
+<h2>Resource panel<a class="headerlink" href="#resource-panel" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">App.create_scene_hook_pipeline()</span></code> mirrors the authored definitions into:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>/.Resources/ShaderSources
+/.Resources/Pipelines
+</pre></div>
+</div>
+<p>The compiled pipeline remains caller-owned. The Resource entries contain the
+shader source, stage, entry point, pipeline state summary, and usage paths for
+inspection.</p>
+</section>
+<section id="run-the-interactive-example">
+<h2>Run the interactive example<a class="headerlink" href="#run-the-interactive-example" title="Link to this heading">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>python/examples/custom_graphics_pipeline.py
+</pre></div>
+</div>
+<p>The example displays a gradient triangle and keeps the editor open so the
+ShaderSources and Pipelines folders can be inspected.</p>
+</section>
 </section>
 
         </article>
@@ -366,23 +450,23 @@ adding physics to an application.</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="FIRST_SCENE.html">
+          <a class="next-page" href="PHYSX_GPU.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">First Scene</div>
+                <div class="title">PhysX GPU Simulation</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="VERIFY_INSTALLATION.html">
+          <a class="prev-page" href="RUNTIME_ARCHITECTURE.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">Verify Installation</div>
+                <div class="title">Runtime Architecture</div>
                 
               </div>
             </a>
@@ -404,8 +488,30 @@ adding physics to an application.</p>
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Custom Graphics Pipelines</a><ul>
+<li><a class="reference internal" href="#minimal-triangle">Minimal triangle</a></li>
+<li><a class="reference internal" href="#lifetime-and-cleanup">Lifetime and cleanup</a></li>
+<li><a class="reference internal" href="#resource-panel">Resource panel</a></li>
+<li><a class="reference internal" href="#run-the-interactive-example">Run the interactive example</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>

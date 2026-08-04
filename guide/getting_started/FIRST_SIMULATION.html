@@ -231,6 +231,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../advanced/INDEX.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/BUILD_FROM_SOURCE.html">Build Guide</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/RUNTIME_ARCHITECTURE.html">Runtime Architecture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/CUSTOM_GRAPHICS_PIPELINES.html">Custom Graphics Pipelines</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
@@ -350,10 +351,10 @@ visual representation.</p>
 </div>
 <p>Advance at the fixed simulation rate and display the latest state once per
 rendered frame:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">fixedUpdate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fixed_dt</span><span class="p">):</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">fixed_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fixed_dt</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">world</span><span class="o">.</span><span class="n">advance</span><span class="p">(</span><span class="n">fixed_dt</span><span class="p">)</span>
 
-<span class="k">def</span><span class="w"> </span><span class="nf">preRender</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">pre_render</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -438,14 +439,14 @@ rendered frame:</p>
 <span class="linenos"> 73</span>        <span class="bp">self</span><span class="o">.</span><span class="n">world</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">substeps</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">apply_commands</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 <span class="linenos"> 74</span>        <span class="bp">self</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
 <span class="linenos"> 75</span>
-<span class="linenos"> 76</span>    <span class="k">def</span><span class="w"> </span><span class="nf">preUpdate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="linenos"> 76</span>    <span class="k">def</span><span class="w"> </span><span class="nf">pre_update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="linenos"> 77</span>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">was_key_pressed</span><span class="p">(</span><span class="n">keys</span><span class="o">.</span><span class="n">R</span><span class="p">):</span>
 <span class="linenos"> 78</span>            <span class="bp">self</span><span class="o">.</span><span class="n">_reset</span><span class="p">()</span>
 <span class="linenos"> 79</span>
-<span class="linenos"> 80</span>    <span class="k">def</span><span class="w"> </span><span class="nf">fixedUpdate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fixed_dt</span><span class="p">):</span>
+<span class="linenos"> 80</span>    <span class="k">def</span><span class="w"> </span><span class="nf">fixed_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fixed_dt</span><span class="p">):</span>
 <span class="linenos"> 81</span>        <span class="bp">self</span><span class="o">.</span><span class="n">world</span><span class="o">.</span><span class="n">advance</span><span class="p">(</span><span class="n">fixed_dt</span><span class="p">)</span>
 <span class="linenos"> 82</span>
-<span class="linenos"> 83</span>    <span class="k">def</span><span class="w"> </span><span class="nf">preRender</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="linenos"> 83</span>    <span class="k">def</span><span class="w"> </span><span class="nf">pre_render</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="linenos"> 84</span>        <span class="bp">self</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
 <span class="linenos"> 85</span>        <span class="bp">self</span><span class="o">.</span><span class="n">check_error</span><span class="p">()</span>
 <span class="linenos"> 86</span>

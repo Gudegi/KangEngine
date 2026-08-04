@@ -231,6 +231,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../advanced/INDEX.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/BUILD_FROM_SOURCE.html">Build Guide</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/RUNTIME_ARCHITECTURE.html">Runtime Architecture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/CUSTOM_GRAPHICS_PIPELINES.html">Custom Graphics Pipelines</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
@@ -331,11 +332,11 @@ materials, hierarchy, local/world transforms, quaternion input, and debug axes.<
             <span class="s2">&quot;/box&quot;</span><span class="p">,</span>
             <span class="n">ke</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">create_cube_data</span><span class="p">(</span><span class="mf">1.0</span><span class="p">),</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">standard_materials</span><span class="o">.</span><span class="n">common</span><span class="p">,</span>
-            <span class="n">color</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">vec4</span><span class="p">(</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+            <span class="n">color</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec4</span><span class="p">(</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
         <span class="p">)</span>
-        <span class="n">box</span><span class="o">.</span><span class="n">set_local_translation</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">vec3</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
+        <span class="n">box</span><span class="o">.</span><span class="n">set_local_translation</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
         <span class="n">box</span><span class="o">.</span><span class="n">set_local_rotation_axis_angle</span><span class="p">(</span>
-            <span class="n">ke</span><span class="o">.</span><span class="n">vec3</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="mf">25.0</span><span class="p">)</span>
+            <span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="mf">25.0</span><span class="p">)</span>
         <span class="p">)</span>
 </pre></div>
 </div>
@@ -355,8 +356,8 @@ materials, hierarchy, local/world transforms, quaternion input, and debug axes.<
     <span class="n">ke</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">create_cube_data</span><span class="p">(</span><span class="mf">1.0</span><span class="p">),</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">standard_materials</span><span class="o">.</span><span class="n">common</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="n">box2</span><span class="o">.</span><span class="n">set_local_translation</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">vec3</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
-<span class="n">box2</span><span class="o">.</span><span class="n">set_local_scale</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">vec3</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">))</span>
+<span class="n">box2</span><span class="o">.</span><span class="n">set_local_translation</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
+<span class="n">box2</span><span class="o">.</span><span class="n">set_local_scale</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">))</span>
 
 <span class="n">local_position</span> <span class="o">=</span> <span class="n">box2</span><span class="o">.</span><span class="n">get_local_translation</span><span class="p">()</span>
 <span class="n">world_position</span> <span class="o">=</span> <span class="n">box2</span><span class="o">.</span><span class="n">get_world_translation</span><span class="p">()</span>
@@ -368,7 +369,7 @@ parent naturally.</p>
 </section>
 <section id="quaternion-ordering">
 <h2>Quaternion ordering<a class="headerlink" href="#quaternion-ordering" title="Link to this heading">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">ke.quat</span></code> and NumPy inputs to quaternion object APIs use <code class="docutils literal notranslate"><span class="pre">wxyz</span></code> ordering.</p>
+<p><code class="docutils literal notranslate"><span class="pre">ke.Quat</span></code> and NumPy inputs to quaternion object APIs use <code class="docutils literal notranslate"><span class="pre">wxyz</span></code> ordering.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Approximately 45 degrees around Z, in wxyz order.</span>
 <span class="n">box2</span><span class="o">.</span><span class="n">set_local_rotation</span><span class="p">(</span>
     <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.924</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.383</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
@@ -380,7 +381,7 @@ parent naturally.</p>
 </pre></div>
 </div>
 <p>Physics and simulation state arrays named <code class="docutils literal notranslate"><span class="pre">rot_xyzw</span></code> retain <code class="docutils literal notranslate"><span class="pre">xyzw</span></code> ordering.
-Use <code class="docutils literal notranslate"><span class="pre">ke.quat.from_xyzw(...)</span></code> when moving such a value into a scene quaternion
+Use <code class="docutils literal notranslate"><span class="pre">ke.Quat.from_xyzw(...)</span></code> when moving such a value into a scene quaternion
 API.</p>
 </section>
 <section id="inspect-transform-axes">
@@ -443,21 +444,21 @@ appear in the SceneGraph and returns a <code class="docutils literal notranslate
 <span class="linenos">28</span>            <span class="s2">&quot;/box&quot;</span><span class="p">,</span>
 <span class="linenos">29</span>            <span class="n">ke</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">create_cube_data</span><span class="p">(</span><span class="mf">1.0</span><span class="p">),</span>
 <span class="linenos">30</span>            <span class="bp">self</span><span class="o">.</span><span class="n">standard_materials</span><span class="o">.</span><span class="n">common</span><span class="p">,</span>
-<span class="linenos">31</span>            <span class="n">color</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">vec4</span><span class="p">(</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+<span class="linenos">31</span>            <span class="n">color</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec4</span><span class="p">(</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
 <span class="linenos">32</span>        <span class="p">)</span>
-<span class="linenos">33</span>        <span class="n">box</span><span class="o">.</span><span class="n">set_local_translation</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">vec3</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
-<span class="linenos">34</span>        <span class="n">box</span><span class="o">.</span><span class="n">set_local_rotation_axis_angle</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">vec3</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="mf">25.0</span><span class="p">))</span>
+<span class="linenos">33</span>        <span class="n">box</span><span class="o">.</span><span class="n">set_local_translation</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
+<span class="linenos">34</span>        <span class="n">box</span><span class="o">.</span><span class="n">set_local_rotation_axis_angle</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="mf">25.0</span><span class="p">))</span>
 <span class="linenos">35</span>
 <span class="linenos">36</span>        <span class="c1"># Box2</span>
 <span class="linenos">37</span>        <span class="n">box2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scene</span><span class="o">.</span><span class="n">add_mesh</span><span class="p">(</span>
 <span class="linenos">38</span>            <span class="s2">&quot;/box/box2&quot;</span><span class="p">,</span>
 <span class="linenos">39</span>            <span class="n">ke</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">create_cube_data</span><span class="p">(</span><span class="mf">1.0</span><span class="p">),</span>
 <span class="linenos">40</span>            <span class="bp">self</span><span class="o">.</span><span class="n">standard_materials</span><span class="o">.</span><span class="n">common</span><span class="p">,</span>
-<span class="linenos">41</span>            <span class="n">color</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">vec4</span><span class="p">(</span><span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+<span class="linenos">41</span>            <span class="n">color</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec4</span><span class="p">(</span><span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
 <span class="linenos">42</span>        <span class="p">)</span>
-<span class="linenos">43</span>        <span class="n">box2</span><span class="o">.</span><span class="n">set_local_translation</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">vec3</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
+<span class="linenos">43</span>        <span class="n">box2</span><span class="o">.</span><span class="n">set_local_translation</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
 <span class="linenos">44</span>        <span class="n">box2</span><span class="o">.</span><span class="n">set_local_rotation</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.924</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.383</span><span class="p">]))</span>
-<span class="linenos">45</span>        <span class="n">box2</span><span class="o">.</span><span class="n">set_local_scale</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">vec3</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">))</span>
+<span class="linenos">45</span>        <span class="n">box2</span><span class="o">.</span><span class="n">set_local_scale</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">))</span>
 <span class="linenos">46</span>
 <span class="linenos">47</span>        <span class="n">w_trans</span> <span class="o">=</span> <span class="n">box2</span><span class="o">.</span><span class="n">get_world_translation</span><span class="p">()</span>
 <span class="linenos">48</span>        <span class="n">w_ori</span> <span class="o">=</span> <span class="n">box2</span><span class="o">.</span><span class="n">get_world_rotation</span><span class="p">()</span>
@@ -484,19 +485,19 @@ appear in the SceneGraph and returns a <code class="docutils literal notranslate
 <span class="linenos">69</span>            <span class="s2">&quot;/sphere&quot;</span><span class="p">,</span>
 <span class="linenos">70</span>            <span class="n">ke</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">create_sphere_data</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">12</span><span class="p">),</span>
 <span class="linenos">71</span>            <span class="bp">self</span><span class="o">.</span><span class="n">standard_materials</span><span class="o">.</span><span class="n">common</span><span class="p">,</span>
-<span class="linenos">72</span>            <span class="n">color</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">vec4</span><span class="p">(</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+<span class="linenos">72</span>            <span class="n">color</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec4</span><span class="p">(</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
 <span class="linenos">73</span>        <span class="p">)</span>
-<span class="linenos">74</span>        <span class="n">sphere</span><span class="o">.</span><span class="n">set_local_translation</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">vec3</span><span class="p">(</span><span class="mf">2.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
+<span class="linenos">74</span>        <span class="n">sphere</span><span class="o">.</span><span class="n">set_local_translation</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mf">2.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
 <span class="linenos">75</span>
 <span class="linenos">76</span>        <span class="bp">self</span><span class="o">.</span><span class="n">check_error</span><span class="p">()</span>
 <span class="linenos">77</span>
-<span class="linenos">78</span>    <span class="k">def</span><span class="w"> </span><span class="nf">preRender</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="linenos">78</span>    <span class="k">def</span><span class="w"> </span><span class="nf">pre_render</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="linenos">79</span>        <span class="bp">self</span><span class="o">.</span><span class="n">check_error</span><span class="p">()</span>
 <span class="linenos">80</span>
 <span class="linenos">81</span>    <span class="k">def</span><span class="w"> </span><span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="linenos">82</span>        <span class="k">pass</span>
 <span class="linenos">83</span>
-<span class="linenos">84</span>    <span class="k">def</span><span class="w"> </span><span class="nf">postRender</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="linenos">84</span>    <span class="k">def</span><span class="w"> </span><span class="nf">post_render</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="linenos">85</span>        <span class="k">pass</span>
 <span class="linenos">86</span>
 <span class="linenos">87</span>

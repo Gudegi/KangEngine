@@ -1,6 +1,6 @@
 # ke.render
 
-Graphics resources, renderer controls, and color helpers.
+Graphics resources, renderer controls, and custom pipeline APIs.
 
 ## API overview
 
@@ -12,8 +12,12 @@ Graphics resources, renderer controls, and color helpers.
 
    Renderer
    GraphicsDevice
-   Shader
    Texture
+   Buffer
+   GraphicsPipeline
+   ShaderDesc
+   ShaderStage
+   SceneHookPipelineDesc
    SamplerDesc
    ExternalBufferDesc
 ```
@@ -23,11 +27,19 @@ Graphics resources, renderer controls, and color helpers.
 
 .. autoclass:: GraphicsDevice
 
-.. autoclass:: Shader
-
 .. autoclass:: Texture
 
+.. autoclass:: Buffer
+
+.. autoclass:: GraphicsPipeline
+
 .. autoclass:: Renderer
+
+.. autoclass:: ShaderDesc
+
+.. autoclass:: ShaderStage
+
+.. autoclass:: SceneHookPipelineDesc
 
 .. autoclass:: SamplerDesc
    :special-members: __init__
@@ -38,6 +50,12 @@ Graphics resources, renderer controls, and color helpers.
 .. autoclass:: TextureRole
 
 .. autoclass:: AlphaMode
+
+.. autoclass:: BufferUsage
+
+.. autoclass:: ShaderType
+
+.. autoclass:: RenderHookPhase
 
 .. autoclass:: TextAlignment
 

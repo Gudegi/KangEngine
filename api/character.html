@@ -231,6 +231,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/advanced/INDEX.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/BUILD_FROM_SOURCE.html">Build Guide</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/RUNTIME_ARCHITECTURE.html">Runtime Architecture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/advanced/CUSTOM_GRAPHICS_PIPELINES.html">Custom Graphics Pipelines</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
@@ -483,29 +484,29 @@
 <dd><p>Collision geometry description type imported from character assets.</p>
 <p>Members:</p>
 <blockquote>
-<div><p>Capsule</p>
-<p>Cylinder</p>
-<p>Sphere</p>
-<p>Box</p>
+<div><p>CAPSULE</p>
+<p>CYLINDER</p>
+<p>SPHERE</p>
+<p>BOX</p>
 </div></blockquote>
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.character.CollisionGeomDescType.Box">
-<span class="sig-name descname"><span class="pre">Box</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;CollisionGeomDescType.Box:</span> <span class="pre">3&gt;</span></span><a class="headerlink" href="#kangengine.character.CollisionGeomDescType.Box" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.character.CollisionGeomDescType.BOX">
+<span class="sig-name descname"><span class="pre">BOX</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;CollisionGeomDescType.BOX:</span> <span class="pre">3&gt;</span></span><a class="headerlink" href="#kangengine.character.CollisionGeomDescType.BOX" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.character.CollisionGeomDescType.Capsule">
-<span class="sig-name descname"><span class="pre">Capsule</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;CollisionGeomDescType.Capsule:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.character.CollisionGeomDescType.Capsule" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.character.CollisionGeomDescType.CAPSULE">
+<span class="sig-name descname"><span class="pre">CAPSULE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;CollisionGeomDescType.CAPSULE:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.character.CollisionGeomDescType.CAPSULE" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.character.CollisionGeomDescType.Cylinder">
-<span class="sig-name descname"><span class="pre">Cylinder</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;CollisionGeomDescType.Cylinder:</span> <span class="pre">1&gt;</span></span><a class="headerlink" href="#kangengine.character.CollisionGeomDescType.Cylinder" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.character.CollisionGeomDescType.CYLINDER">
+<span class="sig-name descname"><span class="pre">CYLINDER</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;CollisionGeomDescType.CYLINDER:</span> <span class="pre">1&gt;</span></span><a class="headerlink" href="#kangengine.character.CollisionGeomDescType.CYLINDER" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.character.CollisionGeomDescType.Sphere">
-<span class="sig-name descname"><span class="pre">Sphere</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;CollisionGeomDescType.Sphere:</span> <span class="pre">2&gt;</span></span><a class="headerlink" href="#kangengine.character.CollisionGeomDescType.Sphere" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.character.CollisionGeomDescType.SPHERE">
+<span class="sig-name descname"><span class="pre">SPHERE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;CollisionGeomDescType.SPHERE:</span> <span class="pre">2&gt;</span></span><a class="headerlink" href="#kangengine.character.CollisionGeomDescType.SPHERE" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py property">
@@ -646,23 +647,23 @@
 <dd><p>MJCF site geometry description type.</p>
 <p>Members:</p>
 <blockquote>
-<div><p>Sphere</p>
-<p>Capsule</p>
-<p>Box</p>
+<div><p>SPHERE</p>
+<p>CAPSULE</p>
+<p>BOX</p>
 </div></blockquote>
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.character.SiteDescType.Box">
-<span class="sig-name descname"><span class="pre">Box</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;SiteDescType.Box:</span> <span class="pre">2&gt;</span></span><a class="headerlink" href="#kangengine.character.SiteDescType.Box" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.character.SiteDescType.BOX">
+<span class="sig-name descname"><span class="pre">BOX</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;SiteDescType.BOX:</span> <span class="pre">2&gt;</span></span><a class="headerlink" href="#kangengine.character.SiteDescType.BOX" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.character.SiteDescType.Capsule">
-<span class="sig-name descname"><span class="pre">Capsule</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;SiteDescType.Capsule:</span> <span class="pre">1&gt;</span></span><a class="headerlink" href="#kangengine.character.SiteDescType.Capsule" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.character.SiteDescType.CAPSULE">
+<span class="sig-name descname"><span class="pre">CAPSULE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;SiteDescType.CAPSULE:</span> <span class="pre">1&gt;</span></span><a class="headerlink" href="#kangengine.character.SiteDescType.CAPSULE" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.character.SiteDescType.Sphere">
-<span class="sig-name descname"><span class="pre">Sphere</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;SiteDescType.Sphere:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.character.SiteDescType.Sphere" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.character.SiteDescType.SPHERE">
+<span class="sig-name descname"><span class="pre">SPHERE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;SiteDescType.SPHERE:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.character.SiteDescType.SPHERE" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py property">
@@ -806,10 +807,10 @@
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.character.CollisionGeomDescType"><code class="docutils literal notranslate"><span class="pre">CollisionGeomDescType</span></code></a><ul>
-<li><a class="reference internal" href="#kangengine.character.CollisionGeomDescType.Box"><code class="docutils literal notranslate"><span class="pre">CollisionGeomDescType.Box</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.character.CollisionGeomDescType.Capsule"><code class="docutils literal notranslate"><span class="pre">CollisionGeomDescType.Capsule</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.character.CollisionGeomDescType.Cylinder"><code class="docutils literal notranslate"><span class="pre">CollisionGeomDescType.Cylinder</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.character.CollisionGeomDescType.Sphere"><code class="docutils literal notranslate"><span class="pre">CollisionGeomDescType.Sphere</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.character.CollisionGeomDescType.BOX"><code class="docutils literal notranslate"><span class="pre">CollisionGeomDescType.BOX</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.character.CollisionGeomDescType.CAPSULE"><code class="docutils literal notranslate"><span class="pre">CollisionGeomDescType.CAPSULE</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.character.CollisionGeomDescType.CYLINDER"><code class="docutils literal notranslate"><span class="pre">CollisionGeomDescType.CYLINDER</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.character.CollisionGeomDescType.SPHERE"><code class="docutils literal notranslate"><span class="pre">CollisionGeomDescType.SPHERE</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.character.CollisionGeomDescType.value"><code class="docutils literal notranslate"><span class="pre">CollisionGeomDescType.value</span></code></a></li>
 </ul>
 </li>
@@ -840,9 +841,9 @@
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.character.SiteDescType"><code class="docutils literal notranslate"><span class="pre">SiteDescType</span></code></a><ul>
-<li><a class="reference internal" href="#kangengine.character.SiteDescType.Box"><code class="docutils literal notranslate"><span class="pre">SiteDescType.Box</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.character.SiteDescType.Capsule"><code class="docutils literal notranslate"><span class="pre">SiteDescType.Capsule</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.character.SiteDescType.Sphere"><code class="docutils literal notranslate"><span class="pre">SiteDescType.Sphere</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.character.SiteDescType.BOX"><code class="docutils literal notranslate"><span class="pre">SiteDescType.BOX</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.character.SiteDescType.CAPSULE"><code class="docutils literal notranslate"><span class="pre">SiteDescType.CAPSULE</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.character.SiteDescType.SPHERE"><code class="docutils literal notranslate"><span class="pre">SiteDescType.SPHERE</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.character.SiteDescType.value"><code class="docutils literal notranslate"><span class="pre">SiteDescType.value</span></code></a></li>
 </ul>
 </li>

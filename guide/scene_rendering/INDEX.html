@@ -231,6 +231,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../advanced/INDEX.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/BUILD_FROM_SOURCE.html">Build Guide</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/RUNTIME_ARCHITECTURE.html">Runtime Architecture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/CUSTOM_GRAPHICS_PIPELINES.html">Custom Graphics Pipelines</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
@@ -327,8 +328,10 @@ assets, and interactive tools.</p>
 <li><p><a class="reference internal" href="DEBUG_VISUALIZATION.html"><span class="std std-doc">Debug Visualization and Text Rendering</span></a></p></li>
 </ul>
 <p>Most application code should use <code class="docutils literal notranslate"><span class="pre">app.scene</span></code> and prim-backed views. Use
-<code class="docutils literal notranslate"><span class="pre">ke.render</span></code> directly only for custom shaders, textures, buffers, or renderer
-experiments.</p>
+<code class="docutils literal notranslate"><span class="pre">ke.render</span></code> directly only for textures, buffers, or renderer experiments.
+Custom graphics pipelines are exposed through the C++ and Python renderer
+hook APIs. Python-authored definitions created with
+<code class="docutils literal notranslate"><span class="pre">App.create_scene_hook_pipeline()</span></code> appear in the Resource panel.</p>
 <p>Primitive mesh factories live under <code class="docutils literal notranslate"><span class="pre">ke.geometry</span></code>:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">create_plane_data()</span></code></p></li>

@@ -11,6 +11,10 @@ Scene graph, prim hierarchy, components, resource mirrors, and debug drawing.
    :nosignatures:
 
    Prim
+   Camera
+   DirectionalLight
+   PointLight
+   SpotLight
    SceneBackend
    SceneResourceManager
    MeshData
@@ -24,6 +28,14 @@ Scene graph, prim hierarchy, components, resource mirrors, and debug drawing.
 .. autoclass:: Token
 
 .. autoclass:: Prim
+
+.. autoclass:: Camera
+
+.. autoclass:: DirectionalLight
+
+.. autoclass:: PointLight
+
+.. autoclass:: SpotLight
 
 .. autoclass:: TransformComponent
 
@@ -53,14 +65,16 @@ Scene graph, prim hierarchy, components, resource mirrors, and debug drawing.
 
 | API | Return and lifetime contract |
 | --- | --- |
-| `register_mesh/material/texture/shader()` | A runtime `ResourceHandle`; it is not a persistent asset identifier. |
+| `register_mesh/material/texture()` | A runtime `ResourceHandle`; it is not a persistent asset identifier. |
+| `register_shader_source/pipeline()` | A handle for copied authored metadata; compiled backend objects are not stored here. |
 | `mesh()` | A shared mesh payload, or `None` for an unknown handle. |
-| `material()`, `texture()`, `shader()` | Borrowed engine objects, or `None`; the manager does not own these payloads. |
+| `material()`, `texture()` | Borrowed engine objects, or `None`; the manager does not own these payloads. |
+| `shader_source()`, `pipeline()` | Authored metadata retained by the manager, or `None`. |
 | `resource_prim()` | A scene-owned mirror prim, valid until removal, `clear()`, or scene teardown. |
 | `usage_paths()` | A Python list converted from the current usage cache. |
 
 `clear()` removes manager records and their `/.Resources` mirror prims. Keep a
-separate owned reference when a non-owned material, texture, or shader must
+separate owned reference when a non-owned material or texture must
 outlive its resource registration.
 
 
@@ -82,8 +96,9 @@ facade:
 ## Resource Prim lifecycle
 
 `SceneResourceManager` is the source of truth for scene-local shared resources.
-Registering a mesh/material/texture/shader assigns a runtime `ResourceHandle`
-and creates a metadata-only mirror prim under `/.Resources/...`.
+Registering a mesh/material/texture or authored shader-source/pipeline assigns
+a runtime `ResourceHandle` and creates a metadata-only mirror prim under
+`/.Resources/...`.
 
 Resource prims are not renderable world objects:
 

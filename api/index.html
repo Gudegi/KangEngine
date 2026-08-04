@@ -231,6 +231,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/advanced/INDEX.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/BUILD_FROM_SOURCE.html">Build Guide</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/RUNTIME_ARCHITECTURE.html">Runtime Architecture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/advanced/CUSTOM_GRAPHICS_PIPELINES.html">Custom Graphics Pipelines</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
@@ -365,16 +366,25 @@ while specialized APIs are grouped by domain under modules such as <code class="
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="rendering.html#kangengine.render.Renderer" title="kangengine.render.Renderer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Renderer</span></code></a></p></td>
-<td><p>Renderer facade for updating renderable resources and draw settings.</p></td>
+<td><p>Facade for custom pipelines and renderable resource updates.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="rendering.html#kangengine.render.GraphicsDevice" title="kangengine.render.GraphicsDevice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GraphicsDevice</span></code></a></p></td>
-<td><p>Factory for backend graphics resources such as shaders and textures.</p></td>
+<td><p>Factory for backend graphics resources.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="rendering.html#kangengine.render.Shader" title="kangengine.render.Shader"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Shader</span></code></a></p></td>
-<td><p>Compiled GPU shader program used by renderer materials.</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="rendering.html#kangengine.render.Texture" title="kangengine.render.Texture"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Texture</span></code></a></p></td>
+<td><p>GPU texture created by a graphics device.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="rendering.html#kangengine.render.Texture" title="kangengine.render.Texture"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Texture</span></code></a></p></td>
-<td><p>GPU texture object created by a GraphicsDevice.</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="rendering.html#kangengine.render.Buffer" title="kangengine.render.Buffer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Buffer</span></code></a></p></td>
+<td><p>GPU buffer created by a graphics device.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rendering.html#kangengine.render.GraphicsPipeline" title="kangengine.render.GraphicsPipeline"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GraphicsPipeline</span></code></a></p></td>
+<td><p>Opaque compiled graphics pipeline.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="rendering.html#kangengine.render.ShaderDesc" title="kangengine.render.ShaderDesc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ShaderDesc</span></code></a></p></td>
+<td><p>Shader stages and diagnostic name used to build a pipeline.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="rendering.html#kangengine.render.SceneHookPipelineDesc" title="kangengine.render.SceneHookPipelineDesc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SceneHookPipelineDesc</span></code></a></p></td>
+<td><p>Describe a custom graphics pipeline inserted into scene rendering.</p></td>
 </tr>
 </tbody>
 </table>
@@ -386,16 +396,16 @@ while specialized APIs are grouped by domain under modules such as <code class="
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="material.html#kangengine.material.Material" title="kangengine.material.Material"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Material</span></code></a></p></td>
-<td><p>Base wrapper for renderer materials.</p></td>
+<td><p>Base facade wrapping a native renderer material.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="material.html#kangengine.material.VertexColorMaterial" title="kangengine.material.VertexColorMaterial"><code class="xref py py-obj docutils literal notranslate"><span class="pre">VertexColorMaterial</span></code></a></p></td>
-<td><p>Material for vertex/display-color shaders.</p></td>
+<td><p>Material using vertex/display colors and an optional built-in style.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="material.html#kangengine.material.PhongMaterial" title="kangengine.material.PhongMaterial"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PhongMaterial</span></code></a></p></td>
-<td><p>Phong material wrapper with optional preset initialization.</p></td>
+<td><p>Blinn-Phong material with factors and optional texture maps.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="material.html#kangengine.material.PBRMaterial" title="kangengine.material.PBRMaterial"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PBRMaterial</span></code></a></p></td>
-<td><p>PBR material wrapper with optional preset initialization.</p></td>
+<td><p>Metallic-roughness PBR material with factors and optional textures.</p></td>
 </tr>
 </tbody>
 </table>

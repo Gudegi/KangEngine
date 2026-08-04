@@ -231,6 +231,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/advanced/INDEX.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/BUILD_FROM_SOURCE.html">Build Guide</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/RUNTIME_ARCHITECTURE.html">Runtime Architecture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/advanced/CUSTOM_GRAPHICS_PIPELINES.html">Custom Graphics Pipelines</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
@@ -317,6 +318,14 @@
         <article role="main" id="furo-main-content">
           <section id="examples">
 <h1>Examples<a class="headerlink" href="#examples" title="Link to this heading">¶</a></h1>
+<section id="custom-rendering">
+<h2>Custom rendering<a class="headerlink" href="#custom-rendering" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">python/examples/custom_graphics_pipeline.py</span></code> draws an interactive gradient
+triangle through a custom graphics pipeline and exposes its shader and
+pipeline definitions in the Resource panel.</p></li>
+</ul>
+</section>
 <section id="recommended-first-runs">
 <h2>Recommended first runs<a class="headerlink" href="#recommended-first-runs" title="Link to this heading">¶</a></h2>
 <div class="table-wrapper colwidths-auto docutils container">
@@ -435,6 +444,7 @@ for regression and historical reference.</p>
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">Examples</a><ul>
+<li><a class="reference internal" href="#custom-rendering">Custom rendering</a></li>
 <li><a class="reference internal" href="#recommended-first-runs">Recommended first runs</a></li>
 <li><a class="reference internal" href="#asset-viewers">Asset viewers</a></li>
 <li><a class="reference internal" href="#debug-and-validation-examples">Debug and validation examples</a></li>

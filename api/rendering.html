@@ -231,6 +231,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/advanced/INDEX.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/BUILD_FROM_SOURCE.html">Build Guide</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/RUNTIME_ARCHITECTURE.html">Runtime Architecture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/advanced/CUSTOM_GRAPHICS_PIPELINES.html">Custom Graphics Pipelines</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
@@ -317,29 +318,41 @@
         <article role="main" id="furo-main-content">
           <section id="ke-render">
 <h1>ke.render<a class="headerlink" href="#ke-render" title="Link to this heading">¶</a></h1>
-<p>Graphics resources, renderer controls, and color helpers.</p>
+<p>Graphics resources, renderer controls, and custom pipeline APIs.</p>
 <section id="api-overview">
 <h2>API overview<a class="headerlink" href="#api-overview" title="Link to this heading">¶</a></h2>
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.render.Renderer" title="kangengine.render.Renderer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Renderer</span></code></a></p></td>
-<td><p>Renderer facade for updating renderable resources and draw settings.</p></td>
+<td><p>Facade for custom pipelines and renderable resource updates.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#kangengine.render.GraphicsDevice" title="kangengine.render.GraphicsDevice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GraphicsDevice</span></code></a></p></td>
-<td><p>Factory for backend graphics resources such as shaders and textures.</p></td>
+<td><p>Factory for backend graphics resources.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.render.Shader" title="kangengine.render.Shader"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Shader</span></code></a></p></td>
-<td><p>Compiled GPU shader program used by renderer materials.</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.render.Texture" title="kangengine.render.Texture"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Texture</span></code></a></p></td>
+<td><p>GPU texture created by a graphics device.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.render.Texture" title="kangengine.render.Texture"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Texture</span></code></a></p></td>
-<td><p>GPU texture object created by a GraphicsDevice.</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.render.Buffer" title="kangengine.render.Buffer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Buffer</span></code></a></p></td>
+<td><p>GPU buffer created by a graphics device.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.render.GraphicsPipeline" title="kangengine.render.GraphicsPipeline"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GraphicsPipeline</span></code></a></p></td>
+<td><p>Opaque compiled graphics pipeline.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.render.ShaderDesc" title="kangengine.render.ShaderDesc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ShaderDesc</span></code></a></p></td>
+<td><p>Shader stages and diagnostic name used to build a pipeline.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.render.ShaderStage" title="kangengine.render.ShaderStage"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ShaderStage</span></code></a></p></td>
+<td><p>One source stage in a pipeline shader description.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.render.SceneHookPipelineDesc" title="kangengine.render.SceneHookPipelineDesc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SceneHookPipelineDesc</span></code></a></p></td>
+<td><p>Describe a custom graphics pipeline inserted into scene rendering.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.render.SamplerDesc" title="kangengine.render.SamplerDesc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SamplerDesc</span></code></a></p></td>
-<td><p>Texture sampler settings independent of GL/WebGPU.</p></td>
+<td><p>Backend-neutral texture sampler settings.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#kangengine.render.ExternalBufferDesc" title="kangengine.render.ExternalBufferDesc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ExternalBufferDesc</span></code></a></p></td>
-<td><p>Descriptor for renderer buffers whose storage is owned externally.</p></td>
+<td><p>Describe transform storage owned outside the renderer.</p></td>
 </tr>
 </tbody>
 </table>
@@ -347,33 +360,11 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.render.GraphicsDevice">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.render.</span></span><span class="sig-name descname"><span class="pre">GraphicsDevice</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.render.GraphicsDevice" title="Link to this definition">¶</a></dt>
-<dd><p>Factory for backend graphics resources such as shaders and textures.</p>
+<dd><p>Factory for backend graphics resources.</p>
 <dl class="py method">
-<dt class="sig sig-object py" id="kangengine.render.GraphicsDevice.create_shader">
-<span class="sig-name descname"><span class="pre">create_shader</span></span><span class="sig-paren">(</span>
-
-<dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.GraphicsDevice</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">vertex_source</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">fragment_source</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
-</dl>
-
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">kangengine.Shader</span></span></span><a class="headerlink" href="#kangengine.render.GraphicsDevice.create_shader" title="Link to this definition">¶</a></dt>
-<dd><p>Create a shader from vertex and fragment shader source strings.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="kangengine.render.GraphicsDevice.create_shader_from_file">
-<span class="sig-name descname"><span class="pre">create_shader_from_file</span></span><span class="sig-paren">(</span>
-
-<dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.GraphicsDevice</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">vert_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">frag_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
-</dl>
-
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">kangengine.Shader</span></span></span><a class="headerlink" href="#kangengine.render.GraphicsDevice.create_shader_from_file" title="Link to this definition">¶</a></dt>
-<dd><p>Create a shader from vertex and fragment shader files.</p>
+<dt class="sig sig-object py" id="kangengine.render.GraphicsDevice.create_buffer">
+<span class="sig-name descname"><span class="pre">create_buffer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">usage</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.render.BufferUsage" title="kangengine.render.BufferUsage"><span class="pre">BufferUsage</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.render.Buffer" title="kangengine.render.Buffer"><span class="pre">Buffer</span></a></span></span><a class="headerlink" href="#kangengine.render.GraphicsDevice.create_buffer" title="Link to this definition">¶</a></dt>
+<dd><p>Create a GPU buffer initialized from a contiguous Python buffer.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -381,177 +372,13 @@
 <span class="sig-name descname"><span class="pre">create_texture</span></span><span class="sig-paren">(</span>
 
 <dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.GraphicsDevice</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">flip</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">sampler</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.SamplerDesc</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">SamplerDesc(wrap_u=TextureWrap.Repeat,</span> <span class="pre">wrap_v=TextureWrap.Repeat,</span> <span class="pre">min_filter=TextureFilter.LinearMipmapLinear,</span> <span class="pre">mag_filter=TextureFilter.Linear)</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">sampler</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.render.SamplerDesc" title="kangengine.render.SamplerDesc"><span class="pre">SamplerDesc</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">...</span></span></em>,</dd>
 </dl>
 
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">kangengine.Texture</span></span></span><a class="headerlink" href="#kangengine.render.GraphicsDevice.create_texture" title="Link to this definition">¶</a></dt>
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.render.Texture" title="kangengine.render.Texture"><span class="pre">Texture</span></a></span></span><a class="headerlink" href="#kangengine.render.GraphicsDevice.create_texture" title="Link to this definition">¶</a></dt>
 <dd><p>Load a texture from an image file.</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="kangengine.render.Shader">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.render.</span></span><span class="sig-name descname"><span class="pre">Shader</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.render.Shader" title="Link to this definition">¶</a></dt>
-<dd><p>Compiled GPU shader program used by renderer materials.</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="kangengine.render.Shader.bind">
-<span class="sig-name descname"><span class="pre">bind</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Shader</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Shader.bind" title="Link to this definition">¶</a></dt>
-<dd><p>Bind this shader program.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="kangengine.render.Shader.set_bool">
-<span class="sig-name descname"><span class="pre">set_bool</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Shader</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Shader.set_bool" title="Link to this definition">¶</a></dt>
-<dd><p>Set a boolean uniform.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="kangengine.render.Shader.set_color">
-<span class="sig-name descname"><span class="pre">set_color</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.render.Shader.set_color" title="Link to this definition">¶</a></dt>
-<dd><p>Overloaded function.</p>
-<ol class="arabic simple">
-<li><p>set_color(self: kangengine.Shader, name: str, r: float, g: float, b: float, a: float) -&gt; None</p></li>
-</ol>
-<p>Set a color uniform from RGBA components.</p>
-<ol class="arabic simple" start="2">
-<li><p>set_color(self: kangengine.Shader, name: str, value: glm::vec&lt;4, float, (glm::qualifier)0&gt;) -&gt; None</p></li>
-</ol>
-<p>Set a color uniform from an RGBA vector.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="kangengine.render.Shader.set_float">
-<span class="sig-name descname"><span class="pre">set_float</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Shader</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Shader.set_float" title="Link to this definition">¶</a></dt>
-<dd><p>Set a float uniform.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="kangengine.render.Shader.set_int">
-<span class="sig-name descname"><span class="pre">set_int</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Shader</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Shader.set_int" title="Link to this definition">¶</a></dt>
-<dd><p>Set an integer uniform.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="kangengine.render.Shader.set_mat2">
-<span class="sig-name descname"><span class="pre">set_mat2</span></span><span class="sig-paren">(</span>
-
-<dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Shader</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">glm::mat&lt;2</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">2</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">float</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">(glm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">:qualifier)0&gt;</span></span></em>,</dd>
-</dl>
-
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Shader.set_mat2" title="Link to this definition">¶</a></dt>
-<dd><p>Set a mat2 uniform.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="kangengine.render.Shader.set_mat3">
-<span class="sig-name descname"><span class="pre">set_mat3</span></span><span class="sig-paren">(</span>
-
-<dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Shader</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">glm::mat&lt;3</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">3</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">float</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">(glm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">:qualifier)0&gt;</span></span></em>,</dd>
-</dl>
-
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Shader.set_mat3" title="Link to this definition">¶</a></dt>
-<dd><p>Set a mat3 uniform.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="kangengine.render.Shader.set_mat4">
-<span class="sig-name descname"><span class="pre">set_mat4</span></span><span class="sig-paren">(</span>
-
-<dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Shader</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">glm::mat&lt;4</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">4</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">float</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">(glm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">:qualifier)0&gt;</span></span></em>,</dd>
-</dl>
-
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Shader.set_mat4" title="Link to this definition">¶</a></dt>
-<dd><p>Set a mat4 uniform.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="kangengine.render.Shader.set_uniform_block_binding">
-<span class="sig-name descname"><span class="pre">set_uniform_block_binding</span></span><span class="sig-paren">(</span>
-
-<dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Shader</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">block_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">binding_point</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
-</dl>
-
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Shader.set_uniform_block_binding" title="Link to this definition">¶</a></dt>
-<dd><p>Bind a named uniform block to a binding point.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="kangengine.render.Shader.set_vec2">
-<span class="sig-name descname"><span class="pre">set_vec2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.render.Shader.set_vec2" title="Link to this definition">¶</a></dt>
-<dd><p>Overloaded function.</p>
-<ol class="arabic simple">
-<li><p>set_vec2(self: kangengine.Shader, name: str, value: glm::vec&lt;2, float, (glm::qualifier)0&gt;) -&gt; None</p></li>
-</ol>
-<p>Set a vec2 uniform.</p>
-<ol class="arabic simple" start="2">
-<li><p>set_vec2(self: kangengine.Shader, name: str, x: float, y: float) -&gt; None</p></li>
-</ol>
-<p>Set a vec2 uniform from components.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="kangengine.render.Shader.set_vec3">
-<span class="sig-name descname"><span class="pre">set_vec3</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.render.Shader.set_vec3" title="Link to this definition">¶</a></dt>
-<dd><p>Overloaded function.</p>
-<ol class="arabic simple">
-<li><p>set_vec3(self: kangengine.Shader, name: str, value: glm::vec&lt;3, float, (glm::qualifier)0&gt;) -&gt; None</p></li>
-</ol>
-<p>Set a vec3 uniform.</p>
-<ol class="arabic simple" start="2">
-<li><p>set_vec3(self: kangengine.Shader, name: str, x: float, y: float, z: float) -&gt; None</p></li>
-</ol>
-<p>Set a vec3 uniform from components.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="kangengine.render.Shader.set_vec4">
-<span class="sig-name descname"><span class="pre">set_vec4</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.render.Shader.set_vec4" title="Link to this definition">¶</a></dt>
-<dd><p>Overloaded function.</p>
-<ol class="arabic simple">
-<li><p>set_vec4(self: kangengine.Shader, name: str, value: glm::vec&lt;4, float, (glm::qualifier)0&gt;) -&gt; None</p></li>
-</ol>
-<p>Set a vec4 uniform.</p>
-<ol class="arabic simple" start="2">
-<li><p>set_vec4(self: kangengine.Shader, name: str, x: float, y: float, z: float, w: float) -&gt; None</p></li>
-</ol>
-<p>Set a vec4 uniform from components.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="kangengine.render.Shader.unbind">
-<span class="sig-name descname"><span class="pre">unbind</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Shader</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Shader.unbind" title="Link to this definition">¶</a></dt>
-<dd><p>Unbind the current shader program.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="kangengine.render.Shader.use">
-<span class="sig-name descname"><span class="pre">use</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Shader</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Shader.use" title="Link to this definition">¶</a></dt>
-<dd><p>Bind this shader program for subsequent draw or uniform calls.</p>
 </dd></dl>
 
 </dd></dl>
@@ -559,53 +386,102 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.render.Texture">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.render.</span></span><span class="sig-name descname"><span class="pre">Texture</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.render.Texture" title="Link to this definition">¶</a></dt>
-<dd><p>GPU texture object created by a GraphicsDevice.</p>
+<dd><p>GPU texture created by a graphics device.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.render.Texture.bind">
-<span class="sig-name descname"><span class="pre">bind</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Texture</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slot</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Texture.bind" title="Link to this definition">¶</a></dt>
-<dd><p>Bind this texture to a texture unit.</p>
+<span class="sig-name descname"><span class="pre">bind</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">slot</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Texture.bind" title="Link to this definition">¶</a></dt>
+<dd><p>Bind the texture to a backend texture unit.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.render.Texture.get_height">
-<span class="sig-name descname"><span class="pre">get_height</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Texture</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.render.Texture.get_height" title="Link to this definition">¶</a></dt>
-<dd><p>Return the texture height in pixels.</p>
+<span class="sig-name descname"><span class="pre">get_height</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.render.Texture.get_height" title="Link to this definition">¶</a></dt>
+<dd><p>Return the height in pixels.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.render.Texture.get_width">
-<span class="sig-name descname"><span class="pre">get_width</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Texture</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.render.Texture.get_width" title="Link to this definition">¶</a></dt>
-<dd><p>Return the texture width in pixels.</p>
+<span class="sig-name descname"><span class="pre">get_width</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.render.Texture.get_width" title="Link to this definition">¶</a></dt>
+<dd><p>Return the width in pixels.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.render.Texture.height">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">height</span></span><a class="headerlink" href="#kangengine.render.Texture.height" title="Link to this definition">¶</a></dt>
-<dd><p>Texture height in pixels.</p>
+<dd><p>Return the height in pixels.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.render.Texture.unbind">
-<span class="sig-name descname"><span class="pre">unbind</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Texture</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Texture.unbind" title="Link to this definition">¶</a></dt>
-<dd><p>Unbind this texture from the active context.</p>
+<span class="sig-name descname"><span class="pre">unbind</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Texture.unbind" title="Link to this definition">¶</a></dt>
+<dd><p>Unbind the texture from the active context.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.render.Texture.width">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">width</span></span><a class="headerlink" href="#kangengine.render.Texture.width" title="Link to this definition">¶</a></dt>
-<dd><p>Texture width in pixels.</p>
+<dd><p>Return the width in pixels.</p>
 </dd></dl>
 
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="kangengine.render.Buffer">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.render.</span></span><span class="sig-name descname"><span class="pre">Buffer</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.render.Buffer" title="Link to this definition">¶</a></dt>
+<dd><p>GPU buffer created by a graphics device.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.render.Buffer.set_data">
+<span class="sig-name descname"><span class="pre">set_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Buffer.set_data" title="Link to this definition">¶</a></dt>
+<dd><p>Upload a contiguous Python buffer at a byte offset.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.render.Buffer.size">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">size</span></span><a class="headerlink" href="#kangengine.render.Buffer.size" title="Link to this definition">¶</a></dt>
+<dd><p>Return the allocation size in bytes.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.render.Buffer.usage">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">usage</span></span><a class="headerlink" href="#kangengine.render.Buffer.usage" title="Link to this definition">¶</a></dt>
+<dd><p>Return the buffer usage flags.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.render.GraphicsPipeline">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.render.</span></span><span class="sig-name descname"><span class="pre">GraphicsPipeline</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.render.GraphicsPipeline" title="Link to this definition">¶</a></dt>
+<dd><p>Opaque compiled graphics pipeline. Keep it alive while hooks use it.</p>
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="kangengine.render.Renderer">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.render.</span></span><span class="sig-name descname"><span class="pre">Renderer</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.render.Renderer" title="Link to this definition">¶</a></dt>
-<dd><p>Renderer facade for updating renderable resources and draw settings.</p>
+<dd><p>Facade for custom pipelines and renderable resource updates.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.render.Renderer.add_render_hook">
+<span class="sig-name descname"><span class="pre">add_render_hook</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">phase</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.render.RenderHookPhase" title="kangengine.render.RenderHookPhase"><span class="pre">RenderHookPhase</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">callback</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">RenderHookContext</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.add_render_hook" title="Link to this definition">¶</a></dt>
+<dd><p>Register a command-recording callback and return its handle.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.render.Renderer.create_scene_hook_pipeline">
+<span class="sig-name descname"><span class="pre">create_scene_hook_pipeline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">desc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.render.SceneHookPipelineDesc" title="kangengine.render.SceneHookPipelineDesc"><span class="pre">SceneHookPipelineDesc</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.render.GraphicsPipeline" title="kangengine.render.GraphicsPipeline"><span class="pre">GraphicsPipeline</span></a></span></span><a class="headerlink" href="#kangengine.render.Renderer.create_scene_hook_pipeline" title="Link to this definition">¶</a></dt>
+<dd><p>Create a pipeline compatible with the scene render targets.</p>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.render.Renderer.device">
-<span class="sig-name descname"><span class="pre">device</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Renderer</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">kangengine.GraphicsDevice</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.device" title="Link to this definition">¶</a></dt>
-<dd><p>Return the graphics device owned by this renderer.</p>
+<span class="sig-name descname"><span class="pre">device</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.render.GraphicsDevice" title="kangengine.render.GraphicsDevice"><span class="pre">GraphicsDevice</span></a></span></span><a class="headerlink" href="#kangengine.render.Renderer.device" title="Link to this definition">¶</a></dt>
+<dd><p>Return the renderer-owned graphics device.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -613,34 +489,32 @@
 <span class="sig-name descname"><span class="pre">map_renderable_cuda_transform_buffers</span></span><span class="sig-paren">(</span>
 
 <dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Renderer</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">handles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">handles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">count</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">device_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">stream_handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>,</dd>
 </dl>
 
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">kangengine.GpuArrayView</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.render.Renderer.map_renderable_cuda_transform_buffers" title="Link to this definition">¶</a></dt>
-<dd><p>Map multiple renderable transform VBOs for direct CUDA writes.</p>
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Any</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.map_renderable_cuda_transform_buffers" title="Link to this definition">¶</a></dt>
+<dd><p>Map transform buffers for direct CUDA writes.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.render.Renderer.point_lights">
-<span class="sig-name descname"><span class="pre">point_lights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Renderer</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">kangengine.PointLight</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.render.Renderer.point_lights" title="Link to this definition">¶</a></dt>
-<dd><p>Return stored point lights.</p>
+<span class="sig-name descname"><span class="pre">point_lights</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Any</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.point_lights" title="Link to this definition">¶</a></dt>
+<dd><p>Return the stored point lights.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.render.Renderer.remove_render_hook">
+<span class="sig-name descname"><span class="pre">remove_render_hook</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.remove_render_hook" title="Link to this definition">¶</a></dt>
+<dd><p>Remove a previously registered render hook.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.render.Renderer.set_point_lights">
-<span class="sig-name descname"><span class="pre">set_point_lights</span></span><span class="sig-paren">(</span>
-
-<dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Renderer</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">lights</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">kangengine.PointLight</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
-</dl>
-
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.set_point_lights" title="Link to this definition">¶</a></dt>
-<dd><p>Store point lights for renderers/shaders that support them.</p>
+<span class="sig-name descname"><span class="pre">set_point_lights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lights</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.set_point_lights" title="Link to this definition">¶</a></dt>
+<dd><p>Replace the renderer’s point-light list.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -648,56 +522,31 @@
 <span class="sig-name descname"><span class="pre">set_renderable_alpha_mode</span></span><span class="sig-paren">(</span>
 
 <dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Renderer</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.AlphaMode</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.render.AlphaMode" title="kangengine.render.AlphaMode"><span class="pre">AlphaMode</span></a></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">cutoff</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.5</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.set_renderable_alpha_mode" title="Link to this definition">¶</a></dt>
-<dd><p>Select opaque, alpha-mask, or alpha-blend rendering.</p>
+<dd><p>Set alpha handling and mask cutoff.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.render.Renderer.set_renderable_casts_shadow">
-<span class="sig-name descname"><span class="pre">set_renderable_casts_shadow</span></span><span class="sig-paren">(</span>
-
-<dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Renderer</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">casts_shadow</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
-</dl>
-
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.set_renderable_casts_shadow" title="Link to this definition">¶</a></dt>
-<dd><p>Enable or disable shadow casting for a renderable.</p>
+<span class="sig-name descname"><span class="pre">set_renderable_casts_shadow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">casts_shadow</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.set_renderable_casts_shadow" title="Link to this definition">¶</a></dt>
+<dd><p>Set whether the renderable casts shadows.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.render.Renderer.set_renderable_colors">
-<span class="sig-name descname"><span class="pre">set_renderable_colors</span></span><span class="sig-paren">(</span>
-
-<dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Renderer</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">colors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">npt.ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">torch.Tensor</span></span></em>,</dd>
-</dl>
-
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.set_renderable_colors" title="Link to this definition">¶</a></dt>
-<dd><p>Set per-instance colors for a renderable.</p>
+<span class="sig-name descname"><span class="pre">set_renderable_colors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.set_renderable_colors" title="Link to this definition">¶</a></dt>
+<dd><p>Set per-instance colors.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.render.Renderer.set_renderable_double_sided">
-<span class="sig-name descname"><span class="pre">set_renderable_double_sided</span></span><span class="sig-paren">(</span>
-
-<dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Renderer</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">double_sided</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
-</dl>
-
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.set_renderable_double_sided" title="Link to this definition">¶</a></dt>
-<dd><p>Enable or disable double-sided rendering for a renderable.</p>
+<span class="sig-name descname"><span class="pre">set_renderable_double_sided</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">double_sided</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.set_renderable_double_sided" title="Link to this definition">¶</a></dt>
+<dd><p>Set whether both triangle faces are rendered.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -705,59 +554,44 @@
 <span class="sig-name descname"><span class="pre">set_renderable_external_buffer</span></span><span class="sig-paren">(</span>
 
 <dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Renderer</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">descriptor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.ExternalBufferDesc</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">descriptor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.render.ExternalBufferDesc" title="kangengine.render.ExternalBufferDesc"><span class="pre">ExternalBufferDesc</span></a></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.set_renderable_external_buffer" title="Link to this definition">¶</a></dt>
-<dd><p>Attach an external CPU/GPU transform buffer to a renderable.</p>
+<dd><p>Attach externally owned transform storage.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.render.Renderer.set_renderable_texture">
-<span class="sig-name descname"><span class="pre">set_renderable_texture</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.render.Renderer.set_renderable_texture" title="Link to this definition">¶</a></dt>
-<dd><p>Overloaded function.</p>
-<ol class="arabic simple">
-<li><p>set_renderable_texture(self: kangengine.Renderer, handle: int, texture: kangengine.Texture, role: kangengine.TextureRole) -&gt; None</p></li>
-</ol>
-<p>Attach a texture to a renderable using a material texture role.</p>
-<ol class="arabic simple" start="2">
-<li><p>set_renderable_texture(self: kangengine.Renderer, handle: int, texture: kangengine.Texture, slot: int = 0) -&gt; None</p></li>
-</ol>
-<p>Attach a texture to a renderable using a raw texture slot.</p>
+<span class="sig-name descname"><span class="pre">set_renderable_texture</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">texture</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.render.Texture" title="kangengine.render.Texture"><span class="pre">Texture</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">role</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.render.TextureRole" title="kangengine.render.TextureRole"><span class="pre">TextureRole</span></a></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.set_renderable_texture" title="Link to this definition">¶</a></dt>
+<dd><p>Attach a texture by semantic material role.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.render.Renderer.set_spot_lights">
-<span class="sig-name descname"><span class="pre">set_spot_lights</span></span><span class="sig-paren">(</span>
-
-<dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Renderer</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">lights</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">kangengine.SpotLight</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
-</dl>
-
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.set_spot_lights" title="Link to this definition">¶</a></dt>
-<dd><p>Store spot lights for renderers/shaders that support them.</p>
+<span class="sig-name descname"><span class="pre">set_spot_lights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lights</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.set_spot_lights" title="Link to this definition">¶</a></dt>
+<dd><p>Replace the renderer’s spot-light list.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.render.Renderer.spot_lights">
-<span class="sig-name descname"><span class="pre">spot_lights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Renderer</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">kangengine.SpotLight</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.render.Renderer.spot_lights" title="Link to this definition">¶</a></dt>
-<dd><p>Return stored spot lights.</p>
+<span class="sig-name descname"><span class="pre">spot_lights</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Any</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.spot_lights" title="Link to this definition">¶</a></dt>
+<dd><p>Return the stored spot lights.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.render.Renderer.sync_scene_lights">
-<span class="sig-name descname"><span class="pre">sync_scene_lights</span></span><span class="sig-paren">(</span>
-
-<dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Renderer</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="scene.html#kangengine.scene.SceneBackend" title="kangengine.scene.SceneBackend"><span class="pre">SceneBackend</span></a></span></em>,</dd>
-</dl>
-
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.sync_scene_lights" title="Link to this definition">¶</a></dt>
-<dd><p>Sync renderer lights from /lights scene prims. Intended for diagnostics and tests.</p>
+<span class="sig-name descname"><span class="pre">sync_scene_lights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.sync_scene_lights" title="Link to this definition">¶</a></dt>
+<dd><p>Synchronize renderer lights from scene light prims.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -765,14 +599,13 @@
 <span class="sig-name descname"><span class="pre">unmap_renderable_cuda_transform_buffers</span></span><span class="sig-paren">(</span>
 
 <dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Renderer</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">handles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">handles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">device_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">stream_handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.unmap_renderable_cuda_transform_buffers" title="Link to this definition">¶</a></dt>
-<dd><p>Unmap transform VBOs after direct CUDA writes.</p>
+<dd><p>Unmap transform buffers after CUDA writes.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -780,28 +613,19 @@
 <span class="sig-name descname"><span class="pre">update_renderable_geometry</span></span><span class="sig-paren">(</span>
 
 <dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Renderer</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">positions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">npt.ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">torch.Tensor</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">normals</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">positions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">normals</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.update_renderable_geometry" title="Link to this definition">¶</a></dt>
-<dd><p>Update dynamic vertex positions and optional normals.</p>
+<dd><p>Update dynamic positions and optional normals.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.render.Renderer.update_renderable_skinning_matrices">
-<span class="sig-name descname"><span class="pre">update_renderable_skinning_matrices</span></span><span class="sig-paren">(</span>
-
-<dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Renderer</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">bone_matrices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">npt.ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">torch.Tensor</span></span></em>,</dd>
-</dl>
-
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.update_renderable_skinning_matrices" title="Link to this definition">¶</a></dt>
-<dd><p>Update bone matrices for a skinned renderable.</p>
+<span class="sig-name descname"><span class="pre">update_renderable_skinning_matrices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bone_matrices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.update_renderable_skinning_matrices" title="Link to this definition">¶</a></dt>
+<dd><p>Update matrices for a skinned renderable.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -809,22 +633,114 @@
 <span class="sig-name descname"><span class="pre">update_renderable_transforms</span></span><span class="sig-paren">(</span>
 
 <dl>
-<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Renderer</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">transforms</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">npt.ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">torch.Tensor</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">colors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">object</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">transforms</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">colors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.update_renderable_transforms" title="Link to this definition">¶</a></dt>
-<dd><p>Replace instance transforms, optionally with per-instance colors.</p>
+<dd><p>Replace instance transforms and optional colors.</p>
 </dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.render.ShaderDesc">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.render.</span></span><span class="sig-name descname"><span class="pre">ShaderDesc</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.render.ShaderDesc" title="Link to this definition">¶</a></dt>
+<dd><p>Shader stages and diagnostic name used to build a pipeline.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.render.ShaderDesc.name">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#kangengine.render.ShaderDesc.name" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.render.ShaderDesc.stages">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">stages</span></span><a class="headerlink" href="#kangengine.render.ShaderDesc.stages" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.render.ShaderStage">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.render.</span></span><span class="sig-name descname"><span class="pre">ShaderStage</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.render.ShaderStage" title="Link to this definition">¶</a></dt>
+<dd><p>One source stage in a pipeline shader description.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.render.ShaderStage.entry_point">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">entry_point</span></span><a class="headerlink" href="#kangengine.render.ShaderStage.entry_point" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.render.ShaderStage.source">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">source</span></span><a class="headerlink" href="#kangengine.render.ShaderStage.source" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.render.ShaderStage.stage">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">stage</span></span><a class="headerlink" href="#kangengine.render.ShaderStage.stage" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.render.SceneHookPipelineDesc">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.render.</span></span><span class="sig-name descname"><span class="pre">SceneHookPipelineDesc</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.render.SceneHookPipelineDesc" title="Link to this definition">¶</a></dt>
+<dd><p>Describe a custom graphics pipeline inserted into scene rendering.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.render.SceneHookPipelineDesc.blend">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">blend</span></span><a class="headerlink" href="#kangengine.render.SceneHookPipelineDesc.blend" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.render.SceneHookPipelineDesc.cull_mode">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">cull_mode</span></span><a class="headerlink" href="#kangengine.render.SceneHookPipelineDesc.cull_mode" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.render.SceneHookPipelineDesc.depth_compare">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">depth_compare</span></span><a class="headerlink" href="#kangengine.render.SceneHookPipelineDesc.depth_compare" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.render.SceneHookPipelineDesc.depth_test">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">depth_test</span></span><a class="headerlink" href="#kangengine.render.SceneHookPipelineDesc.depth_test" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.render.SceneHookPipelineDesc.depth_write">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">depth_write</span></span><a class="headerlink" href="#kangengine.render.SceneHookPipelineDesc.depth_write" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.render.SceneHookPipelineDesc.label">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">label</span></span><a class="headerlink" href="#kangengine.render.SceneHookPipelineDesc.label" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.render.SceneHookPipelineDesc.shader">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">shader</span></span><a class="headerlink" href="#kangengine.render.SceneHookPipelineDesc.shader" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.render.SceneHookPipelineDesc.topology">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">topology</span></span><a class="headerlink" href="#kangengine.render.SceneHookPipelineDesc.topology" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.render.SceneHookPipelineDesc.use_scene_frame_bindings">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">use_scene_frame_bindings</span></span><a class="headerlink" href="#kangengine.render.SceneHookPipelineDesc.use_scene_frame_bindings" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.render.SceneHookPipelineDesc.vertex_buffers">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">vertex_buffers</span></span><a class="headerlink" href="#kangengine.render.SceneHookPipelineDesc.vertex_buffers" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
 
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.render.SamplerDesc">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.render.</span></span><span class="sig-name descname"><span class="pre">SamplerDesc</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.render.SamplerDesc" title="Link to this definition">¶</a></dt>
-<dd><p>Texture sampler settings independent of GL/WebGPU.</p>
+<dd><p>Backend-neutral texture sampler settings.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.render.SamplerDesc.__init__">
 <span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span>
@@ -870,7 +786,7 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.render.ExternalBufferDesc">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.render.</span></span><span class="sig-name descname"><span class="pre">ExternalBufferDesc</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.render.ExternalBufferDesc" title="Link to this definition">¶</a></dt>
-<dd><p>Descriptor for renderer buffers whose storage is owned externally.</p>
+<dd><p>Describe transform storage owned outside the renderer.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.render.ExternalBufferDesc.__init__">
 <span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span>
@@ -923,62 +839,50 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.render.TextureRole">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.render.</span></span><span class="sig-name descname"><span class="pre">TextureRole</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.render.TextureRole" title="Link to this definition">¶</a></dt>
-<dd><p>Renderer texture binding roles used by material shaders.</p>
-<p>Members:</p>
-<blockquote>
-<div><p>BaseColor</p>
-<p>Diffuse</p>
-<p>Normal</p>
-<p>MetallicRoughness</p>
-<p>AmbientOcclusion</p>
-<p>Emissive</p>
-<p>Metallic</p>
-<p>Roughness</p>
-<p>OcclusionRoughnessMetallic</p>
-</div></blockquote>
+<dd><p>Semantic texture slot used by built-in materials.</p>
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.TextureRole.AmbientOcclusion">
-<span class="sig-name descname"><span class="pre">AmbientOcclusion</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextureRole.AmbientOcclusion:</span> <span class="pre">3&gt;</span></span><a class="headerlink" href="#kangengine.render.TextureRole.AmbientOcclusion" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.TextureRole.AMBIENT_OCCLUSION">
+<span class="sig-name descname"><span class="pre">AMBIENT_OCCLUSION</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextureRole.AMBIENT_OCCLUSION:</span> <span class="pre">3&gt;</span></span><a class="headerlink" href="#kangengine.render.TextureRole.AMBIENT_OCCLUSION" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.TextureRole.BaseColor">
-<span class="sig-name descname"><span class="pre">BaseColor</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextureRole.BaseColor:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.render.TextureRole.BaseColor" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.TextureRole.BASE_COLOR">
+<span class="sig-name descname"><span class="pre">BASE_COLOR</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextureRole.BASE_COLOR:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.render.TextureRole.BASE_COLOR" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.TextureRole.Diffuse">
-<span class="sig-name descname"><span class="pre">Diffuse</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextureRole.BaseColor:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.render.TextureRole.Diffuse" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.TextureRole.DIFFUSE">
+<span class="sig-name descname"><span class="pre">DIFFUSE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextureRole.BASE_COLOR:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.render.TextureRole.DIFFUSE" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.TextureRole.Emissive">
-<span class="sig-name descname"><span class="pre">Emissive</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextureRole.Emissive:</span> <span class="pre">4&gt;</span></span><a class="headerlink" href="#kangengine.render.TextureRole.Emissive" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.TextureRole.EMISSIVE">
+<span class="sig-name descname"><span class="pre">EMISSIVE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextureRole.EMISSIVE:</span> <span class="pre">4&gt;</span></span><a class="headerlink" href="#kangengine.render.TextureRole.EMISSIVE" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.TextureRole.Metallic">
-<span class="sig-name descname"><span class="pre">Metallic</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextureRole.Metallic:</span> <span class="pre">5&gt;</span></span><a class="headerlink" href="#kangengine.render.TextureRole.Metallic" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.TextureRole.METALLIC">
+<span class="sig-name descname"><span class="pre">METALLIC</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextureRole.METALLIC:</span> <span class="pre">5&gt;</span></span><a class="headerlink" href="#kangengine.render.TextureRole.METALLIC" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.TextureRole.MetallicRoughness">
-<span class="sig-name descname"><span class="pre">MetallicRoughness</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextureRole.MetallicRoughness:</span> <span class="pre">2&gt;</span></span><a class="headerlink" href="#kangengine.render.TextureRole.MetallicRoughness" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.TextureRole.METALLIC_ROUGHNESS">
+<span class="sig-name descname"><span class="pre">METALLIC_ROUGHNESS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextureRole.METALLIC_ROUGHNESS:</span> <span class="pre">2&gt;</span></span><a class="headerlink" href="#kangengine.render.TextureRole.METALLIC_ROUGHNESS" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.TextureRole.Normal">
-<span class="sig-name descname"><span class="pre">Normal</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextureRole.Normal:</span> <span class="pre">1&gt;</span></span><a class="headerlink" href="#kangengine.render.TextureRole.Normal" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.TextureRole.NORMAL">
+<span class="sig-name descname"><span class="pre">NORMAL</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextureRole.NORMAL:</span> <span class="pre">1&gt;</span></span><a class="headerlink" href="#kangengine.render.TextureRole.NORMAL" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.TextureRole.OcclusionRoughnessMetallic">
-<span class="sig-name descname"><span class="pre">OcclusionRoughnessMetallic</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextureRole.OcclusionRoughnessMetallic:</span> <span class="pre">7&gt;</span></span><a class="headerlink" href="#kangengine.render.TextureRole.OcclusionRoughnessMetallic" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.TextureRole.OCCLUSION_ROUGHNESS_METALLIC">
+<span class="sig-name descname"><span class="pre">OCCLUSION_ROUGHNESS_METALLIC</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextureRole.OCCLUSION_ROUGHNESS_METALLIC:</span> <span class="pre">7&gt;</span></span><a class="headerlink" href="#kangengine.render.TextureRole.OCCLUSION_ROUGHNESS_METALLIC" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.TextureRole.Roughness">
-<span class="sig-name descname"><span class="pre">Roughness</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextureRole.Roughness:</span> <span class="pre">6&gt;</span></span><a class="headerlink" href="#kangengine.render.TextureRole.Roughness" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.TextureRole.ROUGHNESS">
+<span class="sig-name descname"><span class="pre">ROUGHNESS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextureRole.ROUGHNESS:</span> <span class="pre">6&gt;</span></span><a class="headerlink" href="#kangengine.render.TextureRole.ROUGHNESS" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py property">
@@ -996,26 +900,20 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.render.AlphaMode">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.render.</span></span><span class="sig-name descname"><span class="pre">AlphaMode</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.render.AlphaMode" title="Link to this definition">¶</a></dt>
-<dd><p>How a renderable handles fragment alpha in scene and depth passes.</p>
-<p>Members:</p>
-<blockquote>
-<div><p>Opaque</p>
-<p>Mask</p>
-<p>Blend</p>
-</div></blockquote>
+<dd><p>Fragment alpha policy.</p>
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.AlphaMode.Blend">
-<span class="sig-name descname"><span class="pre">Blend</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;AlphaMode.Blend:</span> <span class="pre">2&gt;</span></span><a class="headerlink" href="#kangengine.render.AlphaMode.Blend" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.AlphaMode.BLEND">
+<span class="sig-name descname"><span class="pre">BLEND</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;AlphaMode.BLEND:</span> <span class="pre">2&gt;</span></span><a class="headerlink" href="#kangengine.render.AlphaMode.BLEND" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.AlphaMode.Mask">
-<span class="sig-name descname"><span class="pre">Mask</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;AlphaMode.Mask:</span> <span class="pre">1&gt;</span></span><a class="headerlink" href="#kangengine.render.AlphaMode.Mask" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.AlphaMode.MASK">
+<span class="sig-name descname"><span class="pre">MASK</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;AlphaMode.MASK:</span> <span class="pre">1&gt;</span></span><a class="headerlink" href="#kangengine.render.AlphaMode.MASK" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.AlphaMode.Opaque">
-<span class="sig-name descname"><span class="pre">Opaque</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;AlphaMode.Opaque:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.render.AlphaMode.Opaque" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.AlphaMode.OPAQUE">
+<span class="sig-name descname"><span class="pre">OPAQUE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;AlphaMode.OPAQUE:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.render.AlphaMode.OPAQUE" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py property">
@@ -1031,25 +929,130 @@
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="kangengine.render.BufferUsage">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.render.</span></span><span class="sig-name descname"><span class="pre">BufferUsage</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.render.BufferUsage" title="Link to this definition">¶</a></dt>
+<dd><p>Bit flags describing GPU buffer use.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.BufferUsage.COPY_DST">
+<span class="sig-name descname"><span class="pre">COPY_DST</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;BufferUsage.COPY_DST:</span> <span class="pre">16&gt;</span></span><a class="headerlink" href="#kangengine.render.BufferUsage.COPY_DST" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.BufferUsage.COPY_SRC">
+<span class="sig-name descname"><span class="pre">COPY_SRC</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;BufferUsage.COPY_SRC:</span> <span class="pre">8&gt;</span></span><a class="headerlink" href="#kangengine.render.BufferUsage.COPY_SRC" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.BufferUsage.INDEX">
+<span class="sig-name descname"><span class="pre">INDEX</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;BufferUsage.INDEX:</span> <span class="pre">2&gt;</span></span><a class="headerlink" href="#kangengine.render.BufferUsage.INDEX" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.BufferUsage.NONE">
+<span class="sig-name descname"><span class="pre">NONE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;BufferUsage.NONE:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.render.BufferUsage.NONE" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.BufferUsage.UNIFORM">
+<span class="sig-name descname"><span class="pre">UNIFORM</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;BufferUsage.UNIFORM:</span> <span class="pre">4&gt;</span></span><a class="headerlink" href="#kangengine.render.BufferUsage.UNIFORM" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.BufferUsage.VERTEX">
+<span class="sig-name descname"><span class="pre">VERTEX</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;BufferUsage.VERTEX:</span> <span class="pre">1&gt;</span></span><a class="headerlink" href="#kangengine.render.BufferUsage.VERTEX" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">BufferUsage.name</span> <span class="pre">-&gt;</span> <span class="pre">str</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.render.BufferUsage.value">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">value</span></span><a class="headerlink" href="#kangengine.render.BufferUsage.value" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.render.ShaderType">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.render.</span></span><span class="sig-name descname"><span class="pre">ShaderType</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.render.ShaderType" title="Link to this definition">¶</a></dt>
+<dd><p>Programmable shader stage.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.ShaderType.COMPUTE">
+<span class="sig-name descname"><span class="pre">COMPUTE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ShaderType.COMPUTE:</span> <span class="pre">3&gt;</span></span><a class="headerlink" href="#kangengine.render.ShaderType.COMPUTE" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.ShaderType.FRAGMENT">
+<span class="sig-name descname"><span class="pre">FRAGMENT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ShaderType.FRAGMENT:</span> <span class="pre">1&gt;</span></span><a class="headerlink" href="#kangengine.render.ShaderType.FRAGMENT" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.ShaderType.GEOMETRY">
+<span class="sig-name descname"><span class="pre">GEOMETRY</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ShaderType.GEOMETRY:</span> <span class="pre">2&gt;</span></span><a class="headerlink" href="#kangengine.render.ShaderType.GEOMETRY" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.ShaderType.VERTEX">
+<span class="sig-name descname"><span class="pre">VERTEX</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ShaderType.VERTEX:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.render.ShaderType.VERTEX" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">ShaderType.name</span> <span class="pre">-&gt;</span> <span class="pre">str</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.render.ShaderType.value">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">value</span></span><a class="headerlink" href="#kangengine.render.ShaderType.value" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.render.RenderHookPhase">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.render.</span></span><span class="sig-name descname"><span class="pre">RenderHookPhase</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.render.RenderHookPhase" title="Link to this definition">¶</a></dt>
+<dd><p>Point at which a scene command-recording callback runs.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.RenderHookPhase.AFTER_OPAQUE">
+<span class="sig-name descname"><span class="pre">AFTER_OPAQUE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;RenderHookPhase.AFTER_OPAQUE:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.render.RenderHookPhase.AFTER_OPAQUE" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.render.RenderHookPhase.AFTER_TRANSPARENT">
+<span class="sig-name descname"><span class="pre">AFTER_TRANSPARENT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;RenderHookPhase.AFTER_TRANSPARENT:</span> <span class="pre">1&gt;</span></span><a class="headerlink" href="#kangengine.render.RenderHookPhase.AFTER_TRANSPARENT" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">RenderHookPhase.name</span> <span class="pre">-&gt;</span> <span class="pre">str</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.render.RenderHookPhase.value">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">value</span></span><a class="headerlink" href="#kangengine.render.RenderHookPhase.value" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="kangengine.render.TextAlignment">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.render.</span></span><span class="sig-name descname"><span class="pre">TextAlignment</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.render.TextAlignment" title="Link to this definition">¶</a></dt>
-<dd><p>Members:</p>
-<p>Left</p>
-<p>Center</p>
-<p>Right</p>
+<dd><p>Horizontal text alignment.</p>
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.TextAlignment.Center">
-<span class="sig-name descname"><span class="pre">Center</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextAlignment.Center:</span> <span class="pre">1&gt;</span></span><a class="headerlink" href="#kangengine.render.TextAlignment.Center" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.TextAlignment.CENTER">
+<span class="sig-name descname"><span class="pre">CENTER</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextAlignment.CENTER:</span> <span class="pre">1&gt;</span></span><a class="headerlink" href="#kangengine.render.TextAlignment.CENTER" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.TextAlignment.Left">
-<span class="sig-name descname"><span class="pre">Left</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextAlignment.Left:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.render.TextAlignment.Left" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.TextAlignment.LEFT">
+<span class="sig-name descname"><span class="pre">LEFT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextAlignment.LEFT:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.render.TextAlignment.LEFT" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.TextAlignment.Right">
-<span class="sig-name descname"><span class="pre">Right</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextAlignment.Right:</span> <span class="pre">2&gt;</span></span><a class="headerlink" href="#kangengine.render.TextAlignment.Right" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.TextAlignment.RIGHT">
+<span class="sig-name descname"><span class="pre">RIGHT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextAlignment.RIGHT:</span> <span class="pre">2&gt;</span></span><a class="headerlink" href="#kangengine.render.TextAlignment.RIGHT" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py property">
@@ -1067,17 +1070,15 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.render.TextDepthMode">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.render.</span></span><span class="sig-name descname"><span class="pre">TextDepthMode</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.render.TextDepthMode" title="Link to this definition">¶</a></dt>
-<dd><p>Members:</p>
-<p>DepthTested</p>
-<p>Overlay</p>
+<dd><p>Text depth-testing policy.</p>
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.TextDepthMode.DepthTested">
-<span class="sig-name descname"><span class="pre">DepthTested</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextDepthMode.DepthTested:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.render.TextDepthMode.DepthTested" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.TextDepthMode.DEPTH_TESTED">
+<span class="sig-name descname"><span class="pre">DEPTH_TESTED</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextDepthMode.DEPTH_TESTED:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.render.TextDepthMode.DEPTH_TESTED" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.TextDepthMode.Overlay">
-<span class="sig-name descname"><span class="pre">Overlay</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextDepthMode.Overlay:</span> <span class="pre">1&gt;</span></span><a class="headerlink" href="#kangengine.render.TextDepthMode.Overlay" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.TextDepthMode.OVERLAY">
+<span class="sig-name descname"><span class="pre">OVERLAY</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;TextDepthMode.OVERLAY:</span> <span class="pre">1&gt;</span></span><a class="headerlink" href="#kangengine.render.TextDepthMode.OVERLAY" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py property">
@@ -1095,59 +1096,50 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.render.ScreenAnchor">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.render.</span></span><span class="sig-name descname"><span class="pre">ScreenAnchor</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor" title="Link to this definition">¶</a></dt>
-<dd><p>Members:</p>
-<p>TopLeft</p>
-<p>TopCenter</p>
-<p>TopRight</p>
-<p>CenterLeft</p>
-<p>Center</p>
-<p>CenterRight</p>
-<p>BottomLeft</p>
-<p>BottomCenter</p>
-<p>BottomRight</p>
+<dd><p>Anchor used for screen-space placement.</p>
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.BottomCenter">
-<span class="sig-name descname"><span class="pre">BottomCenter</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.BottomCenter:</span> <span class="pre">7&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.BottomCenter" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.BOTTOM_CENTER">
+<span class="sig-name descname"><span class="pre">BOTTOM_CENTER</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.BOTTOM_CENTER:</span> <span class="pre">7&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.BOTTOM_CENTER" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.BottomLeft">
-<span class="sig-name descname"><span class="pre">BottomLeft</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.BottomLeft:</span> <span class="pre">6&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.BottomLeft" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.BOTTOM_LEFT">
+<span class="sig-name descname"><span class="pre">BOTTOM_LEFT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.BOTTOM_LEFT:</span> <span class="pre">6&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.BOTTOM_LEFT" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.BottomRight">
-<span class="sig-name descname"><span class="pre">BottomRight</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.BottomRight:</span> <span class="pre">8&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.BottomRight" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.BOTTOM_RIGHT">
+<span class="sig-name descname"><span class="pre">BOTTOM_RIGHT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.BOTTOM_RIGHT:</span> <span class="pre">8&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.BOTTOM_RIGHT" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.Center">
-<span class="sig-name descname"><span class="pre">Center</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.Center:</span> <span class="pre">4&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.Center" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.CENTER">
+<span class="sig-name descname"><span class="pre">CENTER</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.CENTER:</span> <span class="pre">4&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.CENTER" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.CenterLeft">
-<span class="sig-name descname"><span class="pre">CenterLeft</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.CenterLeft:</span> <span class="pre">3&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.CenterLeft" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.CENTER_LEFT">
+<span class="sig-name descname"><span class="pre">CENTER_LEFT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.CENTER_LEFT:</span> <span class="pre">3&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.CENTER_LEFT" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.CenterRight">
-<span class="sig-name descname"><span class="pre">CenterRight</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.CenterRight:</span> <span class="pre">5&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.CenterRight" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.CENTER_RIGHT">
+<span class="sig-name descname"><span class="pre">CENTER_RIGHT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.CENTER_RIGHT:</span> <span class="pre">5&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.CENTER_RIGHT" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.TopCenter">
-<span class="sig-name descname"><span class="pre">TopCenter</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.TopCenter:</span> <span class="pre">1&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.TopCenter" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.TOP_CENTER">
+<span class="sig-name descname"><span class="pre">TOP_CENTER</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.TOP_CENTER:</span> <span class="pre">1&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.TOP_CENTER" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.TopLeft">
-<span class="sig-name descname"><span class="pre">TopLeft</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.TopLeft:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.TopLeft" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.TOP_LEFT">
+<span class="sig-name descname"><span class="pre">TOP_LEFT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.TOP_LEFT:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.TOP_LEFT" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.TopRight">
-<span class="sig-name descname"><span class="pre">TopRight</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.TopRight:</span> <span class="pre">2&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.TopRight" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="kangengine.render.ScreenAnchor.TOP_RIGHT">
+<span class="sig-name descname"><span class="pre">TOP_RIGHT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;ScreenAnchor.TOP_RIGHT:</span> <span class="pre">2&gt;</span></span><a class="headerlink" href="#kangengine.render.ScreenAnchor.TOP_RIGHT" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py property">
@@ -1258,26 +1250,8 @@
 <li><a class="reference internal" href="#">ke.render</a><ul>
 <li><a class="reference internal" href="#api-overview">API overview</a><ul>
 <li><a class="reference internal" href="#kangengine.render.GraphicsDevice"><code class="docutils literal notranslate"><span class="pre">GraphicsDevice</span></code></a><ul>
-<li><a class="reference internal" href="#kangengine.render.GraphicsDevice.create_shader"><code class="docutils literal notranslate"><span class="pre">GraphicsDevice.create_shader()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.GraphicsDevice.create_shader_from_file"><code class="docutils literal notranslate"><span class="pre">GraphicsDevice.create_shader_from_file()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.GraphicsDevice.create_buffer"><code class="docutils literal notranslate"><span class="pre">GraphicsDevice.create_buffer()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.GraphicsDevice.create_texture"><code class="docutils literal notranslate"><span class="pre">GraphicsDevice.create_texture()</span></code></a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#kangengine.render.Shader"><code class="docutils literal notranslate"><span class="pre">Shader</span></code></a><ul>
-<li><a class="reference internal" href="#kangengine.render.Shader.bind"><code class="docutils literal notranslate"><span class="pre">Shader.bind()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.Shader.set_bool"><code class="docutils literal notranslate"><span class="pre">Shader.set_bool()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.Shader.set_color"><code class="docutils literal notranslate"><span class="pre">Shader.set_color()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.Shader.set_float"><code class="docutils literal notranslate"><span class="pre">Shader.set_float()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.Shader.set_int"><code class="docutils literal notranslate"><span class="pre">Shader.set_int()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.Shader.set_mat2"><code class="docutils literal notranslate"><span class="pre">Shader.set_mat2()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.Shader.set_mat3"><code class="docutils literal notranslate"><span class="pre">Shader.set_mat3()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.Shader.set_mat4"><code class="docutils literal notranslate"><span class="pre">Shader.set_mat4()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.Shader.set_uniform_block_binding"><code class="docutils literal notranslate"><span class="pre">Shader.set_uniform_block_binding()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.Shader.set_vec2"><code class="docutils literal notranslate"><span class="pre">Shader.set_vec2()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.Shader.set_vec3"><code class="docutils literal notranslate"><span class="pre">Shader.set_vec3()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.Shader.set_vec4"><code class="docutils literal notranslate"><span class="pre">Shader.set_vec4()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.Shader.unbind"><code class="docutils literal notranslate"><span class="pre">Shader.unbind()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.Shader.use"><code class="docutils literal notranslate"><span class="pre">Shader.use()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.render.Texture"><code class="docutils literal notranslate"><span class="pre">Texture</span></code></a><ul>
@@ -1289,10 +1263,20 @@
 <li><a class="reference internal" href="#kangengine.render.Texture.width"><code class="docutils literal notranslate"><span class="pre">Texture.width</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#kangengine.render.Buffer"><code class="docutils literal notranslate"><span class="pre">Buffer</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.render.Buffer.set_data"><code class="docutils literal notranslate"><span class="pre">Buffer.set_data()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.Buffer.size"><code class="docutils literal notranslate"><span class="pre">Buffer.size</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.Buffer.usage"><code class="docutils literal notranslate"><span class="pre">Buffer.usage</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.render.GraphicsPipeline"><code class="docutils literal notranslate"><span class="pre">GraphicsPipeline</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.Renderer"><code class="docutils literal notranslate"><span class="pre">Renderer</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.render.Renderer.add_render_hook"><code class="docutils literal notranslate"><span class="pre">Renderer.add_render_hook()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.Renderer.create_scene_hook_pipeline"><code class="docutils literal notranslate"><span class="pre">Renderer.create_scene_hook_pipeline()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.Renderer.device"><code class="docutils literal notranslate"><span class="pre">Renderer.device()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.Renderer.map_renderable_cuda_transform_buffers"><code class="docutils literal notranslate"><span class="pre">Renderer.map_renderable_cuda_transform_buffers()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.Renderer.point_lights"><code class="docutils literal notranslate"><span class="pre">Renderer.point_lights()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.Renderer.remove_render_hook"><code class="docutils literal notranslate"><span class="pre">Renderer.remove_render_hook()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.Renderer.set_point_lights"><code class="docutils literal notranslate"><span class="pre">Renderer.set_point_lights()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.Renderer.set_renderable_alpha_mode"><code class="docutils literal notranslate"><span class="pre">Renderer.set_renderable_alpha_mode()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.Renderer.set_renderable_casts_shadow"><code class="docutils literal notranslate"><span class="pre">Renderer.set_renderable_casts_shadow()</span></code></a></li>
@@ -1307,6 +1291,30 @@
 <li><a class="reference internal" href="#kangengine.render.Renderer.update_renderable_geometry"><code class="docutils literal notranslate"><span class="pre">Renderer.update_renderable_geometry()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.Renderer.update_renderable_skinning_matrices"><code class="docutils literal notranslate"><span class="pre">Renderer.update_renderable_skinning_matrices()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.Renderer.update_renderable_transforms"><code class="docutils literal notranslate"><span class="pre">Renderer.update_renderable_transforms()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.render.ShaderDesc"><code class="docutils literal notranslate"><span class="pre">ShaderDesc</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.render.ShaderDesc.name"><code class="docutils literal notranslate"><span class="pre">ShaderDesc.name</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.ShaderDesc.stages"><code class="docutils literal notranslate"><span class="pre">ShaderDesc.stages</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.render.ShaderStage"><code class="docutils literal notranslate"><span class="pre">ShaderStage</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.render.ShaderStage.entry_point"><code class="docutils literal notranslate"><span class="pre">ShaderStage.entry_point</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.ShaderStage.source"><code class="docutils literal notranslate"><span class="pre">ShaderStage.source</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.ShaderStage.stage"><code class="docutils literal notranslate"><span class="pre">ShaderStage.stage</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.render.SceneHookPipelineDesc"><code class="docutils literal notranslate"><span class="pre">SceneHookPipelineDesc</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.render.SceneHookPipelineDesc.blend"><code class="docutils literal notranslate"><span class="pre">SceneHookPipelineDesc.blend</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.SceneHookPipelineDesc.cull_mode"><code class="docutils literal notranslate"><span class="pre">SceneHookPipelineDesc.cull_mode</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.SceneHookPipelineDesc.depth_compare"><code class="docutils literal notranslate"><span class="pre">SceneHookPipelineDesc.depth_compare</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.SceneHookPipelineDesc.depth_test"><code class="docutils literal notranslate"><span class="pre">SceneHookPipelineDesc.depth_test</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.SceneHookPipelineDesc.depth_write"><code class="docutils literal notranslate"><span class="pre">SceneHookPipelineDesc.depth_write</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.SceneHookPipelineDesc.label"><code class="docutils literal notranslate"><span class="pre">SceneHookPipelineDesc.label</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.SceneHookPipelineDesc.shader"><code class="docutils literal notranslate"><span class="pre">SceneHookPipelineDesc.shader</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.SceneHookPipelineDesc.topology"><code class="docutils literal notranslate"><span class="pre">SceneHookPipelineDesc.topology</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.SceneHookPipelineDesc.use_scene_frame_bindings"><code class="docutils literal notranslate"><span class="pre">SceneHookPipelineDesc.use_scene_frame_bindings</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.SceneHookPipelineDesc.vertex_buffers"><code class="docutils literal notranslate"><span class="pre">SceneHookPipelineDesc.vertex_buffers</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.render.SamplerDesc"><code class="docutils literal notranslate"><span class="pre">SamplerDesc</span></code></a><ul>
@@ -1327,48 +1335,72 @@
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.render.TextureRole"><code class="docutils literal notranslate"><span class="pre">TextureRole</span></code></a><ul>
-<li><a class="reference internal" href="#kangengine.render.TextureRole.AmbientOcclusion"><code class="docutils literal notranslate"><span class="pre">TextureRole.AmbientOcclusion</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.TextureRole.BaseColor"><code class="docutils literal notranslate"><span class="pre">TextureRole.BaseColor</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.TextureRole.Diffuse"><code class="docutils literal notranslate"><span class="pre">TextureRole.Diffuse</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.TextureRole.Emissive"><code class="docutils literal notranslate"><span class="pre">TextureRole.Emissive</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.TextureRole.Metallic"><code class="docutils literal notranslate"><span class="pre">TextureRole.Metallic</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.TextureRole.MetallicRoughness"><code class="docutils literal notranslate"><span class="pre">TextureRole.MetallicRoughness</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.TextureRole.Normal"><code class="docutils literal notranslate"><span class="pre">TextureRole.Normal</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.TextureRole.OcclusionRoughnessMetallic"><code class="docutils literal notranslate"><span class="pre">TextureRole.OcclusionRoughnessMetallic</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.TextureRole.Roughness"><code class="docutils literal notranslate"><span class="pre">TextureRole.Roughness</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.TextureRole.AMBIENT_OCCLUSION"><code class="docutils literal notranslate"><span class="pre">TextureRole.AMBIENT_OCCLUSION</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.TextureRole.BASE_COLOR"><code class="docutils literal notranslate"><span class="pre">TextureRole.BASE_COLOR</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.TextureRole.DIFFUSE"><code class="docutils literal notranslate"><span class="pre">TextureRole.DIFFUSE</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.TextureRole.EMISSIVE"><code class="docutils literal notranslate"><span class="pre">TextureRole.EMISSIVE</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.TextureRole.METALLIC"><code class="docutils literal notranslate"><span class="pre">TextureRole.METALLIC</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.TextureRole.METALLIC_ROUGHNESS"><code class="docutils literal notranslate"><span class="pre">TextureRole.METALLIC_ROUGHNESS</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.TextureRole.NORMAL"><code class="docutils literal notranslate"><span class="pre">TextureRole.NORMAL</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.TextureRole.OCCLUSION_ROUGHNESS_METALLIC"><code class="docutils literal notranslate"><span class="pre">TextureRole.OCCLUSION_ROUGHNESS_METALLIC</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.TextureRole.ROUGHNESS"><code class="docutils literal notranslate"><span class="pre">TextureRole.ROUGHNESS</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.TextureRole.value"><code class="docutils literal notranslate"><span class="pre">TextureRole.value</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.render.AlphaMode"><code class="docutils literal notranslate"><span class="pre">AlphaMode</span></code></a><ul>
-<li><a class="reference internal" href="#kangengine.render.AlphaMode.Blend"><code class="docutils literal notranslate"><span class="pre">AlphaMode.Blend</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.AlphaMode.Mask"><code class="docutils literal notranslate"><span class="pre">AlphaMode.Mask</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.AlphaMode.Opaque"><code class="docutils literal notranslate"><span class="pre">AlphaMode.Opaque</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.AlphaMode.BLEND"><code class="docutils literal notranslate"><span class="pre">AlphaMode.BLEND</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.AlphaMode.MASK"><code class="docutils literal notranslate"><span class="pre">AlphaMode.MASK</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.AlphaMode.OPAQUE"><code class="docutils literal notranslate"><span class="pre">AlphaMode.OPAQUE</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.AlphaMode.value"><code class="docutils literal notranslate"><span class="pre">AlphaMode.value</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#kangengine.render.BufferUsage"><code class="docutils literal notranslate"><span class="pre">BufferUsage</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.render.BufferUsage.COPY_DST"><code class="docutils literal notranslate"><span class="pre">BufferUsage.COPY_DST</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.BufferUsage.COPY_SRC"><code class="docutils literal notranslate"><span class="pre">BufferUsage.COPY_SRC</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.BufferUsage.INDEX"><code class="docutils literal notranslate"><span class="pre">BufferUsage.INDEX</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.BufferUsage.NONE"><code class="docutils literal notranslate"><span class="pre">BufferUsage.NONE</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.BufferUsage.UNIFORM"><code class="docutils literal notranslate"><span class="pre">BufferUsage.UNIFORM</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.BufferUsage.VERTEX"><code class="docutils literal notranslate"><span class="pre">BufferUsage.VERTEX</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.BufferUsage.value"><code class="docutils literal notranslate"><span class="pre">BufferUsage.value</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.render.ShaderType"><code class="docutils literal notranslate"><span class="pre">ShaderType</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.render.ShaderType.COMPUTE"><code class="docutils literal notranslate"><span class="pre">ShaderType.COMPUTE</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.ShaderType.FRAGMENT"><code class="docutils literal notranslate"><span class="pre">ShaderType.FRAGMENT</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.ShaderType.GEOMETRY"><code class="docutils literal notranslate"><span class="pre">ShaderType.GEOMETRY</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.ShaderType.VERTEX"><code class="docutils literal notranslate"><span class="pre">ShaderType.VERTEX</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.ShaderType.value"><code class="docutils literal notranslate"><span class="pre">ShaderType.value</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.render.RenderHookPhase"><code class="docutils literal notranslate"><span class="pre">RenderHookPhase</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.render.RenderHookPhase.AFTER_OPAQUE"><code class="docutils literal notranslate"><span class="pre">RenderHookPhase.AFTER_OPAQUE</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.RenderHookPhase.AFTER_TRANSPARENT"><code class="docutils literal notranslate"><span class="pre">RenderHookPhase.AFTER_TRANSPARENT</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.RenderHookPhase.value"><code class="docutils literal notranslate"><span class="pre">RenderHookPhase.value</span></code></a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#kangengine.render.TextAlignment"><code class="docutils literal notranslate"><span class="pre">TextAlignment</span></code></a><ul>
-<li><a class="reference internal" href="#kangengine.render.TextAlignment.Center"><code class="docutils literal notranslate"><span class="pre">TextAlignment.Center</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.TextAlignment.Left"><code class="docutils literal notranslate"><span class="pre">TextAlignment.Left</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.TextAlignment.Right"><code class="docutils literal notranslate"><span class="pre">TextAlignment.Right</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.TextAlignment.CENTER"><code class="docutils literal notranslate"><span class="pre">TextAlignment.CENTER</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.TextAlignment.LEFT"><code class="docutils literal notranslate"><span class="pre">TextAlignment.LEFT</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.TextAlignment.RIGHT"><code class="docutils literal notranslate"><span class="pre">TextAlignment.RIGHT</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.TextAlignment.value"><code class="docutils literal notranslate"><span class="pre">TextAlignment.value</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.render.TextDepthMode"><code class="docutils literal notranslate"><span class="pre">TextDepthMode</span></code></a><ul>
-<li><a class="reference internal" href="#kangengine.render.TextDepthMode.DepthTested"><code class="docutils literal notranslate"><span class="pre">TextDepthMode.DepthTested</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.TextDepthMode.Overlay"><code class="docutils literal notranslate"><span class="pre">TextDepthMode.Overlay</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.TextDepthMode.DEPTH_TESTED"><code class="docutils literal notranslate"><span class="pre">TextDepthMode.DEPTH_TESTED</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.TextDepthMode.OVERLAY"><code class="docutils literal notranslate"><span class="pre">TextDepthMode.OVERLAY</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.TextDepthMode.value"><code class="docutils literal notranslate"><span class="pre">TextDepthMode.value</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.render.ScreenAnchor"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor</span></code></a><ul>
-<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.BottomCenter"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.BottomCenter</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.BottomLeft"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.BottomLeft</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.BottomRight"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.BottomRight</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.Center"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.Center</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.CenterLeft"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.CenterLeft</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.CenterRight"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.CenterRight</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.TopCenter"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.TopCenter</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.TopLeft"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.TopLeft</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.TopRight"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.TopRight</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.BOTTOM_CENTER"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.BOTTOM_CENTER</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.BOTTOM_LEFT"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.BOTTOM_LEFT</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.BOTTOM_RIGHT"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.BOTTOM_RIGHT</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.CENTER"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.CENTER</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.CENTER_LEFT"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.CENTER_LEFT</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.CENTER_RIGHT"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.CENTER_RIGHT</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.TOP_CENTER"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.TOP_CENTER</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.TOP_LEFT"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.TOP_LEFT</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.ScreenAnchor.TOP_RIGHT"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.TOP_RIGHT</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.ScreenAnchor.value"><code class="docutils literal notranslate"><span class="pre">ScreenAnchor.value</span></code></a></li>
 </ul>
 </li>

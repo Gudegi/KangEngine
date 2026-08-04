@@ -231,6 +231,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../advanced/INDEX.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/BUILD_FROM_SOURCE.html">Build Guide</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/RUNTIME_ARCHITECTURE.html">Runtime Architecture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/CUSTOM_GRAPHICS_PIPELINES.html">Custom Graphics Pipelines</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
@@ -444,7 +445,7 @@ id in each environment, and retrieve a batched view.</p>
 <span class="linenos"> 94</span>        <span class="bp">self</span><span class="o">.</span><span class="n">low_friction_material</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">physics</span><span class="o">.</span><span class="n">PhysicsMaterialDesc</span><span class="p">([</span><span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">])</span>
 <span class="linenos"> 95</span>        <span class="bp">self</span><span class="o">.</span><span class="n">high_friction_material</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">physics</span><span class="o">.</span><span class="n">PhysicsMaterialDesc</span><span class="p">([</span><span class="mf">3.0</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">])</span>
 <span class="linenos"> 96</span>
-<span class="linenos"> 97</span>        <span class="bp">self</span><span class="o">.</span><span class="n">shaders</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_standard_shaders</span><span class="p">()</span>
+<span class="linenos"> 97</span>        <span class="bp">self</span><span class="o">.</span><span class="n">standard_materials</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_standard_materials</span><span class="p">()</span>
 <span class="linenos"> 98</span>        <span class="bp">self</span><span class="o">.</span><span class="n">set_camera_view</span><span class="p">([</span><span class="mf">3.6</span><span class="p">,</span> <span class="o">-</span><span class="mf">5.0</span><span class="p">,</span> <span class="mf">2.8</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">])</span>
 <span class="linenos"> 99</span>
 <span class="linenos">100</span>        <span class="bp">self</span><span class="o">.</span><span class="n">world</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">KangSimWorld</span><span class="p">(</span>
@@ -483,7 +484,7 @@ id in each environment, and retrieve a batched view.</p>
 <span class="linenos">133</span>            <span class="bp">self</span><span class="o">.</span><span class="n">box</span><span class="p">,</span>
 <span class="linenos">134</span>            <span class="bp">self</span><span class="o">.</span><span class="n">box_xml</span><span class="p">,</span>
 <span class="linenos">135</span>            <span class="n">prim_base_path</span><span class="o">=</span><span class="s2">&quot;/group/box&quot;</span><span class="p">,</span>
-<span class="linenos">136</span>            <span class="n">shader</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shaders</span><span class="o">.</span><span class="n">common</span><span class="p">,</span>
+<span class="linenos">136</span>            <span class="n">material</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">standard_materials</span><span class="o">.</span><span class="n">common</span><span class="p">,</span>
 <span class="linenos">137</span>            <span class="n">color</span><span class="o">=</span><span class="p">[</span><span class="n">friction_group_color</span><span class="p">(</span><span class="n">env_id</span><span class="p">)</span> <span class="k">for</span> <span class="n">env_id</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span><span class="p">)],</span>
 <span class="linenos">138</span>        <span class="p">)</span>
 <span class="linenos">139</span>
@@ -528,11 +529,11 @@ id in each environment, and retrieve a batched view.</p>
 <span class="linenos">178</span>        <span class="bp">self</span><span class="o">.</span><span class="n">world</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">substeps</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">apply_commands</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 <span class="linenos">179</span>        <span class="bp">self</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
 <span class="linenos">180</span>
-<span class="linenos">181</span>    <span class="k">def</span><span class="w"> </span><span class="nf">preUpdate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="linenos">181</span>    <span class="k">def</span><span class="w"> </span><span class="nf">pre_update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="linenos">182</span>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">was_key_pressed</span><span class="p">(</span><span class="n">keys</span><span class="o">.</span><span class="n">R</span><span class="p">):</span>
 <span class="linenos">183</span>            <span class="bp">self</span><span class="o">.</span><span class="n">_reset</span><span class="p">()</span>
 <span class="linenos">184</span>
-<span class="linenos">185</span>    <span class="k">def</span><span class="w"> </span><span class="nf">fixedUpdate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fixed_dt</span><span class="p">):</span>
+<span class="linenos">185</span>    <span class="k">def</span><span class="w"> </span><span class="nf">fixed_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fixed_dt</span><span class="p">):</span>
 <span class="linenos">186</span>        <span class="bp">self</span><span class="o">.</span><span class="n">world</span><span class="o">.</span><span class="n">advance</span><span class="p">(</span><span class="n">fixed_dt</span><span class="p">)</span>
 <span class="linenos">187</span>        <span class="bp">self</span><span class="o">.</span><span class="n">sim_time</span> <span class="o">+=</span> <span class="n">fixed_dt</span>
 <span class="linenos">188</span>        <span class="k">if</span> <span class="p">(</span>
@@ -549,7 +550,7 @@ id in each environment, and retrieve a batched view.</p>
 <span class="linenos">199</span>                <span class="sa">f</span><span class="s2">&quot;total_updated_shapes=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">material_update_count</span><span class="si">}</span><span class="s2">&quot;</span>
 <span class="linenos">200</span>            <span class="p">)</span>
 <span class="linenos">201</span>
-<span class="linenos">202</span>    <span class="k">def</span><span class="w"> </span><span class="nf">preRender</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="linenos">202</span>    <span class="k">def</span><span class="w"> </span><span class="nf">pre_render</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="linenos">203</span>        <span class="bp">self</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
 <span class="linenos">204</span>        <span class="bp">self</span><span class="o">.</span><span class="n">check_error</span><span class="p">()</span>
 <span class="linenos">205</span>
@@ -609,14 +610,14 @@ id in each environment, and retrieve a batched view.</p>
 <span class="linenos">259</span>        <span class="n">view</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_mesh</span><span class="p">(</span>
 <span class="linenos">260</span>            <span class="s2">&quot;/terrain/inclined_box&quot;</span><span class="p">,</span>
 <span class="linenos">261</span>            <span class="n">mesh_data</span><span class="p">,</span>
-<span class="linenos">262</span>            <span class="bp">self</span><span class="o">.</span><span class="n">shaders</span><span class="o">.</span><span class="n">common</span><span class="p">,</span>
+<span class="linenos">262</span>            <span class="bp">self</span><span class="o">.</span><span class="n">standard_materials</span><span class="o">.</span><span class="n">common</span><span class="p">,</span>
 <span class="linenos">263</span>            <span class="n">color</span><span class="o">=</span><span class="p">[</span><span class="mf">0.45</span><span class="p">,</span> <span class="mf">0.45</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span>
 <span class="linenos">264</span>        <span class="p">)</span>
-<span class="linenos">265</span>        <span class="n">view</span><span class="o">.</span><span class="n">prim</span><span class="o">.</span><span class="n">set_local_translation</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">vec3</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ramp_pos</span><span class="p">))</span>
-<span class="linenos">266</span>        <span class="c1"># ke.quat constructor is (w, x, y, z), while PhysX binding args above</span>
+<span class="linenos">265</span>        <span class="n">view</span><span class="o">.</span><span class="n">prim</span><span class="o">.</span><span class="n">set_local_translation</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ramp_pos</span><span class="p">))</span>
+<span class="linenos">266</span>        <span class="c1"># ke.Quat constructor is (w, x, y, z), while PhysX binding args above</span>
 <span class="linenos">267</span>        <span class="c1"># use xyzw lists.</span>
 <span class="linenos">268</span>        <span class="n">view</span><span class="o">.</span><span class="n">prim</span><span class="o">.</span><span class="n">set_local_rotation</span><span class="p">(</span>
-<span class="linenos">269</span>            <span class="n">ke</span><span class="o">.</span><span class="n">quat</span><span class="p">(</span>
+<span class="linenos">269</span>            <span class="n">ke</span><span class="o">.</span><span class="n">Quat</span><span class="p">(</span>
 <span class="linenos">270</span>                <span class="bp">self</span><span class="o">.</span><span class="n">ramp_rot_xyzw</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span>
 <span class="linenos">271</span>                <span class="bp">self</span><span class="o">.</span><span class="n">ramp_rot_xyzw</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
 <span class="linenos">272</span>                <span class="bp">self</span><span class="o">.</span><span class="n">ramp_rot_xyzw</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>

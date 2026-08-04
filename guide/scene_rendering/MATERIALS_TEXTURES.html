@@ -174,7 +174,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
       </label>
     </div>
@@ -231,6 +231,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../advanced/INDEX.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/BUILD_FROM_SOURCE.html">Build Guide</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/RUNTIME_ARCHITECTURE.html">Runtime Architecture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../advanced/CUSTOM_GRAPHICS_PIPELINES.html">Custom Graphics Pipelines</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/PHYSX_GPU.html">PhysX GPU Simulation</a></li>
 </ul>
 </li>
@@ -310,39 +311,217 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
           </label>
         </div>
         <article role="main" id="furo-main-content">
           <section id="materials-and-textures">
 <h1>Materials and Textures<a class="headerlink" href="#materials-and-textures" title="Link to this heading">¶</a></h1>
-<p>For common scenes, start with the standard material bundle:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="bp">self</span><span class="o">.</span><span class="n">standard_materials</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_standard_materials</span><span class="p">()</span>
-<span class="bp">self</span><span class="o">.</span><span class="n">add_ground</span><span class="p">()</span>
+<p>Materials describe how a mesh surface should look. This page shows how to use
+the built-in materials, create independent Phong and PBR materials, attach
+textures, and assign the result to a scene mesh.</p>
+<p>Most applications only need <code class="docutils literal notranslate"><span class="pre">self.scene</span></code> and <code class="docutils literal notranslate"><span class="pre">ke.material</span></code>. The custom graphics
+pipeline section at the end is optional and intended for rendering experiments.</p>
+<p>Examples assume <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">kangengine</span> <span class="pre">as</span> <span class="pre">ke</span></code> and run inside an <code class="docutils literal notranslate"><span class="pre">App</span></code> subclass, so
+the current application and its scene are accessed as <code class="docutils literal notranslate"><span class="pre">self</span></code> and <code class="docutils literal notranslate"><span class="pre">self.scene</span></code>.</p>
+<section id="api-namespaces">
+<h2>API namespaces<a class="headerlink" href="#api-namespaces" title="Link to this heading">¶</a></h2>
+<p>KangEngine separates normal scene authoring from low-level rendering:</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Namespace</p></th>
+<th class="head"><p>Use it for</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">self.scene</span></code></p></td>
+<td><p>Adding meshes, ground planes, and imported assets to the scene</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.material</span></code></p></td>
+<td><p>Material classes, presets, and vertex-color styles</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.render</span></code></p></td>
+<td><p>Textures, GPU buffers, custom pipelines, and render hooks</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>For ordinary meshes, create a material and pass it to
+<code class="docutils literal notranslate"><span class="pre">self.scene.add_mesh()</span></code>.</p>
+</section>
+<section id="standard-materials">
+<h2>Standard materials<a class="headerlink" href="#standard-materials" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">create_standard_materials()</span></code> creates a cached bundle of shared materials used
+by common scene, debug, ground, and character workflows. Calling it again
+returns the same bundle unless <code class="docutils literal notranslate"><span class="pre">force=True</span></code> is supplied.</p>
+<p>The simplest ground call automatically uses the shared checkerboard material
+from the standard bundle:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ground</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scene</span><span class="o">.</span><span class="n">add_ground</span><span class="p">()</span>
 </pre></div>
 </div>
-<p>Python material facades live under <code class="docutils literal notranslate"><span class="pre">ke.material</span></code>; low-level shader and texture
-objects live under <code class="docutils literal notranslate"><span class="pre">ke.render</span></code>. Scene and visualization APIs accept any
-material subtype through the same <code class="docutils literal notranslate"><span class="pre">material=</span></code> argument, so Phong and PBR are
-interchangeable at the binding point:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">material</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_phong_material</span><span class="p">(</span><span class="n">diffuse</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">vec3</span><span class="p">(</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">))</span>
-<span class="c1"># Or: material = self.create_pbr_material(</span>
-<span class="c1">#     base_color=ke.vec4(0.8, 0.3, 0.1, 1.0), roughness=0.6</span>
-<span class="c1"># )</span>
+<p>Obtain the bundle directly when you want to reuse one of its materials or
+replace the ground material explicitly:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">materials</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_standard_materials</span><span class="p">()</span>
+<span class="n">ground</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scene</span><span class="o">.</span><span class="n">add_ground</span><span class="p">(</span>
+    <span class="n">path</span><span class="o">=</span><span class="s2">&quot;/diagnostic_ground&quot;</span><span class="p">,</span>
+    <span class="n">material</span><span class="o">=</span><span class="n">materials</span><span class="o">.</span><span class="n">debug_checker</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>The bundle contains:</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Purpose</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">common</span></code>, <code class="docutils literal notranslate"><span class="pre">debug</span></code>, <code class="docutils literal notranslate"><span class="pre">skinned</span></code>, <code class="docutils literal notranslate"><span class="pre">skinned_debug</span></code></p></td>
+<td><p>Untextured vertex/display color</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">common_texture</span></code>, <code class="docutils literal notranslate"><span class="pre">skinned_texture</span></code></p></td>
+<td><p>Textured vertex/display color</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ground</span></code></p></td>
+<td><p>Checkerboard ground</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">debug_checker</span></code>, <code class="docutils literal notranslate"><span class="pre">skinned_debug_checker</span></code></p></td>
+<td><p>Diagnostic UV grid and checker pattern</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">phong</span></code>, <code class="docutils literal notranslate"><span class="pre">skinned_phong</span></code></p></td>
+<td><p>Default Phong surface</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pbr</span></code>, <code class="docutils literal notranslate"><span class="pre">skinned_pbr</span></code></p></td>
+<td><p>Default PBR surface</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>These are shared defaults. Changing one changes every object using that same
+material. Create a separate material when an object needs its own editable
+surface values.</p>
+</section>
+<section id="create-a-phong-material">
+<h2>Create a Phong material<a class="headerlink" href="#create-a-phong-material" title="Link to this heading">¶</a></h2>
+<p>Phong is useful for simple colored surfaces and assets described with diffuse,
+specular, and shininess values.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">material</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_phong_material</span><span class="p">(</span>
+    <span class="n">diffuse</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
+    <span class="n">specular</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">),</span>
+    <span class="n">shininess</span><span class="o">=</span><span class="mf">32.0</span><span class="p">,</span>
+<span class="p">)</span>
 
-<span class="n">mesh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scene</span><span class="o">.</span><span class="n">add_mesh</span><span class="p">(</span><span class="s2">&quot;/mesh&quot;</span><span class="p">,</span> <span class="n">mesh_data</span><span class="p">,</span> <span class="n">material</span><span class="p">)</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scene</span><span class="o">.</span><span class="n">add_mesh</span><span class="p">(</span><span class="s2">&quot;/orange_mesh&quot;</span><span class="p">,</span> <span class="n">mesh_data</span><span class="p">,</span> <span class="n">material</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">create_phong_material()</span></code> returns a new retained material on every call.
+Available texture inputs are <code class="docutils literal notranslate"><span class="pre">diffuse_map</span></code>, <code class="docutils literal notranslate"><span class="pre">specular_map</span></code>, <code class="docutils literal notranslate"><span class="pre">alpha_map</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">normal_map</span></code>.</p>
+</section>
+<section id="create-a-pbr-material">
+<h2>Create a PBR material<a class="headerlink" href="#create-a-pbr-material" title="Link to this heading">¶</a></h2>
+<p>PBR is a better fit for metallic-roughness assets and surfaces that should
+respond more consistently to different lighting environments.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">material</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_pbr_material</span><span class="p">(</span>
+    <span class="n">base_color</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec4</span><span class="p">(</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+    <span class="n">metallic</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">roughness</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">mesh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scene</span><span class="o">.</span><span class="n">add_mesh</span><span class="p">(</span><span class="s2">&quot;/pbr_mesh&quot;</span><span class="p">,</span> <span class="n">mesh_data</span><span class="p">,</span> <span class="n">material</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Phong and PBR parameters are intentionally different. Replacing a Phong
+material with a PBR material does not translate <code class="docutils literal notranslate"><span class="pre">diffuse</span></code> and <code class="docutils literal notranslate"><span class="pre">shininess</span></code> into
+<code class="docutils literal notranslate"><span class="pre">base_color</span></code> and <code class="docutils literal notranslate"><span class="pre">roughness</span></code>.</p>
+</section>
+<section id="load-and-attach-textures">
+<h2>Load and attach textures<a class="headerlink" href="#load-and-attach-textures" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">App.load_texture()</span></code> loads a texture through <code class="docutils literal notranslate"><span class="pre">ke.render</span></code>, retains it for the
+application lifetime, and reuses it when the same normalized path is requested
+again.</p>
+<p>Phong example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">diffuse</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_texture</span><span class="p">(</span><span class="s2">&quot;assets/wood_base_color.png&quot;</span><span class="p">)</span>
+<span class="n">normal</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_texture</span><span class="p">(</span><span class="s2">&quot;assets/wood_normal.png&quot;</span><span class="p">)</span>
+
+<span class="n">material</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_phong_material</span><span class="p">(</span>
+    <span class="n">diffuse</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+    <span class="n">diffuse_map</span><span class="o">=</span><span class="n">diffuse</span><span class="p">,</span>
+    <span class="n">normal_map</span><span class="o">=</span><span class="n">normal</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>PBR example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">base_color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_texture</span><span class="p">(</span><span class="s2">&quot;assets/metal_base_color.png&quot;</span><span class="p">)</span>
+<span class="n">orm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_texture</span><span class="p">(</span><span class="s2">&quot;assets/metal_orm.png&quot;</span><span class="p">)</span>
+
+<span class="n">material</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_pbr_material</span><span class="p">(</span>
+    <span class="n">base_color</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec4</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+    <span class="n">base_color_texture</span><span class="o">=</span><span class="n">base_color</span><span class="p">,</span>
+    <span class="n">orm_texture</span><span class="o">=</span><span class="n">orm</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Material color factors multiply their corresponding textures. Use a white
+factor when the texture should appear without an additional tint.</p>
+<p>OBJ/MTL imports create material subsets automatically and attach supported
+diffuse, specular, alpha, and normal textures. See
+<a class="reference internal" href="LOAD_ASSETS.html"><span class="std std-doc">Load Assets</span></a> for the import workflow.</p>
+</section>
+<section id="mesh-rendering-options">
+<h2>Mesh rendering options<a class="headerlink" href="#mesh-rendering-options" title="Link to this heading">¶</a></h2>
+<p>Shadow casting, face culling, and alpha handling belong to the renderable mesh,
+not to the material itself:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mesh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scene</span><span class="o">.</span><span class="n">add_mesh</span><span class="p">(</span><span class="s2">&quot;/mesh&quot;</span><span class="p">,</span> <span class="n">mesh_data</span><span class="p">,</span> <span class="n">material</span><span class="p">)</span>
 <span class="n">mesh</span><span class="o">.</span><span class="n">set_casts_shadow</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
 <span class="n">mesh</span><span class="o">.</span><span class="n">set_double_sided</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">mesh</span><span class="o">.</span><span class="n">set_alpha_mode</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">render</span><span class="o">.</span><span class="n">AlphaMode</span><span class="o">.</span><span class="n">OPAQUE</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Phong and PBR parameters are intentionally different; replacing the material
-does not translate <code class="docutils literal notranslate"><span class="pre">diffuse</span></code>/<code class="docutils literal notranslate"><span class="pre">shininess</span></code> into <code class="docutils literal notranslate"><span class="pre">base_color</span></code>/<code class="docutils literal notranslate"><span class="pre">roughness</span></code>.
-<code class="docutils literal notranslate"><span class="pre">create_phong_material()</span></code> and <code class="docutils literal notranslate"><span class="pre">create_pbr_material()</span></code> return independent,
-mutable instances. The entries in <code class="docutils literal notranslate"><span class="pre">standard_materials</span></code> are shared defaults.</p>
-<p>For imported OBJ/MTL scenes, <code class="docutils literal notranslate"><span class="pre">SceneContext.add_obj(...)</span></code> creates material
-subsets and binds diffuse, specular, alpha, and normal textures when available.</p>
-<p>Examples:</p>
+<p>Use double-sided rendering for surfaces that must be visible from both sides.
+For cutout textures use <code class="docutils literal notranslate"><span class="pre">AlphaMode.MASK</span></code>; for partial transparency use
+<code class="docutils literal notranslate"><span class="pre">AlphaMode.BLEND</span></code>.</p>
+</section>
+<section id="vertex-color-styles">
+<h2>Vertex-color styles<a class="headerlink" href="#vertex-color-styles" title="Link to this heading">¶</a></h2>
+<p>Vertex-color materials use the mesh or instance display color and are useful
+for visualization, debug geometry, and lightweight scene objects.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">plain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_vertex_color_material</span><span class="p">()</span>
+<span class="n">textured</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_vertex_color_material</span><span class="p">(</span>
+    <span class="n">style</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">material</span><span class="o">.</span><span class="n">VertexColorStyle</span><span class="o">.</span><span class="n">TEXTURED</span>
+<span class="p">)</span>
+<span class="n">checker</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_vertex_color_material</span><span class="p">(</span>
+    <span class="n">style</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">material</span><span class="o">.</span><span class="n">VertexColorStyle</span><span class="o">.</span><span class="n">CHECKERBOARD</span>
+<span class="p">)</span>
+<span class="n">debug_checker</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_vertex_color_material</span><span class="p">(</span>
+    <span class="n">style</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">material</span><span class="o">.</span><span class="n">VertexColorStyle</span><span class="o">.</span><span class="n">DEBUG_CHECKER</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">DEBUG_CHECKER</span></code> overlays a fine/coarse UV grid and checker pattern. It is useful
+for finding distorted or missing UV coordinates.</p>
+</section>
+<section id="shader-and-pipeline-sharing">
+<h2>Shader and pipeline sharing<a class="headerlink" href="#shader-and-pipeline-sharing" title="Link to this heading">¶</a></h2>
+<p>KangEngine selects and reuses the appropriate built-in pipeline from the
+material, mesh, and render settings. Creating many materials does not compile
+the same built-in shader repeatedly.</p>
+<p>The Resource panel exposes built-in shader sources and logical pipeline
+families for inspection. A pipeline entry can be expanded to show its shader
+sources and variants, such as static/skinned or opaque/transparent.</p>
+</section>
+<section id="custom-rendering">
+<h2>Custom rendering<a class="headerlink" href="#custom-rendering" title="Link to this heading">¶</a></h2>
+<p>Drawing geometry outside the normal scene-mesh path is an advanced workflow.
+See <a class="reference internal" href="../advanced/CUSTOM_GRAPHICS_PIPELINES.html"><span class="std std-doc">Custom Graphics Pipelines</span></a> for
+buffer layouts, shader stages, render hooks, resource tracking, and a runnable
+triangle example.</p>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Link to this heading">¶</a></h2>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">python/examples/test_phong_texture.py</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">python/examples/view_obj_scene.py</span></code></p></li>
@@ -350,6 +529,7 @@ subsets and binds diffuse, specular, alpha, and normal textures when available.<
 <li><p><code class="docutils literal notranslate"><span class="pre">python/examples/view_pbr_presets.py</span></code></p></li>
 </ul>
 <p><img alt="PBR presets" src="../../_images/materials_and_textures.png" /></p>
+</section>
 </section>
 
         </article>
@@ -395,8 +575,36 @@ subsets and binds diffuse, specular, alpha, and normal textures when available.<
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Materials and Textures</a><ul>
+<li><a class="reference internal" href="#api-namespaces">API namespaces</a></li>
+<li><a class="reference internal" href="#standard-materials">Standard materials</a></li>
+<li><a class="reference internal" href="#create-a-phong-material">Create a Phong material</a></li>
+<li><a class="reference internal" href="#create-a-pbr-material">Create a PBR material</a></li>
+<li><a class="reference internal" href="#load-and-attach-textures">Load and attach textures</a></li>
+<li><a class="reference internal" href="#mesh-rendering-options">Mesh rendering options</a></li>
+<li><a class="reference internal" href="#vertex-color-styles">Vertex-color styles</a></li>
+<li><a class="reference internal" href="#shader-and-pipeline-sharing">Shader and pipeline sharing</a></li>
+<li><a class="reference internal" href="#custom-rendering">Custom rendering</a></li>
+<li><a class="reference internal" href="#examples">Examples</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>
