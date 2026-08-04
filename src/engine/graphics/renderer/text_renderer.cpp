@@ -1,4 +1,5 @@
 #include "text_renderer.hpp"
+#include "engine/graphics/renderer/shader_library.hpp"
 #include "utils/asset_path.hpp"
 #include <algorithm>
 #include <cstddef>
@@ -81,7 +82,8 @@ const GlyphInfo* FontAtlasData::findGlyph(char32_t codepoint) const {
 void TextRenderer::init(Backend::GraphicsDevice* device,
                         FontAtlasData atlasData,
                         Backend::BindGroupLayout* frameGroupLayout,
-                        Backend::BindGroup* frameBindGroup) {
+                        Backend::BindGroup* frameBindGroup,
+                        ShaderLibrary* shaderLibrary) {
     _device = device;
     _frameBindGroup = frameBindGroup;
     _atlasData = std::move(atlasData);
@@ -91,6 +93,8 @@ void TextRenderer::init(Backend::GraphicsDevice* device,
 
     if (!frameGroupLayout || !_frameBindGroup)
         return;
+    if (!shaderLibrary)
+        throw std::invalid_argument("TextRenderer requires ShaderLibrary");
     Backend::BindGroupLayoutDesc passLayoutDesc;
     passLayoutDesc.label = "text_pass_group_layout";
     passLayoutDesc.entries = {{0, Backend::BindingType::UniformBuffer,
@@ -172,9 +176,9 @@ void TextRenderer::init(Backend::GraphicsDevice* device,
     pipelineDesc.label = "text_world_depth_pipeline";
     pipelineDesc.shader.name = "text_rhi";
     pipelineDesc.shader.stages = {
-        {Backend::loadShaderSource(KE::getAssetPath("shaders/rhi/text.vs")),
+        {shaderLibrary->load(KE::getAssetPath("shaders/rhi/text.vs")),
          Backend::ShaderType::Vertex, "main"},
-        {Backend::loadShaderSource(KE::getAssetPath("shaders/rhi/text.fs")),
+        {shaderLibrary->load(KE::getAssetPath("shaders/rhi/text.fs")),
          Backend::ShaderType::Fragment, "main"}};
     pipelineDesc.pipelineLayout = _rhiPipelineLayout.get();
     pipelineDesc.vertexBuffers = {quadLayout, instanceLayout};

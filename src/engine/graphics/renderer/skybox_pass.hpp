@@ -9,11 +9,14 @@
 
 namespace KE {
 
+class ShaderLibrary;
+
 class SkyboxPass : public RenderPassBase {
   public:
     SkyboxPass() : RenderPassBase("SkyboxPass") {}
 
-    void initializeResources(Backend::BindGroupLayout* frameLayout);
+    void initializeResources(Backend::BindGroupLayout* frameLayout,
+                             ShaderLibrary& shaderLibrary);
     void setTexture(const std::string& path, UpAxis upAxis);
     void setTexture(const std::vector<std::string>& paths, UpAxis upAxis);
     bool ready() const { return _pipeline && _textureBindGroup; }
@@ -23,6 +26,7 @@ class SkyboxPass : public RenderPassBase {
   private:
     void rebuildBinding(UpAxis upAxis);
 
+    ShaderLibrary* _shaderLibrary = nullptr;
     std::unique_ptr<Backend::BindGroupLayout> _passGroupLayout;
     std::unique_ptr<Backend::BindGroupLayout> _textureGroupLayout;
     std::unique_ptr<Backend::PipelineLayout> _pipelineLayout;

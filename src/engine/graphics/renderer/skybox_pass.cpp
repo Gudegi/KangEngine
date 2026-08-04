@@ -1,5 +1,6 @@
 #include "engine/graphics/renderer/skybox_pass.hpp"
 
+#include "engine/graphics/renderer/shader_library.hpp"
 #include "utils/asset_path.hpp"
 
 #include <glm/vec3.hpp>
@@ -7,10 +8,12 @@
 
 namespace KE {
 
-void SkyboxPass::initializeResources(Backend::BindGroupLayout* frameLayout) {
+void SkyboxPass::initializeResources(Backend::BindGroupLayout* frameLayout,
+                                     ShaderLibrary& shaderLibrary) {
     requireInitialized("initializing resources");
     if (!frameLayout)
         throw std::invalid_argument("SkyboxPass requires a frame layout");
+    _shaderLibrary = &shaderLibrary;
 
     static constexpr glm::vec3 vertices[] = {
         {-1, -1, -1}, {1, -1, -1}, {1, 1, -1}, {-1, 1, -1},
@@ -73,9 +76,9 @@ void SkyboxPass::initializeResources(Backend::BindGroupLayout* frameLayout) {
     pipelineDesc.label = "skybox_pipeline";
     pipelineDesc.shader.name = "skybox_rhi";
     pipelineDesc.shader.stages = {
-        {Backend::loadShaderSource(KE::getAssetPath("shaders/rhi/skybox.vs")),
+        {_shaderLibrary->load(KE::getAssetPath("shaders/rhi/skybox.vs")),
          Backend::ShaderType::Vertex, "main"},
-        {Backend::loadShaderSource(KE::getAssetPath("shaders/rhi/skybox.fs")),
+        {_shaderLibrary->load(KE::getAssetPath("shaders/rhi/skybox.fs")),
          Backend::ShaderType::Fragment, "main"}};
     pipelineDesc.pipelineLayout = _pipelineLayout.get();
     pipelineDesc.vertexBuffers = {vertexLayout};

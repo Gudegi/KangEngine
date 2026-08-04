@@ -343,7 +343,7 @@ void App::registerBuiltinRenderResources() {
         Scene::ShaderSourceResource resource;
         resource.stage = shader.stage;
         resource.language = Scene::ShaderLanguage::GLSL;
-        resource.source = Backend::loadShaderSource(path);
+        resource.source = _rasterizer->shaderLibrary().load(path);
         resource.entryPoint = "main";
         shaderHandles.emplace(shader.name,
                               _sceneResourceManager.registerShaderSource(

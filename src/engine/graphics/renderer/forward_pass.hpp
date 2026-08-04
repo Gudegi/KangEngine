@@ -4,6 +4,7 @@
 #include "engine/graphics/renderer/render_pass_base.hpp"
 
 #include <array>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -12,6 +13,7 @@ namespace KE {
 class MeshInstancer;
 class PhongMaterial;
 class PBRMaterial;
+class ShaderLibrary;
 struct BackgroundSettings;
 
 // Owns forward descriptors, immutable pipeline variants, shared material
@@ -23,7 +25,8 @@ class ForwardPass : public RenderPassBase {
     void initializeResources(Backend::Buffer* cameraBuffer,
                              Backend::Buffer* lightBuffer,
                              Backend::Buffer* shadowBuffer,
-                             Backend::BindGroupLayout* shadowSamplingLayout);
+                             Backend::BindGroupLayout* shadowSamplingLayout,
+                             ShaderLibrary& shaderLibrary);
     void setBackgroundSettings(const BackgroundSettings& settings);
     Backend::BindGroupLayout* frameLayout() const { return _groupLayouts[0]; }
     Backend::BindGroup* frameBindGroup() const { return _frameBindGroup; }
@@ -126,6 +129,9 @@ class ForwardPass : public RenderPassBase {
     std::vector<std::unique_ptr<Backend::Sampler>> _samplers;
     std::vector<std::unique_ptr<Backend::Texture>> _textures;
     RasterPipelineLibrary _pipelines;
+    std::optional<RasterPassSignature> _passSignature;
+    ShaderLibrary* _shaderLibrary = nullptr;
+    uint64_t _shaderGeneration = 0;
     std::unordered_map<const MeshInstancer*, TexturedVertexColorResources>
         _texturedVertexColorResources;
     std::unordered_map<const PhongMaterial*, PhongResources> _phongResources;

@@ -1,6 +1,7 @@
 #include "engine/graphics/renderer/selection_mask_pass.hpp"
 
 #include "engine/graphics/renderer/mesh_instancer.hpp"
+#include "engine/graphics/renderer/shader_library.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "utils/asset_path.hpp"
 
@@ -26,10 +27,12 @@ size_t SelectionMaskPass::index(bool skinned, bool alphaMask,
            (doubleSided ? 1u : 0u);
 }
 
-void SelectionMaskPass::initializeResources(Backend::Buffer* cameraBuffer) {
+void SelectionMaskPass::initializeResources(Backend::Buffer* cameraBuffer,
+                                            ShaderLibrary& shaderLibrary) {
     requireInitialized("initializing resources");
     if (!cameraBuffer)
         throw std::invalid_argument("SelectionMaskPass requires camera data");
+    _shaderLibrary = &shaderLibrary;
 
     Backend::BindGroupLayoutDesc frameDesc;
     frameDesc.label = "selection_mask_frame_layout";
@@ -94,12 +97,12 @@ void SelectionMaskPass::initializeResources(Backend::Buffer* cameraBuffer) {
     boneWeights.attributes = {
         {Backend::VertexFormat::Float32x4, 0, RendererAttribute::BoneWeights}};
     Backend::VertexBufferLayout empty;
-    const std::string staticVs = Backend::loadShaderSource(
-        KE::getAssetPath("shaders/selection_mask.vs"));
-    const std::string skinVs = Backend::loadShaderSource(
+    const std::string staticVs =
+        _shaderLibrary->load(KE::getAssetPath("shaders/selection_mask.vs"));
+    const std::string skinVs = _shaderLibrary->load(
         KE::getAssetPath("shaders/skinned_selection_mask.vs"));
-    const std::string alphaFs = Backend::loadShaderSource(
-        KE::getAssetPath("shaders/selection_mask.fs"));
+    const std::string alphaFs =
+        _shaderLibrary->load(KE::getAssetPath("shaders/selection_mask.fs"));
 
     for (bool skin : {false, true}) {
         for (bool alpha : {false, true}) {

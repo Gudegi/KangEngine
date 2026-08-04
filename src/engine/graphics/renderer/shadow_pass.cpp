@@ -1,6 +1,7 @@
 #include "engine/graphics/renderer/shadow_pass.hpp"
 
 #include "engine/graphics/renderer/mesh_instancer.hpp"
+#include "engine/graphics/renderer/shader_library.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "utils/asset_path.hpp"
 
@@ -41,10 +42,12 @@ Backend::GraphicsPipeline* ShadowPass::pipelineFor(bool skinned, bool alphaMask,
     return pipeline;
 }
 
-void ShadowPass::initializeResources(Backend::Buffer* shadowBuffer) {
+void ShadowPass::initializeResources(Backend::Buffer* shadowBuffer,
+                                     ShaderLibrary& shaderLibrary) {
     requireInitialized("initializing resources");
     if (!shadowBuffer)
         throw std::invalid_argument("ShadowPass requires shadow frame data");
+    _shaderLibrary = &shaderLibrary;
 
     Backend::BindGroupLayoutDesc frameDesc;
     frameDesc.label = "shadow_frame_layout";
@@ -109,11 +112,11 @@ void ShadowPass::initializeResources(Backend::Buffer* shadowBuffer) {
         {Backend::VertexFormat::Float32x4, 0, RendererAttribute::BoneWeights}};
     Backend::VertexBufferLayout empty;
     const std::string staticVs =
-        Backend::loadShaderSource(KE::getAssetPath("shaders/shadow.vs"));
-    const std::string skinVs = Backend::loadShaderSource(
-        KE::getAssetPath("shaders/skinned_shadow.vs"));
+        _shaderLibrary->load(KE::getAssetPath("shaders/shadow.vs"));
+    const std::string skinVs =
+        _shaderLibrary->load(KE::getAssetPath("shaders/skinned_shadow.vs"));
     const std::string alphaFs =
-        Backend::loadShaderSource(KE::getAssetPath("shaders/shadow.fs"));
+        _shaderLibrary->load(KE::getAssetPath("shaders/shadow.fs"));
     for (bool skin : {false, true}) {
         for (bool alpha : {false, true}) {
             for (bool doubleSided : {false, true}) {

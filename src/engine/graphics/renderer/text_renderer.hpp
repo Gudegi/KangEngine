@@ -15,6 +15,8 @@
 
 namespace KE {
 
+class ShaderLibrary;
+
 enum class TextAlignment {
     Left,
     Center,
@@ -174,7 +176,8 @@ class TextRenderer {
 
     void init(Backend::GraphicsDevice* device, FontAtlasData atlasData,
               Backend::BindGroupLayout* frameGroupLayout = nullptr,
-              Backend::BindGroup* frameBindGroup = nullptr);
+              Backend::BindGroup* frameBindGroup = nullptr,
+              ShaderLibrary* shaderLibrary = nullptr);
     void setWorldText(const std::string& path, const WorldTextDesc& desc);
     void setWorldString(const std::string& path, std::string text);
     void setWorldPosition(const std::string& path, const glm::vec3& position);

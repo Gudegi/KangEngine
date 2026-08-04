@@ -10,6 +10,7 @@
 namespace KE {
 
 class MeshInstancer;
+class ShaderLibrary;
 
 class ShadowPass : public RenderPassBase {
   public:
@@ -33,7 +34,8 @@ class ShadowPass : public RenderPassBase {
                         const Backend::GraphicsPipelineDesc& desc);
     Backend::GraphicsPipeline* pipelineFor(bool skinned, bool alphaMask,
                                            bool doubleSided) const;
-    void initializeResources(Backend::Buffer* shadowBuffer);
+    void initializeResources(Backend::Buffer* shadowBuffer,
+                             ShaderLibrary& shaderLibrary);
     PreparedDraws prepare(const std::vector<MeshInstancer*>& casters);
     void record(Backend::RenderPassEncoder& pass,
                 const PreparedDraws& prepared) const;
@@ -63,6 +65,7 @@ class ShadowPass : public RenderPassBase {
     static size_t index(bool skinned, bool alphaMask, bool doubleSided);
 
     std::array<std::unique_ptr<Backend::GraphicsPipeline>, 8> _pipelines;
+    ShaderLibrary* _shaderLibrary = nullptr;
     std::array<std::unique_ptr<Backend::BindGroupLayout>, 4> _groupLayouts;
     std::unique_ptr<Backend::BindGroupLayout> _alphaGroupLayout;
     std::unique_ptr<Backend::BindGroupLayout> _skinGroupLayout;

@@ -25,9 +25,8 @@ std::string readTextFile(const std::filesystem::path& path) {
 
 std::string trimLeft(std::string value) {
     value.erase(value.begin(),
-                std::find_if(value.begin(), value.end(), [](unsigned char c) {
-                    return !std::isspace(c);
-                }));
+                std::find_if(value.begin(), value.end(),
+                             [](unsigned char c) { return !std::isspace(c); }));
     return value;
 }
 
@@ -58,7 +57,8 @@ bool containsPath(const std::vector<std::filesystem::path>& stack,
 }
 
 std::string loadShaderSourceRecursive(const std::filesystem::path& path,
-                                      std::vector<std::filesystem::path>& stack) {
+                                      std::vector<std::filesystem::path>& stack,
+                                      std::vector<std::string>& dependencies) {
     const std::filesystem::path normalized =
         std::filesystem::weakly_canonical(path);
     if (containsPath(stack, normalized)) {
@@ -67,6 +67,10 @@ std::string loadShaderSourceRecursive(const std::filesystem::path& path,
     }
 
     stack.push_back(normalized);
+    const std::string dependency = normalized.string();
+    if (std::find(dependencies.begin(), dependencies.end(), dependency) ==
+        dependencies.end())
+        dependencies.push_back(dependency);
 
     std::stringstream input(readTextFile(normalized));
     std::stringstream output;
@@ -81,7 +85,9 @@ std::string loadShaderSourceRecursive(const std::filesystem::path& path,
 
         const std::filesystem::path resolvedInclude =
             normalized.parent_path() / includePath;
-        output << loadShaderSourceRecursive(resolvedInclude, stack) << '\n';
+        output << loadShaderSourceRecursive(resolvedInclude, stack,
+                                            dependencies)
+               << '\n';
     }
 
     stack.pop_back();
@@ -91,8 +97,15 @@ std::string loadShaderSourceRecursive(const std::filesystem::path& path,
 } // namespace
 
 std::string loadShaderSource(const std::string& path) {
+    return loadShaderSourceWithDependencies(path).source;
+}
+
+ShaderSourceLoadResult
+loadShaderSourceWithDependencies(const std::string& path) {
     std::vector<std::filesystem::path> stack;
-    return loadShaderSourceRecursive(path, stack);
+    ShaderSourceLoadResult result;
+    result.source = loadShaderSourceRecursive(path, stack, result.dependencies);
+    return result;
 }
 
 } // namespace Backend

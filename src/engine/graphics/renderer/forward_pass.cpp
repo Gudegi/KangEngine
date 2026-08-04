@@ -3,6 +3,7 @@
 #include "engine/graphics/material/material.hpp"
 #include "engine/graphics/renderer/mesh_instancer.hpp"
 #include "engine/graphics/renderer/renderer_types.hpp"
+#include "engine/graphics/renderer/shader_library.hpp"
 #include "utils/asset_path.hpp"
 
 #include <array>
@@ -56,12 +57,25 @@ ForwardPass::createTexture(const Backend::TextureResourceDesc& desc,
 void ForwardPass::createPipeline(RasterPipelineKey key,
                                  const Backend::GraphicsPipelineDesc& desc) {
     requireInitialized("creating pipelines");
-    _pipelines.add(key, _device->createGraphicsPipeline(desc));
+    key.pass = RasterPassSignature::fromPipelineDesc(desc);
+    key.shaderGeneration = _shaderGeneration;
+    if (!_passSignature)
+        _passSignature = key.pass;
+    else if (!(*_passSignature == key.pass))
+        throw std::logic_error(
+            "ForwardPass pipeline variants must share one pass signature");
+    _pipelines.getOrCreate(
+        key, [&] { return _device->createGraphicsPipeline(desc); });
 }
 
 Backend::GraphicsPipeline* ForwardPass::pipelineFor(const MeshInstancer& inst,
                                                     bool transparent) const {
     RasterPipelineKey key;
+    if (!_passSignature)
+        throw std::logic_error(
+            "ForwardPass has no initialized render-pass signature");
+    key.pass = *_passSignature;
+    key.shaderGeneration = _shaderGeneration;
     key.skinned = inst.hasSkinning();
     key.transparent = transparent;
     key.doubleSided = inst.isDoubleSided();
@@ -408,7 +422,10 @@ void ForwardPass::record(Backend::RenderPassEncoder& pass,
 void ForwardPass::initializeResources(
     Backend::Buffer* cameraBuffer, Backend::Buffer* lightBuffer,
     Backend::Buffer* shadowBuffer,
-    Backend::BindGroupLayout* shadowSamplingLayout) {
+    Backend::BindGroupLayout* shadowSamplingLayout,
+    ShaderLibrary& shaderLibrary) {
+    _shaderLibrary = &shaderLibrary;
+    _shaderGeneration = shaderLibrary.generation();
     // Group 0 owns frame data. Group 1 reuses the shadow-sampling layout;
     // groups 2/3 stay reserved for skinning and material resources.
     Backend::BindGroupLayoutDesc frameDesc;
@@ -471,10 +488,10 @@ void ForwardPass::initializeResources(
     pipelineDesc.label = "forward_vertex_color_pipeline";
     pipelineDesc.shader.name = "forward_vertex_color_rhi";
     pipelineDesc.shader.stages = {
-        {Backend::loadShaderSource(
+        {_shaderLibrary->load(
              KE::getAssetPath("shaders/rhi/forward_vertex_color.vs")),
          Backend::ShaderType::Vertex, "main"},
-        {Backend::loadShaderSource(
+        {_shaderLibrary->load(
              KE::getAssetPath("shaders/rhi/forward_vertex_color.fs")),
          Backend::ShaderType::Fragment, "main"},
     };
@@ -515,7 +532,7 @@ void ForwardPass::initializeResources(
     pipelineDesc.label = "forward_skinned_vertex_color_pipeline";
     pipelineDesc.shader.name = "forward_skinned_vertex_color_rhi";
     pipelineDesc.shader.stages[0] = {
-        Backend::loadShaderSource(
+        _shaderLibrary->load(
             KE::getAssetPath("shaders/rhi/forward_skinned_vertex_color.vs")),
         Backend::ShaderType::Vertex, "main"};
     pipelineDesc.pipelineLayout = _skinPipelineLayout;
@@ -622,10 +639,10 @@ void ForwardPass::initializeResources(
     texturedAlphaBlend.alpha.srcFactor = Backend::BlendFactorValue::SrcAlpha;
     texturedAlphaBlend.alpha.dstFactor =
         Backend::BlendFactorValue::OneMinusSrcAlpha;
-    const std::string texturedFs = Backend::loadShaderSource(
+    const std::string texturedFs = _shaderLibrary->load(
         KE::getAssetPath("shaders/rhi/forward_textured_vertex_color.fs"));
     for (size_t skin = 0; skin < 2; ++skin) {
-        const std::string texturedVs = Backend::loadShaderSource(
+        const std::string texturedVs = _shaderLibrary->load(
             KE::getAssetPath(skin ? "shaders/rhi/forward_skinned_material.vs"
                                   : "shaders/rhi/forward_material.vs"));
         for (size_t transparent = 0; transparent < 2; ++transparent) {
@@ -690,9 +707,9 @@ void ForwardPass::initializeResources(
     _checkerboardBindGroup = createBindGroup(checkerGroupDesc);
     setBackgroundSettings(BackgroundSettings{});
 
-    const std::string checkerVs = Backend::loadShaderSource(
+    const std::string checkerVs = _shaderLibrary->load(
         KE::getAssetPath("shaders/rhi/forward_material.vs"));
-    const std::string checkerFs = Backend::loadShaderSource(
+    const std::string checkerFs = _shaderLibrary->load(
         KE::getAssetPath("shaders/rhi/forward_checkerboard.fs"));
     for (size_t transparent = 0; transparent < 2; ++transparent) {
         for (size_t doubleSided = 0; doubleSided < 2; ++doubleSided) {
@@ -725,11 +742,10 @@ void ForwardPass::initializeResources(
     pipelineDesc.label = "forward_phong_pipeline";
     pipelineDesc.shader.name = "forward_phong_rhi";
     pipelineDesc.shader.stages = {
-        {Backend::loadShaderSource(
+        {_shaderLibrary->load(
              KE::getAssetPath("shaders/rhi/forward_material.vs")),
          Backend::ShaderType::Vertex, "main"},
-        {Backend::loadShaderSource(
-             KE::getAssetPath("shaders/rhi/forward_phong.fs")),
+        {_shaderLibrary->load(KE::getAssetPath("shaders/rhi/forward_phong.fs")),
          Backend::ShaderType::Fragment, "main"},
     };
     pipelineDesc.pipelineLayout = _phongPipelineLayout;
@@ -765,9 +781,9 @@ void ForwardPass::initializeResources(
     _pbrPipelineLayout = createPipelineLayout(pbrLayoutDesc);
     pipelineDesc.label = "forward_pbr_pipeline";
     pipelineDesc.shader.name = "forward_pbr_rhi";
-    pipelineDesc.shader.stages[1] = {Backend::loadShaderSource(KE::getAssetPath(
-                                         "shaders/rhi/forward_pbr.fs")),
-                                     Backend::ShaderType::Fragment, "main"};
+    pipelineDesc.shader.stages[1] = {
+        _shaderLibrary->load(KE::getAssetPath("shaders/rhi/forward_pbr.fs")),
+        Backend::ShaderType::Fragment, "main"};
     pipelineDesc.pipelineLayout = _pbrPipelineLayout;
     pipelineDesc.primitive.cullMode = Backend::CullMode::Back;
     createPipeline({RasterPipelineFamily::Pbr, false, false, false},
@@ -807,18 +823,18 @@ void ForwardPass::initializeResources(
             desc.primitive.cullMode = Backend::CullMode::None;
             createPipeline({family, skinned, true, true}, desc);
         };
-    const std::string vertexColorVs = Backend::loadShaderSource(
+    const std::string vertexColorVs = _shaderLibrary->load(
         KE::getAssetPath("shaders/rhi/forward_vertex_color.vs"));
-    const std::string skinnedVertexColorVs = Backend::loadShaderSource(
+    const std::string skinnedVertexColorVs = _shaderLibrary->load(
         KE::getAssetPath("shaders/rhi/forward_skinned_vertex_color.vs"));
-    const std::string materialVs = Backend::loadShaderSource(
+    const std::string materialVs = _shaderLibrary->load(
         KE::getAssetPath("shaders/rhi/forward_material.vs"));
-    const std::string vertexColorFs = Backend::loadShaderSource(
+    const std::string vertexColorFs = _shaderLibrary->load(
         KE::getAssetPath("shaders/rhi/forward_vertex_color.fs"));
-    const std::string phongFs = Backend::loadShaderSource(
-        KE::getAssetPath("shaders/rhi/forward_phong.fs"));
-    const std::string pbrFs = Backend::loadShaderSource(
-        KE::getAssetPath("shaders/rhi/forward_pbr.fs"));
+    const std::string phongFs =
+        _shaderLibrary->load(KE::getAssetPath("shaders/rhi/forward_phong.fs"));
+    const std::string pbrFs =
+        _shaderLibrary->load(KE::getAssetPath("shaders/rhi/forward_pbr.fs"));
     createTransparentVariants(
         RasterPipelineFamily::VertexColor, false, "transparent_vertex_color",
         _forwardPipelineLayout, vertexColorVs, vertexColorFs,
@@ -838,7 +854,7 @@ void ForwardPass::initializeResources(
         materialVs, pbrFs,
         {position, transform, normal, texCoord, color, tangent});
 
-    const std::string skinnedMaterialVs = Backend::loadShaderSource(
+    const std::string skinnedMaterialVs = _shaderLibrary->load(
         KE::getAssetPath("shaders/rhi/forward_skinned_material.vs"));
     for (size_t model = 0; model < 2; ++model) {
         Backend::PipelineLayoutDesc skinnedLayoutDesc;
@@ -887,7 +903,7 @@ void ForwardPass::initializeResources(
         }
     }
 
-    const std::string debugCheckerFs = Backend::loadShaderSource(
+    const std::string debugCheckerFs = _shaderLibrary->load(
         KE::getAssetPath("shaders/rhi/forward_debug_checker.fs"));
     for (size_t skin = 0; skin < 2; ++skin) {
         for (size_t transparent = 0; transparent < 2; ++transparent) {

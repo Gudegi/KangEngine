@@ -1,5 +1,6 @@
 #include "engine/graphics/renderer/debug_renderer.hpp"
 #include "engine/graphics/material/colors.hpp"
+#include "engine/graphics/renderer/shader_library.hpp"
 #include "utils/asset_path.hpp"
 #include <algorithm>
 #include <cstddef>
@@ -59,7 +60,8 @@ void validatePointInputs(const char* functionName,
 
 void DebugRenderer::init(Backend::GraphicsDevice* device,
                          Backend::BindGroupLayout* frameGroupLayout,
-                         Backend::BindGroup* frameBindGroup) {
+                         Backend::BindGroup* frameBindGroup,
+                         ShaderLibrary* shaderLibrary) {
     _device = device;
     if (!_device)
         return;
@@ -67,6 +69,8 @@ void DebugRenderer::init(Backend::GraphicsDevice* device,
     _frameBindGroup = frameBindGroup;
     if (!frameGroupLayout || !_frameBindGroup)
         return;
+    if (!shaderLibrary)
+        throw std::invalid_argument("DebugRenderer requires ShaderLibrary");
     for (size_t i = 0; i < _reservedGroupLayouts.size(); ++i) {
         Backend::BindGroupLayoutDesc desc;
         desc.label = "debug_reserved_group_" + std::to_string(i + 1);
@@ -93,10 +97,9 @@ void DebugRenderer::init(Backend::GraphicsDevice* device,
     desc.label = "debug_line_pipeline";
     desc.shader.name = "debug_line_rhi";
     desc.shader.stages = {
-        {Backend::loadShaderSource(KE::getAssetPath("shaders/rhi/debug.vs")),
+        {shaderLibrary->load(KE::getAssetPath("shaders/rhi/debug.vs")),
          Backend::ShaderType::Vertex, "main"},
-        {Backend::loadShaderSource(
-             KE::getAssetPath("shaders/rhi/debug_line.fs")),
+        {shaderLibrary->load(KE::getAssetPath("shaders/rhi/debug_line.fs")),
          Backend::ShaderType::Fragment, "main"}};
     desc.pipelineLayout = _pipelineLayout.get();
     desc.vertexBuffers = {lineLayout};
@@ -117,9 +120,9 @@ void DebugRenderer::init(Backend::GraphicsDevice* device,
         {Backend::VertexFormat::Float32, offsetof(PointVertex, size), 2}};
     desc.label = "debug_point_pipeline";
     desc.shader.name = "debug_point_rhi";
-    desc.shader.stages[1] = {Backend::loadShaderSource(KE::getAssetPath(
-                                 "shaders/rhi/debug_point.fs")),
-                             Backend::ShaderType::Fragment, "main"};
+    desc.shader.stages[1] = {
+        shaderLibrary->load(KE::getAssetPath("shaders/rhi/debug_point.fs")),
+        Backend::ShaderType::Fragment, "main"};
     desc.vertexBuffers = {pointLayout};
     desc.primitive.topology = Backend::PrimitiveTopology::PointList;
     _pointPipeline = _device->createGraphicsPipeline(desc);

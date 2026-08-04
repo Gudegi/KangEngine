@@ -91,16 +91,17 @@ Rasterizer::Rasterizer(Backend::GraphicsDevice* graphicsDevice) {
         fbo = _graphicsDevice->createFramebuffer(
             {mapSize, mapSize, true, false, 0});
     }
-    _selectionMaskPass.initializeResources(_cameraUBO.get());
+    _selectionMaskPass.initializeResources(_cameraUBO.get(), _shaderLibrary);
     initShadowRhi();
     initForwardRhi();
-    _skyboxPass.initializeResources(_forwardPass.frameLayout());
+    _skyboxPass.initializeResources(_forwardPass.frameLayout(), _shaderLibrary);
     _debugRenderer.init(_graphicsDevice, _forwardPass.frameLayout(),
-                        _forwardPass.frameBindGroup());
+                        _forwardPass.frameBindGroup(), &_shaderLibrary);
     _textRenderer.init(
         _graphicsDevice,
         FontAtlasData::loadAscii(KE::getAssetPath("fonts/godoFont/GodoM.ttf")),
-        _forwardPass.frameLayout(), _forwardPass.frameBindGroup());
+        _forwardPass.frameLayout(), _forwardPass.frameBindGroup(),
+        &_shaderLibrary);
     updateShadowUBO(0.0f);
 }
 
@@ -821,7 +822,7 @@ void Rasterizer::initShadowRhi() {
     // Records single-map and CSM depth passes. The 8 immutable variants cover
     // static/skinned, opaque/alpha-mask, and culled/double-sided casters.
     // =====================================================================
-    _shadowPass.initializeResources(_shadowUBO.get());
+    _shadowPass.initializeResources(_shadowUBO.get(), _shaderLibrary);
 
     // ShadowPass owns the RHI views and render targets. Framebuffers remain
     // here temporarily as the OpenGL shadow-texture allocation boundary.
@@ -849,9 +850,9 @@ void Rasterizer::rebuildShadowSamplingBindings(
 }
 
 void Rasterizer::initForwardRhi() {
-    _forwardPass.initializeResources(_cameraUBO.get(), _lightUBO.get(),
-                                     _shadowUBO.get(),
-                                     _shadowPass.samplingLayout());
+    _forwardPass.initializeResources(
+        _cameraUBO.get(), _lightUBO.get(), _shadowUBO.get(),
+        _shadowPass.samplingLayout(), _shaderLibrary);
 }
 void Rasterizer::setBackgroundSettings(const BackgroundSettings& settings) {
     _forwardPass.setBackgroundSettings(settings);

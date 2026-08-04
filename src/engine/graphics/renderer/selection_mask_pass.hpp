@@ -8,6 +8,7 @@
 namespace KE {
 
 class MeshInstancer;
+class ShaderLibrary;
 
 class SelectionMaskPass : public RenderPassBase {
   public:
@@ -24,7 +25,8 @@ class SelectionMaskPass : public RenderPassBase {
         int instanceIndex = -1;
     };
 
-    void initializeResources(Backend::Buffer* cameraBuffer);
+    void initializeResources(Backend::Buffer* cameraBuffer,
+                             ShaderLibrary& shaderLibrary);
     PreparedDraw prepare(MeshInstancer* instancer, int instanceIndex,
                          Backend::Framebuffer* target);
     Backend::RenderTarget* target() const { return _outputTarget.get(); }
@@ -36,6 +38,7 @@ class SelectionMaskPass : public RenderPassBase {
     void ensureTarget(Backend::Framebuffer* target);
 
     std::array<std::unique_ptr<Backend::BindGroupLayout>, 4> _groupLayouts;
+    ShaderLibrary* _shaderLibrary = nullptr;
     std::unique_ptr<Backend::BindGroupLayout> _alphaGroupLayout;
     std::unique_ptr<Backend::BindGroupLayout> _skinGroupLayout;
     std::array<std::unique_ptr<Backend::PipelineLayout>, 4> _pipelineLayouts;

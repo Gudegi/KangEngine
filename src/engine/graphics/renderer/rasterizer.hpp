@@ -3,6 +3,7 @@
 
 #include "engine/graphics/renderer/render_pipeline.hpp"
 #include "engine/graphics/renderer/selection_mask_pass.hpp"
+#include "engine/graphics/renderer/shader_library.hpp"
 #include "engine/graphics/renderer/forward_pass.hpp"
 #include "engine/graphics/renderer/shadow_pass.hpp"
 #include "engine/graphics/renderer/skybox_pass.hpp"
@@ -61,6 +62,7 @@ class Rasterizer : public RenderPipeline {
     // =====================================================================
     // Scene Mesh Pipelines - batching and renderable registration
     // =====================================================================
+    ShaderLibrary _shaderLibrary;
     struct InstancerKey {
         const Scene::MeshData* mesh;
         Material* material;
@@ -209,6 +211,8 @@ class Rasterizer : public RenderPipeline {
     Backend::BindGroupLayout* sceneFrameBindGroupLayout() const {
         return _forwardPass.frameLayout();
     }
+    ShaderLibrary& shaderLibrary() { return _shaderLibrary; }
+    const ShaderLibrary& shaderLibrary() const { return _shaderLibrary; }
     RenderHookHandle addRenderHook(RenderHookPhase phase,
                                    RenderHookCallback callback);
     bool removeRenderHook(RenderHookHandle handle);

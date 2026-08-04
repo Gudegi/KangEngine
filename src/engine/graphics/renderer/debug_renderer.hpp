@@ -16,6 +16,8 @@
 
 namespace KE {
 
+class ShaderLibrary;
+
 class DebugRenderer {
   private:
     struct LineVertex {
@@ -66,7 +68,8 @@ class DebugRenderer {
 
     void init(Backend::GraphicsDevice* device,
               Backend::BindGroupLayout* frameGroupLayout = nullptr,
-              Backend::BindGroup* frameBindGroup = nullptr);
+              Backend::BindGroup* frameBindGroup = nullptr,
+              ShaderLibrary* shaderLibrary = nullptr);
     void logLines(const std::string& path, const std::vector<glm::vec3>& starts,
                   const std::vector<glm::vec3>& ends,
                   const std::vector<glm::vec4>& colors = {}, float width = 1.0f,
