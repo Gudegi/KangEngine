@@ -2099,7 +2099,7 @@ void OpenGLDevice::submit(CommandBuffer& commandBuffer) {
         GLint sampler = 0;
         glGetIntegerv(GL_TEXTURE_BINDING_2D, &texture2D);
         glGetIntegerv(GL_TEXTURE_BINDING_CUBE_MAP, &textureCube);
-        glGetIntegeri_v(GL_SAMPLER_BINDING, slot, &sampler);
+        glGetIntegerv(GL_SAMPLER_BINDING, &sampler);
         textureBindingStates.push_back({static_cast<GLuint>(texture2D),
                                         static_cast<GLuint>(textureCube),
                                         static_cast<GLuint>(sampler)});
