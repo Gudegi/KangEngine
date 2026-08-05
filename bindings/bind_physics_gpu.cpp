@@ -69,6 +69,9 @@ void bind_physics_gpu(py::module& m) {
         .def_readwrite("rigid_torque", &PhysicsGpuStateViews::rigidTorque,
                        "Rigid torque command buffer submitted by "
                        "apply_rigid_torque().")
+        .def_readwrite("rigid_accelerations",
+                       &PhysicsGpuStateViews::rigidAccelerations,
+                       "Rigid COM linear/angular acceleration state.")
         .def_readwrite("articulation_link_data",
                        &PhysicsGpuStateViews::articulationLinkData,
                        "Articulation link pose and velocity state.")
@@ -94,6 +97,29 @@ void bind_physics_gpu(py::module& m) {
             "articulation_link_incoming_joint_forces",
             &PhysicsGpuStateViews::articulationLinkIncomingJointForces,
             "Incoming joint-force state for articulation links.")
+        .def_readwrite("articulation_link_accelerations",
+                       &PhysicsGpuStateViews::articulationLinkAccelerations)
+        .def_readwrite("articulation_link_forces",
+                       &PhysicsGpuStateViews::articulationLinkForces)
+        .def_readwrite("articulation_link_torques",
+                       &PhysicsGpuStateViews::articulationLinkTorques)
+        .def_readwrite("articulation_dense_jacobians",
+                       &PhysicsGpuStateViews::articulationDenseJacobians)
+        .def_readwrite("articulation_mass_matrices",
+                       &PhysicsGpuStateViews::articulationMassMatrices)
+        .def_readwrite("articulation_gravity_forces",
+                       &PhysicsGpuStateViews::articulationGravityForces)
+        .def_readwrite("articulation_coriolis_forces",
+                       &PhysicsGpuStateViews::articulationCoriolisForces)
+        .def_readwrite("articulation_com_world",
+                       &PhysicsGpuStateViews::articulationComWorld)
+        .def_readwrite("articulation_com_root",
+                       &PhysicsGpuStateViews::articulationComRoot)
+        .def_readwrite(
+            "articulation_centroidal_momentum_matrices",
+            &PhysicsGpuStateViews::articulationCentroidalMomentumMatrices)
+        .def_readwrite("articulation_centroidal_bias_forces",
+                       &PhysicsGpuStateViews::articulationCentroidalBiasForces)
         .def_readwrite("contact_pairs", &PhysicsGpuStateViews::contactPairs,
                        "Packed contact-pair state buffer.")
         .def_readwrite("contact_pair_count",
@@ -148,6 +174,16 @@ void bind_physics_gpu(py::module& m) {
         .def("articulation_count", &PhysicsGpuSystem::articulationCount)
         .def("articulation_max_links", &PhysicsGpuSystem::articulationMaxLinks)
         .def("articulation_max_dofs", &PhysicsGpuSystem::articulationMaxDofs)
+        .def("articulation_generalized_dof_count",
+             &PhysicsGpuSystem::articulationGeneralizedDofCount,
+             py::arg("articulation_row"))
+        .def("articulation_jacobian_row_count",
+             &PhysicsGpuSystem::articulationJacobianRowCount,
+             py::arg("articulation_row"))
+        .def("articulation_max_generalized_dofs",
+             &PhysicsGpuSystem::articulationMaxGeneralizedDofs)
+        .def("articulation_max_jacobian_rows",
+             &PhysicsGpuSystem::articulationMaxJacobianRows)
         .def("step_start", &PhysicsGpuSystem::stepStart)
         .def("step_finish", &PhysicsGpuSystem::stepFinish)
         .def("rigid_data", &PhysicsGpuSystem::rigidData,
@@ -155,6 +191,8 @@ void bind_physics_gpu(py::module& m) {
         .def("rigid_force", &PhysicsGpuSystem::rigidForce,
              py::return_value_policy::reference_internal)
         .def("rigid_torque", &PhysicsGpuSystem::rigidTorque,
+             py::return_value_policy::reference_internal)
+        .def("rigid_accelerations", &PhysicsGpuSystem::rigidAccelerations,
              py::return_value_policy::reference_internal)
         .def("articulation_link_data", &PhysicsGpuSystem::articulationLinkData,
              py::return_value_policy::reference_internal)
@@ -179,6 +217,37 @@ void bind_physics_gpu(py::module& m) {
         .def("articulation_link_incoming_joint_forces",
              &PhysicsGpuSystem::articulationLinkIncomingJointForces,
              py::return_value_policy::reference_internal)
+        .def("articulation_link_accelerations",
+             &PhysicsGpuSystem::articulationLinkAccelerations,
+             py::return_value_policy::reference_internal)
+        .def("articulation_link_forces",
+             &PhysicsGpuSystem::articulationLinkForces,
+             py::return_value_policy::reference_internal)
+        .def("articulation_link_torques",
+             &PhysicsGpuSystem::articulationLinkTorques,
+             py::return_value_policy::reference_internal)
+        .def("articulation_dense_jacobians",
+             &PhysicsGpuSystem::articulationDenseJacobians,
+             py::return_value_policy::reference_internal)
+        .def("articulation_mass_matrices",
+             &PhysicsGpuSystem::articulationMassMatrices,
+             py::return_value_policy::reference_internal)
+        .def("articulation_gravity_forces",
+             &PhysicsGpuSystem::articulationGravityForces,
+             py::return_value_policy::reference_internal)
+        .def("articulation_coriolis_forces",
+             &PhysicsGpuSystem::articulationCoriolisForces,
+             py::return_value_policy::reference_internal)
+        .def("articulation_com_world", &PhysicsGpuSystem::articulationComWorld,
+             py::return_value_policy::reference_internal)
+        .def("articulation_com_root", &PhysicsGpuSystem::articulationComRoot,
+             py::return_value_policy::reference_internal)
+        .def("articulation_centroidal_momentum_matrices",
+             &PhysicsGpuSystem::articulationCentroidalMomentumMatrices,
+             py::return_value_policy::reference_internal)
+        .def("articulation_centroidal_bias_forces",
+             &PhysicsGpuSystem::articulationCentroidalBiasForces,
+             py::return_value_policy::reference_internal)
         .def("contact_pairs", &PhysicsGpuSystem::contactPairs,
              py::return_value_policy::reference_internal)
         .def("contact_pair_count", &PhysicsGpuSystem::contactPairCount,
@@ -195,6 +264,8 @@ void bind_physics_gpu(py::module& m) {
              &PhysicsGpuSystem::contactPointPairIndices,
              py::return_value_policy::reference_internal)
         .def("fetch_rigid_data", &PhysicsGpuSystem::fetchRigidData)
+        .def("fetch_rigid_accelerations",
+             &PhysicsGpuSystem::fetchRigidAccelerations)
         .def("fetch_articulation_link_pose",
              &PhysicsGpuSystem::fetchArticulationLinkPose)
         .def("fetch_articulation_link_vel",
@@ -213,6 +284,28 @@ void bind_physics_gpu(py::module& m) {
              &PhysicsGpuSystem::fetchArticulationTargetJointVelocities)
         .def("fetch_articulation_link_incoming_joint_force",
              &PhysicsGpuSystem::fetchArticulationLinkIncomingJointForce)
+        .def("fetch_articulation_link_accelerations",
+             &PhysicsGpuSystem::fetchArticulationLinkAccelerations)
+        .def("prepare_articulation_link_commands",
+             &PhysicsGpuSystem::prepareArticulationLinkCommands)
+        .def("apply_articulation_link_forces",
+             &PhysicsGpuSystem::applyArticulationLinkForces)
+        .def("apply_articulation_link_torques",
+             &PhysicsGpuSystem::applyArticulationLinkTorques)
+        .def("compute_articulation_dense_jacobians",
+             &PhysicsGpuSystem::computeArticulationDenseJacobians)
+        .def("compute_articulation_mass_matrices",
+             &PhysicsGpuSystem::computeArticulationMassMatrices)
+        .def("compute_articulation_gravity_forces",
+             &PhysicsGpuSystem::computeArticulationGravityForces)
+        .def("compute_articulation_coriolis_forces",
+             &PhysicsGpuSystem::computeArticulationCoriolisForces)
+        .def("compute_articulation_com_world",
+             &PhysicsGpuSystem::computeArticulationComWorld)
+        .def("compute_articulation_com_root",
+             &PhysicsGpuSystem::computeArticulationComRoot)
+        .def("compute_articulation_centroidal_momentum",
+             &PhysicsGpuSystem::computeArticulationCentroidalMomentum)
         .def("fetch_contact_pairs", &PhysicsGpuSystem::fetchContactPairs)
         .def("clear_contact_data", &PhysicsGpuSystem::clearContactData)
         .def("apply_rigid_data", &PhysicsGpuSystem::applyRigidData,

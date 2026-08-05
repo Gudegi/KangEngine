@@ -230,6 +230,105 @@ new impact impulses, apply the reset first and then simulate one step.
 
 </details>
 
+## Rigid acceleration
+
+Rigid pose and velocity remain in the compact `[rigid_count, 13]` state
+mirror. Linear and angular COM acceleration are an optional `[rigid_count, 6]`
+mirror:
+
+```python
+config = ke.physics.PhysicsConfig.z_up()
+config.enable_body_accelerations = True
+world = ke.sim.KangSimWorld(
+    num_envs=4096,
+    physics_config=config,
+    sim_device="cuda",
+)
+
+acceleration = world.get_gpu_rigid_accelerations()
+linear_acceleration = acceleration[:, :3]
+angular_acceleration = acceleration[:, 3:6]
+```
+
+PhysX requires `enable_body_accelerations` at scene creation. It defaults to
+false so simulations that do not consume acceleration retain the existing
+solver cost. The CUDA output and its dedicated scratch storage are allocated
+lazily on the first fetch.
+
+## Articulation dynamics
+
+PhysX GPU dynamics results are available as opt-in CUDA tensors:
+
+```python
+jacobian = world.get_gpu_articulation_dense_jacobians()
+mass = world.get_gpu_articulation_mass_matrices()
+gravity = world.get_gpu_articulation_gravity_forces()
+coriolis = world.get_gpu_articulation_coriolis_forces()
+link_acceleration = world.get_gpu_articulation_link_accelerations()
+com_world = world.get_gpu_articulation_com_world()
+com_root = world.get_gpu_articulation_com_root()
+centroidal_matrix, centroidal_bias = (
+    world.get_gpu_articulation_centroidal_dynamics()
+)
+```
+
+These buffers are allocated lazily on their first compute call. Merely enabling
+the GPU physics system does not allocate them or add work to `world.step()`.
+Repeated `compute=True` reads in the same articulation-dynamics generation reuse
+the computed result. A physics step or GPU state reset invalidates that cache;
+the next read dispatches PhysX again. Passing `compute=False` always returns the
+last computed buffer without dispatching a new PhysX operation.
+
+PhysX returns one fixed-capacity packed block per articulation. Use:
+
+```python
+rows, dofs = world.get_gpu_articulation_dynamics_shape(articulation_row)
+j0 = jacobian[articulation_row, : rows * dofs].reshape(rows, dofs)
+m0 = mass[articulation_row, : dofs * dofs].reshape(dofs, dofs)
+g0 = gravity[articulation_row, :dofs]
+c0 = coriolis[articulation_row, :dofs]
+```
+
+`dofs` includes six floating-base coordinates when the articulation is not
+fixed. The packed representation intentionally matches the PhysX Direct GPU
+API output and avoids a repacking kernel or an additional CUDA buffer. Compute
+only the quantities required by the controller, preferably at control rate
+rather than every physics substep.
+
+Link acceleration uses `[articulation_count, max_links, 6]` with linear XYZ
+followed by angular XYZ. COM buffers use `[articulation_count, 3]` in world or
+root frame. Centroidal momentum is available for floating-base articulations;
+the matrix is a packed `[articulation_count, 6 * max_generalized_dofs]` block
+and its bias force is `[articulation_count, 6]`.
+
+### Batched link wrench
+
+Dense CUDA link force and torque commands use the PhysX-native
+`[articulation_count, max_links, 3]` layout:
+
+```python
+forces = world.get_gpu_articulation_link_forces()
+torques = world.get_gpu_articulation_link_torques()
+forces.zero_()
+torques.zero_()
+forces[:, pelvis_link, 0] = 250.0
+world.apply_gpu_articulation_link_wrenches(forces=True, torques=False)
+```
+
+Or copy existing contiguous CUDA tensors and submit them together:
+
+```python
+world.set_gpu_articulation_link_wrenches(
+    forces=policy_forces,
+    torques=policy_torques,
+)
+```
+
+Command buffers are allocated on first use. No Python environment loop or
+host transfer is performed. Submission is explicit: apply the desired wrench
+for each simulation step that should receive it, and submit zeroed buffers when
+the external wrench should stop.
+
 ## Contacts and sensors
 
 Create sensors from rigid or articulation views:

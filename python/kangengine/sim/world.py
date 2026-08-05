@@ -55,15 +55,6 @@ def _clip_forces(forces, limits):
     return np.clip(forces, -limits, limits).astype(np.float32, copy=False)
 
 
-def _copy_command_from_dof_reset(positions):
-    import sys
-
-    torch = sys.modules.get("torch")
-    if torch is not None and torch.is_tensor(positions):
-        return positions.reshape(-1).contiguous().clone()
-    return np.asarray(positions, dtype=np.float32).reshape(-1).copy()
-
-
 def _torch():
     global _TORCH
     if _TORCH is None:
@@ -2088,13 +2079,6 @@ class KangSimWorld:
                     gpu_articulation_dof_resets.append((key, reset.dof))
                 else:
                     cache.set_dofs(reset.dof.positions, reset.dof.velocities)
-                command = self.commands.get(key)
-                if (
-                    command is not None
-                    and command.mode == ControlMode.POS
-                    and command.cmd is None
-                ):
-                    command.cmd = _copy_command_from_dof_reset(reset.dof.positions)
             self.resets[key] = ResetBuffer()
         if gpu_rigid_root_resets:
             self._apply_gpu_rigid_root_resets(gpu_rigid_root_resets)
@@ -2131,6 +2115,7 @@ class KangSimWorld:
             or gpu_root_batches
             or gpu_dof_batches
         ):
+            self.state.gpu.invalidate_articulation_dynamics()
             self._clear_gpu_contact_data_after_reset()
             return True
         return False
@@ -2268,6 +2253,7 @@ class KangSimWorld:
             self._clear_batch_body_forces(batch.env_ids, batch.obj_id)
             first_key = (0, batch.obj_id)
             if first_key in self.articulations:
+                self.batch_commands.pop(batch.obj_id, None)
                 if link_state is None:
                     link_state = gpu_system.articulation_link_data().torch()
                 rows = self._articulation_gpu_rows_for_obj(
@@ -2307,6 +2293,7 @@ class KangSimWorld:
         device = qpos.device
 
         for batch in batches:
+            self.batch_commands.pop(batch.obj_id, None)
             self._clear_batch_body_forces(batch.env_ids, batch.obj_id)
             rows = self._articulation_gpu_rows_for_obj(
                 batch.obj_id, batch.env_ids, device=device
@@ -2372,14 +2359,13 @@ class KangSimWorld:
         gpu_system = self.gpu_system
         link_view = gpu_system.articulation_link_data()
         device = torch.device(f"cuda:{int(link_view.device_id)}")
+        reset_obj_ids = {key[1] for key in keys}
+        for obj_id in reset_obj_ids:
+            # A dense batch command cannot represent a reset-created hole.
+            # Drop it instead of silently reapplying stale control on the next
+            # step; the caller can submit the next policy command explicitly.
+            self.batch_commands.pop(obj_id, None)
         for key in keys:
-            command = self.commands.get(key)
-            if (
-                command is not None
-                and command.mode != ControlMode.NONE
-                and command.cmd is not None
-            ):
-                continue
             self.commands[key] = CommandBuffer(ControlMode.NONE)
 
         index_view = self._articulation_gpu_index_view_for_keys(
@@ -2517,6 +2503,8 @@ class KangSimWorld:
             self.sim_time += self.sim_dt
         self.clear_body_forces()
         if self._uses_gpu_sim:
+            if substep_count > 0:
+                self.state.gpu.invalidate_articulation_dynamics()
             self.state.mark_stale()
         if reset_applied and substep_count == 0:
             self.clear_sensor_outputs()
@@ -2708,6 +2696,14 @@ class KangSimWorld:
         """Return the full PhysX GPU rigid mirror as a Torch CUDA view."""
         return self.state.gpu.rigid_data_tensor(fetch=fetch)
 
+    def get_gpu_rigid_accelerations(self, *, fetch: bool = True):
+        """Return rigid COM accelerations as ``[lin xyz, ang xyz]``.
+
+        Shape is ``[rigid_count, 6]``. The physics scene must be created with
+        ``PhysicsConfig(enable_body_accelerations=True)``.
+        """
+        return self.state.gpu.rigid_accelerations_tensor(fetch=fetch)
+
     def get_gpu_articulation_link_data(
         self, *, fetch_pose: bool = True, fetch_velocity: bool = True
     ):
@@ -2741,6 +2737,110 @@ class KangSimWorld:
     def get_gpu_articulation_link_incoming_joint_forces(self, *, fetch: bool = True):
         return self.state.gpu.articulation_link_incoming_joint_forces_tensor(
             fetch=fetch
+        )
+
+    def get_gpu_articulation_link_accelerations(self, *, fetch: bool = True):
+        """Return link COM acceleration `[lin xyz, ang xyz]`."""
+        return self.state.gpu.articulation_link_accelerations_tensor(fetch=fetch)
+
+    def get_gpu_articulation_link_forces(self):
+        """Return the writable `[articulation, max_links, 3]` force buffer."""
+        return self.state.gpu.articulation_link_forces_tensor()
+
+    def get_gpu_articulation_link_torques(self):
+        """Return the writable `[articulation, max_links, 3]` torque buffer."""
+        return self.state.gpu.articulation_link_torques_tensor()
+
+    def apply_gpu_articulation_link_wrenches(self, *, forces=True, torques=True):
+        """Submit the current dense CUDA link force/torque command buffers."""
+        if forces:
+            self.gpu_system.apply_articulation_link_forces()
+        if torques:
+            self.gpu_system.apply_articulation_link_torques()
+
+    def set_gpu_articulation_link_wrenches(self, *, forces=None, torques=None):
+        """Copy dense CUDA wrench tensors into the PhysX command buffers."""
+        if forces is None and torques is None:
+            raise ValueError("forces or torques must be provided")
+        torch = _torch()
+        for name, value in (("forces", forces), ("torques", torques)):
+            if value is None:
+                continue
+            if not torch.is_tensor(value) or value.device.type != "cuda":
+                raise TypeError(f"{name} must be a CUDA tensor")
+            if value.dtype != torch.float32 or not value.is_contiguous():
+                raise TypeError(f"{name} must be contiguous CUDA float32")
+        if forces is not None:
+            target = self.get_gpu_articulation_link_forces()
+            if forces.device != target.device:
+                raise ValueError(
+                    f"forces device {forces.device} must be {target.device}"
+                )
+            if tuple(forces.shape) != tuple(target.shape):
+                raise ValueError(
+                    f"forces shape {tuple(forces.shape)} must be {tuple(target.shape)}"
+                )
+            target.copy_(forces)
+        if torques is not None:
+            target = self.get_gpu_articulation_link_torques()
+            if torques.device != target.device:
+                raise ValueError(
+                    f"torques device {torques.device} must be {target.device}"
+                )
+            if tuple(torques.shape) != tuple(target.shape):
+                raise ValueError(
+                    f"torques shape {tuple(torques.shape)} must be {tuple(target.shape)}"
+                )
+            target.copy_(torques)
+        self.apply_gpu_articulation_link_wrenches(
+            forces=forces is not None, torques=torques is not None
+        )
+
+    def get_gpu_articulation_dense_jacobians(self, *, compute: bool = True):
+        """Return lazy-computed PhysX dense-Jacobian blocks.
+
+        Shape is ``[articulation_count, max_jacobian_rows *
+        max_generalized_dofs]``. For row ``i``, reshape the leading
+        ``rows * cols`` values using ``get_gpu_articulation_dynamics_shape(i)``.
+        """
+        return self.state.gpu.articulation_dense_jacobians_tensor(compute=compute)
+
+    def get_gpu_articulation_mass_matrices(self, *, compute: bool = True):
+        """Return lazy-computed PhysX mass-matrix blocks.
+
+        Each row begins with a packed ``n * n`` matrix, where ``n`` is that
+        articulation's generalized DOF count.
+        """
+        return self.state.gpu.articulation_mass_matrices_tensor(compute=compute)
+
+    def get_gpu_articulation_gravity_forces(self, *, compute: bool = True):
+        """Return lazy-computed generalized gravity-compensation forces."""
+        return self.state.gpu.articulation_gravity_forces_tensor(compute=compute)
+
+    def get_gpu_articulation_coriolis_forces(self, *, compute: bool = True):
+        """Return lazy-computed generalized Coriolis/centrifugal forces."""
+        return self.state.gpu.articulation_coriolis_forces_tensor(compute=compute)
+
+    def get_gpu_articulation_com_world(self, *, compute: bool = True):
+        return self.state.gpu.articulation_com_world_tensor(compute=compute)
+
+    def get_gpu_articulation_com_root(self, *, compute: bool = True):
+        return self.state.gpu.articulation_com_root_tensor(compute=compute)
+
+    def get_gpu_articulation_centroidal_dynamics(self, *, compute: bool = True):
+        """Return `(centroidal_momentum_matrix, bias_force)` CUDA blocks."""
+        gpu = self.state.gpu
+        return (
+            gpu.articulation_centroidal_momentum_matrices_tensor(compute=compute),
+            gpu.articulation_centroidal_bias_forces_tensor(compute=False),
+        )
+
+    def get_gpu_articulation_dynamics_shape(self, articulation_row: int):
+        """Return ``(jacobian_rows, generalized_dofs)`` for one GPU row."""
+        row = int(articulation_row)
+        return (
+            int(self.gpu_system.articulation_jacobian_row_count(row)),
+            int(self.gpu_system.articulation_generalized_dof_count(row)),
         )
 
     def get_gpu_contact_pairs(self, *, fetch: bool = True):

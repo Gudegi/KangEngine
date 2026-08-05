@@ -228,6 +228,12 @@ class GpuContactSensorViewer(ke.App):
         self.show_contact_debug = True
         self.contact_marker_view = None
         self.force_arrow_view = None
+        self.left_sensor_marker_view = None
+        self.right_sensor_marker_view = None
+        self.left_sensor_normal_view = None
+        self.right_sensor_normal_view = None
+        self.left_sensor_point_count = 0
+        self.right_sensor_point_count = 0
         self.demo = GpuContactSensorDemo(self.args).setup()
         self.timing = self.configure_timing(
             ke.SimulationTimingConfig.from_dt(
@@ -284,6 +290,14 @@ class GpuContactSensorViewer(ke.App):
             self.contact_marker_view.update_lines(empty3, empty3, empty4)
         if self.force_arrow_view is not None:
             self.force_arrow_view.update_arrows(empty3, empty3, empty4)
+        for view in (self.left_sensor_marker_view, self.right_sensor_marker_view):
+            if view is not None:
+                view.update_lines(empty3, empty3, empty4)
+        for view in (self.left_sensor_normal_view, self.right_sensor_normal_view):
+            if view is not None:
+                view.update_arrows(empty3, empty3, empty4)
+        self.left_sensor_point_count = 0
+        self.right_sensor_point_count = 0
 
     def _update_contact_debug(self):
         if not self.show_contact_debug:
@@ -303,6 +317,19 @@ class GpuContactSensorViewer(ke.App):
         self._update_contact_markers(positions)
         self._update_force_arrows(positions, impulses)
 
+        left_contacts = self.demo.left_contact.contact_points()
+        right_contacts = self.demo.right_contact.contact_points()
+        left_positions, left_normals = self._sensor_contacts_cpu(left_contacts)
+        right_positions, right_normals = self._sensor_contacts_cpu(right_contacts)
+        self.left_sensor_point_count = int(left_positions.shape[0])
+        self.right_sensor_point_count = int(right_positions.shape[0])
+        self._update_sensor_contacts(
+            "left", left_positions, left_normals, (0.15, 0.45, 1.0, 1.0)
+        )
+        self._update_sensor_contacts(
+            "right", right_positions, right_normals, (1.0, 0.25, 0.12, 1.0)
+        )
+
     def _contact_points_cpu(self):
         gpu_system = self.demo.world.gpu_system
         count_tensor = torch.as_tensor(
@@ -314,6 +341,63 @@ class GpuContactSensorViewer(ke.App):
         points = torch.as_tensor(gpu_system.contact_points(), device=self.demo.device)
         count = min(count, int(points.shape[0]), int(self.args.max_debug_contacts))
         return points[:count].cpu().numpy().astype(np.float32, copy=False)
+
+    def _sensor_contacts_cpu(self, contacts):
+        count = min(int(contacts.count), int(self.args.max_debug_contacts))
+        if count <= 0:
+            empty = np.zeros((0, 3), dtype=np.float32)
+            return empty, empty
+        positions = (
+            contacts.position_w[:count].detach().cpu().numpy().astype(np.float32)
+        )
+        normals = contacts.normal_w[:count].detach().cpu().numpy().astype(np.float32)
+        return positions, normals
+
+    def _update_sensor_contacts(self, side, positions, normals, color):
+        marker_view_name = f"{side}_sensor_marker_view"
+        normal_view_name = f"{side}_sensor_normal_view"
+        marker_view = getattr(self, marker_view_name)
+        normal_view = getattr(self, normal_view_name)
+        colors = np.repeat(
+            np.asarray([color], dtype=np.float32), positions.shape[0], axis=0
+        )
+
+        # Use a side-specific short axis so coincident left/right positions are
+        # still distinguishable: left is X-shaped, right is Y-shaped.
+        half = float(self.args.contact_marker_size) * 0.7
+        marker_axis = 0 if side == "left" else 1
+        offset = np.zeros((1, 3), dtype=np.float32)
+        offset[0, marker_axis] = half
+        starts = positions - offset
+        ends = positions + offset
+        if marker_view is None:
+            marker_view = self.scene.log_lines(
+                f"/debug/{side}_sensor_contact_points",
+                self.standard_materials.common,
+                starts,
+                ends,
+                colors,
+                0.012,
+                8,
+            )
+            setattr(self, marker_view_name, marker_view)
+        else:
+            marker_view.update_lines(starts, ends, colors)
+
+        normal_ends = positions + normals * float(self.args.contact_normal_scale)
+        if normal_view is None:
+            normal_view = self.scene.log_arrows(
+                f"/debug/{side}_sensor_contact_normals",
+                self.standard_materials.common,
+                positions,
+                normal_ends,
+                colors,
+                0.012,
+                10,
+            )
+            setattr(self, normal_view_name, normal_view)
+        else:
+            normal_view.update_arrows(positions, normal_ends, colors)
 
     def _update_contact_markers(self, positions):
         half = float(self.args.contact_marker_size) * 0.5
@@ -399,6 +483,9 @@ class GpuContactSensorViewer(ke.App):
         imgui.text(f"Max normal force: {max_force:.2f}")
         imgui.text(f"Peak normal force: {self.demo.peak_force:.2f}")
         imgui.text(f"Contact debug: {'on' if self.show_contact_debug else 'off'}")
+        imgui.text("Raw contacts: cyan crosses / yellow force")
+        imgui.text(f"Left sensor: blue ({self.left_sensor_point_count} points)")
+        imgui.text(f"Right sensor: red ({self.right_sensor_point_count} points)")
         imgui.separator()
         imgui.text(
             "Enter: play/pause    Space: pause/step    R: reset    C: contact debug"
@@ -423,6 +510,7 @@ def parse_args():
     parser.add_argument("--speed", type=float, default=1.5)
     parser.add_argument("--max-debug-contacts", type=int, default=128)
     parser.add_argument("--contact-marker-size", type=float, default=0.08)
+    parser.add_argument("--contact-normal-scale", type=float, default=0.18)
     parser.add_argument("--force-arrow-scale", type=float, default=0.001)
     parser.add_argument("--force-threshold", type=float, default=1e-4)
     parser.add_argument("--cuda-device", type=int, default=0)
@@ -447,6 +535,8 @@ def parse_args():
         parser.error("--max-debug-contacts must be positive")
     if args.contact_marker_size <= 0.0:
         parser.error("--contact-marker-size must be positive")
+    if args.contact_normal_scale <= 0.0:
+        parser.error("--contact-normal-scale must be positive")
     if args.force_arrow_scale < 0.0:
         parser.error("--force-arrow-scale must be non-negative")
     if args.force_threshold < 0.0:

@@ -160,6 +160,7 @@ void bind_physics(py::module& m) {
                          bool enable_gpu,
                          const PhysicsGpuDynamicsConfig& gpu_dynamics,
                          bool enable_contact_reports,
+                         bool enable_body_accelerations,
                          uint32_t cpu_dispatcher_threads,
                          float bounce_threshold_velocity,
                          float friction_offset_threshold,
@@ -181,6 +182,7 @@ void bind_physics(py::module& m) {
                  config.enableGPU = enable_gpu;
                  config.gpuDynamics = gpu_dynamics;
                  config.enableContactReports = enable_contact_reports;
+                 config.enableBodyAccelerations = enable_body_accelerations;
                  config.cpuDispatcherThreads = cpu_dispatcher_threads;
                  config.bounceThresholdVelocity = bounce_threshold_velocity;
                  config.frictionOffsetThreshold = friction_offset_threshold;
@@ -199,6 +201,8 @@ void bind_physics(py::module& m) {
                        "PhysicsGpuDynamicsConfig()"),
              py::arg("enable_contact_reports") =
                  PhysicsConfig{}.enableContactReports,
+             py::arg("enable_body_accelerations") =
+                 PhysicsConfig{}.enableBodyAccelerations,
              py::arg("cpu_dispatcher_threads") =
                  PhysicsConfig{}.cpuDispatcherThreads,
              py::arg("bounce_threshold_velocity") =
@@ -237,6 +241,9 @@ void bind_physics(py::module& m) {
         .def_readwrite("enable_contact_reports",
                        &PhysicsConfig::enableContactReports,
                        "Enable contact collection during simulation.")
+        .def_readwrite("enable_body_accelerations",
+                       &PhysicsConfig::enableBodyAccelerations,
+                       "Enable PhysX rigid-body acceleration state.")
         .def_readwrite("cpu_dispatcher_threads",
                        &PhysicsConfig::cpuDispatcherThreads,
                        "Worker threads used by the PhysX CPU dispatcher.")
@@ -275,6 +282,7 @@ void bind_physics(py::module& m) {
                            "static_friction={:g}, dynamic_friction={:g}, "
                            "restitution={:g}, enable_gpu={!r}, "
                            "gpu_dynamics={!r}, enable_contact_reports={!r}, "
+                           "enable_body_accelerations={!r}, "
                            "cpu_dispatcher_threads={!r}, "
                            "bounce_threshold_velocity={:g}, "
                            "friction_offset_threshold={:g}, "
@@ -284,6 +292,7 @@ void bind_physics(py::module& m) {
                     config.dt, solver_type, config.friction[0],
                     config.friction[1], config.friction[2], config.enableGPU,
                     config.gpuDynamics, config.enableContactReports,
+                    config.enableBodyAccelerations,
                     config.cpuDispatcherThreads, config.bounceThresholdVelocity,
                     config.frictionOffsetThreshold,
                     config.frictionCorrelationDistance,
@@ -451,6 +460,38 @@ void bind_physics(py::module& m) {
             },
             "Return root angular velocity.")
         .def("get_mass", &PxRigidDynamic::getMass, "Return rigid body mass.")
+        .def("get_inverse_mass", &PxRigidDynamic::getInvMass,
+             "Return inverse rigid body mass.")
+        .def(
+            "get_local_com_position",
+            [](const PxRigidDynamic& self) {
+                const PxVec3 position = self.getCMassLocalPose().p;
+                return floatArrayFromVector(
+                    {position.x, position.y, position.z});
+            },
+            "Return the center-of-mass position in the actor frame.")
+        .def(
+            "get_local_com_rotation",
+            [](const PxRigidDynamic& self) {
+                const PxQuat rotation = self.getCMassLocalPose().q;
+                return floatArrayFromVector(
+                    {rotation.x, rotation.y, rotation.z, rotation.w});
+            },
+            "Return the center-of-mass frame rotation as an XYZW quaternion.")
+        .def(
+            "get_mass_space_inertia",
+            [](const PxRigidDynamic& self) {
+                const PxVec3 inertia = self.getMassSpaceInertiaTensor();
+                return floatArrayFromVector({inertia.x, inertia.y, inertia.z});
+            },
+            "Return the diagonal inertia tensor in the center-of-mass frame.")
+        .def(
+            "get_mass_space_inverse_inertia",
+            [](const PxRigidDynamic& self) {
+                const PxVec3 inertia = self.getMassSpaceInvInertiaTensor();
+                return floatArrayFromVector({inertia.x, inertia.y, inertia.z});
+            },
+            "Return inverse diagonal inertia in the center-of-mass frame.")
         .def(
             "set_kinematic",
             [](PxRigidDynamic& self, bool enabled) {

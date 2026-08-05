@@ -74,6 +74,31 @@ def main():
             raise AssertionError("contact sensor impulses violate action/reaction")
         if torch.count_nonzero(sensor.net_impulse[1]).item() != 0:
             raise AssertionError("separated env reported a false impulse")
+        points = sensor.contact_points()
+        if points.position_w.device.type != "cuda":
+            raise AssertionError("packed contact points were copied off CUDA")
+        if points.count <= 0 or torch.any(points.environment != 0):
+            raise AssertionError("sensor contact-point selection mismatch")
+        point_impulse = points.normal_impulse_w.sum(dim=0)
+        if not torch.allclose(point_impulse, impulse, rtol=1e-4, atol=1e-7):
+            raise AssertionError("packed contact points do not sum to net impulse")
+        if not torch.isfinite(points.position_w).all():
+            raise AssertionError("packed contact positions contain non-finite values")
+        wrench = points.normal_impulse_wrench_about(torch.zeros(3, device="cuda:0"))
+        expected_angular_impulse = torch.linalg.cross(
+            points.position_w, points.normal_impulse_w, dim=-1
+        )
+        if not torch.allclose(
+            wrench[:, :3], points.normal_impulse_w
+        ) or not torch.allclose(wrench[:, 3:], expected_angular_impulse):
+            raise AssertionError("contact wrench reference-point calculation mismatch")
+        if not torch.allclose(
+            torch.linalg.vector_norm(points.normal_w, dim=1),
+            torch.ones(points.count, device=points.normal_w.device),
+            rtol=1e-4,
+            atol=1e-4,
+        ):
+            raise AssertionError("packed contact normals are not unit length")
         if not torch.allclose(force_sensor.impulse, sensor.net_impulse):
             raise AssertionError("ForceSensor impulse does not share contact semantics")
         expected_force = force_sensor.impulse / world.sim_dt

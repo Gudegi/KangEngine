@@ -6,7 +6,7 @@ from .._public import set_public_module
 from .cloner import GridCloner
 from .run_mode import SimulationPacer, SimulationRunConfig, SimulationRunMode
 from .runtime import ArticulationStateView, SimulationRuntime
-from .sensor import ContactSensor, ContactSensorData, ForceSensor
+from .sensor import ContactPointData, ContactSensor, ContactSensorData, ForceSensor
 from .timing import SimulationTimingConfig
 from .world import (
     ControlMode,
@@ -21,6 +21,7 @@ from .world import (
 __all__ = [
     "ControlMode",
     "ArticulationStateView",
+    "ContactPointData",
     "ContactSensor",
     "ContactSensorData",
     "ForceSensor",
@@ -41,6 +42,7 @@ __all__ = [
 for _type in (
     ArticulationStateView,
     ControlMode,
+    ContactPointData,
     ContactSensor,
     ContactSensorData,
     ForceSensor,

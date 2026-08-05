@@ -770,6 +770,9 @@ class GPUStateBackend:
         self._link_index_tensors = {}
         self._dof_index_tensors = {}
         self._frame_cache = {}
+        # Lazy caches used only by PhysX articulation dynamics compute APIs.
+        self._articulation_dynamics_generation = 0
+        self._articulation_dynamics_computed_generation = {}
 
     def set_metadata_backend(self, backend):
         self._metadata_backend = backend
@@ -781,6 +784,19 @@ class GPUStateBackend:
 
     def clear_frame_cache(self):
         self._frame_cache.clear()
+
+    def invalidate_articulation_dynamics(self):
+        """Mark on-demand articulation dynamics results stale."""
+        self._articulation_dynamics_generation += 1
+
+    def _ensure_articulation_dynamics_computed(self, key, compute, callback):
+        if not compute:
+            return
+        generation = self._articulation_dynamics_generation
+        if self._articulation_dynamics_computed_generation.get(key) == generation:
+            return
+        callback()
+        self._articulation_dynamics_computed_generation[key] = generation
 
     def refresh_frame_cache(
         self,
@@ -1088,6 +1104,15 @@ class GPUStateBackend:
             self._frame_cache["rigid_data"] = raw
         return raw
 
+    def rigid_accelerations(self, *, fetch: bool = True):
+        gpu_system = self._require_gpu_system()
+        if fetch:
+            gpu_system.fetch_rigid_accelerations()
+        return gpu_system.rigid_accelerations()
+
+    def rigid_accelerations_tensor(self, *, fetch: bool = True):
+        return self.rigid_accelerations(fetch=fetch).torch()
+
     def articulation_link_data(self, *, fetch: bool = True):
         gpu_system = self._require_gpu_system()
         if fetch:
@@ -1159,6 +1184,97 @@ class GPUStateBackend:
 
     def articulation_link_incoming_joint_forces_tensor(self, *, fetch: bool = True):
         return self.articulation_link_incoming_joint_forces(fetch=fetch).torch()
+
+    def articulation_link_accelerations(self, *, fetch: bool = True):
+        gpu_system = self._require_gpu_system()
+        if fetch:
+            gpu_system.fetch_articulation_link_accelerations()
+        return gpu_system.articulation_link_accelerations()
+
+    def articulation_link_accelerations_tensor(self, *, fetch: bool = True):
+        return self.articulation_link_accelerations(fetch=fetch).torch()
+
+    def articulation_link_forces_tensor(self):
+        gpu_system = self._require_gpu_system()
+        gpu_system.prepare_articulation_link_commands()
+        return gpu_system.articulation_link_forces().torch()
+
+    def articulation_link_torques_tensor(self):
+        gpu_system = self._require_gpu_system()
+        gpu_system.prepare_articulation_link_commands()
+        return gpu_system.articulation_link_torques().torch()
+
+    def articulation_dense_jacobians(self, *, compute: bool = True):
+        gpu_system = self._require_gpu_system()
+        self._ensure_articulation_dynamics_computed(
+            "dense_jacobians",
+            compute,
+            gpu_system.compute_articulation_dense_jacobians,
+        )
+        return gpu_system.articulation_dense_jacobians()
+
+    def articulation_dense_jacobians_tensor(self, *, compute: bool = True):
+        return self.articulation_dense_jacobians(compute=compute).torch()
+
+    def articulation_mass_matrices(self, *, compute: bool = True):
+        gpu_system = self._require_gpu_system()
+        self._ensure_articulation_dynamics_computed(
+            "mass_matrices", compute, gpu_system.compute_articulation_mass_matrices
+        )
+        return gpu_system.articulation_mass_matrices()
+
+    def articulation_mass_matrices_tensor(self, *, compute: bool = True):
+        return self.articulation_mass_matrices(compute=compute).torch()
+
+    def articulation_gravity_forces(self, *, compute: bool = True):
+        gpu_system = self._require_gpu_system()
+        self._ensure_articulation_dynamics_computed(
+            "gravity_forces", compute, gpu_system.compute_articulation_gravity_forces
+        )
+        return gpu_system.articulation_gravity_forces()
+
+    def articulation_gravity_forces_tensor(self, *, compute: bool = True):
+        return self.articulation_gravity_forces(compute=compute).torch()
+
+    def articulation_coriolis_forces(self, *, compute: bool = True):
+        gpu_system = self._require_gpu_system()
+        self._ensure_articulation_dynamics_computed(
+            "coriolis_forces",
+            compute,
+            gpu_system.compute_articulation_coriolis_forces,
+        )
+        return gpu_system.articulation_coriolis_forces()
+
+    def articulation_coriolis_forces_tensor(self, *, compute: bool = True):
+        return self.articulation_coriolis_forces(compute=compute).torch()
+
+    def articulation_com_world_tensor(self, *, compute: bool = True):
+        gpu_system = self._require_gpu_system()
+        self._ensure_articulation_dynamics_computed(
+            "com_world", compute, gpu_system.compute_articulation_com_world
+        )
+        return gpu_system.articulation_com_world().torch()
+
+    def articulation_com_root_tensor(self, *, compute: bool = True):
+        gpu_system = self._require_gpu_system()
+        self._ensure_articulation_dynamics_computed(
+            "com_root", compute, gpu_system.compute_articulation_com_root
+        )
+        return gpu_system.articulation_com_root().torch()
+
+    def articulation_centroidal_momentum_matrices_tensor(self, *, compute: bool = True):
+        gpu_system = self._require_gpu_system()
+        self._ensure_articulation_dynamics_computed(
+            "centroidal", compute, gpu_system.compute_articulation_centroidal_momentum
+        )
+        return gpu_system.articulation_centroidal_momentum_matrices().torch()
+
+    def articulation_centroidal_bias_forces_tensor(self, *, compute: bool = True):
+        gpu_system = self._require_gpu_system()
+        self._ensure_articulation_dynamics_computed(
+            "centroidal", compute, gpu_system.compute_articulation_centroidal_momentum
+        )
+        return gpu_system.articulation_centroidal_bias_forces().torch()
 
     def contact_pairs(self, *, fetch: bool = True):
         gpu_system = self._require_gpu_system()

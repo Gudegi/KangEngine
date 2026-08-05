@@ -332,6 +332,7 @@ def main():
     config = physics.PhysicsConfig.z_up()
     config.enable_gpu = True
     config.enable_contact_reports = False
+    config.enable_body_accelerations = True
     world = physics.PhysicsWorld(config)
 
     initial_rows = []
@@ -381,6 +382,8 @@ def main():
         name="physics_rigid_data",
         stream_handle=stream_handle,
     )
+    if gpu_system.rigid_accelerations().ptr != 0:
+        raise AssertionError("rigid acceleration buffer was allocated eagerly")
 
     articulation_row = gpu_system.articulation_row(articulation)
     articulation_link_count = gpu_system.articulation_link_count(articulation_row)
@@ -779,6 +782,15 @@ def main():
         if step_index > 1:
             world.step()
         gpu_system.fetch_rigid_data()
+        gpu_system.fetch_rigid_accelerations()
+        acceleration_view = gpu_system.rigid_accelerations()
+        rigid_acceleration = acceleration_view.torch()
+        if tuple(rigid_acceleration.shape) != (RIGID_COUNT, 6):
+            raise AssertionError(
+                f"unexpected rigid acceleration shape {rigid_acceleration.shape}"
+            )
+        if not torch.isfinite(rigid_acceleration).all():
+            raise AssertionError("rigid acceleration contains non-finite values")
         if rigid_view.version != step_index:
             raise AssertionError(
                 f"expected rigid data version {step_index}, got {rigid_view.version}"

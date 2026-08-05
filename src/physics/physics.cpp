@@ -288,6 +288,9 @@ PhysicsWorld::PhysicsWorld(PhysicsConfig config) {
     if (config.enableStabilization) {
         sceneDesc.flags |= PxSceneFlag::eENABLE_STABILIZATION;
     }
+    if (config.enableBodyAccelerations) {
+        sceneDesc.flags |= PxSceneFlag::eENABLE_BODY_ACCELERATIONS;
+    }
     if (config.enableGPU) {
 #ifdef __APPLE__
         fmt::print(

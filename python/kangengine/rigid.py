@@ -128,7 +128,19 @@ def _node_names(data):
 
 def _geom_type_name(geom):
     value = geom.type
-    return getattr(value, "name", str(value).split(".")[-1])
+    name = getattr(value, "name", str(value).split(".")[-1])
+    map = {
+        "CAPSULE": "Capsule",
+        "CYLINDER": "Cylinder",
+        "SPHERE": "Sphere",
+        "BOX": "Box",
+    }
+    try:
+        return map[str(name).upper()]
+    except KeyError as error:
+        raise ValueError(
+            f"unsupported rigid collision geometry type: {name}"
+        ) from error
 
 
 def _vec3(value):

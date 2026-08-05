@@ -48,6 +48,7 @@ struct PhysicsConfig {
     float friction[3] = {1.0f, 1.0f, 0.0f};
     PxSimulationFilterShader filterShader = PxDefaultSimulationFilterShader;
     bool enableContactReports = true;
+    bool enableBodyAccelerations = false;
     uint32_t cpuDispatcherThreads = 4;
     // PxSolverType::Enum solverType = PxSolverType::ePGS;
     PxSolverType::Enum solverType = PxSolverType::eTGS;

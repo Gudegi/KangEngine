@@ -45,6 +45,14 @@ constexpr int kArticulationReadTargetJointVelocity =
     PxArticulationGPUAPIReadType::eJOINT_TARGET_VELOCITY;
 constexpr int kArticulationReadTargetJointPosition =
     PxArticulationGPUAPIReadType::eJOINT_TARGET_POSITION;
+constexpr int kArticulationReadLinkLinearAcceleration =
+    PxArticulationGPUAPIReadType::eLINK_LINEAR_ACCELERATION;
+constexpr int kArticulationReadLinkAngularAcceleration =
+    PxArticulationGPUAPIReadType::eLINK_ANGULAR_ACCELERATION;
+constexpr int kRigidReadLinearAcceleration =
+    PxRigidDynamicGPUAPIReadType::eLINEAR_ACCELERATION;
+constexpr int kRigidReadAngularAcceleration =
+    PxRigidDynamicGPUAPIReadType::eANGULAR_ACCELERATION;
 constexpr int kArticulationWriteJointPosition =
     PxArticulationGPUAPIWriteType::eJOINT_POSITION;
 constexpr int kArticulationWriteJointVelocity =
@@ -55,6 +63,10 @@ constexpr int kArticulationWriteTargetJointVelocity =
     PxArticulationGPUAPIWriteType::eJOINT_TARGET_VELOCITY;
 constexpr int kArticulationWriteTargetJointPosition =
     PxArticulationGPUAPIWriteType::eJOINT_TARGET_POSITION;
+constexpr int kArticulationWriteLinkForce =
+    PxArticulationGPUAPIWriteType::eLINK_FORCE;
+constexpr int kArticulationWriteLinkTorque =
+    PxArticulationGPUAPIWriteType::eLINK_TORQUE;
 constexpr auto kArticulationWriteRootPose =
     PxArticulationGPUAPIWriteType::eROOT_GLOBAL_POSE;
 constexpr auto kArticulationWriteRootLinearVelocity =
@@ -63,6 +75,20 @@ constexpr auto kArticulationWriteRootAngularVelocity =
     PxArticulationGPUAPIWriteType::eROOT_ANGULAR_VELOCITY;
 constexpr auto kArticulationComputeUpdateKinematic =
     PxArticulationGPUAPIComputeType::eUPDATE_KINEMATIC;
+constexpr int kArticulationComputeDenseJacobians =
+    PxArticulationGPUAPIComputeType::eDENSE_JACOBIANS;
+constexpr int kArticulationComputeMassMatrices =
+    PxArticulationGPUAPIComputeType::eMASS_MATRICES;
+constexpr int kArticulationComputeGravityForces =
+    PxArticulationGPUAPIComputeType::eGRAVITY_COMPENSATION;
+constexpr int kArticulationComputeCoriolisForces =
+    PxArticulationGPUAPIComputeType::eCORIOLIS_AND_CENTRIFUGAL_COMPENSATION;
+constexpr int kArticulationComputeComWorld =
+    PxArticulationGPUAPIComputeType::eARTICULATION_COMS_WORLD_FRAME;
+constexpr int kArticulationComputeComRoot =
+    PxArticulationGPUAPIComputeType::eARTICULATION_COMS_ROOT_FRAME;
+constexpr int kArticulationComputeCentroidalMomentum =
+    PxArticulationGPUAPIComputeType::eCENTROIDAL_MOMENTUM_MATRICES;
 #else
 constexpr int kArticulationReadJointPosition = 0;
 constexpr int kArticulationReadJointVelocity = 0;
@@ -70,11 +96,24 @@ constexpr int kArticulationReadJointAcceleration = 0;
 constexpr int kArticulationReadJointForce = 0;
 constexpr int kArticulationReadTargetJointVelocity = 0;
 constexpr int kArticulationReadTargetJointPosition = 0;
+constexpr int kArticulationReadLinkLinearAcceleration = 0;
+constexpr int kArticulationReadLinkAngularAcceleration = 0;
+constexpr int kRigidReadLinearAcceleration = 0;
+constexpr int kRigidReadAngularAcceleration = 0;
 constexpr int kArticulationWriteJointPosition = 0;
 constexpr int kArticulationWriteJointVelocity = 0;
 constexpr int kArticulationWriteJointForce = 0;
 constexpr int kArticulationWriteTargetJointVelocity = 0;
 constexpr int kArticulationWriteTargetJointPosition = 0;
+constexpr int kArticulationWriteLinkForce = 0;
+constexpr int kArticulationWriteLinkTorque = 0;
+constexpr int kArticulationComputeDenseJacobians = 0;
+constexpr int kArticulationComputeMassMatrices = 0;
+constexpr int kArticulationComputeGravityForces = 0;
+constexpr int kArticulationComputeCoriolisForces = 0;
+constexpr int kArticulationComputeComWorld = 0;
+constexpr int kArticulationComputeComRoot = 0;
+constexpr int kArticulationComputeCentroidalMomentum = 0;
 #endif
 
 #ifdef KANGENGINE_USE_CUDA
@@ -309,8 +348,7 @@ void PhysicsGpuSystem::init() {
 
         std::vector<PxArticulationGPUIndex> articulationIndices(
             _articulationCount);
-        _articulationLinkCounts.resize(_articulationCount);
-        _articulationDofCounts.resize(_articulationCount);
+        _articulationMetadata.resize(_articulationCount);
         _articulationRows.clear();
         for (uint32_t i = 0; i < _articulationCount; ++i) {
             auto* articulation = articulations[i];
@@ -318,21 +356,24 @@ void PhysicsGpuSystem::init() {
                 throw std::runtime_error(
                     "PhysicsGpuSystem found a null articulation");
             _articulationRows[articulation] = i;
-            _articulationLinkCounts[i] = articulation->getNbLinks();
-            _articulationDofCounts[i] = articulation->getDofs();
-            if (_articulationLinkCounts[i] > _articulationMaxLinks)
+            auto& metadata = _articulationMetadata[i];
+            metadata.linkCount = articulation->getNbLinks();
+            metadata.dofCount = articulation->getDofs();
+            metadata.fixedBase = articulation->getArticulationFlags().isSet(
+                PxArticulationFlag::eFIX_BASE);
+            if (metadata.linkCount > _articulationMaxLinks)
                 throw std::runtime_error(
                     "articulation link count exceeds PhysX GPU max links");
-            if (_articulationDofCounts[i] > _articulationMaxDofs)
+            if (metadata.dofCount > _articulationMaxDofs)
                 throw std::runtime_error(
                     "articulation DOF count exceeds PhysX GPU max DOFs");
             articulationIndices[i] = articulation->getGPUIndex();
             if (articulationIndices[i] == 0xFFFFFFFFu)
                 throw std::runtime_error(
                     "PhysicsGpuSystem found an invalid articulation GPU index");
-            std::vector<PxArticulationLink*> links(_articulationLinkCounts[i]);
+            std::vector<PxArticulationLink*> links(metadata.linkCount);
             const PxU32 linkCount =
-                articulation->getLinks(links.data(), _articulationLinkCounts[i]);
+                articulation->getLinks(links.data(), metadata.linkCount);
             for (PxU32 linkSlot = 0; linkSlot < linkCount; ++linkSlot) {
                 PxArticulationLink* link = links[linkSlot];
                 if (!link)
@@ -643,6 +684,7 @@ void PhysicsGpuSystem::setCudaStream(uint64_t streamHandle) {
     _views.rigidData.streamHandle = streamHandle;
     _views.rigidForce.streamHandle = streamHandle;
     _views.rigidTorque.streamHandle = streamHandle;
+    _views.rigidAccelerations.streamHandle = streamHandle;
     _views.articulationLinkData.streamHandle = streamHandle;
     _views.articulationJointPositions.streamHandle = streamHandle;
     _views.articulationJointVelocities.streamHandle = streamHandle;
@@ -651,6 +693,17 @@ void PhysicsGpuSystem::setCudaStream(uint64_t streamHandle) {
     _views.articulationTargetJointPositions.streamHandle = streamHandle;
     _views.articulationTargetJointVelocities.streamHandle = streamHandle;
     _views.articulationLinkIncomingJointForces.streamHandle = streamHandle;
+    _views.articulationLinkAccelerations.streamHandle = streamHandle;
+    _views.articulationLinkForces.streamHandle = streamHandle;
+    _views.articulationLinkTorques.streamHandle = streamHandle;
+    _views.articulationDenseJacobians.streamHandle = streamHandle;
+    _views.articulationMassMatrices.streamHandle = streamHandle;
+    _views.articulationGravityForces.streamHandle = streamHandle;
+    _views.articulationCoriolisForces.streamHandle = streamHandle;
+    _views.articulationComWorld.streamHandle = streamHandle;
+    _views.articulationComRoot.streamHandle = streamHandle;
+    _views.articulationCentroidalMomentumMatrices.streamHandle = streamHandle;
+    _views.articulationCentroidalBiasForces.streamHandle = streamHandle;
     _views.contactPairs.streamHandle = streamHandle;
     _views.contactPairCount.streamHandle = streamHandle;
     _views.contactPairHeaders.streamHandle = streamHandle;
@@ -682,17 +735,31 @@ uint32_t PhysicsGpuSystem::articulationRow(
 uint32_t
 PhysicsGpuSystem::articulationLinkCount(uint32_t articulationRow) const {
     checkInitialized();
-    if (articulationRow >= _articulationLinkCounts.size())
+    if (articulationRow >= _articulationMetadata.size())
         throw std::runtime_error("articulation row is out of range");
-    return _articulationLinkCounts[articulationRow];
+    return _articulationMetadata[articulationRow].linkCount;
 }
 
 uint32_t
 PhysicsGpuSystem::articulationDofCount(uint32_t articulationRow) const {
     checkInitialized();
-    if (articulationRow >= _articulationDofCounts.size())
+    if (articulationRow >= _articulationMetadata.size())
         throw std::runtime_error("articulation row is out of range");
-    return _articulationDofCounts[articulationRow];
+    return _articulationMetadata[articulationRow].dofCount;
+}
+
+uint32_t PhysicsGpuSystem::articulationGeneralizedDofCount(
+    uint32_t articulationRow) const {
+    const uint32_t dofs = articulationDofCount(articulationRow);
+    return dofs + (_articulationMetadata[articulationRow].fixedBase ? 0u : 6u);
+}
+
+uint32_t PhysicsGpuSystem::articulationJacobianRowCount(
+    uint32_t articulationRow) const {
+    const uint32_t links = articulationLinkCount(articulationRow);
+    return (_articulationMetadata[articulationRow].fixedBase ? links - 1u
+                                                             : links) *
+           6u;
 }
 
 void PhysicsGpuSystem::stepStart() { checkInitialized(); }
@@ -773,6 +840,85 @@ void PhysicsGpuSystem::fetchRigidData() {
 #endif
 #else
     notImplemented("fetchRigidData");
+#endif
+}
+
+void PhysicsGpuSystem::fetchRigidAccelerations() {
+    checkInitialized();
+#ifdef KANGENGINE_USE_CUDA
+    if (_rigidCount == 0)
+        return;
+#ifndef KANGENGINE_HAS_PHYSX_DIRECT_GPU_API
+    throw std::runtime_error(
+        "PhysicsGpuSystem requires PhysX Direct GPU API support");
+#else
+    if (!_world->getScene()->getFlags().isSet(
+            PxSceneFlag::eENABLE_BODY_ACCELERATIONS))
+        throw std::runtime_error(
+            "rigid acceleration requires "
+            "PhysicsConfig.enable_body_accelerations=True");
+
+    checkCuda(cudaSetDevice(_config.cudaDeviceId), "cudaSetDevice");
+    auto stream = reinterpret_cast<cudaStream_t>(_streamHandle);
+    auto copyEvent = reinterpret_cast<cudaEvent_t>(_copyEvent);
+    auto readyEvent = reinterpret_cast<cudaEvent_t>(_readyEvent);
+    auto physxCopyEvent = reinterpret_cast<CUevent>(_copyEvent);
+    if (!_rigidAccelerationBuffer) {
+        const size_t bytes = sizeof(float) * 6 * _rigidCount;
+        checkCuda(cudaMalloc(&_rigidAccelerationBuffer, bytes),
+                  "cudaMalloc(rigid accelerations)");
+        checkCuda(cudaMalloc(&_rigidAccelerationScratchBuffer,
+                             sizeof(PxVec3) * 2 * _rigidCount),
+                  "cudaMalloc(rigid acceleration scratch)");
+        setFloatCudaView(_views.rigidAccelerations,
+                         _rigidAccelerationBuffer, _config.cudaDeviceId,
+                         _rigidCount, 6, _streamHandle,
+                         reinterpret_cast<uint64_t>(_readyEvent),
+                         "physics_rigid_accelerations");
+    }
+
+    auto* scratch =
+        static_cast<unsigned char*>(_rigidAccelerationScratchBuffer);
+    void* linearAccelerationBuffer = scratch;
+    void* angularAccelerationBuffer =
+        scratch + sizeof(PxVec3) * _rigidCount;
+    PxDirectGPUAPI& directGpuApi = _world->getScene()->getDirectGPUAPI();
+    auto* gpuIndices = static_cast<PxRigidDynamicGPUIndex*>(_rigidIndexBuffer);
+    if (!directGpuApi.getRigidDynamicData(
+            linearAccelerationBuffer, gpuIndices,
+            static_cast<PxRigidDynamicGPUAPIReadType::Enum>(
+                kRigidReadLinearAcceleration),
+            _rigidCount, nullptr, physxCopyEvent))
+        throw std::runtime_error(
+            "PxDirectGPUAPI::getRigidDynamicData(linear acceleration) failed");
+    if (!directGpuApi.getRigidDynamicData(
+            angularAccelerationBuffer, gpuIndices,
+            static_cast<PxRigidDynamicGPUAPIReadType::Enum>(
+                kRigidReadAngularAcceleration),
+            _rigidCount, nullptr, physxCopyEvent))
+        throw std::runtime_error(
+            "PxDirectGPUAPI::getRigidDynamicData(angular acceleration) failed");
+    checkCuda(cudaStreamWaitEvent(stream, copyEvent, 0),
+              "cudaStreamWaitEvent(PhysX rigid acceleration copy)");
+
+    auto* destination = static_cast<unsigned char*>(_rigidAccelerationBuffer);
+    constexpr size_t destinationPitch = sizeof(float) * 6;
+    checkCuda(cudaMemcpy2DAsync(
+                  destination, destinationPitch, linearAccelerationBuffer,
+                  sizeof(PxVec3), sizeof(float) * 3, _rigidCount,
+                  cudaMemcpyDeviceToDevice, stream),
+              "cudaMemcpy2DAsync(rigid linear acceleration)");
+    checkCuda(cudaMemcpy2DAsync(
+                  destination + sizeof(float) * 3, destinationPitch,
+                  angularAccelerationBuffer, sizeof(PxVec3), sizeof(float) * 3,
+                  _rigidCount, cudaMemcpyDeviceToDevice, stream),
+              "cudaMemcpy2DAsync(rigid angular acceleration)");
+    checkCuda(cudaEventRecord(readyEvent, stream),
+              "cudaEventRecord(rigid accelerations ready)");
+    ++_views.rigidAccelerations.version;
+#endif
+#else
+    notImplemented("fetchRigidAccelerations");
 #endif
 }
 
@@ -1030,6 +1176,335 @@ void PhysicsGpuSystem::fetchArticulationLinkIncomingJointForce() {
 #endif
 #else
     notImplemented("fetchArticulationLinkIncomingJointForce");
+#endif
+}
+
+void PhysicsGpuSystem::fetchArticulationLinkAccelerations() {
+    checkInitialized();
+#ifdef KANGENGINE_USE_CUDA
+    if (_articulationCount == 0 || _articulationMaxLinks == 0)
+        return;
+#ifndef KANGENGINE_HAS_PHYSX_DIRECT_GPU_API
+    throw std::runtime_error(
+        "PhysicsGpuSystem requires PhysX Direct GPU API support");
+#else
+    checkCuda(cudaSetDevice(_config.cudaDeviceId), "cudaSetDevice");
+    auto stream = reinterpret_cast<cudaStream_t>(_streamHandle);
+    auto copyEvent = reinterpret_cast<cudaEvent_t>(_copyEvent);
+    auto readyEvent = reinterpret_cast<cudaEvent_t>(_readyEvent);
+    const size_t paddedLinks = static_cast<size_t>(_articulationCount) *
+                               _articulationMaxLinks;
+    if (!_articulationLinkAccelerationBuffer) {
+        checkCuda(cudaMalloc(&_articulationLinkAccelerationBuffer,
+                             sizeof(float) * 6 * paddedLinks),
+                  "cudaMalloc(articulation link accelerations)");
+        checkCuda(cudaMalloc(&_articulationLinkAccelerationScratchBuffer,
+                             sizeof(PxVec3) * 2 * paddedLinks),
+                  "cudaMalloc(articulation link acceleration scratch)");
+        setFloatCudaView3D(
+            _views.articulationLinkAccelerations,
+            _articulationLinkAccelerationBuffer, _config.cudaDeviceId,
+            _articulationCount, _articulationMaxLinks, 6, _streamHandle,
+            reinterpret_cast<uint64_t>(_readyEvent),
+            "physics_articulation_link_accelerations");
+    }
+
+    auto* scratch =
+        static_cast<unsigned char*>(_articulationLinkAccelerationScratchBuffer);
+    void* linearBuffer = scratch;
+    void* angularBuffer = scratch + sizeof(PxVec3) * paddedLinks;
+    PxDirectGPUAPI& api = _world->getScene()->getDirectGPUAPI();
+    auto* indices =
+        static_cast<PxArticulationGPUIndex*>(_articulationIndexBuffer);
+    if (!api.getArticulationData(
+            linearBuffer, indices,
+            static_cast<PxArticulationGPUAPIReadType::Enum>(
+                kArticulationReadLinkLinearAcceleration),
+            _articulationCount, nullptr,
+            reinterpret_cast<CUevent>(_copyEvent)))
+        throw std::runtime_error(
+            "PxDirectGPUAPI::getArticulationData(link linear acceleration) "
+            "failed");
+    if (!api.getArticulationData(
+            angularBuffer, indices,
+            static_cast<PxArticulationGPUAPIReadType::Enum>(
+                kArticulationReadLinkAngularAcceleration),
+            _articulationCount, nullptr,
+            reinterpret_cast<CUevent>(_copyEvent)))
+        throw std::runtime_error(
+            "PxDirectGPUAPI::getArticulationData(link angular acceleration) "
+            "failed");
+    checkCuda(cudaStreamWaitEvent(stream, copyEvent, 0),
+              "cudaStreamWaitEvent(articulation link acceleration copy)");
+    auto* destination =
+        static_cast<unsigned char*>(_articulationLinkAccelerationBuffer);
+    constexpr size_t pitch = sizeof(float) * 6;
+    checkCuda(cudaMemcpy2DAsync(destination, pitch, linearBuffer,
+                                sizeof(PxVec3), sizeof(float) * 3, paddedLinks,
+                                cudaMemcpyDeviceToDevice, stream),
+              "cudaMemcpy2DAsync(link linear acceleration)");
+    checkCuda(cudaMemcpy2DAsync(destination + sizeof(float) * 3, pitch,
+                                angularBuffer, sizeof(PxVec3),
+                                sizeof(float) * 3, paddedLinks,
+                                cudaMemcpyDeviceToDevice, stream),
+              "cudaMemcpy2DAsync(link angular acceleration)");
+    checkCuda(cudaEventRecord(readyEvent, stream),
+              "cudaEventRecord(articulation link accelerations ready)");
+    ++_views.articulationLinkAccelerations.version;
+#endif
+#else
+    notImplemented("fetchArticulationLinkAccelerations");
+#endif
+}
+
+void PhysicsGpuSystem::prepareArticulationLinkCommands() {
+    checkInitialized();
+#ifdef KANGENGINE_USE_CUDA
+    if (_articulationCount == 0 || _articulationMaxLinks == 0 ||
+        _articulationLinkForceBuffer)
+        return;
+    checkCuda(cudaSetDevice(_config.cudaDeviceId), "cudaSetDevice");
+    const size_t count = static_cast<size_t>(_articulationCount) *
+                         _articulationMaxLinks * 3;
+    const size_t bytes = sizeof(float) * count;
+    checkCuda(cudaMalloc(&_articulationLinkForceBuffer, bytes),
+              "cudaMalloc(articulation link forces)");
+    checkCuda(cudaMalloc(&_articulationLinkTorqueBuffer, bytes),
+              "cudaMalloc(articulation link torques)");
+    checkCuda(cudaMemset(_articulationLinkForceBuffer, 0, bytes),
+              "cudaMemset(articulation link forces)");
+    checkCuda(cudaMemset(_articulationLinkTorqueBuffer, 0, bytes),
+              "cudaMemset(articulation link torques)");
+    const uint64_t ready = reinterpret_cast<uint64_t>(_readyEvent);
+    setFloatCudaView3D(_views.articulationLinkForces,
+                       _articulationLinkForceBuffer, _config.cudaDeviceId,
+                       _articulationCount, _articulationMaxLinks, 3,
+                       _streamHandle, ready, "physics_articulation_link_forces");
+    setFloatCudaView3D(
+        _views.articulationLinkTorques, _articulationLinkTorqueBuffer,
+        _config.cudaDeviceId, _articulationCount, _articulationMaxLinks, 3,
+        _streamHandle, ready, "physics_articulation_link_torques");
+#else
+    notImplemented("prepareArticulationLinkCommands");
+#endif
+}
+
+namespace {
+void applyDenseArticulationLinkCommand(
+    PhysicsWorld* world, void* command, void* indexBuffer, uint32_t count,
+    int writeType, int deviceId, uint64_t streamHandle, void* startEventPtr,
+    void* finishEventPtr, Sim::GpuArrayView& view, const char* name) {
+#if defined(KANGENGINE_USE_CUDA) && defined(KANGENGINE_HAS_PHYSX_DIRECT_GPU_API)
+    if (!command || count == 0)
+        return;
+    checkCuda(cudaSetDevice(deviceId), "cudaSetDevice");
+    auto stream = reinterpret_cast<cudaStream_t>(streamHandle);
+    auto startEvent = reinterpret_cast<cudaEvent_t>(startEventPtr);
+    auto finishEvent = reinterpret_cast<cudaEvent_t>(finishEventPtr);
+    checkCuda(cudaEventRecord(startEvent, stream), name);
+    PxDirectGPUAPI& api = world->getScene()->getDirectGPUAPI();
+    if (!api.setArticulationData(
+            command, static_cast<PxArticulationGPUIndex*>(indexBuffer),
+            static_cast<PxArticulationGPUAPIWriteType::Enum>(writeType), count,
+            reinterpret_cast<CUevent>(startEventPtr),
+            reinterpret_cast<CUevent>(finishEventPtr)))
+        throw std::runtime_error(std::string(name) + " failed");
+    checkCuda(cudaStreamWaitEvent(stream, finishEvent, 0), name);
+    ++view.version;
+#else
+    (void)world;
+    (void)command;
+    (void)indexBuffer;
+    (void)count;
+    (void)writeType;
+    (void)deviceId;
+    (void)streamHandle;
+    (void)startEventPtr;
+    (void)finishEventPtr;
+    (void)view;
+    throw std::runtime_error(std::string(name) +
+                             " requires PhysX Direct GPU API support");
+#endif
+}
+} // namespace
+
+void PhysicsGpuSystem::applyArticulationLinkForces() {
+    prepareArticulationLinkCommands();
+    applyDenseArticulationLinkCommand(
+        _world, _articulationLinkForceBuffer, _articulationIndexBuffer,
+        _articulationCount, kArticulationWriteLinkForce, _config.cudaDeviceId,
+        _streamHandle, _copyEvent, _readyEvent, _views.articulationLinkForces,
+        "apply articulation link forces");
+}
+
+void PhysicsGpuSystem::applyArticulationLinkTorques() {
+    prepareArticulationLinkCommands();
+    applyDenseArticulationLinkCommand(
+        _world, _articulationLinkTorqueBuffer, _articulationIndexBuffer,
+        _articulationCount, kArticulationWriteLinkTorque, _config.cudaDeviceId,
+        _streamHandle, _copyEvent, _readyEvent, _views.articulationLinkTorques,
+        "apply articulation link torques");
+}
+
+void PhysicsGpuSystem::computeArticulationDynamicsBuffer(
+    void*& buffer, Sim::GpuArrayView& view, uint32_t blockFloatCount,
+    int operation, const char* name) {
+    checkInitialized();
+#ifdef KANGENGINE_USE_CUDA
+    if (_articulationCount == 0 || blockFloatCount == 0)
+        return;
+#ifndef KANGENGINE_HAS_PHYSX_DIRECT_GPU_API
+    (void)buffer;
+    (void)view;
+    (void)operation;
+    (void)name;
+    throw std::runtime_error(
+        "PhysicsGpuSystem requires PhysX Direct GPU API support");
+#else
+    checkCuda(cudaSetDevice(_config.cudaDeviceId), "cudaSetDevice");
+    auto stream = reinterpret_cast<cudaStream_t>(_streamHandle);
+    auto startEvent = reinterpret_cast<cudaEvent_t>(_copyEvent);
+    auto finishEvent = reinterpret_cast<cudaEvent_t>(_readyEvent);
+    if (!buffer) {
+        const size_t bytes = sizeof(float) * _articulationCount *
+                             static_cast<size_t>(blockFloatCount);
+        checkCuda(cudaMalloc(&buffer, bytes), name);
+        checkCuda(cudaMemsetAsync(buffer, 0, bytes, stream), name);
+        setFloatCudaView(view, buffer, _config.cudaDeviceId,
+                         _articulationCount, blockFloatCount, _streamHandle,
+                         reinterpret_cast<uint64_t>(_readyEvent), name);
+    }
+
+    checkCuda(cudaEventRecord(startEvent, stream), name);
+    PxDirectGPUAPI& directGpuApi = _world->getScene()->getDirectGPUAPI();
+    auto* gpuIndices =
+        static_cast<PxArticulationGPUIndex*>(_articulationIndexBuffer);
+    if (!directGpuApi.computeArticulationData(
+            buffer, gpuIndices,
+            static_cast<PxArticulationGPUAPIComputeType::Enum>(operation),
+            _articulationCount, reinterpret_cast<CUevent>(_copyEvent),
+            reinterpret_cast<CUevent>(_readyEvent)))
+        throw std::runtime_error(std::string(name) + " failed");
+    checkCuda(cudaStreamWaitEvent(stream, finishEvent, 0), name);
+    ++view.version;
+#endif
+#else
+    (void)buffer;
+    (void)view;
+    (void)blockFloatCount;
+    (void)operation;
+    notImplemented(name);
+#endif
+}
+
+void PhysicsGpuSystem::computeArticulationDenseJacobians() {
+    computeArticulationDynamicsBuffer(
+        _articulationDenseJacobianBuffer, _views.articulationDenseJacobians,
+        articulationMaxJacobianRows() * articulationMaxGeneralizedDofs(),
+        kArticulationComputeDenseJacobians, "articulation dense Jacobians");
+}
+
+void PhysicsGpuSystem::computeArticulationMassMatrices() {
+    const uint32_t n = articulationMaxGeneralizedDofs();
+    computeArticulationDynamicsBuffer(
+        _articulationMassMatrixBuffer, _views.articulationMassMatrices, n * n,
+        kArticulationComputeMassMatrices, "articulation mass matrices");
+}
+
+void PhysicsGpuSystem::computeArticulationGravityForces() {
+    computeArticulationDynamicsBuffer(
+        _articulationGravityForceBuffer, _views.articulationGravityForces,
+        articulationMaxGeneralizedDofs(), kArticulationComputeGravityForces,
+        "articulation gravity forces");
+}
+
+void PhysicsGpuSystem::computeArticulationCoriolisForces() {
+    computeArticulationDynamicsBuffer(
+        _articulationCoriolisForceBuffer, _views.articulationCoriolisForces,
+        articulationMaxGeneralizedDofs(), kArticulationComputeCoriolisForces,
+        "articulation Coriolis forces");
+}
+
+void PhysicsGpuSystem::computeArticulationComWorld() {
+    computeArticulationDynamicsBuffer(
+        _articulationComWorldBuffer, _views.articulationComWorld, 3,
+        kArticulationComputeComWorld, "articulation COM world");
+}
+
+void PhysicsGpuSystem::computeArticulationComRoot() {
+    computeArticulationDynamicsBuffer(
+        _articulationComRootBuffer, _views.articulationComRoot, 3,
+        kArticulationComputeComRoot, "articulation COM root");
+}
+
+void PhysicsGpuSystem::computeArticulationCentroidalMomentum() {
+    checkInitialized();
+#ifdef KANGENGINE_USE_CUDA
+    if (_articulationCount == 0)
+        return;
+#ifndef KANGENGINE_HAS_PHYSX_DIRECT_GPU_API
+    throw std::runtime_error(
+        "PhysicsGpuSystem requires PhysX Direct GPU API support");
+#else
+    for (const auto& metadata : _articulationMetadata) {
+        if (metadata.fixedBase)
+            throw std::runtime_error(
+                "centroidal momentum requires floating-base articulations");
+    }
+    checkCuda(cudaSetDevice(_config.cudaDeviceId), "cudaSetDevice");
+    auto stream = reinterpret_cast<cudaStream_t>(_streamHandle);
+    auto startEvent = reinterpret_cast<cudaEvent_t>(_copyEvent);
+    auto finishEvent = reinterpret_cast<cudaEvent_t>(_readyEvent);
+    const size_t n = articulationMaxGeneralizedDofs();
+    const size_t massCount = static_cast<size_t>(_articulationCount) * n * n;
+    const size_t coriolisCount = static_cast<size_t>(_articulationCount) * n;
+    const size_t matrixCount = static_cast<size_t>(_articulationCount) * 6 * n;
+    const size_t biasCount = static_cast<size_t>(_articulationCount) * 6;
+    if (!_articulationCentroidalWorkspaceBuffer) {
+        const size_t total = massCount + coriolisCount + matrixCount + biasCount;
+        checkCuda(cudaMalloc(&_articulationCentroidalWorkspaceBuffer,
+                             sizeof(float) * total),
+                  "cudaMalloc(articulation centroidal workspace)");
+        auto* base = static_cast<float*>(_articulationCentroidalWorkspaceBuffer);
+        setFloatCudaView(
+            _views.articulationCentroidalMomentumMatrices,
+            base + massCount + coriolisCount, _config.cudaDeviceId,
+            _articulationCount, static_cast<uint32_t>(6 * n), _streamHandle,
+            reinterpret_cast<uint64_t>(_readyEvent),
+            "physics_articulation_centroidal_momentum_matrices");
+        setFloatCudaView(
+            _views.articulationCentroidalBiasForces,
+            base + massCount + coriolisCount + matrixCount,
+            _config.cudaDeviceId, _articulationCount, 6, _streamHandle,
+            reinterpret_cast<uint64_t>(_readyEvent),
+            "physics_articulation_centroidal_bias_forces");
+    }
+
+    auto* base = static_cast<float*>(_articulationCentroidalWorkspaceBuffer);
+    auto* indices =
+        static_cast<PxArticulationGPUIndex*>(_articulationIndexBuffer);
+    PxDirectGPUAPI& api = _world->getScene()->getDirectGPUAPI();
+    auto dispatch = [&](void* data, int operation, const char* name) {
+        checkCuda(cudaEventRecord(startEvent, stream), name);
+        if (!api.computeArticulationData(
+                data, indices,
+                static_cast<PxArticulationGPUAPIComputeType::Enum>(operation),
+                _articulationCount, reinterpret_cast<CUevent>(_copyEvent),
+                reinterpret_cast<CUevent>(_readyEvent)))
+            throw std::runtime_error(std::string(name) + " failed");
+        checkCuda(cudaStreamWaitEvent(stream, finishEvent, 0), name);
+    };
+    dispatch(base, kArticulationComputeMassMatrices,
+             "centroidal input mass matrices");
+    dispatch(base + massCount, kArticulationComputeCoriolisForces,
+             "centroidal input Coriolis forces");
+    dispatch(base, kArticulationComputeCentroidalMomentum,
+             "articulation centroidal momentum");
+    ++_views.articulationCentroidalMomentumMatrices.version;
+    ++_views.articulationCentroidalBiasForces.version;
+#endif
+#else
+    notImplemented("computeArticulationCentroidalMomentum");
 #endif
 }
 
@@ -1780,6 +2255,10 @@ void PhysicsGpuSystem::releaseGpuBuffers() {
         cudaFree(_rigidForceBuffer);
     if (_rigidTorqueBuffer)
         cudaFree(_rigidTorqueBuffer);
+    if (_rigidAccelerationBuffer)
+        cudaFree(_rigidAccelerationBuffer);
+    if (_rigidAccelerationScratchBuffer)
+        cudaFree(_rigidAccelerationScratchBuffer);
     if (_rigidScratchBuffer)
         cudaFree(_rigidScratchBuffer);
     if (_rigidIndexBuffer)
@@ -1806,6 +2285,28 @@ void PhysicsGpuSystem::releaseGpuBuffers() {
         cudaFree(_articulationTargetJointVelocityBuffer);
     if (_articulationLinkIncomingJointForceBuffer)
         cudaFree(_articulationLinkIncomingJointForceBuffer);
+    if (_articulationLinkAccelerationBuffer)
+        cudaFree(_articulationLinkAccelerationBuffer);
+    if (_articulationLinkAccelerationScratchBuffer)
+        cudaFree(_articulationLinkAccelerationScratchBuffer);
+    if (_articulationLinkForceBuffer)
+        cudaFree(_articulationLinkForceBuffer);
+    if (_articulationLinkTorqueBuffer)
+        cudaFree(_articulationLinkTorqueBuffer);
+    if (_articulationDenseJacobianBuffer)
+        cudaFree(_articulationDenseJacobianBuffer);
+    if (_articulationMassMatrixBuffer)
+        cudaFree(_articulationMassMatrixBuffer);
+    if (_articulationGravityForceBuffer)
+        cudaFree(_articulationGravityForceBuffer);
+    if (_articulationCoriolisForceBuffer)
+        cudaFree(_articulationCoriolisForceBuffer);
+    if (_articulationComWorldBuffer)
+        cudaFree(_articulationComWorldBuffer);
+    if (_articulationComRootBuffer)
+        cudaFree(_articulationComRootBuffer);
+    if (_articulationCentroidalWorkspaceBuffer)
+        cudaFree(_articulationCentroidalWorkspaceBuffer);
     if (_contactPairBuffer)
         cudaFree(_contactPairBuffer);
     if (_contactPairCountBuffer)
@@ -1833,6 +2334,8 @@ void PhysicsGpuSystem::releaseGpuBuffers() {
     _rigidMirrorBuffer = nullptr;
     _rigidForceBuffer = nullptr;
     _rigidTorqueBuffer = nullptr;
+    _rigidAccelerationBuffer = nullptr;
+    _rigidAccelerationScratchBuffer = nullptr;
     _rigidRows.clear();
     _articulationCount = 0;
     _articulationMaxLinks = 0;
@@ -1848,6 +2351,17 @@ void PhysicsGpuSystem::releaseGpuBuffers() {
     _articulationTargetJointPositionBuffer = nullptr;
     _articulationTargetJointVelocityBuffer = nullptr;
     _articulationLinkIncomingJointForceBuffer = nullptr;
+    _articulationLinkAccelerationBuffer = nullptr;
+    _articulationLinkAccelerationScratchBuffer = nullptr;
+    _articulationLinkForceBuffer = nullptr;
+    _articulationLinkTorqueBuffer = nullptr;
+    _articulationDenseJacobianBuffer = nullptr;
+    _articulationMassMatrixBuffer = nullptr;
+    _articulationGravityForceBuffer = nullptr;
+    _articulationCoriolisForceBuffer = nullptr;
+    _articulationComWorldBuffer = nullptr;
+    _articulationComRootBuffer = nullptr;
+    _articulationCentroidalWorkspaceBuffer = nullptr;
     _contactPairBuffer = nullptr;
     _contactPairCountBuffer = nullptr;
     _contactPairHeaderBuffer = nullptr;
@@ -1860,14 +2374,14 @@ void PhysicsGpuSystem::releaseGpuBuffers() {
     _contactPointBuffer = nullptr;
     _contactPointCountBuffer = nullptr;
     _contactPointPairIndexBuffer = nullptr;
-    _articulationLinkCounts.clear();
-    _articulationDofCounts.clear();
+    _articulationMetadata.clear();
     _articulationRows.clear();
     _copyEvent = nullptr;
     _readyEvent = nullptr;
     _views.rigidData = {};
     _views.rigidForce = {};
     _views.rigidTorque = {};
+    _views.rigidAccelerations = {};
     _views.articulationLinkData = {};
     _views.articulationJointPositions = {};
     _views.articulationJointVelocities = {};
@@ -1876,6 +2390,17 @@ void PhysicsGpuSystem::releaseGpuBuffers() {
     _views.articulationTargetJointPositions = {};
     _views.articulationTargetJointVelocities = {};
     _views.articulationLinkIncomingJointForces = {};
+    _views.articulationLinkAccelerations = {};
+    _views.articulationLinkForces = {};
+    _views.articulationLinkTorques = {};
+    _views.articulationDenseJacobians = {};
+    _views.articulationMassMatrices = {};
+    _views.articulationGravityForces = {};
+    _views.articulationCoriolisForces = {};
+    _views.articulationComWorld = {};
+    _views.articulationComRoot = {};
+    _views.articulationCentroidalMomentumMatrices = {};
+    _views.articulationCentroidalBiasForces = {};
     _views.contactPairs = {};
     _views.contactPairCount = {};
     _views.contactPairHeaders = {};

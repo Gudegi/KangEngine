@@ -28,10 +28,17 @@ struct GpuPhysicsConfig {
     uint32_t maxContactPoints = DefaultMaxContactPoints;
 };
 
+struct ArticulationGpuMetadata {
+    uint32_t linkCount = 0;
+    uint32_t dofCount = 0;
+    bool fixedBase = false;
+};
+
 struct PhysicsGpuStateViews {
     Sim::GpuArrayView rigidData;
     Sim::GpuArrayView rigidForce;
     Sim::GpuArrayView rigidTorque;
+    Sim::GpuArrayView rigidAccelerations;
     Sim::GpuArrayView articulationLinkData;
     Sim::GpuArrayView articulationJointPositions;
     Sim::GpuArrayView articulationJointVelocities;
@@ -40,6 +47,17 @@ struct PhysicsGpuStateViews {
     Sim::GpuArrayView articulationTargetJointPositions;
     Sim::GpuArrayView articulationTargetJointVelocities;
     Sim::GpuArrayView articulationLinkIncomingJointForces;
+    Sim::GpuArrayView articulationLinkAccelerations;
+    Sim::GpuArrayView articulationLinkForces;
+    Sim::GpuArrayView articulationLinkTorques;
+    Sim::GpuArrayView articulationDenseJacobians;
+    Sim::GpuArrayView articulationMassMatrices;
+    Sim::GpuArrayView articulationGravityForces;
+    Sim::GpuArrayView articulationCoriolisForces;
+    Sim::GpuArrayView articulationComWorld;
+    Sim::GpuArrayView articulationComRoot;
+    Sim::GpuArrayView articulationCentroidalMomentumMatrices;
+    Sim::GpuArrayView articulationCentroidalBiasForces;
     Sim::GpuArrayView contactPairs;
     Sim::GpuArrayView contactPairCount;
     Sim::GpuArrayView contactPairHeaders;
@@ -96,6 +114,14 @@ class PhysicsGpuSystem {
     uint32_t articulationCount() const { return _articulationCount; }
     uint32_t articulationMaxLinks() const { return _articulationMaxLinks; }
     uint32_t articulationMaxDofs() const { return _articulationMaxDofs; }
+    uint32_t articulationGeneralizedDofCount(uint32_t articulationRow) const;
+    uint32_t articulationJacobianRowCount(uint32_t articulationRow) const;
+    uint32_t articulationMaxGeneralizedDofs() const {
+        return _articulationMaxDofs + 6;
+    }
+    uint32_t articulationMaxJacobianRows() const {
+        return _articulationMaxLinks * 6;
+    }
 
     void stepStart();
     void stepFinish();
@@ -106,6 +132,9 @@ class PhysicsGpuSystem {
     }
     const Sim::GpuArrayView& rigidForce() const { return _views.rigidForce; }
     const Sim::GpuArrayView& rigidTorque() const { return _views.rigidTorque; }
+    const Sim::GpuArrayView& rigidAccelerations() const {
+        return _views.rigidAccelerations;
+    }
     const Sim::GpuArrayView& articulationJointPositions() const {
         return _views.articulationJointPositions;
     }
@@ -126,6 +155,39 @@ class PhysicsGpuSystem {
     }
     const Sim::GpuArrayView& articulationLinkIncomingJointForces() const {
         return _views.articulationLinkIncomingJointForces;
+    }
+    const Sim::GpuArrayView& articulationLinkAccelerations() const {
+        return _views.articulationLinkAccelerations;
+    }
+    const Sim::GpuArrayView& articulationLinkForces() const {
+        return _views.articulationLinkForces;
+    }
+    const Sim::GpuArrayView& articulationLinkTorques() const {
+        return _views.articulationLinkTorques;
+    }
+    const Sim::GpuArrayView& articulationDenseJacobians() const {
+        return _views.articulationDenseJacobians;
+    }
+    const Sim::GpuArrayView& articulationMassMatrices() const {
+        return _views.articulationMassMatrices;
+    }
+    const Sim::GpuArrayView& articulationGravityForces() const {
+        return _views.articulationGravityForces;
+    }
+    const Sim::GpuArrayView& articulationCoriolisForces() const {
+        return _views.articulationCoriolisForces;
+    }
+    const Sim::GpuArrayView& articulationComWorld() const {
+        return _views.articulationComWorld;
+    }
+    const Sim::GpuArrayView& articulationComRoot() const {
+        return _views.articulationComRoot;
+    }
+    const Sim::GpuArrayView& articulationCentroidalMomentumMatrices() const {
+        return _views.articulationCentroidalMomentumMatrices;
+    }
+    const Sim::GpuArrayView& articulationCentroidalBiasForces() const {
+        return _views.articulationCentroidalBiasForces;
     }
     const Sim::GpuArrayView& contactPairs() const {
         return _views.contactPairs;
@@ -150,6 +212,7 @@ class PhysicsGpuSystem {
     }
 
     void fetchRigidData();
+    void fetchRigidAccelerations();
     void fetchArticulationLinkPose();
     void fetchArticulationLinkVel();
     void fetchArticulationJointPositions();
@@ -159,6 +222,17 @@ class PhysicsGpuSystem {
     void fetchArticulationTargetJointPositions();
     void fetchArticulationTargetJointVelocities();
     void fetchArticulationLinkIncomingJointForce();
+    void fetchArticulationLinkAccelerations();
+    void prepareArticulationLinkCommands();
+    void applyArticulationLinkForces();
+    void applyArticulationLinkTorques();
+    void computeArticulationDenseJacobians();
+    void computeArticulationMassMatrices();
+    void computeArticulationGravityForces();
+    void computeArticulationCoriolisForces();
+    void computeArticulationComWorld();
+    void computeArticulationComRoot();
+    void computeArticulationCentroidalMomentum();
     void fetchContactPairs();
     void clearContactData();
 
@@ -203,6 +277,10 @@ class PhysicsGpuSystem {
                                    void*& angularVelocityBuffer,
                                    void*& gpuIndices, uint32_t& applyCount);
     void applyRigidCommand(const Sim::GpuArrayView* indices, bool torque);
+    void computeArticulationDynamicsBuffer(void*& buffer,
+                                           Sim::GpuArrayView& view,
+                                           uint32_t blockFloatCount,
+                                           int operation, const char* name);
     void releaseGpuBuffers();
 
     PhysicsWorld* _world = nullptr;
@@ -216,6 +294,8 @@ class PhysicsGpuSystem {
     void* _rigidMirrorBuffer = nullptr;
     void* _rigidForceBuffer = nullptr;
     void* _rigidTorqueBuffer = nullptr;
+    void* _rigidAccelerationBuffer = nullptr;
+    void* _rigidAccelerationScratchBuffer = nullptr;
     std::unordered_map<const void*, uint32_t> _rigidRows;
     uint32_t _articulationCount = 0;
     uint32_t _articulationMaxLinks = 0;
@@ -231,6 +311,17 @@ class PhysicsGpuSystem {
     void* _articulationTargetJointPositionBuffer = nullptr;
     void* _articulationTargetJointVelocityBuffer = nullptr;
     void* _articulationLinkIncomingJointForceBuffer = nullptr;
+    void* _articulationLinkAccelerationBuffer = nullptr;
+    void* _articulationLinkAccelerationScratchBuffer = nullptr;
+    void* _articulationLinkForceBuffer = nullptr;
+    void* _articulationLinkTorqueBuffer = nullptr;
+    void* _articulationDenseJacobianBuffer = nullptr;
+    void* _articulationMassMatrixBuffer = nullptr;
+    void* _articulationGravityForceBuffer = nullptr;
+    void* _articulationCoriolisForceBuffer = nullptr;
+    void* _articulationComWorldBuffer = nullptr;
+    void* _articulationComRootBuffer = nullptr;
+    void* _articulationCentroidalWorkspaceBuffer = nullptr;
     void* _contactPairBuffer = nullptr;
     void* _contactPairCountBuffer = nullptr;
     void* _contactPairHeaderBuffer = nullptr;
@@ -243,8 +334,7 @@ class PhysicsGpuSystem {
     void* _contactPointBuffer = nullptr;
     void* _contactPointCountBuffer = nullptr;
     void* _contactPointPairIndexBuffer = nullptr;
-    std::vector<uint32_t> _articulationLinkCounts;
-    std::vector<uint32_t> _articulationDofCounts;
+    std::vector<ArticulationGpuMetadata> _articulationMetadata;
     std::unordered_map<const void*, uint32_t> _articulationRows;
     void* _copyEvent = nullptr;
     void* _readyEvent = nullptr;

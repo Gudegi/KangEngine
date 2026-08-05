@@ -542,10 +542,12 @@ class RigidVisual:
             mesh = _ke.geometry.create_cylinder_data(
                 float(size[0]), float(size[1] * 2.0), _ke.UpAxis.X, 24
             )
-        else:
+        elif geom_type == "Capsule":
             mesh = _ke.geometry.create_capsule_data(
                 float(size[0]), float(size[1] * 2.0), _ke.UpAxis.X, 24
             )
+        else:
+            raise ValueError(f"unsupported rigid visual geometry type: {geom_type}")
         prim.set_mesh_data(mesh)
         return prim
 

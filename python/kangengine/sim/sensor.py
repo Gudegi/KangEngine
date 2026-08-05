@@ -50,6 +50,50 @@ class _ContactSensorDescriptor:
 
 
 @dataclass(slots=True)
+class ContactPointData:
+    """Packed PhysX contact points selected by one contact sensor.
+
+    All Cartesian values retain the PhysX world-space convention.  ``normal_w``
+    and ``normal_impulse_w`` point toward the sensor body, so the two endpoints
+    of the same contact receive opposite vectors.
+    """
+
+    environment: torch.Tensor
+    body_slot: torch.Tensor
+    other_body_kind: torch.Tensor
+    other_row: torch.Tensor
+    other_body: torch.Tensor
+    position_w: torch.Tensor
+    normal_w: torch.Tensor
+    normal_impulse_w: torch.Tensor
+    separation: torch.Tensor
+
+    @property
+    def count(self) -> int:
+        return int(self.position_w.shape[0])
+
+    def normal_impulse_wrench_about(self, reference_position_w) -> torch.Tensor:
+        """Return ``[linear, angular]`` impulse about world-space points.
+
+        ``reference_position_w`` may be one ``(3,)`` point or one point per
+        packed contact. The angular part is
+        ``(position_w - reference_position_w) x normal_impulse_w``. This is not
+        a complete frictional wrench because PhysX's packed report exposes only
+        the normal solver impulse.
+        """
+        reference = torch.as_tensor(
+            reference_position_w,
+            dtype=self.position_w.dtype,
+            device=self.position_w.device,
+        )
+        lever_arm_w = self.position_w - reference
+        angular_impulse_w = torch.linalg.cross(
+            lever_arm_w, self.normal_impulse_w, dim=-1
+        )
+        return torch.cat((self.normal_impulse_w, angular_impulse_w), dim=-1)
+
+
+@dataclass(slots=True)
 class ContactSensorData:
     """Per-environment, per-body Torch contact state.
 
@@ -122,6 +166,22 @@ class ContactSensor:
     def net_force(self) -> torch.Tensor:
         """Shape: ``(N, B, 3)``."""
         return self.data.net_force
+
+    def contact_points(self, *, refresh: bool = False) -> ContactPointData:
+        """Return this sensor's current packed PhysX contact points on CUDA.
+
+        The returned tensors are intended as raw inputs for Python-side contact
+        filtering, frame conversion, friction-cone construction, and wrench
+        metrics. Boolean compaction allocates output tensors but does not copy
+        contact data to the host.
+        """
+        if refresh:
+            self.world.refresh_sensors()
+        elif self._contact_count is None:
+            raise RuntimeError(
+                f"contact sensor {self.name!r} has not been refreshed yet"
+            )
+        return self.world._contact_sensor_batch.contact_points(self)
 
     def refresh(self) -> ContactSensorData:
         """Refresh the world sensor batch and return this sensor's CUDA data."""
@@ -202,6 +262,7 @@ class _ContactSensorBatch:
         self._torch = None
         self._native_views = None
         self._storage = None
+        self._descriptors = None
 
     def mark_dirty(self):
         self._dirty = True
@@ -236,7 +297,100 @@ class _ContactSensorBatch:
         self._torch = None
         self._native_views = None
         self._storage = None
+        self._descriptors = None
         self._dirty = True
+
+    def contact_points(self, sensor) -> ContactPointData:
+        """Select raw packed contacts for one sensor entirely on CUDA."""
+        if self._dirty:
+            raise RuntimeError("contact sensor batch has not been prepared")
+        descriptor = self._descriptors[id(sensor)]
+        pair_refs = (
+            self.world.gpu_system.contact_pair_body_refs()
+            .torch()
+            .reshape(-1, 2, 3)
+        )
+        pair_count = self.world.gpu_system.contact_pair_count().torch().reshape(-1)
+        points = self.world.gpu_system.contact_points().torch().reshape(-1, 10)
+        point_count = (
+            self.world.gpu_system.contact_point_count().torch().reshape(-1)
+        )
+        point_pairs = (
+            self.world.gpu_system.contact_point_pair_indices().torch().reshape(-1)
+        )
+
+        device = points.device
+        point_indices = torch.arange(points.shape[0], device=device)
+        valid_point = point_indices < point_count[0]
+        safe_pair = point_pairs.to(torch.int64).clamp_(0, pair_refs.shape[0] - 1)
+        valid_point &= safe_pair < pair_count[0]
+        refs = pair_refs[safe_pair]
+
+        row_map = self._storage[1][
+            descriptor.row_map_offset : descriptor.row_map_offset
+            + descriptor.row_map_count
+        ]
+        body_map = self._storage[2][
+            descriptor.body_map_offset : descriptor.body_map_offset
+            + descriptor.body_map_count
+        ]
+
+        outputs = []
+        for endpoint, sign in ((0, 1.0), (1, -1.0)):
+            ref = refs[:, endpoint]
+            row = ref[:, 1]
+            body = ref[:, 2]
+            in_bounds = (
+                (ref[:, 0] == descriptor.body_kind)
+                & (row >= 0)
+                & (row < descriptor.row_map_count)
+                & (body >= 0)
+                & (body < descriptor.body_map_count)
+            )
+            safe_row = row.clamp(0, descriptor.row_map_count - 1).to(torch.int64)
+            safe_body = body.clamp(0, descriptor.body_map_count - 1).to(torch.int64)
+            environment = row_map[safe_row]
+            body_slot = body_map[safe_body]
+            selected = (
+                valid_point & in_bounds & (environment >= 0) & (body_slot >= 0)
+            )
+            other = refs[:, 1 - endpoint]
+            outputs.append(
+                (
+                    environment[selected],
+                    body_slot[selected],
+                    other[selected],
+                    points[selected],
+                    sign,
+                )
+            )
+
+        environment = torch.cat([output[0] for output in outputs])
+        body_slot = torch.cat([output[1] for output in outputs])
+        other = torch.cat([output[2] for output in outputs])
+        selected_points = torch.cat([output[3] for output in outputs])
+        signs = torch.cat(
+            [
+                torch.full(
+                    (output[3].shape[0], 1),
+                    output[4],
+                    dtype=points.dtype,
+                    device=device,
+                )
+                for output in outputs
+            ]
+        )
+        return ContactPointData(
+            environment=environment,
+            body_slot=body_slot,
+            other_body_kind=other[:, 0],
+            other_row=other[:, 1],
+            other_body=other[:, 2],
+            position_w=selected_points[:, 0:3],
+            normal_w=selected_points[:, 3:6] * signs,
+            normal_impulse_w=selected_points[:, 6:9] * signs,
+            separation=selected_points[:, 9],
+        )
 
     def _prepare(self, sensors):
         import torch
@@ -309,6 +463,10 @@ class _ContactSensorBatch:
             in_contact,
             net_impulse,
         )
+        self._descriptors = {
+            id(sensor): descriptor
+            for sensor, descriptor in zip(sensors, descriptors)
+        }
         self._native_views = tuple(
             to_gpu_array_view(tensor, dtype=tensor.dtype, name=name)
             for tensor, name in zip(
