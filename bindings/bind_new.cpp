@@ -984,6 +984,15 @@ py::class_<glm::vec3>(m, "Vec3")
              py::arg("speed"), "Set interactive camera movement speed.")
         .def("get_camera_move_speed", &App::getCameraMoveSpeed,
              "Return interactive camera movement speed.")
+        .def("set_skybox",
+             py::overload_cast<const std::string&>(&App::setSkybox),
+             py::arg("cross_image_path"),
+             "Set a skybox from one cross-layout cubemap image.")
+        .def(
+            "set_skybox",
+            py::overload_cast<const std::vector<std::string>&>(&App::setSkybox),
+            py::arg("face_paths"),
+            "Set a skybox from six cubemap face image paths.")
         .def("start", &App::start, "Enter the application render loop.")
         .def("render_frame_once", &App::renderFrameOnce,
              "Render and process one frame without entering the main loop.")

@@ -36,8 +36,10 @@ def normalize_color_array(color):
 def batch_colors(color, env_ids):
     env_ids = tuple(env_ids)
     if color is None:
+        # Instance colors multiply the material/asset color. White is the
+        # neutral default, so omitting color preserves the authored color.
         return np.tile(
-            np.asarray([0.15, 0.15, 0.15, 1.0], dtype=np.float32),
+            np.asarray([1.0, 1.0, 1.0, 1.0], dtype=np.float32),
             (len(env_ids), 1),
         )
     rows = [
