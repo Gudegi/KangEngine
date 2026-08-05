@@ -1609,6 +1609,7 @@ class KangSimWorld:
             kp_arr = _optional_drive_array(kp, expected)
             kd_arr = _optional_drive_array(kd, expected)
 
+        had_full_batch = int(obj_id) in self.batch_commands
         self.batch_commands[int(obj_id)] = BatchCommandBuffer(
             mode=mode,
             env_ids=(
@@ -1621,8 +1622,9 @@ class KangSimWorld:
             kp=kp_arr,
             kd=kd_arr,
         )
-        for eid in env_ids:
-            self.commands[(int(eid), int(obj_id))] = CommandBuffer(ControlMode.NONE)
+        if not had_full_batch:
+            for eid in env_ids:
+                self.commands[(int(eid), int(obj_id))] = CommandBuffer(ControlMode.NONE)
         return True
 
     def _select_cuda_batch_pd_gain(
