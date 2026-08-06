@@ -1382,6 +1382,40 @@ py::class_<glm::vec3>(m, "Vec3")
         .def("set_light_ambient", &App::setLightAmbient, py::arg("ambient"),
              "Set ambient light intensity.")
         .def(
+            "set_background_color",
+            [](App& self, const glm::vec4& color) {
+                self.getRenderer().settings().background.backgroundColor =
+                    color;
+            },
+            py::arg("color"), "Set the renderer clear/background color.")
+        .def(
+            "set_ground_style",
+            [](App& self, const glm::vec4& checkerA, const glm::vec4& checkerB,
+               const glm::vec4& gridColor, bool showGrid, bool usePbr,
+               float metallic, float roughness, float gridScale,
+               float lineWidth, float gridEmission) {
+                auto& background = self.getRenderer().settings().background;
+                background.checkerColor1 = checkerA;
+                background.checkerColor2 = checkerB;
+                background.gridColor = gridColor;
+                background.showGrid = showGrid;
+                background.groundShadingModel = usePbr
+                                                    ? GroundShadingModel::Pbr
+                                                    : GroundShadingModel::Phong;
+                background.groundMetallic = std::clamp(metallic, 0.0f, 1.0f);
+                background.groundRoughness = std::clamp(roughness, 0.04f, 1.0f);
+                background.gridScale = std::max(gridScale, 0.0001f);
+                background.gridLineWidth =
+                    std::clamp(lineWidth, 0.0001f, 0.49f);
+                background.gridEmission = std::max(gridEmission, 0.0f);
+            },
+            py::arg("checker_a"), py::arg("checker_b"), py::arg("grid_color"),
+            py::arg("show_grid") = true, py::arg("use_pbr") = false,
+            py::arg("metallic") = 0.0f, py::arg("roughness") = 0.8f,
+            py::arg("grid_scale") = 1.0f, py::arg("line_width") = 0.005f,
+            py::arg("grid_emission") = 0.0f,
+            "Configure the standard ground shading and procedural grid.")
+        .def(
             "set_gamma",
             [](App& self, float gamma) {
                 self.getRenderer().settings().gamma = std::max(0.001f, gamma);

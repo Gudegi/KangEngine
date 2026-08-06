@@ -61,11 +61,23 @@ enum class AlphaMode {
     Blend,
 };
 
+enum class GroundShadingModel {
+    Phong,
+    Pbr,
+};
+
 struct BackgroundSettings {
     glm::vec4 checkerColor1 = ColorLibrary::getVec4(ColorType::WHITE);
     glm::vec4 checkerColor2 = ColorLibrary::getVec4(ColorType::DARK_GREEN);
     bool showGrid = true;
     glm::vec4 gridColor = ColorLibrary::getVec4(ColorType::BLACK);
+    // GroundShadingModel groundShadingModel = GroundShadingModel::Phong;
+    GroundShadingModel groundShadingModel = GroundShadingModel::Pbr;
+    float groundMetallic = 0.0f;
+    float groundRoughness = 0.8f;
+    float gridScale = 1.0f;
+    float gridLineWidth = 0.005f;
+    float gridEmission = 0.0f;
     glm::vec4 backgroundColor = {0.2f, 0.3f, 0.3f, 1.0f};
 };
 

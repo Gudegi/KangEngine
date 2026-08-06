@@ -87,7 +87,8 @@ Backend::GraphicsPipeline* ForwardPass::pipelineFor(const MeshInstancer& inst,
             key.family = RasterPipelineFamily::TexturedVertexColor;
             break;
         case VertexColorStyle::Checkerboard:
-            key.family = RasterPipelineFamily::Checkerboard;
+            key.family = _useGroundPbr ? RasterPipelineFamily::GroundPbr
+                                       : RasterPipelineFamily::GroundPhong;
             // Checkerboard is a ground-only family and has no skin input.
             key.skinned = false;
             break;
@@ -368,7 +369,7 @@ ForwardPass::prepare(const std::vector<MeshInstancer*>& drawables,
             draw.kind = DrawKind::Material;
         } else if (checkerboard) {
             draw.kind = DrawKind::Material;
-            draw.materialBindGroup = _checkerboardBindGroup;
+            draw.materialBindGroup = _groundBindGroup;
         } else if (textured) {
             draw.kind = DrawKind::Material;
             draw.materialBindGroup = updateTexturedVertexColorMaterial(*inst);
@@ -680,64 +681,71 @@ void ForwardPass::initializeResources(
         }
     }
 
-    // Checkerboard Ground Pipeline
-    Backend::BindGroupLayoutDesc checkerLayoutDesc;
-    checkerLayoutDesc.label = "checkerboard_group_layout";
-    checkerLayoutDesc.entries = {{0, Backend::BindingType::UniformBuffer,
-                                  Backend::ShaderStageVisibility::Fragment}};
-    _checkerboardGroupLayout = createBindGroupLayout(checkerLayoutDesc);
-    Backend::PipelineLayoutDesc checkerPipelineLayoutDesc;
-    checkerPipelineLayoutDesc.label = "forward_checkerboard_pipeline_layout";
-    checkerPipelineLayoutDesc.bindGroupLayouts = {
+    // PBR Ground Pipeline
+    Backend::BindGroupLayoutDesc groundLayoutDesc;
+    groundLayoutDesc.label = "ground_group_layout";
+    groundLayoutDesc.entries = {{0, Backend::BindingType::UniformBuffer,
+                                 Backend::ShaderStageVisibility::Fragment}};
+    _groundGroupLayout = createBindGroupLayout(groundLayoutDesc);
+    Backend::PipelineLayoutDesc groundPipelineLayoutDesc;
+    groundPipelineLayoutDesc.label = "forward_ground_pipeline_layout";
+    groundPipelineLayoutDesc.bindGroupLayouts = {
         _groupLayouts[0], shadowSamplingLayout, _groupLayouts[1],
-        _checkerboardGroupLayout};
-    _checkerboardPipelineLayout =
-        createPipelineLayout(checkerPipelineLayoutDesc);
-    Backend::BufferDesc checkerParamsDesc;
-    checkerParamsDesc.size = sizeof(glm::vec4) * 4;
-    checkerParamsDesc.usage =
+        _groundGroupLayout};
+    _groundPipelineLayout = createPipelineLayout(groundPipelineLayoutDesc);
+    Backend::BufferDesc groundParamsDesc;
+    groundParamsDesc.size = sizeof(glm::vec4) * 5;
+    groundParamsDesc.usage =
         Backend::BufferUsage::Uniform | Backend::BufferUsage::CopyDst;
-    checkerParamsDesc.label = "checkerboard_params";
-    _checkerboardParamsBuffer = createBuffer(checkerParamsDesc);
-    Backend::BindGroupDesc checkerGroupDesc;
-    checkerGroupDesc.layout = _checkerboardGroupLayout;
-    checkerGroupDesc.label = "checkerboard_bind_group";
-    checkerGroupDesc.entries = {{0, _checkerboardParamsBuffer, 0,
-                                 checkerParamsDesc.size, nullptr, nullptr}};
-    _checkerboardBindGroup = createBindGroup(checkerGroupDesc);
+    groundParamsDesc.label = "ground_params";
+    _groundParamsBuffer = createBuffer(groundParamsDesc);
+    Backend::BindGroupDesc groundGroupDesc;
+    groundGroupDesc.layout = _groundGroupLayout;
+    groundGroupDesc.label = "ground_bind_group";
+    groundGroupDesc.entries = {
+        {0, _groundParamsBuffer, 0, groundParamsDesc.size, nullptr, nullptr}};
+    _groundBindGroup = createBindGroup(groundGroupDesc);
     setBackgroundSettings(BackgroundSettings{});
 
-    const std::string checkerVs = _shaderLibrary->load(
+    const std::string groundVs = _shaderLibrary->load(
         KE::getAssetPath("shaders/rhi/forward_material.vs"));
-    const std::string checkerFs = _shaderLibrary->load(
-        KE::getAssetPath("shaders/rhi/forward_checkerboard.fs"));
-    for (size_t transparent = 0; transparent < 2; ++transparent) {
-        for (size_t doubleSided = 0; doubleSided < 2; ++doubleSided) {
-            Backend::GraphicsPipelineDesc desc;
-            desc.label = std::string("forward_checkerboard_") +
-                         (transparent ? "transparent_" : "opaque_") +
-                         (doubleSided ? "double_sided" : "back_face");
-            desc.shader.name = desc.label + "_rhi";
-            desc.shader.stages = {
-                {checkerVs, Backend::ShaderType::Vertex, "main"},
-                {checkerFs, Backend::ShaderType::Fragment, "main"}};
-            desc.pipelineLayout = _checkerboardPipelineLayout;
-            desc.vertexBuffers = {position, transform, normal,
-                                  texCoord, color,     tangent};
-            desc.primitive.cullMode =
-                doubleSided ? Backend::CullMode::None : Backend::CullMode::Back;
-            desc.depthStencil = Backend::DepthStencilState{
-                Backend::TextureFormat::Depth24Stencil8, !transparent,
-                Backend::CompareFunction::Less};
-            desc.colorTargets = {{Backend::TextureFormat::RGBA16Float}};
-            if (transparent)
-                desc.colorTargets[0].blend = texturedAlphaBlend;
-            desc.sampleCount = 4;
-            createPipeline({RasterPipelineFamily::Checkerboard, false,
-                            transparent != 0, doubleSided != 0},
-                           desc);
+    const auto createGroundPipelines = [&](RasterPipelineFamily family,
+                                           const char* shaderPath,
+                                           const char* familyLabel) {
+        const std::string groundFs =
+            _shaderLibrary->load(KE::getAssetPath(shaderPath));
+        for (size_t transparent = 0; transparent < 2; ++transparent) {
+            for (size_t doubleSided = 0; doubleSided < 2; ++doubleSided) {
+                Backend::GraphicsPipelineDesc desc;
+                desc.label = std::string("forward_") + familyLabel + "_" +
+                             (transparent ? "transparent_" : "opaque_") +
+                             (doubleSided ? "double_sided" : "back_face");
+                desc.shader.name = desc.label + "_rhi";
+                desc.shader.stages = {
+                    {groundVs, Backend::ShaderType::Vertex, "main"},
+                    {groundFs, Backend::ShaderType::Fragment, "main"}};
+                desc.pipelineLayout = _groundPipelineLayout;
+                desc.vertexBuffers = {position, transform, normal,
+                                      texCoord, color,     tangent};
+                desc.primitive.cullMode = doubleSided ? Backend::CullMode::None
+                                                      : Backend::CullMode::Back;
+                desc.depthStencil = Backend::DepthStencilState{
+                    Backend::TextureFormat::Depth24Stencil8, !transparent,
+                    Backend::CompareFunction::Less};
+                desc.colorTargets = {{Backend::TextureFormat::RGBA16Float}};
+                if (transparent)
+                    desc.colorTargets[0].blend = texturedAlphaBlend;
+                desc.sampleCount = 4;
+                createPipeline(
+                    {family, false, transparent != 0, doubleSided != 0}, desc);
+            }
         }
-    }
+    };
+    createGroundPipelines(RasterPipelineFamily::GroundPhong,
+                          "shaders/rhi/forward_ground_phong.fs",
+                          "ground_phong");
+    createGroundPipelines(RasterPipelineFamily::GroundPbr,
+                          "shaders/rhi/forward_ground_pbr.fs", "ground_pbr");
 
     pipelineDesc.label = "forward_phong_pipeline";
     pipelineDesc.shader.name = "forward_phong_rhi";
@@ -952,12 +960,15 @@ void ForwardPass::initializeResources(
 }
 
 void ForwardPass::setBackgroundSettings(const BackgroundSettings& settings) {
-    if (!_checkerboardParamsBuffer)
+    _useGroundPbr = settings.groundShadingModel == GroundShadingModel::Pbr;
+    if (!_groundParamsBuffer)
         return;
-    const std::array<glm::vec4, 4> params{
+    const std::array<glm::vec4, 5> params{
         settings.checkerColor1, settings.checkerColor2, settings.gridColor,
-        glm::vec4(settings.showGrid ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f)};
-    _checkerboardParamsBuffer->setData(params.data(), sizeof(params));
+        glm::vec4(settings.showGrid ? 1.0f : 0.0f, settings.groundMetallic,
+                  settings.groundRoughness, settings.gridScale),
+        glm::vec4(settings.gridLineWidth, settings.gridEmission, 0.0f, 0.0f)};
+    _groundParamsBuffer->setData(params.data(), sizeof(params));
 }
 
 } // namespace KE

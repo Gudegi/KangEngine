@@ -307,7 +307,9 @@ void App::registerBuiltinRenderResources() {
         {"ForwardTexturedVertexColorFS",
          "shaders/rhi/forward_textured_vertex_color.fs",
          Backend::ShaderType::Fragment},
-        {"ForwardCheckerboardFS", "shaders/rhi/forward_checkerboard.fs",
+        {"ForwardGroundPbrFS", "shaders/rhi/forward_ground_pbr.fs",
+         Backend::ShaderType::Fragment},
+        {"ForwardGroundPhongFS", "shaders/rhi/forward_ground_phong.fs",
          Backend::ShaderType::Fragment},
         {"ForwardDebugCheckerFS", "shaders/rhi/forward_debug_checker.fs",
          Backend::ShaderType::Fragment},
@@ -383,9 +385,13 @@ void App::registerBuiltinRenderResources() {
                 {"ForwardMaterialVS", "ForwardSkinnedMaterialVS",
                  "ForwardTexturedVertexColorFS"},
                 variants(true, true, true), "scene forward sampled color");
-    addPipeline("ForwardCheckerboard",
-                {"ForwardMaterialVS", "ForwardCheckerboardFS"},
-                variants(false, true, true), "procedural checkerboard");
+    addPipeline("ForwardGroundPBR", {"ForwardMaterialVS", "ForwardGroundPbrFS"},
+                variants(false, true, true),
+                "PBR ground with procedural checker/grid");
+    addPipeline("ForwardGroundPhong",
+                {"ForwardMaterialVS", "ForwardGroundPhongFS"},
+                variants(false, true, true),
+                "Phong ground with procedural checker/grid");
     addPipeline("ForwardDebugChecker",
                 {"ForwardMaterialVS", "ForwardSkinnedMaterialVS",
                  "ForwardDebugCheckerFS"},

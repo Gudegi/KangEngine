@@ -113,10 +113,10 @@ class ForwardPass : public RenderPassBase {
     Backend::BindGroupLayout* _texturedVertexColorGroupLayout = nullptr;
     std::array<Backend::PipelineLayout*, 2>
         _texturedVertexColorPipelineLayouts{};
-    Backend::BindGroupLayout* _checkerboardGroupLayout = nullptr;
-    Backend::PipelineLayout* _checkerboardPipelineLayout = nullptr;
-    Backend::Buffer* _checkerboardParamsBuffer = nullptr;
-    Backend::BindGroup* _checkerboardBindGroup = nullptr;
+    Backend::BindGroupLayout* _groundGroupLayout = nullptr;
+    Backend::PipelineLayout* _groundPipelineLayout = nullptr;
+    Backend::Buffer* _groundParamsBuffer = nullptr;
+    Backend::BindGroup* _groundBindGroup = nullptr;
     Backend::BindGroupLayout* _phongMaterialGroupLayout = nullptr;
     Backend::PipelineLayout* _phongPipelineLayout = nullptr;
     Backend::BindGroupLayout* _pbrMaterialGroupLayout = nullptr;
@@ -132,6 +132,7 @@ class ForwardPass : public RenderPassBase {
     std::optional<RasterPassSignature> _passSignature;
     ShaderLibrary* _shaderLibrary = nullptr;
     uint64_t _shaderGeneration = 0;
+    bool _useGroundPbr = false;
     std::unordered_map<const MeshInstancer*, TexturedVertexColorResources>
         _texturedVertexColorResources;
     std::unordered_map<const PhongMaterial*, PhongResources> _phongResources;

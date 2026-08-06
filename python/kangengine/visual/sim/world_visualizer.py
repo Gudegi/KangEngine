@@ -620,14 +620,13 @@ class SimWorldVisualizer:
         mjcf_path: str,
         prim_base_path: str | None = None,
         **kwargs,
-    ):
+    ) -> VisualBatch:
         """Create one CPU or GPU ExternalBuffer VisualBatch.
 
         ``sim_handle`` may be a single ``SimRigid`` / ``SimArticulation`` or a
         ``SimRigidBatch`` / ``SimArticulationBatch``. Single objects are treated
-        as a one-env visual batch. Per-environment SceneGraph visuals remain
-        available through the explicit ``add_articulation_scene_graph`` and
-        ``add_rigid_scene_graph`` methods.
+        as a one-env visual batch. Use ``add_scene_graph`` when an inspectable
+        per-environment SceneGraph visual is required.
         """
         self._require_valid()
         obj_id = int(sim_handle.obj_id)
@@ -668,6 +667,60 @@ class SimWorldVisualizer:
             mjcf_path,
             prim_base_path=base_path,
             **kwargs,
+        )
+
+    def add_scene_graph(
+        self,
+        sim_handle: SimRigid | SimArticulation | SimRigidBatch | SimArticulationBatch,
+        mjcf_path: str,
+        prim_base_path: str | None = None,
+        *,
+        env_id: int | None = None,
+        **kwargs,
+    ) -> VisualArticulationSceneGraph | VisualRigidSceneGraph:
+        """Create one inspectable SceneGraph visual for a simulation object.
+
+        Unlike :meth:`add`, this path creates ordinary SceneGraph-owned prims
+        and is intended for detailed playback and editor inspection. A batch
+        handle requires ``env_id`` so accidentally expanding every training
+        environment into prims is impossible.
+        """
+        self._require_valid()
+        obj_id = int(sim_handle.obj_id)
+        env_ids = tuple(int(value) for value in sim_handle.env_ids)
+        name = _safe_prim_name(getattr(sim_handle, "name", "") or f"obj_{obj_id}")
+        base_path = prim_base_path or f"/{name}"
+        if env_id is None:
+            if len(env_ids) != 1:
+                raise ValueError(
+                    "add_scene_graph() requires env_id for a batched handle"
+                )
+            selected_env_id = env_ids[0]
+        else:
+            selected_env_id = int(env_id)
+            if selected_env_id not in env_ids:
+                raise KeyError(
+                    f"env_id={selected_env_id} is outside handle env_ids={env_ids}"
+                )
+        key = (selected_env_id, obj_id)
+        if key in self.world.articulations:
+            return self.add_articulation_scene_graph(
+                selected_env_id,
+                obj_id,
+                mjcf_path,
+                prim_base_path=base_path,
+                **kwargs,
+            )
+        if key in self.world.rigids or key in self.world.static_rigids:
+            return self.add_rigid_scene_graph(
+                selected_env_id,
+                obj_id,
+                mjcf_path,
+                prim_base_path=base_path,
+                **kwargs,
+            )
+        raise KeyError(
+            f"simulation handle env={selected_env_id}, obj={obj_id} is not registered"
         )
 
     def add_articulation_scene_graph(
@@ -855,9 +908,7 @@ class SimWorldVisualizer:
         self._require_valid()
         material = self._resolve_visual_material(material)
         if material is None:
-            raise ValueError(
-                "_add_cpu_external_articulation requires a material"
-            )
+            raise ValueError("_add_cpu_external_articulation requires a material")
 
         obj_id = int(sim_view.obj_id)
         env_ids = tuple(int(env_id) for env_id in sim_view.env_ids)

@@ -603,8 +603,8 @@ void drawResourceComponentEditor(App* app, Scene::Prim& prim) {
                 static_cast<unsigned long long>(resource->version()));
     ImGui::Text("Handle: %u", resource->handle());
 
-    const char* kindLabels[] = {"Unknown", "Mesh", "Material", "Texture",
-                                "Shader Source", "Pipeline"};
+    const char* kindLabels[] = {"Unknown", "Mesh",          "Material",
+                                "Texture", "Shader Source", "Pipeline"};
     int kind = static_cast<int>(resource->type());
     if (ImGui::Combo("Kind", &kind, kindLabels,
                      static_cast<int>(std::size(kindLabels)))) {
@@ -628,10 +628,18 @@ void drawResourceComponentEditor(App* app, Scene::Prim& prim) {
         if (const auto* shader = manager.shaderSource(resource->handle())) {
             const char* stage = "Vertex";
             switch (shader->stage) {
-            case Backend::ShaderType::Vertex: stage = "Vertex"; break;
-            case Backend::ShaderType::Fragment: stage = "Fragment"; break;
-            case Backend::ShaderType::Geometry: stage = "Geometry"; break;
-            case Backend::ShaderType::Compute: stage = "Compute"; break;
+            case Backend::ShaderType::Vertex:
+                stage = "Vertex";
+                break;
+            case Backend::ShaderType::Fragment:
+                stage = "Fragment";
+                break;
+            case Backend::ShaderType::Geometry:
+                stage = "Geometry";
+                break;
+            case Backend::ShaderType::Compute:
+                stage = "Compute";
+                break;
             }
             ImGui::SeparatorText("Shader Source");
             ImGui::Text("Language: %s",
@@ -655,20 +663,18 @@ void drawResourceComponentEditor(App* app, Scene::Prim& prim) {
                     ("Shader Sources (" +
                      std::to_string(pipeline->shaderSources.size()) + ")")
                         .c_str())) {
-                for (Scene::ResourceHandle handle :
-                     pipeline->shaderSources) {
+                for (Scene::ResourceHandle handle : pipeline->shaderSources) {
                     const auto* entry = manager.entry(handle);
-                    ImGui::BulletText("%s",
-                                      entry ? entry->name.c_str() : "<missing>");
+                    ImGui::BulletText("%s", entry ? entry->name.c_str()
+                                                  : "<missing>");
                 }
             }
             if (!pipeline->stateSummary.empty())
-                ImGui::TextWrapped("State: %s",
-                                   pipeline->stateSummary.c_str());
+                ImGui::TextWrapped("State: %s", pipeline->stateSummary.c_str());
             if (!pipeline->variants.empty() &&
                 ImGui::CollapsingHeader(
-                    ("Variants (" +
-                     std::to_string(pipeline->variants.size()) + ")")
+                    ("Variants (" + std::to_string(pipeline->variants.size()) +
+                     ")")
                         .c_str())) {
                 for (const std::string& variant : pipeline->variants)
                     ImGui::BulletText("%s", variant.c_str());
@@ -854,6 +860,28 @@ void RendererDebugPanel::buildPanel() {
                           &rendererSettings.background.checkerColor1.x);
         ImGui::ColorEdit4("Checker B",
                           &rendererSettings.background.checkerColor2.x);
+        const char* groundShadingLabels[] = {"Phong", "PBR"};
+        int groundShading =
+            static_cast<int>(rendererSettings.background.groundShadingModel);
+        if (ImGui::Combo("Ground Shading", &groundShading, groundShadingLabels,
+                         2)) {
+            rendererSettings.background.groundShadingModel =
+                static_cast<GroundShadingModel>(groundShading);
+        }
+        ImGui::SliderFloat("Ground Metallic",
+                           &rendererSettings.background.groundMetallic, 0.0f,
+                           1.0f);
+        ImGui::SliderFloat("Ground Roughness",
+                           &rendererSettings.background.groundRoughness, 0.04f,
+                           1.0f);
+        ImGui::DragFloat("Grid Scale", &rendererSettings.background.gridScale,
+                         0.05f, 0.05f, 20.0f);
+        ImGui::DragFloat("Grid Line Width",
+                         &rendererSettings.background.gridLineWidth, 0.001f,
+                         0.001f, 0.49f);
+        ImGui::SliderFloat("Grid Emission",
+                           &rendererSettings.background.gridEmission, 0.0f,
+                           2.0f);
         ImGui::SeparatorText("Interaction");
         const char* interactionLabels[] = {"Inspect", "Edit", "Force"};
         int interactionMode = static_cast<int>(_app->getInteractionMode());
@@ -929,7 +957,7 @@ void RendererDebugPanel::buildPanel() {
             _app->setLightColor(glm::vec3(color[0], color[1], color[2]));
         }
         if (ImGui::SliderFloat("Light Intensity", &light.intensity, 0.0f,
-                               2.0f)) {
+                               10.0f)) {
             _app->setLightIntensity(light.intensity);
         }
         if (ImGui::ColorEdit3("Ambient", &ambient.x)) {

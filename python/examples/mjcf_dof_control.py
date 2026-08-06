@@ -145,7 +145,7 @@ class MjcfDofControlApp(ke.App):
             self.mjcf_path,
             prim_base_path=self.prim_base_path,
             order=self.order,
-            material=self.standard_materials.common,
+            material=self.standard_materials.pbr,
             collision_base_path=f"{self.prim_base_path}_collision",
             show_collision=self.show_collision,
             color=(

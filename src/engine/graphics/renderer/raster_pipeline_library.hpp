@@ -17,7 +17,8 @@ namespace KE {
 enum class RasterPipelineFamily {
     VertexColor,
     TexturedVertexColor,
-    Checkerboard,
+    GroundPhong,
+    GroundPbr,
     DebugChecker,
     Phong,
     Pbr,
