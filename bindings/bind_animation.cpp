@@ -12,7 +12,7 @@
 #include <iterator>
 #include "py_array_view.hpp"
 
-#include "character/character_description.hpp"
+#include "asset/articulation_desc.hpp"
 #include "animation/skeleton_math.hpp"
 #include "animation/full_body_ik.hpp"
 #include "animation/skeleton_motion.hpp"
@@ -28,7 +28,6 @@
 namespace py = pybind11;
 using namespace KE;
 using namespace KE::Animation;
-using namespace KE::Character;
 using namespace KE::Bridge;
 
 namespace {

@@ -31,7 +31,7 @@ namespace fs = std::filesystem;
 // Build a merged MeshData from all collision geoms of one body,
 // with each geom's vertices/normals transformed into body-local space.
 static Scene::MeshData
-buildCollisionMesh(const std::vector<Character::CollisionGeomDesc>& geoms) {
+buildCollisionMesh(const std::vector<Asset::CollisionGeomDesc>& geoms) {
     Scene::MeshData combined;
     for (const auto& geom : geoms) {
         glm::vec3 localPos;
@@ -47,7 +47,7 @@ buildCollisionMesh(const std::vector<Character::CollisionGeomDesc>& geoms) {
             localPos = glm::vec3(center.x(), center.y(), center.z());
             localQuat = glm::quat(eq.w(), eq.x(), eq.y(), eq.z());
             float r = geom.size[0];
-            if (geom.type == Character::CollisionGeomDesc::Type::Capsule)
+            if (geom.type == Asset::CollisionGeomDesc::Type::Capsule)
                 part = Scene::Prim::createCapsuleData(r, halfLen * 2.f,
                                                       UpAxis::Z, 12);
             else
@@ -58,18 +58,18 @@ buildCollisionMesh(const std::vector<Character::CollisionGeomDesc>& geoms) {
             localQuat = glm::quat(geom.quat.w(), geom.quat.x(), geom.quat.y(),
                                   geom.quat.z());
             switch (geom.type) {
-            case Character::CollisionGeomDesc::Type::Sphere:
+            case Asset::CollisionGeomDesc::Type::Sphere:
                 part = Scene::Prim::createSphereData(geom.size[0], 12, 8);
                 break;
-            case Character::CollisionGeomDesc::Type::Capsule:
+            case Asset::CollisionGeomDesc::Type::Capsule:
                 part = Scene::Prim::createCapsuleData(
                     geom.size[0], geom.size[1] * 2.f, UpAxis::Z, 12);
                 break;
-            case Character::CollisionGeomDesc::Type::Cylinder:
+            case Asset::CollisionGeomDesc::Type::Cylinder:
                 part = Scene::Prim::createCylinderData(
                     geom.size[0], geom.size[1] * 2.f, UpAxis::Z, 12);
                 break;
-            case Character::CollisionGeomDesc::Type::Box:
+            case Asset::CollisionGeomDesc::Type::Box:
                 part = Scene::Prim::createRectangleData(
                     geom.size[0] * 2.f, geom.size[1] * 2.f, geom.size[2] * 2.f);
                 break;
@@ -117,7 +117,7 @@ static Scene::MeshData loadVisualMesh(const std::string& path) {
 }
 
 static void applyMeshInfoTransform(Scene::MeshData& mesh,
-                                   const Character::VisualGeomDesc& meshInfo) {
+                                   const Asset::VisualGeomDesc& meshInfo) {
     glm::vec3 localPos(meshInfo.pos.x(), meshInfo.pos.y(), meshInfo.pos.z());
     glm::quat localQuat(meshInfo.quat.w(), meshInfo.quat.x(), meshInfo.quat.y(),
                         meshInfo.quat.z());
@@ -141,12 +141,12 @@ static void appendMesh(Scene::MeshData& dst, Scene::MeshData&& part) {
 }
 
 static std::vector<ArticulationVisualBridgeAsset::VisualGeomAsset>
-buildVisualGeomAssets(const Character::CharacterData& data) {
+buildVisualGeomAssets(const Asset::ArticulationDesc& data) {
     std::vector<ArticulationVisualBridgeAsset::VisualGeomAsset> visualGeomAssets;
-    visualGeomAssets.reserve(data.meshInfos.size());
+    visualGeomAssets.reserve(data.visualGeoms.size());
 
-    for (const auto& meshInfo : data.meshInfos) {
-        std::string meshPath = (fs::path(data.meshDir) / meshInfo.meshFile)
+    for (const auto& meshInfo : data.visualGeoms) {
+        std::string meshPath = (fs::path(data.assetDir) / meshInfo.meshFile)
                                    .lexically_normal()
                                    .string();
         fmt::print("Loading mesh [{}] {}: {}\n", meshInfo.bodyIndex,
@@ -167,7 +167,7 @@ buildVisualGeomAssets(const Character::CharacterData& data) {
 static std::vector<std::shared_ptr<Scene::MeshData>> buildBodyMeshesFromVisuals(
     int numBodies,
     const std::vector<ArticulationVisualBridgeAsset::VisualGeomAsset>& visualGeomAssets,
-    const Character::CollisionGeomDescMap& collisionGeoms) {
+    const Asset::CollisionGeomDescMap& collisionGeoms) {
     std::vector<std::shared_ptr<Scene::MeshData>> bodyMeshes(numBodies);
     std::vector<bool> hasVisual(static_cast<size_t>(numBodies), false);
 
@@ -249,7 +249,7 @@ ArticulationVisualBridge ArticulationVisualBridge::fromMJCF(const std::string& m
     return asset.instantiate(scene, primBasePath, meshAssetBasePath);
 }
 
-ArticulationVisualBridge ArticulationVisualBridge::fromData(const Character::CharacterData& data,
+ArticulationVisualBridge ArticulationVisualBridge::fromData(const Asset::ArticulationDesc& data,
                                         Scene::SceneBackend* scene,
                                         const std::string& primBasePath,
                                         float scale,
@@ -268,14 +268,14 @@ ArticulationVisualBridgeAsset ArticulationVisualBridgeAsset::fromMJCF(const std:
 }
 
 ArticulationVisualBridgeAsset
-ArticulationVisualBridgeAsset::fromData(const Character::CharacterData& data,
+ArticulationVisualBridgeAsset::fromData(const Asset::ArticulationDesc& data,
                               float scale) {
     ArticulationVisualBridgeAsset asset;
     asset._data = data;
     asset._scale = scale;
     asset._visualGeomAssets = buildVisualGeomAssets(data);
     fmt::print("ArticulationVisualBridgeAsset loaded: {} bodies, {} meshes\n",
-               asset.numBodies(), data.meshInfos.size());
+               asset.numBodies(), data.visualGeoms.size());
     return asset;
 }
 

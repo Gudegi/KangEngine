@@ -11,7 +11,7 @@
 
 #ifdef KANGENGINE_USE_PHYSX
 #include "asset/heightmap_loader.hpp"
-#include "character/character_description.hpp"
+#include "asset/articulation_desc.hpp"
 #include "bridge/physics_bridge.hpp"
 #include "bridge/articulation_visual_bridge.hpp"
 #include "engine/core/app/app.hpp"
@@ -54,7 +54,7 @@ KE::Physics::PhysicsMaterialDesc physicsMaterialFromPy(py::handle obj,
 void bind_physics(py::module& m) {
 #ifdef KANGENGINE_USE_PHYSX
     using namespace KE;
-    using namespace KE::Character;
+    using namespace KE::Asset;
     using namespace KE::Physics;
     using namespace KE::Bridge;
 
@@ -812,10 +812,10 @@ void bind_physics(py::module& m) {
              &PhysicsWorld::setRigidCollisionMaterialOverrides,
              py::arg("rigid"), py::arg("data"), py::arg("material_overrides"),
              "Apply named/indexed material overrides to an existing rigid body "
-             "created from character data. Returns updated shape count.")
+             "created from an articulation description. Returns updated shape count.")
         .def(
             "create_dynamic_rigid",
-            [](PhysicsWorld& self, const CharacterData& data,
+            [](PhysicsWorld& self, const Asset::ArticulationDesc& data,
                const FloatArray& pos, const FloatArray& rot_xyzw, float density,
                PxU32 collisionGroup, float contactOffset, float restOffset,
                const std::vector<CollisionMaterialOverride>&
@@ -838,10 +838,10 @@ void bind_physics(py::module& m) {
             py::arg("material_overrides") =
                 std::vector<CollisionMaterialOverride>{},
             py::return_value_policy::reference,
-            "Create a dynamic rigid body from imported character data.")
+            "Create a dynamic rigid body from an articulation description.")
         .def(
             "create_static_rigid",
-            [](PhysicsWorld& self, const CharacterData& data,
+            [](PhysicsWorld& self, const Asset::ArticulationDesc& data,
                const std::vector<float>& pos,
                const std::vector<float>& rot_xyzw, PxU32 collisionGroup,
                float contactOffset, float restOffset,
@@ -864,10 +864,10 @@ void bind_physics(py::module& m) {
             py::arg("material_overrides") =
                 std::vector<CollisionMaterialOverride>{},
             py::return_value_policy::reference,
-            "Create a static rigid body from imported character data.")
+            "Create a static rigid body from an articulation description.")
         .def(
             "create_dynamic_rigid",
-            [](PhysicsWorld& self, const CharacterData& data,
+            [](PhysicsWorld& self, const Asset::ArticulationDesc& data,
                const std::vector<float>& pos,
                const std::vector<float>& rot_xyzw, float density,
                PxU32 collisionGroup, float contactOffset, float restOffset,
@@ -891,7 +891,7 @@ void bind_physics(py::module& m) {
             py::arg("material_overrides") =
                 std::vector<CollisionMaterialOverride>{},
             py::return_value_policy::reference,
-            "Create a dynamic rigid body from imported character data.")
+            "Create a dynamic rigid body from an articulation description.")
         .def("set_dt", &PhysicsWorld::setDt, py::arg("dt"),
              "Set simulation timestep in seconds.");
 
@@ -1084,7 +1084,7 @@ void bind_physics(py::module& m) {
         "Immutable articulation metadata shared by many PhysX instances.")
         .def_static(
             "create",
-            [](const CharacterData& data, const ArticulationConfig& cfg) {
+            [](const Asset::ArticulationDesc& data, const ArticulationConfig& cfg) {
                 return ArticulationTemplate::create(
                     data.skeletonTree, data.collisionGeoms, data.joints,
                     data.inertials, cfg);
@@ -1098,12 +1098,11 @@ void bind_physics(py::module& m) {
 
     // Articulation (non-copyable)
     py::class_<Articulation>(physics, "Articulation",
-                             "PhysX articulated character or robot built from "
-                             "imported character data.")
+        "PhysX articulation built from an articulation description.")
         .def(py::init<>(), "Create an empty articulation handle.")
         .def_static(
             "build",
-            [](PhysicsWorld& physics, const CharacterData& data,
+            [](PhysicsWorld& physics, const Asset::ArticulationDesc& data,
                const ArticulationConfig& cfg) {
                 return Articulation::build(physics, data.skeletonTree,
                                            data.collisionGeoms, data.joints,
@@ -1111,7 +1110,7 @@ void bind_physics(py::module& m) {
             },
             py::arg("physics"), py::arg("data"),
             py::arg("cfg") = ArticulationConfig{}, py::keep_alive<0, 1>(),
-            "Build an articulation in a PhysicsWorld from character data.")
+            "Build an articulation in a PhysicsWorld from an articulation description.")
         .def_static(
             "build_from_template",
             [](PhysicsWorld& physics,

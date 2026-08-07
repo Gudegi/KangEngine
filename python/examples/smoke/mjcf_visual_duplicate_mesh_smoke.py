@@ -63,9 +63,9 @@ def main():
         )
 
         data = ke.asset.MJCFLoader.load(str(mjcf))
-        if len(data.mesh_infos) != 1:
+        if len(data.visual_geoms) != 1:
             raise AssertionError(
-                f"expected one visual mesh info, got {len(data.mesh_infos)}"
+                f"expected one visual geom, got {len(data.visual_geoms)}"
             )
 
         scene = ke.scene.create_backend(ke.scene.BackendType.NATIVE)

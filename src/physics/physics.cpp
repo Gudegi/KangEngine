@@ -1,7 +1,7 @@
 #include "physics.hpp"
 #include "PxBroadPhase.h"
 #include "PxSceneDesc.h"
-#include "character/character_description.hpp"
+#include "asset/articulation_desc.hpp"
 #include "articulation.hpp"
 #include "collision_material_utils.hpp"
 #include "physics/physx_compat.hpp"
@@ -551,7 +551,7 @@ PxRigidDynamic* PhysicsWorld::createDynamicSphere(float radius,
 }
 
 PxRigidDynamic* PhysicsWorld::createDynamicRigid(
-    const Character::CharacterData& data, const glm::vec3& pos,
+    const Asset::ArticulationDesc& data, const glm::vec3& pos,
     const glm::quat& rot, float density, PxU32 collisionGroup,
     float contactOffset, float restOffset,
     const std::vector<Physics::CollisionMaterialOverride>& materialOverrides) {
@@ -561,7 +561,7 @@ PxRigidDynamic* PhysicsWorld::createDynamicRigid(
     if (!actor)
         return nullptr;
 
-    const std::vector<Character::CollisionGeomDesc>* geoms = nullptr;
+    const std::vector<Asset::CollisionGeomDesc>* geoms = nullptr;
     int sourceBodyIndex = -1;
     auto rootIt = data.collisionGeoms.find(0);
     if (rootIt != data.collisionGeoms.end() && !rootIt->second.empty()) {
@@ -578,7 +578,7 @@ PxRigidDynamic* PhysicsWorld::createDynamicRigid(
     }
 
     if (!geoms) {
-        Character::CollisionGeomDesc fallbackGeom;
+        Asset::CollisionGeomDesc fallbackGeom;
         fallbackGeom.name = "__fallback_sphere";
         const auto material = resolveCollisionMaterial(
             fallbackGeom, materialOverrides, data.skeletonTree, -1, 0);
@@ -586,7 +586,7 @@ PxRigidDynamic* PhysicsWorld::createDynamicRigid(
             createExclusiveShape(*actor, PxSphereGeometry(0.1f), material);
         applyRigidContactOffsets(shape, contactOffset, restOffset);
     } else {
-        using Type = Character::CollisionGeomDesc::Type;
+        using Type = Asset::CollisionGeomDesc::Type;
         for (std::size_t i = 0; i < geoms->size(); ++i) {
             const auto& g = (*geoms)[i];
             const auto material = resolveCollisionMaterial(
@@ -645,7 +645,7 @@ PxRigidDynamic* PhysicsWorld::createDynamicRigid(
 }
 
 PxRigidStatic* PhysicsWorld::createStaticRigid(
-    const Character::CharacterData& data, const glm::vec3& pos,
+    const Asset::ArticulationDesc& data, const glm::vec3& pos,
     const glm::quat& rot, PxU32 collisionGroup, float contactOffset,
     float restOffset,
     const std::vector<Physics::CollisionMaterialOverride>& materialOverrides) {
@@ -655,7 +655,7 @@ PxRigidStatic* PhysicsWorld::createStaticRigid(
     if (!actor)
         return nullptr;
 
-    const std::vector<Character::CollisionGeomDesc>* geoms = nullptr;
+    const std::vector<Asset::CollisionGeomDesc>* geoms = nullptr;
     int sourceBodyIndex = -1;
     auto rootIt = data.collisionGeoms.find(0);
     if (rootIt != data.collisionGeoms.end() && !rootIt->second.empty()) {
@@ -672,7 +672,7 @@ PxRigidStatic* PhysicsWorld::createStaticRigid(
     }
 
     if (!geoms) {
-        Character::CollisionGeomDesc fallbackGeom;
+        Asset::CollisionGeomDesc fallbackGeom;
         fallbackGeom.name = "__fallback_sphere";
         const auto material = resolveCollisionMaterial(
             fallbackGeom, materialOverrides, data.skeletonTree, -1, 0);
@@ -680,7 +680,7 @@ PxRigidStatic* PhysicsWorld::createStaticRigid(
             createExclusiveShape(*actor, PxSphereGeometry(0.1f), material);
         applyRigidContactOffsets(shape, contactOffset, restOffset);
     } else {
-        using Type = Character::CollisionGeomDesc::Type;
+        using Type = Asset::CollisionGeomDesc::Type;
         for (std::size_t i = 0; i < geoms->size(); ++i) {
             const auto& g = (*geoms)[i];
             const auto material = resolveCollisionMaterial(
@@ -760,12 +760,12 @@ int PhysicsWorld::setRigidCollisionMaterial(
 }
 
 int PhysicsWorld::setRigidCollisionMaterialOverrides(
-    PxRigidDynamic& rigid, const Character::CharacterData& data,
+    PxRigidDynamic& rigid, const Asset::ArticulationDesc& data,
     const std::vector<Physics::CollisionMaterialOverride>& overrides) {
     if (!_physics)
         return 0;
 
-    const std::vector<Character::CollisionGeomDesc>* geoms = nullptr;
+    const std::vector<Asset::CollisionGeomDesc>* geoms = nullptr;
     int sourceBodyIndex = -1;
     auto rootIt = data.collisionGeoms.find(0);
     if (rootIt != data.collisionGeoms.end() && !rootIt->second.empty()) {
@@ -790,7 +790,7 @@ int PhysicsWorld::setRigidCollisionMaterialOverrides(
     rigid.getShapes(shapes.data(), shapeCount);
 
     if (!geoms) {
-        Character::CollisionGeomDesc fallbackGeom;
+        Asset::CollisionGeomDesc fallbackGeom;
         fallbackGeom.name = "__fallback_sphere";
         const auto material = resolveCollisionMaterial(
             fallbackGeom, overrides, data.skeletonTree, -1, 0);

@@ -22,15 +22,15 @@ std::string fallbackBodyName(int bodyIdx) {
 }
 
 Scene::CollisionShapeType
-toCollisionShapeType(Character::CollisionGeomDesc::Type type) {
+toCollisionShapeType(Asset::CollisionGeomDesc::Type type) {
     switch (type) {
-    case Character::CollisionGeomDesc::Type::Sphere:
+    case Asset::CollisionGeomDesc::Type::Sphere:
         return Scene::CollisionShapeType::Sphere;
-    case Character::CollisionGeomDesc::Type::Capsule:
+    case Asset::CollisionGeomDesc::Type::Capsule:
         return Scene::CollisionShapeType::Capsule;
-    case Character::CollisionGeomDesc::Type::Cylinder:
+    case Asset::CollisionGeomDesc::Type::Cylinder:
         return Scene::CollisionShapeType::Cylinder;
-    case Character::CollisionGeomDesc::Type::Box:
+    case Asset::CollisionGeomDesc::Type::Box:
         return Scene::CollisionShapeType::Box;
     }
     return Scene::CollisionShapeType::Sphere;
@@ -112,7 +112,7 @@ std::vector<Scene::Prim*> PhysicsBridge::addCollisionVisuals(
                 localQuat = glm::quat(eq.w(), eq.x(), eq.y(), eq.z());
 
                 float r = geom.size[0];
-                if (geom.type == Character::CollisionGeomDesc::Type::Capsule)
+                if (geom.type == Asset::CollisionGeomDesc::Type::Capsule)
                     meshData = Scene::Prim::createCapsuleData(r, halfLen * 2.f,
                                                               UpAxis::Z, 12);
                 else
@@ -124,19 +124,19 @@ std::vector<Scene::Prim*> PhysicsBridge::addCollisionVisuals(
                                       geom.quat.y(), geom.quat.z());
 
                 switch (geom.type) {
-                case Character::CollisionGeomDesc::Type::Sphere:
+                case Asset::CollisionGeomDesc::Type::Sphere:
                     meshData =
                         Scene::Prim::createSphereData(geom.size[0], 12, 8);
                     break;
-                case Character::CollisionGeomDesc::Type::Capsule:
+                case Asset::CollisionGeomDesc::Type::Capsule:
                     meshData = Scene::Prim::createCapsuleData(
                         geom.size[0], geom.size[1] * 2.f, UpAxis::Z, 12);
                     break;
-                case Character::CollisionGeomDesc::Type::Cylinder:
+                case Asset::CollisionGeomDesc::Type::Cylinder:
                     meshData = Scene::Prim::createCylinderData(
                         geom.size[0], geom.size[1] * 2.f, UpAxis::Z, 12);
                     break;
-                case Character::CollisionGeomDesc::Type::Box:
+                case Asset::CollisionGeomDesc::Type::Box:
                     meshData = Scene::Prim::createRectangleData(
                         geom.size[0] * 2.f, geom.size[1] * 2.f,
                         geom.size[2] * 2.f);

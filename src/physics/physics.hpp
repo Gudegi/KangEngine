@@ -21,9 +21,9 @@ using namespace physx;
 namespace KE {
 
 class Articulation;
-namespace Character {
-struct CharacterData;
-} // namespace Character
+namespace Asset {
+struct ArticulationDesc;
+} // namespace Asset
 namespace Physics {
 struct CollisionMaterialOverride;
 struct PhysicsMaterialDesc;
@@ -178,7 +178,7 @@ class PhysicsWorld {
         float density = 1.0f);
 
     physx::PxRigidDynamic*
-    createDynamicRigid(const Character::CharacterData& data,
+    createDynamicRigid(const Asset::ArticulationDesc& data,
                        const glm::vec3& pos,
                        const glm::quat& rot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
                        float density = 1.0f, PxU32 collisionGroup = 0,
@@ -187,7 +187,7 @@ class PhysicsWorld {
                            materialOverrides = {});
 
     physx::PxRigidStatic*
-    createStaticRigid(const Character::CharacterData& data,
+    createStaticRigid(const Asset::ArticulationDesc& data,
                       const glm::vec3& pos,
                       const glm::quat& rot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
                       PxU32 collisionGroup = 0, float contactOffset = 0.02f,
@@ -199,7 +199,7 @@ class PhysicsWorld {
                                   const Physics::PhysicsMaterialDesc& material);
 
     int setRigidCollisionMaterialOverrides(
-        physx::PxRigidDynamic& rigid, const Character::CharacterData& data,
+        physx::PxRigidDynamic& rigid, const Asset::ArticulationDesc& data,
         const std::vector<Physics::CollisionMaterialOverride>& overrides);
 
     void fecthData();

@@ -13,7 +13,6 @@ from ._public import set_public_module as _set_public_module
 from . import (
     animation,
     asset,
-    character,
     geometry,
     input,
     material,
@@ -159,7 +158,6 @@ __all__ = [
     "scene",
     "asset",
     "animation",
-    "character",
     "exports",
     "geometry",
     "input",

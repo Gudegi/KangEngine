@@ -1,7 +1,7 @@
 #ifndef _MJCF_LOADER_HPP_
 #define _MJCF_LOADER_HPP_
 
-#include "character/character_description.hpp"
+#include "asset/articulation_desc.hpp"
 #include "asset/import_diagnostics.hpp"
 
 #include <string>
@@ -10,7 +10,7 @@ namespace KE {
 namespace Asset {
 
 struct MJCFImportResult {
-    Character::CharacterData character;
+    ArticulationDesc articulation;
     ImportDiagnostics diagnostics;
 };
 
@@ -21,14 +21,14 @@ class MJCFLoader {
                                   const std::string& order = "DFS");
 
     // Single-pass parse: returns all data needed for visual + physics.
-    static Character::CharacterData load(const std::string& mjcfPath,
-                                         float scale = 1.0f,
-                                         const std::string& order = "DFS");
+    static ArticulationDesc load(const std::string& mjcfPath,
+                                 float scale = 1.0f,
+                                 const std::string& order = "DFS");
 
   private:
     MJCFLoader() = default;
 
-    Character::CharacterData _data;
+    ArticulationDesc _data;
     ImportDiagnostics _diagnostics;
 
     void parseIntoData(const std::string& mjcfPath, float scale,

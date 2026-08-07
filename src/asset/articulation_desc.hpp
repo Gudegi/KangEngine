@@ -1,5 +1,5 @@
-#ifndef _CHARACTER_DESCRIPTION_HPP_
-#define _CHARACTER_DESCRIPTION_HPP_
+#ifndef _ARTICULATION_DESC_HPP_
+#define _ARTICULATION_DESC_HPP_
 
 // Shared character description types — used by all format parsers (MJCF, URDF,
 // etc.) so that downstream code (physics bridge, skeleton FK) is
@@ -16,7 +16,7 @@
 #include <vector>
 
 namespace KE {
-namespace Character {
+namespace Asset {
 
 // ---------------------------------------------------------------------------
 // Data types
@@ -123,17 +123,17 @@ using CollisionGeomDescMap = std::unordered_map<int, std::vector<CollisionGeomDe
 // Aggregate output
 // ---------------------------------------------------------------------------
 
-struct CharacterData {
+struct ArticulationDesc {
     std::shared_ptr<const Animation::SkeletonTree> skeletonTree;
-    std::vector<VisualGeomDesc> meshInfos;
-    std::string meshDir;
+    std::vector<VisualGeomDesc> visualGeoms;
+    std::string assetDir;
     JointDescMap joints;
     SiteDescMap sites;
     CollisionGeomDescMap collisionGeoms;
     InertialDescMap inertials;
 };
 
-} // namespace Character
+} // namespace Asset
 } // namespace KE
 
 #endif

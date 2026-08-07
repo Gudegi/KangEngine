@@ -1,5 +1,5 @@
 ///
-/// Character description Python bindings.
+/// Articulation description Python bindings.
 ///
 
 #include <pybind11/pybind11.h>
@@ -8,18 +8,17 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include "animation/skeleton_math.hpp"
-#include "character/character_description.hpp"
+#include "asset/articulation_desc.hpp"
 
 namespace py = pybind11;
 using namespace KE;
-using namespace KE::Character;
+using namespace KE::Asset;
 
-void bind_character(py::module& m) {
-    py::module character = m.def_submodule(
-        "character", "Imported character/robot description payload types.");
+void bind_articulation_desc(py::module& m) {
+    py::module asset = m.attr("asset").cast<py::module>();
 
     py::class_<JointDesc>(
-        character, "JointDesc",
+        asset, "JointDesc",
         "Joint description imported from robot/character assets.")
         .def_readonly("name", &JointDesc::name, "Joint name.")
         .def_readonly("lo_limit", &JointDesc::loLimit, "Lower joint limit.")
@@ -29,14 +28,14 @@ void bind_character(py::module& m) {
             "axis", [](const JointDesc& j) { return Animation::toGlm(j.axis); },
             "Joint axis.");
 
-    py::enum_<SiteDesc::Type>(character, "SiteDescType",
+    py::enum_<SiteDesc::Type>(asset, "SiteDescType",
                               "MJCF site geometry description type.")
         .value("SPHERE", SiteDesc::Type::Sphere)
         .value("CAPSULE", SiteDesc::Type::Capsule)
         .value("BOX", SiteDesc::Type::Box);
 
     py::class_<SiteDesc>(
-        character, "SiteDesc",
+        asset, "SiteDesc",
         "Imported MJCF site description attached to a character body.")
         .def_readonly("type", &SiteDesc::type, "Site geometry type.")
         .def_readonly("name", &SiteDesc::name, "Site name.")
@@ -65,7 +64,7 @@ void bind_character(py::module& m) {
             [](const SiteDesc& s) { return Animation::toGlm(s.zaxis); },
             "Explicit site z-axis if present.");
 
-    py::class_<InertialDesc>(character, "InertialDesc",
+    py::class_<InertialDesc>(asset, "InertialDesc",
                              "Imported body-local inertial properties.")
         .def_readonly("mass", &InertialDesc::mass, "Body mass.")
         .def_property_readonly(
@@ -84,7 +83,7 @@ void bind_character(py::module& m) {
             "Diagonal inertia in the inertial frame.");
 
     py::class_<VisualGeomDesc>(
-        character, "VisualGeomDesc",
+        asset, "VisualGeomDesc",
         "Visual mesh description imported from a character asset.")
         .def_readonly("body_name", &VisualGeomDesc::bodyName,
                       "Owning body name.")
@@ -111,7 +110,7 @@ void bind_character(py::module& m) {
             "Mesh display color.");
 
     py::enum_<CollisionGeomDesc::Type>(
-        character, "CollisionGeomDescType",
+        asset, "CollisionGeomDescType",
         "Collision geometry description type imported from character assets.")
         .value("CAPSULE", CollisionGeomDesc::Type::Capsule)
         .value("CYLINDER", CollisionGeomDesc::Type::Cylinder)
@@ -119,7 +118,7 @@ void bind_character(py::module& m) {
         .value("BOX", CollisionGeomDesc::Type::Box);
 
     py::class_<CollisionGeomDesc>(
-        character, "CollisionGeomDesc",
+        asset, "CollisionGeomDesc",
         "Imported body-local collision geometry description.")
         .def_readonly("type", &CollisionGeomDesc::type,
                       "Collision geometry type.")
@@ -160,20 +159,20 @@ void bind_character(py::module& m) {
         .def_readonly("is_fallback", &CollisionGeomDesc::isFallback,
                       "Whether KangEngine synthesized this fallback shape.");
 
-    py::class_<CharacterData>(
-        character, "CharacterData",
-        "Imported character description with skeleton, visual, collision, "
+    py::class_<ArticulationDesc>(
+        asset, "ArticulationDesc",
+        "Imported articulation description with skeleton, visual, collision, "
         "joint, and site payloads.")
-        .def_readonly("skeleton_tree", &CharacterData::skeletonTree,
+        .def_readonly("skeleton_tree", &ArticulationDesc::skeletonTree,
                       "Imported skeleton hierarchy.")
-        .def_readonly("mesh_infos", &CharacterData::meshInfos,
+        .def_readonly("visual_geoms", &ArticulationDesc::visualGeoms,
                       "Visual mesh descriptions.")
-        .def_readonly("mesh_dir", &CharacterData::meshDir,
+        .def_readonly("asset_dir", &ArticulationDesc::assetDir,
                       "Directory used to resolve mesh files.")
-        .def_readonly("sites", &CharacterData::sites, "Imported site markers.")
+        .def_readonly("sites", &ArticulationDesc::sites, "Imported site markers.")
         .def_property_readonly(
             "joints",
-            [](const CharacterData& d) {
+            [](const ArticulationDesc& d) {
                 py::dict result;
                 for (const auto& [idx, jvec] : d.joints)
                     result[py::int_(idx)] = jvec;
@@ -182,7 +181,7 @@ void bind_character(py::module& m) {
             "JointDesc metadata keyed by body index.")
         .def_property_readonly(
             "collision_geoms",
-            [](const CharacterData& d) {
+            [](const ArticulationDesc& d) {
                 py::dict result;
                 for (const auto& [idx, geoms] : d.collisionGeoms)
                     result[py::int_(idx)] = geoms;
@@ -191,7 +190,7 @@ void bind_character(py::module& m) {
             "Collision geometry descriptions keyed by body index.")
         .def_property_readonly(
             "inertials",
-            [](const CharacterData& d) {
+            [](const ArticulationDesc& d) {
                 py::dict result;
                 for (const auto& [idx, inertial] : d.inertials)
                     result[py::int_(idx)] = inertial;

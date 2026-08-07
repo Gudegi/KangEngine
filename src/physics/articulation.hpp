@@ -1,7 +1,7 @@
 #ifndef _ARTICULATION_HPP_
 #define _ARTICULATION_HPP_
 
-#include "character/character_description.hpp"
+#include "asset/articulation_desc.hpp"
 #include "physics.hpp"
 #include <array>
 #include <memory>
@@ -81,9 +81,9 @@ class ArticulationTemplate {
 
   private:
     std::shared_ptr<const Animation::SkeletonTree> _tree;
-    Character::JointDescMap _joints;
-    Character::CollisionGeomDescMap _colGeoms;
-    Character::InertialDescMap _inertials;
+    Asset::JointDescMap _joints;
+    Asset::CollisionGeomDescMap _colGeoms;
+    Asset::InertialDescMap _inertials;
     std::vector<PxTransform> _restTransforms;
     // Orientation of each inbound joint frame. Multi-axis MJCF joints need a
     // shared frame whose PhysX twist/swing axes match the authored axes.
@@ -96,9 +96,9 @@ class ArticulationTemplate {
   public:
     static std::shared_ptr<ArticulationTemplate>
     create(std::shared_ptr<const Animation::SkeletonTree> tree,
-           const Character::CollisionGeomDescMap& colGeoms,
-           const Character::JointDescMap& joints,
-           const Character::InertialDescMap& inertials,
+           const Asset::CollisionGeomDescMap& colGeoms,
+           const Asset::JointDescMap& joints,
+           const Asset::InertialDescMap& inertials,
            const ArticulationConfig& cfg = {});
 
     int numLinks() const { return static_cast<int>(_bodyNames.size()); }
@@ -132,9 +132,9 @@ class Articulation {
     static Articulation
     build(PhysicsWorld& physics,
           std::shared_ptr<const Animation::SkeletonTree> tree,
-          const Character::CollisionGeomDescMap& colGeoms,
-          const Character::JointDescMap& joints,
-          const Character::InertialDescMap& inertials,
+          const Asset::CollisionGeomDescMap& colGeoms,
+          const Asset::JointDescMap& joints,
+          const Asset::InertialDescMap& inertials,
           const ArticulationConfig& cfg = {});
     static Articulation
     build(PhysicsWorld& physics,
@@ -169,8 +169,8 @@ class Articulation {
     PxArticulationLink* link(int i) const { return _links[i]; }
     int numLinks() const { return static_cast<int>(_links.size()); }
     PxArticulationReducedCoordinate* raw() { return _artic; }
-    const Character::JointDescMap& joints() const {
-        static const Character::JointDescMap empty;
+    const Asset::JointDescMap& joints() const {
+        static const Asset::JointDescMap empty;
         return _template ? _template->_joints : empty;
     }
     int numDofs() const { return _template ? _template->numDofs() : 0; }
@@ -180,8 +180,8 @@ class Articulation {
 
     // Data accessors for PhysicsBridge
     const std::vector<PxArticulationLink*>& links() const { return _links; }
-    const Character::CollisionGeomDescMap& colGeoms() const {
-        static const Character::CollisionGeomDescMap empty;
+    const Asset::CollisionGeomDescMap& colGeoms() const {
+        static const Asset::CollisionGeomDescMap empty;
         return _template ? _template->_colGeoms : empty;
     }
     const std::vector<std::string>& bodyNames() const {

@@ -22,8 +22,8 @@ class SkeletonFK {
     static SkeletonFK fromMJCF(const std::string& mjcfPath, float scale = 1.0f,
                                const std::string& order = "DFS");
 
-    // Build from pre-parsed CharacterData (no extra file I/O).
-    static SkeletonFK fromData(const Character::CharacterData& data,
+    // Build from a pre-parsed articulation description (no extra file I/O).
+    static SkeletonFK fromData(const Asset::ArticulationDesc& data,
                                float scale = 1.0f);
 
     void setJointRotation(int idx, const Eigen::Quaternionf& q);

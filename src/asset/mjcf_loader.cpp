@@ -17,7 +17,6 @@ namespace KE {
 namespace Asset {
 
 using namespace Animation;
-using namespace Character;
 using namespace Physics;
 
 namespace {
@@ -573,7 +572,7 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
     float degToRad = static_cast<float>(M_PI) / 180.f;
     bool inertiafromgeom = false;
     if (auto* compiler = root->FirstChildElement("compiler")) {
-        _data.meshDir =
+        _data.assetDir =
             resolveMeshDir(mjcfPath, compiler->Attribute("meshdir"));
         const char* angle = compiler->Attribute("angle");
         if (angle && std::string_view(angle) == "radian")
@@ -582,7 +581,7 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
         if (ifg && std::string(ifg) == "true")
             inertiafromgeom = true;
     } else {
-        _data.meshDir = resolveMeshDir(mjcfPath, nullptr);
+        _data.assetDir = resolveMeshDir(mjcfPath, nullptr);
     }
 
     // 2. Asset name -> file map
@@ -666,7 +665,7 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
                                 ? Eigen::Vector4f(rgbaValues[0], rgbaValues[1],
                                                   rgbaValues[2], rgbaValues[3])
                                 : Eigen::Vector4f(0.15f, 0.15f, 0.15f, 1.0f);
-                        _data.meshInfos.push_back({bodyName, it->second, idx,
+                        _data.visualGeoms.push_back({bodyName, it->second, idx,
                                                    meshPos, meshQuat, rgba});
                     }
                     continue;
@@ -832,15 +831,15 @@ MJCFImportResult MJCFLoader::parse(const std::string& mjcfPath, float scale,
     loader.parseIntoData(mjcfPath, scale, order);
 
     MJCFImportResult result;
-    result.character = std::move(loader._data);
+    result.articulation = std::move(loader._data);
     result.diagnostics = std::move(loader._diagnostics);
     result.diagnostics.printWarnings("MJCFLoader " + mjcfPath);
     return result;
 }
 
-CharacterData MJCFLoader::load(const std::string& mjcfPath, float scale,
-                               const std::string& order) {
-    return std::move(parse(mjcfPath, scale, order).character);
+ArticulationDesc MJCFLoader::load(const std::string& mjcfPath, float scale,
+                                  const std::string& order) {
+    return std::move(parse(mjcfPath, scale, order).articulation);
 }
 
 } // namespace Asset

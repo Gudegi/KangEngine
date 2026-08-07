@@ -508,7 +508,7 @@ class SimRigid:
         source_data = self.source_data if data is None else data
         if source_data is None:
             raise RuntimeError(
-                "set_collision_material_overrides requires the CharacterData used to create this rigid"
+                "set_collision_material_overrides requires the ArticulationDesc used to create this rigid"
             )
         return world.physics.set_rigid_collision_material_overrides(
             self.rigid, source_data, material_overrides

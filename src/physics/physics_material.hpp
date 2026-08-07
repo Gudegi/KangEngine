@@ -15,7 +15,7 @@ struct PhysicsMaterialDesc {
 
 struct CollisionMaterialOverride {
     // Match by index when non-negative. Names are intended for Python/user
-    // facing APIs and are resolved against imported CharacterData/SkeletonTree
+    // facing APIs and are resolved against imported ArticulationDesc/SkeletonTree
     // at build time. Empty body name and bodyIndex < 0 means "all bodies".
     int bodyIndex = -1;
     std::string bodyName;

@@ -9,7 +9,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include "py_array_view.hpp"
 
-#include "character/character_description.hpp"
+#include "asset/articulation_desc.hpp"
 #include "asset/bvh_loader.hpp"
 #include "asset/fbx_loader.hpp"
 #include "asset/heightmap_loader.hpp"
@@ -31,7 +31,6 @@ namespace py = pybind11;
 using namespace KE;
 using namespace KE::Asset;
 using namespace KE::Animation;
-using namespace KE::Character;
 using namespace KE::Bridge;
 
 namespace {
@@ -415,20 +414,20 @@ void bind_asset(py::module& m) {
                       "Human-readable importer warnings.");
 
     py::class_<MJCFImportResult>(asset, "MJCFImportResult",
-                                 "Parsed MJCF character plus diagnostics.")
-        .def_readonly("character", &MJCFImportResult::character,
-                      "Imported character data.")
+                                 "Parsed MJCF articulation plus diagnostics.")
+        .def_readonly("articulation", &MJCFImportResult::articulation,
+                      "Imported articulation description.")
         .def_readonly("diagnostics", &MJCFImportResult::diagnostics,
                       "Importer diagnostics.");
 
     py::class_<MJCFLoader>(asset, "MJCFLoader",
-                           "Loader for MJCF/XML robot character assets.")
+                           "Loader for MJCF/XML articulation descriptions.")
         .def_static("parse", &MJCFLoader::parse, py::arg("mjcf_path"),
                     py::arg("scale") = 1.0f, py::arg("order") = "DFS",
-                    "Parse MJCF and return character data with diagnostics.")
+                    "Parse MJCF and return an articulation description with diagnostics.")
         .def_static("load", &MJCFLoader::load, py::arg("mjcf_path"),
                     py::arg("scale") = 1.0f, py::arg("order") = "DFS",
-                    "Load MJCF and return character data.");
+                    "Load MJCF and return an articulation description.");
 
     py::class_<BVHImportResult>(asset, "BVHImportResult",
                                 "Parsed BVH skeleton motion plus diagnostics.")

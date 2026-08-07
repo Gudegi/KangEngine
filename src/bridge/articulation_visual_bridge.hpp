@@ -33,19 +33,18 @@ class ArticulationVisualBridge {
   public:
     ArticulationVisualBridge() {}
 
-    // Load MJCF: builds FK/link visual mapping + creates one scene Prim per body.
-    static ArticulationVisualBridge fromMJCF(const std::string& mjcfPath,
-                                   Scene::SceneBackend* scene,
-                                   const std::string& primBasePath = "/robot",
-                                   float scale = 1.0f,
-                                   const std::string& order = "DFS",
-                                   const std::string& meshAssetBasePath = "");
+    // Load MJCF: builds FK/link visual mapping + creates one scene Prim per
+    // body.
+    static ArticulationVisualBridge
+    fromMJCF(const std::string& mjcfPath, Scene::SceneBackend* scene,
+             const std::string& primBasePath = "/robot", float scale = 1.0f,
+             const std::string& order = "DFS",
+             const std::string& meshAssetBasePath = "");
 
-    static ArticulationVisualBridge fromData(const Character::CharacterData& data,
-                                   Scene::SceneBackend* scene,
-                                   const std::string& primBasePath = "/robot",
-                                   float scale = 1.0f,
-                                   const std::string& meshAssetBasePath = "");
+    static ArticulationVisualBridge
+    fromData(const Asset::ArticulationDesc& data, Scene::SceneBackend* scene,
+             const std::string& primBasePath = "/robot", float scale = 1.0f,
+             const std::string& meshAssetBasePath = "");
 
     // Sync FK global transforms > update all body Prim xformOp attributes.
     void applyPose();
@@ -81,21 +80,22 @@ class ArticulationVisualBridgeAsset {
   public:
     ArticulationVisualBridgeAsset() = default;
 
-    static ArticulationVisualBridgeAsset fromMJCF(const std::string& mjcfPath,
-                                        float scale = 1.0f,
-                                        const std::string& order = "DFS");
+    static ArticulationVisualBridgeAsset
+    fromMJCF(const std::string& mjcfPath, float scale = 1.0f,
+             const std::string& order = "DFS");
 
-    static ArticulationVisualBridgeAsset fromData(const Character::CharacterData& data,
-                                        float scale = 1.0f);
+    static ArticulationVisualBridgeAsset
+    fromData(const Asset::ArticulationDesc& data, float scale = 1.0f);
 
     void defineMeshAssets(Scene::SceneBackend* scene,
                           const std::string& meshAssetBasePath,
                           bool splitVisualGeoms = false) const;
 
-    ArticulationVisualBridge instantiate(Scene::SceneBackend* scene,
-                               const std::string& primBasePath = "/robot",
-                               const std::string& meshAssetBasePath = "",
-                               bool splitVisualGeoms = false) const;
+    ArticulationVisualBridge
+    instantiate(Scene::SceneBackend* scene,
+                const std::string& primBasePath = "/robot",
+                const std::string& meshAssetBasePath = "",
+                bool splitVisualGeoms = false) const;
 
     int numBodies() const {
         return _data.skeletonTree ? _data.skeletonTree->numJoints() : 0;
@@ -109,7 +109,7 @@ class ArticulationVisualBridgeAsset {
     };
 
   private:
-    Character::CharacterData _data;
+    Asset::ArticulationDesc _data;
     float _scale = 1.0f;
     std::string _assetPath;
     // Source visual assets, kept at MJCF geom granularity.  Merged body meshes

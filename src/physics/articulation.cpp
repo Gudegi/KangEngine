@@ -38,7 +38,7 @@ struct MultiAxisFrame {
 // right-handed frame so arbitrary signed/rotated orthogonal axes (for example
 // nv_humanoid's diagonal shoulder axes) remain distinct PhysX DOFs.
 MultiAxisFrame
-makeMultiAxisFrame(const std::vector<Character::JointDesc>& joints) {
+makeMultiAxisFrame(const std::vector<Asset::JointDesc>& joints) {
     if (joints.size() < 2 || joints.size() > 3)
         throw std::runtime_error(
             "multi-axis articulation joints require two or three axes");
@@ -123,9 +123,9 @@ void applyContactOffsets(PxShape* shape, float contactOffset,
     shape->setContactOffset(std::max(contactOffset, restOffset + 1e-4f));
 }
 
-Character::CollisionGeomDesc makeFallbackBoxGeom(const PxVec3& halfExtents) {
-    Character::CollisionGeomDesc geom;
-    geom.type = Character::CollisionGeomDesc::Type::Box;
+Asset::CollisionGeomDesc makeFallbackBoxGeom(const PxVec3& halfExtents) {
+    Asset::CollisionGeomDesc geom;
+    geom.type = Asset::CollisionGeomDesc::Type::Box;
     geom.name = "__fallback_box";
     geom.size[0] = halfExtents.x;
     geom.size[1] = halfExtents.y;
@@ -138,11 +138,11 @@ Character::CollisionGeomDesc makeFallbackBoxGeom(const PxVec3& halfExtents) {
 // Cylinders are approximated as capsules (PhysX has no native cylinder shape).
 void attachCollisionShapes(
     PxArticulationLink* link, PhysicsWorld& physics,
-    const Character::CollisionGeomDesc* geoms, std::size_t count,
+    const Asset::CollisionGeomDesc* geoms, std::size_t count,
     float contactOffset, float restOffset,
     const std::vector<Physics::CollisionMaterialOverride>& overrides,
     std::shared_ptr<const Animation::SkeletonTree> tree, int bodyIndex) {
-    using Type = Character::CollisionGeomDesc::Type;
+    using Type = Asset::CollisionGeomDesc::Type;
     for (std::size_t i = 0; i < count; ++i) {
         const auto& g = geoms[i];
         const auto material = resolveCollisionMaterial(
@@ -191,7 +191,7 @@ void attachCollisionShapes(
 // Convenience overload accepting a vector of geoms.
 void attachCollisionShapes(
     PxArticulationLink* link, PhysicsWorld& physics,
-    const std::vector<Character::CollisionGeomDesc>& geoms, float contactOffset,
+    const std::vector<Asset::CollisionGeomDesc>& geoms, float contactOffset,
     float restOffset,
     const std::vector<Physics::CollisionMaterialOverride>& overrides,
     std::shared_ptr<const Animation::SkeletonTree> tree, int bodyIndex) {
@@ -203,7 +203,7 @@ void attachCollisionShapes(
 // Applies MJCF inertial properties (mass, COM, diag inertia) to a link.
 // Falls back to uniform mass distribution if the link has no inertial entry.
 void applyInertial(PxArticulationLink* link,
-                   const Character::InertialDescMap& inertials, int idx,
+                   const Asset::InertialDescMap& inertials, int idx,
                    float fallbackMass = 1.f) {
     auto it = inertials.find(idx);
     if (it == inertials.end()) {
@@ -548,9 +548,9 @@ float Articulation::calcMass() const {
 
 std::shared_ptr<ArticulationTemplate> ArticulationTemplate::create(
     std::shared_ptr<const Animation::SkeletonTree> tree,
-    const Character::CollisionGeomDescMap& colGeoms,
-    const Character::JointDescMap& joints,
-    const Character::InertialDescMap& inertials,
+    const Asset::CollisionGeomDescMap& colGeoms,
+    const Asset::JointDescMap& joints,
+    const Asset::InertialDescMap& inertials,
     const ArticulationConfig& cfg) {
     if (!tree || tree->numJoints() == 0)
         throw std::runtime_error(
@@ -612,9 +612,9 @@ std::shared_ptr<ArticulationTemplate> ArticulationTemplate::create(
 Articulation
 Articulation::build(PhysicsWorld& physics,
                     std::shared_ptr<const Animation::SkeletonTree> tree,
-                    const Character::CollisionGeomDescMap& colGeoms,
-                    const Character::JointDescMap& joints,
-                    const Character::InertialDescMap& inertials,
+                    const Asset::CollisionGeomDescMap& colGeoms,
+                    const Asset::JointDescMap& joints,
+                    const Asset::InertialDescMap& inertials,
                     const ArticulationConfig& cfg) {
     return build(physics,
                  ArticulationTemplate::create(std::move(tree), colGeoms, joints,

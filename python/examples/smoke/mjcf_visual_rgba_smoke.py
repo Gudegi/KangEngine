@@ -66,9 +66,9 @@ def main():
         )
 
         data = ke.asset.MJCFLoader.load(str(mjcf))
-        if len(data.mesh_infos) != 1:
+        if len(data.visual_geoms) != 1:
             raise AssertionError("expected one visual mesh info")
-        _assert_rgba(data.mesh_infos[0].rgba, (0.4, 0.5, 0.6, 0.7))
+        _assert_rgba(data.visual_geoms[0].rgba, (0.4, 0.5, 0.6, 0.7))
         collision_geoms = data.collision_geoms
         if 0 not in collision_geoms or len(collision_geoms[0]) != 1:
             raise AssertionError("expected one body collision geom")

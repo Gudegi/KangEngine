@@ -1,7 +1,7 @@
 #ifndef _PHYSICS_COLLISION_MATERIAL_UTILS_HPP_
 #define _PHYSICS_COLLISION_MATERIAL_UTILS_HPP_
 
-#include "character/character_description.hpp"
+#include "asset/articulation_desc.hpp"
 
 #include <memory>
 #include <vector>
@@ -42,7 +42,7 @@ collisionOverrideBodyMatches(const Physics::CollisionMaterialOverride& entry,
 inline bool
 collisionOverrideGeomMatches(const Physics::CollisionMaterialOverride& entry,
                              int geomIndex,
-                             const Character::CollisionGeomDesc& geom) {
+                             const Asset::CollisionGeomDesc& geom) {
     if (entry.geomIndex >= 0)
         return entry.geomIndex == geomIndex;
     if (!entry.geomName.empty())
@@ -51,7 +51,7 @@ collisionOverrideGeomMatches(const Physics::CollisionMaterialOverride& entry,
 }
 
 inline Physics::PhysicsMaterialDesc resolveCollisionMaterial(
-    const Character::CollisionGeomDesc& geom,
+    const Asset::CollisionGeomDesc& geom,
     const std::vector<Physics::CollisionMaterialOverride>& overrides,
     std::shared_ptr<const Animation::SkeletonTree> tree, int bodyIndex,
     int geomIndex) {
@@ -67,7 +67,7 @@ inline Physics::PhysicsMaterialDesc resolveCollisionMaterial(
 }
 
 inline Physics::PhysicsMaterialDesc resolveCollisionMaterial(
-    const Character::CollisionGeomDesc& geom,
+    const Asset::CollisionGeomDesc& geom,
     const std::vector<Physics::CollisionMaterialOverride>& overrides,
     const std::vector<std::string>& bodyNames, int bodyIndex, int geomIndex) {
     Physics::PhysicsMaterialDesc material = geom.physicsMaterial;
