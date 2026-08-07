@@ -8,10 +8,13 @@
 #include <pybind11/typing.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <algorithm>
+#include <iterator>
 #include "py_array_view.hpp"
 
 #include "character/character_description.hpp"
 #include "animation/skeleton_math.hpp"
+#include "animation/full_body_ik.hpp"
 #include "animation/skeleton_motion.hpp"
 #include "animation/skeleton_state.hpp"
 #include "animation/skeleton_tree.hpp"
@@ -46,14 +49,14 @@ Eigen::Quaternionf eigenQuatXyzwFromArray(const FloatArray& array,
                               view.data[2]);
 }
 
-std::vector<Eigen::Quaternionf> eigenQuatXyzwArray(const FloatArray& array,
+std::vector<Eigen::Quaternionf> eigenQuatWxyzArray(const FloatArray& array,
                                                    const char* name) {
     auto view = vec4ArrayView(array, name);
     std::vector<Eigen::Quaternionf> result;
     result.reserve(view.count);
     for (size_t i = 0; i < view.count; ++i) {
         const float* q = view.data + i * 4;
-        result.emplace_back(q[3], q[0], q[1], q[2]);
+        result.emplace_back(q[0], q[1], q[2], q[3]);
     }
     return result;
 }
@@ -138,6 +141,72 @@ floatArrayFromVec3Vector(const std::vector<Eigen::Vector3f>& values) {
         view(i, 2) = v.z();
     }
     return array;
+}
+
+py::array_t<float> motionVec3Array(const std::vector<Eigen::Vector3f>& values,
+                                   int frames, int joints) {
+    py::array_t<float> output({static_cast<py::ssize_t>(frames),
+                               static_cast<py::ssize_t>(joints),
+                               py::ssize_t(3)});
+    auto view = output.mutable_unchecked<3>();
+    for (int frame = 0; frame < frames; ++frame) {
+        for (int joint = 0; joint < joints; ++joint) {
+            const auto& value =
+                values[static_cast<size_t>(frame * joints + joint)];
+            view(frame, joint, 0) = value.x();
+            view(frame, joint, 1) = value.y();
+            view(frame, joint, 2) = value.z();
+        }
+    }
+    return output;
+}
+
+py::array_t<float> motionGlobalMatrices(const SkeletonMotion& motion) {
+    const auto transforms = motion.globalTransforms();
+    py::array_t<float> output({static_cast<py::ssize_t>(motion.numFrames()),
+                               static_cast<py::ssize_t>(motion.numJoints()),
+                               py::ssize_t(4), py::ssize_t(4)});
+    auto view = output.mutable_unchecked<4>();
+    for (int frame = 0; frame < motion.numFrames(); ++frame) {
+        for (int joint = 0; joint < motion.numJoints(); ++joint) {
+            const Transform& transform = transforms[static_cast<size_t>(
+                frame * motion.numJoints() + joint)];
+            const Eigen::Matrix3f rotation =
+                transform.rotation.toRotationMatrix();
+            for (int row = 0; row < 4; ++row) {
+                for (int col = 0; col < 4; ++col) {
+                    float value = row == col ? 1.0f : 0.0f;
+                    if (row < 3 && col < 3)
+                        value = rotation(row, col);
+                    else if (row < 3 && col == 3)
+                        value = transform.translation[row];
+                    view(frame, joint, row, col) = value;
+                }
+            }
+        }
+    }
+    return output;
+}
+
+py::array_t<float> motionGlobalRotations(const SkeletonMotion& motion) {
+    const auto transforms = motion.globalTransforms();
+    py::array_t<float> output({static_cast<py::ssize_t>(motion.numFrames()),
+                               static_cast<py::ssize_t>(motion.numJoints()),
+                               py::ssize_t(4)});
+    auto view = output.mutable_unchecked<3>();
+    for (int frame = 0; frame < motion.numFrames(); ++frame) {
+        for (int joint = 0; joint < motion.numJoints(); ++joint) {
+            const auto& rotation =
+                transforms[static_cast<size_t>(frame * motion.numJoints() +
+                                               joint)]
+                    .rotation;
+            view(frame, joint, 0) = rotation.w();
+            view(frame, joint, 1) = rotation.x();
+            view(frame, joint, 2) = rotation.y();
+            view(frame, joint, 3) = rotation.z();
+        }
+    }
+    return output;
 }
 
 py::array_t<float>
@@ -361,6 +430,38 @@ void bind_animation(py::module& m) {
     py::class_<SkeletonTree, std::shared_ptr<SkeletonTree>>(
         anim, "SkeletonTree",
         "Read-only skeleton hierarchy with local bind transforms.")
+        .def(py::init([](std::vector<std::string> names,
+                         std::vector<int> parents,
+                         const FloatArray& translations,
+                         const FloatArray& rotationsWxyz) {
+                 auto translationView =
+                     vec3ArrayView(translations, "local_translations");
+                 auto rotationValues =
+                     eigenQuatWxyzArray(rotationsWxyz, "local_rotations_wxyz");
+                 if (translationView.count != names.size() ||
+                     rotationValues.size() != names.size() ||
+                     parents.size() != names.size()) {
+                     throw py::value_error(
+                         "names, parents, local_translations, and "
+                         "local_rotations "
+                         "must have the same joint count");
+                 }
+                 std::vector<Eigen::Vector3f> translationValues;
+                 translationValues.reserve(translationView.count);
+                 for (size_t i = 0; i < translationView.count; ++i) {
+                     const float* value = translationView.data + i * 3;
+                     translationValues.emplace_back(value[0], value[1],
+                                                    value[2]);
+                 }
+                 return std::make_shared<SkeletonTree>(
+                     std::move(names), std::move(parents),
+                     std::move(translationValues), std::move(rotationValues),
+                     std::vector<int>(translationView.count, 0));
+             }),
+             py::arg("names"), py::arg("parents"),
+             py::arg("local_translations"), py::arg("local_rotations_wxyz"),
+             "Create a skeleton from NumPy translations and WXYZ bind "
+             "rotations.")
         .def("num_joints", &SkeletonTree::numJoints,
              "Return the number of joints/nodes.")
         .def("node_name", &SkeletonTree::nodeName, py::arg("index"),
@@ -388,6 +489,39 @@ void bind_animation(py::module& m) {
     py::class_<SkeletonMotion>(
         anim, "SkeletonMotion",
         "Sampled skeleton animation clip with root motion and local rotations.")
+        .def_static(
+            "from_arrays",
+            [](const SkeletonTree& tree, const FloatArray& rootTranslations,
+               const FloatArray& localRotationsWxyz, float fps,
+               std::string motionName) {
+                py::buffer_info rootInfo = rootTranslations.request();
+                py::buffer_info rotationInfo = localRotationsWxyz.request();
+                if (rootInfo.ndim != 2 || rootInfo.shape[1] != 3) {
+                    throw py::value_error(
+                        "root_translations expected shape [frames, 3]");
+                }
+                if (rotationInfo.ndim != 3 ||
+                    rotationInfo.shape[0] != rootInfo.shape[0] ||
+                    rotationInfo.shape[1] != tree.numJoints() ||
+                    rotationInfo.shape[2] != 4) {
+                    throw py::value_error("local_rotations_wxyz expected shape "
+                                          "[frames, num_joints, 4]");
+                }
+                const auto* root = static_cast<const float*>(rootInfo.ptr);
+                const auto* rotations =
+                    static_cast<const float*>(rotationInfo.ptr);
+                return SkeletonMotion(
+                    std::make_shared<SkeletonTree>(tree), fps,
+                    std::move(motionName),
+                    std::vector<float>(root, root + rootInfo.size),
+                    std::vector<float>(rotations,
+                                       rotations + rotationInfo.size));
+            },
+            py::arg("skeleton_tree"), py::arg("root_translations"),
+            py::arg("local_rotations_wxyz"), py::arg("fps"),
+            py::arg("motion_name") = "Motion",
+            "Create a motion from root translations [F, 3] and WXYZ local "
+            "rotations [F, J, 4].")
         .def("num_frames", &SkeletonMotion::numFrames,
              "Return the number of sampled frames.")
         .def("num_joints", &SkeletonMotion::numJoints,
@@ -409,6 +543,13 @@ void bind_animation(py::module& m) {
                 return self.skeletonTree().parentIndices();
             },
             "Return skeleton parent indices.")
+        .def_property_readonly(
+            "skeleton_tree",
+            [](const SkeletonMotion& self) -> const SkeletonTree& {
+                return self.skeletonTree();
+            },
+            py::return_value_policy::reference_internal,
+            "Return the motion's read-only skeleton hierarchy.")
         .def("frame", &SkeletonMotion::frame, py::arg("frame_index"),
              "Return a SkeletonState for a frame.")
         .def("sample", &SkeletonMotion::sample, py::arg("time"),
@@ -431,7 +572,251 @@ void bind_animation(py::module& m) {
              "Return root translations as a flat float array.")
         .def("local_rotations_wxyz_flat",
              &SkeletonMotion::localRotationsWxyzFlat,
-             "Return local rotations as a flat WXYZ float array.");
+             "Return local rotations as a flat WXYZ float array.")
+        .def(
+            "root_translations",
+            [](const SkeletonMotion& self) {
+                py::array_t<float> output(
+                    {static_cast<py::ssize_t>(self.numFrames()),
+                     py::ssize_t(3)});
+                const auto& values = self.rootTranslationsFlat();
+                if (!values.empty()) {
+                    std::memcpy(output.mutable_data(), values.data(),
+                                values.size() * sizeof(float));
+                }
+                return output;
+            },
+            "Return root translations as float32 [F, 3].")
+        .def(
+            "local_rotations_wxyz",
+            [](const SkeletonMotion& self) {
+                py::array_t<float> output(
+                    {static_cast<py::ssize_t>(self.numFrames()),
+                     static_cast<py::ssize_t>(self.numJoints()),
+                     py::ssize_t(4)});
+                const auto& values = self.localRotationsWxyzFlat();
+                if (!values.empty()) {
+                    std::memcpy(output.mutable_data(), values.data(),
+                                values.size() * sizeof(float));
+                }
+                return output;
+            },
+            "Return WXYZ local rotations as float32 [F, J, 4].")
+        .def("global_matrices", &motionGlobalMatrices,
+             "Compute global transforms as float32 [F, J, 4, 4].")
+        .def(
+            "global_positions",
+            [](const SkeletonMotion& self) {
+                return motionVec3Array(self.globalPositions(), self.numFrames(),
+                                       self.numJoints());
+            },
+            "Compute global joint positions as float32 [F, J, 3].")
+        .def("global_rotations_wxyz", &motionGlobalRotations,
+             "Compute WXYZ global joint rotations as float32 [F, J, 4].")
+        .def(
+            "root_linear_velocities",
+            [](const SkeletonMotion& self) {
+                return floatArrayFromVec3Vector(self.rootLinearVelocities());
+            },
+            "Compute root linear velocities as float32 [F, 3].")
+        .def(
+            "root_linear_accelerations",
+            [](const SkeletonMotion& self) {
+                return floatArrayFromVec3Vector(self.rootLinearAccelerations());
+            },
+            "Compute root linear accelerations as float32 [F, 3].")
+        .def(
+            "global_linear_velocities",
+            [](const SkeletonMotion& self) {
+                return motionVec3Array(self.globalLinearVelocities(),
+                                       self.numFrames(), self.numJoints());
+            },
+            "Compute global joint linear velocities as float32 [F, J, 3].")
+        .def(
+            "global_angular_velocities",
+            [](const SkeletonMotion& self) {
+                return motionVec3Array(self.globalAngularVelocities(),
+                                       self.numFrames(), self.numJoints());
+            },
+            "Compute global joint angular velocities as float32 [F, J, 3].")
+        .def(
+            "global_linear_accelerations",
+            [](const SkeletonMotion& self) {
+                return motionVec3Array(self.globalLinearAccelerations(),
+                                       self.numFrames(), self.numJoints());
+            },
+            "Compute global joint linear accelerations as float32 [F, J, 3].")
+        .def(
+            "global_angular_accelerations",
+            [](const SkeletonMotion& self) {
+                return motionVec3Array(self.globalAngularAccelerations(),
+                                       self.numFrames(), self.numJoints());
+            },
+            "Compute global joint angular accelerations as float32 [F, J, 3].");
+
+    anim.def(
+        "solve_full_body_ik_batch",
+        [](const SkeletonMotion& motion, const FloatArray& targets,
+           py::array_t<int, py::array::c_style | py::array::forcecast> effectors,
+           const FloatArray& offsets,
+           py::array_t<int, py::array::c_style | py::array::forcecast> controlJoints,
+           const FloatArray& controlAxes, int maxIterations) {
+            const auto targetInfo = targets.request();
+            const auto effectorInfo = effectors.request();
+            const auto offsetInfo = offsets.request();
+            const auto jointInfo = controlJoints.request();
+            const auto axisInfo = controlAxes.request();
+            if (targetInfo.ndim != 3 || targetInfo.shape[0] != motion.numFrames() ||
+                targetInfo.shape[2] != 3)
+                throw py::value_error("targets expected shape [frames, effectors, 3]");
+            const py::ssize_t count = targetInfo.shape[1];
+            if (effectorInfo.ndim != 1 || effectorInfo.shape[0] != count ||
+                offsetInfo.ndim != 2 || offsetInfo.shape[0] != count ||
+                offsetInfo.shape[1] != 3)
+                throw py::value_error("effector arrays have inconsistent shapes");
+            if (jointInfo.ndim != 1 || axisInfo.ndim != 2 ||
+                axisInfo.shape[0] != jointInfo.shape[0] || axisInfo.shape[1] != 3)
+                throw py::value_error("controls expected shapes [C] and [C, 3]");
+
+            const float* targetData = static_cast<const float*>(targetInfo.ptr);
+            const int* effectorData = static_cast<const int*>(effectorInfo.ptr);
+            const float* offsetData = static_cast<const float*>(offsetInfo.ptr);
+            const int* jointData = static_cast<const int*>(jointInfo.ptr);
+            const float* axisData = static_cast<const float*>(axisInfo.ptr);
+            std::vector<float> targetValues(targetData,
+                                             targetData + targetInfo.size);
+            std::vector<IKEffector> effectorValues;
+            effectorValues.reserve(static_cast<size_t>(count));
+            for (py::ssize_t i = 0; i < count; ++i)
+                effectorValues.push_back({
+                    effectorData[i],
+                    Eigen::Vector3f(offsetData[i * 3], offsetData[i * 3 + 1],
+                                    offsetData[i * 3 + 2])});
+            std::vector<IKJointControl> controls;
+            controls.reserve(static_cast<size_t>(jointInfo.size));
+            for (py::ssize_t i = 0; i < jointInfo.size; ++i) {
+                const int joint = jointData[i];
+                auto existing = std::find_if(
+                    controls.begin(), controls.end(),
+                    [joint](const IKJointControl& control) {
+                        return control.joint == joint;
+                    });
+                if (existing == controls.end()) {
+                    controls.push_back({joint, {}});
+                    existing = std::prev(controls.end());
+                }
+                existing->axes.emplace_back(
+                    axisData[i * 3], axisData[i * 3 + 1], axisData[i * 3 + 2]);
+            }
+
+            FullBodyIKConfig config;
+            config.maxIterations = maxIterations;
+
+            FullBodyIKBatchResult solved;
+            {
+                py::gil_scoped_release release;
+                solved = solveFullBodyIKBatch(
+                    motion, targetValues, effectorValues, controls, config);
+            }
+            py::array_t<float> positions(
+                {static_cast<py::ssize_t>(motion.numFrames()),
+                 static_cast<py::ssize_t>(motion.numJoints()), py::ssize_t(3)});
+            py::array_t<float> errors(
+                {static_cast<py::ssize_t>(motion.numFrames()), count});
+            py::array_t<int> iterations(
+                {static_cast<py::ssize_t>(motion.numFrames())});
+            std::memcpy(positions.mutable_data(), solved.bodyPositions.data(),
+                        solved.bodyPositions.size() * sizeof(float));
+            std::memcpy(errors.mutable_data(), solved.finalErrors.data(),
+                        solved.finalErrors.size() * sizeof(float));
+            std::memcpy(iterations.mutable_data(), solved.iterations.data(),
+                        solved.iterations.size() * sizeof(int));
+            return py::make_tuple(std::move(solved.motion), std::move(positions),
+                                  std::move(errors), std::move(iterations));
+        },
+        py::arg("motion"), py::arg("targets"), py::arg("effector_joints"),
+        py::arg("effector_offsets"), py::arg("control_joints"),
+        py::arg("control_axes"), py::arg("max_iterations") = 0,
+        "Solve full-body IK for all frames in a motion batch.");
+
+    anim.def(
+        "solve_full_body_ik",
+        [](const SkeletonState& state, const FloatArray& targets,
+           py::array_t<int, py::array::c_style | py::array::forcecast> effectors,
+           const FloatArray& offsets,
+           py::array_t<int, py::array::c_style | py::array::forcecast> controlJoints,
+           const FloatArray& controlAxes, int maxIterations) {
+            const auto targetInfo = targets.request();
+            const auto effectorInfo = effectors.request();
+            const auto offsetInfo = offsets.request();
+            const auto jointInfo = controlJoints.request();
+            const auto axisInfo = controlAxes.request();
+            if (targetInfo.ndim != 2 || targetInfo.shape[1] != 3)
+                throw py::value_error("targets expected shape [effectors, 3]");
+            const py::ssize_t count = targetInfo.shape[0];
+            if (effectorInfo.ndim != 1 || effectorInfo.shape[0] != count ||
+                offsetInfo.ndim != 2 || offsetInfo.shape[0] != count ||
+                offsetInfo.shape[1] != 3)
+                throw py::value_error("effector arrays have inconsistent shapes");
+            if (jointInfo.ndim != 1 || axisInfo.ndim != 2 ||
+                axisInfo.shape[0] != jointInfo.shape[0] || axisInfo.shape[1] != 3)
+                throw py::value_error("controls expected shapes [C] and [C, 3]");
+
+            const auto* targetData = static_cast<const float*>(targetInfo.ptr);
+            const auto* effectorData = static_cast<const int*>(effectorInfo.ptr);
+            const auto* offsetData = static_cast<const float*>(offsetInfo.ptr);
+            const auto* jointData = static_cast<const int*>(jointInfo.ptr);
+            const auto* axisData = static_cast<const float*>(axisInfo.ptr);
+            std::vector<Eigen::Vector3f> targetValues;
+            std::vector<IKEffector> effectorValues;
+            targetValues.reserve(static_cast<size_t>(count));
+            effectorValues.reserve(static_cast<size_t>(count));
+            for (py::ssize_t i = 0; i < count; ++i) {
+                targetValues.emplace_back(targetData[i * 3], targetData[i * 3 + 1],
+                                          targetData[i * 3 + 2]);
+                effectorValues.push_back({
+                    effectorData[i],
+                    Eigen::Vector3f(offsetData[i * 3], offsetData[i * 3 + 1],
+                                    offsetData[i * 3 + 2])});
+            }
+            std::vector<IKJointControl> controls;
+            controls.reserve(static_cast<size_t>(jointInfo.size));
+            for (py::ssize_t i = 0; i < jointInfo.size; ++i) {
+                const int joint = jointData[i];
+                auto existing = std::find_if(
+                    controls.begin(), controls.end(),
+                    [joint](const IKJointControl& control) {
+                        return control.joint == joint;
+                    });
+                if (existing == controls.end()) {
+                    controls.push_back({joint, {}});
+                    existing = std::prev(controls.end());
+                }
+                existing->axes.emplace_back(
+                    axisData[i * 3], axisData[i * 3 + 1], axisData[i * 3 + 2]);
+            }
+            FullBodyIKConfig config;
+            config.maxIterations = maxIterations;
+            FullBodyIKResult solved;
+            {
+                py::gil_scoped_release release;
+                solved = solveFullBodyIK(state, targetValues, effectorValues,
+                                         controls, config);
+            }
+            py::array_t<float> positions(
+                {static_cast<py::ssize_t>(state.numJoints()), py::ssize_t(3)});
+            py::array_t<float> errors({count});
+            std::memcpy(positions.mutable_data(), solved.bodyPositions.data(),
+                        solved.bodyPositions.size() * sizeof(float));
+            std::memcpy(errors.mutable_data(), solved.finalErrors.data(),
+                        solved.finalErrors.size() * sizeof(float));
+            return py::make_tuple(std::move(solved.state), std::move(positions),
+                                  std::move(errors), solved.iterations);
+        },
+        py::arg("state"), py::arg("targets"), py::arg("effector_joints"),
+        py::arg("effector_offsets"), py::arg("control_joints"),
+        py::arg("control_axes"), py::arg("max_iterations") = 0,
+        "Solve full-body IK for one skeleton state.");
 
     // Transform (FK result)
     py::class_<Transform>(anim, "Transform",
@@ -450,9 +835,10 @@ void bind_animation(py::module& m) {
                               "translation and rotations.")
         .def_static(
             "from_rotation_and_root_translation",
-            [](std::shared_ptr<SkeletonTree> tree, const FloatArray& rotations,
+            [](std::shared_ptr<SkeletonTree> tree,
+               const FloatArray& rotationsWxyz,
                const FloatArray& rootTranslation, bool isLocal) {
-                auto rot = eigenQuatXyzwArray(rotations, "rotations");
+                auto rot = eigenQuatWxyzArray(rotationsWxyz, "rotations_wxyz");
                 if (static_cast<int>(rot.size()) != tree->numJoints()) {
                     throw py::value_error(
                         "rotations must have shape [num_joints, 4]");
@@ -462,9 +848,9 @@ void bind_animation(py::module& m) {
                     eigenVec3FromArray(rootTranslation, "root_translation"),
                     isLocal);
             },
-            py::arg("tree"), py::arg("rotations"), py::arg("root_translation"),
-            py::arg("is_local") = true,
-            "Create a pose from rotations and root translation.")
+            py::arg("tree"), py::arg("rotations_wxyz"),
+            py::arg("root_translation"), py::arg("is_local") = true,
+            "Create a pose from WXYZ rotations and root translation.")
         .def("num_joints", &SkeletonState::numJoints,
              "Return the number of joints.")
         .def("is_local", &SkeletonState::isLocal,

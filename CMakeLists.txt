@@ -197,6 +197,7 @@ target_include_directories(engine_core PUBLIC
 target_include_directories(engine_core SYSTEM PRIVATE
     ${THIRDPARTY_DIR}/IconFontCppHeaders
     ${THIRDPARTY_DIR}/ImViewGuizmo
+    ${THIRDPARTY_DIR}/LBFGSpp/include
 )
 target_link_libraries(engine_core PUBLIC
     build_configs

@@ -18,6 +18,7 @@ namespace py = pybind11;
 
 using FloatArray =
     py::array_t<float, py::array::c_style | py::array::forcecast>;
+using IntArray = py::array_t<int, py::array::c_style | py::array::forcecast>;
 
 template <std::size_t N>
 inline std::optional<std::array<float, N>> fixedFloatArray(py::handle obj,
@@ -261,6 +262,19 @@ inline std::vector<glm::vec4> vec4Array(const FloatArray& array,
                               " expected shape [4] or [N, 4]");
     const auto* p = static_cast<const float*>(info.ptr);
     std::vector<glm::vec4> result;
+    result.reserve(static_cast<size_t>(info.shape[0]));
+    for (py::ssize_t i = 0; i < info.shape[0]; ++i)
+        result.emplace_back(p[i * 4], p[i * 4 + 1], p[i * 4 + 2], p[i * 4 + 3]);
+    return result;
+}
+
+inline std::vector<glm::ivec4> intVec4Array(const IntArray& array,
+                                            const char* name) {
+    py::buffer_info info = array.request();
+    if (info.ndim != 2 || info.shape[1] != 4)
+        throw py::value_error(std::string(name) + " expected shape [N, 4]");
+    const auto* p = static_cast<const int*>(info.ptr);
+    std::vector<glm::ivec4> result;
     result.reserve(static_cast<size_t>(info.shape[0]));
     for (py::ssize_t i = 0; i < info.shape[0]; ++i)
         result.emplace_back(p[i * 4], p[i * 4 + 1], p[i * 4 + 2], p[i * 4 + 3]);

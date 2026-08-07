@@ -26,6 +26,9 @@ class SkeletonMotion {
     const std::string& motionName() const { return _motionName; }
 
     const SkeletonTree& skeletonTree() const { return *_tree; }
+    const std::shared_ptr<const SkeletonTree>& skeletonTreePtr() const {
+        return _tree;
+    }
     int numJoints() const { return _tree->numJoints(); }
 
     Eigen::Vector3f rootTranslation(int frameIndex) const;
@@ -35,6 +38,15 @@ class SkeletonMotion {
     // with reusable buffers for per-frame playback hot loops.
     SkeletonState frame(int frameIndex) const;
     SkeletonState sample(float time, bool loop = true) const;
+
+    std::vector<Transform> globalTransforms() const;
+    std::vector<Eigen::Vector3f> globalPositions() const;
+    std::vector<Eigen::Vector3f> globalLinearVelocities() const;
+    std::vector<Eigen::Vector3f> globalAngularVelocities() const;
+    std::vector<Eigen::Vector3f> globalLinearAccelerations() const;
+    std::vector<Eigen::Vector3f> globalAngularAccelerations() const;
+    std::vector<Eigen::Vector3f> rootLinearVelocities() const;
+    std::vector<Eigen::Vector3f> rootLinearAccelerations() const;
 
     const std::vector<float>& rootTranslationsFlat() const {
         return _rootTranslations;

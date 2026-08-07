@@ -13,6 +13,16 @@ _Float32Array: TypeAlias = npt.NDArray[np.float32]
 class SkeletonTree:
     """Read-only skeleton hierarchy and local bind transforms."""
 
+    def __init__(
+        self,
+        names: list[str],
+        parents: list[int],
+        local_translations: npt.ArrayLike | torch.Tensor,
+        local_rotations_wxyz: npt.ArrayLike | torch.Tensor,
+    ) -> None:
+        """Create a skeleton from translations and WXYZ bind rotations."""
+        ...
+
     def num_joints(self) -> int:
         """Return S, the number of skeleton nodes."""
         ...
@@ -41,6 +51,16 @@ class SkeletonTree:
 class SkeletonMotion:
     """Sampled skeleton animation with root motion and local rotations."""
 
+    @staticmethod
+    def from_arrays(
+        skeleton_tree: SkeletonTree,
+        root_translations: npt.ArrayLike | torch.Tensor,
+        local_rotations_wxyz: npt.ArrayLike | torch.Tensor,
+        fps: float,
+        motion_name: str = "Motion",
+    ) -> SkeletonMotion:
+        """Create a motion from root ``(F, 3)`` and WXYZ rotations ``(F, J, 4)``."""
+        ...
     def num_frames(self) -> int:
         """Return F, the number of frames."""
         ...
@@ -62,6 +82,10 @@ class SkeletonMotion:
     def parent_indices(self) -> list[int]:
         """Return S parent indices."""
         ...
+    @property
+    def skeleton_tree(self) -> SkeletonTree:
+        """Return the motion's read-only skeleton hierarchy."""
+        ...
     def frame(self, frame_index: int) -> SkeletonState:
         """Return the pose at one frame."""
         ...
@@ -79,6 +103,39 @@ class SkeletonMotion:
         ...
     def local_rotations_wxyz_flat(self) -> list[float]:
         """Return flattened WXYZ rotations with logical shape ``(F, S, 4)``."""
+        ...
+    def root_translations(self) -> _Float32Array:
+        """Return root translations with shape ``(F, 3)``."""
+        ...
+    def local_rotations_wxyz(self) -> _Float32Array:
+        """Return WXYZ local rotations with shape ``(F, J, 4)``."""
+        ...
+    def global_matrices(self) -> _Float32Array:
+        """Compute global transforms with shape ``(F, J, 4, 4)``."""
+        ...
+    def global_positions(self) -> _Float32Array:
+        """Compute global joint positions with shape ``(F, J, 3)``."""
+        ...
+    def global_rotations_wxyz(self) -> _Float32Array:
+        """Compute WXYZ global joint rotations with shape ``(F, J, 4)``."""
+        ...
+    def root_linear_velocities(self) -> _Float32Array:
+        """Compute root linear velocities with shape ``(F, 3)``."""
+        ...
+    def root_linear_accelerations(self) -> _Float32Array:
+        """Compute root linear accelerations with shape ``(F, 3)``."""
+        ...
+    def global_linear_velocities(self) -> _Float32Array:
+        """Compute global joint linear velocities with shape ``(F, J, 3)``."""
+        ...
+    def global_angular_velocities(self) -> _Float32Array:
+        """Compute global joint angular velocities with shape ``(F, J, 3)``."""
+        ...
+    def global_linear_accelerations(self) -> _Float32Array:
+        """Compute global joint linear accelerations with shape ``(F, J, 3)``."""
+        ...
+    def global_angular_accelerations(self) -> _Float32Array:
+        """Compute global joint angular accelerations with shape ``(F, J, 3)``."""
         ...
 
 class Transform:
@@ -99,11 +156,11 @@ class SkeletonState:
     @staticmethod
     def from_rotation_and_root_translation(
         tree: SkeletonTree,
-        rotations: npt.ArrayLike | torch.Tensor,
+        rotations_wxyz: npt.ArrayLike | torch.Tensor,
         root_translation: npt.ArrayLike | torch.Tensor,
         is_local: bool = True,
     ) -> SkeletonState:
-        """Create a pose from XYZW rotations ``(S, 4)`` and root ``(3,)``."""
+        """Create a pose from WXYZ rotations ``(S, 4)`` and root ``(3,)``."""
         ...
     def num_joints(self) -> int:
         """Return S, the number of skeleton nodes."""
@@ -141,6 +198,26 @@ class SkeletonState:
     def print_global_positions(self) -> None:
         """Print global node positions for debugging."""
         ...
+
+def solve_full_body_ik(
+    state: SkeletonState,
+    targets: npt.ArrayLike | torch.Tensor,
+    effector_joints: npt.ArrayLike | torch.Tensor,
+    effector_offsets: npt.ArrayLike | torch.Tensor,
+    control_joints: npt.ArrayLike | torch.Tensor,
+    control_axes: npt.ArrayLike | torch.Tensor,
+    max_iterations: int = 0,
+) -> tuple[SkeletonState, _Float32Array, _Float32Array, int]: ...
+
+def solve_full_body_ik_batch(
+    motion: SkeletonMotion,
+    targets: npt.ArrayLike | torch.Tensor,
+    effector_joints: npt.ArrayLike | torch.Tensor,
+    effector_offsets: npt.ArrayLike | torch.Tensor,
+    control_joints: npt.ArrayLike | torch.Tensor,
+    control_axes: npt.ArrayLike | torch.Tensor,
+    max_iterations: int = 0,
+) -> tuple[SkeletonMotion, _Float32Array, _Float32Array, npt.NDArray[np.int32]]: ...
 
 def cpu_skin(
     bind_positions: npt.ArrayLike | torch.Tensor,

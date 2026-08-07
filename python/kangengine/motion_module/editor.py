@@ -25,16 +25,6 @@ def _vec3_to_array(value) -> np.ndarray:
     return np.asarray(_vec3_to_list(value), dtype=np.float32)
 
 
-def _sample_global_matrices(motion) -> np.ndarray:
-    frame_count = max(int(motion.num_frames()), 1)
-    fps = max(float(motion.fps()), 1e-6)
-    frames = []
-    for frame in range(frame_count):
-        state = motion.sample(frame / fps, loop=False)
-        frames.append(np.asarray(state.compute_global_matrices(), dtype=np.float32))
-    return np.asarray(frames, dtype=np.float32)
-
-
 @dataclass
 class MotionSampleData:
     positions: np.ndarray
@@ -46,13 +36,12 @@ class MotionSampleData:
 
     @classmethod
     def from_motion(cls, motion, profiles=None) -> "MotionSampleData":
-        matrices = _sample_global_matrices(motion)
-        positions = matrices[:, :, :3, 3].copy()
+        matrices = np.asarray(motion.global_matrices(), dtype=np.float32)
+        positions = np.asarray(motion.global_positions(), dtype=np.float32)
+        velocities = np.asarray(
+            motion.global_linear_velocities(), dtype=np.float32
+        )
         fps = max(float(motion.fps()), 1e-6)
-        if positions.shape[0] <= 1:
-            velocities = np.zeros_like(positions)
-        else:
-            velocities = np.gradient(positions, axis=0) * fps
         mapper = JointMapper.from_motion(motion, profiles=profiles or None)
         return cls(
             positions,

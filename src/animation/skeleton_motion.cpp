@@ -8,6 +8,46 @@
 namespace KE {
 namespace Animation {
 
+namespace {
+
+std::vector<Eigen::Vector3f>
+differentiateVectors(const std::vector<Eigen::Vector3f>& values, int frames,
+                     int width, float fps) {
+    std::vector<Eigen::Vector3f> output(values.size(), Eigen::Vector3f::Zero());
+    if (frames <= 1)
+        return output;
+    for (int frameIndex = 0; frameIndex < frames; ++frameIndex) {
+        const int before = frameIndex == 0 ? 0 : frameIndex - 1;
+        const int after =
+            frameIndex == frames - 1 ? frames - 1 : frameIndex + 1;
+        const float scale = fps / static_cast<float>(after - before);
+        for (int item = 0; item < width; ++item) {
+            output[static_cast<size_t>(frameIndex * width + item)] =
+                (values[static_cast<size_t>(after * width + item)] -
+                 values[static_cast<size_t>(before * width + item)]) *
+                scale;
+        }
+    }
+    return output;
+}
+
+Eigen::Vector3f angularDifference(const Eigen::Quaternionf& before,
+                                  const Eigen::Quaternionf& after,
+                                  float inverseDeltaTime) {
+    Eigen::Quaternionf delta = after * before.conjugate();
+    if (delta.w() < 0.0f)
+        delta.coeffs() *= -1.0f;
+    if (delta.norm() <= 1e-8f)
+        return Eigen::Vector3f::Zero();
+    delta.normalize();
+    Eigen::AngleAxisf angleAxis(delta);
+    if (!std::isfinite(angleAxis.angle()))
+        return Eigen::Vector3f::Zero();
+    return angleAxis.axis() * angleAxis.angle() * inverseDeltaTime;
+}
+
+} // namespace
+
 SkeletonMotion::SkeletonMotion(std::shared_ptr<const SkeletonTree> tree,
                                float fps, std::string motionName,
                                std::vector<float> rootTranslations,
@@ -116,6 +156,81 @@ SkeletonState SkeletonMotion::sample(float time, bool loop) const {
 
     return SkeletonState::fromRotationAndRootTranslation(_tree, rotations, root,
                                                          true);
+}
+
+std::vector<Transform> SkeletonMotion::globalTransforms() const {
+    std::vector<Transform> output(static_cast<size_t>(numFrames()) *
+                                  static_cast<size_t>(numJoints()));
+    std::vector<Transform> frameTransforms;
+    for (int frameIndex = 0; frameIndex < numFrames(); ++frameIndex) {
+        frame(frameIndex).computeGlobalTransformsInto(frameTransforms);
+        std::copy(frameTransforms.begin(), frameTransforms.end(),
+                  output.begin() + static_cast<size_t>(frameIndex) *
+                                       static_cast<size_t>(numJoints()));
+    }
+    return output;
+}
+
+std::vector<Eigen::Vector3f> SkeletonMotion::globalPositions() const {
+    const auto transforms = globalTransforms();
+    std::vector<Eigen::Vector3f> output;
+    output.reserve(transforms.size());
+    for (const Transform& transform : transforms)
+        output.push_back(transform.translation);
+    return output;
+}
+
+std::vector<Eigen::Vector3f> SkeletonMotion::globalLinearVelocities() const {
+    return differentiateVectors(globalPositions(), numFrames(), numJoints(),
+                                fps());
+}
+
+std::vector<Eigen::Vector3f> SkeletonMotion::globalAngularVelocities() const {
+    const auto transforms = globalTransforms();
+    std::vector<Eigen::Vector3f> output(transforms.size(),
+                                        Eigen::Vector3f::Zero());
+    if (numFrames() <= 1)
+        return output;
+    for (int frameIndex = 0; frameIndex < numFrames(); ++frameIndex) {
+        const int before = frameIndex == 0 ? 0 : frameIndex - 1;
+        const int after =
+            frameIndex == numFrames() - 1 ? numFrames() - 1 : frameIndex + 1;
+        const float scale = fps() / static_cast<float>(after - before);
+        for (int joint = 0; joint < numJoints(); ++joint) {
+            output[static_cast<size_t>(frameIndex * numJoints() + joint)] =
+                angularDifference(
+                    transforms[static_cast<size_t>(before * numJoints() +
+                                                   joint)]
+                        .rotation,
+                    transforms[static_cast<size_t>(after * numJoints() + joint)]
+                        .rotation,
+                    scale);
+        }
+    }
+    return output;
+}
+
+std::vector<Eigen::Vector3f> SkeletonMotion::globalLinearAccelerations() const {
+    return differentiateVectors(globalLinearVelocities(), numFrames(),
+                                numJoints(), fps());
+}
+
+std::vector<Eigen::Vector3f>
+SkeletonMotion::globalAngularAccelerations() const {
+    return differentiateVectors(globalAngularVelocities(), numFrames(),
+                                numJoints(), fps());
+}
+
+std::vector<Eigen::Vector3f> SkeletonMotion::rootLinearVelocities() const {
+    std::vector<Eigen::Vector3f> roots;
+    roots.reserve(static_cast<size_t>(numFrames()));
+    for (int frameIndex = 0; frameIndex < numFrames(); ++frameIndex)
+        roots.push_back(rootTranslation(frameIndex));
+    return differentiateVectors(roots, numFrames(), 1, fps());
+}
+
+std::vector<Eigen::Vector3f> SkeletonMotion::rootLinearAccelerations() const {
+    return differentiateVectors(rootLinearVelocities(), numFrames(), 1, fps());
 }
 
 } // namespace Animation

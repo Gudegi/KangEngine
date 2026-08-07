@@ -35,6 +35,9 @@ class SkeletonState {
 
     // Accessors
     const SkeletonTree& skeletonTree() const { return *_tree; }
+    const std::shared_ptr<const SkeletonTree>& skeletonTreePtr() const {
+        return _tree;
+    }
     int numJoints() const { return _tree->numJoints(); }
     bool isLocal() const { return _isLocal; }
 
