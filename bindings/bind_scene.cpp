@@ -65,16 +65,16 @@ void bind_scene(py::module& m) {
              "Return the near clipping distance.")
         .def("get_far_plane", &KE::Camera::getFarPlane,
              "Return the far clipping distance.")
-        .def("set_camera_pos", &KE::Camera::setCameraPos,
-             py::arg("camera_pos"), "Set the camera position.")
-        .def("set_target_pos", &KE::Camera::setTargetPos,
-             py::arg("target_pos"), "Set the camera target point.")
+        .def("set_camera_pos", &KE::Camera::setCameraPos, py::arg("camera_pos"),
+             "Set the camera position.")
+        .def("set_target_pos", &KE::Camera::setTargetPos, py::arg("target_pos"),
+             "Set the camera target point.")
         .def("set_fov", &KE::Camera::setFoV, py::arg("fov"),
              "Set the vertical field of view in degrees.")
-        .def("set_near_plane", &KE::Camera::setNearPlane,
-             py::arg("distance"), "Set the near clipping distance.")
-        .def("set_far_plane", &KE::Camera::setFarPlane,
-             py::arg("distance"), "Set the far clipping distance.");
+        .def("set_near_plane", &KE::Camera::setNearPlane, py::arg("distance"),
+             "Set the near clipping distance.")
+        .def("set_far_plane", &KE::Camera::setFarPlane, py::arg("distance"),
+             "Set the far clipping distance.");
 
     py::class_<KE::Scene::DirectionalLight>(
         scene, "DirectionalLight",
@@ -157,7 +157,8 @@ void bind_scene(py::module& m) {
         .value("ROOT", KE::Scene::ArticulationPrimRole::Root)
         .value("BODY_FRAME", KE::Scene::ArticulationPrimRole::BodyFrame)
         .value("VISUAL_GEOM", KE::Scene::ArticulationPrimRole::VisualGeom)
-        .value("COLLISION_GEOM", KE::Scene::ArticulationPrimRole::CollisionGeom);
+        .value("COLLISION_GEOM",
+               KE::Scene::ArticulationPrimRole::CollisionGeom);
 
     py::enum_<KE::Scene::CollisionShapeType>(
         scene, "CollisionShapeType",
@@ -1323,6 +1324,50 @@ void bind_scene(py::module& m) {
         scene, "SkinnedMeshData",
         "Mesh payload with skinning attributes for skeletal animation.")
         .def(py::init<>(), "Create empty skinned mesh data.")
+        .def(
+            py::init([](std::shared_ptr<KE::Scene::MeshData> mesh,
+                        const IntArray& boneIndices,
+                        const FloatArray& boneWeights,
+                        std::vector<int> boneNodeIndices,
+                        const FloatArray& inverseBindMatrices) {
+                if (!mesh)
+                    throw py::value_error("mesh is None");
+                auto result = std::make_shared<KE::Scene::SkinnedMeshData>();
+                result->mesh = *mesh;
+                result->boneIndices = intVec4Array(boneIndices, "bone_indices");
+                result->boneWeights = vec4Array(boneWeights, "bone_weights");
+                result->boneNodeIndices = std::move(boneNodeIndices);
+                result->inverseBindMatrices = mat4RowMajorArray(
+                    inverseBindMatrices, "inverse_bind_matrices");
+                const size_t vertexCount = result->mesh.vertices.size();
+                if (result->boneIndices.size() != vertexCount ||
+                    result->boneWeights.size() != vertexCount) {
+                    throw py::value_error("bone_indices and bone_weights must "
+                                          "match mesh vertices");
+                }
+                if (result->boneNodeIndices.size() !=
+                    result->inverseBindMatrices.size()) {
+                    throw py::value_error("bone_node_indices and "
+                                          "inverse_bind_matrices must match");
+                }
+                const int boneCount =
+                    static_cast<int>(result->inverseBindMatrices.size());
+                for (size_t vertex = 0; vertex < vertexCount; ++vertex) {
+                    const glm::ivec4 indices = result->boneIndices[vertex];
+                    const glm::vec4 weights = result->boneWeights[vertex];
+                    for (int slot = 0; slot < 4; ++slot) {
+                        if (weights[slot] > 0.0f &&
+                            (indices[slot] < 0 || indices[slot] >= boneCount)) {
+                            throw py::value_error("weighted bone index is "
+                                                  "outside the bone palette");
+                        }
+                    }
+                }
+                return result;
+            }),
+            py::arg("mesh"), py::arg("bone_indices"), py::arg("bone_weights"),
+            py::arg("bone_node_indices"), py::arg("inverse_bind_matrices"),
+            "Create a complete skinned mesh payload from array data.")
         .def_readwrite("mesh", &KE::Scene::SkinnedMeshData::mesh,
                        "Base static mesh data.")
         .def_readwrite("bone_node_indices",
@@ -1659,5 +1704,4 @@ void bind_scene(py::module& m) {
         return false;
 #endif
     });
-
 }

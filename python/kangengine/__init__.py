@@ -61,11 +61,13 @@ _LAZY_IMPORTS = {
     ),
 }
 _LAZY_MODULES = {
+    "exports": ".exports",
     "motion_module": ".motion_module",
     "sim": ".sim",
 }
 
 if _TYPE_CHECKING:
+    from . import exports as exports
     from . import motion_module as motion_module
     from . import sim as sim
     from .sim.run_mode import SimulationPacer, SimulationRunConfig, SimulationRunMode
@@ -158,6 +160,7 @@ __all__ = [
     "asset",
     "animation",
     "character",
+    "exports",
     "geometry",
     "input",
     "material",
