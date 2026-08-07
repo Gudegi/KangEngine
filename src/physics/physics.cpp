@@ -288,9 +288,11 @@ PhysicsWorld::PhysicsWorld(PhysicsConfig config) {
     if (config.enableStabilization) {
         sceneDesc.flags |= PxSceneFlag::eENABLE_STABILIZATION;
     }
+#ifdef KANGENGINE_HAS_PHYSX_DIRECT_GPU_API
     if (config.enableBodyAccelerations) {
         sceneDesc.flags |= PxSceneFlag::eENABLE_BODY_ACCELERATIONS;
     }
+#endif
     if (config.enableGPU) {
 #ifdef __APPLE__
         fmt::print(
