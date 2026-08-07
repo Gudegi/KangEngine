@@ -656,26 +656,33 @@ void bind_animation(py::module& m) {
     anim.def(
         "solve_full_body_ik_batch",
         [](const SkeletonMotion& motion, const FloatArray& targets,
-           py::array_t<int, py::array::c_style | py::array::forcecast> effectors,
+           py::array_t<int, py::array::c_style | py::array::forcecast>
+               effectors,
            const FloatArray& offsets,
-           py::array_t<int, py::array::c_style | py::array::forcecast> controlJoints,
+           py::array_t<int, py::array::c_style | py::array::forcecast>
+               controlJoints,
            const FloatArray& controlAxes, int maxIterations) {
             const auto targetInfo = targets.request();
             const auto effectorInfo = effectors.request();
             const auto offsetInfo = offsets.request();
             const auto jointInfo = controlJoints.request();
             const auto axisInfo = controlAxes.request();
-            if (targetInfo.ndim != 3 || targetInfo.shape[0] != motion.numFrames() ||
+            if (targetInfo.ndim != 3 ||
+                targetInfo.shape[0] != motion.numFrames() ||
                 targetInfo.shape[2] != 3)
-                throw py::value_error("targets expected shape [frames, effectors, 3]");
+                throw py::value_error(
+                    "targets expected shape [frames, effectors, 3]");
             const py::ssize_t count = targetInfo.shape[1];
             if (effectorInfo.ndim != 1 || effectorInfo.shape[0] != count ||
                 offsetInfo.ndim != 2 || offsetInfo.shape[0] != count ||
                 offsetInfo.shape[1] != 3)
-                throw py::value_error("effector arrays have inconsistent shapes");
+                throw py::value_error(
+                    "effector arrays have inconsistent shapes");
             if (jointInfo.ndim != 1 || axisInfo.ndim != 2 ||
-                axisInfo.shape[0] != jointInfo.shape[0] || axisInfo.shape[1] != 3)
-                throw py::value_error("controls expected shapes [C] and [C, 3]");
+                axisInfo.shape[0] != jointInfo.shape[0] ||
+                axisInfo.shape[1] != 3)
+                throw py::value_error(
+                    "controls expected shapes [C] and [C, 3]");
 
             const float* targetData = static_cast<const float*>(targetInfo.ptr);
             const int* effectorData = static_cast<const int*>(effectorInfo.ptr);
@@ -683,23 +690,23 @@ void bind_animation(py::module& m) {
             const int* jointData = static_cast<const int*>(jointInfo.ptr);
             const float* axisData = static_cast<const float*>(axisInfo.ptr);
             std::vector<float> targetValues(targetData,
-                                             targetData + targetInfo.size);
+                                            targetData + targetInfo.size);
             std::vector<IKEffector> effectorValues;
             effectorValues.reserve(static_cast<size_t>(count));
             for (py::ssize_t i = 0; i < count; ++i)
-                effectorValues.push_back({
-                    effectorData[i],
-                    Eigen::Vector3f(offsetData[i * 3], offsetData[i * 3 + 1],
-                                    offsetData[i * 3 + 2])});
+                effectorValues.push_back(
+                    {effectorData[i],
+                     Eigen::Vector3f(offsetData[i * 3], offsetData[i * 3 + 1],
+                                     offsetData[i * 3 + 2])});
             std::vector<IKJointControl> controls;
             controls.reserve(static_cast<size_t>(jointInfo.size));
             for (py::ssize_t i = 0; i < jointInfo.size; ++i) {
                 const int joint = jointData[i];
-                auto existing = std::find_if(
-                    controls.begin(), controls.end(),
-                    [joint](const IKJointControl& control) {
-                        return control.joint == joint;
-                    });
+                auto existing =
+                    std::find_if(controls.begin(), controls.end(),
+                                 [joint](const IKJointControl& control) {
+                                     return control.joint == joint;
+                                 });
                 if (existing == controls.end()) {
                     controls.push_back({joint, {}});
                     existing = std::prev(controls.end());
@@ -714,8 +721,8 @@ void bind_animation(py::module& m) {
             FullBodyIKBatchResult solved;
             {
                 py::gil_scoped_release release;
-                solved = solveFullBodyIKBatch(
-                    motion, targetValues, effectorValues, controls, config);
+                solved = solveFullBodyIKBatch(motion, targetValues,
+                                              effectorValues, controls, config);
             }
             py::array_t<float> positions(
                 {static_cast<py::ssize_t>(motion.numFrames()),
@@ -723,15 +730,16 @@ void bind_animation(py::module& m) {
             py::array_t<float> errors(
                 {static_cast<py::ssize_t>(motion.numFrames()), count});
             py::array_t<int> iterations(
-                {static_cast<py::ssize_t>(motion.numFrames())});
+                static_cast<py::ssize_t>(motion.numFrames()));
             std::memcpy(positions.mutable_data(), solved.bodyPositions.data(),
                         solved.bodyPositions.size() * sizeof(float));
             std::memcpy(errors.mutable_data(), solved.finalErrors.data(),
                         solved.finalErrors.size() * sizeof(float));
             std::memcpy(iterations.mutable_data(), solved.iterations.data(),
                         solved.iterations.size() * sizeof(int));
-            return py::make_tuple(std::move(solved.motion), std::move(positions),
-                                  std::move(errors), std::move(iterations));
+            return py::make_tuple(std::move(solved.motion),
+                                  std::move(positions), std::move(errors),
+                                  std::move(iterations));
         },
         py::arg("motion"), py::arg("targets"), py::arg("effector_joints"),
         py::arg("effector_offsets"), py::arg("control_joints"),
@@ -741,9 +749,11 @@ void bind_animation(py::module& m) {
     anim.def(
         "solve_full_body_ik",
         [](const SkeletonState& state, const FloatArray& targets,
-           py::array_t<int, py::array::c_style | py::array::forcecast> effectors,
+           py::array_t<int, py::array::c_style | py::array::forcecast>
+               effectors,
            const FloatArray& offsets,
-           py::array_t<int, py::array::c_style | py::array::forcecast> controlJoints,
+           py::array_t<int, py::array::c_style | py::array::forcecast>
+               controlJoints,
            const FloatArray& controlAxes, int maxIterations) {
             const auto targetInfo = targets.request();
             const auto effectorInfo = effectors.request();
@@ -756,13 +766,17 @@ void bind_animation(py::module& m) {
             if (effectorInfo.ndim != 1 || effectorInfo.shape[0] != count ||
                 offsetInfo.ndim != 2 || offsetInfo.shape[0] != count ||
                 offsetInfo.shape[1] != 3)
-                throw py::value_error("effector arrays have inconsistent shapes");
+                throw py::value_error(
+                    "effector arrays have inconsistent shapes");
             if (jointInfo.ndim != 1 || axisInfo.ndim != 2 ||
-                axisInfo.shape[0] != jointInfo.shape[0] || axisInfo.shape[1] != 3)
-                throw py::value_error("controls expected shapes [C] and [C, 3]");
+                axisInfo.shape[0] != jointInfo.shape[0] ||
+                axisInfo.shape[1] != 3)
+                throw py::value_error(
+                    "controls expected shapes [C] and [C, 3]");
 
             const auto* targetData = static_cast<const float*>(targetInfo.ptr);
-            const auto* effectorData = static_cast<const int*>(effectorInfo.ptr);
+            const auto* effectorData =
+                static_cast<const int*>(effectorInfo.ptr);
             const auto* offsetData = static_cast<const float*>(offsetInfo.ptr);
             const auto* jointData = static_cast<const int*>(jointInfo.ptr);
             const auto* axisData = static_cast<const float*>(axisInfo.ptr);
@@ -771,22 +785,23 @@ void bind_animation(py::module& m) {
             targetValues.reserve(static_cast<size_t>(count));
             effectorValues.reserve(static_cast<size_t>(count));
             for (py::ssize_t i = 0; i < count; ++i) {
-                targetValues.emplace_back(targetData[i * 3], targetData[i * 3 + 1],
+                targetValues.emplace_back(targetData[i * 3],
+                                          targetData[i * 3 + 1],
                                           targetData[i * 3 + 2]);
-                effectorValues.push_back({
-                    effectorData[i],
-                    Eigen::Vector3f(offsetData[i * 3], offsetData[i * 3 + 1],
-                                    offsetData[i * 3 + 2])});
+                effectorValues.push_back(
+                    {effectorData[i],
+                     Eigen::Vector3f(offsetData[i * 3], offsetData[i * 3 + 1],
+                                     offsetData[i * 3 + 2])});
             }
             std::vector<IKJointControl> controls;
             controls.reserve(static_cast<size_t>(jointInfo.size));
             for (py::ssize_t i = 0; i < jointInfo.size; ++i) {
                 const int joint = jointData[i];
-                auto existing = std::find_if(
-                    controls.begin(), controls.end(),
-                    [joint](const IKJointControl& control) {
-                        return control.joint == joint;
-                    });
+                auto existing =
+                    std::find_if(controls.begin(), controls.end(),
+                                 [joint](const IKJointControl& control) {
+                                     return control.joint == joint;
+                                 });
                 if (existing == controls.end()) {
                     controls.push_back({joint, {}});
                     existing = std::prev(controls.end());
@@ -804,7 +819,7 @@ void bind_animation(py::module& m) {
             }
             py::array_t<float> positions(
                 {static_cast<py::ssize_t>(state.numJoints()), py::ssize_t(3)});
-            py::array_t<float> errors({count});
+            py::array_t<float> errors(count);
             std::memcpy(positions.mutable_data(), solved.bodyPositions.data(),
                         solved.bodyPositions.size() * sizeof(float));
             std::memcpy(errors.mutable_data(), solved.finalErrors.data(),
