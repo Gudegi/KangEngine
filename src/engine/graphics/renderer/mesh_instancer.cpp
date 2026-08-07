@@ -15,6 +15,7 @@
 namespace KE {
 
 void MeshInstancer::_initMeshData(const Scene::MeshData& mesh) {
+    _vertexCount = mesh.vertices.size();
     _localBounds = mesh.computeLocalAABB();
     // Reserved for future sphere culling / LOD paths; current culling uses
     // AABB.
@@ -530,6 +531,12 @@ void MeshInstancer::updateGeometry(const std::vector<glm::vec3>& positions,
                                    const std::vector<glm::vec3>& normals) {
     // TODO: Soft-body/deformable meshes need world bounds refresh after this.
     // _vbos[0] = positions (location 0), _vbos[1] = normals (location 1)
+    if (positions.size() != _vertexCount)
+        throw std::runtime_error(
+            "Dynamic geometry vertex count must match the uploaded mesh");
+    if (!normals.empty() && normals.size() != _vertexCount)
+        throw std::runtime_error(
+            "Dynamic geometry normals must match the uploaded mesh");
     if (!_vbos.empty())
         _vbos[0]->setData(positions.data(),
                           sizeof(glm::vec3) * positions.size());

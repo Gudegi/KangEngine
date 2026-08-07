@@ -426,7 +426,8 @@ class App {
     void logDebugPoints(const std::string& path,
                         const std::vector<glm::vec3>& points,
                         const std::vector<glm::vec4>& colors = {},
-                        float size = 6.0f, bool hidden = false);
+                        float size = 6.0f, bool hidden = false,
+                        bool overlay = false);
     void clearDebugPoints(const std::string& path);
     ///////
 

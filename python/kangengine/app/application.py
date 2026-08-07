@@ -478,8 +478,9 @@ class DebugOverlay:
         *,
         size: float = 6.0,
         hidden: bool = False,
+        overlay: bool = False,
     ):
-        self._app.log_debug_points(path, points, colors, size, hidden)
+        self._app.log_debug_points(path, points, colors, size, hidden, overlay)
         return self
 
     def axes(

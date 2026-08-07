@@ -1286,7 +1286,7 @@ py::class_<glm::vec3>(m, "Vec3")
         .def(
             "log_debug_points",
             [](App* self, const std::string& path, const FloatArray& points,
-               py::object colors, float size, bool hidden) {
+               py::object colors, float size, bool hidden, bool overlay) {
                 auto p = vec3Array(points, "points");
                 std::vector<glm::vec4> c;
                 if (!colors.is_none()) {
@@ -1297,11 +1297,12 @@ py::class_<glm::vec3>(m, "Vec3")
                             "colors must be empty, length 1, or match points");
                     }
                 }
-                self->logDebugPoints(path, p, c, size, hidden);
+                self->logDebugPoints(path, p, c, size, hidden, overlay);
             },
             py::arg("path"), py::arg("points"), py::arg("colors") = py::none(),
             py::arg("size") = 6.0f, py::arg("hidden") = false,
-            "Draw persistent debug points at a debug path.")
+            py::arg("overlay") = false,
+            "Draw persistent debug points, optionally over scene depth.")
         .def("clear_debug_points", &App::clearDebugPoints, py::arg("path"),
              "Clear debug points stored at a debug path.")
         .def(

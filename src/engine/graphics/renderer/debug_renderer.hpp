@@ -44,6 +44,7 @@ class DebugRenderer {
         std::vector<PointVertex> vertices;
         size_t allocatedVertices = 0;
         bool hidden = false;
+        bool overlay = false;
     };
 
     Backend::GraphicsDevice* _device = nullptr;
@@ -55,6 +56,7 @@ class DebugRenderer {
     std::unique_ptr<Backend::PipelineLayout> _pipelineLayout;
     std::unique_ptr<Backend::GraphicsPipeline> _linePipeline;
     std::unique_ptr<Backend::GraphicsPipeline> _pointPipeline;
+    std::unique_ptr<Backend::GraphicsPipeline> _pointOverlayPipeline;
 
     void ensureLineBatchGpu(LineBatch& batch);
     void ensurePointBatchGpu(PointBatch& batch);
@@ -84,7 +86,7 @@ class DebugRenderer {
     void logPoints(const std::string& path,
                    const std::vector<glm::vec3>& points,
                    const std::vector<glm::vec4>& colors = {}, float size = 6.0f,
-                   bool hidden = false);
+                   bool hidden = false, bool overlay = false);
     void clearPoints(const std::string& path);
     bool hasDraws() const;
     void record(Backend::RenderPassEncoder& pass) const;

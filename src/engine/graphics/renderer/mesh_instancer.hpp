@@ -74,6 +74,7 @@ class MeshInstancer {
     std::unique_ptr<Backend::Buffer> _boneMatricesUBO;
     std::unique_ptr<Backend::Buffer> _alphaParamsUBO;
     int _numIndices = 0;
+    size_t _vertexCount = 0;
 
     // Instance data (dynamic, uploaded each frame)
     std::unique_ptr<Backend::Buffer> _transformVBO; // mat4 × N  (loc 3-6)

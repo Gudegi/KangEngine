@@ -126,6 +126,10 @@ void DebugRenderer::init(Backend::GraphicsDevice* device,
     desc.vertexBuffers = {pointLayout};
     desc.primitive.topology = Backend::PrimitiveTopology::PointList;
     _pointPipeline = _device->createGraphicsPipeline(desc);
+    desc.label = "debug_point_overlay_pipeline";
+    desc.depthStencil->depthWriteEnabled = false;
+    desc.depthStencil->depthCompare = Backend::CompareFunction::Always;
+    _pointOverlayPipeline = _device->createGraphicsPipeline(desc);
 }
 
 void DebugRenderer::ensureLineBatchGpu(LineBatch& batch) {
@@ -226,7 +230,7 @@ void DebugRenderer::clearLines(const std::string& path) {
 void DebugRenderer::logPoints(const std::string& path,
                               const std::vector<glm::vec3>& points,
                               const std::vector<glm::vec4>& colors, float size,
-                              bool hidden) {
+                              bool hidden, bool overlay) {
     if (path.empty())
         return;
     validatePointInputs("DebugRenderer::logPoints", points, colors);
@@ -235,6 +239,7 @@ void DebugRenderer::logPoints(const std::string& path,
     batch.vertices.clear();
     batch.vertices.reserve(points.size());
     batch.hidden = hidden;
+    batch.overlay = overlay;
 
     const float safeSize = std::max(1.0f, size);
     for (size_t i = 0; i < points.size(); ++i)
@@ -276,7 +281,8 @@ void DebugRenderer::record(Backend::RenderPassEncoder& pass) const {
     for (const auto& [path, batch] : _pointBatches) {
         if (batch.hidden || batch.vertices.empty() || !batch.vertexBuffer)
             continue;
-        pass.setPipeline(_pointPipeline.get());
+        pass.setPipeline(batch.overlay ? _pointOverlayPipeline.get()
+                                       : _pointPipeline.get());
         pass.setBindGroup(0, _frameBindGroup);
         pass.setVertexBuffer(0, batch.vertexBuffer.get());
         pass.draw(static_cast<uint32_t>(batch.vertices.size()));

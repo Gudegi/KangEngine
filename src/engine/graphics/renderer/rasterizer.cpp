@@ -440,8 +440,8 @@ void Rasterizer::clearDebugLines(const std::string& path) {
 void Rasterizer::logDebugPoints(const std::string& path,
                                 const std::vector<glm::vec3>& points,
                                 const std::vector<glm::vec4>& colors,
-                                float size, bool hidden) {
-    _debugRenderer.logPoints(path, points, colors, size, hidden);
+                                float size, bool hidden, bool overlay) {
+    _debugRenderer.logPoints(path, points, colors, size, hidden, overlay);
 }
 
 void Rasterizer::clearDebugPoints(const std::string& path) {
