@@ -53,6 +53,7 @@ class MotionSequencerPanel : public Panel {
     float playbackDuration() const;
     void wrapOrClampTime();
     void setFrame(int frame);
+    void handleFrameShortcuts();
     void emitPlayingChanged();
 
     std::string _motionName = "Motion";
@@ -70,6 +71,8 @@ class MotionSequencerPanel : public Panel {
     float _overlayWidthRatio = 0.70f;
     float _legendWidth = 200.0f;
     float _timeScale = 1.0f;
+    float _leftArrowHoldTime = 0.0f;
+    float _rightArrowHoldTime = 0.0f;
     int _firstFrame = 0;
     int _selectedTrack = -1;
     UIScale _uiScale;

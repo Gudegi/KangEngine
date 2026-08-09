@@ -106,6 +106,7 @@ class SMPLMotionViewer(ke.App):
             self.motion,
             motion_name=Path(self.motion.motion_name() or self.motion_file).name,
         )
+        self.playback_controller.add_target(self.editor)
         self._apply_motion_time()
 
         print(

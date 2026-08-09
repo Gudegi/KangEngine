@@ -38,9 +38,7 @@ class MotionSampleData:
     def from_motion(cls, motion, profiles=None) -> "MotionSampleData":
         matrices = np.asarray(motion.global_matrices(), dtype=np.float32)
         positions = np.asarray(motion.global_positions(), dtype=np.float32)
-        velocities = np.asarray(
-            motion.global_linear_velocities(), dtype=np.float32
-        )
+        velocities = np.asarray(motion.global_linear_velocities(), dtype=np.float32)
         fps = max(float(motion.fps()), 1e-6)
         mapper = JointMapper.from_motion(motion, profiles=profiles or None)
         return cls(
@@ -336,6 +334,9 @@ class MotionEditor:
             self.player.num_frames,
             self.player.fps,
         )
+
+    def set_playing(self, playing: bool):
+        self.player.playing = playing
 
     def update(self, dt: float) -> bool:
         is_changed = self.player.update(dt)

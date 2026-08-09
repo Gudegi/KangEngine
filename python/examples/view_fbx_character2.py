@@ -22,17 +22,18 @@ def default_fbx_file() -> Path:
 
 
 def default_bind_file() -> Path:
-    return repo_root() / "assets" / "external" / "Geno/Geno_bind.fbx"
+    return repo_root() / "assets" / "external" / "Geno/Geno_bind_Nfix.fbx"
 
 
 def resolve_bind_file(fbx_file: Path) -> Path | None:
     candidate = default_bind_file()
+    if candidate.exists():
+        return candidate.resolve()
+
     for parent in (fbx_file.parent, *fbx_file.parents):
         local_candidate = parent / "Geno_bind.fbx"
         if local_candidate.exists():
             return local_candidate.resolve()
-    if "geno" in [part.lower() for part in fbx_file.parts] and candidate.exists():
-        return candidate.resolve()
     return None
 
 

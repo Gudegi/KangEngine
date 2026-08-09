@@ -93,6 +93,28 @@ void MotionSequencerPanel::setPlayingChangedCallback(
     _onPlayingChanged = std::move(callback);
 }
 
+void MotionSequencerPanel::handleFrameShortcuts() {
+    const ImGuiIO& io = ImGui::GetIO();
+    _leftArrowHoldTime = ImGui::IsKeyDown(ImGuiKey_LeftArrow)
+                             ? _leftArrowHoldTime + io.DeltaTime
+                             : 0.0f;
+    _rightArrowHoldTime = ImGui::IsKeyDown(ImGuiKey_RightArrow)
+                              ? _rightArrowHoldTime + io.DeltaTime
+                              : 0.0f;
+
+    const int leftStep = _leftArrowHoldTime >= 5.0f ? 30 : 1;
+    const int rightStep = _rightArrowHoldTime >= 5.0f ? 30 : 1;
+    const int leftPresses = ImGui::GetKeyPressedAmount(
+        ImGuiKey_LeftArrow, io.KeyRepeatDelay, io.KeyRepeatRate);
+    const int rightPresses = ImGui::GetKeyPressedAmount(
+        ImGuiKey_RightArrow, io.KeyRepeatDelay, io.KeyRepeatRate);
+    const int stepOffset = rightPresses * rightStep - leftPresses * leftStep;
+    if (stepOffset == 0)
+        return;
+    setPlaying(false);
+    setFrame(currentFrame() + stepOffset);
+}
+
 void MotionSequencerPanel::buildPanel() {
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
     _uiScale.update(static_cast<int>(viewport->WorkSize.x * viewport->DpiScale),
@@ -153,6 +175,7 @@ void MotionSequencerPanel::buildPanel() {
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,
                         ImVec2(logicalPx(8.0f), itemSpacingY));
     ImGui::Begin(name().c_str(), nullptr, windowFlags);
+    handleFrameShortcuts();
 
     const float d = duration();
     const float playbackD = playbackDuration();
@@ -295,7 +318,11 @@ int MotionSequencerPanel::currentFrame() const {
     const float playbackD = playbackDuration();
     const float t = _loop && playbackD > 1e-6f ? std::fmod(_time, playbackD)
                                                : std::clamp(_time, 0.0f, d);
-    return std::clamp(static_cast<int>(std::floor(t * _fps)), 0,
+    float framePosition = t * _fps;
+    const float nearestFrame = std::round(framePosition);
+    if (std::abs(framePosition - nearestFrame) < 1e-4f)
+        framePosition = nearestFrame;
+    return std::clamp(static_cast<int>(std::floor(framePosition)), 0,
                       _numFrames - 1);
 }
 

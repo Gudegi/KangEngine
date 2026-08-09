@@ -18,6 +18,7 @@ from .. import input as input_api
 from .. import material as material_api
 from .. import render as render_api
 from ..recording import VideoCaptureController
+from .playback_controller import PlaybackController
 
 keys = _ke.keys
 scene = _ke.scene
@@ -903,6 +904,7 @@ class App(_NativeApp):
         self._textures_by_uri = {}
         self._scene_hook_resource_handles = {}
         self._render_hook_resource_usage = {}
+        self.playback_controller = PlaybackController()
 
     def get_native_scene(self):
         """Return the native SceneBackend escape hatch.
@@ -1001,10 +1003,11 @@ class App(_NativeApp):
             usage = self._render_hook_resource_usage.pop(handle, None)
             if usage is not None:
                 pipeline_handle, usage_path = usage
-                self.resources.remove_external_usage(
-                    pipeline_handle, usage_path
-                )
+                self.resources.remove_external_usage(pipeline_handle, usage_path)
         return removed
+
+    def add_playback_target(self, target):
+        self.playback_controller.add_target(target)
 
     def package_asset_path(self, *parts: str) -> str:
         return str(Path(_ke.__file__).resolve().parent / "assets" / Path(*parts))
@@ -1514,7 +1517,10 @@ class App(_NativeApp):
         pass
 
     def pre_update(self):
-        pass
+        if self.playback_controller.has_targets:
+            if self.was_key_pressed(keys.SPACE):
+                playing = self.playback_controller.toggle_play()
+                self.set_simulation_paused(not playing)
 
     def fixed_update(self, fixed_dt):
         pass

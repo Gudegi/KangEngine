@@ -2156,7 +2156,11 @@ void OpenGLDevice::submit(CommandBuffer& commandBuffer) {
                                   static_cast<GLsizei>(value.width),
                                   static_cast<GLsizei>(value.height));
                     } else if constexpr (std::is_same_v<T, LineWidthCommand>) {
+#ifdef __APPLE__
+                        glLineWidth(1.0f);
+#else
                         glLineWidth(value.width);
+#endif
                     } else if constexpr (std::is_same_v<T,
                                                         PolygonModeCommand>) {
                         GLenum mode = GL_FILL;
