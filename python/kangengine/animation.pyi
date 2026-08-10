@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any, TypeAlias, overload
+from typing import TypeAlias, overload
 
 import numpy as np
 import numpy.typing as npt
 import torch
+
+from . import Quat, Vec3
 
 _Float32Array: TypeAlias = npt.NDArray[np.float32]
 
@@ -32,10 +34,10 @@ class SkeletonTree:
     def parent_index(self, index: int) -> int:
         """Return the parent node index, or -1 for the root."""
         ...
-    def local_translation(self, index: int) -> Any:
+    def local_translation(self, index: int) -> Vec3:
         """Return a node's local bind translation."""
         ...
-    def local_rotation(self, index: int) -> Any:
+    def local_rotation(self, index: int) -> Quat:
         """Return a node's local bind rotation."""
         ...
     def node_names(self) -> list[str]:
@@ -92,10 +94,10 @@ class SkeletonMotion:
     def sample(self, time: float, loop: bool = True) -> SkeletonState:
         """Sample a pose at time in seconds."""
         ...
-    def root_translation(self, frame: int) -> Any:
+    def root_translation(self, frame: int) -> Vec3:
         """Return the root translation at one frame."""
         ...
-    def local_rotation(self, frame: int, joint: int) -> Any:
+    def local_rotation(self, frame: int, joint: int) -> Quat:
         """Return one node's local rotation at one frame."""
         ...
     def root_translations_flat(self) -> list[float]:
@@ -142,11 +144,11 @@ class Transform:
     """Forward-kinematics transform result."""
 
     @property
-    def rotation(self) -> Any:
+    def rotation(self) -> Quat:
         """Return the transform rotation."""
         ...
     @property
-    def translation(self) -> Any:
+    def translation(self) -> Vec3:
         """Return the transform translation."""
         ...
 
@@ -174,10 +176,10 @@ class SkeletonState:
     def compute_global_matrices(self) -> _Float32Array:
         """Return global float32 matrices with shape ``(S, 4, 4)``."""
         ...
-    def compute_global_positions(self) -> list[Any]:
+    def compute_global_positions(self) -> list[Vec3]:
         """Return S global node positions."""
         ...
-    def rotation(self, index: int) -> Any:
+    def rotation(self, index: int) -> Quat:
         """Return one stored node rotation."""
         ...
     @overload
@@ -185,8 +187,8 @@ class SkeletonState:
         """Set one node rotation from an XYZW array with shape ``(4,)``."""
         ...
     @overload
-    def set_rotation(self, index: int, rotation: Any) -> None: ...
-    def root_translation(self) -> Any:
+    def set_rotation(self, index: int, rotation: Quat) -> None: ...
+    def root_translation(self) -> Vec3:
         """Return the root translation."""
         ...
     @overload
@@ -194,7 +196,7 @@ class SkeletonState:
         """Set the root translation from shape ``(3,)``."""
         ...
     @overload
-    def set_root_translation(self, translation: Any) -> None: ...
+    def set_root_translation(self, translation: Vec3) -> None: ...
     def print_global_positions(self) -> None:
         """Print global node positions for debugging."""
         ...

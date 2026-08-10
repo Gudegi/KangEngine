@@ -127,12 +127,12 @@ class SMPLMotionViewer(ke.App):
             rotations[target] = [rotation.w, rotation.x, rotation.y, rotation.z]
         root = state.root_translation()
         root_translation = np.asarray([root.x, root.y, root.z], dtype=np.float32)
-        self.body.apply_pose(
+        self.body.update_pose_correctives(
             self.surface,
             rotations,
-            root_translation,
-            pose_correctives=self.pose_correctives,
+            enabled=self.pose_correctives,
         )
+        self.surface.apply_state(root_translation, rotations)
 
     def pre_render(self):
         if self.editor.update(self.get_delta_time()):

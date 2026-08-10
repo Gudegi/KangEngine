@@ -437,6 +437,124 @@ std::string normalizeTexturePathString(std::string path) {
     return path;
 }
 
+std::string embeddedTextureExtension(const ofbx::DataView& data,
+                                     const std::string& sourceName) {
+    const auto size = static_cast<size_t>(data.end - data.begin);
+    if (size >= 8 && std::memcmp(data.begin, "\x89PNG\r\n\x1a\n", 8) == 0)
+        return ".png";
+    if (size >= 3 && data.begin[0] == 0xff && data.begin[1] == 0xd8 &&
+        data.begin[2] == 0xff)
+        return ".jpg";
+    if (size >= 4 && std::memcmp(data.begin, "DDS ", 4) == 0)
+        return ".dds";
+
+    std::string extension =
+        std::filesystem::path(sourceName).extension().string();
+    std::transform(
+        extension.begin(), extension.end(), extension.begin(),
+        [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+    if (extension == ".png" || extension == ".jpg" || extension == ".jpeg" ||
+        extension == ".tga" || extension == ".bmp" || extension == ".dds")
+        return extension;
+    return ".bin";
+}
+
+std::string embeddedTextureCacheStem(const std::string& sourceName) {
+    std::string stem = std::filesystem::path(sourceName).stem().string();
+    for (char& ch : stem) {
+        const unsigned char value = static_cast<unsigned char>(ch);
+        if (!std::isalnum(value) && ch != '_' && ch != '-' && ch != '.')
+            ch = '_';
+    }
+    while (!stem.empty() && (stem.front() == '.' || stem.front() == '_'))
+        stem.erase(stem.begin());
+    if (stem.empty())
+        stem = "embedded_texture";
+    constexpr size_t MaxStemLength = 80;
+    if (stem.size() > MaxStemLength)
+        stem.resize(MaxStemLength);
+    return stem;
+}
+
+ofbx::DataView embeddedTexturePayload(ofbx::DataView data) {
+    if (!data.begin || !data.end || data.end <= data.begin)
+        return data;
+    const auto size = static_cast<size_t>(data.end - data.begin);
+    if (size <= 4)
+        return data;
+
+    const uint32_t declaredSize =
+        static_cast<uint32_t>(data.begin[0]) |
+        (static_cast<uint32_t>(data.begin[1]) << 8u) |
+        (static_cast<uint32_t>(data.begin[2]) << 16u) |
+        (static_cast<uint32_t>(data.begin[3]) << 24u);
+    if (declaredSize == size - 4)
+        data.begin += 4;
+    return data;
+}
+
+std::string extractEmbeddedTexture(const ofbx::Texture& texture,
+                                   const std::string& sourceName) {
+    const ofbx::DataView data =
+        embeddedTexturePayload(texture.getEmbeddedData());
+    if (!data.begin || !data.end || data.end <= data.begin)
+        return {};
+
+    uint64_t hash = 1469598103934665603ull;
+    for (const ofbx::u8* byte = data.begin; byte != data.end; ++byte) {
+        hash ^= static_cast<uint64_t>(*byte);
+        hash *= 1099511628211ull;
+    }
+
+    std::error_code error;
+    const std::filesystem::path cacheDir =
+        std::filesystem::temp_directory_path(error) / "kangengine" /
+        "fbx_embedded_textures";
+    if (error) {
+        fmt::print(stderr,
+                   "FBX warning: cannot locate temporary directory for "
+                   "embedded texture '{}': {}\n",
+                   sourceName, error.message());
+        return {};
+    }
+    std::filesystem::create_directories(cacheDir, error);
+    if (error) {
+        fmt::print(stderr,
+                   "FBX warning: cannot create embedded texture cache '{}': "
+                   "{}\n",
+                   cacheDir.string(), error.message());
+        return {};
+    }
+
+    const std::filesystem::path output =
+        cacheDir / (embeddedTextureCacheStem(sourceName) + "_" +
+                    fmt::format("{:016x}", hash) +
+                    embeddedTextureExtension(data, sourceName));
+    const auto byteCount = static_cast<uintmax_t>(data.end - data.begin);
+    if (std::filesystem::is_regular_file(output, error) && !error &&
+        std::filesystem::file_size(output, error) == byteCount && !error)
+        return output.string();
+
+    error.clear();
+    std::ofstream stream(output, std::ios::binary | std::ios::trunc);
+    if (!stream) {
+        fmt::print(stderr,
+                   "FBX warning: cannot write embedded texture cache '{}'.\n",
+                   output.string());
+        return {};
+    }
+    stream.write(reinterpret_cast<const char*>(data.begin),
+                 static_cast<std::streamsize>(byteCount));
+    stream.close();
+    if (!stream) {
+        fmt::print(stderr,
+                   "FBX warning: failed writing embedded texture cache '{}'.\n",
+                   output.string());
+        return {};
+    }
+    return output.string();
+}
+
 std::string resolveTexturePath(const std::string& fbxPath,
                                const ofbx::Texture& texture) {
     std::string relative = normalizeTexturePathString(
@@ -483,6 +601,10 @@ std::string resolveTexturePath(const std::string& fbxPath,
     if (!resolved.empty())
         return resolved;
     resolved = tryResolveCandidate(file);
+    if (!resolved.empty())
+        return resolved;
+    const std::string sourceName = !relative.empty() ? relative : file;
+    resolved = extractEmbeddedTexture(texture, sourceName);
     if (!resolved.empty())
         return resolved;
     return fallback;

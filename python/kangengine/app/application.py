@@ -1405,10 +1405,12 @@ class App(_NativeApp):
     ):
         """Register a skinned mesh prim and return a RenderablePrimView.
 
-        The material selects the built-in or custom RHI rendering path.
+        The bind mesh is registered as the shared resource identity. Runtime
+        skinning and deformable vertex updates remain per-renderable state.
         """
         if transform_source is None:
             transform_source = render_api.TransformSource.SCENE_GRAPH
+        self._ensure_prim_mesh_resource(prim)
         self._add_skinned_renderable(
             material,
             prim,
@@ -1421,6 +1423,20 @@ class App(_NativeApp):
                 f"failed to register skinned renderable prim: {prim.get_path()}"
             )
         return RenderablePrimView(self, prim, component)
+
+    def _ensure_prim_mesh_resource(self, prim):
+        """Attach resource identity to a prim's bind/source mesh."""
+        mesh_component = prim.get_mesh_component()
+        if mesh_component is None or mesh_component.mesh_data is None:
+            raise ValueError("add_skinned_mesh requires mesh data on the prim")
+        if mesh_component.resource_handle == scene.InvalidResourceHandle:
+            prim_path = prim.get_path()
+            mesh_component.resource_handle = self._register_mesh_resource(
+                mesh_component.mesh_data,
+                display_name=Path(prim_path).name or "Mesh",
+                uri=f"scene://mesh{prim_path}",
+            )
+        return mesh_component.resource_handle
 
     def as_vec3(self, value):
         if isinstance(value, _ke.Vec3):

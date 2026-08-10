@@ -261,31 +261,41 @@ class SMPLBody:
         offsets = (self.pose_directions.T @ feature).reshape(-1, 3)
         return self.surface_asset.positions + offsets
 
-    def apply_pose(
+    def update_pose_correctives(
         self,
         surface: SkinnedSurface,
-        rotations_wxyz: npt.ArrayLike,
-        root_translation: npt.ArrayLike,
+        state_or_local_rotations: Any,
         *,
-        pose_correctives: bool = False,
+        enabled: bool = True,
         update_normals: bool = True,
-    ) -> Any:
-        """Apply optional CPU correctives followed by GPU LBS matrices."""
+    ) -> SkinnedSurface:
+        """Update or clear pose-dependent geometry before applying skinning."""
         if surface.asset is not self.surface_asset:
             raise ValueError("surface was not created from this SMPL body")
-        if pose_correctives:
-            positions = self.corrected_bind_vertices(rotations_wxyz)
-            normals = (
-                _vertex_normals(positions, self.surface_asset.indices.reshape(-1, 3))
-                if update_normals
-                else None
-            )
-            surface.update_bind_geometry(positions, normals)
+        if not enabled:
+            return surface.reset_bind_geometry()
+        if hasattr(state_or_local_rotations, "rotation"):
+            state = state_or_local_rotations
+            if not state.is_local():
+                raise ValueError("SMPL pose correctives require local rotations")
+            rotations_wxyz = np.empty((state.num_joints(), 4), np.float32)
+            for joint in range(state.num_joints()):
+                rotation = state.rotation(joint)
+                rotations_wxyz[joint] = (
+                    rotation.w,
+                    rotation.x,
+                    rotation.y,
+                    rotation.z,
+                )
         else:
-            surface.reset_bind_geometry()
-        return surface.set_pose(
-            self.skeleton_tree, rotations_wxyz, root_translation, True
+            rotations_wxyz = state_or_local_rotations
+        positions = self.corrected_bind_vertices(rotations_wxyz)
+        normals = (
+            _vertex_normals(positions, self.surface_asset.indices.reshape(-1, 3))
+            if update_normals
+            else None
         )
+        return surface.update_bind_geometry(positions, normals)
 
 
 class SMPLHBody(SMPLBody):
@@ -345,6 +355,7 @@ class SMPLModel:
         inverse_binds[:, :3, 3] = -joints
         bone_indices, bone_weights, discarded = _top_four_weights(self.weights)
         asset = SkinnedSurfaceAsset(
+            tree,
             vertices.astype(np.float32),
             _vertex_normals(vertices, self.faces).astype(np.float32),
             self.faces.reshape(-1),
@@ -409,6 +420,7 @@ class SMPLHModel(SMPLModel):
         inverse_binds[:, :3, 3] = -joints
         bone_indices, bone_weights, discarded = _top_four_weights(self.weights)
         asset = SkinnedSurfaceAsset(
+            tree,
             vertices.astype(np.float32),
             _vertex_normals(vertices, self.faces).astype(np.float32),
             self.faces.reshape(-1),
@@ -473,6 +485,7 @@ class SMPLXModel(SMPLModel):
         inverse_binds[:, :3, 3] = -joints
         bone_indices, bone_weights, discarded = _top_four_weights(self.weights)
         asset = SkinnedSurfaceAsset(
+            tree,
             vertices.astype(np.float32),
             _vertex_normals(vertices, self.faces).astype(np.float32),
             self.faces.reshape(-1),
@@ -500,7 +513,7 @@ __all__ = [
     "SMPLXBody",
     "SMPLXModel",
     "SMPLX_JOINT_NAMES",
-    "repository_model_path",
+    "repository_smpl_model_path",
     "repository_smplh_model_path",
     "repository_smplx_model_path",
 ]
