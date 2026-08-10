@@ -96,12 +96,17 @@ class VideoCaptureController:
         self._recorder = VideoRecorder(path, fps=recording_fps)
         self._recorder.start()
         self._output_path = path
-        self._wall_start_time = self._clock() if not self.is_offscreen else None
+        self._wall_start_time = None
         self._last_paced_frame = None
         self._scheduled_frame_count = 0
         self._encode_error = None
         self._capture_resolution = self._resolve_capture_resolution(app)
         if not self.is_offscreen:
+            first_frame = self._read_frame(app).copy()
+            self._recorder.write(first_frame)
+            self._last_paced_frame = first_frame
+            self._scheduled_frame_count = 1
+            self._wall_start_time = self._clock()
             self._encode_queue = queue.Queue(maxsize=8)
             self._encode_thread = threading.Thread(
                 target=self._paced_encode_worker,
