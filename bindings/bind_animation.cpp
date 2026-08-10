@@ -544,10 +544,10 @@ void bind_animation(py::module& m) {
             "Return skeleton parent indices.")
         .def_property_readonly(
             "skeleton_tree",
-            [](const SkeletonMotion& self) -> const SkeletonTree& {
-                return self.skeletonTree();
+            [](const SkeletonMotion& self) {
+                return std::const_pointer_cast<SkeletonTree>(
+                    self.skeletonTreePtr());
             },
-            py::return_value_policy::reference_internal,
             "Return the motion's read-only skeleton hierarchy.")
         .def("frame", &SkeletonMotion::frame, py::arg("frame_index"),
              "Return a SkeletonState for a frame.")
