@@ -1,48 +1,71 @@
 #include "motion_sequencer_panel.hpp"
 #include "engine/graphics/material/colors.hpp"
 #include "imgui.h"
+#include "imgui_internal.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <stdexcept>
 #include <utility>
 
 namespace KE {
 
-class MotionSequencerPanel::SingleMotionSequence
-    : public UI::SequenceInterface {
+class MotionSequencerPanel::MotionSequence : public UI::SequenceInterface {
   public:
-    SingleMotionSequence(int frameMin, int frameMax, const std::string& label)
-        : _frameMin(frameMin), _frameMax(frameMax), _label(label),
-          _start(frameMin), _end(frameMax) {}
+    MotionSequence(int frameMax, const std::vector<std::string>& labels,
+                   const std::vector<int>& ends, int currentFrame, bool loop)
+        : _frameMax(frameMax), _labels(labels), _ends(ends),
+          _starts(labels.size(), 0), _currentFrame(currentFrame), _loop(loop) {}
 
-    int GetFrameMin() const override { return _frameMin; }
+    int GetFrameMin() const override { return 0; }
     int GetFrameMax() const override { return _frameMax; }
-    int GetItemCount() const override { return 1; }
-    const char* GetItemLabel(int) const override { return _label.c_str(); }
+    int GetItemCount() const override {
+        return static_cast<int>(_labels.size());
+    }
+    const char* GetItemLabel(int index) const override {
+        return _labels.at(static_cast<size_t>(index)).c_str();
+    }
+    int GetItemCurrentFrame(int index) const override {
+        if (_labels.size() <= 1)
+            return -1;
+        const int end = _ends.at(static_cast<size_t>(index));
+        const int playbackFrames = end + 1;
+        if (_loop && playbackFrames > 0)
+            return _currentFrame % playbackFrames;
+        return std::min(_currentFrame, end);
+    }
     const char* GetCollapseFmt() const override { return "%d Frames"; }
 
-    void Get(int, int** start, int** end, int* type,
+    void Get(int index, int** start, int** end, int* type,
              unsigned int* color) override {
+        const size_t item = static_cast<size_t>(index);
         if (start)
-            *start = &_start;
+            *start = &_starts.at(item);
         if (end)
-            *end = &_end;
+            *end = &_ends.at(item);
         if (type)
             *type = 0;
         if (color) {
-            const Color& pg = ColorLibrary::get(ColorType::PASTEL_GREEN);
+            constexpr ColorType colors[] = {
+                ColorType::PASTEL_SKY,    ColorType::PASTEL_GREEN,
+                ColorType::PASTEL_CORAL,  ColorType::PASTEL_PURPLE,
+                ColorType::PASTEL_YELLOW,
+            };
+            const Color& pg = ColorLibrary::get(
+                colors[item % (sizeof(colors) / sizeof(colors[0]))]);
             *color =
                 ImGui::ColorConvertFloat4ToU32(ImVec4(pg.r, pg.g, pg.b, pg.a));
         }
     }
 
   private:
-    int _frameMin = 0;
     int _frameMax = 0;
-    std::string _label;
-    int _start = 0;
-    int _end = 0;
+    const std::vector<std::string>& _labels;
+    std::vector<int> _ends;
+    std::vector<int> _starts;
+    int _currentFrame = 0;
+    bool _loop = true;
 };
 
 MotionSequencerPanel::MotionSequencerPanel() : Panel("Motion Sequencer") {}
@@ -51,9 +74,37 @@ MotionSequencerPanel::~MotionSequencerPanel() {}
 
 void MotionSequencerPanel::setMotion(std::string motionName, int numFrames,
                                      float fps) {
-    _motionName = std::move(motionName);
-    _numFrames = std::max(1, numFrames);
-    _fps = std::max(1e-6f, fps);
+    setMotions({std::move(motionName)}, {numFrames}, {fps});
+}
+
+void MotionSequencerPanel::setMotions(std::vector<std::string> motionNames,
+                                      std::vector<int> numFrames,
+                                      std::vector<float> fps) {
+    if (motionNames.empty() || motionNames.size() != numFrames.size() ||
+        motionNames.size() != fps.size())
+        throw std::invalid_argument(
+            "setMotions requires equally sized, non-empty track arrays");
+
+    _fps = 1e-6f;
+    for (float rate : fps)
+        _fps = std::max(_fps, rate);
+    _trackNames = std::move(motionNames);
+    _trackEndFrames.clear();
+    _trackEndFrames.reserve(numFrames.size());
+    _numFrames = 1;
+    for (size_t i = 0; i < numFrames.size(); ++i) {
+        const int frames = std::max(1, numFrames[i]);
+        const float rate = std::max(1e-6f, fps[i]);
+        const int end = std::max(
+            0, static_cast<int>(
+                   std::ceil(static_cast<float>(frames) * _fps / rate)) -
+                   1);
+        _trackEndFrames.push_back(end);
+        _numFrames = std::max(_numFrames, end + 1);
+    }
+    _motionName = _trackNames.size() == 1
+                      ? _trackNames.front()
+                      : std::to_string(_trackNames.size()) + " motions";
     _time = 0.0f;
     _firstFrame = 0;
     _selectedTrack = -1;
@@ -129,7 +180,9 @@ void MotionSequencerPanel::buildPanel() {
     const float itemSpacingY = logicalPx(6.0f);
     const float rowHeight = static_cast<float>(std::ceil(std::max(
         logicalPx(20.0f), ImGui::GetTextLineHeight() + logicalPx(8.0f))));
-    const float sequencerMinHeight = rowHeight * 2.0f + logicalPx(8.0f);
+    const float sequencerMinHeight =
+        rowHeight * (static_cast<float>(_trackNames.size()) + 1.0f) +
+        logicalPx(8.0f);
     const float expandedMinHeight = panelPaddingY * 2.0f +
                                     ImGui::GetFrameHeight() * 2.0f +
                                     sequencerMinHeight + itemSpacingY * 2.0f;
@@ -141,17 +194,37 @@ void MotionSequencerPanel::buildPanel() {
         ImGui::GetFrameHeight() + panelPaddingY * 2.0f;
     const float foldedHeight = std::max(logicalPx(42.0f), foldedContentHeight);
     const float panelHeight = _folded ? foldedHeight : expandedHeight;
+    float availableLeft = viewport->WorkPos.x;
+    float availableRight = viewport->WorkPos.x + viewport->WorkSize.x;
+    ImGuiWindow* existingWindow = ImGui::FindWindowByName(name().c_str());
+    const bool panelIsDocked = existingWindow && existingWindow->DockIsActive;
+    bool foundRightDock = false;
+    if (!panelIsDocked) {
+        constexpr const char* rightPanelNames[] = {
+            "Scene", "Renderer Debug", "Performance", "Inspector"};
+        const float rightHalfStart =
+            viewport->WorkPos.x + viewport->WorkSize.x * 0.5f;
+        for (const char* panelName : rightPanelNames) {
+            ImGuiWindow* panel = ImGui::FindWindowByName(panelName);
+            if (!panel || !panel->DockIsActive || panel->Pos.x < rightHalfStart)
+                continue;
+            availableRight = std::min(availableRight, panel->Pos.x);
+            foundRightDock = true;
+        }
+    }
+    const float availableWidth = std::max(1.0f, availableRight - availableLeft);
     const float minPanelWidth =
         logicalPx(96.0f) +
-        std::max(logicalPx(240.0f), viewport->WorkSize.x * 0.35f);
+        std::max(logicalPx(240.0f), availableWidth * 0.35f);
     const float preferredPanelWidth =
-        viewport->WorkSize.x * (_overlay ? _overlayWidthRatio : 1.0f);
+        availableWidth * (_overlay ? _overlayWidthRatio : 1.0f);
     const float panelWidth = std::min(
-        viewport->WorkSize.x, std::max(preferredPanelWidth, minPanelWidth));
+        availableWidth, std::max(preferredPanelWidth, minPanelWidth));
     const float panelX =
-        viewport->WorkPos.x + (viewport->WorkSize.x - panelWidth) * 0.5f;
+        availableLeft + (availableWidth - panelWidth) * 0.5f;
     const ImGuiCond placementCond =
-        _overlay ? ImGuiCond_Always : ImGuiCond_FirstUseEver;
+        (_overlay || foundRightDock) ? ImGuiCond_Always
+                                     : ImGuiCond_FirstUseEver;
     ImGui::SetNextWindowPos(
         ImVec2(panelX,
                viewport->WorkPos.y + viewport->WorkSize.y - panelHeight),
@@ -257,7 +330,8 @@ void MotionSequencerPanel::buildPanel() {
     ImGui::SliderFloat("Speed", &_timeScale, 0.0f, 4.0f);
 
     int frame = currentFrame();
-    SingleMotionSequence sequence(0, std::max(_numFrames - 1, 0), _motionName);
+    MotionSequence sequence(std::max(_numFrames - 1, 0), _trackNames,
+                            _trackEndFrames, frame, _loop);
     UI::SequencerConfig config;
     config.fitToContent = _fitToContent;
     config.requestFitToContent = fitToContentChanged && _fitToContent;
@@ -268,8 +342,12 @@ void MotionSequencerPanel::buildPanel() {
     config.legendWidth = static_cast<int>(legendWidth);
     config.legendWidthValue = &legendWidth;
     config.minLegendWidth = logicalPx(96.0f);
-    const float motionNameLegendWidth =
-        ImGui::CalcTextSize(_motionName.c_str()).x + logicalPx(24.0f);
+    float motionNameLegendWidth = 0.0f;
+    for (const std::string& name : _trackNames) {
+        motionNameLegendWidth =
+            std::max(motionNameLegendWidth,
+                     ImGui::CalcTextSize(name.c_str()).x + logicalPx(24.0f));
+    }
     config.maxLegendWidth = std::max(logicalPx(420.0f), motionNameLegendWidth);
     config.legendResizeHandleWidth = logicalPx(10.0f);
     config.itemHeight = static_cast<int>(rowHeight);

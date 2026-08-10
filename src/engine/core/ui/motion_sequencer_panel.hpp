@@ -7,6 +7,7 @@
 
 #include <functional>
 #include <string>
+#include <vector>
 
 namespace KE {
 
@@ -19,6 +20,8 @@ class MotionSequencerPanel : public Panel {
     ~MotionSequencerPanel();
 
     void setMotion(std::string motionName, int numFrames, float fps);
+    void setMotions(std::vector<std::string> motionNames,
+                    std::vector<int> numFrames, std::vector<float> fps);
     void setCurrentTime(float time);
     float currentTime() const { return _time; }
     float duration() const;
@@ -47,7 +50,7 @@ class MotionSequencerPanel : public Panel {
     void buildPanel() override;
 
   private:
-    class SingleMotionSequence;
+    class MotionSequence;
 
     int currentFrame() const;
     float playbackDuration() const;
@@ -57,6 +60,8 @@ class MotionSequencerPanel : public Panel {
     void emitPlayingChanged();
 
     std::string _motionName = "Motion";
+    std::vector<std::string> _trackNames{"Motion"};
+    std::vector<int> _trackEndFrames{0};
     int _numFrames = 1;
     float _fps = 30.0f;
     float _time = 0.0f;

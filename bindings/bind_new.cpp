@@ -472,6 +472,9 @@ PYBIND11_MODULE(_kangengine, m) {
         .def(py::init<>())
         .def("set_motion", &MotionSequencerPanel::setMotion,
              py::arg("motion_name"), py::arg("num_frames"), py::arg("fps"))
+        .def("set_motions", &MotionSequencerPanel::setMotions,
+             py::arg("motion_names"), py::arg("num_frames"), py::arg("fps"),
+             "Display multiple motion tracks on one shared time axis.")
         .def("set_current_time", &MotionSequencerPanel::setCurrentTime)
         .def("current_time", &MotionSequencerPanel::currentTime)
         .def("duration", &MotionSequencerPanel::duration)

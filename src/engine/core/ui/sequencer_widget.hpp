@@ -78,6 +78,9 @@ struct SequenceInterface {
     virtual int GetItemTypeCount() const { return 0; }
     virtual const char* GetItemTypeName(int typeIndex) const { return ""; }
     virtual const char* GetItemLabel(int index) const { return ""; }
+    // Optional cursor for one track, expressed in the shared frame space.
+    // A negative value disables the per-track cursor.
+    virtual int GetItemCurrentFrame(int index) const { return -1; }
     virtual const char* GetCollapseFmt() const {
         return "%d Frames / %d entries";
     }

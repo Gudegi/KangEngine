@@ -173,7 +173,7 @@ class VideoCaptureControllerTest(unittest.TestCase):
         app = _FakeApp(render_hz=30.0)
         app.read_rgb_pixels = mock.Mock(
             side_effect=[
-                np.full((4, 8, 3), value, dtype=np.uint8) for value in range(30)
+                np.full((4, 8, 3), value, dtype=np.uint8) for value in range(31)
             ]
         )
         clock = _FakeClock()
@@ -190,7 +190,32 @@ class VideoCaptureControllerTest(unittest.TestCase):
         self.assertEqual(controller.recorder.get_num_frames(), 60)
         self.assertEqual(len(writer.frames), 60)
         np.testing.assert_array_equal(writer.frames[2], writer.frames[1])
-        self.assertEqual(int(writer.frames[3][0, 0, 0]), 1)
+        self.assertEqual(int(writer.frames[3][0, 0, 0]), 2)
+
+    def test_paced_encoder_startup_is_excluded_from_recording_clock(self):
+        writer = _FakeWriter()
+        app = _FakeApp()
+        clock = _FakeClock()
+        original_append = writer.append_data
+
+        def delayed_first_append(frame):
+            if not writer.frames:
+                clock.now += 2.0
+            original_append(frame)
+
+        writer.append_data = delayed_first_append
+        controller = VideoCaptureController(fps=60.0, clock=clock)
+        controller.configure(run_mode="paced")
+
+        with mock.patch.object(VideoRecorder, "_open_writer", return_value=writer):
+            controller.start(app, "paced.mp4")
+            self.assertEqual(controller.recorder.get_num_frames(), 1)
+            self.assertEqual(controller._wall_start_time, 2.0)
+            clock.now += 2.0 / 60.0
+            controller.on_frame_rendered(app)
+            controller.stop(app)
+
+        self.assertEqual(controller.recorder.get_num_frames(), 2)
 
     def test_headless_fast_rejects_recording(self):
         controller = VideoCaptureController()

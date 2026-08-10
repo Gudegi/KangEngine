@@ -520,6 +520,24 @@ bool sequencer(SequenceInterface* sequence, int* currentFrame, bool* expanded,
                 draw_list->AddRectFilled(slotP1, slotP2, slotColor,
                                          rectRounding);
             }
+            const int itemCurrentFrame = sequence->GetItemCurrentFrame(i);
+            if (itemCurrentFrame >= *start && itemCurrentFrame <= *end) {
+                const float markerX =
+                    pos.x + itemCurrentFrame * framePixelWidth +
+                    framePixelWidth * 0.5f;
+                if (markerX >= contentMin.x + legendWidth &&
+                    markerX <= contentMin.x + canvas_size.x) {
+                    draw_list->AddLine(
+                        ImVec2(markerX, slotP1.y),
+                        ImVec2(markerX, slotP2.y), 0xFFFFFFFF,
+                        std::max(2.0f, config.cursorWidth * 0.35f));
+                    draw_list->AddTriangleFilled(
+                        ImVec2(markerX, slotP1.y),
+                        ImVec2(markerX - 4.0f, slotP1.y + 5.0f),
+                        ImVec2(markerX + 4.0f, slotP1.y + 5.0f),
+                        0xFFFFFFFF);
+                }
+            }
             if (ImRect(slotP1, slotP2).Contains(io.MousePos) &&
                 io.MouseDoubleClicked[0]) {
                 sequence->DoubleClick(i);
