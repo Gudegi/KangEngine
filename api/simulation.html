@@ -220,11 +220,13 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VIEWER_SYNC.html">Viewer Synchronization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VISUALIZATION.html">Simulation Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RUN_MODES.html">Simulation Run Modes</a></li>
 </ul>
 </li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/motion_animation/INDEX.html">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="simple">
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/animation/INDEX.html">Animation</a><input aria-label="Toggle navigation of Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/SMPL.html">SMPL Models and Motion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/VISUALS.html">Pose Visualization</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
@@ -246,7 +248,7 @@
 <li class="toctree-l2"><a class="reference internal" href="geometry.html">ke.geometry</a></li>
 <li class="toctree-l2"><a class="reference internal" href="asset.html">ke.asset</a></li>
 <li class="toctree-l2"><a class="reference internal" href="animation.html">ke.animation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="character.html">ke.character</a></li>
+<li class="toctree-l2"><a class="reference internal" href="exports.html">ke.exports</a></li>
 <li class="toctree-l2"><a class="reference internal" href="motion.html">ke.motion_module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="material.html">ke.material</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rendering.html">ke.render</a></li>
@@ -418,6 +420,7 @@ is intentionally separate from <code class="docutils literal notranslate"><span 
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>,</dd>
@@ -472,6 +475,7 @@ is intentionally separate from <code class="docutils literal notranslate"><span 
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>,</dd>
@@ -494,6 +498,7 @@ is intentionally separate from <code class="docutils literal notranslate"><span 
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>,</dd>
@@ -520,6 +525,7 @@ is intentionally separate from <code class="docutils literal notranslate"><span 
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>,</dd>
@@ -575,6 +581,12 @@ step is due.</p></li>
 <dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.apply_commands">
 <span class="sig-name descname"><span class="pre">apply_commands</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.apply_commands" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.apply_gpu_articulation_link_wrenches">
+<span class="sig-name descname"><span class="pre">apply_gpu_articulation_link_wrenches</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">forces</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">torques</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.apply_gpu_articulation_link_wrenches" title="Link to this definition">¶</a></dt>
+<dd><p>Submit the current dense CUDA link force/torque command buffers.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.apply_resets">
@@ -633,7 +645,7 @@ step is due.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.create_articulation_template">
-<span class="sig-name descname"><span class="pre">create_articulation_template</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.create_articulation_template" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">create_articulation_template</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.create_articulation_template" title="Link to this definition">¶</a></dt>
 <dd><p>Precompute immutable articulation resources for repeated instances.</p>
 </dd></dl>
 
@@ -673,6 +685,49 @@ step is due.</p></li>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_gpu_articulation_centroidal_dynamics">
+<span class="sig-name descname"><span class="pre">get_gpu_articulation_centroidal_dynamics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">compute</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_centroidal_dynamics" title="Link to this definition">¶</a></dt>
+<dd><p>Return <cite>(centroidal_momentum_matrix, bias_force)</cite> CUDA blocks.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_gpu_articulation_com_root">
+<span class="sig-name descname"><span class="pre">get_gpu_articulation_com_root</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">compute</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_com_root" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_gpu_articulation_com_world">
+<span class="sig-name descname"><span class="pre">get_gpu_articulation_com_world</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">compute</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_com_world" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_gpu_articulation_coriolis_forces">
+<span class="sig-name descname"><span class="pre">get_gpu_articulation_coriolis_forces</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">compute</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_coriolis_forces" title="Link to this definition">¶</a></dt>
+<dd><p>Return lazy-computed generalized Coriolis/centrifugal forces.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_gpu_articulation_dense_jacobians">
+<span class="sig-name descname"><span class="pre">get_gpu_articulation_dense_jacobians</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">compute</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_dense_jacobians" title="Link to this definition">¶</a></dt>
+<dd><p>Return lazy-computed PhysX dense-Jacobian blocks.</p>
+<p>Shape is <code class="docutils literal notranslate"><span class="pre">[articulation_count,</span> <span class="pre">max_jacobian_rows</span> <span class="pre">*</span>
+<span class="pre">max_generalized_dofs]</span></code>. For row <code class="docutils literal notranslate"><span class="pre">i</span></code>, reshape the leading
+<code class="docutils literal notranslate"><span class="pre">rows</span> <span class="pre">*</span> <span class="pre">cols</span></code> values using <code class="docutils literal notranslate"><span class="pre">get_gpu_articulation_dynamics_shape(i)</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_gpu_articulation_dynamics_shape">
+<span class="sig-name descname"><span class="pre">get_gpu_articulation_dynamics_shape</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">articulation_row</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_dynamics_shape" title="Link to this definition">¶</a></dt>
+<dd><p>Return <code class="docutils literal notranslate"><span class="pre">(jacobian_rows,</span> <span class="pre">generalized_dofs)</span></code> for one GPU row.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_gpu_articulation_gravity_forces">
+<span class="sig-name descname"><span class="pre">get_gpu_articulation_gravity_forces</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">compute</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_gravity_forces" title="Link to this definition">¶</a></dt>
+<dd><p>Return lazy-computed generalized gravity-compensation forces.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_gpu_articulation_joint_accelerations">
 <span class="sig-name descname"><span class="pre">get_gpu_articulation_joint_accelerations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">fetch</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_joint_accelerations" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
@@ -693,6 +748,12 @@ step is due.</p></li>
 <dd></dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_gpu_articulation_link_accelerations">
+<span class="sig-name descname"><span class="pre">get_gpu_articulation_link_accelerations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">fetch</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_link_accelerations" title="Link to this definition">¶</a></dt>
+<dd><p>Return link COM acceleration <cite>[lin xyz, ang xyz]</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_gpu_articulation_link_data">
 <span class="sig-name descname"><span class="pre">get_gpu_articulation_link_data</span></span><span class="sig-paren">(</span>
 
@@ -709,9 +770,29 @@ step is due.</p></li>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_gpu_articulation_link_forces">
+<span class="sig-name descname"><span class="pre">get_gpu_articulation_link_forces</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_link_forces" title="Link to this definition">¶</a></dt>
+<dd><p>Return the writable <cite>[articulation, max_links, 3]</cite> force buffer.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_gpu_articulation_link_incoming_joint_forces">
 <span class="sig-name descname"><span class="pre">get_gpu_articulation_link_incoming_joint_forces</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">fetch</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_link_incoming_joint_forces" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_gpu_articulation_link_torques">
+<span class="sig-name descname"><span class="pre">get_gpu_articulation_link_torques</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_link_torques" title="Link to this definition">¶</a></dt>
+<dd><p>Return the writable <cite>[articulation, max_links, 3]</cite> torque buffer.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_gpu_articulation_mass_matrices">
+<span class="sig-name descname"><span class="pre">get_gpu_articulation_mass_matrices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">compute</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_mass_matrices" title="Link to this definition">¶</a></dt>
+<dd><p>Return lazy-computed PhysX mass-matrix blocks.</p>
+<p>Each row begins with a packed <code class="docutils literal notranslate"><span class="pre">n</span> <span class="pre">*</span> <span class="pre">n</span></code> matrix, where <code class="docutils literal notranslate"><span class="pre">n</span></code> is that
+articulation’s generalized DOF count.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_gpu_articulation_target_joint_positions">
@@ -757,6 +838,14 @@ step is due.</p></li>
 <dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_gpu_contact_points">
 <span class="sig-name descname"><span class="pre">get_gpu_contact_points</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">fetch</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.get_gpu_contact_points" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_gpu_rigid_accelerations">
+<span class="sig-name descname"><span class="pre">get_gpu_rigid_accelerations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">fetch</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.get_gpu_rigid_accelerations" title="Link to this definition">¶</a></dt>
+<dd><p>Return rigid COM accelerations as <code class="docutils literal notranslate"><span class="pre">[lin</span> <span class="pre">xyz,</span> <span class="pre">ang</span> <span class="pre">xyz]</span></code>.</p>
+<p>Shape is <code class="docutils literal notranslate"><span class="pre">[rigid_count,</span> <span class="pre">6]</span></code>. The physics scene must be created with
+<code class="docutils literal notranslate"><span class="pre">PhysicsConfig(enable_body_accelerations=True)</span></code>.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_gpu_rigid_data">
@@ -979,6 +1068,12 @@ high-level setter.</p>
 
 <span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.set_dof_state" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.set_gpu_articulation_link_wrenches">
+<span class="sig-name descname"><span class="pre">set_gpu_articulation_link_wrenches</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">forces</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">torques</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.set_gpu_articulation_link_wrenches" title="Link to this definition">¶</a></dt>
+<dd><p>Copy dense CUDA wrench tensors into the PhysX command buffers.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.set_gpu_dof_state_batch">
@@ -3003,6 +3098,28 @@ net_force: <code class="docutils literal notranslate"><span class="pre">(N,</spa
 </dl>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.ContactSensor.contact_points">
+<span class="sig-name descname"><span class="pre">contact_points</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">refresh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ContactPointData</span></span></span><a class="headerlink" href="#kangengine.sim.ContactSensor.contact_points" title="Link to this definition">¶</a></dt>
+<dd><p>Return this sensor’s current packed PhysX contact points on CUDA.</p>
+<p>The returned tensors are intended as raw inputs for Python-side contact
+filtering, frame conversion, friction-cone construction, and wrench
+metrics. Boolean compaction allocates output tensors but does not copy
+contact data to the host.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">ContactPointData</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.sim.ContactSensor.data">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">data</span></span><a class="headerlink" href="#kangengine.sim.ContactSensor.data" title="Link to this definition">¶</a></dt>
@@ -3166,6 +3283,7 @@ net_force: <code class="docutils literal notranslate"><span class="pre">(N,</spa
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.advance"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.advance()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.apply_body_forces"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.apply_body_forces()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.apply_commands"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.apply_commands()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.apply_gpu_articulation_link_wrenches"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.apply_gpu_articulation_link_wrenches()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.apply_resets"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.apply_resets()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.articulation"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.articulation()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.articulation_gpu_index_view"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.articulation_gpu_index_view()</span></code></a></li>
@@ -3176,12 +3294,23 @@ net_force: <code class="docutils literal notranslate"><span class="pre">(N,</spa
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.create_articulation_template"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.create_articulation_template()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_articulation"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_articulation()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_articulation_batch"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_articulation_batch()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_centroidal_dynamics"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_articulation_centroidal_dynamics()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_com_root"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_articulation_com_root()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_com_world"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_articulation_com_world()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_coriolis_forces"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_articulation_coriolis_forces()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_dense_jacobians"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_articulation_dense_jacobians()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_dynamics_shape"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_articulation_dynamics_shape()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_gravity_forces"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_articulation_gravity_forces()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_joint_accelerations"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_articulation_joint_accelerations()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_joint_forces"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_articulation_joint_forces()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_joint_positions"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_articulation_joint_positions()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_joint_velocities"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_articulation_joint_velocities()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_link_accelerations"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_articulation_link_accelerations()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_link_data"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_articulation_link_data()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_link_forces"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_articulation_link_forces()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_link_incoming_joint_forces"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_articulation_link_incoming_joint_forces()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_link_torques"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_articulation_link_torques()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_mass_matrices"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_articulation_mass_matrices()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_target_joint_positions"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_articulation_target_joint_positions()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_target_joint_velocities"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_articulation_target_joint_velocities()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_contact_pair_body_refs"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_contact_pair_body_refs()</span></code></a></li>
@@ -3191,6 +3320,7 @@ net_force: <code class="docutils literal notranslate"><span class="pre">(N,</spa
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_contact_point_count"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_contact_point_count()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_contact_point_pair_indices"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_contact_point_pair_indices()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_contact_points"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_contact_points()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_rigid_accelerations"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_rigid_accelerations()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_rigid_data"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_rigid_data()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_mjcf_cache_size"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_mjcf_cache_size()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_mjcf_load_count"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_mjcf_load_count()</span></code></a></li>
@@ -3211,6 +3341,7 @@ net_force: <code class="docutils literal notranslate"><span class="pre">(N,</spa
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.set_body_force_at_position"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.set_body_force_at_position()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.set_cmd"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.set_cmd()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.set_dof_state"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.set_dof_state()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.set_gpu_articulation_link_wrenches"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.set_gpu_articulation_link_wrenches()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.set_gpu_dof_state_batch"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.set_gpu_dof_state_batch()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.set_gpu_root_state_batch"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.set_gpu_root_state_batch()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.set_root_state"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.set_root_state()</span></code></a></li>
@@ -3444,6 +3575,7 @@ net_force: <code class="docutils literal notranslate"><span class="pre">(N,</spa
 </li>
 <li><a class="reference internal" href="#kangengine.sim.ContactSensor"><code class="docutils literal notranslate"><span class="pre">ContactSensor</span></code></a><ul>
 <li><a class="reference internal" href="#kangengine.sim.ContactSensor.contact_count"><code class="docutils literal notranslate"><span class="pre">ContactSensor.contact_count</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.ContactSensor.contact_points"><code class="docutils literal notranslate"><span class="pre">ContactSensor.contact_points()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.ContactSensor.data"><code class="docutils literal notranslate"><span class="pre">ContactSensor.data</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.ContactSensor.in_contact"><code class="docutils literal notranslate"><span class="pre">ContactSensor.in_contact</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.ContactSensor.net_force"><code class="docutils literal notranslate"><span class="pre">ContactSensor.net_force</span></code></a></li>

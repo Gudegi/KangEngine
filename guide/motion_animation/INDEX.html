@@ -3,7 +3,7 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="RL With MimicKit" href="../MIMICKIT.html"><link rel="prev" title="Simulation Run Modes" href="../simulation/RUN_MODES.html">
+<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="SMPL Motion and Models" href="SMPL.html"><link rel="prev" title="Simulation Run Modes" href="../simulation/RUN_MODES.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
         <title>Motion and Animation - KangEngine Docs</title>
@@ -221,10 +221,13 @@
 <li class="toctree-l3"><a class="reference internal" href="../simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/VIEWER_SYNC.html">Viewer Synchronization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/VISUALIZATION.html">Simulation Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/RUN_MODES.html">Simulation Run Modes</a></li>
 </ul>
 </li>
-<li class="toctree-l2 current has-children current-page"><a class="current reference internal" href="#">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" checked="" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="simple">
+<li class="toctree-l2 current has-children current-page"><a class="current reference internal" href="#">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" checked="" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="SMPL.html">SMPL Motion and Models</a></li>
+<li class="toctree-l3"><a class="reference internal" href="VISUALS.html">Motion and Pose Visualization</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../MIMICKIT.html">RL With MimicKit</a></li>
@@ -246,7 +249,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../api/geometry.html">ke.geometry</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/asset.html">ke.asset</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/animation.html">ke.animation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../api/character.html">ke.character</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/exports.html">ke.exports</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/motion.html">ke.motion_module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/material.html">ke.material</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/rendering.html">ke.render</a></li>
@@ -320,6 +323,45 @@
 <h1>Motion and Animation<a class="headerlink" href="#motion-and-animation" title="Link to this heading">¶</a></h1>
 <p>KangEngine loads BVH and FBX motion, evaluates skeleton poses, displays
 skeletons or skinned characters, and provides a Python motion editor.</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="VISUALS.html"><span class="std std-doc">Motion and Pose Visualization</span></a></p></li>
+</ul>
+<section id="load-motion">
+<h2>Load motion<a class="headerlink" href="#load-motion" title="Link to this heading">¶</a></h2>
+<p>All motion loaders return the same <code class="docutils literal notranslate"><span class="pre">ke.animation.SkeletonMotion</span></code> type. This
+lets playback, sampling, analysis, visualization, and BVH export operate on a
+motion without depending on its source file format.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># BVH hierarchy and animation</span>
+<span class="n">bvh_motion</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">animation</span><span class="o">.</span><span class="n">SkeletonMotion</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">BVHLoader</span><span class="o">.</span><span class="n">load_motion</span><span class="p">(</span><span class="s2">&quot;walk.bvh&quot;</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="c1"># One animation clip from an FBX character</span>
+<span class="n">fbx_motion</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">animation</span><span class="o">.</span><span class="n">SkeletonMotion</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">FBXLoader</span><span class="o">.</span><span class="n">load_motion</span><span class="p">(</span>
+    <span class="s2">&quot;character.fbx&quot;</span><span class="p">,</span>
+    <span class="n">clip_index</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">fps</span><span class="o">=</span><span class="mf">60.0</span><span class="p">,</span>
+    <span class="n">scale</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># AMASS poses mapped onto a selected body-model skeleton</span>
+<span class="n">model_path</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">smpl</span><span class="o">.</span><span class="n">repository_smplx_model_path</span><span class="p">(</span><span class="s2">&quot;neutral&quot;</span><span class="p">)</span>
+<span class="n">smplx_body</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">SMPLXModel</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">model_path</span><span class="p">)</span><span class="o">.</span><span class="n">create_body</span><span class="p">()</span>
+<span class="n">amass_motion</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">animation</span><span class="o">.</span><span class="n">SkeletonMotion</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">AMASSLoader</span><span class="o">.</span><span class="n">load_motion</span><span class="p">(</span>
+    <span class="s2">&quot;walking_poses.npz&quot;</span><span class="p">,</span>
+    <span class="n">smplx_body</span><span class="o">.</span><span class="n">skeleton_tree</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Use <code class="docutils literal notranslate"><span class="pre">load_skeleton()</span></code> when only the hierarchy is needed. Use <code class="docutils literal notranslate"><span class="pre">parse()</span></code> when
+import diagnostics or source metadata are also needed:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">result</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">BVHImportResult</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">BVHLoader</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="s2">&quot;walk.bvh&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">motion</span><span class="o">.</span><span class="n">num_frames</span><span class="p">(),</span> <span class="n">result</span><span class="o">.</span><span class="n">frame_rate</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">warning</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">diagnostics</span><span class="o">.</span><span class="n">warnings</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">warning</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
 <section id="view-bvh-motion">
 <h2>View BVH motion<a class="headerlink" href="#view-bvh-motion" title="Link to this heading">¶</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">motion</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">BVHLoader</span><span class="o">.</span><span class="n">load_motion</span><span class="p">(</span><span class="n">bvh_file</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span>
@@ -475,6 +517,7 @@ skeletons or skinned characters, and provides a Python motion editor.</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">python/examples/view_fbx_character.py</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">python/examples/view_fbx_character2.py</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">python/examples/view_fbx_character_apply_pose.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">python/examples/view_smpl_motion.py</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">python/examples/view_motion.py</span></code></p></li>
 </ul>
 <p><img alt="BVH skeleton and motion sequencer" src="../../_images/bvh_motion.png" /></p>
@@ -488,12 +531,12 @@ skeletons or skinned characters, and provides a Python motion editor.</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="../MIMICKIT.html">
+          <a class="next-page" href="SMPL.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">RL With MimicKit</div>
+                <div class="title">SMPL Motion and Models</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
@@ -539,6 +582,7 @@ skeletons or skinned characters, and provides a Python motion editor.</p>
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">Motion and Animation</a><ul>
+<li><a class="reference internal" href="#load-motion">Load motion</a></li>
 <li><a class="reference internal" href="#view-bvh-motion">View BVH motion</a></li>
 </ul>
 </li>

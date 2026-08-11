@@ -220,11 +220,13 @@
 <li class="toctree-l3"><a class="reference internal" href="../simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../simulation/VIEWER_SYNC.html">Viewer Synchronization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/VISUALIZATION.html">Simulation Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/RUN_MODES.html">Simulation Run Modes</a></li>
 </ul>
 </li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="../motion_animation/INDEX.html">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="simple">
+<li class="toctree-l2 has-children"><a class="reference internal" href="../animation/INDEX.html">Animation</a><input aria-label="Toggle navigation of Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../animation/SMPL.html">SMPL Models and Motion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../animation/VISUALS.html">Pose Visualization</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../MIMICKIT.html">RL With MimicKit</a></li>
@@ -246,7 +248,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../api/geometry.html">ke.geometry</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/asset.html">ke.asset</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/animation.html">ke.animation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../api/character.html">ke.character</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/exports.html">ke.exports</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/motion.html">ke.motion_module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/material.html">ke.material</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/rendering.html">ke.render</a></li>
@@ -328,25 +330,34 @@ visual representation.</p>
         <span class="n">fixed_update_hz</span><span class="o">=</span><span class="mf">60.0</span><span class="p">,</span>
     <span class="p">)</span>
 <span class="p">)</span>
-<span class="bp">self</span><span class="o">.</span><span class="n">set_simulation_hotkeys_enabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
-<span class="bp">self</span><span class="o">.</span><span class="n">world</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">KangSimWorld</span><span class="p">(</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">set_simulation_hotkeys_enabled</span><span class="p">(</span><span class="n">enabled</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">world</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">KangSimWorld</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">KangSimWorld</span><span class="p">(</span>
     <span class="n">num_envs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
     <span class="n">sim_dt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timing</span><span class="o">.</span><span class="n">physics_dt</span><span class="p">,</span>
     <span class="n">add_ground</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="bp">self</span><span class="o">.</span><span class="n">visual</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">SimWorldVisualizer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">world</span><span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">visual</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">SimWorldVisualizer</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">SimWorldVisualizer</span><span class="p">(</span>
+    <span class="n">app</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+    <span class="n">world</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">world</span><span class="p">,</span>
+<span class="p">)</span>
 
 <span class="n">ball_xml</span> <span class="o">=</span> <span class="n">package_asset_path</span><span class="p">(</span><span class="s2">&quot;objects&quot;</span><span class="p">,</span> <span class="s2">&quot;ball.xml&quot;</span><span class="p">)</span>
-<span class="n">ball_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">world</span><span class="o">.</span><span class="n">load_mjcf</span><span class="p">(</span><span class="n">ball_xml</span><span class="p">)</span>
-<span class="bp">self</span><span class="o">.</span><span class="n">ball</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">world</span><span class="o">.</span><span class="n">add_rigid</span><span class="p">(</span>
-    <span class="n">ball_data</span><span class="p">,</span>
+<span class="n">ball_data</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">ArticulationDesc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">world</span><span class="o">.</span><span class="n">load_mjcf</span><span class="p">(</span>
+    <span class="n">mjcf_path</span><span class="o">=</span><span class="n">ball_xml</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">ball</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">SimRigid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">world</span><span class="o">.</span><span class="n">add_rigid</span><span class="p">(</span>
+    <span class="n">data</span><span class="o">=</span><span class="n">ball_data</span><span class="p">,</span>
     <span class="n">env_id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
     <span class="n">obj_id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
     <span class="n">name</span><span class="o">=</span><span class="s2">&quot;ball&quot;</span><span class="p">,</span>
     <span class="n">pos</span><span class="o">=</span><span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.8</span><span class="p">],</span>
     <span class="n">density</span><span class="o">=</span><span class="mf">600.0</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="bp">self</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ball</span><span class="p">,</span> <span class="n">ball_xml</span><span class="p">,</span> <span class="n">material</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">standard_materials</span><span class="o">.</span><span class="n">common</span><span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+    <span class="n">sim_handle</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ball</span><span class="p">,</span>
+    <span class="n">mjcf_path</span><span class="o">=</span><span class="n">ball_xml</span><span class="p">,</span>
+    <span class="n">material</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">standard_materials</span><span class="o">.</span><span class="n">common</span><span class="p">,</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 <p>Advance at the fixed simulation rate and display the latest state once per
@@ -419,7 +430,7 @@ rendered frame:</p>
 <span class="linenos"> 53</span>        <span class="bp">self</span><span class="o">.</span><span class="n">ball_visual</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
 <span class="linenos"> 54</span>            <span class="bp">self</span><span class="o">.</span><span class="n">ball</span><span class="p">,</span>
 <span class="linenos"> 55</span>            <span class="bp">self</span><span class="o">.</span><span class="n">ball_xml</span><span class="p">,</span>
-<span class="linenos"> 56</span>            <span class="n">prim_base_path</span><span class="o">=</span><span class="s2">&quot;/ball&quot;</span><span class="p">,</span>
+<span class="linenos"> 56</span>            <span class="n">path</span><span class="o">=</span><span class="s2">&quot;/ball&quot;</span><span class="p">,</span>
 <span class="linenos"> 57</span>            <span class="n">material</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">standard_materials</span><span class="o">.</span><span class="n">common</span><span class="p">,</span>
 <span class="linenos"> 58</span>            <span class="n">color</span><span class="o">=</span><span class="p">[</span><span class="mf">0.95</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.12</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span>
 <span class="linenos"> 59</span>        <span class="p">)</span>

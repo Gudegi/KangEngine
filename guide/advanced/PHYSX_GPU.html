@@ -220,11 +220,13 @@
 <li class="toctree-l3"><a class="reference internal" href="../simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../simulation/VIEWER_SYNC.html">Viewer Synchronization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/VISUALIZATION.html">Simulation Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/RUN_MODES.html">Simulation Run Modes</a></li>
 </ul>
 </li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="../motion_animation/INDEX.html">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="simple">
+<li class="toctree-l2 has-children"><a class="reference internal" href="../animation/INDEX.html">Animation</a><input aria-label="Toggle navigation of Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../animation/SMPL.html">SMPL Models and Motion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../animation/VISUALS.html">Pose Visualization</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../MIMICKIT.html">RL With MimicKit</a></li>
@@ -246,7 +248,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../api/geometry.html">ke.geometry</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/asset.html">ke.asset</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/animation.html">ke.animation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../api/character.html">ke.character</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/exports.html">ke.exports</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/motion.html">ke.motion_module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/material.html">ke.material</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/rendering.html">ke.render</a></li>
@@ -543,6 +545,93 @@ reset-only frame (<code class="docutils literal notranslate"><span class="pre">w
 new impact impulses, apply the reset first and then simulate one step.</p>
 </details>
 </section>
+<section id="rigid-acceleration">
+<h2>Rigid acceleration<a class="headerlink" href="#rigid-acceleration" title="Link to this heading">¶</a></h2>
+<p>Rigid pose and velocity remain in the compact <code class="docutils literal notranslate"><span class="pre">[rigid_count,</span> <span class="pre">13]</span></code> state
+mirror. Linear and angular COM acceleration are an optional <code class="docutils literal notranslate"><span class="pre">[rigid_count,</span> <span class="pre">6]</span></code>
+mirror:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">config</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">physics</span><span class="o">.</span><span class="n">PhysicsConfig</span><span class="o">.</span><span class="n">z_up</span><span class="p">()</span>
+<span class="n">config</span><span class="o">.</span><span class="n">enable_body_accelerations</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="n">world</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">KangSimWorld</span><span class="p">(</span>
+    <span class="n">num_envs</span><span class="o">=</span><span class="mi">4096</span><span class="p">,</span>
+    <span class="n">physics_config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
+    <span class="n">sim_device</span><span class="o">=</span><span class="s2">&quot;cuda&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">acceleration</span> <span class="o">=</span> <span class="n">world</span><span class="o">.</span><span class="n">get_gpu_rigid_accelerations</span><span class="p">()</span>
+<span class="n">linear_acceleration</span> <span class="o">=</span> <span class="n">acceleration</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span>
+<span class="n">angular_acceleration</span> <span class="o">=</span> <span class="n">acceleration</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">:</span><span class="mi">6</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>PhysX requires <code class="docutils literal notranslate"><span class="pre">enable_body_accelerations</span></code> at scene creation. It defaults to
+false so simulations that do not consume acceleration retain the existing
+solver cost. The CUDA output and its dedicated scratch storage are allocated
+lazily on the first fetch.</p>
+</section>
+<section id="articulation-dynamics">
+<h2>Articulation dynamics<a class="headerlink" href="#articulation-dynamics" title="Link to this heading">¶</a></h2>
+<p>PhysX GPU dynamics results are available as opt-in CUDA tensors:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">jacobian</span> <span class="o">=</span> <span class="n">world</span><span class="o">.</span><span class="n">get_gpu_articulation_dense_jacobians</span><span class="p">()</span>
+<span class="n">mass</span> <span class="o">=</span> <span class="n">world</span><span class="o">.</span><span class="n">get_gpu_articulation_mass_matrices</span><span class="p">()</span>
+<span class="n">gravity</span> <span class="o">=</span> <span class="n">world</span><span class="o">.</span><span class="n">get_gpu_articulation_gravity_forces</span><span class="p">()</span>
+<span class="n">coriolis</span> <span class="o">=</span> <span class="n">world</span><span class="o">.</span><span class="n">get_gpu_articulation_coriolis_forces</span><span class="p">()</span>
+<span class="n">link_acceleration</span> <span class="o">=</span> <span class="n">world</span><span class="o">.</span><span class="n">get_gpu_articulation_link_accelerations</span><span class="p">()</span>
+<span class="n">com_world</span> <span class="o">=</span> <span class="n">world</span><span class="o">.</span><span class="n">get_gpu_articulation_com_world</span><span class="p">()</span>
+<span class="n">com_root</span> <span class="o">=</span> <span class="n">world</span><span class="o">.</span><span class="n">get_gpu_articulation_com_root</span><span class="p">()</span>
+<span class="n">centroidal_matrix</span><span class="p">,</span> <span class="n">centroidal_bias</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">world</span><span class="o">.</span><span class="n">get_gpu_articulation_centroidal_dynamics</span><span class="p">()</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>These buffers are allocated lazily on their first compute call. Merely enabling
+the GPU physics system does not allocate them or add work to <code class="docutils literal notranslate"><span class="pre">world.step()</span></code>.
+Repeated <code class="docutils literal notranslate"><span class="pre">compute=True</span></code> reads in the same articulation-dynamics generation reuse
+the computed result. A physics step or GPU state reset invalidates that cache;
+the next read dispatches PhysX again. Passing <code class="docutils literal notranslate"><span class="pre">compute=False</span></code> always returns the
+last computed buffer without dispatching a new PhysX operation.</p>
+<p>PhysX returns one fixed-capacity packed block per articulation. Use:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">rows</span><span class="p">,</span> <span class="n">dofs</span> <span class="o">=</span> <span class="n">world</span><span class="o">.</span><span class="n">get_gpu_articulation_dynamics_shape</span><span class="p">(</span><span class="n">articulation_row</span><span class="p">)</span>
+<span class="n">j0</span> <span class="o">=</span> <span class="n">jacobian</span><span class="p">[</span><span class="n">articulation_row</span><span class="p">,</span> <span class="p">:</span> <span class="n">rows</span> <span class="o">*</span> <span class="n">dofs</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">dofs</span><span class="p">)</span>
+<span class="n">m0</span> <span class="o">=</span> <span class="n">mass</span><span class="p">[</span><span class="n">articulation_row</span><span class="p">,</span> <span class="p">:</span> <span class="n">dofs</span> <span class="o">*</span> <span class="n">dofs</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">dofs</span><span class="p">,</span> <span class="n">dofs</span><span class="p">)</span>
+<span class="n">g0</span> <span class="o">=</span> <span class="n">gravity</span><span class="p">[</span><span class="n">articulation_row</span><span class="p">,</span> <span class="p">:</span><span class="n">dofs</span><span class="p">]</span>
+<span class="n">c0</span> <span class="o">=</span> <span class="n">coriolis</span><span class="p">[</span><span class="n">articulation_row</span><span class="p">,</span> <span class="p">:</span><span class="n">dofs</span><span class="p">]</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">dofs</span></code> includes six floating-base coordinates when the articulation is not
+fixed. The packed representation intentionally matches the PhysX Direct GPU
+API output and avoids a repacking kernel or an additional CUDA buffer. Compute
+only the quantities required by the controller, preferably at control rate
+rather than every physics substep.</p>
+<p>Link acceleration uses <code class="docutils literal notranslate"><span class="pre">[articulation_count,</span> <span class="pre">max_links,</span> <span class="pre">6]</span></code> with linear XYZ
+followed by angular XYZ. COM buffers use <code class="docutils literal notranslate"><span class="pre">[articulation_count,</span> <span class="pre">3]</span></code> in world or
+root frame. Centroidal momentum is available for floating-base articulations;
+the matrix is a packed <code class="docutils literal notranslate"><span class="pre">[articulation_count,</span> <span class="pre">6</span> <span class="pre">*</span> <span class="pre">max_generalized_dofs]</span></code> block
+and its bias force is <code class="docutils literal notranslate"><span class="pre">[articulation_count,</span> <span class="pre">6]</span></code>.</p>
+<section id="batched-link-wrench">
+<h3>Batched link wrench<a class="headerlink" href="#batched-link-wrench" title="Link to this heading">¶</a></h3>
+<p>Dense CUDA link force and torque commands use the PhysX-native
+<code class="docutils literal notranslate"><span class="pre">[articulation_count,</span> <span class="pre">max_links,</span> <span class="pre">3]</span></code> layout:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">forces</span> <span class="o">=</span> <span class="n">world</span><span class="o">.</span><span class="n">get_gpu_articulation_link_forces</span><span class="p">()</span>
+<span class="n">torques</span> <span class="o">=</span> <span class="n">world</span><span class="o">.</span><span class="n">get_gpu_articulation_link_torques</span><span class="p">()</span>
+<span class="n">forces</span><span class="o">.</span><span class="n">zero_</span><span class="p">()</span>
+<span class="n">torques</span><span class="o">.</span><span class="n">zero_</span><span class="p">()</span>
+<span class="n">forces</span><span class="p">[:,</span> <span class="n">pelvis_link</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">250.0</span>
+<span class="n">world</span><span class="o">.</span><span class="n">apply_gpu_articulation_link_wrenches</span><span class="p">(</span><span class="n">forces</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">torques</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Or copy existing contiguous CUDA tensors and submit them together:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">world</span><span class="o">.</span><span class="n">set_gpu_articulation_link_wrenches</span><span class="p">(</span>
+    <span class="n">forces</span><span class="o">=</span><span class="n">policy_forces</span><span class="p">,</span>
+    <span class="n">torques</span><span class="o">=</span><span class="n">policy_torques</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Command buffers are allocated on first use. No Python environment loop or
+host transfer is performed. Submission is explicit: apply the desired wrench
+for each simulation step that should receive it, and submit zeroed buffers when
+the external wrench should stop.</p>
+</section>
+</section>
 <section id="contacts-and-sensors">
 <h2>Contacts and sensors<a class="headerlink" href="#contacts-and-sensors" title="Link to this heading">¶</a></h2>
 <p>Create sensors from rigid or articulation views:</p>
@@ -700,6 +789,11 @@ make<span class="w"> </span>validate_physx_gpu_cpp
 </li>
 <li><a class="reference internal" href="#writing-root-and-dof-state">Writing root and DOF state</a></li>
 <li><a class="reference internal" href="#articulation-control">Articulation control</a></li>
+<li><a class="reference internal" href="#rigid-acceleration">Rigid acceleration</a></li>
+<li><a class="reference internal" href="#articulation-dynamics">Articulation dynamics</a><ul>
+<li><a class="reference internal" href="#batched-link-wrench">Batched link wrench</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#contacts-and-sensors">Contacts and sensors</a></li>
 <li><a class="reference internal" href="#gpu-visualization">GPU visualization</a></li>
 <li><a class="reference internal" href="#examples-and-validation">Examples and validation</a></li>

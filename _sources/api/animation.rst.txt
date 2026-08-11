@@ -32,6 +32,13 @@ API overview
 .. autoclass:: SkeletonTree
 
 .. autoclass:: SkeletonMotion
+   :members:
+
+``SkeletonMotion`` is the canonical public motion container. Importers such as
+``BVHLoader`` and ``AMASSLoader`` return it directly; preprocessing code should
+construct edited clips with ``SkeletonMotion.from_arrays()``. Batched FK,
+linear/angular velocity, and acceleration arrays are computed through its
+``global_*`` and ``root_*`` methods.
 
 .. autoclass:: Transform
 

@@ -1,0 +1,120 @@
+# ke.deform
+
+`ke.deform` contains body models and geometry-deformation calculations.
+Renderable surfaces live under `ke.visual`; see
+[Visual Objects and Deformable Surfaces](../guide/scene_rendering/VISUAL_OBJECTS.md)
+for the boundary between deformation producers and their visual objects.
+
+`ke.deform.smpl.SMPLModel` adapts an SMPL NPZ or PKL file to
+`ke.visual.SkinnedSurface`.
+Shape coefficients are baked once and each pose is supplied as WXYZ local joint
+rotations plus a root translation.
+
+## SMPL model files
+
+The KangEngine SMPL examples require **one standard SMPL or SMPL-X model file**
+matching the character gender. No separate slim or rendering-specific model is
+needed.
+
+**Standard SMPL model** (for animation and rendering):
+
+**Files**:
+
+- `assets/external/smpl_models/smpl/SMPL_NEUTRAL.pkl`
+- `assets/external/smpl_models/smpl/SMPL_MALE.pkl`
+- `assets/external/smpl_models/smpl/SMPL_FEMALE.pkl`
+
+**Source**: [SMPL official website](https://smpl.is.tue.mpg.de/)
+
+**Purpose**: Body shape computation, pose correctives, skinning, and rendering
+
+**Required for**: `view_smpl_motion.py` and applications using
+`ke.deform.smpl.SMPLModel`
+
+Only the selected gender file is required. Repository examples resolve these
+files with `repository_model_path("neutral")`, `repository_model_path("male")`,
+or `repository_model_path("female")`.
+
+**Standard SMPL-X model** (for AMASS body and hand motion):
+
+**Files**:
+
+- `assets/external/smpl_models/smplx/SMPLX_NEUTRAL.npz`
+- `assets/external/smpl_models/smplx/SMPLX_MALE.npz`
+- `assets/external/smpl_models/smplx/SMPLX_FEMALE.npz`
+
+**Source**: [SMPL-X official website](https://smpl-x.is.tue.mpg.de/)
+
+**Purpose**: Full SMPL-X body shape, body pose, hand pose, pose correctives,
+skinning, and rendering
+
+**Required for**: Preserving the body and hand rotations from AMASS pose
+archives. `view_smpl_motion.py` selects SMPL-X automatically for AMASS NPZ
+input.
+
+**Model directory structure:**
+
+```text
+assets/
+└── external/
+    └── smpl_models/
+        ├── smpl/
+        │   ├── SMPL_NEUTRAL.pkl
+        │   ├── SMPL_MALE.pkl
+        │   └── SMPL_FEMALE.pkl
+        └── smplx/
+            ├── SMPLX_NEUTRAL.npz
+            ├── SMPLX_MALE.npz
+            └── SMPLX_FEMALE.npz
+```
+
+Applications outside the KangEngine repository should keep the model wherever
+appropriate and pass its path directly to `SMPLModel.load()` or
+`SMPLXModel.load()`.
+
+```python
+model = ke.deform.smpl.SMPLModel.load("/path/to/SMPL_NEUTRAL.pkl")
+body = model.create_body(betas)
+surface = body.create_visual(self, "/character", material)
+
+body.apply_pose(
+    surface,
+    local_rotations_wxyz,
+    root_translation,
+    pose_correctives=False,
+)
+```
+
+For AMASS playback, `AMASSLoader.load_motion()` maps the 22 body and 30 hand
+rotations into the 55-joint SMPL-X hierarchy and returns a native
+`SkeletonMotion`. Jaw and eye rotations remain identity:
+
+```bash
+python python/examples/view_smpl_motion.py --motion /path/to/amass_motion.npz
+```
+
+AMASS archives are Z-up. The loader keeps Z-up when requested, while the SMPL
+viewer asks it to convert root translation and orientation to Y-up.
+
+`SMPLBody.apply_pose(..., pose_correctives=True)` enables the hybrid path: the
+SMPL adapter evaluates pose-dependent blend shapes (pose correctives) on the
+CPU. It computes pose offsets from `posedirs × (R - I)`, adds them to the shaped
+template vertices before skinning, and updates the vertex and normal streams.
+Linear blend skinning (LBS) still runs on the GPU. This path is opt-in because
+recalculating vertices and normals is substantially more expensive than
+uploading only the joint matrix palette. The default path remains matrix-only
+GPU LBS. The same process applies to `SMPLXBody` with its larger joint palette.
+
+## API overview
+
+```{eval-rst}
+.. currentmodule:: kangengine.deform.smpl
+
+.. autoclass:: SMPLModel
+
+.. autoclass:: SMPLBody
+
+.. autoclass:: SMPLXModel
+
+.. autoclass:: SMPLXBody
+```

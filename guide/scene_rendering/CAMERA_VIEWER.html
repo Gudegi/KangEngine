@@ -220,11 +220,13 @@
 <li class="toctree-l3"><a class="reference internal" href="../simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../simulation/VIEWER_SYNC.html">Viewer Synchronization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulation/VISUALIZATION.html">Simulation Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../simulation/RUN_MODES.html">Simulation Run Modes</a></li>
 </ul>
 </li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="../motion_animation/INDEX.html">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="simple">
+<li class="toctree-l2 has-children"><a class="reference internal" href="../animation/INDEX.html">Animation</a><input aria-label="Toggle navigation of Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../animation/SMPL.html">SMPL Models and Motion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../animation/VISUALS.html">Pose Visualization</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../MIMICKIT.html">RL With MimicKit</a></li>
@@ -246,7 +248,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../api/geometry.html">ke.geometry</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/asset.html">ke.asset</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/animation.html">ke.animation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../api/character.html">ke.character</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/exports.html">ke.exports</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/motion.html">ke.motion_module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/material.html">ke.material</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/rendering.html">ke.render</a></li>
@@ -327,11 +329,11 @@
 </div>
 <p>For direct control:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">camera</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_camera</span><span class="p">()</span>
-<span class="n">camera</span><span class="o">.</span><span class="n">set_near_plane</span><span class="p">(</span><span class="mf">0.05</span><span class="p">)</span>
-<span class="n">camera</span><span class="o">.</span><span class="n">set_far_plane</span><span class="p">(</span><span class="mf">5000.0</span><span class="p">)</span>
-<span class="n">camera</span><span class="o">.</span><span class="n">set_fov</span><span class="p">(</span><span class="mf">58.0</span><span class="p">)</span>
-<span class="n">camera</span><span class="o">.</span><span class="n">set_camera_pos</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">,</span> <span class="mf">14.0</span><span class="p">))</span>
-<span class="n">camera</span><span class="o">.</span><span class="n">set_target_pos</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
+<span class="n">camera</span><span class="o">.</span><span class="n">set_near_plane</span><span class="p">(</span><span class="n">distance</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+<span class="n">camera</span><span class="o">.</span><span class="n">set_far_plane</span><span class="p">(</span><span class="n">distance</span><span class="o">=</span><span class="mf">5000.0</span><span class="p">)</span>
+<span class="n">camera</span><span class="o">.</span><span class="n">set_fov</span><span class="p">(</span><span class="n">fov</span><span class="o">=</span><span class="mf">58.0</span><span class="p">)</span>
+<span class="n">camera</span><span class="o">.</span><span class="n">set_camera_pos</span><span class="p">(</span><span class="n">position</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">,</span> <span class="mf">14.0</span><span class="p">))</span>
+<span class="n">camera</span><span class="o">.</span><span class="n">set_target_pos</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
 </pre></div>
 </div>
 <p>Use <code class="docutils literal notranslate"><span class="pre">ke.keys</span></code> in lifecycle callbacks for keyboard interaction and <code class="docutils literal notranslate"><span class="pre">ke.imgui</span></code>

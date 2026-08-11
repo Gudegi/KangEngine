@@ -26,7 +26,7 @@ scene
 geometry
 asset
 animation
-character
+exports
 motion
 material
 rendering
@@ -139,7 +139,33 @@ utils
     :nosignatures:
 
     ArticulationVisual
+    ArticulatedSurface
     SkeletalVisual
+```
+
+### Deformable Surfaces
+
+```{eval-rst}
+.. currentmodule:: kangengine.visual
+
+.. autosummary::
+    :nosignatures:
+
+    SkinnedSurfaceAsset
+    SkinnedSurface
+    ArticulatedSurfaceAsset
+    DeformableSurface
+```
+
+### Exports
+
+```{eval-rst}
+.. currentmodule:: kangengine.exports
+
+.. autosummary::
+    :nosignatures:
+
+    save_motion_bvh
 ```
 
 ## Physics And Simulation

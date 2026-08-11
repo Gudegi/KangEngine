@@ -220,11 +220,13 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VIEWER_SYNC.html">Viewer Synchronization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VISUALIZATION.html">Simulation Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RUN_MODES.html">Simulation Run Modes</a></li>
 </ul>
 </li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/motion_animation/INDEX.html">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="simple">
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/animation/INDEX.html">Animation</a><input aria-label="Toggle navigation of Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/SMPL.html">SMPL Models and Motion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/VISUALS.html">Pose Visualization</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
@@ -246,7 +248,7 @@
 <li class="toctree-l2"><a class="reference internal" href="geometry.html">ke.geometry</a></li>
 <li class="toctree-l2"><a class="reference internal" href="asset.html">ke.asset</a></li>
 <li class="toctree-l2"><a class="reference internal" href="animation.html">ke.animation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="character.html">ke.character</a></li>
+<li class="toctree-l2"><a class="reference internal" href="exports.html">ke.exports</a></li>
 <li class="toctree-l2"><a class="reference internal" href="motion.html">ke.motion_module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="material.html">ke.material</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rendering.html">ke.render</a></li>
@@ -364,6 +366,11 @@ pause/single-step controls with <cite>set_simulation_hotkeys_enabled(True)</cite
 <dd></dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.App.add_playback_target">
+<span class="sig-name descname"><span class="pre">add_playback_target</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.add_playback_target" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.App.add_render_hook">
 <span class="sig-name descname"><span class="pre">add_render_hook</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">phase</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">callback</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">pipeline</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.add_render_hook" title="Link to this definition">¶</a></dt>
 <dd><p>Register a custom draw callback and optionally track its pipeline.</p>
@@ -373,7 +380,8 @@ pause/single-step controls with <cite>set_simulation_hotkeys_enabled(True)</cite
 <dt class="sig sig-object py" id="kangengine.App.add_skinned_mesh">
 <span class="sig-name descname"><span class="pre">add_skinned_mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">material</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skinned_mesh_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transform_source</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.App.add_skinned_mesh" title="Link to this definition">¶</a></dt>
 <dd><p>Register a skinned mesh prim and return a RenderablePrimView.</p>
-<p>The material selects the built-in or custom RHI rendering path.</p>
+<p>The bind mesh is registered as the shared resource identity. Runtime
+skinning and deformable vertex updates remain per-renderable state.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1046,6 +1054,7 @@ pybind API explicitly requires SceneBackend.</p>
 <dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">6.0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">hidden</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">overlay</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span><a class="headerlink" href="#kangengine.DebugOverlay.points" title="Link to this definition">¶</a></dt>
@@ -2076,6 +2085,7 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <li><a class="reference internal" href="#kangengine.App.add_ground"><code class="docutils literal notranslate"><span class="pre">App.add_ground()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.add_mesh"><code class="docutils literal notranslate"><span class="pre">App.add_mesh()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.add_obj"><code class="docutils literal notranslate"><span class="pre">App.add_obj()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.App.add_playback_target"><code class="docutils literal notranslate"><span class="pre">App.add_playback_target()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.add_render_hook"><code class="docutils literal notranslate"><span class="pre">App.add_render_hook()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.add_skinned_mesh"><code class="docutils literal notranslate"><span class="pre">App.add_skinned_mesh()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.App.as_vec3"><code class="docutils literal notranslate"><span class="pre">App.as_vec3()</span></code></a></li>

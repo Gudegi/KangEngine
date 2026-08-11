@@ -220,11 +220,13 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VIEWER_SYNC.html">Viewer Synchronization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VISUALIZATION.html">Simulation Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RUN_MODES.html">Simulation Run Modes</a></li>
 </ul>
 </li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/motion_animation/INDEX.html">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="simple">
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/animation/INDEX.html">Animation</a><input aria-label="Toggle navigation of Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/SMPL.html">SMPL Models and Motion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/VISUALS.html">Pose Visualization</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
@@ -246,7 +248,7 @@
 <li class="toctree-l2"><a class="reference internal" href="geometry.html">ke.geometry</a></li>
 <li class="toctree-l2"><a class="reference internal" href="asset.html">ke.asset</a></li>
 <li class="toctree-l2"><a class="reference internal" href="animation.html">ke.animation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="character.html">ke.character</a></li>
+<li class="toctree-l2"><a class="reference internal" href="exports.html">ke.exports</a></li>
 <li class="toctree-l2"><a class="reference internal" href="motion.html">ke.motion_module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="material.html">ke.material</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rendering.html">ke.render</a></li>
@@ -415,11 +417,22 @@ PhysX/CUDA features and invalid lifecycle state raise <code class="docutils lite
 <dd><em class="sig-param"><span class="n"><span class="pre">enable_gpu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">gpu_dynamics</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.PhysicsGpuDynamicsConfig" title="kangengine.physics.PhysicsGpuDynamicsConfig"><span class="pre">PhysicsGpuDynamicsConfig</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">PhysicsGpuDynamicsConfig()</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">enable_contact_reports</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">enable_body_accelerations</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">cpu_dispatcher_threads</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">4</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">bounce_threshold_velocity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">friction_offset_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.03999999910593033</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">friction_correlation_distance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.02500000037252903</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">enable_stabilization</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.PhysicsConfig.__init__" title="Link to this definition">¶</a></dt>
 <dd><p>Create physics configuration from keyword arguments.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsConfig.bounce_threshold_velocity">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">bounce_threshold_velocity</span></span><a class="headerlink" href="#kangengine.physics.PhysicsConfig.bounce_threshold_velocity" title="Link to this definition">¶</a></dt>
+<dd><p>Relative speed below which contacts do not bounce.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -441,6 +454,12 @@ PhysX/CUDA features and invalid lifecycle state raise <code class="docutils lite
 </dd></dl>
 
 <dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsConfig.enable_body_accelerations">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">enable_body_accelerations</span></span><a class="headerlink" href="#kangengine.physics.PhysicsConfig.enable_body_accelerations" title="Link to this definition">¶</a></dt>
+<dd><p>Enable PhysX rigid-body acceleration state.</p>
+</dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsConfig.enable_contact_reports">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">enable_contact_reports</span></span><a class="headerlink" href="#kangengine.physics.PhysicsConfig.enable_contact_reports" title="Link to this definition">¶</a></dt>
 <dd><p>Enable contact collection during simulation.</p>
@@ -450,6 +469,24 @@ PhysX/CUDA features and invalid lifecycle state raise <code class="docutils lite
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsConfig.enable_gpu">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">enable_gpu</span></span><a class="headerlink" href="#kangengine.physics.PhysicsConfig.enable_gpu" title="Link to this definition">¶</a></dt>
 <dd><p>Enable PhysX GPU features when available.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsConfig.enable_stabilization">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">enable_stabilization</span></span><a class="headerlink" href="#kangengine.physics.PhysicsConfig.enable_stabilization" title="Link to this definition">¶</a></dt>
+<dd><p>Enable the PhysX scene stabilization pass.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsConfig.friction_correlation_distance">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">friction_correlation_distance</span></span><a class="headerlink" href="#kangengine.physics.PhysicsConfig.friction_correlation_distance" title="Link to this definition">¶</a></dt>
+<dd><p>Distance used to correlate friction patches.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsConfig.friction_offset_threshold">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">friction_offset_threshold</span></span><a class="headerlink" href="#kangengine.physics.PhysicsConfig.friction_offset_threshold" title="Link to this definition">¶</a></dt>
+<dd><p>Contact separation threshold for friction anchors.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -1123,6 +1160,10 @@ unchanged after later step(), sync(), or clear_contacts() calls.</p>
 <dd><em class="sig-param"><span class="n"><span class="pre">link_linear_damping</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">link_angular_damping</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05000000074505806</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">max_angular_velocity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">100.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">max_depenetration_velocity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0000000331813535e+32</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">sleep_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.004999999888241291</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">stabilization_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0005000000237487257</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">enable_gyroscopic_forces</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">contact_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.019999999552965164</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">rest_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">material_overrides</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Sequence</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#kangengine.physics.CollisionMaterialOverride" title="kangengine.physics.CollisionMaterialOverride"><span class="pre">CollisionMaterialOverride</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">[]</span></span></em>,</dd>
@@ -1183,6 +1224,12 @@ unchanged after later step(), sync(), or clear_contacts() calls.</p>
 </dd></dl>
 
 <dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.ArticulationConfig.enable_gyroscopic_forces">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">enable_gyroscopic_forces</span></span><a class="headerlink" href="#kangengine.physics.ArticulationConfig.enable_gyroscopic_forces" title="Link to this definition">¶</a></dt>
+<dd><p>Enable gyroscopic forces on articulation links.</p>
+</dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.ArticulationConfig.fix_base">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">fix_base</span></span><a class="headerlink" href="#kangengine.physics.ArticulationConfig.fix_base" title="Link to this definition">¶</a></dt>
 <dd><p>Whether the root body is fixed.</p>
@@ -1225,6 +1272,12 @@ unchanged after later step(), sync(), or clear_contacts() calls.</p>
 </dd></dl>
 
 <dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.ArticulationConfig.max_depenetration_velocity">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">max_depenetration_velocity</span></span><a class="headerlink" href="#kangengine.physics.ArticulationConfig.max_depenetration_velocity" title="Link to this definition">¶</a></dt>
+<dd><p>Maximum depenetration velocity for links.</p>
+</dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.ArticulationConfig.rest_offset">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">rest_offset</span></span><a class="headerlink" href="#kangengine.physics.ArticulationConfig.rest_offset" title="Link to this definition">¶</a></dt>
 <dd><p>PhysX rest offset.</p>
@@ -1243,6 +1296,12 @@ unchanged after later step(), sync(), or clear_contacts() calls.</p>
 </dd></dl>
 
 <dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.ArticulationConfig.sleep_threshold">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">sleep_threshold</span></span><a class="headerlink" href="#kangengine.physics.ArticulationConfig.sleep_threshold" title="Link to this definition">¶</a></dt>
+<dd><p>Articulation sleep threshold.</p>
+</dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.ArticulationConfig.solver_iterations">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">solver_iterations</span></span><a class="headerlink" href="#kangengine.physics.ArticulationConfig.solver_iterations" title="Link to this definition">¶</a></dt>
 <dd><p>Compatibility alias for solver_position_iteration_count.</p>
@@ -1258,6 +1317,12 @@ unchanged after later step(), sync(), or clear_contacts() calls.</p>
 <dt class="sig sig-object py" id="kangengine.physics.ArticulationConfig.solver_velocity_iteration_count">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">solver_velocity_iteration_count</span></span><a class="headerlink" href="#kangengine.physics.ArticulationConfig.solver_velocity_iteration_count" title="Link to this definition">¶</a></dt>
 <dd><p>Velocity solver iteration count.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.ArticulationConfig.stabilization_threshold">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">stabilization_threshold</span></span><a class="headerlink" href="#kangengine.physics.ArticulationConfig.stabilization_threshold" title="Link to this definition">¶</a></dt>
+<dd><p>Articulation stabilization threshold.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -1280,7 +1345,7 @@ unchanged after later step(), sync(), or clear_contacts() calls.</p>
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">physics</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.PhysicsWorld" title="kangengine.physics.PhysicsWorld"><span class="pre">PhysicsWorld</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#kangengine.physics.PhysicsWorld" title="kangengine.physics.PhysicsWorld"><span class="pre">PhysicsWorld</span></a></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">cfg</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.ArticulationConfig" title="kangengine.physics.ArticulationConfig"><span class="pre">ArticulationConfig</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.ArticulationConfig" title="kangengine.physics.ArticulationConfig"><span class="pre">ArticulationConfig</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.Articulation" title="kangengine.physics.Articulation"><span class="pre">Articulation</span></a></span></span><a class="headerlink" href="#kangengine.physics.Articulation.build" title="Link to this definition">¶</a></dt>
@@ -1386,7 +1451,7 @@ unchanged after later step(), sync(), or clear_contacts() calls.</p>
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">artic</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.Articulation" title="kangengine.physics.Articulation"><span class="pre">Articulation</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#kangengine.physics.Articulation" title="kangengine.physics.Articulation"><span class="pre">Articulation</span></a></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">base_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/collision'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/collision'</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">visible_by_default</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
 </dl>
 
@@ -1459,6 +1524,41 @@ unchanged after later step(), sync(), or clear_contacts() calls.</p>
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">PhysicsGpuStateViews</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews" title="Link to this definition">¶</a></dt>
 <dd><p>Backend-owned GPU state and command-buffer views. State buffers are refreshed by the corresponding fetch methods; command buffers are submitted by apply methods. The views become invalid when their PhysicsGpuSystem is released.</p>
 <dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.articulation_centroidal_bias_forces">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">articulation_centroidal_bias_forces</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.articulation_centroidal_bias_forces" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.articulation_centroidal_momentum_matrices">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">articulation_centroidal_momentum_matrices</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.articulation_centroidal_momentum_matrices" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.articulation_com_root">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">articulation_com_root</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.articulation_com_root" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.articulation_com_world">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">articulation_com_world</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.articulation_com_world" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.articulation_coriolis_forces">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">articulation_coriolis_forces</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.articulation_coriolis_forces" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.articulation_dense_jacobians">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">articulation_dense_jacobians</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.articulation_dense_jacobians" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.articulation_gravity_forces">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">articulation_gravity_forces</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.articulation_gravity_forces" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.articulation_joint_accelerations">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">articulation_joint_accelerations</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.articulation_joint_accelerations" title="Link to this definition">¶</a></dt>
 <dd><p>Articulation joint-acceleration state.</p>
@@ -1483,16 +1583,36 @@ unchanged after later step(), sync(), or clear_contacts() calls.</p>
 </dd></dl>
 
 <dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.articulation_link_accelerations">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">articulation_link_accelerations</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.articulation_link_accelerations" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.articulation_link_data">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">articulation_link_data</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.articulation_link_data" title="Link to this definition">¶</a></dt>
 <dd><p>Articulation link pose and velocity state.</p>
 </dd></dl>
 
 <dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.articulation_link_forces">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">articulation_link_forces</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.articulation_link_forces" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.articulation_link_incoming_joint_forces">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">articulation_link_incoming_joint_forces</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.articulation_link_incoming_joint_forces" title="Link to this definition">¶</a></dt>
 <dd><p>Incoming joint-force state for articulation links.</p>
 </dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.articulation_link_torques">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">articulation_link_torques</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.articulation_link_torques" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.articulation_mass_matrices">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">articulation_mass_matrices</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.articulation_mass_matrices" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.articulation_target_joint_positions">
@@ -1546,6 +1666,12 @@ unchanged after later step(), sync(), or clear_contacts() calls.</p>
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.contact_points">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">contact_points</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.contact_points" title="Link to this definition">¶</a></dt>
 <dd><p>Packed contact-point state buffer.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuStateViews.rigid_accelerations">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">rigid_accelerations</span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuStateViews.rigid_accelerations" title="Link to this definition">¶</a></dt>
+<dd><p>Rigid COM linear/angular acceleration state.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -1625,7 +1751,7 @@ synchronization, or refresh operations.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.physics.aggregate_contact_sensors_cuda">
-<span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">aggregate_contact_sensors_cuda</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">...</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.aggregate_contact_sensors_cuda" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">aggregate_contact_sensors_cuda</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">...</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.physics.aggregate_contact_sensors_cuda" title="Link to this definition">¶</a></dt>
 <dd><p>Aggregates contact sensor outputs on the GPU. Available only in CUDA-enabled builds.</p>
 </dd></dl>
 
@@ -1703,11 +1829,16 @@ KangEngine fallback boxes. Visual-only mesh geoms remain render-only.</p>
 <li><a class="reference internal" href="#return-and-error-contracts">Return and error contracts</a><ul>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsConfig"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig</span></code></a><ul>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.__init__"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.__init__()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.bounce_threshold_velocity"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.bounce_threshold_velocity</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.cpu_dispatcher_threads"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.cpu_dispatcher_threads</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.dt"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.dt</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.dynamic_friction"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.dynamic_friction</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.enable_body_accelerations"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.enable_body_accelerations</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.enable_contact_reports"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.enable_contact_reports</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.enable_gpu"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.enable_gpu</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.enable_stabilization"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.enable_stabilization</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.friction_correlation_distance"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.friction_correlation_distance</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.friction_offset_threshold"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.friction_offset_threshold</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.gpu_dynamics"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.gpu_dynamics</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.restitution"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.restitution</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsConfig.solver_type"><code class="docutils literal notranslate"><span class="pre">PhysicsConfig.solver_type</span></code></a></li>
@@ -1791,6 +1922,7 @@ KangEngine fallback boxes. Visual-only mesh geoms remain render-only.</p>
 <li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.contact_offset"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.contact_offset</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.disable_self_collision"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.disable_self_collision</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.enable_ccd"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.enable_ccd</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.enable_gyroscopic_forces"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.enable_gyroscopic_forces</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.fix_base"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.fix_base</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.fixed_base"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.fixed_base()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.free_base"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.free_base()</span></code></a></li>
@@ -1798,12 +1930,15 @@ KangEngine fallback boxes. Visual-only mesh geoms remain render-only.</p>
 <li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.link_linear_damping"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.link_linear_damping</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.material_overrides"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.material_overrides</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.max_angular_velocity"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.max_angular_velocity</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.max_depenetration_velocity"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.max_depenetration_velocity</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.rest_offset"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.rest_offset</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.root_angular_damping"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.root_angular_damping</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.root_linear_damping"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.root_linear_damping</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.sleep_threshold"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.sleep_threshold</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.solver_iterations"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.solver_iterations</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.solver_position_iteration_count"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.solver_position_iteration_count</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.solver_velocity_iteration_count"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.solver_velocity_iteration_count</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.stabilization_threshold"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.stabilization_threshold</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.ArticulationConfig.use_aggregate"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig.use_aggregate</span></code></a></li>
 </ul>
 </li>
@@ -1831,12 +1966,23 @@ KangEngine fallback boxes. Visual-only mesh geoms remain render-only.</p>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.articulation_centroidal_bias_forces"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.articulation_centroidal_bias_forces</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.articulation_centroidal_momentum_matrices"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.articulation_centroidal_momentum_matrices</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.articulation_com_root"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.articulation_com_root</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.articulation_com_world"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.articulation_com_world</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.articulation_coriolis_forces"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.articulation_coriolis_forces</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.articulation_dense_jacobians"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.articulation_dense_jacobians</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.articulation_gravity_forces"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.articulation_gravity_forces</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.articulation_joint_accelerations"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.articulation_joint_accelerations</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.articulation_joint_forces"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.articulation_joint_forces</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.articulation_joint_positions"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.articulation_joint_positions</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.articulation_joint_velocities"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.articulation_joint_velocities</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.articulation_link_accelerations"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.articulation_link_accelerations</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.articulation_link_data"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.articulation_link_data</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.articulation_link_forces"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.articulation_link_forces</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.articulation_link_incoming_joint_forces"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.articulation_link_incoming_joint_forces</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.articulation_link_torques"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.articulation_link_torques</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.articulation_mass_matrices"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.articulation_mass_matrices</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.articulation_target_joint_positions"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.articulation_target_joint_positions</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.articulation_target_joint_velocities"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.articulation_target_joint_velocities</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.contact_pair_body_refs"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.contact_pair_body_refs</span></code></a></li>
@@ -1846,6 +1992,7 @@ KangEngine fallback boxes. Visual-only mesh geoms remain render-only.</p>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.contact_point_count"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.contact_point_count</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.contact_point_pair_indices"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.contact_point_pair_indices</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.contact_points"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.contact_points</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.rigid_accelerations"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.rigid_accelerations</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.rigid_data"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.rigid_data</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.rigid_force"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.rigid_force</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsGpuStateViews.rigid_torque"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuStateViews.rigid_torque</span></code></a></li>

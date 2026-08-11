@@ -220,11 +220,13 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VIEWER_SYNC.html">Viewer Synchronization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VISUALIZATION.html">Simulation Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RUN_MODES.html">Simulation Run Modes</a></li>
 </ul>
 </li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/motion_animation/INDEX.html">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="simple">
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/animation/INDEX.html">Animation</a><input aria-label="Toggle navigation of Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/SMPL.html">SMPL Models and Motion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/VISUALS.html">Pose Visualization</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
@@ -246,7 +248,7 @@
 <li class="toctree-l2"><a class="reference internal" href="geometry.html">ke.geometry</a></li>
 <li class="toctree-l2"><a class="reference internal" href="asset.html">ke.asset</a></li>
 <li class="toctree-l2"><a class="reference internal" href="animation.html">ke.animation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="character.html">ke.character</a></li>
+<li class="toctree-l2"><a class="reference internal" href="exports.html">ke.exports</a></li>
 <li class="toctree-l2"><a class="reference internal" href="motion.html">ke.motion_module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="material.html">ke.material</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rendering.html">ke.render</a></li>
@@ -441,16 +443,16 @@ while specialized APIs are grouped by domain under modules such as <code class="
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="asset.html#kangengine.asset.MJCFLoader" title="kangengine.asset.MJCFLoader"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MJCFLoader</span></code></a></p></td>
-<td><p>Loader for MJCF/XML robot character assets.</p></td>
+<td><p>Load MJCF/XML articulation descriptions.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="asset.html#kangengine.asset.BVHLoader" title="kangengine.asset.BVHLoader"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BVHLoader</span></code></a></p></td>
-<td><p>Loader for BVH skeleton and motion files.</p></td>
+<td><p>Load a BVH hierarchy or sampled skeleton motion.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="asset.html#kangengine.asset.FBXLoader" title="kangengine.asset.FBXLoader"><code class="xref py py-obj docutils literal notranslate"><span class="pre">FBXLoader</span></code></a></p></td>
-<td><p>Loader for FBX skeletons, motions, and meshes.</p></td>
+<td><p>Load FBX skeletons, animation clips, and character data.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="asset.html#kangengine.asset.USDLoader" title="kangengine.asset.USDLoader"><code class="xref py py-obj docutils literal notranslate"><span class="pre">USDLoader</span></code></a></p></td>
-<td><p>Loader for USD mesh scenes.</p></td>
+<td><p>Load meshes from USD scenes.</p></td>
 </tr>
 </tbody>
 </table>
@@ -485,8 +487,44 @@ while specialized APIs are grouped by domain under modules such as <code class="
 <tr class="row-odd"><td><p><a class="reference internal" href="visual.html#kangengine.visual.ArticulationVisual" title="kangengine.visual.ArticulationVisual"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ArticulationVisual</span></code></a></p></td>
 <td><p>Viewer-side articulated rigid-link visual object.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="visual.html#kangengine.visual.SkeletalVisual" title="kangengine.visual.SkeletalVisual"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SkeletalVisual</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="visual.html#kangengine.visual.ArticulatedSurface" title="kangengine.visual.ArticulatedSurface"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ArticulatedSurface</span></code></a></p></td>
+<td><p>Application-owned FK surface composed of rigid link meshes.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="visual.html#kangengine.visual.SkeletalVisual" title="kangengine.visual.SkeletalVisual"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SkeletalVisual</span></code></a></p></td>
 <td><p>Instanced line/point renderer for skeleton poses and motion clips.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="deformable-surfaces">
+<h3>Deformable Surfaces<a class="headerlink" href="#deformable-surfaces" title="Link to this heading">¶</a></h3>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="visual.html#kangengine.visual.SkinnedSurfaceAsset" title="kangengine.visual.SkinnedSurfaceAsset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SkinnedSurfaceAsset</span></code></a></p></td>
+<td><p>Static topology and four-weight LBS data uploaded once.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="visual.html#kangengine.visual.SkinnedSurface" title="kangengine.visual.SkinnedSurface"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SkinnedSurface</span></code></a></p></td>
+<td><p>One or more skinned render parts driven by a shared skeleton.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="visual.html#kangengine.visual.ArticulatedSurfaceAsset" title="kangengine.visual.ArticulatedSurfaceAsset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ArticulatedSurfaceAsset</span></code></a></p></td>
+<td><p>Reusable MJCF skeleton and rigid-link mesh asset.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="visual.html#kangengine.visual.DeformableSurface" title="kangengine.visual.DeformableSurface"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DeformableSurface</span></code></a></p></td>
+<td><p>TODO scaffold for directly streamed deformable geometry.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="exports">
+<h3>Exports<a class="headerlink" href="#exports" title="Link to this heading">¶</a></h3>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">save_motion_bvh</span></code></p></td>
+<td><p>Write a <code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code> to a BVH file and return its path.</p></td>
 </tr>
 </tbody>
 </table>
@@ -646,6 +684,8 @@ while specialized APIs are grouped by domain under modules such as <code class="
 <li><a class="reference internal" href="#animation-and-visuals">Animation And Visuals</a><ul>
 <li><a class="reference internal" href="#animation">Animation</a></li>
 <li><a class="reference internal" href="#visual-bridges">Visual Bridges</a></li>
+<li><a class="reference internal" href="#deformable-surfaces">Deformable Surfaces</a></li>
+<li><a class="reference internal" href="#exports">Exports</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#physics-and-simulation">Physics And Simulation</a><ul>

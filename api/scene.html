@@ -220,11 +220,13 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VIEWER_SYNC.html">Viewer Synchronization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VISUALIZATION.html">Simulation Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RUN_MODES.html">Simulation Run Modes</a></li>
 </ul>
 </li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/motion_animation/INDEX.html">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="simple">
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/animation/INDEX.html">Animation</a><input aria-label="Toggle navigation of Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/SMPL.html">SMPL Models and Motion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/VISUALS.html">Pose Visualization</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
@@ -246,7 +248,7 @@
 <li class="toctree-l2"><a class="reference internal" href="geometry.html">ke.geometry</a></li>
 <li class="toctree-l2"><a class="reference internal" href="asset.html">ke.asset</a></li>
 <li class="toctree-l2"><a class="reference internal" href="animation.html">ke.animation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="character.html">ke.character</a></li>
+<li class="toctree-l2"><a class="reference internal" href="exports.html">ke.exports</a></li>
 <li class="toctree-l2"><a class="reference internal" href="motion.html">ke.motion_module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="material.html">ke.material</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rendering.html">ke.render</a></li>
@@ -1481,7 +1483,7 @@
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.scene.Prim" title="kangengine.scene.Prim"><span class="pre">Prim</span></a></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">callback</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">std::__1::function&lt;void</span> <span class="pre">(KE::Scene::Prim*)&gt;</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">callback</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">std::function&lt;void</span> <span class="pre">(KE::Scene::Prim*)&gt;</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.scene.Prim.traverse" title="Link to this definition">¶</a></dt>
@@ -1578,7 +1580,7 @@
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.scene.Camera" title="kangengine.scene.Camera"><span class="pre">Camera</span></a></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">camera_pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">glm::vec&lt;3</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">position</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">glm::vec&lt;3</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">float</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">(glm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">:qualifier)0&gt;</span></span></em>,</dd>
 </dl>
@@ -1611,7 +1613,7 @@
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.scene.Camera" title="kangengine.scene.Camera"><span class="pre">Camera</span></a></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">target_pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">glm::vec&lt;3</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">target</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">glm::vec&lt;3</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">float</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">(glm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">:qualifier)0&gt;</span></span></em>,</dd>
 </dl>
@@ -2934,11 +2936,11 @@ facade:</p>
 <span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">log_scene_arrows</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.scene.DebugDraw.log_scene_arrows" title="Link to this definition">¶</a></dt>
 <dd><p>Overloaded function.</p>
 <ol class="arabic simple">
-<li><p>log_scene_arrows(scene: KE::Scene::SceneBackend, base_path: str, starts: npt.ArrayLike | torch.Tensor, ends: npt.ArrayLike | torch.Tensor, colors: npt.ArrayLike | torch.Tensor, radius: float = 0.019999999552965164, segments: int = 12) -&gt; list[kangengine.scene.Prim]</p></li>
+<li><p>log_scene_arrows(scene: KE::Scene::SceneBackend, path: str, starts: npt.ArrayLike | torch.Tensor, ends: npt.ArrayLike | torch.Tensor, colors: npt.ArrayLike | torch.Tensor, radius: float = 0.019999999552965164, segments: int = 12) -&gt; list[kangengine.scene.Prim]</p></li>
 </ol>
 <p>Create scene-backed arrow prims from numpy arrays.</p>
 <ol class="arabic simple" start="2">
-<li><p>log_scene_arrows(scene: KE::Scene::SceneBackend, base_path: str, starts: collections.abc.Sequence[glm::vec&lt;3, float, (glm::qualifier)0&gt;], ends: collections.abc.Sequence[glm::vec&lt;3, float, (glm::qualifier)0&gt;], colors: collections.abc.Sequence[glm::vec&lt;4, float, (glm::qualifier)0&gt;], radius: float = 0.019999999552965164, segments: int = 12) -&gt; list[kangengine.scene.Prim]</p></li>
+<li><p>log_scene_arrows(scene: KE::Scene::SceneBackend, path: str, starts: collections.abc.Sequence[glm::vec&lt;3, float, (glm::qualifier)0&gt;], ends: collections.abc.Sequence[glm::vec&lt;3, float, (glm::qualifier)0&gt;], colors: collections.abc.Sequence[glm::vec&lt;4, float, (glm::qualifier)0&gt;], radius: float = 0.019999999552965164, segments: int = 12) -&gt; list[kangengine.scene.Prim]</p></li>
 </ol>
 <p>Create scene-backed arrow prims.</p>
 </dd></dl>
@@ -2949,7 +2951,7 @@ facade:</p>
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">KE::Scene::SceneBackend</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">base_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">origin</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">glm::vec&lt;3</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">float</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">(glm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">:qualifier)0&gt;</span></span></em>,</dd>
@@ -2969,11 +2971,11 @@ facade:</p>
 <span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">log_scene_lines</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.scene.DebugDraw.log_scene_lines" title="Link to this definition">¶</a></dt>
 <dd><p>Overloaded function.</p>
 <ol class="arabic simple">
-<li><p>log_scene_lines(scene: KE::Scene::SceneBackend, base_path: str, starts: npt.ArrayLike | torch.Tensor, ends: npt.ArrayLike | torch.Tensor, colors: npt.ArrayLike | torch.Tensor, radius: float = 0.004999999888241291, segments: int = 8) -&gt; list[kangengine.scene.Prim]</p></li>
+<li><p>log_scene_lines(scene: KE::Scene::SceneBackend, path: str, starts: npt.ArrayLike | torch.Tensor, ends: npt.ArrayLike | torch.Tensor, colors: npt.ArrayLike | torch.Tensor, radius: float = 0.004999999888241291, segments: int = 8) -&gt; list[kangengine.scene.Prim]</p></li>
 </ol>
 <p>Create scene-backed line prims from numpy arrays.</p>
 <ol class="arabic simple" start="2">
-<li><p>log_scene_lines(scene: KE::Scene::SceneBackend, base_path: str, starts: collections.abc.Sequence[glm::vec&lt;3, float, (glm::qualifier)0&gt;], ends: collections.abc.Sequence[glm::vec&lt;3, float, (glm::qualifier)0&gt;], colors: collections.abc.Sequence[glm::vec&lt;4, float, (glm::qualifier)0&gt;], radius: float = 0.004999999888241291, segments: int = 8) -&gt; list[kangengine.scene.Prim]</p></li>
+<li><p>log_scene_lines(scene: KE::Scene::SceneBackend, path: str, starts: collections.abc.Sequence[glm::vec&lt;3, float, (glm::qualifier)0&gt;], ends: collections.abc.Sequence[glm::vec&lt;3, float, (glm::qualifier)0&gt;], colors: collections.abc.Sequence[glm::vec&lt;4, float, (glm::qualifier)0&gt;], radius: float = 0.004999999888241291, segments: int = 8) -&gt; list[kangengine.scene.Prim]</p></li>
 </ol>
 <p>Create scene-backed line prims.</p>
 </dd></dl>

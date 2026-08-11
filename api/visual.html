@@ -220,11 +220,13 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VIEWER_SYNC.html">Viewer Synchronization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VISUALIZATION.html">Simulation Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RUN_MODES.html">Simulation Run Modes</a></li>
 </ul>
 </li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/motion_animation/INDEX.html">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="simple">
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/animation/INDEX.html">Animation</a><input aria-label="Toggle navigation of Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/SMPL.html">SMPL Models and Motion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/VISUALS.html">Pose Visualization</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
@@ -246,7 +248,7 @@
 <li class="toctree-l2"><a class="reference internal" href="geometry.html">ke.geometry</a></li>
 <li class="toctree-l2"><a class="reference internal" href="asset.html">ke.asset</a></li>
 <li class="toctree-l2"><a class="reference internal" href="animation.html">ke.animation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="character.html">ke.character</a></li>
+<li class="toctree-l2"><a class="reference internal" href="exports.html">ke.exports</a></li>
 <li class="toctree-l2"><a class="reference internal" href="motion.html">ke.motion_module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="material.html">ke.material</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rendering.html">ke.render</a></li>
@@ -331,13 +333,28 @@ state visualization.</p>
 <tr class="row-even"><td><p><a class="reference internal" href="#kangengine.visual.ArticulationVisualAsset" title="kangengine.visual.ArticulationVisualAsset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ArticulationVisualAsset</span></code></a></p></td>
 <td><p>Reusable articulated rigid-link visual asset that can instantiate scene prims.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.visual.SkinVisual" title="kangengine.visual.SkinVisual"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SkinVisual</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.ArticulatedSurface"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ArticulatedSurface</span></code></a></p></td>
+<td><p>Application-owned FK surface composed of rigid link meshes.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.visual.ArticulatedSurfaceAsset" title="kangengine.visual.ArticulatedSurfaceAsset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ArticulatedSurfaceAsset</span></code></a></p></td>
+<td><p>Reusable MJCF skeleton and rigid-link mesh asset.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.visual.DeformableSurface" title="kangengine.visual.DeformableSurface"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DeformableSurface</span></code></a></p></td>
+<td><p>TODO scaffold for directly streamed deformable geometry.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.visual.SkinVisual" title="kangengine.visual.SkinVisual"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SkinVisual</span></code></a></p></td>
 <td><p>Skinned-character visual bridge created from an FBX asset.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.visual.SkeletalVisual" title="kangengine.visual.SkeletalVisual"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SkeletalVisual</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.SkinnedSurface"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SkinnedSurface</span></code></a></p></td>
+<td><p>One or more skinned render parts driven by a shared skeleton.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.visual.SkinnedSurfaceAsset" title="kangengine.visual.SkinnedSurfaceAsset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SkinnedSurfaceAsset</span></code></a></p></td>
+<td><p>Static topology and four-weight LBS data uploaded once.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.visual.SkeletalVisual" title="kangengine.visual.SkeletalVisual"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SkeletalVisual</span></code></a></p></td>
 <td><p>Instanced line/point renderer for skeleton poses and motion clips.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.visual.SkeletalVisualConfig" title="kangengine.visual.SkeletalVisualConfig"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SkeletalVisualConfig</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.visual.SkeletalVisualConfig" title="kangengine.visual.SkeletalVisualConfig"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SkeletalVisualConfig</span></code></a></p></td>
 <td><p>Style settings for SkeletalVisual line/joint rendering.</p></td>
 </tr>
 </tbody>
@@ -385,7 +402,7 @@ state visualization.</p>
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="scene.html#kangengine.scene.SceneBackend" title="kangengine.scene.SceneBackend"><span class="pre">SceneBackend</span></a></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">prim_base_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/robot'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/robot'</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">mesh_asset_base_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>,</dd>
@@ -531,7 +548,7 @@ state visualization.</p>
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.animation.ArticulationVisualAsset</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="scene.html#kangengine.scene.SceneBackend" title="kangengine.scene.SceneBackend"><span class="pre">SceneBackend</span></a></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">prim_base_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/robot'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/robot'</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">mesh_asset_base_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">split_visual_geoms</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
 </dl>
@@ -550,6 +567,776 @@ state visualization.</p>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.visual.ArticulationVisualAsset.num_bodies" title="Link to this definition">¶</a></dt>
 <dd><p>Return the number of bodies in this asset.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulatedSurfaceAsset">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.visual.</span></span><span class="sig-name descname"><span class="pre">ArticulatedSurfaceAsset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">native</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh_asset_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurfaceAsset" title="Link to this definition">¶</a></dt>
+<dd><p>Reusable MJCF skeleton and rigid-link mesh asset.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulatedSurfaceAsset.from_mjcf">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_mjcf</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.ArticulatedSurfaceAsset" title="kangengine.visual.articulated_surface.ArticulatedSurfaceAsset"><span class="pre">ArticulatedSurfaceAsset</span></a></span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurfaceAsset.from_mjcf" title="Link to this definition">¶</a></dt>
+<dd><p>Load a reusable kinematic surface asset from MJCF.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.ArticulatedSurfaceAsset" title="kangengine.visual.articulated_surface.ArticulatedSurfaceAsset"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArticulatedSurfaceAsset</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulatedSurfaceAsset.num_bodies">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">num_bodies</span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurfaceAsset.num_bodies" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulatedSurfaceAsset.create">
+<span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">app</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="python.html#kangengine.App" title="kangengine.App"><span class="pre">App</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="material.html#kangengine.material.Material" title="kangengine.material.Material"><span class="pre">Material</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><span class="pre">ArticulatedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurfaceAsset.create" title="Link to this definition">¶</a></dt>
+<dd><p>Create an independently posed surface instance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArticulatedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulatedSurface">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.visual.</span></span><span class="sig-name descname"><span class="pre">ArticulatedSurface</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">app</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="python.html#kangengine.App" title="kangengine.App"><span class="pre">App</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">asset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.visual.ArticulatedSurfaceAsset" title="kangengine.visual.articulated_surface.ArticulatedSurfaceAsset"><span class="pre">ArticulatedSurfaceAsset</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">native</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">views</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="python.html#kangengine.RenderablePrimView" title="kangengine.RenderablePrimView"><span class="pre">RenderablePrimView</span></a><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="material.html#kangengine.material.Material" title="kangengine.material.Material"><span class="pre">Material</span></a></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurface" title="Link to this definition">¶</a></dt>
+<dd><p>Application-owned FK surface composed of rigid link meshes.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulatedSurface.create_from_mjcf">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">create_from_mjcf</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">app</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="python.html#kangengine.App" title="kangengine.App"><span class="pre">App</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="material.html#kangengine.material.Material" title="kangengine.material.Material"><span class="pre">Material</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><span class="pre">ArticulatedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurface.create_from_mjcf" title="Link to this definition">¶</a></dt>
+<dd><p>Load an MJCF asset and create its first kinematic instance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArticulatedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulatedSurface.asset">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">asset</span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurface.asset" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulatedSurface.skeleton_tree">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">skeleton_tree</span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurface.skeleton_tree" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulatedSurface.prims">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">prims</span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurface.prims" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulatedSurface.views">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">views</span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurface.views" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulatedSurface.create_instance">
+<span class="sig-name descname"><span class="pre">create_instance</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="material.html#kangengine.material.Material" title="kangengine.material.Material"><span class="pre">Material</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><span class="pre">ArticulatedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurface.create_instance" title="Link to this definition">¶</a></dt>
+<dd><p>Create a visual-only instance initialized from the current pose.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArticulatedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulatedSurface.apply_state">
+<span class="sig-name descname"><span class="pre">apply_state</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonState" title="kangengine.animation.SkeletonState"><span class="pre">SkeletonState</span></a></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><span class="pre">ArticulatedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurface.apply_state" title="Link to this definition">¶</a></dt>
+<dd><p>Apply a SkeletonState to the rigid links.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArticulatedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulatedSurface.apply_pose">
+<span class="sig-name descname"><span class="pre">apply_pose</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">root_translation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">local_rotations_wxyz</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><span class="pre">ArticulatedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurface.apply_pose" title="Link to this definition">¶</a></dt>
+<dd><p>Apply a raw root translation and WXYZ local joint rotations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArticulatedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulatedSurface.set_color">
+<span class="sig-name descname"><span class="pre">set_color</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><span class="pre">ArticulatedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurface.set_color" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArticulatedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulatedSurface.set_alpha_mode">
+<span class="sig-name descname"><span class="pre">set_alpha_mode</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">cutoff</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.5</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><span class="pre">ArticulatedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurface.set_alpha_mode" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArticulatedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulatedSurface.set_alpha">
+<span class="sig-name descname"><span class="pre">set_alpha</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><span class="pre">ArticulatedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurface.set_alpha" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArticulatedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulatedSurface.set_visible">
+<span class="sig-name descname"><span class="pre">set_visible</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">visible</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><span class="pre">ArticulatedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurface.set_visible" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArticulatedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulatedSurface.set_casts_shadow">
+<span class="sig-name descname"><span class="pre">set_casts_shadow</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">enabled</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><span class="pre">ArticulatedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurface.set_casts_shadow" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArticulatedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulatedSurface.remove">
+<span class="sig-name descname"><span class="pre">remove</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurface.remove" title="Link to this definition">¶</a></dt>
+<dd><p>Remove the instance while preserving its shared asset resources.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurfaceAsset">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.visual.</span></span><span class="sig-name descname"><span class="pre">SkinnedSurfaceAsset</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">skeleton_tree</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">SkeletonTree</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">positions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">float32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">normals</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">float32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">int32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">bone_indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">int32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">bone_weights</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">float32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">bone_node_indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">int32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">inverse_bind_matrices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">float32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">uvs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">float32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurfaceAsset" title="Link to this definition">¶</a></dt>
+<dd><p>Static topology and four-weight LBS data uploaded once.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurfaceAsset.skeleton_tree">
+<span class="sig-name descname"><span class="pre">skeleton_tree</span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurfaceAsset.skeleton_tree" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurfaceAsset.positions">
+<span class="sig-name descname"><span class="pre">positions</span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurfaceAsset.positions" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurfaceAsset.normals">
+<span class="sig-name descname"><span class="pre">normals</span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurfaceAsset.normals" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurfaceAsset.indices">
+<span class="sig-name descname"><span class="pre">indices</span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurfaceAsset.indices" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurfaceAsset.bone_indices">
+<span class="sig-name descname"><span class="pre">bone_indices</span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurfaceAsset.bone_indices" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurfaceAsset.bone_weights">
+<span class="sig-name descname"><span class="pre">bone_weights</span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurfaceAsset.bone_weights" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurfaceAsset.bone_node_indices">
+<span class="sig-name descname"><span class="pre">bone_node_indices</span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurfaceAsset.bone_node_indices" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurfaceAsset.inverse_bind_matrices">
+<span class="sig-name descname"><span class="pre">inverse_bind_matrices</span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurfaceAsset.inverse_bind_matrices" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurfaceAsset.uvs">
+<span class="sig-name descname"><span class="pre">uvs</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurfaceAsset.uvs" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurfaceAsset.from_fbx">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_fbx</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">skeleton_tree</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">SkeletonTree</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">mesh_info</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="asset.html#kangengine.asset.FBXSkinnedMeshInfo" title="kangengine.asset.FBXSkinnedMeshInfo"><span class="pre">FBXSkinnedMeshInfo</span></a></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.SkinnedSurfaceAsset" title="kangengine.visual.deformable.SkinnedSurfaceAsset"><span class="pre">SkinnedSurfaceAsset</span></a></span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurfaceAsset.from_fbx" title="Link to this definition">¶</a></dt>
+<dd><p>Convert one imported FBX skinned mesh without reading the file again.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.SkinnedSurfaceAsset" title="kangengine.visual.deformable.SkinnedSurfaceAsset"><code class="xref py py-class docutils literal notranslate"><span class="pre">SkinnedSurfaceAsset</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurfaceAsset.create_native">
+<span class="sig-name descname"><span class="pre">create_native</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurfaceAsset.create_native" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurface">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.visual.</span></span><span class="sig-name descname"><span class="pre">SkinnedSurface</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">view</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">asset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.visual.SkinnedSurfaceAsset" title="kangengine.visual.deformable.SkinnedSurfaceAsset"><span class="pre">SkinnedSurfaceAsset</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">app</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">native_mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">native_skin</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurface" title="Link to this definition">¶</a></dt>
+<dd><p>One or more skinned render parts driven by a shared skeleton.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurface.create">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">app</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="python.html#kangengine.App" title="kangengine.App"><span class="pre">App</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">asset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.visual.SkinnedSurfaceAsset" title="kangengine.visual.deformable.SkinnedSurfaceAsset"><span class="pre">SkinnedSurfaceAsset</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="material.html#kangengine.material.Material" title="kangengine.material.Material"><span class="pre">Material</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><span class="pre">SkinnedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurface.create" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">SkinnedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurface.create_from_fbx">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">create_from_fbx</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">app</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="python.html#kangengine.App" title="kangengine.App"><span class="pre">App</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">skeleton_tree</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">SkeletonTree</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">mesh_info</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="asset.html#kangengine.asset.FBXSkinnedMeshInfo" title="kangengine.asset.FBXSkinnedMeshInfo"><span class="pre">FBXSkinnedMeshInfo</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="material.html#kangengine.material.Material" title="kangengine.material.Material"><span class="pre">Material</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><span class="pre">SkinnedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurface.create_from_fbx" title="Link to this definition">¶</a></dt>
+<dd><p>Create one surface from one already imported FBX skinned mesh.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">SkinnedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurface.create_from_fbx_result">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">create_from_fbx_result</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">app</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="python.html#kangengine.App" title="kangengine.App"><span class="pre">App</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">result</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="asset.html#kangengine.asset.FBXImportResult" title="kangengine.asset.FBXImportResult"><span class="pre">FBXImportResult</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="material.html#kangengine.material.Material" title="kangengine.material.Material"><span class="pre">Material</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">use_imported_materials</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><span class="pre">SkinnedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurface.create_from_fbx_result" title="Link to this definition">¶</a></dt>
+<dd><p>Create one logical surface from every skinned mesh in an FBX result.</p>
+<p>By default, distinct imported FBX materials become retained PBR
+materials. Passing <code class="docutils literal notranslate"><span class="pre">material</span></code> applies one caller-owned override to
+every part instead.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">SkinnedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurface.create_instance">
+<span class="sig-name descname"><span class="pre">create_instance</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="material.html#kangengine.material.Material" title="kangengine.material.Material"><span class="pre">Material</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><span class="pre">SkinnedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurface.create_instance" title="Link to this definition">¶</a></dt>
+<dd><p>Create an independently posed instance sharing this surface’s assets.</p>
+<p>Bind geometry, skin weights, textures, and materials are shared unless
+a material override is supplied. The new prims and runtime skinning
+buffers are independent from the source surface.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">SkinnedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurface.prim">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">prim</span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurface.prim" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurface.prims">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">prims</span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurface.prims" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurface.view">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">view</span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurface.view" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurface.views">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">views</span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurface.views" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurface.asset">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">asset</span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurface.asset" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurface.assets">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">assets</span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurface.assets" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurface.skeleton_tree">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">skeleton_tree</span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurface.skeleton_tree" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurface.remove">
+<span class="sig-name descname"><span class="pre">remove</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurface.remove" title="Link to this definition">¶</a></dt>
+<dd><p>Remove every render part from the scene.</p>
+<p>Shared assets and materials remain alive for other surface instances.
+Calling <code class="docutils literal notranslate"><span class="pre">remove</span></code> more than once is safe and returns <code class="docutils literal notranslate"><span class="pre">False</span></code> after
+the first call.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurface.update_joint_matrices">
+<span class="sig-name descname"><span class="pre">update_joint_matrices</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">joint_matrices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><span class="pre">SkinnedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurface.update_joint_matrices" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">SkinnedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurface.update_bind_geometry">
+<span class="sig-name descname"><span class="pre">update_bind_geometry</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">positions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">normals</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><span class="pre">SkinnedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurface.update_bind_geometry" title="Link to this definition">¶</a></dt>
+<dd><p>Update pre-skinning vertices on a single-part surface.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">SkinnedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurface.reset_bind_geometry">
+<span class="sig-name descname"><span class="pre">reset_bind_geometry</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><span class="pre">SkinnedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurface.reset_bind_geometry" title="Link to this definition">¶</a></dt>
+<dd><p>Restore original bind vertices on a single-part surface.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">SkinnedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurface.set_visible">
+<span class="sig-name descname"><span class="pre">set_visible</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">visible</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><span class="pre">SkinnedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurface.set_visible" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">SkinnedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurface.set_casts_shadow">
+<span class="sig-name descname"><span class="pre">set_casts_shadow</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">enabled</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><span class="pre">SkinnedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurface.set_casts_shadow" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">SkinnedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurface.set_alpha_mode">
+<span class="sig-name descname"><span class="pre">set_alpha_mode</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="rendering.html#kangengine.render.AlphaMode" title="kangengine.render.AlphaMode"><span class="pre">AlphaMode</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">cutoff</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.5</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><span class="pre">SkinnedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurface.set_alpha_mode" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">SkinnedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurface.set_color">
+<span class="sig-name descname"><span class="pre">set_color</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><span class="pre">SkinnedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurface.set_color" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">SkinnedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurface.set_alpha">
+<span class="sig-name descname"><span class="pre">set_alpha</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><span class="pre">SkinnedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurface.set_alpha" title="Link to this definition">¶</a></dt>
+<dd><p>Set per-instance opacity without modifying the shared material.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">SkinnedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurface.apply_state">
+<span class="sig-name descname"><span class="pre">apply_state</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonState" title="kangengine.animation.SkeletonState"><span class="pre">SkeletonState</span></a></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><span class="pre">SkinnedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurface.apply_state" title="Link to this definition">¶</a></dt>
+<dd><p>Apply a SkeletonState to the skinned vertices.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">SkinnedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.SkinnedSurface.apply_pose">
+<span class="sig-name descname"><span class="pre">apply_pose</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">root_translation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">local_rotations_wxyz</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><span class="pre">SkinnedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.SkinnedSurface.apply_pose" title="Link to this definition">¶</a></dt>
+<dd><p>Apply a raw root translation and WXYZ local joint rotations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">SkinnedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.visual.DeformableSurface">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.visual.</span></span><span class="sig-name descname"><span class="pre">DeformableSurface</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">view</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.visual.DeformableSurface" title="Link to this definition">¶</a></dt>
+<dd><p>TODO scaffold for directly streamed deformable geometry.</p>
+<p>This path does not yet guarantee per-surface geometry isolation or complete
+dynamic bounds handling. It is not a supported cloth/soft-body visual API.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.DeformableSurface.create">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">app</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">positions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">normals</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.DeformableSurface" title="kangengine.visual.deformable.DeformableSurface"><span class="pre">DeformableSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.DeformableSurface.create" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.DeformableSurface" title="kangengine.visual.deformable.DeformableSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">DeformableSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.visual.DeformableSurface.prim">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">prim</span></span><a class="headerlink" href="#kangengine.visual.DeformableSurface.prim" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.DeformableSurface.update">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">positions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">normals</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.DeformableSurface" title="kangengine.visual.deformable.DeformableSurface"><span class="pre">DeformableSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.DeformableSurface.update" title="Link to this definition">¶</a></dt>
+<dd><p>Upload geometry through the current experimental batch path.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.DeformableSurface" title="kangengine.visual.deformable.DeformableSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">DeformableSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.DeformableSurface.set_visible">
+<span class="sig-name descname"><span class="pre">set_visible</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">visible</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.DeformableSurface" title="kangengine.visual.deformable.DeformableSurface"><span class="pre">DeformableSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.DeformableSurface.set_visible" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.DeformableSurface" title="kangengine.visual.deformable.DeformableSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">DeformableSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.DeformableSurface.set_casts_shadow">
+<span class="sig-name descname"><span class="pre">set_casts_shadow</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">enabled</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.DeformableSurface" title="kangengine.visual.deformable.DeformableSurface"><span class="pre">DeformableSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.DeformableSurface.set_casts_shadow" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.DeformableSurface" title="kangengine.visual.deformable.DeformableSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">DeformableSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.DeformableSurface.set_alpha_mode">
+<span class="sig-name descname"><span class="pre">set_alpha_mode</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">cutoff</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.5</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.DeformableSurface" title="kangengine.visual.deformable.DeformableSurface"><span class="pre">DeformableSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.DeformableSurface.set_alpha_mode" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.DeformableSurface" title="kangengine.visual.deformable.DeformableSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">DeformableSurface</span></code></a></span></p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -593,7 +1380,7 @@ state visualization.</p>
 <dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Material</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">bind_fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">prim_base_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/fbx_character'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/fbx_character'</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">clip_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">fps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1.0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.009999999776482582</span></span></em>,</dd>
@@ -615,7 +1402,7 @@ state visualization.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.SkinVisual.set_casts_shadow">
-<span class="sig-name descname"><span class="pre">set_casts_shadow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.SkinVisual</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">casts_shadow</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.visual.SkinVisual.set_casts_shadow" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">set_casts_shadow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.SkinVisual</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enabled</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.visual.SkinVisual.set_casts_shadow" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -744,11 +1531,11 @@ state visualization.</p>
 <span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">define</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.SkeletalVisual.define" title="Link to this definition">¶</a></dt>
 <dd><p>Overloaded function.</p>
 <ol class="arabic simple">
-<li><p>define(app: KE::App, material: kangengine.Material, base_path: str, state: kangengine.animation.SkeletonState, config: kangengine.animation.SkeletalVisualConfig = SkeletalVisualConfig(bone_color=(0.686, 0.867, 1, 1), joint_color=(1, 0.745, 0.675, 1), bone_radius=0.006, joint_radius=0.025, segments=8, visible=True, show_joints=True)) -&gt; kangengine.animation.SkeletalVisual</p></li>
+<li><p>define(app: KE::App, material: kangengine.Material, path: str, state: kangengine.animation.SkeletonState, config: kangengine.animation.SkeletalVisualConfig = SkeletalVisualConfig(bone_color=(0.686, 0.867, 1, 1), joint_color=(1, 0.745, 0.675, 1), bone_radius=0.006, joint_radius=0.025, segments=8, visible=True, show_joints=True)) -&gt; kangengine.animation.SkeletalVisual</p></li>
 </ol>
 <p>Create skeleton visuals from a SkeletonState.</p>
 <ol class="arabic simple" start="2">
-<li><p>define(app: KE::App, material: kangengine.Material, base_path: str, motion: kangengine.animation.SkeletonMotion, time: float = 0.0, loop: bool = True, config: kangengine.animation.SkeletalVisualConfig = SkeletalVisualConfig(bone_color=(0.686, 0.867, 1, 1), joint_color=(1, 0.745, 0.675, 1), bone_radius=0.006, joint_radius=0.025, segments=8, visible=True, show_joints=True)) -&gt; kangengine.animation.SkeletalVisual</p></li>
+<li><p>define(app: KE::App, material: kangengine.Material, path: str, motion: kangengine.animation.SkeletonMotion, time: float = 0.0, loop: bool = True, config: kangengine.animation.SkeletalVisualConfig = SkeletalVisualConfig(bone_color=(0.686, 0.867, 1, 1), joint_color=(1, 0.745, 0.675, 1), bone_radius=0.006, joint_radius=0.025, segments=8, visible=True, show_joints=True)) -&gt; kangengine.animation.SkeletalVisual</p></li>
 </ol>
 <p>Create skeleton visuals by sampling a SkeletonMotion.</p>
 </dd></dl>
@@ -828,17 +1615,22 @@ state consumed by policy or training code.</p>
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">sim_handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="simulation.html#kangengine.sim.SimRigid" title="kangengine.sim.SimRigid"><span class="pre">SimRigid</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="simulation.html#kangengine.sim.SimArticulation" title="kangengine.sim.SimArticulation"><span class="pre">SimArticulation</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="simulation.html#kangengine.sim.SimRigidBatch" title="kangengine.sim.SimRigidBatch"><span class="pre">SimRigidBatch</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="simulation.html#kangengine.sim.SimArticulationBatch" title="kangengine.sim.SimArticulationBatch"><span class="pre">SimArticulationBatch</span></a></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">prim_base_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em>,</dd>
 </dl>
 
-<span class="sig-paren">)</span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.add" title="Link to this definition">¶</a></dt>
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.sim.VisualBatch" title="kangengine.visual.sim.VisualBatch"><span class="pre">VisualBatch</span></a></span></span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.add" title="Link to this definition">¶</a></dt>
 <dd><p>Create one CPU or GPU ExternalBuffer VisualBatch.</p>
 <p><code class="docutils literal notranslate"><span class="pre">sim_handle</span></code> may be a single <code class="docutils literal notranslate"><span class="pre">SimRigid</span></code> / <code class="docutils literal notranslate"><span class="pre">SimArticulation</span></code> or a
 <code class="docutils literal notranslate"><span class="pre">SimRigidBatch</span></code> / <code class="docutils literal notranslate"><span class="pre">SimArticulationBatch</span></code>. Single objects are treated
-as a one-env visual batch. Per-environment SceneGraph visuals remain
-available through the explicit <code class="docutils literal notranslate"><span class="pre">add_articulation_scene_graph</span></code> and
-<code class="docutils literal notranslate"><span class="pre">add_rigid_scene_graph</span></code> methods.</p>
+as a one-env visual batch. Use <code class="docutils literal notranslate"><span class="pre">add_scene_graph</span></code> when an inspectable
+per-environment SceneGraph visual is required.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.sim.VisualBatch" title="kangengine.visual.sim.VisualBatch"><code class="xref py py-class docutils literal notranslate"><span class="pre">VisualBatch</span></code></a></span></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -849,12 +1641,13 @@ available through the explicit <code class="docutils literal notranslate"><span 
 <dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">prim_base_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/robot'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/robot'</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">add_shapes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">collision_base_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">collision_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">collision_material</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">show_collision</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
@@ -881,7 +1674,8 @@ MimicKit-style per-body SceneGraph control.</p>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">prim_base_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/robot'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/robot'</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
@@ -906,7 +1700,8 @@ MimicKit-style per-body SceneGraph control.</p>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">prim_base_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/rigid'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/rigid'</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
@@ -923,6 +1718,32 @@ access.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.sim.VisualRigidSceneGraph" title="kangengine.visual.sim.VisualRigidSceneGraph"><code class="xref py py-class docutils literal notranslate"><span class="pre">VisualRigidSceneGraph</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.sim.SimWorldVisualizer.add_scene_graph">
+<span class="sig-name descname"><span class="pre">add_scene_graph</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">sim_handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="simulation.html#kangengine.sim.SimRigid" title="kangengine.sim.SimRigid"><span class="pre">SimRigid</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="simulation.html#kangengine.sim.SimArticulation" title="kangengine.sim.SimArticulation"><span class="pre">SimArticulation</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="simulation.html#kangengine.sim.SimRigidBatch" title="kangengine.sim.SimRigidBatch"><span class="pre">SimRigidBatch</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="simulation.html#kangengine.sim.SimArticulationBatch" title="kangengine.sim.SimArticulationBatch"><span class="pre">SimArticulationBatch</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.sim.VisualArticulationSceneGraph" title="kangengine.visual.sim.VisualArticulationSceneGraph"><span class="pre">VisualArticulationSceneGraph</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#kangengine.visual.sim.VisualRigidSceneGraph" title="kangengine.visual.sim.VisualRigidSceneGraph"><span class="pre">VisualRigidSceneGraph</span></a></span></span><a class="headerlink" href="#kangengine.visual.sim.SimWorldVisualizer.add_scene_graph" title="Link to this definition">¶</a></dt>
+<dd><p>Create one inspectable SceneGraph visual for a simulation object.</p>
+<p>Unlike <a class="reference internal" href="#kangengine.visual.sim.SimWorldVisualizer.add" title="kangengine.visual.sim.SimWorldVisualizer.add"><code class="xref py py-meth docutils literal notranslate"><span class="pre">add()</span></code></a>, this path creates ordinary SceneGraph-owned prims
+and is intended for detailed playback and editor inspection. A batch
+handle requires <code class="docutils literal notranslate"><span class="pre">env_id</span></code> so accidentally expanding every training
+environment into prims is impossible.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.sim.VisualArticulationSceneGraph" title="kangengine.visual.sim.VisualArticulationSceneGraph"><code class="xref py py-class docutils literal notranslate"><span class="pre">VisualArticulationSceneGraph</span></code></a> | <a class="reference internal" href="#kangengine.visual.sim.VisualRigidSceneGraph" title="kangengine.visual.sim.VisualRigidSceneGraph"><code class="xref py py-class docutils literal notranslate"><span class="pre">VisualRigidSceneGraph</span></code></a></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -1512,6 +2333,77 @@ exposed as <code class="docutils literal notranslate"><span class="pre">kangengi
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisualAsset.num_bodies"><code class="docutils literal notranslate"><span class="pre">ArticulationVisualAsset.num_bodies()</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulatedSurfaceAsset"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurfaceAsset</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.visual.ArticulatedSurfaceAsset.from_mjcf"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurfaceAsset.from_mjcf()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulatedSurfaceAsset.num_bodies"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurfaceAsset.num_bodies</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulatedSurfaceAsset.create"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurfaceAsset.create()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface.create_from_mjcf"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface.create_from_mjcf()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface.asset"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface.asset</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface.skeleton_tree"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface.skeleton_tree</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface.prims"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface.prims</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface.views"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface.views</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface.create_instance"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface.create_instance()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface.apply_state"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface.apply_state()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface.apply_pose"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface.apply_pose()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface.set_color"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface.set_color()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface.set_alpha_mode"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface.set_alpha_mode()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface.set_alpha"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface.set_alpha()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface.set_visible"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface.set_visible()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface.set_casts_shadow"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface.set_casts_shadow()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface.remove"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface.remove()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurfaceAsset"><code class="docutils literal notranslate"><span class="pre">SkinnedSurfaceAsset</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurfaceAsset.skeleton_tree"><code class="docutils literal notranslate"><span class="pre">SkinnedSurfaceAsset.skeleton_tree</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurfaceAsset.positions"><code class="docutils literal notranslate"><span class="pre">SkinnedSurfaceAsset.positions</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurfaceAsset.normals"><code class="docutils literal notranslate"><span class="pre">SkinnedSurfaceAsset.normals</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurfaceAsset.indices"><code class="docutils literal notranslate"><span class="pre">SkinnedSurfaceAsset.indices</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurfaceAsset.bone_indices"><code class="docutils literal notranslate"><span class="pre">SkinnedSurfaceAsset.bone_indices</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurfaceAsset.bone_weights"><code class="docutils literal notranslate"><span class="pre">SkinnedSurfaceAsset.bone_weights</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurfaceAsset.bone_node_indices"><code class="docutils literal notranslate"><span class="pre">SkinnedSurfaceAsset.bone_node_indices</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurfaceAsset.inverse_bind_matrices"><code class="docutils literal notranslate"><span class="pre">SkinnedSurfaceAsset.inverse_bind_matrices</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurfaceAsset.uvs"><code class="docutils literal notranslate"><span class="pre">SkinnedSurfaceAsset.uvs</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurfaceAsset.from_fbx"><code class="docutils literal notranslate"><span class="pre">SkinnedSurfaceAsset.from_fbx()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurfaceAsset.create_native"><code class="docutils literal notranslate"><span class="pre">SkinnedSurfaceAsset.create_native()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurface"><code class="docutils literal notranslate"><span class="pre">SkinnedSurface</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurface.create"><code class="docutils literal notranslate"><span class="pre">SkinnedSurface.create()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurface.create_from_fbx"><code class="docutils literal notranslate"><span class="pre">SkinnedSurface.create_from_fbx()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurface.create_from_fbx_result"><code class="docutils literal notranslate"><span class="pre">SkinnedSurface.create_from_fbx_result()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurface.create_instance"><code class="docutils literal notranslate"><span class="pre">SkinnedSurface.create_instance()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurface.prim"><code class="docutils literal notranslate"><span class="pre">SkinnedSurface.prim</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurface.prims"><code class="docutils literal notranslate"><span class="pre">SkinnedSurface.prims</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurface.view"><code class="docutils literal notranslate"><span class="pre">SkinnedSurface.view</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurface.views"><code class="docutils literal notranslate"><span class="pre">SkinnedSurface.views</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurface.asset"><code class="docutils literal notranslate"><span class="pre">SkinnedSurface.asset</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurface.assets"><code class="docutils literal notranslate"><span class="pre">SkinnedSurface.assets</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurface.skeleton_tree"><code class="docutils literal notranslate"><span class="pre">SkinnedSurface.skeleton_tree</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurface.remove"><code class="docutils literal notranslate"><span class="pre">SkinnedSurface.remove()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurface.update_joint_matrices"><code class="docutils literal notranslate"><span class="pre">SkinnedSurface.update_joint_matrices()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurface.update_bind_geometry"><code class="docutils literal notranslate"><span class="pre">SkinnedSurface.update_bind_geometry()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurface.reset_bind_geometry"><code class="docutils literal notranslate"><span class="pre">SkinnedSurface.reset_bind_geometry()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurface.set_visible"><code class="docutils literal notranslate"><span class="pre">SkinnedSurface.set_visible()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurface.set_casts_shadow"><code class="docutils literal notranslate"><span class="pre">SkinnedSurface.set_casts_shadow()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurface.set_alpha_mode"><code class="docutils literal notranslate"><span class="pre">SkinnedSurface.set_alpha_mode()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurface.set_color"><code class="docutils literal notranslate"><span class="pre">SkinnedSurface.set_color()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurface.set_alpha"><code class="docutils literal notranslate"><span class="pre">SkinnedSurface.set_alpha()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurface.apply_state"><code class="docutils literal notranslate"><span class="pre">SkinnedSurface.apply_state()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinnedSurface.apply_pose"><code class="docutils literal notranslate"><span class="pre">SkinnedSurface.apply_pose()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.visual.DeformableSurface"><code class="docutils literal notranslate"><span class="pre">DeformableSurface</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.visual.DeformableSurface.create"><code class="docutils literal notranslate"><span class="pre">DeformableSurface.create()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.DeformableSurface.prim"><code class="docutils literal notranslate"><span class="pre">DeformableSurface.prim</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.DeformableSurface.update"><code class="docutils literal notranslate"><span class="pre">DeformableSurface.update()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.DeformableSurface.set_visible"><code class="docutils literal notranslate"><span class="pre">DeformableSurface.set_visible()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.DeformableSurface.set_casts_shadow"><code class="docutils literal notranslate"><span class="pre">DeformableSurface.set_casts_shadow()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.DeformableSurface.set_alpha_mode"><code class="docutils literal notranslate"><span class="pre">DeformableSurface.set_alpha_mode()</span></code></a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#kangengine.visual.SkinVisual"><code class="docutils literal notranslate"><span class="pre">SkinVisual</span></code></a><ul>
 <li><a class="reference internal" href="#kangengine.visual.SkinVisual.apply_pose"><code class="docutils literal notranslate"><span class="pre">SkinVisual.apply_pose()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.SkinVisual.apply_time"><code class="docutils literal notranslate"><span class="pre">SkinVisual.apply_time()</span></code></a></li>
@@ -1552,6 +2444,7 @@ exposed as <code class="docutils literal notranslate"><span class="pre">kangengi
 <li><a class="reference internal" href="#kangengine.visual.sim.SimWorldVisualizer.add_articulation_scene_graph"><code class="docutils literal notranslate"><span class="pre">SimWorldVisualizer.add_articulation_scene_graph()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.sim.SimWorldVisualizer.add_articulation_skin"><code class="docutils literal notranslate"><span class="pre">SimWorldVisualizer.add_articulation_skin()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.sim.SimWorldVisualizer.add_rigid_scene_graph"><code class="docutils literal notranslate"><span class="pre">SimWorldVisualizer.add_rigid_scene_graph()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.sim.SimWorldVisualizer.add_scene_graph"><code class="docutils literal notranslate"><span class="pre">SimWorldVisualizer.add_scene_graph()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.sim.SimWorldVisualizer.body_id_from_render_handle_scene_graph"><code class="docutils literal notranslate"><span class="pre">SimWorldVisualizer.body_id_from_render_handle_scene_graph()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.sim.SimWorldVisualizer.cleanup"><code class="docutils literal notranslate"><span class="pre">SimWorldVisualizer.cleanup()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.sim.SimWorldVisualizer.get_visual_articulation_scene_graph"><code class="docutils literal notranslate"><span class="pre">SimWorldVisualizer.get_visual_articulation_scene_graph()</span></code></a></li>

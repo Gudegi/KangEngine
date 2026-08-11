@@ -220,11 +220,13 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VIEWER_SYNC.html">Viewer Synchronization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VISUALIZATION.html">Simulation Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RUN_MODES.html">Simulation Run Modes</a></li>
 </ul>
 </li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/motion_animation/INDEX.html">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="simple">
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/animation/INDEX.html">Animation</a><input aria-label="Toggle navigation of Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/SMPL.html">SMPL Models and Motion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/VISUALS.html">Pose Visualization</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
@@ -246,7 +248,7 @@
 <li class="toctree-l2"><a class="reference internal" href="geometry.html">ke.geometry</a></li>
 <li class="toctree-l2 current current-page"><a class="current reference internal" href="#">ke.asset</a></li>
 <li class="toctree-l2"><a class="reference internal" href="animation.html">ke.animation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="character.html">ke.character</a></li>
+<li class="toctree-l2"><a class="reference internal" href="exports.html">ke.exports</a></li>
 <li class="toctree-l2"><a class="reference internal" href="motion.html">ke.motion_module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="material.html">ke.material</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rendering.html">ke.render</a></li>
@@ -318,23 +320,66 @@
         <article role="main" id="furo-main-content">
           <section id="ke-asset">
 <h1>ke.asset<a class="headerlink" href="#ke-asset" title="Link to this heading">¶</a></h1>
-<p>Loaders and result types for MJCF, BVH, FBX, and USD assets.</p>
+<p>Loaders, model assets, and result types for MJCF, BVH, FBX, USD, AMASS,
+SMPL, SMPL-H, and SMPL-X.</p>
 <section id="api-overview">
 <h2>API overview<a class="headerlink" href="#api-overview" title="Link to this heading">¶</a></h2>
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.asset.MJCFLoader" title="kangengine.asset.MJCFLoader"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MJCFLoader</span></code></a></p></td>
-<td><p>Loader for MJCF/XML robot character assets.</p></td>
+<td><p>Load MJCF/XML articulation descriptions.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#kangengine.asset.BVHLoader" title="kangengine.asset.BVHLoader"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BVHLoader</span></code></a></p></td>
-<td><p>Loader for BVH skeleton and motion files.</p></td>
+<td><p>Load a BVH hierarchy or sampled skeleton motion.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.asset.FBXLoader" title="kangengine.asset.FBXLoader"><code class="xref py py-obj docutils literal notranslate"><span class="pre">FBXLoader</span></code></a></p></td>
-<td><p>Loader for FBX skeletons, motions, and meshes.</p></td>
+<td><p>Load FBX skeletons, animation clips, and character data.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#kangengine.asset.USDLoader" title="kangengine.asset.USDLoader"><code class="xref py py-obj docutils literal notranslate"><span class="pre">USDLoader</span></code></a></p></td>
-<td><p>Loader for USD mesh scenes.</p></td>
+<td><p>Load meshes from USD scenes.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.asset.AMASSLoader" title="kangengine.asset.AMASSLoader"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AMASSLoader</span></code></a></p></td>
+<td><p>Load AMASS body and hand poses as a native <code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.asset.AMASSInfo" title="kangengine.asset.AMASSInfo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AMASSInfo</span></code></a></p></td>
+<td><p>Metadata read from an AMASS NPZ archive.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.asset.ArticulationDesc" title="kangengine.asset.ArticulationDesc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ArticulationDesc</span></code></a></p></td>
+<td><p>Imported articulation description with skeleton, visual, collision, joint, and site payloads.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.asset.JointDesc" title="kangengine.asset.JointDesc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JointDesc</span></code></a></p></td>
+<td><p>Joint description imported from robot/character assets.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.asset.SiteDesc" title="kangengine.asset.SiteDesc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SiteDesc</span></code></a></p></td>
+<td><p>Imported MJCF site description attached to a character body.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.asset.InertialDesc" title="kangengine.asset.InertialDesc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">InertialDesc</span></code></a></p></td>
+<td><p>Imported body-local inertial properties.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.asset.VisualGeomDesc" title="kangengine.asset.VisualGeomDesc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">VisualGeomDesc</span></code></a></p></td>
+<td><p>Visual mesh description imported from a character asset.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.asset.CollisionGeomDesc" title="kangengine.asset.CollisionGeomDesc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CollisionGeomDesc</span></code></a></p></td>
+<td><p>Imported body-local collision geometry description.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.asset.SMPLModel" title="kangengine.asset.SMPLModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SMPLModel</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.asset.SMPLBody" title="kangengine.asset.SMPLBody"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SMPLBody</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.asset.SMPLHModel" title="kangengine.asset.SMPLHModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SMPLHModel</span></code></a></p></td>
+<td><p>Standard 52-joint SMPL-H NPZ model adapter.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.asset.SMPLHBody" title="kangengine.asset.SMPLHBody"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SMPLHBody</span></code></a></p></td>
+<td><p>A 52-joint SMPL-H body and renderable surface asset.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.asset.SMPLXModel" title="kangengine.asset.SMPLXModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SMPLXModel</span></code></a></p></td>
+<td><p>Standard 55-joint SMPL-X NPZ model adapter.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.asset.SMPLXBody" title="kangengine.asset.SMPLXBody"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SMPLXBody</span></code></a></p></td>
+<td><p>A 55-joint SMPL-X body and renderable surface asset.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.asset.ImportDiagnostics" title="kangengine.asset.ImportDiagnostics"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ImportDiagnostics</span></code></a></p></td>
 <td><p>Warnings collected while importing an asset.</p></td>
@@ -370,6 +415,15 @@ diagnostics. Mesh payloads retain shared native storage.</p></td>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">USDLoader.parse()</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">USDImportResult</span></code> containing imported mesh records and diagnostics.</p></td>
 </tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">AMASSLoader.inspect()</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AMASSInfo</span></code> containing gender, shape coefficients, frame rate, and
+frame count without constructing a motion.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">AMASSLoader.load_motion()</span></code></p></td>
+<td><p>A native <code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code> mapped onto a supplied SMPL, SMPL-H, or SMPL-X
+<code class="docutils literal notranslate"><span class="pre">SkeletonTree</span></code>. AMASS Z-up data can be returned as Z-up or converted
+to KangEngine’s usual Y-up coordinates.</p></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -389,9 +443,309 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="kangengine.asset.ArticulationDesc">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">ArticulationDesc</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.ArticulationDesc" title="Link to this definition">¶</a></dt>
+<dd><p>Imported articulation description with skeleton, visual, collision, joint, and site payloads.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.ArticulationDesc.asset_dir">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">asset_dir</span></span><a class="headerlink" href="#kangengine.asset.ArticulationDesc.asset_dir" title="Link to this definition">¶</a></dt>
+<dd><p>Directory used to resolve mesh files.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.ArticulationDesc.collision_geoms">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">collision_geoms</span></span><a class="headerlink" href="#kangengine.asset.ArticulationDesc.collision_geoms" title="Link to this definition">¶</a></dt>
+<dd><p>Collision geometry descriptions keyed by body index.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.ArticulationDesc.inertials">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">inertials</span></span><a class="headerlink" href="#kangengine.asset.ArticulationDesc.inertials" title="Link to this definition">¶</a></dt>
+<dd><p>Inertial descriptions keyed by body index.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.ArticulationDesc.joints">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">joints</span></span><a class="headerlink" href="#kangengine.asset.ArticulationDesc.joints" title="Link to this definition">¶</a></dt>
+<dd><p>JointDesc metadata keyed by body index.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.ArticulationDesc.sites">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">sites</span></span><a class="headerlink" href="#kangengine.asset.ArticulationDesc.sites" title="Link to this definition">¶</a></dt>
+<dd><p>Imported site markers.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.ArticulationDesc.skeleton_tree">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">skeleton_tree</span></span><a class="headerlink" href="#kangengine.asset.ArticulationDesc.skeleton_tree" title="Link to this definition">¶</a></dt>
+<dd><p>Imported skeleton hierarchy.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.ArticulationDesc.visual_geoms">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">visual_geoms</span></span><a class="headerlink" href="#kangengine.asset.ArticulationDesc.visual_geoms" title="Link to this definition">¶</a></dt>
+<dd><p>Visual mesh descriptions.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.asset.JointDesc">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">JointDesc</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.JointDesc" title="Link to this definition">¶</a></dt>
+<dd><p>Joint description imported from robot/character assets.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.JointDesc.armature">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">armature</span></span><a class="headerlink" href="#kangengine.asset.JointDesc.armature" title="Link to this definition">¶</a></dt>
+<dd><p>Joint-space armature.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.JointDesc.axis">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">axis</span></span><a class="headerlink" href="#kangengine.asset.JointDesc.axis" title="Link to this definition">¶</a></dt>
+<dd><p>Joint axis.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.JointDesc.hi_limit">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">hi_limit</span></span><a class="headerlink" href="#kangengine.asset.JointDesc.hi_limit" title="Link to this definition">¶</a></dt>
+<dd><p>Upper joint limit.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.JointDesc.lo_limit">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">lo_limit</span></span><a class="headerlink" href="#kangengine.asset.JointDesc.lo_limit" title="Link to this definition">¶</a></dt>
+<dd><p>Lower joint limit.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.JointDesc.name">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#kangengine.asset.JointDesc.name" title="Link to this definition">¶</a></dt>
+<dd><p>Joint name.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.asset.SiteDesc">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">SiteDesc</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.SiteDesc" title="Link to this definition">¶</a></dt>
+<dd><p>Imported MJCF site description attached to a character body.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.SiteDesc.body_index">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">body_index</span></span><a class="headerlink" href="#kangengine.asset.SiteDesc.body_index" title="Link to this definition">¶</a></dt>
+<dd><p>Index of the body this site belongs to.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.SiteDesc.has_zaxis">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">has_zaxis</span></span><a class="headerlink" href="#kangengine.asset.SiteDesc.has_zaxis" title="Link to this definition">¶</a></dt>
+<dd><p>Whether this site has an explicit z-axis.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.SiteDesc.name">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#kangengine.asset.SiteDesc.name" title="Link to this definition">¶</a></dt>
+<dd><p>Site name.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.SiteDesc.pos">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">pos</span></span><a class="headerlink" href="#kangengine.asset.SiteDesc.pos" title="Link to this definition">¶</a></dt>
+<dd><p>Local site position.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.SiteDesc.quat">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">quat</span></span><a class="headerlink" href="#kangengine.asset.SiteDesc.quat" title="Link to this definition">¶</a></dt>
+<dd><p>Local site orientation.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.SiteDesc.rgba">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">rgba</span></span><a class="headerlink" href="#kangengine.asset.SiteDesc.rgba" title="Link to this definition">¶</a></dt>
+<dd><p>Site display color.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.SiteDesc.size">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">size</span></span><a class="headerlink" href="#kangengine.asset.SiteDesc.size" title="Link to this definition">¶</a></dt>
+<dd><p>Site size parameters.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.SiteDesc.type">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">type</span></span><a class="headerlink" href="#kangengine.asset.SiteDesc.type" title="Link to this definition">¶</a></dt>
+<dd><p>Site geometry type.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.SiteDesc.zaxis">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">zaxis</span></span><a class="headerlink" href="#kangengine.asset.SiteDesc.zaxis" title="Link to this definition">¶</a></dt>
+<dd><p>Explicit site z-axis if present.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.asset.InertialDesc">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">InertialDesc</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.InertialDesc" title="Link to this definition">¶</a></dt>
+<dd><p>Imported body-local inertial properties.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.InertialDesc.com">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">com</span></span><a class="headerlink" href="#kangengine.asset.InertialDesc.com" title="Link to this definition">¶</a></dt>
+<dd><p>Body-local center of mass.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.InertialDesc.diag_inertia">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">diag_inertia</span></span><a class="headerlink" href="#kangengine.asset.InertialDesc.diag_inertia" title="Link to this definition">¶</a></dt>
+<dd><p>Diagonal inertia in the inertial frame.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.InertialDesc.mass">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">mass</span></span><a class="headerlink" href="#kangengine.asset.InertialDesc.mass" title="Link to this definition">¶</a></dt>
+<dd><p>Body mass.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.InertialDesc.quat">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">quat</span></span><a class="headerlink" href="#kangengine.asset.InertialDesc.quat" title="Link to this definition">¶</a></dt>
+<dd><p>Body-local inertial frame orientation.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.asset.VisualGeomDesc">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">VisualGeomDesc</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.VisualGeomDesc" title="Link to this definition">¶</a></dt>
+<dd><p>Visual mesh description imported from a character asset.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.VisualGeomDesc.body_index">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">body_index</span></span><a class="headerlink" href="#kangengine.asset.VisualGeomDesc.body_index" title="Link to this definition">¶</a></dt>
+<dd><p>Owning body index.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.VisualGeomDesc.body_name">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">body_name</span></span><a class="headerlink" href="#kangengine.asset.VisualGeomDesc.body_name" title="Link to this definition">¶</a></dt>
+<dd><p>Owning body name.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.VisualGeomDesc.mesh_file">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">mesh_file</span></span><a class="headerlink" href="#kangengine.asset.VisualGeomDesc.mesh_file" title="Link to this definition">¶</a></dt>
+<dd><p>Mesh file path.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.VisualGeomDesc.pos">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">pos</span></span><a class="headerlink" href="#kangengine.asset.VisualGeomDesc.pos" title="Link to this definition">¶</a></dt>
+<dd><p>Local mesh position.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.VisualGeomDesc.quat">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">quat</span></span><a class="headerlink" href="#kangengine.asset.VisualGeomDesc.quat" title="Link to this definition">¶</a></dt>
+<dd><p>Local mesh orientation.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.VisualGeomDesc.rgba">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">rgba</span></span><a class="headerlink" href="#kangengine.asset.VisualGeomDesc.rgba" title="Link to this definition">¶</a></dt>
+<dd><p>Mesh display color.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.asset.CollisionGeomDesc">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">CollisionGeomDesc</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.CollisionGeomDesc" title="Link to this definition">¶</a></dt>
+<dd><p>Imported body-local collision geometry description.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.CollisionGeomDesc.condim">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">condim</span></span><a class="headerlink" href="#kangengine.asset.CollisionGeomDesc.condim" title="Link to this definition">¶</a></dt>
+<dd><p>Imported contact dimensionality.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.CollisionGeomDesc.friction">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">friction</span></span><a class="headerlink" href="#kangengine.asset.CollisionGeomDesc.friction" title="Link to this definition">¶</a></dt>
+<dd><p>Imported MuJoCo sliding friction value.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.CollisionGeomDesc.from_pos">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_pos</span></span><a class="headerlink" href="#kangengine.asset.CollisionGeomDesc.from_pos" title="Link to this definition">¶</a></dt>
+<dd><p>Collision endpoint start position.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.CollisionGeomDesc.has_from_to">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">has_from_to</span></span><a class="headerlink" href="#kangengine.asset.CollisionGeomDesc.has_from_to" title="Link to this definition">¶</a></dt>
+<dd><p>Whether capsule-style from/to endpoints are present.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.CollisionGeomDesc.is_fallback">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">is_fallback</span></span><a class="headerlink" href="#kangengine.asset.CollisionGeomDesc.is_fallback" title="Link to this definition">¶</a></dt>
+<dd><p>Whether KangEngine synthesized this fallback shape.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.CollisionGeomDesc.margin">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">margin</span></span><a class="headerlink" href="#kangengine.asset.CollisionGeomDesc.margin" title="Link to this definition">¶</a></dt>
+<dd><p>Imported collision margin.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.CollisionGeomDesc.name">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#kangengine.asset.CollisionGeomDesc.name" title="Link to this definition">¶</a></dt>
+<dd><p>Imported MJCF geom name, if present.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.CollisionGeomDesc.physics_material">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">physics_material</span></span><a class="headerlink" href="#kangengine.asset.CollisionGeomDesc.physics_material" title="Link to this definition">¶</a></dt>
+<dd><p>PhysX-style material factors derived from this geom.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.CollisionGeomDesc.pos">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">pos</span></span><a class="headerlink" href="#kangengine.asset.CollisionGeomDesc.pos" title="Link to this definition">¶</a></dt>
+<dd><p>Local collision position.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.CollisionGeomDesc.quat">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">quat</span></span><a class="headerlink" href="#kangengine.asset.CollisionGeomDesc.quat" title="Link to this definition">¶</a></dt>
+<dd><p>Local collision orientation.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.CollisionGeomDesc.size">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">size</span></span><a class="headerlink" href="#kangengine.asset.CollisionGeomDesc.size" title="Link to this definition">¶</a></dt>
+<dd><p>Collision size parameters.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.CollisionGeomDesc.to_pos">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">to_pos</span></span><a class="headerlink" href="#kangengine.asset.CollisionGeomDesc.to_pos" title="Link to this definition">¶</a></dt>
+<dd><p>Collision endpoint end position.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.CollisionGeomDesc.type">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">type</span></span><a class="headerlink" href="#kangengine.asset.CollisionGeomDesc.type" title="Link to this definition">¶</a></dt>
+<dd><p>Collision geometry type.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.MJCFLoader">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">MJCFLoader</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.MJCFLoader" title="Link to this definition">¶</a></dt>
-<dd><p>Loader for MJCF/XML robot character assets.</p>
+<dd><p>Load MJCF/XML articulation descriptions.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.asset.MJCFLoader.load">
 <span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span>
@@ -402,8 +756,8 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
 </dl>
 
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="character.html#kangengine.character.CharacterData" title="kangengine.character.CharacterData"><span class="pre">CharacterData</span></a></span></span><a class="headerlink" href="#kangengine.asset.MJCFLoader.load" title="Link to this definition">¶</a></dt>
-<dd><p>Load MJCF and return character data.</p>
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">KE::Asset::ArticulationDesc</span></span></span><a class="headerlink" href="#kangengine.asset.MJCFLoader.load" title="Link to this definition">¶</a></dt>
+<dd><p>Load MJCF and return an articulation description.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -417,7 +771,7 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.MJCFImportResult" title="kangengine.asset.MJCFImportResult"><span class="pre">MJCFImportResult</span></a></span></span><a class="headerlink" href="#kangengine.asset.MJCFLoader.parse" title="Link to this definition">¶</a></dt>
-<dd><p>Parse MJCF and return character data with diagnostics.</p>
+<dd><p>Parse MJCF and return an articulation description with diagnostics.</p>
 </dd></dl>
 
 </dd></dl>
@@ -425,11 +779,11 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.MJCFImportResult">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">MJCFImportResult</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.MJCFImportResult" title="Link to this definition">¶</a></dt>
-<dd><p>Parsed MJCF character plus diagnostics.</p>
+<dd><p>Parsed MJCF articulation plus diagnostics.</p>
 <dl class="py property">
-<dt class="sig sig-object py" id="kangengine.asset.MJCFImportResult.character">
-<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">character</span></span><a class="headerlink" href="#kangengine.asset.MJCFImportResult.character" title="Link to this definition">¶</a></dt>
-<dd><p>Imported character data.</p>
+<dt class="sig sig-object py" id="kangengine.asset.MJCFImportResult.articulation">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">articulation</span></span><a class="headerlink" href="#kangengine.asset.MJCFImportResult.articulation" title="Link to this definition">¶</a></dt>
+<dd><p>Imported articulation description.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -443,7 +797,7 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.BVHLoader">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">BVHLoader</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.BVHLoader" title="Link to this definition">¶</a></dt>
-<dd><p>Loader for BVH skeleton and motion files.</p>
+<dd><p>Load a BVH hierarchy or sampled skeleton motion.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.asset.BVHLoader.load_motion">
 <span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_motion</span></span><span class="sig-paren">(</span>
@@ -454,7 +808,7 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">SkeletonMotion</span></a></span></span><a class="headerlink" href="#kangengine.asset.BVHLoader.load_motion" title="Link to this definition">¶</a></dt>
-<dd><p>Load skeleton motion from a BVH file.</p>
+<dd><p>Load the hierarchy and animation frames as a <code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code>.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -467,13 +821,13 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">SkeletonTree</span></a></span></span><a class="headerlink" href="#kangengine.asset.BVHLoader.load_skeleton" title="Link to this definition">¶</a></dt>
-<dd><p>Load only the skeleton hierarchy from a BVH file.</p>
+<dd><p>Load only the skeleton hierarchy from <code class="docutils literal notranslate"><span class="pre">bvh_path</span></code>.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.asset.BVHLoader.parse">
 <span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">parse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bvh_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.BVHImportResult" title="kangengine.asset.BVHImportResult"><span class="pre">BVHImportResult</span></a></span></span><a class="headerlink" href="#kangengine.asset.BVHLoader.parse" title="Link to this definition">¶</a></dt>
-<dd><p>Parse BVH and return motion plus diagnostics.</p>
+<dd><p>Load BVH motion together with diagnostics and source timing metadata.</p>
 </dd></dl>
 
 </dd></dl>
@@ -481,7 +835,7 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.BVHImportResult">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">BVHImportResult</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.BVHImportResult" title="Link to this definition">¶</a></dt>
-<dd><p>Parsed BVH skeleton motion plus diagnostics.</p>
+<dd><p>BVH motion and source-file metadata returned by <a class="reference internal" href="#kangengine.asset.BVHLoader.parse" title="kangengine.asset.BVHLoader.parse"><code class="xref py py-meth docutils literal notranslate"><span class="pre">BVHLoader.parse()</span></code></a>.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.BVHImportResult.diagnostics">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">diagnostics</span></span><a class="headerlink" href="#kangengine.asset.BVHImportResult.diagnostics" title="Link to this definition">¶</a></dt>
@@ -517,7 +871,7 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.FBXLoader">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">FBXLoader</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.FBXLoader" title="Link to this definition">¶</a></dt>
-<dd><p>Loader for FBX skeletons, motions, and meshes.</p>
+<dd><p>Load FBX skeletons, animation clips, and character data.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.asset.FBXLoader.load_animation_clip_infos">
 <span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_animation_clip_infos</span></span><span class="sig-paren">(</span>
@@ -527,7 +881,7 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#kangengine.asset.FBXAnimationClipInfo" title="kangengine.asset.FBXAnimationClipInfo"><span class="pre">FBXAnimationClipInfo</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.load_animation_clip_infos" title="Link to this definition">¶</a></dt>
-<dd><p>List animation clips available in an FBX file.</p>
+<dd><p>Return metadata for the animation clips in an FBX file.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -542,7 +896,7 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.FBXCharacterData" title="kangengine.asset.FBXCharacterData"><span class="pre">FBXCharacterData</span></a></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.load_character" title="Link to this definition">¶</a></dt>
-<dd><p>Load FBX character data without diagnostics.</p>
+<dd><p>Load one animation clip and all associated skinned meshes.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -558,13 +912,13 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.FBXCharacterData" title="kangengine.asset.FBXCharacterData"><span class="pre">FBXCharacterData</span></a></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.load_character_with_bind" title="Link to this definition">¶</a></dt>
-<dd><p>Load FBX character data using a separate bind-pose file.</p>
+<dd><p>Load character data using a separate FBX file for the bind pose.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.asset.FBXLoader.load_meshes">
 <span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_meshes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fbx_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.009999999776482582</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.load_meshes" title="Link to this definition">¶</a></dt>
-<dd><p>Load static meshes from an FBX file.</p>
+<dd><p>Load static meshes without animation data.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -579,7 +933,7 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">SkeletonMotion</span></a></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.load_motion" title="Link to this definition">¶</a></dt>
-<dd><p>Load skeleton motion from an FBX file.</p>
+<dd><p>Load one FBX animation clip as a <code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code>.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -592,7 +946,7 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">SkeletonTree</span></a></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.load_skeleton" title="Link to this definition">¶</a></dt>
-<dd><p>Load only the skeleton hierarchy from an FBX file.</p>
+<dd><p>Load only the FBX skeleton hierarchy.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -605,7 +959,7 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.load_skinned_meshes" title="Link to this definition">¶</a></dt>
-<dd><p>Load skinned meshes from an FBX file.</p>
+<dd><p>Load skinned meshes without animation data.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -620,7 +974,7 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.FBXImportResult" title="kangengine.asset.FBXImportResult"><span class="pre">FBXImportResult</span></a></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.parse" title="Link to this definition">¶</a></dt>
-<dd><p>Parse an FBX file and return character data plus diagnostics.</p>
+<dd><p>Load FBX character data together with clip metadata and diagnostics.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -636,7 +990,7 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.FBXImportResult" title="kangengine.asset.FBXImportResult"><span class="pre">FBXImportResult</span></a></span></span><a class="headerlink" href="#kangengine.asset.FBXLoader.parse_with_bind" title="Link to this definition">¶</a></dt>
-<dd><p>Parse FBX motion with a separate bind-pose FBX file.</p>
+<dd><p>Parse animation using a separate FBX file for the bind pose.</p>
 </dd></dl>
 
 </dd></dl>
@@ -644,7 +998,7 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.FBXImportResult">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">FBXImportResult</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.FBXImportResult" title="Link to this definition">¶</a></dt>
-<dd><p>Parsed FBX character, clips, and diagnostics.</p>
+<dd><p>FBX character data, clips, and import diagnostics.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.FBXImportResult.character">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">character</span></span><a class="headerlink" href="#kangengine.asset.FBXImportResult.character" title="Link to this definition">¶</a></dt>
@@ -830,7 +1184,7 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.FBXMeshInfo">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">FBXMeshInfo</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.FBXMeshInfo" title="Link to this definition">¶</a></dt>
-<dd><p>Static mesh payload imported from an FBX file.</p>
+<dd><p>Imported static FBX mesh and material metadata.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.FBXMeshInfo.has_normals">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">has_normals</span></span><a class="headerlink" href="#kangengine.asset.FBXMeshInfo.has_normals" title="Link to this definition">¶</a></dt>
@@ -896,7 +1250,7 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.FBXSkinnedMeshInfo">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">FBXSkinnedMeshInfo</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.FBXSkinnedMeshInfo" title="Link to this definition">¶</a></dt>
-<dd><p>Skinned mesh payload imported from an FBX file.</p>
+<dd><p>Imported skinned-mesh data and skin bindings.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.FBXSkinnedMeshInfo.bind_bone_matrices">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">bind_bone_matrices</span></span><a class="headerlink" href="#kangengine.asset.FBXSkinnedMeshInfo.bind_bone_matrices" title="Link to this definition">¶</a></dt>
@@ -1027,7 +1381,7 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.FBXCharacterData">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">FBXCharacterData</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.FBXCharacterData" title="Link to this definition">¶</a></dt>
-<dd><p>FBX character import result with motion and skinned meshes.</p>
+<dd><p>An FBX motion and its skinned meshes.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.FBXCharacterData.motion">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">motion</span></span><a class="headerlink" href="#kangengine.asset.FBXCharacterData.motion" title="Link to this definition">¶</a></dt>
@@ -1045,7 +1399,7 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.USDLoader">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">USDLoader</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.USDLoader" title="Link to this definition">¶</a></dt>
-<dd><p>Loader for USD mesh scenes.</p>
+<dd><p>Load meshes from USD scenes.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.asset.USDLoader.load_meshes">
 <span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_meshes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">usd_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#kangengine.asset.USDLoader.load_meshes" title="Link to this definition">¶</a></dt>
@@ -1129,6 +1483,316 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 
 </dd></dl>
 
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.asset.AMASSInfo">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">AMASSInfo</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">gender</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">betas</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">fps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">num_frames</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.asset.AMASSInfo" title="Link to this definition">¶</a></dt>
+<dd><p>Metadata read from an AMASS NPZ archive.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.asset.AMASSInfo.path">
+<span class="sig-name descname"><span class="pre">path</span></span><a class="headerlink" href="#kangengine.asset.AMASSInfo.path" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.asset.AMASSInfo.gender">
+<span class="sig-name descname"><span class="pre">gender</span></span><a class="headerlink" href="#kangengine.asset.AMASSInfo.gender" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.asset.AMASSInfo.betas">
+<span class="sig-name descname"><span class="pre">betas</span></span><a class="headerlink" href="#kangengine.asset.AMASSInfo.betas" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.asset.AMASSInfo.fps">
+<span class="sig-name descname"><span class="pre">fps</span></span><a class="headerlink" href="#kangengine.asset.AMASSInfo.fps" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.asset.AMASSInfo.num_frames">
+<span class="sig-name descname"><span class="pre">num_frames</span></span><a class="headerlink" href="#kangengine.asset.AMASSInfo.num_frames" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.asset.AMASSLoader">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">AMASSLoader</span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.asset.AMASSLoader" title="Link to this definition">¶</a></dt>
+<dd><p>Load AMASS body and hand poses as a native <code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code>.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.asset.AMASSLoader.inspect">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">inspect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.AMASSInfo" title="kangengine.asset.amass.AMASSInfo"><span class="pre">AMASSInfo</span></a></span></span><a class="headerlink" href="#kangengine.asset.AMASSLoader.inspect" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.asset.AMASSInfo" title="kangengine.asset.amass.AMASSInfo"><code class="xref py py-class docutils literal notranslate"><span class="pre">AMASSInfo</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.asset.AMASSLoader.load_motion">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_motion</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">skeleton_tree</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">SkeletonTree</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">model_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'smplx'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">up_axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;UpAxis.Y:</span> <span class="pre">1&gt;</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">motion_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">SkeletonMotion</span></a></span></span><a class="headerlink" href="#kangengine.asset.AMASSLoader.load_motion" title="Link to this definition">¶</a></dt>
+<dd><p>Load an AMASS NPZ directly into <code class="docutils literal notranslate"><span class="pre">animation.SkeletonMotion</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><code class="xref py py-class docutils literal notranslate"><span class="pre">SkeletonMotion</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.asset.SMPLModel">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">SMPLModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.asset.SMPLModel" title="Link to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="kangengine.asset.SMPLModel.load">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.SMPLModel" title="kangengine.asset.smpl.SMPLModel"><span class="pre">SMPLModel</span></a></span></span><a class="headerlink" href="#kangengine.asset.SMPLModel.load" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.asset.SMPLModel" title="kangengine.asset.smpl.SMPLModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">SMPLModel</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.asset.SMPLModel.create_body">
+<span class="sig-name descname"><span class="pre">create_body</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">betas</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.SMPLBody" title="kangengine.asset.smpl.SMPLBody"><span class="pre">SMPLBody</span></a></span></span><a class="headerlink" href="#kangengine.asset.SMPLModel.create_body" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.asset.SMPLBody" title="kangengine.asset.smpl.SMPLBody"><code class="xref py py-class docutils literal notranslate"><span class="pre">SMPLBody</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.asset.SMPLBody">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">SMPLBody</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">skeleton_tree</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">SkeletonTree</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">surface_asset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="visual.html#kangengine.visual.SkinnedSurfaceAsset" title="kangengine.visual.deformable.SkinnedSurfaceAsset"><span class="pre">SkinnedSurfaceAsset</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">joints</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">discarded_weight_max</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">pose_directions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.asset.SMPLBody" title="Link to this definition">¶</a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.asset.SMPLBody.skeleton_tree">
+<span class="sig-name descname"><span class="pre">skeleton_tree</span></span><a class="headerlink" href="#kangengine.asset.SMPLBody.skeleton_tree" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.asset.SMPLBody.surface_asset">
+<span class="sig-name descname"><span class="pre">surface_asset</span></span><a class="headerlink" href="#kangengine.asset.SMPLBody.surface_asset" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.asset.SMPLBody.joints">
+<span class="sig-name descname"><span class="pre">joints</span></span><a class="headerlink" href="#kangengine.asset.SMPLBody.joints" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.asset.SMPLBody.discarded_weight_max">
+<span class="sig-name descname"><span class="pre">discarded_weight_max</span></span><a class="headerlink" href="#kangengine.asset.SMPLBody.discarded_weight_max" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.asset.SMPLBody.pose_directions">
+<span class="sig-name descname"><span class="pre">pose_directions</span></span><a class="headerlink" href="#kangengine.asset.SMPLBody.pose_directions" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.asset.SMPLBody.create_visual">
+<span class="sig-name descname"><span class="pre">create_visual</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">app</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="python.html#kangengine.App" title="kangengine.App"><span class="pre">App</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="material.html#kangengine.material.Material" title="kangengine.material.Material"><span class="pre">Material</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="visual.html#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><span class="pre">SkinnedSurface</span></a></span></span><a class="headerlink" href="#kangengine.asset.SMPLBody.create_visual" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="visual.html#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">SkinnedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.asset.SMPLBody.corrected_bind_vertices">
+<span class="sig-name descname"><span class="pre">corrected_bind_vertices</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">rotations_wxyz</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">float32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.asset.SMPLBody.corrected_bind_vertices" title="Link to this definition">¶</a></dt>
+<dd><p>Evaluate SMPL pose blend shapes before LBS.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">...</span></code>], <code class="xref py py-class docutils literal notranslate"><span class="pre">dtype</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float32</span></code>]]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.asset.SMPLBody.update_pose_correctives">
+<span class="sig-name descname"><span class="pre">update_pose_correctives</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">surface</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="visual.html#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><span class="pre">SkinnedSurface</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonState" title="kangengine.animation.SkeletonState"><span class="pre">SkeletonState</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">enabled</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">update_normals</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="visual.html#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><span class="pre">SkinnedSurface</span></a></span></span><a class="headerlink" href="#kangengine.asset.SMPLBody.update_pose_correctives" title="Link to this definition">¶</a></dt>
+<dd><p>Update or clear pose-dependent geometry from a SkeletonState.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="visual.html#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">SkinnedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.asset.SMPLBody.update_pose_correctives_from_rotations">
+<span class="sig-name descname"><span class="pre">update_pose_correctives_from_rotations</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">surface</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="visual.html#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><span class="pre">SkinnedSurface</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">local_rotations_wxyz</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">enabled</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">update_normals</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="visual.html#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><span class="pre">SkinnedSurface</span></a></span></span><a class="headerlink" href="#kangengine.asset.SMPLBody.update_pose_correctives_from_rotations" title="Link to this definition">¶</a></dt>
+<dd><p>Update or clear pose-dependent geometry from raw local rotations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="visual.html#kangengine.visual.SkinnedSurface" title="kangengine.visual.deformable.SkinnedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">SkinnedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.asset.SMPLHModel">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">SMPLHModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.asset.SMPLHModel" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#kangengine.asset.SMPLModel" title="kangengine.asset.smpl.SMPLModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">SMPLModel</span></code></a></p>
+<p>Standard 52-joint SMPL-H NPZ model adapter.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.asset.SMPLHModel.create_body">
+<span class="sig-name descname"><span class="pre">create_body</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">betas</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.SMPLHBody" title="kangengine.asset.smpl.SMPLHBody"><span class="pre">SMPLHBody</span></a></span></span><a class="headerlink" href="#kangengine.asset.SMPLHModel.create_body" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.asset.SMPLHBody" title="kangengine.asset.smpl.SMPLHBody"><code class="xref py py-class docutils literal notranslate"><span class="pre">SMPLHBody</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.asset.SMPLHBody">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">SMPLHBody</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">skeleton_tree</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">SkeletonTree</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">surface_asset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="visual.html#kangengine.visual.SkinnedSurfaceAsset" title="kangengine.visual.deformable.SkinnedSurfaceAsset"><span class="pre">SkinnedSurfaceAsset</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">joints</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">discarded_weight_max</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">pose_directions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.asset.SMPLHBody" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#kangengine.asset.SMPLBody" title="kangengine.asset.smpl.SMPLBody"><code class="xref py py-class docutils literal notranslate"><span class="pre">SMPLBody</span></code></a></p>
+<p>A 52-joint SMPL-H body and renderable surface asset.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.asset.SMPLXModel">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">SMPLXModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.asset.SMPLXModel" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#kangengine.asset.SMPLModel" title="kangengine.asset.smpl.SMPLModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">SMPLModel</span></code></a></p>
+<p>Standard 55-joint SMPL-X NPZ model adapter.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.asset.SMPLXModel.create_body">
+<span class="sig-name descname"><span class="pre">create_body</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">betas</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.SMPLXBody" title="kangengine.asset.smpl.SMPLXBody"><span class="pre">SMPLXBody</span></a></span></span><a class="headerlink" href="#kangengine.asset.SMPLXModel.create_body" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.asset.SMPLXBody" title="kangengine.asset.smpl.SMPLXBody"><code class="xref py py-class docutils literal notranslate"><span class="pre">SMPLXBody</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.asset.SMPLXBody">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">SMPLXBody</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">skeleton_tree</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="animation.html#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">SkeletonTree</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">surface_asset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="visual.html#kangengine.visual.SkinnedSurfaceAsset" title="kangengine.visual.deformable.SkinnedSurfaceAsset"><span class="pre">SkinnedSurfaceAsset</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">joints</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">discarded_weight_max</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">pose_directions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.asset.SMPLXBody" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#kangengine.asset.SMPLBody" title="kangengine.asset.smpl.SMPLBody"><code class="xref py py-class docutils literal notranslate"><span class="pre">SMPLBody</span></code></a></p>
+<p>A 55-joint SMPL-X body and renderable surface asset.</p>
+</dd></dl>
+
 </section>
 </section>
 
@@ -1194,13 +1858,75 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <li><a class="reference internal" href="#kangengine.asset.ImportDiagnostics.warnings"><code class="docutils literal notranslate"><span class="pre">ImportDiagnostics.warnings</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#kangengine.asset.ArticulationDesc"><code class="docutils literal notranslate"><span class="pre">ArticulationDesc</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.asset.ArticulationDesc.asset_dir"><code class="docutils literal notranslate"><span class="pre">ArticulationDesc.asset_dir</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.ArticulationDesc.collision_geoms"><code class="docutils literal notranslate"><span class="pre">ArticulationDesc.collision_geoms</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.ArticulationDesc.inertials"><code class="docutils literal notranslate"><span class="pre">ArticulationDesc.inertials</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.ArticulationDesc.joints"><code class="docutils literal notranslate"><span class="pre">ArticulationDesc.joints</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.ArticulationDesc.sites"><code class="docutils literal notranslate"><span class="pre">ArticulationDesc.sites</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.ArticulationDesc.skeleton_tree"><code class="docutils literal notranslate"><span class="pre">ArticulationDesc.skeleton_tree</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.ArticulationDesc.visual_geoms"><code class="docutils literal notranslate"><span class="pre">ArticulationDesc.visual_geoms</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.asset.JointDesc"><code class="docutils literal notranslate"><span class="pre">JointDesc</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.asset.JointDesc.armature"><code class="docutils literal notranslate"><span class="pre">JointDesc.armature</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.JointDesc.axis"><code class="docutils literal notranslate"><span class="pre">JointDesc.axis</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.JointDesc.hi_limit"><code class="docutils literal notranslate"><span class="pre">JointDesc.hi_limit</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.JointDesc.lo_limit"><code class="docutils literal notranslate"><span class="pre">JointDesc.lo_limit</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.JointDesc.name"><code class="docutils literal notranslate"><span class="pre">JointDesc.name</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.asset.SiteDesc"><code class="docutils literal notranslate"><span class="pre">SiteDesc</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.asset.SiteDesc.body_index"><code class="docutils literal notranslate"><span class="pre">SiteDesc.body_index</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.SiteDesc.has_zaxis"><code class="docutils literal notranslate"><span class="pre">SiteDesc.has_zaxis</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.SiteDesc.name"><code class="docutils literal notranslate"><span class="pre">SiteDesc.name</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.SiteDesc.pos"><code class="docutils literal notranslate"><span class="pre">SiteDesc.pos</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.SiteDesc.quat"><code class="docutils literal notranslate"><span class="pre">SiteDesc.quat</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.SiteDesc.rgba"><code class="docutils literal notranslate"><span class="pre">SiteDesc.rgba</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.SiteDesc.size"><code class="docutils literal notranslate"><span class="pre">SiteDesc.size</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.SiteDesc.type"><code class="docutils literal notranslate"><span class="pre">SiteDesc.type</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.SiteDesc.zaxis"><code class="docutils literal notranslate"><span class="pre">SiteDesc.zaxis</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.asset.InertialDesc"><code class="docutils literal notranslate"><span class="pre">InertialDesc</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.asset.InertialDesc.com"><code class="docutils literal notranslate"><span class="pre">InertialDesc.com</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.InertialDesc.diag_inertia"><code class="docutils literal notranslate"><span class="pre">InertialDesc.diag_inertia</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.InertialDesc.mass"><code class="docutils literal notranslate"><span class="pre">InertialDesc.mass</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.InertialDesc.quat"><code class="docutils literal notranslate"><span class="pre">InertialDesc.quat</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.asset.VisualGeomDesc"><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.asset.VisualGeomDesc.body_index"><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc.body_index</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.VisualGeomDesc.body_name"><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc.body_name</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.VisualGeomDesc.mesh_file"><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc.mesh_file</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.VisualGeomDesc.pos"><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc.pos</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.VisualGeomDesc.quat"><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc.quat</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.VisualGeomDesc.rgba"><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc.rgba</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.asset.CollisionGeomDesc"><code class="docutils literal notranslate"><span class="pre">CollisionGeomDesc</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.asset.CollisionGeomDesc.condim"><code class="docutils literal notranslate"><span class="pre">CollisionGeomDesc.condim</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.CollisionGeomDesc.friction"><code class="docutils literal notranslate"><span class="pre">CollisionGeomDesc.friction</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.CollisionGeomDesc.from_pos"><code class="docutils literal notranslate"><span class="pre">CollisionGeomDesc.from_pos</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.CollisionGeomDesc.has_from_to"><code class="docutils literal notranslate"><span class="pre">CollisionGeomDesc.has_from_to</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.CollisionGeomDesc.is_fallback"><code class="docutils literal notranslate"><span class="pre">CollisionGeomDesc.is_fallback</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.CollisionGeomDesc.margin"><code class="docutils literal notranslate"><span class="pre">CollisionGeomDesc.margin</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.CollisionGeomDesc.name"><code class="docutils literal notranslate"><span class="pre">CollisionGeomDesc.name</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.CollisionGeomDesc.physics_material"><code class="docutils literal notranslate"><span class="pre">CollisionGeomDesc.physics_material</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.CollisionGeomDesc.pos"><code class="docutils literal notranslate"><span class="pre">CollisionGeomDesc.pos</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.CollisionGeomDesc.quat"><code class="docutils literal notranslate"><span class="pre">CollisionGeomDesc.quat</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.CollisionGeomDesc.size"><code class="docutils literal notranslate"><span class="pre">CollisionGeomDesc.size</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.CollisionGeomDesc.to_pos"><code class="docutils literal notranslate"><span class="pre">CollisionGeomDesc.to_pos</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.CollisionGeomDesc.type"><code class="docutils literal notranslate"><span class="pre">CollisionGeomDesc.type</span></code></a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#kangengine.asset.MJCFLoader"><code class="docutils literal notranslate"><span class="pre">MJCFLoader</span></code></a><ul>
 <li><a class="reference internal" href="#kangengine.asset.MJCFLoader.load"><code class="docutils literal notranslate"><span class="pre">MJCFLoader.load()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.MJCFLoader.parse"><code class="docutils literal notranslate"><span class="pre">MJCFLoader.parse()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.asset.MJCFImportResult"><code class="docutils literal notranslate"><span class="pre">MJCFImportResult</span></code></a><ul>
-<li><a class="reference internal" href="#kangengine.asset.MJCFImportResult.character"><code class="docutils literal notranslate"><span class="pre">MJCFImportResult.character</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.MJCFImportResult.articulation"><code class="docutils literal notranslate"><span class="pre">MJCFImportResult.articulation</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.MJCFImportResult.diagnostics"><code class="docutils literal notranslate"><span class="pre">MJCFImportResult.diagnostics</span></code></a></li>
 </ul>
 </li>
@@ -1338,6 +2064,46 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <li><a class="reference internal" href="#kangengine.asset.USDMeshInfo.vertex_count"><code class="docutils literal notranslate"><span class="pre">USDMeshInfo.vertex_count</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#kangengine.asset.AMASSInfo"><code class="docutils literal notranslate"><span class="pre">AMASSInfo</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.asset.AMASSInfo.path"><code class="docutils literal notranslate"><span class="pre">AMASSInfo.path</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.AMASSInfo.gender"><code class="docutils literal notranslate"><span class="pre">AMASSInfo.gender</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.AMASSInfo.betas"><code class="docutils literal notranslate"><span class="pre">AMASSInfo.betas</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.AMASSInfo.fps"><code class="docutils literal notranslate"><span class="pre">AMASSInfo.fps</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.AMASSInfo.num_frames"><code class="docutils literal notranslate"><span class="pre">AMASSInfo.num_frames</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.asset.AMASSLoader"><code class="docutils literal notranslate"><span class="pre">AMASSLoader</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.asset.AMASSLoader.inspect"><code class="docutils literal notranslate"><span class="pre">AMASSLoader.inspect()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.AMASSLoader.load_motion"><code class="docutils literal notranslate"><span class="pre">AMASSLoader.load_motion()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.asset.SMPLModel"><code class="docutils literal notranslate"><span class="pre">SMPLModel</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.asset.SMPLModel.load"><code class="docutils literal notranslate"><span class="pre">SMPLModel.load()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.SMPLModel.create_body"><code class="docutils literal notranslate"><span class="pre">SMPLModel.create_body()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.asset.SMPLBody"><code class="docutils literal notranslate"><span class="pre">SMPLBody</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.asset.SMPLBody.skeleton_tree"><code class="docutils literal notranslate"><span class="pre">SMPLBody.skeleton_tree</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.SMPLBody.surface_asset"><code class="docutils literal notranslate"><span class="pre">SMPLBody.surface_asset</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.SMPLBody.joints"><code class="docutils literal notranslate"><span class="pre">SMPLBody.joints</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.SMPLBody.discarded_weight_max"><code class="docutils literal notranslate"><span class="pre">SMPLBody.discarded_weight_max</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.SMPLBody.pose_directions"><code class="docutils literal notranslate"><span class="pre">SMPLBody.pose_directions</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.SMPLBody.create_visual"><code class="docutils literal notranslate"><span class="pre">SMPLBody.create_visual()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.SMPLBody.corrected_bind_vertices"><code class="docutils literal notranslate"><span class="pre">SMPLBody.corrected_bind_vertices()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.SMPLBody.update_pose_correctives"><code class="docutils literal notranslate"><span class="pre">SMPLBody.update_pose_correctives()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.SMPLBody.update_pose_correctives_from_rotations"><code class="docutils literal notranslate"><span class="pre">SMPLBody.update_pose_correctives_from_rotations()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.asset.SMPLHModel"><code class="docutils literal notranslate"><span class="pre">SMPLHModel</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.asset.SMPLHModel.create_body"><code class="docutils literal notranslate"><span class="pre">SMPLHModel.create_body()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.asset.SMPLHBody"><code class="docutils literal notranslate"><span class="pre">SMPLHBody</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.SMPLXModel"><code class="docutils literal notranslate"><span class="pre">SMPLXModel</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.asset.SMPLXModel.create_body"><code class="docutils literal notranslate"><span class="pre">SMPLXModel.create_body()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.asset.SMPLXBody"><code class="docutils literal notranslate"><span class="pre">SMPLXBody</span></code></a></li>
 </ul>
 </li>
 </ul>

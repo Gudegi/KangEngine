@@ -3,7 +3,7 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="ke.character" href="character.html"><link rel="prev" title="ke.asset" href="asset.html">
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="ke.exports" href="exports.html"><link rel="prev" title="ke.asset" href="asset.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
         <title>ke.animation - KangEngine Docs</title>
@@ -220,11 +220,13 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VIEWER_SYNC.html">Viewer Synchronization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/VISUALIZATION.html">Simulation Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RUN_MODES.html">Simulation Run Modes</a></li>
 </ul>
 </li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/motion_animation/INDEX.html">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="simple">
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/animation/INDEX.html">Animation</a><input aria-label="Toggle navigation of Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/SMPL.html">SMPL Models and Motion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/VISUALS.html">Pose Visualization</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
@@ -246,7 +248,7 @@
 <li class="toctree-l2"><a class="reference internal" href="geometry.html">ke.geometry</a></li>
 <li class="toctree-l2"><a class="reference internal" href="asset.html">ke.asset</a></li>
 <li class="toctree-l2 current current-page"><a class="current reference internal" href="#">ke.animation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="character.html">ke.character</a></li>
+<li class="toctree-l2"><a class="reference internal" href="exports.html">ke.exports</a></li>
 <li class="toctree-l2"><a class="reference internal" href="motion.html">ke.motion_module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="material.html">ke.material</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rendering.html">ke.render</a></li>
@@ -417,13 +419,13 @@ them. Python code should use <code class="docutils literal notranslate"><span cl
 <dd><p>Read-only skeleton hierarchy and local bind transforms.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonTree.local_rotation">
-<span class="sig-name descname"><span class="pre">local_rotation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Any</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonTree.local_rotation" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">local_rotation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Quat</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonTree.local_rotation" title="Link to this definition">¶</a></dt>
 <dd><p>Return a node’s local bind rotation.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonTree.local_translation">
-<span class="sig-name descname"><span class="pre">local_translation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Any</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonTree.local_translation" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">local_translation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Vec3</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonTree.local_translation" title="Link to this definition">¶</a></dt>
 <dd><p>Return a node’s local bind translation.</p>
 </dd></dl>
 
@@ -488,9 +490,73 @@ them. Python code should use <code class="docutils literal notranslate"><span cl
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.from_arrays">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_arrays</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">skeleton_tree</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">SkeletonTree</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">root_translations</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">npt.ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">torch.Tensor</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">local_rotations_wxyz</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">npt.ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">torch.Tensor</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">fps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">motion_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'Motion'</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.animation.SkeletonMotion" title="kangengine.animation.SkeletonMotion"><span class="pre">SkeletonMotion</span></a></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.from_arrays" title="Link to this definition">¶</a></dt>
+<dd><p>Create a motion from root <code class="docutils literal notranslate"><span class="pre">(F,</span> <span class="pre">3)</span></code> and WXYZ rotations <code class="docutils literal notranslate"><span class="pre">(F,</span> <span class="pre">J,</span> <span class="pre">4)</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.global_angular_accelerations">
+<span class="sig-name descname"><span class="pre">global_angular_accelerations</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">_Float32Array</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.global_angular_accelerations" title="Link to this definition">¶</a></dt>
+<dd><p>Compute global joint angular accelerations with shape <code class="docutils literal notranslate"><span class="pre">(F,</span> <span class="pre">J,</span> <span class="pre">3)</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.global_angular_velocities">
+<span class="sig-name descname"><span class="pre">global_angular_velocities</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">_Float32Array</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.global_angular_velocities" title="Link to this definition">¶</a></dt>
+<dd><p>Compute global joint angular velocities with shape <code class="docutils literal notranslate"><span class="pre">(F,</span> <span class="pre">J,</span> <span class="pre">3)</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.global_linear_accelerations">
+<span class="sig-name descname"><span class="pre">global_linear_accelerations</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">_Float32Array</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.global_linear_accelerations" title="Link to this definition">¶</a></dt>
+<dd><p>Compute global joint linear accelerations with shape <code class="docutils literal notranslate"><span class="pre">(F,</span> <span class="pre">J,</span> <span class="pre">3)</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.global_linear_velocities">
+<span class="sig-name descname"><span class="pre">global_linear_velocities</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">_Float32Array</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.global_linear_velocities" title="Link to this definition">¶</a></dt>
+<dd><p>Compute global joint linear velocities with shape <code class="docutils literal notranslate"><span class="pre">(F,</span> <span class="pre">J,</span> <span class="pre">3)</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.global_matrices">
+<span class="sig-name descname"><span class="pre">global_matrices</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">_Float32Array</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.global_matrices" title="Link to this definition">¶</a></dt>
+<dd><p>Compute global transforms with shape <code class="docutils literal notranslate"><span class="pre">(F,</span> <span class="pre">J,</span> <span class="pre">4,</span> <span class="pre">4)</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.global_positions">
+<span class="sig-name descname"><span class="pre">global_positions</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">_Float32Array</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.global_positions" title="Link to this definition">¶</a></dt>
+<dd><p>Compute global joint positions with shape <code class="docutils literal notranslate"><span class="pre">(F,</span> <span class="pre">J,</span> <span class="pre">3)</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.global_rotations_wxyz">
+<span class="sig-name descname"><span class="pre">global_rotations_wxyz</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">_Float32Array</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.global_rotations_wxyz" title="Link to this definition">¶</a></dt>
+<dd><p>Compute WXYZ global joint rotations with shape <code class="docutils literal notranslate"><span class="pre">(F,</span> <span class="pre">J,</span> <span class="pre">4)</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.local_rotation">
-<span class="sig-name descname"><span class="pre">local_rotation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">joint</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Any</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.local_rotation" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">local_rotation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">joint</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Quat</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.local_rotation" title="Link to this definition">¶</a></dt>
 <dd><p>Return one node’s local rotation at one frame.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.local_rotations_wxyz">
+<span class="sig-name descname"><span class="pre">local_rotations_wxyz</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">_Float32Array</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.local_rotations_wxyz" title="Link to this definition">¶</a></dt>
+<dd><p>Return WXYZ local rotations with shape <code class="docutils literal notranslate"><span class="pre">(F,</span> <span class="pre">J,</span> <span class="pre">4)</span></code>.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -530,9 +596,27 @@ them. Python code should use <code class="docutils literal notranslate"><span cl
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.root_linear_accelerations">
+<span class="sig-name descname"><span class="pre">root_linear_accelerations</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">_Float32Array</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.root_linear_accelerations" title="Link to this definition">¶</a></dt>
+<dd><p>Compute root linear accelerations with shape <code class="docutils literal notranslate"><span class="pre">(F,</span> <span class="pre">3)</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.root_linear_velocities">
+<span class="sig-name descname"><span class="pre">root_linear_velocities</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">_Float32Array</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.root_linear_velocities" title="Link to this definition">¶</a></dt>
+<dd><p>Compute root linear velocities with shape <code class="docutils literal notranslate"><span class="pre">(F,</span> <span class="pre">3)</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.root_translation">
-<span class="sig-name descname"><span class="pre">root_translation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Any</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.root_translation" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">root_translation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Vec3</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.root_translation" title="Link to this definition">¶</a></dt>
 <dd><p>Return the root translation at one frame.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.root_translations">
+<span class="sig-name descname"><span class="pre">root_translations</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">_Float32Array</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.root_translations" title="Link to this definition">¶</a></dt>
+<dd><p>Return root translations with shape <code class="docutils literal notranslate"><span class="pre">(F,</span> <span class="pre">3)</span></code>.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -547,8 +631,19 @@ them. Python code should use <code class="docutils literal notranslate"><span cl
 <dd><p>Sample a pose at time in seconds.</p>
 </dd></dl>
 
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.animation.SkeletonMotion.skeleton_tree">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">skeleton_tree</span></span><a class="headerlink" href="#kangengine.animation.SkeletonMotion.skeleton_tree" title="Link to this definition">¶</a></dt>
+<dd><p>Return the motion’s read-only skeleton hierarchy.</p>
 </dd></dl>
 
+</dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code> is the canonical public motion container. Importers such as
+<code class="docutils literal notranslate"><span class="pre">BVHLoader</span></code> and <code class="docutils literal notranslate"><span class="pre">AMASSLoader</span></code> return it directly; preprocessing code should
+construct edited clips with <code class="docutils literal notranslate"><span class="pre">SkeletonMotion.from_arrays()</span></code>. Batched FK,
+linear/angular velocity, and acceleration arrays are computed through its
+<code class="docutils literal notranslate"><span class="pre">global_*</span></code> and <code class="docutils literal notranslate"><span class="pre">root_*</span></code> methods.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.animation.Transform">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.animation.</span></span><span class="sig-name descname"><span class="pre">Transform</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.animation.Transform" title="Link to this definition">¶</a></dt>
@@ -579,7 +674,7 @@ them. Python code should use <code class="docutils literal notranslate"><span cl
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonState.compute_global_positions">
-<span class="sig-name descname"><span class="pre">compute_global_positions</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonState.compute_global_positions" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">compute_global_positions</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">Vec3</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonState.compute_global_positions" title="Link to this definition">¶</a></dt>
 <dd><p>Return S global node positions.</p>
 </dd></dl>
 
@@ -595,13 +690,13 @@ them. Python code should use <code class="docutils literal notranslate"><span cl
 
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">tree</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.animation.SkeletonTree" title="kangengine.animation.SkeletonTree"><span class="pre">SkeletonTree</span></a></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">rotations</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">npt.ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">torch.Tensor</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">rotations_wxyz</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">npt.ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">torch.Tensor</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">root_translation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">npt.ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">torch.Tensor</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">is_local</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.animation.SkeletonState" title="kangengine.animation.SkeletonState"><span class="pre">SkeletonState</span></a></span></span><a class="headerlink" href="#kangengine.animation.SkeletonState.from_rotation_and_root_translation" title="Link to this definition">¶</a></dt>
-<dd><p>Create a pose from XYZW rotations <code class="docutils literal notranslate"><span class="pre">(S,</span> <span class="pre">4)</span></code> and root <code class="docutils literal notranslate"><span class="pre">(3,)</span></code>.</p>
+<dd><p>Create a pose from WXYZ rotations <code class="docutils literal notranslate"><span class="pre">(S,</span> <span class="pre">4)</span></code> and root <code class="docutils literal notranslate"><span class="pre">(3,)</span></code>.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -624,13 +719,13 @@ them. Python code should use <code class="docutils literal notranslate"><span cl
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonState.root_translation">
-<span class="sig-name descname"><span class="pre">root_translation</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Any</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonState.root_translation" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">root_translation</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Vec3</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonState.root_translation" title="Link to this definition">¶</a></dt>
 <dd><p>Return the root translation.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.animation.SkeletonState.rotation">
-<span class="sig-name descname"><span class="pre">rotation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Any</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonState.rotation" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">rotation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Quat</span></span></span><a class="headerlink" href="#kangengine.animation.SkeletonState.rotation" title="Link to this definition">¶</a></dt>
 <dd><p>Return one stored node rotation.</p>
 </dd></dl>
 
@@ -656,12 +751,12 @@ them. Python code should use <code class="docutils literal notranslate"><span cl
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="character.html">
+          <a class="next-page" href="exports.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">ke.character</div>
+                <div class="title">ke.exports</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
@@ -726,16 +821,29 @@ them. Python code should use <code class="docutils literal notranslate"><span cl
 <li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.duration"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.duration()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.fps"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.fps()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.frame"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.frame()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.from_arrays"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.from_arrays()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.global_angular_accelerations"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.global_angular_accelerations()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.global_angular_velocities"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.global_angular_velocities()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.global_linear_accelerations"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.global_linear_accelerations()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.global_linear_velocities"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.global_linear_velocities()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.global_matrices"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.global_matrices()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.global_positions"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.global_positions()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.global_rotations_wxyz"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.global_rotations_wxyz()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.local_rotation"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.local_rotation()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.local_rotations_wxyz"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.local_rotations_wxyz()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.local_rotations_wxyz_flat"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.local_rotations_wxyz_flat()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.motion_name"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.motion_name()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.node_names"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.node_names()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.num_frames"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.num_frames()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.num_joints"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.num_joints()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.parent_indices"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.parent_indices()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.root_linear_accelerations"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.root_linear_accelerations()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.root_linear_velocities"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.root_linear_velocities()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.root_translation"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.root_translation()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.root_translations"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.root_translations()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.root_translations_flat"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.root_translations_flat()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.sample"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.sample()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.animation.SkeletonMotion.skeleton_tree"><code class="docutils literal notranslate"><span class="pre">SkeletonMotion.skeleton_tree</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.animation.Transform"><code class="docutils literal notranslate"><span class="pre">Transform</span></code></a><ul>

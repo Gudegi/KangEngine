@@ -13,7 +13,12 @@ state visualization.
 
    ArticulationVisual
    ArticulationVisualAsset
+   ArticulatedSurface
+   ArticulatedSurfaceAsset
+   DeformableSurface
    SkinVisual
+   SkinnedSurface
+   SkinnedSurfaceAsset
    SkeletalVisual
    SkeletalVisualConfig
 ```
@@ -24,6 +29,16 @@ state visualization.
 .. autoclass:: ArticulationVisual
 
 .. autoclass:: ArticulationVisualAsset
+
+.. autoclass:: ArticulatedSurfaceAsset
+
+.. autoclass:: ArticulatedSurface
+
+.. autoclass:: SkinnedSurfaceAsset
+
+.. autoclass:: SkinnedSurface
+
+.. autoclass:: DeformableSurface
 
 .. autoclass:: SkinVisual
 

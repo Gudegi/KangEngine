@@ -1,6 +1,6 @@
 # KangEngine Documentation
 
-KangEngine is a C++/Python engine for motion visualization, robotics assets,
+KangEngine is a C++/Python engine for rendering, character animation, robotics,
 and PhysX-based simulation. Start with the guide for runnable workflows, use
 the API reference for exact Python signatures, and browse the examples for
 complete programs.

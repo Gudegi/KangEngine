@@ -3,7 +3,7 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="ke.motion_module" href="motion.html"><link rel="prev" title="ke.animation" href="animation.html">
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="SMPL model assets" href="smpl.html"><link rel="prev" title="ke.animation" href="animation.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
         <title>ke.character - KangEngine Docs</title>
@@ -207,6 +207,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/scene_rendering/INDEX.html">Scene and Rendering</a><input aria-label="Toggle navigation of Scene and Rendering" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/MATERIALS_TEXTURES.html">Materials and Textures</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/LOAD_ASSETS.html">Load Assets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/VISUAL_OBJECTS.html">Visual Objects and Deformable Surfaces</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/CAMERA_VIEWER.html">Camera and Viewer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/VIDEO_RECORDING.html">Video Recording</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/scene_rendering/DEBUG_VISUALIZATION.html">Debug Visualization and Text Rendering</a></li>
@@ -247,6 +248,8 @@
 <li class="toctree-l2"><a class="reference internal" href="asset.html">ke.asset</a></li>
 <li class="toctree-l2"><a class="reference internal" href="animation.html">ke.animation</a></li>
 <li class="toctree-l2 current current-page"><a class="current reference internal" href="#">ke.character</a></li>
+<li class="toctree-l2"><a class="reference internal" href="smpl.html">SMPL model assets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="exports.html">ke.exports</a></li>
 <li class="toctree-l2"><a class="reference internal" href="motion.html">ke.motion_module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="material.html">ke.material</a></li>
 <li class="toctree-l2"><a class="reference internal" href="rendering.html">ke.render</a></li>
@@ -556,6 +559,12 @@
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.character.</span></span><span class="sig-name descname"><span class="pre">JointDesc</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.character.JointDesc" title="Link to this definition">¶</a></dt>
 <dd><p>Joint description imported from robot/character assets.</p>
 <dl class="py property">
+<dt class="sig sig-object py" id="kangengine.character.JointDesc.armature">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">armature</span></span><a class="headerlink" href="#kangengine.character.JointDesc.armature" title="Link to this definition">¶</a></dt>
+<dd><p>Joint-space armature.</p>
+</dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="kangengine.character.JointDesc.axis">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">axis</span></span><a class="headerlink" href="#kangengine.character.JointDesc.axis" title="Link to this definition">¶</a></dt>
 <dd><p>Joint axis.</p>
@@ -728,12 +737,12 @@
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="motion.html">
+          <a class="next-page" href="smpl.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">ke.motion_module</div>
+                <div class="title">SMPL model assets</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
@@ -822,6 +831,7 @@
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.character.JointDesc"><code class="docutils literal notranslate"><span class="pre">JointDesc</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.character.JointDesc.armature"><code class="docutils literal notranslate"><span class="pre">JointDesc.armature</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.character.JointDesc.axis"><code class="docutils literal notranslate"><span class="pre">JointDesc.axis</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.character.JointDesc.hi_limit"><code class="docutils literal notranslate"><span class="pre">JointDesc.hi_limit</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.character.JointDesc.lo_limit"><code class="docutils literal notranslate"><span class="pre">JointDesc.lo_limit</span></code></a></li>

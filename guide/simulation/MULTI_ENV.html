@@ -220,11 +220,13 @@
 <li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Multi-Environment Simulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="CONTACT_SENSORS.html">Contact Sensors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="VIEWER_SYNC.html">Viewer Synchronization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="VISUALIZATION.html">Simulation Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="RUN_MODES.html">Simulation Run Modes</a></li>
 </ul>
 </li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="../motion_animation/INDEX.html">Motion and Animation</a><input aria-label="Toggle navigation of Motion and Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="simple">
+<li class="toctree-l2 has-children"><a class="reference internal" href="../animation/INDEX.html">Animation</a><input aria-label="Toggle navigation of Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../animation/SMPL.html">SMPL Models and Motion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../animation/VISUALS.html">Pose Visualization</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../MIMICKIT.html">RL With MimicKit</a></li>
@@ -246,7 +248,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../api/geometry.html">ke.geometry</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/asset.html">ke.asset</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/animation.html">ke.animation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../api/character.html">ke.character</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/exports.html">ke.exports</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/motion.html">ke.motion_module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/material.html">ke.material</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/rendering.html">ke.render</a></li>
@@ -483,7 +485,7 @@ id in each environment, and retrieve a batched view.</p>
 <span class="linenos">132</span>        <span class="bp">self</span><span class="o">.</span><span class="n">box_visual_batch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
 <span class="linenos">133</span>            <span class="bp">self</span><span class="o">.</span><span class="n">box</span><span class="p">,</span>
 <span class="linenos">134</span>            <span class="bp">self</span><span class="o">.</span><span class="n">box_xml</span><span class="p">,</span>
-<span class="linenos">135</span>            <span class="n">prim_base_path</span><span class="o">=</span><span class="s2">&quot;/group/box&quot;</span><span class="p">,</span>
+<span class="linenos">135</span>            <span class="n">path</span><span class="o">=</span><span class="s2">&quot;/group/box&quot;</span><span class="p">,</span>
 <span class="linenos">136</span>            <span class="n">material</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">standard_materials</span><span class="o">.</span><span class="n">common</span><span class="p">,</span>
 <span class="linenos">137</span>            <span class="n">color</span><span class="o">=</span><span class="p">[</span><span class="n">friction_group_color</span><span class="p">(</span><span class="n">env_id</span><span class="p">)</span> <span class="k">for</span> <span class="n">env_id</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span><span class="p">)],</span>
 <span class="linenos">138</span>        <span class="p">)</span>
