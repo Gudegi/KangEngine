@@ -6,6 +6,7 @@
 :maxdepth: 1
 :hidden:
 
-SMPL
+LOAD_MOTION
 VISUALS
+SMPL
 ```
