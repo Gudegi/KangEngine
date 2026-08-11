@@ -1138,6 +1138,7 @@ class KangSimWorld:
     def add_articulation(
         self,
         data,
+        *,
         env_id: int = 0,
         obj_id: int = 0,
         name: str = "",
@@ -1181,7 +1182,7 @@ class KangSimWorld:
         )
         return record
 
-    def create_articulation_template(self, data, config=None):
+    def create_articulation_template(self, data, *, config=None):
         """Precompute immutable articulation resources for repeated instances."""
         if config is None:
             config = _ke.physics.ArticulationConfig.free_base()
@@ -1212,6 +1213,7 @@ class KangSimWorld:
     def add_rigid(
         self,
         data,
+        *,
         env_id: int = 0,
         obj_id: int = 0,
         name: str = "",
@@ -1271,6 +1273,7 @@ class KangSimWorld:
     def add_static_rigid(
         self,
         data,
+        *,
         env_id: int = 0,
         obj_id: int = 0,
         name: str = "",
@@ -1305,6 +1308,7 @@ class KangSimWorld:
     def add_mjcf_articulation(
         self,
         mjcf_path: str,
+        *,
         env_id: int = 0,
         obj_id: int = 0,
         name: str = "",
@@ -1313,7 +1317,13 @@ class KangSimWorld:
         scale: float = 1.0,
     ) -> SimArticulation:
         data = self.load_mjcf(mjcf_path, scale=scale, order=order)
-        return self.add_articulation(data, env_id, obj_id, name, config)
+        return self.add_articulation(
+            data,
+            env_id=env_id,
+            obj_id=obj_id,
+            name=name,
+            config=config,
+        )
 
     def get_articulation(self, env_id: int = 0, obj_id: int = 0) -> SimArticulation:
         key = (int(env_id), int(obj_id))

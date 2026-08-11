@@ -444,10 +444,10 @@ void bind_render(py::module& m) {
              py::arg("device_id"), py::arg("stream_handle") = 0,
              "Unmap transform VBOs after direct CUDA writes.")
         .def("set_renderable_double_sided", &Renderer::setRenderableDoubleSided,
-             py::arg("handle"), py::arg("double_sided") = true,
+             py::arg("handle"), py::arg("enabled") = true,
              "Enable or disable double-sided rendering for a renderable.")
         .def("set_renderable_casts_shadow", &Renderer::setRenderableCastsShadow,
-             py::arg("handle"), py::arg("casts_shadow") = true,
+             py::arg("handle"), py::arg("enabled") = true,
              "Enable or disable shadow casting for a renderable.")
         .def("set_renderable_alpha_mode", &Renderer::setRenderableAlphaMode,
              py::arg("handle"), py::arg("mode"), py::arg("cutoff") = 0.5f,

@@ -1,7 +1,8 @@
 ke.asset
 ========
 
-Loaders and result types for MJCF, BVH, FBX, and USD assets.
+Loaders, model assets, and result types for MJCF, BVH, FBX, USD, AMASS,
+SMPL, SMPL-H, and SMPL-X.
 
 .. currentmodule:: kangengine.asset
 
@@ -15,6 +16,20 @@ API overview
    BVHLoader
    FBXLoader
    USDLoader
+   AMASSLoader
+   AMASSInfo
+   ArticulationDesc
+   JointDesc
+   SiteDesc
+   InertialDesc
+   VisualGeomDesc
+   CollisionGeomDesc
+   SMPLModel
+   SMPLBody
+   SMPLHModel
+   SMPLHBody
+   SMPLXModel
+   SMPLXBody
    ImportDiagnostics
 
 
@@ -36,12 +51,31 @@ Loader return contracts
        diagnostics. Mesh payloads retain shared native storage.
    * - ``USDLoader.parse()``
      - ``USDImportResult`` containing imported mesh records and diagnostics.
+   * - ``AMASSLoader.inspect()``
+     - ``AMASSInfo`` containing gender, shape coefficients, frame rate, and
+       frame count without constructing a motion.
+   * - ``AMASSLoader.load_motion()``
+     - A native ``SkeletonMotion`` mapped onto a supplied SMPL, SMPL-H, or SMPL-X
+       ``SkeletonTree``. AMASS Z-up data can be returned as Z-up or converted
+       to KangEngine's usual Y-up coordinates.
 
 Missing or unreadable files and malformed source data raise ``RuntimeError``;
 invalid argument values raise ``ValueError`` where validation is available.
 Inspect ``ImportDiagnostics`` for supported non-fatal import warnings.
 
 .. autoclass:: ImportDiagnostics
+
+.. autoclass:: ArticulationDesc
+
+.. autoclass:: JointDesc
+
+.. autoclass:: SiteDesc
+
+.. autoclass:: InertialDesc
+
+.. autoclass:: VisualGeomDesc
+
+.. autoclass:: CollisionGeomDesc
 
 .. autoclass:: MJCFLoader
 
@@ -72,3 +106,20 @@ Inspect ``ImportDiagnostics`` for supported non-fatal import warnings.
 .. autoclass:: USDImportResult
 
 .. autoclass:: USDMeshInfo
+
+.. autoclass:: AMASSInfo
+
+.. autoclass:: AMASSLoader
+   :members:
+
+.. autoclass:: SMPLModel
+
+.. autoclass:: SMPLBody
+
+.. autoclass:: SMPLHModel
+
+.. autoclass:: SMPLHBody
+
+.. autoclass:: SMPLXModel
+
+.. autoclass:: SMPLXBody

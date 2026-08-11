@@ -6,12 +6,12 @@ that data is displayed.
 ## OBJ with materials
 
 ```python
-result = self.scene.add_obj(
-    "/environment",
-    obj_file,
+result: ke.ObjImportView = self.scene.add_obj(
+    path="/environment",
+    obj_path=obj_file,
     double_sided=True,
 )
-result.root.set_local_scale(ke.Vec3(scale, scale, scale))
+result.root.set_local_scale(scale=ke.Vec3(scale, scale, scale))
 ```
 
 Run:
@@ -33,9 +33,16 @@ python ./python/examples/view_obj_scene.py --obj-file /path/to/model.obj
 ## FBX mesh
 
 ```python
-meshes = ke.asset.FBXLoader.load_meshes(fbx_file, scale)
+meshes: list[ke.asset.FBXStaticMeshInfo] = ke.asset.FBXLoader.load_meshes(
+    fbx_path=fbx_file,
+    scale=scale,
+)
 for i, mesh in enumerate(meshes):
-    self.scene.add_mesh(f"/fbx/mesh_{i}", mesh.mesh_data, material)
+    self.scene.add_mesh(
+        path=f"/fbx/mesh_{i}",
+        mesh_data=mesh.mesh_data,
+        material=material,
+    )
 ```
 
 ## USD

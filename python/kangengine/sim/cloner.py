@@ -45,7 +45,7 @@ class GridCloner:
         self.env_origins = self._make_env_origins()
         self.articulation_templates = {}
 
-    def create_articulation_template(self, name: str, data, config=None):
+    def create_articulation_template(self, name: str, data, *, config=None):
         name = str(name)
         if name in self.articulation_templates:
             raise ValueError(f"articulation template already exists: {name!r}")
@@ -53,7 +53,7 @@ class GridCloner:
         # global transforms, body/DOF and joint metadata, inertials, and
         # collision descriptors. PhysX articulations, links, shapes, collision
         # groups, commands, and dynamic state are still created per environment.
-        template = self.world.create_articulation_template(data, config)
+        template = self.world.create_articulation_template(data, config=config)
         self.articulation_templates[name] = template
         return template
 

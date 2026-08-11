@@ -77,7 +77,7 @@ class SMPLMotionViewer(ke.App):
         self.surface = self.body.create_visual(
             self,
             "/smpl_character",
-            materials.pbr,
+            material=materials.pbr,
             color=ke.Vec4(0.72, 0.82, 0.95, 1.0),
         )
 
@@ -132,7 +132,10 @@ class SMPLMotionViewer(ke.App):
             rotations,
             enabled=self.pose_correctives,
         )
-        self.surface.apply_state(root_translation, rotations)
+        self.surface.apply_pose(
+            root_translation=root_translation,
+            local_rotations_wxyz=rotations,
+        )
 
     def pre_render(self):
         if self.editor.update(self.get_delta_time()):

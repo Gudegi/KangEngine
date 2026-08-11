@@ -338,13 +338,13 @@ class Articulation(_NativeWrapper):
     def build(
         physics: PhysicsWorld | NativePhysicsWorld,
         data: Any,
-        cfg: ArticulationConfig | None = None,
+        config: ArticulationConfig | None = None,
     ) -> "Articulation":
         native_module = _require_native()
-        if cfg is None:
-            cfg = native_module.ArticulationConfig()
+        if config is None:
+            config = native_module.ArticulationConfig()
         return Articulation(
-            native_module.Articulation.build(unwrap_native(physics), data, cfg)
+            native_module.Articulation.build(unwrap_native(physics), data, config)
         )
 
     def num_links(self) -> int:
@@ -390,11 +390,11 @@ class PhysicsBridge(_NativeWrapper):
         self,
         artic: Articulation | NativeArticulation,
         scene: Any,
-        base_path: str = "/collision",
+        path: str = "/collision",
         visible_by_default: bool = False,
     ):
         return self._native.add_collision_visuals(
-            unwrap_native(artic), unwrap_native(scene), base_path, visible_by_default
+            unwrap_native(artic), unwrap_native(scene), path, visible_by_default
         )
 
 

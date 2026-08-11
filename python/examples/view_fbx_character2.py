@@ -86,11 +86,11 @@ class FbxCharacterBridgeViewer(ke.App):
         camera.set_target_pos(ke.Vec3(0.0, 0.85, 0.0))
 
         self.character = ke.visual.SkinVisual.from_fbx(
-            self,
-            self.textured_mesh_material,
-            self.fbx_file,
-            self.bind_file,
-            "/fbx_character",
+            app=self,
+            material=self.textured_mesh_material,
+            fbx_path=self.fbx_file,
+            bind_fbx_path=self.bind_file,
+            path="/fbx_character",
             clip_index=self.clip_index,
             fps=self.fps,
             scale=self.scale,

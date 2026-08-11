@@ -10,7 +10,7 @@ simulation guide:
 - [Control DOFs](simulation/DOF_CONTROL.md)
 - [Multi-Environment Simulation](simulation/MULTI_ENV.md)
 - [Contact Sensors](simulation/CONTACT_SENSORS.md)
-- [Viewer Synchronization](simulation/VIEWER_SYNC.md)
+- [Simulation Visualization](simulation/VISUALIZATION.md)
 - [Simulation Run Modes](simulation/RUN_MODES.md)
 
 For CUDA buffer lifetime, stream/event ownership, GPU resets, and contact

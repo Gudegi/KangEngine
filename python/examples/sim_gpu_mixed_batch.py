@@ -392,7 +392,7 @@ class MixedGpuBatchViewer(ke.App):
         self.ball_visual = self.visual.add(
             self.balls,
             asset_path("objects", "ball.xml"),
-            prim_base_path="/gpu_batch/balls",
+            path="/gpu_batch/balls",
             material=self.standard_materials.common,
             color=[
                 env_color(env_id, self.args.num_envs, warm=True)
@@ -402,7 +402,7 @@ class MixedGpuBatchViewer(ke.App):
         self.robot_visual = self.visual.add(
             self.robots,
             asset_path("characters", "kw", "kw5.xml"),
-            prim_base_path="/gpu_batch/robots",
+            path="/gpu_batch/robots",
             material=self.standard_materials.common,
             color=[
                 env_color(env_id, self.args.num_envs)

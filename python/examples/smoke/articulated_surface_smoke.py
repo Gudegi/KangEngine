@@ -48,7 +48,7 @@ def main():
     mjcf = root / "python/kangengine/assets/characters/kw/kw5.xml"
     app = _App()
     robot = ke.visual.ArticulatedSurface.create_from_mjcf(
-        app, "/robot", mjcf, object()
+        app, "/robot", mjcf, material=object()
     )
 
     joints = robot.skeleton_tree.num_joints()

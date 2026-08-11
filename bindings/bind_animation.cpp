@@ -970,7 +970,7 @@ void bind_animation(py::module& m) {
                     meshAssetBasePath);
             },
             py::arg("mjcf_path"), py::arg("scene"),
-            py::arg("prim_base_path") = "/robot", py::arg("scale") = 1.0f,
+            py::arg("path") = "/robot", py::arg("scale") = 1.0f,
             py::arg("order") = "DFS", py::arg("mesh_asset_base_path") = "",
             "Create an articulation visual and scene prims from an MJCF file.")
         .def("apply_pose", &ArticulationVisualBridge::applyPose,
@@ -1049,7 +1049,7 @@ void bind_animation(py::module& m) {
              py::arg("split_visual_geoms") = false,
              "Define shared mesh asset prims in a scene.")
         .def("instantiate", &ArticulationVisualBridgeAsset::instantiate,
-             py::arg("scene"), py::arg("prim_base_path") = "/robot",
+             py::arg("scene"), py::arg("path") = "/robot",
              py::arg("mesh_asset_base_path") = "",
              py::arg("split_visual_geoms") = false,
              "Instantiate this asset into a scene.")
@@ -1122,7 +1122,7 @@ void bind_animation(py::module& m) {
                 return SkeletalVisualBridge::define(app, material, basePath,
                                                     state, config);
             },
-            py::arg("app"), py::arg("material"), py::arg("base_path"),
+            py::arg("app"), py::arg("material"), py::arg("path"),
             py::arg("state"), py::arg("config") = SkeletalVisualConfig{},
             "Create skeleton visuals from a SkeletonState.")
         .def_static(
@@ -1133,7 +1133,7 @@ void bind_animation(py::module& m) {
                 return SkeletalVisualBridge::define(app, material, basePath,
                                                     motion, time, loop, config);
             },
-            py::arg("app"), py::arg("material"), py::arg("base_path"),
+            py::arg("app"), py::arg("material"), py::arg("path"),
             py::arg("motion"), py::arg("time") = 0.0f, py::arg("loop") = true,
             py::arg("config") = SkeletalVisualConfig{},
             "Create skeleton visuals by sampling a SkeletonMotion.")

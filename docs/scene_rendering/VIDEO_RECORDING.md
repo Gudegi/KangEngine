@@ -82,10 +82,13 @@ and therefore cannot record video.
 `[height, width, 3]` without an `App`:
 
 ```python
-recorder = ke.recording.VideoRecorder("output.mp4", fps=60)
+recorder: ke.recording.VideoRecorder = ke.recording.VideoRecorder(
+    output_path="output.mp4",
+    fps=60,
+)
 
 with recorder:
-    recorder.write(rgb_frame)
+    recorder.write(frame=rgb_frame)
 ```
 
 Pass `codec` to `VideoRecorder` to select another available encoder.

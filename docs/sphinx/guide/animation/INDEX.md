@@ -1,4 +1,4 @@
-```{include} ../../../../docs/motion_animation/INDEX.md
+```{include} ../../../../docs/animation/INDEX.md
 :relative-images:
 ```
 
@@ -6,5 +6,6 @@
 :maxdepth: 1
 :hidden:
 
-
+SMPL
+VISUALS
 ```

@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any
 
 import numpy.typing as npt
 import numpy as np
@@ -78,8 +78,8 @@ class ArticulatedSurfaceAsset:
         self,
         app: App,
         path: str,
-        material: Material,
         *,
+        material: Material,
         color: npt.ArrayLike | None = None,
     ) -> ArticulatedSurface:
         """Create an independently posed surface instance."""
@@ -128,8 +128,8 @@ class ArticulatedSurface:
         app: App,
         path: str,
         mjcf_path: str | Path,
-        material: Material,
         *,
+        material: Material,
         color: npt.ArrayLike | None = None,
         scale: float = 1.0,
         order: str = "DFS",
@@ -138,7 +138,7 @@ class ArticulatedSurface:
         asset = ArticulatedSurfaceAsset.from_mjcf(
             mjcf_path, scale=scale, order=order
         )
-        return asset.create(app, path, material, color=color)
+        return asset.create(app, path, material=material, color=color)
 
     def _require_alive(self) -> None:
         if self._removed:
@@ -175,7 +175,7 @@ class ArticulatedSurface:
         instance = self._asset.create(
             self._app,
             path,
-            self._material if material is None else material,
+            material=self._material if material is None else material,
             color=color,
         )
         instance.apply_state(self._native.state())
@@ -187,37 +187,11 @@ class ArticulatedSurface:
                     target.set_alpha_mode(_ke.AlphaMode.BLEND)
         return instance
 
-    @overload
-    def apply_state(self, state: SkeletonState) -> ArticulatedSurface: ...
-
-    @overload
-    def apply_state(
-        self,
-        root_translation: npt.ArrayLike,
-        local_rotations_wxyz: npt.ArrayLike,
-    ) -> ArticulatedSurface: ...
-
-    def apply_state(
-        self,
-        state_or_root_translation: SkeletonState | npt.ArrayLike,
-        local_rotations_wxyz: npt.ArrayLike | None = None,
-    ) -> ArticulatedSurface:
-        """Apply a SkeletonState or root translation and WXYZ local rotations."""
+    def apply_state(self, state: SkeletonState) -> ArticulatedSurface:
+        """Apply a SkeletonState to the rigid links."""
         self._require_alive()
-        if local_rotations_wxyz is None:
-            state = state_or_root_translation
-            if not hasattr(state, "num_joints"):
-                raise TypeError(
-                    "apply_state expects a SkeletonState or "
-                    "(root_translation, local_rotations_wxyz)"
-                )
-        else:
-            state = _ke.animation.SkeletonState.from_rotation_and_root_translation(
-                self.skeleton_tree,
-                local_rotations_wxyz,
-                state_or_root_translation,
-                True,
-            )
+        if not hasattr(state, "num_joints"):
+            raise TypeError("state must be a SkeletonState")
         if state.num_joints() != self.skeleton_tree.num_joints():
             raise ValueError("state skeleton does not match the articulated surface")
         self._native.set_root_translation(state.root_translation())
@@ -225,6 +199,20 @@ class ArticulatedSurface:
             self._native.set_joint_rotation(index, state.rotation(index))
         self._native.apply_pose()
         return self
+
+    def apply_pose(
+        self,
+        root_translation: npt.ArrayLike,
+        local_rotations_wxyz: npt.ArrayLike,
+    ) -> ArticulatedSurface:
+        """Apply a raw root translation and WXYZ local joint rotations."""
+        state = _ke.animation.SkeletonState.from_rotation_and_root_translation(
+            self.skeleton_tree,
+            local_rotations_wxyz,
+            root_translation,
+            True,
+        )
+        return self.apply_state(state)
 
     def set_color(self, color: npt.ArrayLike) -> ArticulatedSurface:
         self._require_alive()
@@ -267,10 +255,10 @@ class ArticulatedSurface:
             view.set_visible(visible)
         return self
 
-    def set_casts_shadow(self, casts_shadow: bool) -> ArticulatedSurface:
+    def set_casts_shadow(self, enabled: bool = True) -> ArticulatedSurface:
         self._require_alive()
         for view in self._views:
-            view.set_casts_shadow(casts_shadow)
+            view.set_casts_shadow(enabled)
         return self
 
     def remove(self) -> bool:

@@ -79,10 +79,10 @@ class KwMotionTrackingApp(ke.App):
             0,
             0,
             self.char_file,
-            prim_base_path="/robot",
+            path="/robot",
             order=self.order,
             material=self.robot_material,
-            collision_base_path="/collision",
+            collision_path="/collision",
             show_collision=self.show_collision,
         )
 

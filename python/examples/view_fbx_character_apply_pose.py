@@ -85,11 +85,11 @@ class FbxCharacterApplyPoseViewer(ke.App):
         self.set_camera_view([0.0, 1.45, 3.2], [0.0, 0.85, 0.0])
 
         self.character = ke.visual.SkinVisual.from_fbx(
-            self,
-            self.mesh_shader,
-            self.fbx_file,
-            self.bind_file,
-            "/fbx_pose_character",
+            app=self,
+            material=self.mesh_shader,
+            fbx_path=self.fbx_file,
+            bind_fbx_path=self.bind_file,
+            path="/fbx_pose_character",
             clip_index=self.clip_index,
             fps=self.fps,
             scale=self.scale,

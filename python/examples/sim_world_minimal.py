@@ -53,7 +53,7 @@ class MinimalSimWorldApp(ke.App):
         self.ball_visual = self.visual.add(
             self.ball,
             self.ball_xml,
-            prim_base_path="/ball",
+            path="/ball",
             material=self.standard_materials.common,
             color=[0.95, 0.2, 0.12, 1.0],
         )

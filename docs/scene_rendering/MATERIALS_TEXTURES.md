@@ -68,13 +68,17 @@ Phong is useful for simple colored surfaces and assets described with diffuse,
 specular, and shininess values.
 
 ```python
-material = self.create_phong_material(
+material: ke.material.PhongMaterial = self.create_phong_material(
     diffuse=ke.Vec3(0.8, 0.3, 0.1),
     specular=ke.Vec3(0.2, 0.2, 0.2),
     shininess=32.0,
 )
 
-mesh = self.scene.add_mesh("/orange_mesh", mesh_data, material)
+mesh: ke.RenderablePrimView = self.scene.add_mesh(
+    path="/orange_mesh",
+    mesh_data=mesh_data,
+    material=material,
+)
 ```
 
 `create_phong_material()` returns a new retained material on every call.
@@ -87,13 +91,17 @@ PBR is a better fit for metallic-roughness assets and surfaces that should
 respond more consistently to different lighting environments.
 
 ```python
-material = self.create_pbr_material(
+material: ke.material.PBRMaterial = self.create_pbr_material(
     base_color=ke.Vec4(0.8, 0.3, 0.1, 1.0),
     metallic=0.0,
     roughness=0.6,
 )
 
-mesh = self.scene.add_mesh("/pbr_mesh", mesh_data, material)
+mesh: ke.RenderablePrimView = self.scene.add_mesh(
+    path="/pbr_mesh",
+    mesh_data=mesh_data,
+    material=material,
+)
 ```
 
 Phong and PBR parameters are intentionally different. Replacing a Phong
@@ -145,10 +153,14 @@ Shadow casting, face culling, and alpha handling belong to the renderable mesh,
 not to the material itself:
 
 ```python
-mesh = self.scene.add_mesh("/mesh", mesh_data, material)
-mesh.set_casts_shadow(True)
-mesh.set_double_sided(False)
-mesh.set_alpha_mode(ke.render.AlphaMode.OPAQUE)
+mesh: ke.RenderablePrimView = self.scene.add_mesh(
+    path="/mesh",
+    mesh_data=mesh_data,
+    material=material,
+)
+mesh.set_casts_shadow(enabled=True)
+mesh.set_double_sided(enabled=False)
+mesh.set_alpha_mode(mode=ke.render.AlphaMode.OPAQUE)
 ```
 
 Use double-sided rendering for surfaces that must be visible from both sides.

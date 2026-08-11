@@ -12,25 +12,34 @@ self.timing = self.configure_timing(
         fixed_update_hz=60.0,
     )
 )
-self.set_simulation_hotkeys_enabled(True)
-self.world = ke.sim.KangSimWorld(
+self.set_simulation_hotkeys_enabled(enabled=True)
+self.world: ke.sim.KangSimWorld = ke.sim.KangSimWorld(
     num_envs=1,
     sim_dt=self.timing.physics_dt,
     add_ground=True,
 )
-self.visual = ke.visual.sim.SimWorldVisualizer(self, self.world)
+self.visual: ke.visual.sim.SimWorldVisualizer = ke.visual.sim.SimWorldVisualizer(
+    app=self,
+    world=self.world,
+)
 
 ball_xml = package_asset_path("objects", "ball.xml")
-ball_data = self.world.load_mjcf(ball_xml)
-self.ball = self.world.add_rigid(
-    ball_data,
+ball_data: ke.asset.ArticulationDesc = self.world.load_mjcf(
+    mjcf_path=ball_xml,
+)
+self.ball: ke.sim.SimRigid = self.world.add_rigid(
+    data=ball_data,
     env_id=0,
     obj_id=0,
     name="ball",
     pos=[0.0, 0.0, 1.8],
     density=600.0,
 )
-self.visual.add(self.ball, ball_xml, material=self.standard_materials.common)
+self.visual.add(
+    sim_handle=self.ball,
+    mjcf_path=ball_xml,
+    material=self.standard_materials.common,
+)
 ```
 
 Advance at the fixed simulation rate and display the latest state once per

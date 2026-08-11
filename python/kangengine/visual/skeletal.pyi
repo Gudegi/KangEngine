@@ -47,7 +47,7 @@ class SkeletalVisual:
     def define(
         app: App,
         material: Material,
-        base_path: str,
+        path: str,
         state: SkeletonState,
         config: SkeletalVisualConfig = ...,
     ) -> SkeletalVisual: ...
@@ -57,7 +57,7 @@ class SkeletalVisual:
     def define(
         app: App,
         material: Material,
-        base_path: str,
+        path: str,
         motion: SkeletonMotion,
         time: float = 0.0,
         loop: bool = True,

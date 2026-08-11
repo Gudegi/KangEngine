@@ -65,9 +65,9 @@ void bind_scene(py::module& m) {
              "Return the near clipping distance.")
         .def("get_far_plane", &KE::Camera::getFarPlane,
              "Return the far clipping distance.")
-        .def("set_camera_pos", &KE::Camera::setCameraPos, py::arg("camera_pos"),
+        .def("set_camera_pos", &KE::Camera::setCameraPos, py::arg("position"),
              "Set the camera position.")
-        .def("set_target_pos", &KE::Camera::setTargetPos, py::arg("target_pos"),
+        .def("set_target_pos", &KE::Camera::setTargetPos, py::arg("target"),
              "Set the camera target point.")
         .def("set_fov", &KE::Camera::setFoV, py::arg("fov"),
              "Set the vertical field of view in degrees.")
@@ -1530,7 +1530,7 @@ void bind_scene(py::module& m) {
                     vec3Array(ends, "ends"), vec4Array(colors, "colors"),
                     radius, segments);
             },
-            py::arg("scene"), py::arg("base_path"), py::arg("starts"),
+            py::arg("scene"), py::arg("path"), py::arg("starts"),
             py::arg("ends"), py::arg("colors"), py::arg("radius") = 0.005f,
             py::arg("segments") = 8, py::return_value_policy::reference,
             "Create scene-backed line prims from numpy arrays.")
@@ -1546,7 +1546,7 @@ void bind_scene(py::module& m) {
                                                       starts, ends, colors,
                                                       radius, segments);
             },
-            py::arg("scene"), py::arg("base_path"), py::arg("starts"),
+            py::arg("scene"), py::arg("path"), py::arg("starts"),
             py::arg("ends"), py::arg("colors"), py::arg("radius") = 0.005f,
             py::arg("segments") = 8, py::return_value_policy::reference,
             "Create scene-backed line prims.")
@@ -1561,7 +1561,7 @@ void bind_scene(py::module& m) {
                     vec3Array(ends, "ends"), vec4Array(colors, "colors"),
                     radius, segments);
             },
-            py::arg("scene"), py::arg("base_path"), py::arg("starts"),
+            py::arg("scene"), py::arg("path"), py::arg("starts"),
             py::arg("ends"), py::arg("colors"), py::arg("radius") = 0.02f,
             py::arg("segments") = 12, py::return_value_policy::reference,
             "Create scene-backed arrow prims from numpy arrays.")
@@ -1577,7 +1577,7 @@ void bind_scene(py::module& m) {
                                                        starts, ends, colors,
                                                        radius, segments);
             },
-            py::arg("scene"), py::arg("base_path"), py::arg("starts"),
+            py::arg("scene"), py::arg("path"), py::arg("starts"),
             py::arg("ends"), py::arg("colors"), py::arg("radius") = 0.02f,
             py::arg("segments") = 12, py::return_value_policy::reference,
             "Create scene-backed arrow prims.")
@@ -1591,7 +1591,7 @@ void bind_scene(py::module& m) {
                     sceneBackend, basePath, origin, orientation, length, radius,
                     segments);
             },
-            py::arg("scene"), py::arg("base_path"), py::arg("origin"),
+            py::arg("scene"), py::arg("path"), py::arg("origin"),
             py::arg("orientation"), py::arg("length") = 1.0f,
             py::arg("radius") = 0.005f, py::arg("segments") = 8,
             py::return_value_policy::reference,

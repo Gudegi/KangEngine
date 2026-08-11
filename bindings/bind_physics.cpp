@@ -1089,7 +1089,7 @@ void bind_physics(py::module& m) {
                     data.skeletonTree, data.collisionGeoms, data.joints,
                     data.inertials, cfg);
             },
-            py::arg("data"), py::arg("cfg") = ArticulationConfig{},
+            py::arg("data"), py::arg("config") = ArticulationConfig{},
             "Precompute shared skeleton, rest transforms, collision metadata, "
             "and DOF metadata.")
         .def("num_links", &ArticulationTemplate::numLinks)
@@ -1109,7 +1109,7 @@ void bind_physics(py::module& m) {
                                            data.inertials, cfg);
             },
             py::arg("physics"), py::arg("data"),
-            py::arg("cfg") = ArticulationConfig{}, py::keep_alive<0, 1>(),
+            py::arg("config") = ArticulationConfig{}, py::keep_alive<0, 1>(),
             "Build an articulation in a PhysicsWorld from an articulation description.")
         .def_static(
             "build_from_template",
@@ -1119,7 +1119,7 @@ void bind_physics(py::module& m) {
                 return Articulation::build(physics, std::move(template_), cfg);
             },
             py::arg("physics"), py::arg("template"),
-            py::arg("cfg") = ArticulationConfig{}, py::keep_alive<0, 1>(),
+            py::arg("config") = ArticulationConfig{}, py::keep_alive<0, 1>(),
             "Build one PhysX articulation from shared immutable metadata.")
         .def_property_readonly(
             "template", &Articulation::articulationTemplate,
@@ -1468,7 +1468,7 @@ void bind_physics(py::module& m) {
                                                 visibleByDefault);
             },
             py::arg("artic"), py::arg("scene"),
-            py::arg("base_path") = "/collision",
+            py::arg("path") = "/collision",
             py::arg("visible_by_default") = false,
             py::return_value_policy::reference, py::keep_alive<1, 2>(),
             py::keep_alive<1, 3>(),

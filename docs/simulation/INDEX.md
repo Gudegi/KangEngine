@@ -10,7 +10,7 @@ articulations, batched environments, commands, and public state.
 - [Multi-Environment Simulation](MULTI_ENV.md)
 - [Procedural Terrain and Collision](PROCEDURAL_TERRAIN.md)
 - [Contact Sensors](CONTACT_SENSORS.md)
-- [Viewer Synchronization](VIEWER_SYNC.md)
+- [Simulation Visualization](VISUALIZATION.md)
 - [Simulation Run Modes](RUN_MODES.md)
 
 Start with [First Simulation](../getting_started/FIRST_SIMULATION.md) if you

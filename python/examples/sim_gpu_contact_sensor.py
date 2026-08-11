@@ -253,14 +253,14 @@ class GpuContactSensorViewer(ke.App):
         self.visual.add(
             self.demo.left,
             rigid_xml,
-            prim_base_path="/gpu_contact/left",
+            path="/gpu_contact/left",
             material=self.standard_materials.common,
             color=group_colors,
         )
         self.visual.add(
             self.demo.right,
             rigid_xml,
-            prim_base_path="/gpu_contact/right",
+            path="/gpu_contact/right",
             material=self.standard_materials.common,
             color=group_colors,
         )

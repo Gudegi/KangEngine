@@ -160,7 +160,7 @@ class _KangEngineViewer(App):
             env_id,
             obj_id,
             asset_file,
-            prim_base_path=f"/env_{env_id}/obj_{obj_id}",
+            path=f"/env_{env_id}/obj_{obj_id}",
             order=order,
             material=self.robot_material,
             color=color,
@@ -172,7 +172,7 @@ class _KangEngineViewer(App):
             env_id,
             obj_id,
             asset_file,
-            prim_base_path=f"/env_{env_id}/visual_obj_{obj_id}",
+            path=f"/env_{env_id}/visual_obj_{obj_id}",
             order=order,
             material=self.robot_material,
             color=color,
@@ -183,7 +183,7 @@ class _KangEngineViewer(App):
         env_id,
         obj_id,
         asset_file,
-        prim_base_path,
+        path,
         order,
         material=None,
         color=None,
@@ -193,7 +193,7 @@ class _KangEngineViewer(App):
             env_id,
             obj_id,
             asset_file,
-            prim_base_path=prim_base_path,
+            path=path,
             order=order,
             material=self.robot_material if material is None else material,
             color=color,
@@ -414,7 +414,13 @@ class KangEngineEngine(_BaseEngine):
             cfg.disable_self_collision = not bool(enable_self_collisions)
             cfg.contact_offset = float(self._config.get("contact_offset", 0.02))
             cfg.rest_offset = float(self._config.get("rest_offset", 0.0))
-            self._world.add_articulation(data, env_id, obj_id, name, cfg)
+            self._world.add_articulation(
+                data,
+                env_id=env_id,
+                obj_id=obj_id,
+                name=name,
+                config=cfg,
+            )
             self._apply_drive_config(env_id, obj_id)
         elif not is_visual and is_rigid:
             rigid_kwargs = {
@@ -424,13 +430,19 @@ class KangEngineEngine(_BaseEngine):
                 "rest_offset": float(self._config.get("rest_offset", 0.0)),
             }
             if is_static:
-                self._world.add_static_rigid(data, env_id, obj_id, name, **rigid_kwargs)
+                self._world.add_static_rigid(
+                    data,
+                    env_id=env_id,
+                    obj_id=obj_id,
+                    name=name,
+                    **rigid_kwargs,
+                )
             else:
                 self._world.add_rigid(
                     data,
-                    env_id,
-                    obj_id,
-                    name,
+                    env_id=env_id,
+                    obj_id=obj_id,
+                    name=name,
                     density=float(self._config.get("rigid_density", 1.0)),
                     kinematic=_parse_bool(self._config.get("rigid_kinematic", False)),
                     **rigid_kwargs,
@@ -551,7 +563,7 @@ class KangEngineEngine(_BaseEngine):
             self._viewer.visual_bridge.add(
                 sim_handle,
                 first.asset_file,
-                prim_base_path=f"/sim_obj_{obj_id}",
+                path=f"/sim_obj_{obj_id}",
                 order=mjcf_order,
                 material=self._viewer.robot_material,
                 color=self._visual_batch_color(obj_id),

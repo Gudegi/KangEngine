@@ -1169,7 +1169,7 @@ py::class_<glm::vec3>(m, "Vec3")
             [](App* self, uint32_t handle, bool doubleSided) {
                 self->setRenderableDoubleSided(handle, doubleSided);
             },
-            py::arg("handle"), py::arg("double_sided") = true,
+            py::arg("handle"), py::arg("enabled") = true,
             "Low-level handle path: enable or disable double-sided rendering. "
             "Prefer RenderablePrimView.set_double_sided() for scene objects.")
         .def(
@@ -1177,7 +1177,7 @@ py::class_<glm::vec3>(m, "Vec3")
             [](App* self, uint32_t handle, bool castsShadow) {
                 self->setRenderableCastsShadow(handle, castsShadow);
             },
-            py::arg("handle"), py::arg("casts_shadow") = true,
+            py::arg("handle"), py::arg("enabled") = true,
             "Low-level handle path: enable or disable shadow casting. Prefer "
             "RenderablePrimView.set_casts_shadow() for scene objects.")
         .def(
@@ -1638,7 +1638,7 @@ py::class_<glm::vec3>(m, "Vec3")
             },
             py::arg("app"), py::arg("material"), py::arg("fbx_path"),
             py::arg("bind_fbx_path") = py::none(),
-            py::arg("prim_base_path") = "/fbx_character",
+            py::arg("path") = "/fbx_character",
             py::arg("clip_index") = -1, py::arg("fps") = -1.0f,
             py::arg("scale") = 0.01f, py::arg("use_materials") = true)
         .def("apply_time", &Bridge::SkinVisualBridge::applyTime,
@@ -1682,7 +1682,7 @@ py::class_<glm::vec3>(m, "Vec3")
              py::arg("visible"))
         .def("set_color", &Bridge::SkinVisualBridge::setColor, py::arg("color"))
         .def("set_casts_shadow", &Bridge::SkinVisualBridge::setCastsShadow,
-             py::arg("casts_shadow"))
+             py::arg("enabled") = true)
         .def("motion", &Bridge::SkinVisualBridge::motion,
              py::return_value_policy::reference_internal)
         .def("num_meshes", [](const Bridge::SkinVisualBridge& self) {

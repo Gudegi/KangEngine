@@ -618,7 +618,8 @@ class SimWorldVisualizer:
         self,
         sim_handle: SimRigid | SimArticulation | SimRigidBatch | SimArticulationBatch,
         mjcf_path: str,
-        prim_base_path: str | None = None,
+        *,
+        path: str | None = None,
         **kwargs,
     ) -> VisualBatch:
         """Create one CPU or GPU ExternalBuffer VisualBatch.
@@ -632,13 +633,13 @@ class SimWorldVisualizer:
         obj_id = int(sim_handle.obj_id)
         env_ids = tuple(int(eid) for eid in sim_handle.env_ids)
         name = _safe_prim_name(getattr(sim_handle, "name", "") or f"obj_{obj_id}")
-        base_path = prim_base_path or f"/{name}"
+        base_path = path or f"/{name}"
         unexpected = set(kwargs) - {
             "scale",
             "order",
             "material",
             "color",
-            "collision_base_path",
+            "collision_path",
             "collision_material",
             "show_collision",
         }
@@ -662,6 +663,8 @@ class SimWorldVisualizer:
             raise KeyError(
                 f"simulation handle obj_id={obj_id} does not match registered objects"
             )
+        if "collision_path" in kwargs:
+            kwargs["collision_base_path"] = kwargs.pop("collision_path")
         return add_batch(
             sim_handle,
             mjcf_path,
@@ -673,8 +676,8 @@ class SimWorldVisualizer:
         self,
         sim_handle: SimRigid | SimArticulation | SimRigidBatch | SimArticulationBatch,
         mjcf_path: str,
-        prim_base_path: str | None = None,
         *,
+        path: str | None = None,
         env_id: int | None = None,
         **kwargs,
     ) -> VisualArticulationSceneGraph | VisualRigidSceneGraph:
@@ -689,7 +692,7 @@ class SimWorldVisualizer:
         obj_id = int(sim_handle.obj_id)
         env_ids = tuple(int(value) for value in sim_handle.env_ids)
         name = _safe_prim_name(getattr(sim_handle, "name", "") or f"obj_{obj_id}")
-        base_path = prim_base_path or f"/{name}"
+        base_path = path or f"/{name}"
         if env_id is None:
             if len(env_ids) != 1:
                 raise ValueError(
@@ -708,7 +711,7 @@ class SimWorldVisualizer:
                 selected_env_id,
                 obj_id,
                 mjcf_path,
-                prim_base_path=base_path,
+                path=base_path,
                 **kwargs,
             )
         if key in self.world.rigids or key in self.world.static_rigids:
@@ -716,7 +719,7 @@ class SimWorldVisualizer:
                 selected_env_id,
                 obj_id,
                 mjcf_path,
-                prim_base_path=base_path,
+                path=base_path,
                 **kwargs,
             )
         raise KeyError(
@@ -728,12 +731,13 @@ class SimWorldVisualizer:
         env_id: int,
         obj_id: int,
         mjcf_path: str,
-        prim_base_path: str = "/robot",
+        *,
+        path: str = "/robot",
         scale: float = 1.0,
         order: str = "DFS",
         material=None,
         add_shapes: bool = True,
-        collision_base_path: str | None = None,
+        collision_path: str | None = None,
         collision_material=None,
         show_collision: bool = False,
         color=None,
@@ -758,7 +762,7 @@ class SimWorldVisualizer:
         )
         articulation_visual = asset.instantiate(
             self.scene,
-            prim_base_path,
+            path,
             mesh_asset_base_path,
             True,
         )
@@ -789,12 +793,12 @@ class SimWorldVisualizer:
             )
 
         collision_prims = []
-        if collision_base_path is not None:
+        if collision_path is not None:
             collision_prims = list(
                 self.physics_bridge.add_collision_visuals(
                     articulation,
                     self.scene,
-                    collision_base_path,
+                    collision_path,
                     bool(show_collision),
                 )
             )
@@ -1077,7 +1081,8 @@ class SimWorldVisualizer:
         env_id: int,
         obj_id: int,
         mjcf_path: str,
-        prim_base_path: str = "/rigid",
+        *,
+        path: str = "/rigid",
         scale: float = 1.0,
         order: str = "DFS",
         material=None,
@@ -1108,7 +1113,7 @@ class SimWorldVisualizer:
             self.scene,
             rigid,
             data,
-            prim_base_path,
+            path,
             material=self._resolve_visual_material(material),
             add_shapes=add_shapes,
             color=color,
@@ -1139,7 +1144,8 @@ class SimWorldVisualizer:
         env_id: int,
         obj_id: int,
         mjcf_path: str,
-        prim_base_path: str = "/robot",
+        *,
+        path: str = "/robot",
         scale: float = 1.0,
         order: str = "DFS",
         material=None,
@@ -1159,7 +1165,7 @@ class SimWorldVisualizer:
         )
         articulation_visual = asset.instantiate(
             self.scene,
-            prim_base_path,
+            path,
             mesh_asset_base_path,
             True,
         )

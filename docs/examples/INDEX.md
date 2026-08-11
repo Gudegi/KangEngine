@@ -23,6 +23,9 @@
 - `view_obj_scene.py`: OBJ/MTL material subsets and textures.
 - `view_fbx_mesh.py`: static FBX meshes and textures.
 - `view_fbx_character.py`: skinned FBX character.
+- `view_motion_party.py`: BVH, FBX, and SMPL/AMASS motions playing
+  together through their standard visual APIs and sequencers.
+- `view_smpl_motion.py`: SMPL surface motion with a sequencer.
 - `view_usd_scene.py`: optional USD-enabled development build.
 - `usd_file_bridge.py`: Python OpenUSD file exchange.
 

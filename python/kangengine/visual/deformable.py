@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import numpy.typing as npt
@@ -12,7 +12,12 @@ import numpy.typing as npt
 from .._core import _ke
 
 if TYPE_CHECKING:
+    from ..app import App, RenderablePrimView
     from ..animation import SkeletonState, SkeletonTree
+    from ..asset import FBXImportResult, FBXSkinnedMeshInfo
+    from ..material import Material
+    from ..render import AlphaMode
+    from ..scene import Prim
 
 
 def _mesh_data(
@@ -59,7 +64,7 @@ class SkinnedSurfaceAsset:
 
     @classmethod
     def from_fbx(
-        cls, skeleton_tree: SkeletonTree, mesh_info: Any
+        cls, skeleton_tree: SkeletonTree, mesh_info: FBXSkinnedMeshInfo
     ) -> SkinnedSurfaceAsset:
         """Convert one imported FBX skinned mesh without reading the file again."""
         positions = np.asarray(mesh_info.vertices, np.float32)
@@ -194,11 +199,12 @@ class SkinnedSurface:
     @classmethod
     def create(
         cls,
-        app: Any,
+        app: App,
         path: str,
         asset: SkinnedSurfaceAsset,
-        material: Any,
-        color: Any = None,
+        *,
+        material: Material,
+        color: npt.ArrayLike | None = None,
     ) -> SkinnedSurface:
         mesh, skin = asset.create_native()
         prim = app.scene.define_prim(path, _ke.scene.PrimType.MESH)
@@ -217,25 +223,27 @@ class SkinnedSurface:
     @classmethod
     def create_from_fbx(
         cls,
-        app: Any,
+        app: App,
         path: str,
         skeleton_tree: SkeletonTree,
-        mesh_info: Any,
-        material: Any,
-        color: Any = None,
+        mesh_info: FBXSkinnedMeshInfo,
+        *,
+        material: Material,
+        color: npt.ArrayLike | None = None,
     ) -> SkinnedSurface:
         """Create one surface from one already imported FBX skinned mesh."""
         asset = SkinnedSurfaceAsset.from_fbx(skeleton_tree, mesh_info)
-        return cls.create(app, path, asset, material, color=color)
+        return cls.create(app, path, asset, material=material, color=color)
 
     @classmethod
     def create_from_fbx_result(
         cls,
-        app: Any,
+        app: App,
         path: str,
-        result: Any,
-        material: Any = None,
-        color: Any = None,
+        result: FBXImportResult,
+        *,
+        material: Material | None = None,
+        color: npt.ArrayLike | None = None,
         use_imported_materials: bool = True,
     ) -> SkinnedSurface:
         """Create one logical surface from every skinned mesh in an FBX result.
@@ -314,7 +322,7 @@ class SkinnedSurface:
                 f"{base_path}/{index}_{name}",
                 motion.skeleton_tree,
                 mesh_info,
-                part_material,
+                material=part_material,
                 color=part_color,
             )
             parts.extend(child._parts)
@@ -354,8 +362,8 @@ class SkinnedSurface:
         self,
         path: str,
         *,
-        material: Any = None,
-        color: Any = None,
+        material: Material | None = None,
+        color: npt.ArrayLike | None = None,
     ) -> SkinnedSurface:
         """Create an independently posed instance sharing this surface's assets.
 
@@ -410,26 +418,26 @@ class SkinnedSurface:
         return instance
 
     @property
-    def prim(self) -> Any:
+    def prim(self) -> Prim:
         self._require_alive()
         if len(self._parts) != 1:
             raise ValueError("prim is available only for a single-part surface")
         return self._parts[0].view.prim
 
     @property
-    def prims(self) -> tuple[Any, ...]:
+    def prims(self) -> tuple[Prim, ...]:
         self._require_alive()
         return tuple(part.view.prim for part in self._parts)
 
     @property
-    def view(self) -> Any:
+    def view(self) -> RenderablePrimView:
         self._require_alive()
         if len(self._parts) != 1:
             raise ValueError("view is available only for a single-part surface")
         return self._parts[0].view
 
     @property
-    def views(self) -> tuple[Any, ...]:
+    def views(self) -> tuple[RenderablePrimView, ...]:
         self._require_alive()
         return tuple(part.view for part in self._parts)
 
@@ -514,14 +522,18 @@ class SkinnedSurface:
             part.view.set_visible(visible)
         return self
 
-    def set_casts_shadow(self, casts_shadow: bool) -> SkinnedSurface:
+    def set_casts_shadow(self, enabled: bool = True) -> SkinnedSurface:
         self._require_alive()
         for part in self._parts:
-            part.view.set_casts_shadow(casts_shadow)
-            part.casts_shadow = bool(casts_shadow)
+            part.view.set_casts_shadow(enabled)
+            part.casts_shadow = bool(enabled)
         return self
 
-    def set_alpha_mode(self, mode: Any, cutoff: float = 0.5) -> SkinnedSurface:
+    def set_alpha_mode(
+        self,
+        mode: AlphaMode,
+        cutoff: float = 0.5,
+    ) -> SkinnedSurface:
         self._require_alive()
         for part in self._parts:
             part.view.set_alpha_mode(mode, cutoff)
@@ -531,7 +543,7 @@ class SkinnedSurface:
                 part.opaque_alpha_mode = mode
         return self
 
-    def set_color(self, color: Any) -> SkinnedSurface:
+    def set_color(self, color: npt.ArrayLike) -> SkinnedSurface:
         self._require_alive()
         for part in self._parts:
             part.view.set_base_color(color)
@@ -555,37 +567,11 @@ class SkinnedSurface:
             part.alpha_mode = mode
         return self
 
-    @overload
-    def apply_state(self, state: SkeletonState) -> SkinnedSurface: ...
-
-    @overload
-    def apply_state(
-        self,
-        root_translation: npt.ArrayLike,
-        local_rotations_wxyz: npt.ArrayLike,
-    ) -> SkinnedSurface: ...
-
-    def apply_state(
-        self,
-        state_or_root_translation: SkeletonState | npt.ArrayLike,
-        local_rotations_wxyz: npt.ArrayLike | None = None,
-    ) -> SkinnedSurface:
-        """Apply a SkeletonState or a root translation and local rotations."""
+    def apply_state(self, state: SkeletonState) -> SkinnedSurface:
+        """Apply a SkeletonState to the skinned vertices."""
         self._require_alive()
-        if local_rotations_wxyz is None:
-            state = state_or_root_translation
-            if not hasattr(state, "compute_global_matrices"):
-                raise TypeError(
-                    "apply_state expects a SkeletonState or "
-                    "(root_translation, local_rotations_wxyz)"
-                )
-        else:
-            state = _ke.animation.SkeletonState.from_rotation_and_root_translation(
-                self.skeleton_tree,
-                local_rotations_wxyz,
-                state_or_root_translation,
-                True,
-            )
+        if not hasattr(state, "compute_global_matrices"):
+            raise TypeError("state must be a SkeletonState")
         if state.num_joints() != self.skeleton_tree.num_joints():
             raise ValueError("state skeleton does not match the skinned surface")
         globals_ = state.compute_global_matrices()
@@ -597,6 +583,20 @@ class SkinnedSurface:
             )
             part.view.update_skinning(matrices)
         return self
+
+    def apply_pose(
+        self,
+        root_translation: npt.ArrayLike,
+        local_rotations_wxyz: npt.ArrayLike,
+    ) -> SkinnedSurface:
+        """Apply a raw root translation and WXYZ local joint rotations."""
+        state = _ke.animation.SkeletonState.from_rotation_and_root_translation(
+            self.skeleton_tree,
+            local_rotations_wxyz,
+            root_translation,
+            True,
+        )
+        return self.apply_state(state)
 
 
 class DeformableSurface:
@@ -640,8 +640,8 @@ class DeformableSurface:
         self.view.set_visible(visible)
         return self
 
-    def set_casts_shadow(self, casts_shadow: bool) -> DeformableSurface:
-        self.view.set_casts_shadow(casts_shadow)
+    def set_casts_shadow(self, enabled: bool = True) -> DeformableSurface:
+        self.view.set_casts_shadow(enabled)
         return self
 
     def set_alpha_mode(self, mode: Any, cutoff: float = 0.5) -> DeformableSurface:

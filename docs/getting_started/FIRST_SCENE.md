@@ -10,17 +10,18 @@ import numpy as np
 class MyApp(ke.App):
     def setup(self):
         self.standard_materials = self.create_standard_materials()
-        self.scene.add_ground("/ground", scale=30.0)
+        self.scene.add_ground(path="/ground", scale=30.0)
 
-        box = self.scene.add_mesh(
-            "/box",
-            ke.geometry.create_cube_data(1.0),
-            self.standard_materials.common,
+        box: ke.RenderablePrimView = self.scene.add_mesh(
+            path="/box",
+            mesh_data=ke.geometry.create_cube_data(scale=1.0),
+            material=self.standard_materials.common,
             color=ke.Vec4(0.8, 0.3, 0.02, 1.0),
         )
-        box.set_local_translation(ke.Vec3(0.0, 2.0, 0.0))
+        box.set_local_translation(translation=ke.Vec3(0.0, 2.0, 0.0))
         box.set_local_rotation_axis_angle(
-            ke.Vec3(0.0, 1.0, 0.0), np.deg2rad(25.0)
+            axis=ke.Vec3(0.0, 1.0, 0.0),
+            angle_radians=np.deg2rad(25.0),
         )
 ```
 
@@ -37,13 +38,13 @@ An absolute prim path establishes hierarchy. `/box/box2` is a child of
 `/box`, so its local transform is relative to the first box.
 
 ```python
-box2 = self.scene.add_mesh(
-    "/box/box2",
-    ke.geometry.create_cube_data(1.0),
-    self.standard_materials.common,
+box2: ke.RenderablePrimView = self.scene.add_mesh(
+    path="/box/box2",
+    mesh_data=ke.geometry.create_cube_data(scale=1.0),
+    material=self.standard_materials.common,
 )
-box2.set_local_translation(ke.Vec3(0.0, 1.5, 0.0))
-box2.set_local_scale(ke.Vec3(0.5, 0.5, 0.5))
+box2.set_local_translation(translation=ke.Vec3(0.0, 1.5, 0.0))
+box2.set_local_scale(scale=ke.Vec3(0.5, 0.5, 0.5))
 
 local_position = box2.get_local_translation()
 world_position = box2.get_world_translation()

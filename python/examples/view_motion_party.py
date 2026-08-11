@@ -62,8 +62,15 @@ class MultiMotionViewer(ke.App):
         self.show_smpl = True
 
         materials = self.create_standard_materials()
-        self.scene.add_ground(scale=30.0, material=materials.ground)
-        self.set_camera_view([0.0, 1.8, 7.5], [0.0, 0.9, 0.0])
+        self.scene.add_ground(
+            path="/ground",
+            scale=30.0,
+            material=materials.ground,
+        )
+        self.set_camera_view(
+            position=[0.0, 1.8, 7.5],
+            target=[0.0, 0.9, 0.0],
+        )
 
         self._setup_bvh(materials)
         self._setup_fbx()
@@ -78,8 +85,8 @@ class MultiMotionViewer(ke.App):
             self.motions.values(),
             key=lambda motion: motion.num_frames() / motion.fps(),
         )
-        self.editor = ke.motion_module.MotionEditor(
-            timeline_motion,
+        self.editor: ke.motion_module.MotionEditor = ke.motion_module.MotionEditor(
+            motion=timeline_motion,
             motion_name="BVH + FBX + SMPL/AMASS",
         )
         self.editor.panel.set_motions(
@@ -99,45 +106,61 @@ class MultiMotionViewer(ke.App):
 
     def _setup_bvh(self, materials):
         self.bvh_motion: ke.animation.SkeletonMotion = asset.BVHLoader.load_motion(
-            str(self.bvh_file), self.bvh_scale
+            bvh_path=str(self.bvh_file),
+            scale=self.bvh_scale,
         )
-        config = visual.SkeletalVisualConfig(
+        config: ke.visual.SkeletalVisualConfig = visual.SkeletalVisualConfig(
             bone_color=ke.Vec4(0.35, 0.75, 1.0, 1.0),
             joint_color=ke.Vec4(1.0, 0.55, 0.3, 1.0),
             bone_radius=0.025,
             joint_radius=0.035,
             show_joints=True,
         )
-        state = _shift_root(self.bvh_motion.sample(0.0, True), (-2.2, 0.0, 0.0))
-        self.bvh_visual = visual.SkeletalVisual.define(
-            self, materials.common, "/bvh_motion", state, config
+        state: ke.animation.SkeletonState = _shift_root(
+            self.bvh_motion.sample(time=0.0, loop=True),
+            (-2.2, 0.0, 0.0),
+        )
+        self.bvh_visual: ke.visual.SkeletalVisual = visual.SkeletalVisual.define(
+            app=self,
+            material=materials.common,
+            path="/bvh_motion",
+            state=state,
+            config=config,
         )
 
     def _setup_fbx(self):
-        result = asset.FBXLoader.parse(
-            str(self.fbx_file),
+        result: ke.asset.FBXImportResult = asset.FBXLoader.parse(
+            fbx_path=str(self.fbx_file),
             clip_index=self.fbx_clip_index,
             fps=-1.0,
             scale=self.fbx_scale,
         )
         self.fbx_motion: ke.animation.SkeletonMotion = result.motion
-        self.fbx_surface = visual.SkinnedSurface.create_from_fbx_result(
-            self, "/fbx_motion", result
+        self.fbx_surface: ke.visual.SkinnedSurface = (
+            visual.SkinnedSurface.create_from_fbx_result(
+                app=self,
+                path="/fbx_motion",
+                result=result,
+            )
         )
 
     def _setup_smpl(self, materials):
-        info = asset.AMASSLoader.inspect(self.smpl_motion_file)
-        model = SMPLXModel.load(repository_smplx_model_path("neutral"))
-        self.smpl_body = model.create_body(info.betas)
-        self.smpl_surface = self.smpl_body.create_visual(
-            self,
-            "/smpl_motion",
-            materials.pbr,
+        info: ke.asset.AMASSInfo = asset.AMASSLoader.inspect(
+            path=self.smpl_motion_file,
+        )
+        model: ke.asset.SMPLXModel = SMPLXModel.load(
+            path=repository_smplx_model_path(gender="neutral"),
+        )
+        self.smpl_body: ke.asset.SMPLXBody = model.create_body(betas=info.betas)
+        self.smpl_surface: ke.visual.SkinnedSurface = self.smpl_body.create_visual(
+            app=self,
+            path="/smpl_motion",
+            material=materials.pbr,
             color=ke.Vec4(0.72, 0.82, 0.95, 1.0),
         )
         self.smpl_motion: ke.animation.SkeletonMotion = asset.AMASSLoader.load_motion(
-            self.smpl_motion_file,
-            self.smpl_body.skeleton_tree,
+            path=self.smpl_motion_file,
+            skeleton_tree=self.smpl_body.skeleton_tree,
             model_type="smplx",
             up_axis=ke.UpAxis.Y,
             scale=self.smpl_scale,
@@ -145,24 +168,31 @@ class MultiMotionViewer(ke.App):
 
     def _apply_bvh_time(self):
         state = _shift_root(
-            self.bvh_motion.sample(self.editor.player.time, self.editor.player.loop),
+            self.bvh_motion.sample(
+                time=self.editor.player.time,
+                loop=self.editor.player.loop,
+            ),
             (-2.5, 0.0, 0.0),
         )
-        self.bvh_visual.apply_state(state)
+        self.bvh_visual.apply_state(state=state)
 
     def _apply_fbx_time(self):
         state = _shift_root(
-            self.fbx_motion.sample(self.editor.player.time, self.editor.player.loop),
+            self.fbx_motion.sample(
+                time=self.editor.player.time,
+                loop=self.editor.player.loop,
+            ),
             (0.0, 0.0, 0.0),
         )
-        self.fbx_surface.apply_state(state)
+        self.fbx_surface.apply_state(state=state)
 
     def _apply_smpl_time(self):
         state = self.smpl_motion.sample(
-            self.editor.player.time, self.editor.player.loop
+            time=self.editor.player.time,
+            loop=self.editor.player.loop,
         )
         _shift_root(state, (2.5, 0.0, 0.0))
-        self.smpl_surface.apply_state(state)
+        self.smpl_surface.apply_state(state=state)
 
     def _apply_all_motion_times(self):
         self._apply_bvh_time()
@@ -170,7 +200,7 @@ class MultiMotionViewer(ke.App):
         self._apply_smpl_time()
 
     def pre_render(self):
-        if self.editor.update(self.get_delta_time()):
+        if self.editor.update(dt=self.get_delta_time()):
             self._apply_all_motion_times()
 
     def render(self):
@@ -178,13 +208,13 @@ class MultiMotionViewer(ke.App):
         imgui.text("BVH skeleton    FBX skinned mesh    SMPL-X / AMASS")
         changed, self.show_bvh = imgui.checkbox("show BVH", self.show_bvh)
         if changed:
-            self.bvh_visual.set_visible(self.show_bvh)
+            self.bvh_visual.set_visible(visible=self.show_bvh)
         changed, self.show_fbx = imgui.checkbox("show FBX", self.show_fbx)
         if changed:
-            self.fbx_surface.set_visible(self.show_fbx)
+            self.fbx_surface.set_visible(visible=self.show_fbx)
         changed, self.show_smpl = imgui.checkbox("show SMPL", self.show_smpl)
         if changed:
-            self.smpl_surface.set_visible(self.show_smpl)
+            self.smpl_surface.set_visible(visible=self.show_smpl)
         if changed:
             self._apply_smpl_time()
         imgui.end()
@@ -227,7 +257,12 @@ def main():
         args.fbx_scale,
         args.smpl_scale,
     )
-    app.initialize(args.width, args.height, False, ke.UpAxis.Y)
+    app.initialize(
+        width=args.width,
+        height=args.height,
+        hide_ui=False,
+        up_axis=ke.UpAxis.Y,
+    )
     app.start()
 
 

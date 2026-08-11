@@ -303,7 +303,7 @@ class Articulation:
     def build(
         physics: PhysicsWorld | NativePhysicsWorld,
         data: Any,
-        cfg: ArticulationConfig | None = None,
+        config: ArticulationConfig | None = None,
     ) -> Articulation: ...
     def num_links(self) -> int: ...
     def num_dofs(self) -> int: ...
@@ -329,7 +329,7 @@ class PhysicsBridge:
         self,
         artic: Articulation | NativeArticulation,
         scene: Any,
-        base_path: str = "/collision",
+        path: str = "/collision",
         visible_by_default: bool = False,
     ) -> Any: ...
 

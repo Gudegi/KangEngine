@@ -172,7 +172,7 @@ def main():
     )
     app = _App()
     surface = ke.visual.SkinnedSurface.create_from_fbx_result(
-        app, "/character", result, object()
+        app, "/character", result, material=object()
     )
     assert len(surface.prims) == 2
     assert len(surface.assets) == 2
@@ -206,7 +206,7 @@ def main():
         body.skeleton_tree, rotations, root
     )
     surface.apply_state(state)
-    surface.apply_state(root, rotations)
+    surface.apply_pose(root_translation=root, local_rotations_wxyz=rotations)
     assert all(view.matrices.shape == (1, 4, 4) for view in surface.views)
 
     ghost = surface.create_instance(
@@ -243,7 +243,7 @@ def main():
         "/single_character",
         body.skeleton_tree,
         result.skinned_meshes[0],
-        object(),
+        material=object(),
     )
     single_handle = single_surface.prim.get_mesh_component().resource_handle
     assert single_handle != ke.scene.InvalidResourceHandle

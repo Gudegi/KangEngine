@@ -132,7 +132,7 @@ class MultiEnvSimWorldApp(ke.App):
         self.box_visual_batch = self.visual.add(
             self.box,
             self.box_xml,
-            prim_base_path="/group/box",
+            path="/group/box",
             material=self.standard_materials.common,
             color=[friction_group_color(env_id) for env_id in range(self.num_envs)],
         )

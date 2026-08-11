@@ -26,7 +26,7 @@ robot_visual = visual.add_articulation_scene_graph(
     0,
     0,
     mjcf_path,
-    prim_base_path="/robot",
+    path="/robot",
     order="DFS",
     material=robot_material,
 )

@@ -49,13 +49,13 @@ class BVHCharacterViewer(ke.App):
         config.visible = self.show_skeleton
         config.show_joints = self.show_joints
         self.skeleton_visual = visual.SkeletalVisual.define(
-            self,
-            self.skeleton_material,
-            "/bvh_skeleton",
-            self.motion,
-            0.0,
-            True,
-            config,
+            app=self,
+            material=self.skeleton_material,
+            path="/bvh_skeleton",
+            motion=self.motion,
+            time=0.0,
+            loop=True,
+            config=config,
         )
 
         print(

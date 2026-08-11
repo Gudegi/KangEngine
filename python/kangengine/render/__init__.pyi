@@ -357,10 +357,10 @@ class Renderer:
     def unmap_renderable_cuda_transform_buffers(self, handles: Any, device_id: int, stream_handle: int = 0) -> None:
         """Unmap transform buffers after CUDA writes."""
         ...
-    def set_renderable_double_sided(self, handle: int, double_sided: bool = True) -> None:
+    def set_renderable_double_sided(self, handle: int, enabled: bool = True) -> None:
         """Set whether both triangle faces are rendered."""
         ...
-    def set_renderable_casts_shadow(self, handle: int, casts_shadow: bool = True) -> None:
+    def set_renderable_casts_shadow(self, handle: int, enabled: bool = True) -> None:
         """Set whether the renderable casts shadows."""
         ...
     def set_renderable_alpha_mode(self, handle: int, mode: AlphaMode, cutoff: float = 0.5) -> None:

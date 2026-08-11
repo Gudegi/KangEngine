@@ -16,7 +16,9 @@ from ..utils import quat_wxyz_to_matrix
 from ..visual.deformable import SkinnedSurface, SkinnedSurfaceAsset
 
 if TYPE_CHECKING:
-    from ..animation import SkeletonTree
+    from ..animation import SkeletonState, SkeletonTree
+    from ..app import App
+    from ..material import Material
 
 
 SMPL_JOINT_NAMES = (
@@ -240,10 +242,15 @@ class SMPLBody:
     pose_directions: np.ndarray
 
     def create_visual(
-        self, app: Any, path: str, material: Any, color: Any = None
+        self,
+        app: App,
+        path: str,
+        *,
+        material: Material,
+        color: npt.ArrayLike | None = None,
     ) -> SkinnedSurface:
         return SkinnedSurface.create(
-            app, path, self.surface_asset, material, color=color
+            app, path, self.surface_asset, material=material, color=color
         )
 
     def corrected_bind_vertices(
@@ -264,32 +271,50 @@ class SMPLBody:
     def update_pose_correctives(
         self,
         surface: SkinnedSurface,
-        state_or_local_rotations: Any,
+        state: SkeletonState,
         *,
         enabled: bool = True,
         update_normals: bool = True,
     ) -> SkinnedSurface:
-        """Update or clear pose-dependent geometry before applying skinning."""
+        """Update or clear pose-dependent geometry from a SkeletonState."""
         if surface.asset is not self.surface_asset:
             raise ValueError("surface was not created from this SMPL body")
         if not enabled:
             return surface.reset_bind_geometry()
-        if hasattr(state_or_local_rotations, "rotation"):
-            state = state_or_local_rotations
-            if not state.is_local():
-                raise ValueError("SMPL pose correctives require local rotations")
-            rotations_wxyz = np.empty((state.num_joints(), 4), np.float32)
-            for joint in range(state.num_joints()):
-                rotation = state.rotation(joint)
-                rotations_wxyz[joint] = (
-                    rotation.w,
-                    rotation.x,
-                    rotation.y,
-                    rotation.z,
-                )
-        else:
-            rotations_wxyz = state_or_local_rotations
-        positions = self.corrected_bind_vertices(rotations_wxyz)
+        if not hasattr(state, "rotation"):
+            raise TypeError("state must be a SkeletonState")
+        if not state.is_local():
+            raise ValueError("SMPL pose correctives require local rotations")
+        rotations_wxyz = np.empty((state.num_joints(), 4), np.float32)
+        for joint in range(state.num_joints()):
+            rotation = state.rotation(joint)
+            rotations_wxyz[joint] = (
+                rotation.w,
+                rotation.x,
+                rotation.y,
+                rotation.z,
+            )
+        return self.update_pose_correctives_from_rotations(
+            surface,
+            rotations_wxyz,
+            enabled=True,
+            update_normals=update_normals,
+        )
+
+    def update_pose_correctives_from_rotations(
+        self,
+        surface: SkinnedSurface,
+        local_rotations_wxyz: npt.ArrayLike,
+        *,
+        enabled: bool = True,
+        update_normals: bool = True,
+    ) -> SkinnedSurface:
+        """Update or clear pose-dependent geometry from raw local rotations."""
+        if surface.asset is not self.surface_asset:
+            raise ValueError("surface was not created from this SMPL body")
+        if not enabled:
+            return surface.reset_bind_geometry()
+        positions = self.corrected_bind_vertices(local_rotations_wxyz)
         normals = (
             _vertex_normals(positions, self.surface_asset.indices.reshape(-1, 3))
             if update_normals
