@@ -233,7 +233,7 @@ endif()
 #file(GLOB MAIN_FILE "${MAIN_DIR}/test_stl.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/test_xml.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physx_drop_box.cpp")
-file(GLOB MAIN_FILE "${MAIN_DIR}/test_prims.cpp")
+#file(GLOB MAIN_FILE "${MAIN_DIR}/test_prims.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/xpbd_cloth.cpp")
 
 # Active PhysX Examples
@@ -247,7 +247,7 @@ file(GLOB MAIN_FILE "${MAIN_DIR}/test_prims.cpp")
 #endif()
 #file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_h1_instancing.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/view_fbx_character.cpp")
-#file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_mimickit_assets.cpp")
+file(GLOB MAIN_FILE "${MAIN_DIR}/physics/physx_mjcf_articulation_gallery.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/view_bvh_character.cpp")
 #file(GLOB MAIN_FILE "${MAIN_DIR}/debug_camera_frustum.cpp")
 

@@ -127,6 +127,7 @@ class SO101DofControlApp(MjcfDofControlApp):
         self._last_ik_solve_t = 0.0
         self.ik_gripper_percent = 50.0
         self.target_ball_radius = 0.025
+        self.target_ball_view = None
         self.target_ball_prim = None
         self.ik_error: str | None = None
         self.last_ik_result = None
@@ -277,15 +278,14 @@ class SO101DofControlApp(MjcfDofControlApp):
         self.targets[dof_idx] = float(lo + alpha * (hi - lo))
 
     def _create_target_ball(self):
-        self.target_ball_prim = self.scene.define_prim(
-            "/ik_target_ball", ke.scene.PrimType.MESH
+        self.target_ball_view = self.scene.add_mesh(
+            "/ik_target_ball",
+            ke.geometry.create_sphere_data(float(self.target_ball_radius), 32, 16),
+            self.standard_materials.pbr,
+            color=ke.Vec4(0.95, 0.18, 0.12, 1.0),
         )
-        self.target_ball_prim.set_mesh_data(
-            ke.geometry.create_sphere_data(float(self.target_ball_radius), 32, 16)
-        )
-        self.target_ball_prim.set_display_color_alpha(ke.Vec4(0.95, 0.18, 0.12, 1.0))
+        self.target_ball_prim = self.target_ball_view.prim
         self._sync_target_ball_prim()
-        self.scene.add_renderable(self.target_ball_prim, self.robot_shader)
 
     def _sync_target_ball_prim(self):
         if self.target_ball_prim is None:
