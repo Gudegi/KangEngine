@@ -161,6 +161,53 @@ CUcontext getCurrentCudaDriverContext() {
 
 } // namespace
 
+std::shared_ptr<Scene::MeshData>
+Physics::buildConvexCollisionMesh(const PxShape& shape) {
+    const PxGeometryHolder holder = shape.getGeometry();
+    if (holder.getType() != PxGeometryType::eCONVEXMESH)
+        return nullptr;
+
+    const PxConvexMeshGeometry& geometry = holder.convexMesh();
+    const PxConvexMesh* convex = geometry.convexMesh;
+    if (!convex)
+        return nullptr;
+
+    auto mesh = std::make_shared<Scene::MeshData>();
+    const PxVec3* vertices = convex->getVertices();
+    const PxU8* indices = convex->getIndexBuffer();
+    const PxTransform localPose = shape.getLocalPose();
+    auto actorLocalVertex = [&](PxU8 index) {
+        return localPose.transform(geometry.scale.transform(vertices[index]));
+    };
+
+    for (PxU32 polygonIndex = 0; polygonIndex < convex->getNbPolygons();
+         ++polygonIndex) {
+        PxHullPolygon polygon;
+        if (!convex->getPolygonData(polygonIndex, polygon) ||
+            polygon.mNbVerts < 3)
+            continue;
+        const PxU8* polygonIndices = indices + polygon.mIndexBase;
+        const PxVec3 p0 = actorLocalVertex(polygonIndices[0]);
+        for (PxU32 corner = 1; corner + 1 < polygon.mNbVerts; ++corner) {
+            const PxVec3 p1 = actorLocalVertex(polygonIndices[corner]);
+            const PxVec3 p2 = actorLocalVertex(polygonIndices[corner + 1]);
+            PxVec3 normal = (p1 - p0).cross(p2 - p0);
+            normal.normalizeSafe();
+            const unsigned int base =
+                static_cast<unsigned int>(mesh->vertices.size());
+            for (const PxVec3& point : {p0, p1, p2}) {
+                mesh->vertices.emplace_back(point.x, point.y, point.z);
+                mesh->normals.emplace_back(normal.x, normal.y, normal.z);
+                mesh->uvs.emplace_back(0.0f);
+            }
+            mesh->indices.push_back(base);
+            mesh->indices.push_back(base + 1);
+            mesh->indices.push_back(base + 2);
+        }
+    }
+    return mesh;
+}
+
 static PxFilterFlags
 kangFilterShader(PxFilterObjectAttributes attributes0, PxFilterData filterData0,
                  PxFilterObjectAttributes attributes1, PxFilterData filterData1,
@@ -372,6 +419,12 @@ PhysicsWorld::~PhysicsWorld() {
             heightField->release();
     }
     _heightFields.clear();
+    for (auto* convexMesh : _convexMeshes) {
+        if (convexMesh)
+            convexMesh->release();
+    }
+    _convexMeshes.clear();
+    _convexMeshCache.clear();
     for (auto& [key, material] : _materialCache) {
         PX_UNUSED(key);
         if (material)
@@ -418,6 +471,187 @@ PxShape* PhysicsWorld::createExclusiveShape(
     const Physics::PhysicsMaterialDesc& material) {
     PxMaterial* shapeMat = materialForDesc(material);
     return PxRigidActorExt::createExclusiveShape(actor, geometry, *shapeMat);
+}
+
+namespace {
+
+std::vector<PxConvexMesh*>
+cookConvexParts(PxPhysics& physics,
+                const std::vector<Physics::ConvexMeshPart>& parts,
+                const Physics::ConvexCookingOptions& options) {
+    if (parts.empty())
+        throw std::invalid_argument(
+            "create convex compound requires at least one part");
+    if (options.vertexLimit < 8 || options.vertexLimit > 255)
+        throw std::invalid_argument("convex vertex_limit must be in [8, 255]");
+    if (options.gpuCompatible && options.vertexLimit > 64)
+        throw std::invalid_argument(
+            "GPU-compatible convex vertex_limit must be <= 64");
+
+    PxCookingParams params(physics.getTolerancesScale());
+    params.buildGPUData = options.gpuCompatible;
+
+    std::vector<PxConvexMesh*> meshes;
+    meshes.reserve(parts.size());
+    try {
+        for (std::size_t partIndex = 0; partIndex < parts.size(); ++partIndex) {
+            const auto& part = parts[partIndex];
+            if (part.vertices.size() < 4) {
+                throw std::invalid_argument("convex part " +
+                                            std::to_string(partIndex) +
+                                            " requires at least four vertices");
+            }
+            if (!part.indices.empty()) {
+                if (part.indices.size() % 3 != 0)
+                    throw std::invalid_argument(
+                        "convex part " + std::to_string(partIndex) +
+                        " indices must contain triangles");
+                for (uint32_t index : part.indices) {
+                    if (index >= part.vertices.size())
+                        throw std::invalid_argument(
+                            "convex part " + std::to_string(partIndex) +
+                            " contains an out-of-range index");
+                }
+            }
+
+            std::vector<PxVec3> points;
+            points.reserve(part.vertices.size());
+            for (const glm::vec3& vertex : part.vertices) {
+                if (!std::isfinite(vertex.x) || !std::isfinite(vertex.y) ||
+                    !std::isfinite(vertex.z)) {
+                    throw std::invalid_argument(
+                        "convex part " + std::to_string(partIndex) +
+                        " contains a non-finite vertex");
+                }
+                points.emplace_back(vertex.x, vertex.y, vertex.z);
+            }
+
+            PxConvexMeshDesc desc;
+            desc.points.data = points.data();
+            desc.points.count = static_cast<PxU32>(points.size());
+            desc.points.stride = sizeof(PxVec3);
+            desc.vertexLimit = static_cast<PxU16>(options.vertexLimit);
+            desc.flags = PxConvexFlag::eCOMPUTE_CONVEX;
+            if (options.gpuCompatible)
+                desc.flags |= PxConvexFlag::eGPU_COMPATIBLE;
+
+            PxConvexMesh* mesh = PxCreateConvexMesh(
+                params, desc, physics.getPhysicsInsertionCallback());
+            if (!mesh) {
+                throw std::runtime_error("PhysX failed to cook convex part " +
+                                         std::to_string(partIndex));
+            }
+            meshes.push_back(mesh);
+        }
+    } catch (...) {
+        for (PxConvexMesh* mesh : meshes)
+            mesh->release();
+        throw;
+    }
+    return meshes;
+}
+
+bool attachConvexParts(PhysicsWorld& world, PxRigidActor& actor,
+                       const std::vector<Physics::ConvexMeshPart>& parts,
+                       const std::vector<PxConvexMesh*>& meshes,
+                       const Physics::PhysicsMaterialDesc& material,
+                       float contactOffset, float restOffset) {
+    for (std::size_t i = 0; i < parts.size(); ++i) {
+        PxShape* shape = world.createExclusiveShape(
+            actor, PxConvexMeshGeometry(meshes[i]), material);
+        if (!shape)
+            return false;
+        const auto& part = parts[i];
+        shape->setLocalPose(
+            PxTransform(PxVec3(part.localPosition.x, part.localPosition.y,
+                               part.localPosition.z),
+                        PxQuat(part.localRotation.x, part.localRotation.y,
+                               part.localRotation.z, part.localRotation.w)));
+        applyRigidContactOffsets(shape, contactOffset, restOffset);
+    }
+    return true;
+}
+
+void releaseConvexMeshes(std::vector<PxConvexMesh*>& meshes) {
+    for (PxConvexMesh* mesh : meshes)
+        mesh->release();
+    meshes.clear();
+}
+
+} // namespace
+
+PxConvexMesh* PhysicsWorld::getOrCreateConvexMesh(
+    std::shared_ptr<const Scene::MeshData> mesh,
+    const Physics::ConvexCookingOptions& cooking) {
+    if (!mesh)
+        throw std::invalid_argument("convex collision mesh is null");
+
+    for (const CachedConvexMesh& cached : _convexMeshCache) {
+        if (cached.source.get() == mesh.get() &&
+            cached.options.vertexLimit == cooking.vertexLimit &&
+            cached.options.gpuCompatible == cooking.gpuCompatible) {
+            return cached.mesh;
+        }
+    }
+
+    Physics::ConvexMeshPart part;
+    part.vertices = mesh->vertices;
+    part.indices.assign(mesh->indices.begin(), mesh->indices.end());
+    auto cooked = cookConvexParts(*_physics, {part}, cooking);
+    PxConvexMesh* result = cooked.front();
+    _convexMeshes.push_back(result);
+    _convexMeshCache.push_back({std::move(mesh), cooking, result});
+    return result;
+}
+
+PxRigidDynamic* PhysicsWorld::createDynamicConvexCompound(
+    const std::vector<Physics::ConvexMeshPart>& parts, const glm::vec3& pos,
+    const glm::quat& rot, float density,
+    const Physics::ConvexCookingOptions& cooking,
+    const Physics::PhysicsMaterialDesc& material, PxU32 collisionGroup,
+    float contactOffset, float restOffset) {
+    std::vector<PxConvexMesh*> meshes =
+        cookConvexParts(*_physics, parts, cooking);
+    PxRigidDynamic* actor = _physics->createRigidDynamic(PxTransform(
+        PxVec3(pos.x, pos.y, pos.z), PxQuat(rot.x, rot.y, rot.z, rot.w)));
+    if (!actor || !attachConvexParts(*this, *actor, parts, meshes, material,
+                                     contactOffset, restOffset)) {
+        if (actor)
+            actor->release();
+        releaseConvexMeshes(meshes);
+        return nullptr;
+    }
+
+    PxRigidBodyExt::updateMassAndInertia(*actor, density);
+    setRigidCollisionFilterData(actor, collisionGroup);
+    _scene->addActor(*actor);
+    _convexMeshes.insert(_convexMeshes.end(), meshes.begin(), meshes.end());
+    return actor;
+}
+
+PxRigidStatic* PhysicsWorld::createStaticConvexCompound(
+    const std::vector<Physics::ConvexMeshPart>& parts, const glm::vec3& pos,
+    const glm::quat& rot, const Physics::ConvexCookingOptions& cooking,
+    const Physics::PhysicsMaterialDesc& material, PxU32 collisionGroup,
+    float contactOffset, float restOffset, bool registerAsGround) {
+    std::vector<PxConvexMesh*> meshes =
+        cookConvexParts(*_physics, parts, cooking);
+    PxRigidStatic* actor = _physics->createRigidStatic(PxTransform(
+        PxVec3(pos.x, pos.y, pos.z), PxQuat(rot.x, rot.y, rot.z, rot.w)));
+    if (!actor || !attachConvexParts(*this, *actor, parts, meshes, material,
+                                     contactOffset, restOffset)) {
+        if (actor)
+            actor->release();
+        releaseConvexMeshes(meshes);
+        return nullptr;
+    }
+
+    setRigidCollisionFilterData(actor, collisionGroup);
+    _scene->addActor(*actor);
+    if (registerAsGround)
+        registerGroundActor(actor);
+    _convexMeshes.insert(_convexMeshes.end(), meshes.begin(), meshes.end());
+    return actor;
 }
 
 void PhysicsWorld::step() {
@@ -627,6 +861,15 @@ PxRigidDynamic* PhysicsWorld::createDynamicRigid(
                     PxVec3(g.pos.x(), g.pos.y(), g.pos.z()),
                     PxQuat(g.quat.x(), g.quat.y(), g.quat.z(), g.quat.w()));
                 break;
+            case Type::ConvexMesh: {
+                PxConvexMesh* convex = getOrCreateConvexMesh(g.meshData);
+                shape = createExclusiveShape(
+                    *actor, PxConvexMeshGeometry(convex), material);
+                localPose = PxTransform(
+                    PxVec3(g.pos.x(), g.pos.y(), g.pos.z()),
+                    PxQuat(g.quat.x(), g.quat.y(), g.quat.z(), g.quat.w()));
+                break;
+            }
             }
 
             if (shape) {
@@ -721,6 +964,15 @@ PxRigidStatic* PhysicsWorld::createStaticRigid(
                     PxVec3(g.pos.x(), g.pos.y(), g.pos.z()),
                     PxQuat(g.quat.x(), g.quat.y(), g.quat.z(), g.quat.w()));
                 break;
+            case Type::ConvexMesh: {
+                PxConvexMesh* convex = getOrCreateConvexMesh(g.meshData);
+                shape = createExclusiveShape(
+                    *actor, PxConvexMeshGeometry(convex), material);
+                localPose = PxTransform(
+                    PxVec3(g.pos.x(), g.pos.y(), g.pos.z()),
+                    PxQuat(g.quat.x(), g.quat.y(), g.quat.z(), g.quat.w()));
+                break;
+            }
             }
 
             if (shape) {

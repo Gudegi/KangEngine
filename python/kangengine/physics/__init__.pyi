@@ -113,12 +113,36 @@ def mjcf_friction_to_physx(friction: Sequence[float]) -> PhysicsMaterialDesc: ..
 
 class ContactPoint: ...
 
+class ConvexMeshPart:
+    vertices: Any
+    indices: Any
+    local_position: tuple[float, float, float]
+    local_rotation_xyzw: tuple[float, float, float, float]
+    vertex_count: int
+    triangle_count: int
+    def __init__(
+        self,
+        vertices: Any,
+        indices: Any | None = None,
+        local_position: Sequence[float] = (0.0, 0.0, 0.0),
+        local_rotation_xyzw: Sequence[float] = (0.0, 0.0, 0.0, 1.0),
+    ) -> None: ...
+    @staticmethod
+    def from_mesh_data(mesh: Any) -> ConvexMeshPart: ...
+
+class ConvexCookingOptions:
+    vertex_limit: int
+    gpu_compatible: bool
+    def __init__(self) -> None: ...
+
 class RigidDynamic:
     def get_root_position(self) -> Any: ...
     def get_root_rotation(self) -> Any: ...
     def get_root_linear_velocity(self) -> Any: ...
     def get_root_angular_velocity(self) -> Any: ...
     def get_mass(self) -> float: ...
+    def num_shapes(self) -> int: ...
+    def get_convex_collision_meshes(self) -> list[Any]: ...
     def get_inverse_mass(self) -> float: ...
     def get_local_com_position(self) -> Any: ...
     def get_local_com_rotation(self) -> Any: ...
@@ -206,6 +230,30 @@ class PhysicsWorld:
         rot_xyzw: Sequence[float] = ...,
         density: float = 1.0,
     ) -> RigidDynamic: ...
+    def create_dynamic_convex_compound(
+        self,
+        parts: Sequence[ConvexMeshPart],
+        pos: Any,
+        rot_xyzw: Any = (0.0, 0.0, 0.0, 1.0),
+        density: float = 1.0,
+        cooking: ConvexCookingOptions | None = None,
+        material: PhysicsMaterialDesc | None = None,
+        collision_group: int = 0,
+        contact_offset: float = 0.02,
+        rest_offset: float = 0.0,
+    ) -> RigidDynamic: ...
+    def create_static_convex_compound(
+        self,
+        parts: Sequence[ConvexMeshPart],
+        pos: Any = (0.0, 0.0, 0.0),
+        rot_xyzw: Any = (0.0, 0.0, 0.0, 1.0),
+        cooking: ConvexCookingOptions | None = None,
+        material: PhysicsMaterialDesc | None = None,
+        collision_group: int = 0,
+        contact_offset: float = 0.02,
+        rest_offset: float = 0.0,
+        register_as_ground: bool = False,
+    ) -> Any: ...
     def get_contact_forces(
         self, articulation: Articulation | NativeArticulation, ground_only: bool = False
     ) -> Any:
@@ -306,6 +354,7 @@ class Articulation:
         config: ArticulationConfig | None = None,
     ) -> Articulation: ...
     def num_links(self) -> int: ...
+    def get_link_shape_counts(self) -> list[int]: ...
     def num_dofs(self) -> int: ...
     def release(self) -> None: ...
     def set_collision_material(

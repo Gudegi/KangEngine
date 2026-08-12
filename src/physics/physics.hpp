@@ -24,9 +24,33 @@ class Articulation;
 namespace Asset {
 struct ArticulationDesc;
 } // namespace Asset
+namespace Scene {
+struct MeshData;
+} // namespace Scene
 namespace Physics {
 struct CollisionMaterialOverride;
 struct PhysicsMaterialDesc;
+
+// Backend-neutral convex part payload. Decomposition tools such as CoACD can
+// populate this without depending on PhysX. The current PhysX path cooks a hull
+// from vertices; triangle indices are retained for validation, visualization,
+// and a future preserve-polygons cooking mode.
+struct ConvexMeshPart {
+    std::vector<glm::vec3> vertices;
+    std::vector<uint32_t> indices;
+    glm::vec3 localPosition = glm::vec3(0.0f);
+    glm::quat localRotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+};
+
+struct ConvexCookingOptions {
+    uint32_t vertexLimit = 255;
+    bool gpuCompatible = false;
+};
+
+// Reconstruct a render mesh from the exact cooked PhysX convex geometry. The
+// shape-local pose is baked into the returned actor/link-local vertices.
+std::shared_ptr<Scene::MeshData>
+buildConvexCollisionMesh(const physx::PxShape& shape);
 } // namespace Physics
 
 struct PhysicsGpuDynamicsConfig {
@@ -115,6 +139,13 @@ class PhysicsWorld {
     PxDefaultCpuDispatcher* _dispatcher = nullptr;
     PxCudaContextManager* _cudaContextManager = nullptr;
     std::vector<physx::PxHeightField*> _heightFields;
+    std::vector<physx::PxConvexMesh*> _convexMeshes;
+    struct CachedConvexMesh {
+        std::shared_ptr<const Scene::MeshData> source;
+        Physics::ConvexCookingOptions options;
+        physx::PxConvexMesh* mesh = nullptr;
+    };
+    std::vector<CachedConvexMesh> _convexMeshCache;
 
     float _dt;
     UpAxis _upAxis;
@@ -157,6 +188,26 @@ class PhysicsWorld {
                          const physx::PxGeometry& geometry,
                          const Physics::PhysicsMaterialDesc& material);
 
+    // Cook once per shared source mesh/options pair and reuse the heavy PhysX
+    // convex resource across exclusive shape instances.
+    physx::PxConvexMesh*
+    getOrCreateConvexMesh(std::shared_ptr<const Scene::MeshData> mesh,
+                          const Physics::ConvexCookingOptions& cooking = {});
+
+    physx::PxRigidDynamic* createDynamicConvexCompound(
+        const std::vector<Physics::ConvexMeshPart>& parts, const glm::vec3& pos,
+        const glm::quat& rot, float density,
+        const Physics::ConvexCookingOptions& cooking,
+        const Physics::PhysicsMaterialDesc& material, PxU32 collisionGroup = 0,
+        float contactOffset = 0.02f, float restOffset = 0.0f);
+
+    physx::PxRigidStatic* createStaticConvexCompound(
+        const std::vector<Physics::ConvexMeshPart>& parts, const glm::vec3& pos,
+        const glm::quat& rot, const Physics::ConvexCookingOptions& cooking,
+        const Physics::PhysicsMaterialDesc& material, PxU32 collisionGroup = 0,
+        float contactOffset = 0.02f, float restOffset = 0.0f,
+        bool registerAsGround = false);
+
     void addBox(float x, float y, float z);
     physx::PxRigidStatic*
     createStaticBox(const glm::vec3& halfExtents, const glm::vec3& pos,
@@ -187,8 +238,7 @@ class PhysicsWorld {
                            materialOverrides = {});
 
     physx::PxRigidStatic*
-    createStaticRigid(const Asset::ArticulationDesc& data,
-                      const glm::vec3& pos,
+    createStaticRigid(const Asset::ArticulationDesc& data, const glm::vec3& pos,
                       const glm::quat& rot = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
                       PxU32 collisionGroup = 0, float contactOffset = 0.02f,
                       float restOffset = 0.0f,

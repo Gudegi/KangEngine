@@ -7,6 +7,8 @@
 #include <pybind11/stl.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <cstring>
+#include <limits>
 #include "py_array_view.hpp"
 
 #ifdef KANGENGINE_USE_PHYSX
@@ -27,6 +29,22 @@ namespace py = pybind11;
 #ifdef KANGENGINE_USE_PHYSX
 namespace {
 
+template <std::size_t N>
+std::array<float, N> fixedFloatValues(py::handle obj, const char* name) {
+    FloatArray array = FloatArray::ensure(obj);
+    if (!array)
+        throw py::value_error(std::string(name) + " expects " +
+                              std::to_string(N) + " numeric values");
+    py::buffer_info info = array.request();
+    if (info.size != static_cast<py::ssize_t>(N))
+        throw py::value_error(std::string(name) + " expects exactly " +
+                              std::to_string(N) + " values");
+    const auto* values = static_cast<const float*>(info.ptr);
+    std::array<float, N> result{};
+    std::copy_n(values, N, result.begin());
+    return result;
+}
+
 KE::Physics::PhysicsMaterialDesc physicsMaterialFromPy(py::handle obj,
                                                        const char* name) {
     if (py::isinstance<KE::Physics::PhysicsMaterialDesc>(obj))
@@ -46,6 +64,79 @@ KE::Physics::PhysicsMaterialDesc physicsMaterialFromPy(py::handle obj,
     throw py::value_error(std::string(name) +
                           " expects PhysicsMaterialDesc or 3 values "
                           "[static_friction, dynamic_friction, restitution]");
+}
+
+std::vector<uint32_t> triangleIndicesFromPy(py::handle obj,
+                                            const char* name) {
+    if (obj.is_none())
+        return {};
+    using IndexArray =
+        py::array_t<int64_t, py::array::c_style | py::array::forcecast>;
+    IndexArray array = IndexArray::ensure(obj);
+    if (!array)
+        throw py::value_error(std::string(name) + " expects an integer array");
+    py::buffer_info info = array.request();
+    if (!((info.ndim == 1 && info.shape[0] % 3 == 0) ||
+          (info.ndim == 2 && info.shape[1] == 3))) {
+        throw py::value_error(std::string(name) +
+                              " expects shape [3*N] or [N, 3]");
+    }
+    const auto* values = static_cast<const int64_t*>(info.ptr);
+    std::vector<uint32_t> result;
+    result.reserve(static_cast<size_t>(info.size));
+    for (py::ssize_t i = 0; i < info.size; ++i) {
+        if (values[i] < 0 ||
+            static_cast<uint64_t>(values[i]) >
+                static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
+            throw py::value_error(std::string(name) +
+                                  " contains an invalid index");
+        }
+        result.push_back(static_cast<uint32_t>(values[i]));
+    }
+    return result;
+}
+
+py::array_t<float>
+convexVerticesToPy(const std::vector<glm::vec3>& vertices) {
+    py::array_t<float> result(
+        {static_cast<py::ssize_t>(vertices.size()), py::ssize_t(3)});
+    auto view = result.mutable_unchecked<2>();
+    for (py::ssize_t i = 0;
+         i < static_cast<py::ssize_t>(vertices.size()); ++i) {
+        const glm::vec3& vertex = vertices[static_cast<size_t>(i)];
+        view(i, 0) = vertex.x;
+        view(i, 1) = vertex.y;
+        view(i, 2) = vertex.z;
+    }
+    return result;
+}
+
+py::array_t<uint32_t>
+convexIndicesToPy(const std::vector<uint32_t>& indices) {
+    py::array_t<uint32_t> result(
+        {static_cast<py::ssize_t>(indices.size() / 3), py::ssize_t(3)});
+    if (!indices.empty())
+        std::memcpy(result.mutable_data(), indices.data(),
+                    indices.size() * sizeof(uint32_t));
+    return result;
+}
+
+std::vector<std::shared_ptr<KE::Scene::MeshData>>
+convexCollisionMeshes(const physx::PxRigidActor& actor) {
+    const physx::PxU32 shapeCount = actor.getNbShapes();
+    std::vector<physx::PxShape*> shapes(shapeCount);
+    actor.getShapes(shapes.data(), shapeCount);
+
+    std::vector<std::shared_ptr<KE::Scene::MeshData>> result;
+    result.reserve(shapeCount);
+    for (physx::PxShape* shape : shapes) {
+        if (!shape)
+            continue;
+        auto mesh = KE::Physics::buildConvexCollisionMesh(*shape);
+        if (mesh)
+            result.push_back(std::move(mesh));
+    }
+    return result;
 }
 
 } // namespace
@@ -428,6 +519,82 @@ void bind_physics(py::module& m) {
         .def_readonly("separation", &ContactPoint::separation,
                       "Contact separation distance.");
 
+    py::class_<ConvexMeshPart>(
+        physics, "ConvexMeshPart",
+        "Backend-neutral convex part produced by PhysX, CoACD, or VisACD.")
+        .def(py::init([](const FloatArray& vertices, py::object indices,
+                         py::handle localPosition,
+                         py::handle localRotationXyzw) {
+                 ConvexMeshPart part;
+                 part.vertices = vec3Array(vertices, "vertices");
+                 part.indices = triangleIndicesFromPy(indices, "indices");
+                 auto p = fixedFloatValues<3>(localPosition, "local_position");
+                 auto q = fixedFloatValues<4>(localRotationXyzw,
+                                              "local_rotation_xyzw");
+                 part.localPosition = glm::vec3(p[0], p[1], p[2]);
+                 part.localRotation =
+                     glm::quat(q[3], q[0], q[1], q[2]);
+                 return part;
+             }),
+             py::arg("vertices"), py::arg("indices") = py::none(),
+             py::arg("local_position") = std::array<float, 3>{0.f, 0.f, 0.f},
+             py::arg("local_rotation_xyzw") =
+                 std::array<float, 4>{0.f, 0.f, 0.f, 1.f})
+        .def_static(
+            "from_mesh_data",
+            [](const Scene::MeshData& mesh) {
+                ConvexMeshPart part;
+                part.vertices = mesh.vertices;
+                part.indices.assign(mesh.indices.begin(), mesh.indices.end());
+                return part;
+            },
+            py::arg("mesh"), "Create a convex part from scene.MeshData.")
+        .def_property_readonly("vertices", [](const ConvexMeshPart& self) {
+            return convexVerticesToPy(self.vertices);
+        })
+        .def_property_readonly("indices", [](const ConvexMeshPart& self) {
+            return convexIndicesToPy(self.indices);
+        })
+        .def_property(
+            "local_position",
+            [](const ConvexMeshPart& self) {
+                return py::make_tuple(self.localPosition.x,
+                                      self.localPosition.y,
+                                      self.localPosition.z);
+            },
+            [](ConvexMeshPart& self, py::handle value) {
+                auto p = fixedFloatValues<3>(value, "local_position");
+                self.localPosition = glm::vec3(p[0], p[1], p[2]);
+            })
+        .def_property(
+            "local_rotation_xyzw",
+            [](const ConvexMeshPart& self) {
+                return py::make_tuple(self.localRotation.x,
+                                      self.localRotation.y,
+                                      self.localRotation.z,
+                                      self.localRotation.w);
+            },
+            [](ConvexMeshPart& self, py::handle value) {
+                auto q = fixedFloatValues<4>(value, "local_rotation_xyzw");
+                self.localRotation =
+                    glm::quat(q[3], q[0], q[1], q[2]);
+            })
+        .def_property_readonly("vertex_count",
+                               [](const ConvexMeshPart& self) {
+                                   return self.vertices.size();
+                               })
+        .def_property_readonly("triangle_count",
+                               [](const ConvexMeshPart& self) {
+                                   return self.indices.size() / 3;
+                               });
+
+    py::class_<ConvexCookingOptions>(
+        physics, "ConvexCookingOptions", "PhysX convex hull cooking options.")
+        .def(py::init<>())
+        .def_readwrite("vertex_limit", &ConvexCookingOptions::vertexLimit)
+        .def_readwrite("gpu_compatible",
+                       &ConvexCookingOptions::gpuCompatible);
+
     py::class_<PxRigidDynamic, std::unique_ptr<PxRigidDynamic, py::nodelete>>(
         m, "RigidDynamic", "PhysX dynamic rigid body owned by a PhysicsWorld.")
         .def(
@@ -460,6 +627,13 @@ void bind_physics(py::module& m) {
             },
             "Return root angular velocity.")
         .def("get_mass", &PxRigidDynamic::getMass, "Return rigid body mass.")
+        .def("num_shapes", &PxRigidDynamic::getNbShapes,
+             "Return the number of collision shapes attached to this body.")
+        .def("get_convex_collision_meshes",
+             [](const PxRigidDynamic& self) {
+                 return convexCollisionMeshes(self);
+             },
+             "Return render meshes reconstructed from cooked convex shapes.")
         .def("get_inverse_mass", &PxRigidDynamic::getInvMass,
              "Return inverse rigid body mass.")
         .def(
@@ -632,6 +806,13 @@ void bind_physics(py::module& m) {
                     PxQuat(rotXyzw[0], rotXyzw[1], rotXyzw[2], rotXyzw[3])));
             },
             py::arg("pos"), py::arg("rot_xyzw"))
+        .def("num_shapes", &PxRigidStatic::getNbShapes,
+             "Return the number of collision shapes attached to this body.")
+        .def("get_convex_collision_meshes",
+             [](const PxRigidStatic& self) {
+                 return convexCollisionMeshes(self);
+             },
+             "Return render meshes reconstructed from cooked convex shapes.")
         .def("release", &PxRigidStatic::release);
 
     // PhysicsWorld (non-copyable, non-movable — Python must keep it alive)
@@ -769,6 +950,67 @@ void bind_physics(py::module& m) {
             py::arg("rot_xyzw") = std::vector<float>{0.f, 0.f, 0.f, 1.f},
             py::arg("density") = 1.0f, py::return_value_policy::reference,
             "Create a dynamic sphere for low-level physics tests and tools.")
+        .def(
+            "create_dynamic_convex_compound",
+            [](PhysicsWorld& self, const std::vector<ConvexMeshPart>& parts,
+               const FloatArray& pos, const FloatArray& rotXyzw, float density,
+               const ConvexCookingOptions& cooking,
+               const PhysicsMaterialDesc& material, PxU32 collisionGroup,
+               float contactOffset, float restOffset) {
+                auto p = vec3ArrayView(pos, "pos");
+                auto q = vec4ArrayView(rotXyzw, "rot_xyzw");
+                if (p.count != 1 || q.count != 1)
+                    throw py::value_error(
+                        "create_dynamic_convex_compound expects pos[3] and "
+                        "rot_xyzw[4]");
+                return self.createDynamicConvexCompound(
+                    parts, glm::vec3(p.data[0], p.data[1], p.data[2]),
+                    glm::quat(q.data[3], q.data[0], q.data[1], q.data[2]),
+                    density, cooking, material, collisionGroup, contactOffset,
+                    restOffset);
+            },
+            py::arg("parts"), py::arg("pos"),
+            py::arg("rot_xyzw") = std::array<float, 4>{0.f, 0.f, 0.f, 1.f},
+            py::arg("density") = 1.0f,
+            py::arg("cooking") = ConvexCookingOptions{},
+            py::arg("material") = PhysicsMaterialDesc{},
+            py::arg("collision_group") = 0,
+            py::arg("contact_offset") = 0.02f,
+            py::arg("rest_offset") = 0.0f,
+            py::return_value_policy::reference,
+            "Cook convex parts and attach them as a compound collider to one "
+            "dynamic rigid body.")
+        .def(
+            "create_static_convex_compound",
+            [](PhysicsWorld& self, const std::vector<ConvexMeshPart>& parts,
+               const FloatArray& pos, const FloatArray& rotXyzw,
+               const ConvexCookingOptions& cooking,
+               const PhysicsMaterialDesc& material, PxU32 collisionGroup,
+               float contactOffset, float restOffset, bool registerAsGround) {
+                auto p = vec3ArrayView(pos, "pos");
+                auto q = vec4ArrayView(rotXyzw, "rot_xyzw");
+                if (p.count != 1 || q.count != 1)
+                    throw py::value_error(
+                        "create_static_convex_compound expects pos[3] and "
+                        "rot_xyzw[4]");
+                return self.createStaticConvexCompound(
+                    parts, glm::vec3(p.data[0], p.data[1], p.data[2]),
+                    glm::quat(q.data[3], q.data[0], q.data[1], q.data[2]),
+                    cooking, material, collisionGroup, contactOffset,
+                    restOffset, registerAsGround);
+            },
+            py::arg("parts"),
+            py::arg("pos") = std::array<float, 3>{0.f, 0.f, 0.f},
+            py::arg("rot_xyzw") = std::array<float, 4>{0.f, 0.f, 0.f, 1.f},
+            py::arg("cooking") = ConvexCookingOptions{},
+            py::arg("material") = PhysicsMaterialDesc{},
+            py::arg("collision_group") = 0,
+            py::arg("contact_offset") = 0.02f,
+            py::arg("rest_offset") = 0.0f,
+            py::arg("register_as_ground") = false,
+            py::return_value_policy::reference,
+            "Cook convex parts and attach them as a compound collider to one "
+            "static rigid body.")
         .def(
             "get_contact_forces",
             [](const PhysicsWorld& self, const Articulation& articulation,
@@ -1126,6 +1368,16 @@ void bind_physics(py::module& m) {
             "Shared immutable template used to build this instance.")
         .def("num_links", &Articulation::numLinks,
              "Return the number of links.")
+        .def(
+            "get_link_shape_counts",
+            [](const Articulation& self) {
+                std::vector<PxU32> counts;
+                counts.reserve(self.links().size());
+                for (const PxArticulationLink* link : self.links())
+                    counts.push_back(link ? link->getNbShapes() : 0);
+                return counts;
+            },
+            "Return the number of collision shapes attached to each link.")
         .def("num_dofs", &Articulation::numDofs,
              "Return the number of controllable DOFs.")
         .def("release", &Articulation::release,

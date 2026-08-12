@@ -110,6 +110,8 @@ PhysicsConfig = _export_native_type("PhysicsConfig")
 PhysicsMaterialDesc = _export_native_type("PhysicsMaterialDesc")
 CollisionMaterialOverride = _export_native_type("CollisionMaterialOverride")
 ContactPoint = _export_native_type("ContactPoint")
+ConvexMeshPart = _export_native_type("ConvexMeshPart")
+ConvexCookingOptions = _export_native_type("ConvexCookingOptions")
 RigidDynamic = _export_native_type("RigidDynamic")
 ArticulationConfig = _export_native_type("ArticulationConfig")
 GpuPhysicsConfig = _export_native_type("GpuPhysicsConfig")
@@ -257,6 +259,64 @@ class PhysicsWorld(_NativeWrapper):
     ) -> RigidDynamic:
         return self._native.create_dynamic_sphere(radius, pos, rot_xyzw, density)
 
+    def create_dynamic_convex_compound(
+        self,
+        parts: Sequence[ConvexMeshPart],
+        pos: Any,
+        rot_xyzw: Any = (0.0, 0.0, 0.0, 1.0),
+        density: float = 1.0,
+        cooking: ConvexCookingOptions | None = None,
+        material: PhysicsMaterialDesc | None = None,
+        collision_group: int = 0,
+        contact_offset: float = 0.02,
+        rest_offset: float = 0.0,
+    ) -> RigidDynamic:
+        """Cook convex parts as shapes on one dynamic rigid body."""
+        if cooking is None:
+            cooking = _native_attr("ConvexCookingOptions")()
+        if material is None:
+            material = _native_attr("PhysicsMaterialDesc")()
+        return self._native.create_dynamic_convex_compound(
+            parts,
+            pos,
+            rot_xyzw,
+            density,
+            cooking,
+            material,
+            collision_group,
+            contact_offset,
+            rest_offset,
+        )
+
+    def create_static_convex_compound(
+        self,
+        parts: Sequence[ConvexMeshPart],
+        pos: Any = (0.0, 0.0, 0.0),
+        rot_xyzw: Any = (0.0, 0.0, 0.0, 1.0),
+        cooking: ConvexCookingOptions | None = None,
+        material: PhysicsMaterialDesc | None = None,
+        collision_group: int = 0,
+        contact_offset: float = 0.02,
+        rest_offset: float = 0.0,
+        register_as_ground: bool = False,
+    ) -> Any:
+        """Cook convex parts as shapes on one static rigid body."""
+        if cooking is None:
+            cooking = _native_attr("ConvexCookingOptions")()
+        if material is None:
+            material = _native_attr("PhysicsMaterialDesc")()
+        return self._native.create_static_convex_compound(
+            parts,
+            pos,
+            rot_xyzw,
+            cooking,
+            material,
+            collision_group,
+            contact_offset,
+            rest_offset,
+            register_as_ground,
+        )
+
     def get_contact_forces(
         self, articulation: Articulation | NativeArticulation, ground_only: bool = False
     ) -> Any:
@@ -349,6 +409,9 @@ class Articulation(_NativeWrapper):
 
     def num_links(self) -> int:
         return self._native.num_links()
+
+    def get_link_shape_counts(self) -> list[int]:
+        return self._native.get_link_shape_counts()
 
     def num_dofs(self) -> int:
         return self._native.num_dofs()
@@ -462,6 +525,8 @@ __all__ = [
         "CollisionMaterialOverride",
         "mjcf_friction_to_physx",
         "ContactPoint",
+        "ConvexMeshPart",
+        "ConvexCookingOptions",
         "RigidDynamic",
         "PhysicsWorld",
         "ArticulationConfig",
