@@ -32,6 +32,8 @@ toCollisionShapeType(Asset::CollisionGeomDesc::Type type) {
         return Scene::CollisionShapeType::Cylinder;
     case Asset::CollisionGeomDesc::Type::Box:
         return Scene::CollisionShapeType::Box;
+    case Asset::CollisionGeomDesc::Type::ConvexMesh:
+        return Scene::CollisionShapeType::ConvexMesh;
     }
     return Scene::CollisionShapeType::Sphere;
 }
@@ -76,6 +78,8 @@ std::vector<Scene::Prim*> PhysicsBridge::addCollisionVisuals(
         if (bodyIdx >= static_cast<int>(links.size()))
             continue;
         physx::PxArticulationLink* lnk = links[bodyIdx];
+        std::vector<physx::PxShape*> shapes(lnk->getNbShapes());
+        lnk->getShapes(shapes.data(), static_cast<physx::PxU32>(shapes.size()));
         std::string bodyName = fallbackBodyName(bodyIdx);
         if (bodyIdx < static_cast<int>(artic.bodyNames().size()))
             bodyName = artic.bodyName(bodyIdx);
@@ -140,6 +144,21 @@ std::vector<Scene::Prim*> PhysicsBridge::addCollisionVisuals(
                     meshData = Scene::Prim::createRectangleData(
                         geom.size[0] * 2.f, geom.size[1] * 2.f,
                         geom.size[2] * 2.f);
+                    break;
+                case Asset::CollisionGeomDesc::Type::ConvexMesh:
+                    if (gi < static_cast<int>(shapes.size())) {
+                        auto cooked = Physics::buildConvexCollisionMesh(
+                            *shapes[static_cast<size_t>(gi)]);
+                        if (cooked) {
+                            meshData = *cooked;
+                            const glm::quat inverseLocal =
+                                glm::inverse(localQuat);
+                            for (glm::vec3& vertex : meshData.vertices)
+                                vertex = inverseLocal * (vertex - localPos);
+                            for (glm::vec3& normal : meshData.normals)
+                                normal = inverseLocal * normal;
+                        }
+                    }
                     break;
                 }
             }

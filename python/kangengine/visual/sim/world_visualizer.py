@@ -546,6 +546,8 @@ class RigidVisual:
             mesh = _ke.geometry.create_capsule_data(
                 float(size[0]), float(size[1] * 2.0), _ke.UpAxis.X, 24
             )
+        elif geom_type == "ConvexMesh" and spec.mesh_data is not None:
+            mesh = spec.mesh_data
         else:
             raise ValueError(f"unsupported rigid visual geometry type: {geom_type}")
         prim.set_mesh_data(mesh)

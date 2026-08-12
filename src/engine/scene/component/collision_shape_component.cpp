@@ -147,6 +147,8 @@ const char* collisionShapeTypeLabel(CollisionShapeType type) {
         return "Cylinder";
     case CollisionShapeType::Box:
         return "Box";
+    case CollisionShapeType::ConvexMesh:
+        return "Convex Mesh";
     }
     return "Unknown";
 }

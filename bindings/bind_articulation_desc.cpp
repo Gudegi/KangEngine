@@ -115,7 +115,8 @@ void bind_articulation_desc(py::module& m) {
         .value("CAPSULE", CollisionGeomDesc::Type::Capsule)
         .value("CYLINDER", CollisionGeomDesc::Type::Cylinder)
         .value("SPHERE", CollisionGeomDesc::Type::Sphere)
-        .value("BOX", CollisionGeomDesc::Type::Box);
+        .value("BOX", CollisionGeomDesc::Type::Box)
+        .value("CONVEX_MESH", CollisionGeomDesc::Type::ConvexMesh);
 
     py::class_<CollisionGeomDesc>(
         asset, "CollisionGeomDesc",
@@ -124,6 +125,16 @@ void bind_articulation_desc(py::module& m) {
                       "Collision geometry type.")
         .def_readonly("name", &CollisionGeomDesc::name,
                       "Imported MJCF geom name, if present.")
+        .def_readonly("mesh_file", &CollisionGeomDesc::meshFile,
+                      "Source mesh file for convex mesh collision geoms.")
+        .def_property_readonly(
+            "mesh_data",
+            [](const CollisionGeomDesc& g) {
+                return g.meshData
+                           ? std::make_shared<Scene::MeshData>(*g.meshData)
+                           : std::shared_ptr<Scene::MeshData>{};
+            },
+            "Imported mesh payload used for convex cooking.")
         .def_property_readonly(
             "pos",
             [](const CollisionGeomDesc& g) { return Animation::toGlm(g.pos); },

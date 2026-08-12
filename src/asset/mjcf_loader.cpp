@@ -1,9 +1,11 @@
 #include "asset/mjcf_loader.hpp"
+#include "asset/mesh_loader.hpp"
 
 #include <fmt/core.h>
 #include <tinyxml2.h>
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <filesystem>
 #include <queue>
@@ -90,6 +92,30 @@ std::string meshAssetName(const char* name, const char* file) {
     if (!file || file[0] == '\0')
         return {};
     return std::filesystem::path(file).stem().string();
+}
+
+struct MeshAssetInfo {
+    std::string file;
+    Eigen::Vector3f scale = Eigen::Vector3f::Ones();
+};
+
+std::string lowerExtension(const std::filesystem::path& path) {
+    std::string extension = path.extension().string();
+    std::transform(extension.begin(), extension.end(), extension.begin(),
+                   [](unsigned char c) {
+                       return static_cast<char>(std::tolower(c));
+                   });
+    return extension;
+}
+
+Scene::MeshData loadCollisionMeshFile(const std::filesystem::path& path) {
+    const std::string extension = lowerExtension(path);
+    if (extension == ".stl")
+        return loadStl(path.string());
+    if (extension == ".obj")
+        return loadObj(path.string());
+    throw std::runtime_error("Unsupported MJCF collision mesh extension: " +
+                             path.string());
 }
 
 // Invokes callback(xml_node, tree_index, name, effectiveClass) for each body.
@@ -418,12 +444,6 @@ bool parseSite(
 
 // Returns false if this loader cannot represent the geom as an explicit
 // CollisionGeomDesc descriptor.
-//
-// Mesh collision geoms are intentionally unsupported here. Dynamic and
-// articulation bodies should use primitive shapes or a future convex-cooked
-// mesh path; visual MeshData cannot be attached directly as a safe PhysX link
-// collision shape. Bodies with no supported descriptors may still receive
-// KangEngine fallback boxes during Articulation::build().
 bool buildCollisionGeom(
     tinyxml2::XMLElement* geomElem,
     const std::unordered_map<std::string, DefaultGeomAttrs>& defaultMap,
@@ -438,7 +458,7 @@ bool buildCollisionGeom(
     auto typeStr = geomElem->Attribute("type")
                        ? std::string(geomElem->Attribute("type"))
                        : defs.type;
-    if (typeStr.empty() || typeStr == "mesh" || typeStr == "plane")
+    if (typeStr.empty() || typeStr == "plane")
         return false;
 
     auto size = splitFloats(geomElem->Attribute("size"));
@@ -465,6 +485,8 @@ bool buildCollisionGeom(
         out.type = CollisionGeomDesc::Type::Sphere;
     else if (typeStr == "box")
         out.type = CollisionGeomDesc::Type::Box;
+    else if (typeStr == "mesh")
+        out.type = CollisionGeomDesc::Type::ConvexMesh;
     else
         return false;
 
@@ -551,6 +573,10 @@ GeomMassData geomMassContribution(const CollisionGeomDesc& g, float density) {
                                 m * (hx * hx + hy * hy) / 3.f);
         break;
     }
+    case Type::ConvexMesh:
+        // Mesh mass properties are left to explicit MJCF inertials or PhysX's
+        // native mass update after the convex shape has been attached.
+        break;
     }
     return {density * V, center, iDiag};
 }
@@ -585,17 +611,24 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
     }
 
     // 2. Asset name -> file map
-    std::unordered_map<std::string, std::string> meshNameToFile;
+    std::unordered_map<std::string, MeshAssetInfo> meshAssets;
     if (auto* asset = root->FirstChildElement("asset")) {
         for (auto* mesh = asset->FirstChildElement("mesh"); mesh;
              mesh = mesh->NextSiblingElement("mesh")) {
             const char* name = mesh->Attribute("name");
             const char* file = mesh->Attribute("file");
             const std::string assetName = meshAssetName(name, file);
-            if (!assetName.empty() && file)
-                meshNameToFile[assetName] = file;
+            if (!assetName.empty() && file) {
+                MeshAssetInfo info;
+                info.file = file;
+                info.scale = parseVec3(mesh->Attribute("scale"),
+                                       Eigen::Vector3f::Ones());
+                meshAssets[assetName] = std::move(info);
+            }
         }
     }
+    std::unordered_map<std::string, std::shared_ptr<const Scene::MeshData>>
+        collisionMeshCache;
 
     // 3. Skeleton
     SkeletonTree skelTree = SkeletonTree::skelFromMJCFElement(root, order);
@@ -648,8 +681,8 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
                 if (meshName && !isCollisionMesh &&
                     (isVisualMesh ||
                      (geomType == "mesh" && !hasVisualOnlyDuplicate))) {
-                    auto it = meshNameToFile.find(meshName);
-                    if (it != meshNameToFile.end()) {
+                    auto it = meshAssets.find(meshName);
+                    if (it != meshAssets.end()) {
                         DefaultGeomAttrs defs;
                         if (!effectiveCls.empty())
                             defs = resolveClass(effectiveCls, defaultMap);
@@ -665,27 +698,70 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
                                 ? Eigen::Vector4f(rgbaValues[0], rgbaValues[1],
                                                   rgbaValues[2], rgbaValues[3])
                                 : Eigen::Vector4f(0.15f, 0.15f, 0.15f, 1.0f);
-                        _data.visualGeoms.push_back({bodyName, it->second, idx,
+                        _data.visualGeoms.push_back({bodyName, it->second.file, idx,
                                                    meshPos, meshQuat, rgba});
                     }
                     continue;
                 }
 
-                // Collision geom
-                // TODO : add convex mesh decomposition like COCAD
+                // Collision mesh: keep one descriptor per authored geom. The
+                // physics backend cooks each source mesh into a convex hull.
                 if (meshName && !isVisualMesh) {
-                    // Empty entry marks that the source authored a collidable
-                    // mesh geom that KangEngine cannot cook yet. Articulation
-                    // build may synthesize a fallback box only for these
-                    // bodies, while visual-only mesh bodies stay collisionless.
-                    _data.collisionGeoms.try_emplace(idx);
-                    fmt::print(
-                        stderr,
-                        "Warning: MJCF mesh collision geom '{}' on body '{}' "
-                        "is not supported yet; using KangEngine fallback "
-                        "collision if this body has no supported primitive "
-                        "collision geom.\n",
-                        meshName, bodyName);
+                    auto assetIt = meshAssets.find(meshName);
+                    if (assetIt == meshAssets.end()) {
+                        _data.collisionGeoms.try_emplace(idx);
+                        _diagnostics.warnings.push_back(fmt::format(
+                            "mesh collision geom '{}' on body '{}' references "
+                            "an unknown mesh asset; fallback collision will be "
+                            "used",
+                            meshName, bodyName));
+                        continue;
+                    }
+
+                    CollisionGeomDesc g;
+                    if (!buildCollisionGeom(geom, defaultMap, g,
+                                            inheritedClass))
+                        continue;
+                    g.pos *= scale;
+                    g.meshFile = assetIt->second.file;
+
+                    const auto meshPath =
+                        (std::filesystem::path(_data.assetDir) /
+                         assetIt->second.file)
+                            .lexically_normal();
+                    const Eigen::Vector3f meshScale =
+                        assetIt->second.scale * scale;
+                    const std::string cacheKey =
+                        fmt::format("{}|{:.9g},{:.9g},{:.9g}",
+                                    meshPath.string(), meshScale.x(),
+                                    meshScale.y(), meshScale.z());
+                    auto cached = collisionMeshCache.find(cacheKey);
+                    if (cached == collisionMeshCache.end()) {
+                        try {
+                            auto meshData = std::make_shared<Scene::MeshData>(
+                                loadCollisionMeshFile(meshPath));
+                            for (glm::vec3& vertex : meshData->vertices) {
+                                vertex.x *= meshScale.x();
+                                vertex.y *= meshScale.y();
+                                vertex.z *= meshScale.z();
+                            }
+                            cached = collisionMeshCache
+                                         .emplace(cacheKey,
+                                                  std::move(meshData))
+                                         .first;
+                        } catch (const std::exception& error) {
+                            _data.collisionGeoms.try_emplace(idx);
+                            _diagnostics.warnings.push_back(fmt::format(
+                                "failed to load collision mesh '{}' on body "
+                                "'{}': {}; fallback collision will be used",
+                                meshPath.string(), bodyName, error.what()));
+                            continue;
+                        }
+                    }
+                    g.meshData = cached->second;
+                    if (g.name.empty())
+                        g.name = meshName;
+                    _data.collisionGeoms[idx].push_back(std::move(g));
                     continue;
                 }
                 CollisionGeomDesc g;

@@ -6,6 +6,7 @@
 // format-agnostic.
 
 #include "animation/skeleton_tree.hpp"
+#include "engine/scene/scene_backend.hpp"
 #include "physics/physics_material.hpp"
 
 #include <cfloat>
@@ -67,11 +68,7 @@ struct InertialDesc {
 };
 
 struct CollisionGeomDesc {
-    // Supported collision payloads are primitive-only for now. MJCF
-    // type="mesh" collision geoms are intentionally not represented here yet;
-    // dynamic/articulation mesh collision needs a separate convex-cooking path
-    // rather than reusing visual MeshData directly.
-    enum class Type { Capsule, Cylinder, Sphere, Box };
+    enum class Type { Capsule, Cylinder, Sphere, Box, ConvexMesh };
     Type type = Type::Sphere;
     std::string name;
 
@@ -83,6 +80,11 @@ struct CollisionGeomDesc {
     //   Capsule/Cylinder: size[0] = radius, size[1] = half-length
     //   Box             : size[0..2] = half-extents
     float size[3] = {};
+
+    // ConvexMesh stores the imported source mesh. Physics backends cook their
+    // native convex resource from this payload and may cache it across shapes.
+    std::string meshFile;
+    std::shared_ptr<const Scene::MeshData> meshData;
 
     // When true, from/to define axis endpoints in body frame
     // (overrides pos/quat for capsule and cylinder)
@@ -104,7 +106,7 @@ struct CollisionGeomDesc {
     float margin = -1.f;
 
     // True when KangEngine synthesized this descriptor from ArticulationConfig
-    // fallback boxes because the source body had no supported collision geom.
+    // because an authored collision mesh could not be loaded.
     // These descriptors make debug collision visuals match the actual PhysX
     // shapes without pretending they came from MJCF.
     bool isFallback = false;

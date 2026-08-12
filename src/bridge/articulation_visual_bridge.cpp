@@ -73,6 +73,10 @@ buildCollisionMesh(const std::vector<Asset::CollisionGeomDesc>& geoms) {
                 part = Scene::Prim::createRectangleData(
                     geom.size[0] * 2.f, geom.size[1] * 2.f, geom.size[2] * 2.f);
                 break;
+            case Asset::CollisionGeomDesc::Type::ConvexMesh:
+                if (geom.meshData)
+                    part = *geom.meshData;
+                break;
             }
         }
 

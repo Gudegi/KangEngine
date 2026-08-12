@@ -162,11 +162,12 @@ void bind_scene(py::module& m) {
 
     py::enum_<KE::Scene::CollisionShapeType>(
         scene, "CollisionShapeType",
-        "Primitive collision shape type mirrored onto debug collision prims.")
+        "Collision shape type mirrored onto debug collision prims.")
         .value("SPHERE", KE::Scene::CollisionShapeType::Sphere)
         .value("CAPSULE", KE::Scene::CollisionShapeType::Capsule)
         .value("CYLINDER", KE::Scene::CollisionShapeType::Cylinder)
-        .value("BOX", KE::Scene::CollisionShapeType::Box);
+        .value("BOX", KE::Scene::CollisionShapeType::Box)
+        .value("CONVEX_MESH", KE::Scene::CollisionShapeType::ConvexMesh);
 
     py::enum_<KE::Scene::ManipulationPolicy>(
         scene, "ManipulationPolicy",

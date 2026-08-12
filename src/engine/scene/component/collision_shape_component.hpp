@@ -21,6 +21,7 @@ enum class CollisionShapeType {
     Capsule,
     Cylinder,
     Box,
+    ConvexMesh,
 };
 
 class CollisionShapeComponent : public ComponentBase {

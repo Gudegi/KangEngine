@@ -135,7 +135,8 @@ Asset::CollisionGeomDesc makeFallbackBoxGeom(const PxVec3& halfExtents) {
 }
 
 // Creates and attaches PhysX shapes for each MJCF collision geom on the link.
-// Cylinders are approximated as capsules (PhysX has no native cylinder shape).
+// Cylinders are approximated as capsules (PhysX has no native cylinder shape),
+// while mesh geoms are cooked as one convex hull per authored geom.
 void attachCollisionShapes(
     PxArticulationLink* link, PhysicsWorld& physics,
     const Asset::CollisionGeomDesc* geoms, std::size_t count,
@@ -179,6 +180,15 @@ void attachCollisionShapes(
                 PxVec3(g.pos.x(), g.pos.y(), g.pos.z()),
                 PxQuat(g.quat.x(), g.quat.y(), g.quat.z(), g.quat.w()));
             break;
+        case Type::ConvexMesh: {
+            PxConvexMesh* convex = physics.getOrCreateConvexMesh(g.meshData);
+            shape = physics.createExclusiveShape(
+                *link, PxConvexMeshGeometry(convex), material);
+            localPose = PxTransform(
+                PxVec3(g.pos.x(), g.pos.y(), g.pos.z()),
+                PxQuat(g.quat.x(), g.quat.y(), g.quat.z(), g.quat.w()));
+            break;
+        }
         }
         if (shape) {
             shape->setLocalPose(localPose);

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
@@ -29,6 +30,7 @@ class RigidShapeSpec:
     local_pos: np.ndarray
     local_rot: np.ndarray
     size: np.ndarray
+    mesh_data: Any = None
 
 
 def rigid_shape_specs(data) -> list[RigidShapeSpec]:
@@ -116,6 +118,7 @@ def _shape_spec(name: str, geom) -> RigidShapeSpec:
         local_pos.astype(np.float32),
         quat_xyzw_normalize(local_rot),
         size.astype(np.float32),
+        getattr(geom, "mesh_data", None),
     )
 
 
@@ -134,6 +137,7 @@ def _geom_type_name(geom):
         "CYLINDER": "Cylinder",
         "SPHERE": "Sphere",
         "BOX": "Box",
+        "CONVEX_MESH": "ConvexMesh",
     }
     try:
         return map[str(name).upper()]
