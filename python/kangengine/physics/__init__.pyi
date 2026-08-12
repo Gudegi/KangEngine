@@ -135,6 +135,12 @@ class ConvexCookingOptions:
     gpu_compatible: bool
     def __init__(self) -> None: ...
 
+class ConvexCollisionResource:
+    part_count: int
+    is_valid: bool
+    vertex_limit: int
+    gpu_compatible: bool
+
 class RigidDynamic:
     def get_root_position(self) -> Any: ...
     def get_root_rotation(self) -> Any: ...
@@ -158,6 +164,13 @@ class RigidDynamic:
     ) -> None: ...
     def add_force(self, force: Any) -> None: ...
     def add_force_at_position(self, force: Any, position: Any) -> None: ...
+
+class RigidStatic:
+    def get_root_position(self) -> Any: ...
+    def get_root_rotation(self) -> Any: ...
+    def num_shapes(self) -> int: ...
+    def get_convex_collision_meshes(self) -> list[Any]: ...
+    def release(self) -> None: ...
 
 class NativePhysicsWorld: ...
 class NativeArticulation: ...
@@ -242,6 +255,33 @@ class PhysicsWorld:
         contact_offset: float = 0.02,
         rest_offset: float = 0.0,
     ) -> RigidDynamic: ...
+    def create_convex_collision(
+        self,
+        parts: Sequence[ConvexMeshPart],
+        cooking: ConvexCookingOptions | None = None,
+    ) -> ConvexCollisionResource: ...
+    def create_dynamic_from_collision(
+        self,
+        collision: ConvexCollisionResource,
+        pos: Any,
+        rot_xyzw: Any = (0.0, 0.0, 0.0, 1.0),
+        density: float = 1.0,
+        material: PhysicsMaterialDesc | None = None,
+        collision_group: int = 0,
+        contact_offset: float = 0.02,
+        rest_offset: float = 0.0,
+    ) -> RigidDynamic: ...
+    def create_static_from_collision(
+        self,
+        collision: ConvexCollisionResource,
+        pos: Any = (0.0, 0.0, 0.0),
+        rot_xyzw: Any = (0.0, 0.0, 0.0, 1.0),
+        material: PhysicsMaterialDesc | None = None,
+        collision_group: int = 0,
+        contact_offset: float = 0.02,
+        rest_offset: float = 0.0,
+        register_as_ground: bool = False,
+    ) -> RigidStatic: ...
     def create_static_convex_compound(
         self,
         parts: Sequence[ConvexMeshPart],

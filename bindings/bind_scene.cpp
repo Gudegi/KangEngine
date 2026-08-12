@@ -24,6 +24,8 @@
 #include "engine/scene/component/articulation_component.hpp"
 #include "engine/scene/component/articulation_binding_component.hpp"
 #include "engine/scene/component/collision_shape_component.hpp"
+#include "engine/scene/component/rigid_body_component.hpp"
+#include "engine/scene/component/scene_physics_system.hpp"
 #include "engine/scene/component/scene_render_system.hpp"
 #include "engine/scene/scene_resource_manager.hpp"
 #include "engine/scene/native/prim.hpp"
@@ -31,6 +33,11 @@
 #include "engine/graphics/material/material.hpp"
 #include "geometry/primitive_mesh.hpp"
 #include "py_array_view.hpp"
+
+#ifdef KANGENGINE_USE_PHYSX
+#include "physics/collision/convex_collision.hpp"
+#include "physics/physics.hpp"
+#endif
 
 #ifdef KANGENGINE_USE_USD
 #include "engine/scene/usd/usd_scene.hpp"
@@ -168,6 +175,18 @@ void bind_scene(py::module& m) {
         .value("CYLINDER", KE::Scene::CollisionShapeType::Cylinder)
         .value("BOX", KE::Scene::CollisionShapeType::Box)
         .value("CONVEX_MESH", KE::Scene::CollisionShapeType::ConvexMesh);
+
+    py::enum_<KE::Scene::RigidBodyType>(
+        scene, "RigidBodyType", "Authored rigid body type for ScenePhysicsSystem.")
+        .value("STATIC", KE::Scene::RigidBodyType::Static)
+        .value("DYNAMIC", KE::Scene::RigidBodyType::Dynamic)
+        .value("KINEMATIC", KE::Scene::RigidBodyType::Kinematic);
+
+    py::enum_<KE::Scene::PhysicsTransformMode>(scene, "PhysicsTransformMode")
+        .value("PHYSICS_TO_SCENE",
+               KE::Scene::PhysicsTransformMode::PhysicsToScene)
+        .value("SCENE_TO_PHYSICS",
+               KE::Scene::PhysicsTransformMode::SceneToPhysics);
 
     py::enum_<KE::Scene::ManipulationPolicy>(
         scene, "ManipulationPolicy",
@@ -505,63 +524,75 @@ void bind_scene(py::module& m) {
                                &KE::Scene::CollisionShapeComponent::owner,
                                py::return_value_policy::reference,
                                "Return the owning prim, or None after detach.")
-        .def_property_readonly("shape_type",
-                               &KE::Scene::CollisionShapeComponent::shapeType,
-                               "Primitive collision shape type.")
-        .def_property_readonly(
+        .def_property("shape_type",
+                      &KE::Scene::CollisionShapeComponent::shapeType,
+                      &KE::Scene::CollisionShapeComponent::setShapeType,
+                      "Get or set the collision shape type.")
+        .def_property(
             "size",
             [](const KE::Scene::CollisionShapeComponent& c) {
                 return c.size();
             },
-            "Shape size descriptor. Interpretation depends on shape type.")
+            &KE::Scene::CollisionShapeComponent::setSize,
+            "Get or set the shape size descriptor.")
         .def_property_readonly(
-            "local_position",
-            [](const KE::Scene::CollisionShapeComponent& c) {
-                return c.localPosition();
-            },
-            "Body-local collision shape position.")
-        .def_property_readonly(
-            "local_rotation",
-            [](const KE::Scene::CollisionShapeComponent& c) {
-                return c.localRotation();
-            },
-            "Body-local collision shape rotation.")
-        .def_property_readonly("has_from_to",
-                               &KE::Scene::CollisionShapeComponent::hasFromTo,
-                               "Whether this shape was authored by from/to.")
+            "has_from_to", &KE::Scene::CollisionShapeComponent::hasFromTo,
+            "Whether the source MJCF geom used endpoint authoring.")
         .def_property_readonly(
             "from_position",
             [](const KE::Scene::CollisionShapeComponent& c) {
                 return c.fromPosition();
             },
-            "Body-local from endpoint when has_from_to is true.")
+            "Original MJCF from endpoint, retained as source metadata.")
         .def_property_readonly(
             "to_position",
             [](const KE::Scene::CollisionShapeComponent& c) {
                 return c.toPosition();
             },
-            "Body-local to endpoint when has_from_to is true.")
-        .def_property_readonly(
+            "Original MJCF to endpoint, retained as source metadata.")
+        .def("set_from_to", &KE::Scene::CollisionShapeComponent::setFromTo,
+             py::arg("from_position"), py::arg("to_position"),
+             "Store source endpoint metadata; runtime pose remains Prim-owned.")
+        .def("clear_from_to", &KE::Scene::CollisionShapeComponent::clearFromTo,
+             "Clear source endpoint metadata.")
+        .def_property(
             "static_friction",
             &KE::Scene::CollisionShapeComponent::staticFriction,
-            "Reference PhysX static friction.")
-        .def_property_readonly(
+            &KE::Scene::CollisionShapeComponent::setStaticFriction,
+            "Get or set PhysX static friction.")
+        .def_property(
             "dynamic_friction",
             &KE::Scene::CollisionShapeComponent::dynamicFriction,
-            "Reference PhysX dynamic friction.")
-        .def_property_readonly("restitution",
-                               &KE::Scene::CollisionShapeComponent::restitution,
-                               "Reference PhysX restitution.")
-        .def_property_readonly(
+            &KE::Scene::CollisionShapeComponent::setDynamicFriction,
+            "Get or set PhysX dynamic friction.")
+        .def_property("restitution",
+                      &KE::Scene::CollisionShapeComponent::restitution,
+                      &KE::Scene::CollisionShapeComponent::setRestitution,
+                      "Get or set PhysX restitution.")
+        .def_property(
             "condim", &KE::Scene::CollisionShapeComponent::condim,
-            "Imported MuJoCo contact dimensionality, if any.")
-        .def_property_readonly(
+            &KE::Scene::CollisionShapeComponent::setCondim,
+            "Get or set imported MuJoCo contact dimensionality.")
+        .def_property(
             "margin", &KE::Scene::CollisionShapeComponent::margin,
-            "Imported MuJoCo margin mapped to contactOffset, if any.")
-        .def_property_readonly(
+            &KE::Scene::CollisionShapeComponent::setMargin,
+            "Get or set imported MuJoCo collision margin.")
+        .def_property(
             "source_geom_index",
             &KE::Scene::CollisionShapeComponent::sourceGeomIndex,
-            "Index of the source collision geom inside the body descriptor.")
+            &KE::Scene::CollisionShapeComponent::setSourceGeomIndex,
+            "Get or set the source collision geom index.")
+#ifdef KANGENGINE_USE_PHYSX
+        .def_property(
+            "convex_resource",
+            &KE::Scene::CollisionShapeComponent::convexResource,
+            &KE::Scene::CollisionShapeComponent::setConvexResource,
+            "Get or set the cooked convex collision resource. Assigning a "
+            "resource also sets shape_type to CONVEX_MESH.")
+        .def("clear_convex_resource",
+             &KE::Scene::CollisionShapeComponent::clearConvexResource,
+             "Clear the cooked convex collision resource reference.")
+#endif
         .def_property_readonly("version",
                                &KE::Scene::CollisionShapeComponent::version,
                                "Return the collision shape metadata version.")
@@ -571,6 +602,46 @@ void bind_scene(py::module& m) {
             return "<CollisionShapeComponent path='" + path + "' shape=" +
                    KE::Scene::collisionShapeTypeLabel(c.shapeType()) +
                    " geom_index=" + std::to_string(c.sourceGeomIndex()) + ">";
+        });
+
+    py::class_<KE::Scene::RigidBodyComponent,
+               std::shared_ptr<KE::Scene::RigidBodyComponent>>(
+        scene, "RigidBodyComponent",
+        "Scene authoring state for one rigid body root. This component does "
+        "not own a PhysX actor.")
+        .def_property_readonly("attached",
+                               &KE::Scene::RigidBodyComponent::isAttached)
+        .def_property_readonly("owner", &KE::Scene::RigidBodyComponent::owner,
+                               py::return_value_policy::reference)
+        .def_property("body_type", &KE::Scene::RigidBodyComponent::bodyType,
+                      &KE::Scene::RigidBodyComponent::setBodyType)
+        .def_property_readonly("transform_mode",
+                               &KE::Scene::RigidBodyComponent::transformMode,
+                               "Transform ownership derived from body_type.")
+        .def_property("density", &KE::Scene::RigidBodyComponent::density,
+                      &KE::Scene::RigidBodyComponent::setDensity)
+        .def_property("collision_group",
+                      &KE::Scene::RigidBodyComponent::collisionGroup,
+                      &KE::Scene::RigidBodyComponent::setCollisionGroup)
+        .def_property("contact_offset",
+                      &KE::Scene::RigidBodyComponent::contactOffset,
+                      &KE::Scene::RigidBodyComponent::setContactOffset)
+        .def_property("rest_offset",
+                      &KE::Scene::RigidBodyComponent::restOffset,
+                      &KE::Scene::RigidBodyComponent::setRestOffset)
+        .def("set_contact_offsets",
+             &KE::Scene::RigidBodyComponent::setContactOffsets,
+             py::arg("contact_offset"), py::arg("rest_offset"),
+             "Set validated PhysX contact/rest offset authoring defaults.")
+        .def_property("enabled", &KE::Scene::RigidBodyComponent::isEnabled,
+                      &KE::Scene::RigidBodyComponent::setEnabled)
+        .def_property_readonly("version",
+                               &KE::Scene::RigidBodyComponent::version)
+        .def("__repr__", [](const KE::Scene::RigidBodyComponent& c) {
+            const KE::Scene::Prim* owner = c.owner();
+            const std::string path = owner ? owner->getPath() : "<detached>";
+            return "<RigidBodyComponent path='" + path + "' type=" +
+                   KE::Scene::rigidBodyTypeLabel(c.bodyType()) + ">";
         });
 
     py::class_<KE::Scene::ShaderSourceResource>(scene, "ShaderSourceResource")
@@ -859,6 +930,49 @@ void bind_scene(py::module& m) {
             py::arg("component"), py::arg("bone_matrices"),
             "Update skinned bone matrices through component registration.");
 
+    py::class_<KE::Scene::ScenePhysicsSystem>(
+        scene, "ScenePhysicsSystem",
+        "SceneGraph-only rigid-body authoring and optional PhysX runtime "
+        "system.")
+#ifdef KANGENGINE_USE_PHYSX
+        .def("bind_physics_world",
+             &KE::Scene::ScenePhysicsSystem::bindPhysicsWorld,
+             py::arg("world"),
+             "Bind a CPU PhysicsWorld and create actors for registrations.")
+        .def("unbind_physics_world",
+             &KE::Scene::ScenePhysicsSystem::unbindPhysicsWorld,
+             "Destroy Scene-owned actors and retain authoring registrations.")
+#endif
+        .def_property_readonly("has_runtime_world",
+                               &KE::Scene::ScenePhysicsSystem::hasRuntimeWorld)
+        .def_property_readonly(
+            "registration_count",
+            &KE::Scene::ScenePhysicsSystem::registrationCount)
+        .def("register_rigid_body",
+             &KE::Scene::ScenePhysicsSystem::registerRigidBody,
+             py::arg("root"),
+             "Validate and register one authored rigid body subtree.")
+        .def("unregister", &KE::Scene::ScenePhysicsSystem::unregister,
+             py::arg("component"))
+        .def("refresh", &KE::Scene::ScenePhysicsSystem::refresh,
+             py::arg("component"))
+        .def("is_registered", &KE::Scene::ScenePhysicsSystem::isRegistered,
+             py::arg("component"))
+        .def("collision_shape_count",
+             &KE::Scene::ScenePhysicsSystem::collisionShapeCount,
+             py::arg("component"))
+        .def("collision_prim_paths",
+             &KE::Scene::ScenePhysicsSystem::collisionPrimPaths,
+             py::arg("component"),
+             "Return the registered collider Prim paths for one rigid body.")
+        .def("has_runtime_actor",
+             &KE::Scene::ScenePhysicsSystem::hasRuntimeActor,
+             py::arg("component"))
+        .def("runtime_error", &KE::Scene::ScenePhysicsSystem::runtimeError,
+             py::arg("component"))
+        .def("contact_count", &KE::Scene::ScenePhysicsSystem::contactCount,
+             py::arg("component"));
+
     // Prim class
     py::class_<KE::Scene::Prim>(
         scene, "Prim",
@@ -983,6 +1097,18 @@ void bind_scene(py::module& m) {
         .def("remove_collision_shape_component",
              &KE::Scene::Prim::removeCollisionShapeComponent,
              "Detach this prim's collision shape component.")
+        .def("add_rigid_body_component",
+             &KE::Scene::Prim::addRigidBodyComponent,
+             "Attach and return this prim's rigid body authoring component.")
+        .def("get_rigid_body_component",
+             &KE::Scene::Prim::getRigidBodyComponent,
+             "Return this prim's rigid body component, or None.")
+        .def("has_rigid_body_component",
+             &KE::Scene::Prim::hasRigidBodyComponent,
+             "Return whether this prim has a rigid body component.")
+        .def("remove_rigid_body_component",
+             &KE::Scene::Prim::removeRigidBodyComponent,
+             "Detach this prim's rigid body component.")
         // Mesh data
         .def("set_mesh_data", &KE::Scene::Prim::setMeshData,
              py::arg("mesh_data"), "Attach mesh data to this prim.")

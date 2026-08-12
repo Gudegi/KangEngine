@@ -1042,6 +1042,10 @@ py::class_<glm::vec3>(m, "Vec3")
              "User override called once before fixed updates each frame.")
         .def("fixed_update", &App::fixedUpdate, py::arg("fixed_dt"),
              "User override called zero or more times at a fixed timestep.")
+        .def("step_scene_physics", &App::stepScenePhysics,
+             py::arg("substeps") = 1,
+             "Advance the bound ScenePhysicsSystem world with per-substep "
+             "synchronization. Call this from fixed_update().")
         .def("pre_render", &App::preRender,
              "User override called before each frame is rendered.")
         .def("render", &App::render,
@@ -1088,6 +1092,11 @@ py::class_<glm::vec3>(m, "Vec3")
             [](App& self) { return &self.getSceneRenderSystem(); },
             py::return_value_policy::reference_internal,
             "Return the scene-to-renderer component registry.")
+        .def(
+            "get_scene_physics_system",
+            [](App& self) { return &self.getScenePhysicsSystem(); },
+            py::return_value_policy::reference_internal,
+            "Return the SceneGraph rigid-body authoring registry.")
         .def(
             "get_scene_resource_manager",
             [](App& self) { return &self.getSceneResourceManager(); },

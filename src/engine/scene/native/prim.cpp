@@ -14,6 +14,7 @@
 #include "engine/scene/component/articulation_component.hpp"
 #include "engine/scene/component/articulation_binding_component.hpp"
 #include "engine/scene/component/collision_shape_component.hpp"
+#include "engine/scene/component/rigid_body_component.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "geometry/primitive_mesh.hpp"
 #include "utils/types.hpp"
@@ -101,6 +102,8 @@ Prim::~Prim() {
         _articulationBindingComponent->detach();
     if (_collisionShapeComponent)
         _collisionShapeComponent->detach();
+    if (_rigidBodyComponent)
+        _rigidBodyComponent->detach();
 }
 
 Prim* Prim::addChild(const std::string& name, PrimType type) {
@@ -455,6 +458,31 @@ bool Prim::removeCollisionShapeComponent() {
         return false;
     _collisionShapeComponent->detach();
     _collisionShapeComponent.reset();
+    return true;
+}
+
+std::shared_ptr<RigidBodyComponent> Prim::addRigidBodyComponent() {
+    if (_type == PrimType::Root || _type == PrimType::Resource)
+        throw std::runtime_error(
+            "Prim '" + _path +
+            "' cannot add a RigidBodyComponent to a Root or Resource Prim");
+    if (_rigidBodyComponent)
+        throw std::runtime_error("Prim '" + _path +
+                                 "' already has a RigidBodyComponent");
+    _rigidBodyComponent =
+        std::shared_ptr<RigidBodyComponent>(new RigidBodyComponent(this));
+    return _rigidBodyComponent;
+}
+
+std::shared_ptr<RigidBodyComponent> Prim::getRigidBodyComponent() const {
+    return _rigidBodyComponent;
+}
+
+bool Prim::removeRigidBodyComponent() {
+    if (!_rigidBodyComponent)
+        return false;
+    _rigidBodyComponent->detach();
+    _rigidBodyComponent.reset();
     return true;
 }
 

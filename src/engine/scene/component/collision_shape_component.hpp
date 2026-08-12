@@ -4,9 +4,15 @@
 #include "engine/scene/component/component.hpp"
 
 #include <glm/glm.hpp>
-#include <glm/gtc/quaternion.hpp>
+#include <functional>
+#include <memory>
 
 namespace KE {
+
+namespace Physics {
+class ConvexCollisionResource;
+}
+
 namespace Scene {
 
 // Scene-side metadata for a collision shape.
@@ -14,8 +20,11 @@ namespace Scene {
 // This component deliberately does not own PhysX objects or runtime contact
 // state. It mirrors the imported/reference collision descriptor onto debug
 // prims so Inspector, Python tools, and future editors can reason about shape
-// type, local pose, and material settings without touching the simulation hot
-// path.(GPU batch)
+// type, normalized size, source metadata, and material settings without
+// touching the simulation hot
+// path (GPU batch). Convex shapes may retain a reusable collision-resource
+// handle, but the originating PhysicsWorld still owns the native PxConvexMesh
+// payload and controls its validity.
 enum class CollisionShapeType {
     Sphere,
     Capsule,
@@ -32,12 +41,8 @@ class CollisionShapeComponent : public ComponentBase {
     const glm::vec3& size() const { return _size; }
     void setSize(const glm::vec3& size);
 
-    const glm::vec3& localPosition() const { return _localPosition; }
-    void setLocalPosition(const glm::vec3& position);
-
-    const glm::quat& localRotation() const { return _localRotation; }
-    void setLocalRotation(const glm::quat& rotation);
-
+    // Preserves the original MJCF endpoint authoring form for diagnostics and
+    // round-tripping. Runtime pose/size are already normalized onto the Prim.
     bool hasFromTo() const { return _hasFromTo; }
     const glm::vec3& fromPosition() const { return _fromPosition; }
     const glm::vec3& toPosition() const { return _toPosition; }
@@ -62,22 +67,32 @@ class CollisionShapeComponent : public ComponentBase {
     int sourceGeomIndex() const { return _sourceGeomIndex; }
     void setSourceGeomIndex(int index);
 
+    std::shared_ptr<Physics::ConvexCollisionResource> convexResource() const {
+        return _convexResource;
+    }
+    void setConvexResource(
+        std::shared_ptr<Physics::ConvexCollisionResource> resource);
+    void clearConvexResource();
+
     void setShapeMetadata(CollisionShapeType shapeType, const glm::vec3& size,
-                          const glm::vec3& localPosition,
-                          const glm::quat& localRotation, float staticFriction,
+                          float staticFriction,
                           float dynamicFriction, float restitution, int condim,
                           float margin, int sourceGeomIndex);
 
   private:
     friend class Prim;
+    friend class ScenePhysicsSystem;
 
     explicit CollisionShapeComponent(Prim* owner);
     void detach();
+    void setRegistrationCallbacks(
+        std::function<void(CollisionShapeComponent&)> detachCallback,
+        std::function<void(CollisionShapeComponent&)> changeCallback);
+    void clearRegistrationCallbacks();
+    void markChanged();
 
     CollisionShapeType _shapeType = CollisionShapeType::Sphere;
     glm::vec3 _size{0.0f};
-    glm::vec3 _localPosition{0.0f};
-    glm::quat _localRotation{1.0f, 0.0f, 0.0f, 0.0f};
     bool _hasFromTo = false;
     glm::vec3 _fromPosition{0.0f};
     glm::vec3 _toPosition{0.0f};
@@ -87,6 +102,9 @@ class CollisionShapeComponent : public ComponentBase {
     int _condim = -1;
     float _margin = -1.0f;
     int _sourceGeomIndex = -1;
+    std::shared_ptr<Physics::ConvexCollisionResource> _convexResource;
+    std::function<void(CollisionShapeComponent&)> _registrationDetachCallback;
+    std::function<void(CollisionShapeComponent&)> _registrationChangeCallback;
 };
 
 const char* collisionShapeTypeLabel(CollisionShapeType type);

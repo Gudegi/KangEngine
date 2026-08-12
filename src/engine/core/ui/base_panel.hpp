@@ -6,6 +6,7 @@
 #define _BASE_PANEL_HPP_
 #include "imgui.h"
 #include "panel.hpp"
+#include <memory>
 #include <string>
 
 namespace KE {
@@ -35,7 +36,13 @@ class RendererDebugPanel : public Panel {
 
 class InspectorPanel : public Panel {
   private:
+    struct PhysicsDraftState;
+
     App* _app;
+    std::unique_ptr<PhysicsDraftState> _physicsDraft;
+    const void* _physicsMessageOwner = nullptr;
+    std::string _physicsMessage;
+    bool _physicsMessageIsError = false;
 
   public:
     explicit InspectorPanel(App* app);

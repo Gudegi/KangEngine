@@ -7,6 +7,7 @@
 
 #include "PxPhysicsAPI.h"
 #include <fmt/base.h>
+#include "physics/collision/convex_collision.hpp"
 #include "utils/types.hpp"
 #include <cstdint>
 #include <glm/glm.hpp>
@@ -30,22 +31,6 @@ struct MeshData;
 namespace Physics {
 struct CollisionMaterialOverride;
 struct PhysicsMaterialDesc;
-
-// Backend-neutral convex part payload. Decomposition tools such as CoACD can
-// populate this without depending on PhysX. The current PhysX path cooks a hull
-// from vertices; triangle indices are retained for validation, visualization,
-// and a future preserve-polygons cooking mode.
-struct ConvexMeshPart {
-    std::vector<glm::vec3> vertices;
-    std::vector<uint32_t> indices;
-    glm::vec3 localPosition = glm::vec3(0.0f);
-    glm::quat localRotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-};
-
-struct ConvexCookingOptions {
-    uint32_t vertexLimit = 255;
-    bool gpuCompatible = false;
-};
 
 // Reconstruct a render mesh from the exact cooked PhysX convex geometry. The
 // shape-local pose is baked into the returned actor/link-local vertices.
@@ -146,6 +131,9 @@ class PhysicsWorld {
         physx::PxConvexMesh* mesh = nullptr;
     };
     std::vector<CachedConvexMesh> _convexMeshCache;
+    std::shared_ptr<Physics::PhysicsResourceLifetimeToken>
+        _resourceLifetimeToken =
+            std::make_shared<Physics::PhysicsResourceLifetimeToken>();
 
     float _dt;
     UpAxis _upAxis;
@@ -159,7 +147,6 @@ class PhysicsWorld {
 
     physx::PxMaterial*
     materialForDesc(const Physics::PhysicsMaterialDesc& material);
-
   public:
     PhysicsWorld(PhysicsConfig config);
     ~PhysicsWorld();
@@ -181,18 +168,49 @@ class PhysicsWorld {
     // PhysX shapes are intentionally created as exclusive per actor/link
     // objects. Per-instance PxShape state (local pose, filter data, contact
     // offsets, material slot) stays local, while heavier resources such as
-    // PxMaterial and future cooked collision meshes are shared/cached by
+    // PxMaterial and cooked collision meshes are shared/cached by
     // PhysicsWorld.
     physx::PxShape*
     createExclusiveShape(physx::PxRigidActor& actor,
                          const physx::PxGeometry& geometry,
                          const Physics::PhysicsMaterialDesc& material);
 
+    bool attachConvexCollision(
+        physx::PxRigidActor& actor,
+        const Physics::ConvexCollisionResource& collision,
+        const Physics::PhysicsMaterialDesc& material,
+        const glm::vec3& localPosition = glm::vec3(0.0f),
+        const glm::quat& localRotation =
+            glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+        float contactOffset = 0.02f, float restOffset = 0.0f);
+
+    void setRigidCollisionGroup(physx::PxRigidActor& actor,
+                                PxU32 collisionGroup);
+    void addRigidActor(physx::PxRigidActor& actor);
+    void destroyRigidActor(physx::PxRigidActor* actor);
+
     // Cook once per shared source mesh/options pair and reuse the heavy PhysX
     // convex resource across exclusive shape instances.
     physx::PxConvexMesh*
     getOrCreateConvexMesh(std::shared_ptr<const Scene::MeshData> mesh,
                           const Physics::ConvexCookingOptions& cooking = {});
+
+    std::shared_ptr<Physics::ConvexCollisionResource>
+    createConvexCollision(const std::vector<Physics::ConvexMeshPart>& parts,
+                          const Physics::ConvexCookingOptions& cooking = {});
+
+    physx::PxRigidDynamic* createDynamicFromCollision(
+        const std::shared_ptr<Physics::ConvexCollisionResource>& collision,
+        const glm::vec3& pos, const glm::quat& rot, float density,
+        const Physics::PhysicsMaterialDesc& material, PxU32 collisionGroup = 0,
+        float contactOffset = 0.02f, float restOffset = 0.0f);
+
+    physx::PxRigidStatic* createStaticFromCollision(
+        const std::shared_ptr<Physics::ConvexCollisionResource>& collision,
+        const glm::vec3& pos, const glm::quat& rot,
+        const Physics::PhysicsMaterialDesc& material, PxU32 collisionGroup = 0,
+        float contactOffset = 0.02f, float restOffset = 0.0f,
+        bool registerAsGround = false);
 
     physx::PxRigidDynamic* createDynamicConvexCompound(
         const std::vector<Physics::ConvexMeshPart>& parts, const glm::vec3& pos,
@@ -293,6 +311,9 @@ class PhysicsWorld {
         return _cudaContextManager;
     }
     bool isGpuEnabled() const { return _cudaContextManager != nullptr; }
+    std::weak_ptr<Physics::PhysicsResourceLifetimeToken> lifetimeToken() const {
+        return _resourceLifetimeToken;
+    }
 };
 
 // PhysX > GLM conversion

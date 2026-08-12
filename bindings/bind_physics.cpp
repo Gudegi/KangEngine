@@ -595,6 +595,22 @@ void bind_physics(py::module& m) {
         .def_readwrite("gpu_compatible",
                        &ConvexCookingOptions::gpuCompatible);
 
+    py::class_<ConvexCollisionResource,
+               std::shared_ptr<ConvexCollisionResource>>(
+        physics, "ConvexCollisionResource",
+        "Reusable cooked convex collision resource owned by a PhysicsWorld.")
+        .def_property_readonly("part_count",
+                               &ConvexCollisionResource::partCount)
+        .def_property_readonly("is_valid", &ConvexCollisionResource::isValid)
+        .def_property_readonly(
+            "vertex_limit", [](const ConvexCollisionResource& self) {
+                return self.cookingOptions().vertexLimit;
+            })
+        .def_property_readonly(
+            "gpu_compatible", [](const ConvexCollisionResource& self) {
+                return self.cookingOptions().gpuCompatible;
+            });
+
     py::class_<PxRigidDynamic, std::unique_ptr<PxRigidDynamic, py::nodelete>>(
         m, "RigidDynamic", "PhysX dynamic rigid body owned by a PhysicsWorld.")
         .def(
@@ -950,6 +966,73 @@ void bind_physics(py::module& m) {
             py::arg("rot_xyzw") = std::vector<float>{0.f, 0.f, 0.f, 1.f},
             py::arg("density") = 1.0f, py::return_value_policy::reference,
             "Create a dynamic sphere for low-level physics tests and tools.")
+        .def(
+            "create_convex_collision",
+            [](PhysicsWorld& self, const std::vector<ConvexMeshPart>& parts,
+               const ConvexCookingOptions& cooking) {
+                return self.createConvexCollision(parts, cooking);
+            },
+            py::arg("parts"), py::arg("cooking") = ConvexCookingOptions{},
+            "Cook convex parts once into a reusable collision resource.")
+        .def(
+            "create_dynamic_from_collision",
+            [](PhysicsWorld& self,
+               const std::shared_ptr<ConvexCollisionResource>& collision,
+               const FloatArray& pos, const FloatArray& rotXyzw, float density,
+               const PhysicsMaterialDesc& material, PxU32 collisionGroup,
+               float contactOffset, float restOffset) {
+                auto p = vec3ArrayView(pos, "pos");
+                auto q = vec4ArrayView(rotXyzw, "rot_xyzw");
+                if (p.count != 1 || q.count != 1)
+                    throw py::value_error(
+                        "create_dynamic_from_collision expects pos[3] and "
+                        "rot_xyzw[4]");
+                return self.createDynamicFromCollision(
+                    collision, glm::vec3(p.data[0], p.data[1], p.data[2]),
+                    glm::quat(q.data[3], q.data[0], q.data[1], q.data[2]),
+                    density, material, collisionGroup, contactOffset,
+                    restOffset);
+            },
+            py::arg("collision"), py::arg("pos"),
+            py::arg("rot_xyzw") = std::array<float, 4>{0.f, 0.f, 0.f, 1.f},
+            py::arg("density") = 1.0f,
+            py::arg("material") = PhysicsMaterialDesc{},
+            py::arg("collision_group") = 0,
+            py::arg("contact_offset") = 0.02f,
+            py::arg("rest_offset") = 0.0f,
+            py::return_value_policy::reference,
+            "Create a dynamic actor using an existing convex collision "
+            "resource.")
+        .def(
+            "create_static_from_collision",
+            [](PhysicsWorld& self,
+               const std::shared_ptr<ConvexCollisionResource>& collision,
+               const FloatArray& pos, const FloatArray& rotXyzw,
+               const PhysicsMaterialDesc& material, PxU32 collisionGroup,
+               float contactOffset, float restOffset, bool registerAsGround) {
+                auto p = vec3ArrayView(pos, "pos");
+                auto q = vec4ArrayView(rotXyzw, "rot_xyzw");
+                if (p.count != 1 || q.count != 1)
+                    throw py::value_error(
+                        "create_static_from_collision expects pos[3] and "
+                        "rot_xyzw[4]");
+                return self.createStaticFromCollision(
+                    collision, glm::vec3(p.data[0], p.data[1], p.data[2]),
+                    glm::quat(q.data[3], q.data[0], q.data[1], q.data[2]),
+                    material, collisionGroup, contactOffset, restOffset,
+                    registerAsGround);
+            },
+            py::arg("collision"),
+            py::arg("pos") = std::array<float, 3>{0.f, 0.f, 0.f},
+            py::arg("rot_xyzw") = std::array<float, 4>{0.f, 0.f, 0.f, 1.f},
+            py::arg("material") = PhysicsMaterialDesc{},
+            py::arg("collision_group") = 0,
+            py::arg("contact_offset") = 0.02f,
+            py::arg("rest_offset") = 0.0f,
+            py::arg("register_as_ground") = false,
+            py::return_value_policy::reference,
+            "Create a static actor using an existing convex collision "
+            "resource.")
         .def(
             "create_dynamic_convex_compound",
             [](PhysicsWorld& self, const std::vector<ConvexMeshPart>& parts,

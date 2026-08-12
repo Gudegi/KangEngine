@@ -14,6 +14,7 @@
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -37,6 +38,7 @@
 #include "engine/scene/scene_backend.hpp"
 #include "engine/scene/scene_resource_manager.hpp"
 #include "engine/scene/component/scene_render_system.hpp"
+#include "engine/scene/component/scene_physics_system.hpp"
 #include "engine/scene/native/prim.hpp"
 namespace KE {
 
@@ -121,6 +123,7 @@ class App {
     std::unique_ptr<SelectionOutlineProcessor> _selectionOutlineProcessor;
     Renderer _renderer;
     Scene::SceneRenderSystem _sceneRenderSystem;
+    Scene::ScenePhysicsSystem _scenePhysicsSystem;
     Scene::SceneResourceManager _sceneResourceManager;
     InteractionController _interaction;
     GizmoController _gizmo;
@@ -136,6 +139,7 @@ class App {
     void renderSelectionGizmo();
     void renderSelectionGizmo(Camera& camera, const ImVec2& rectMin,
                               const ImVec2& rectSize, ImDrawList* drawList);
+    void renderScenePhysicsForceDragOverlay();
     void renderSelectedLightOverlay();
     void renderSelectedCameraOverlay();
     bool isEditorViewportInputActive() const;
@@ -182,6 +186,12 @@ class App {
     }
     const Scene::SceneRenderSystem& getSceneRenderSystem() const {
         return _sceneRenderSystem;
+    }
+    Scene::ScenePhysicsSystem& getScenePhysicsSystem() {
+        return _scenePhysicsSystem;
+    }
+    const Scene::ScenePhysicsSystem& getScenePhysicsSystem() const {
+        return _scenePhysicsSystem;
     }
     Scene::SceneResourceManager& getSceneResourceManager() {
         return _sceneResourceManager;
@@ -291,6 +301,10 @@ class App {
     bool isSimulationPaused() const;
     void requestSimulationStep();
     void setSimulationHotkeysEnabled(bool enabled);
+    // Advance the PhysicsWorld bound to ScenePhysicsSystem. When called from
+    // fixedUpdate(), the first substep consumes App's already-prepared sync;
+    // later substeps each receive their own pre-simulation sync.
+    void stepScenePhysics(std::size_t substeps = 1);
     bool getSimulationHotkeysEnabled() const {
         return _simulationHotkeysEnabled;
     }
@@ -304,6 +318,8 @@ class App {
     bool _simulationHotkeysEnabled = false;
     bool _simulationPauseKeyWasDown = false;
     bool _simulationStepKeyWasDown = false;
+    bool _scenePhysicsFixedUpdateActive = false;
+    bool _scenePhysicsStepPrepared = false;
     float _measuredRenderFPS = 0.0f;
     float _frameCPUTimeMs = 0.0f;
     float _updateCPUTimeMs = 0.0f;

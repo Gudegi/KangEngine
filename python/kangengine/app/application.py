@@ -905,6 +905,7 @@ class App(_NativeApp):
         self._scene_hook_resource_handles = {}
         self._render_hook_resource_usage = {}
         self.playback_controller = PlaybackController()
+        self._scene_physics_world = None
 
     def get_native_scene(self):
         """Return the native SceneBackend escape hatch.
@@ -926,6 +927,35 @@ class App(_NativeApp):
     def get_renderer(self):
         """Return the native renderer exposed through ``ke.render``."""
         return super().get_renderer()
+
+    def get_scene_physics_system(self):
+        """Return the SceneGraph rigid-body authoring/runtime system.
+
+        Bind a CPU PhysicsWorld to enable runtime actor creation. The world is
+        still stepped explicitly, normally from ``fixed_update``.
+        """
+        return super().get_scene_physics_system()
+
+    def bind_scene_physics_world(self, world):
+        """Bind and retain a CPU PhysicsWorld for SceneGraph rigid bodies."""
+        native_world = getattr(world, "native", world)
+        self.get_scene_physics_system().bind_physics_world(native_world)
+        self._scene_physics_world = world
+
+    def unbind_scene_physics_world(self):
+        """Destroy Scene-owned actors and release the retained world."""
+        self.get_scene_physics_system().unbind_physics_world()
+        self._scene_physics_world = None
+
+    def step_scene_physics(self, substeps: int = 1):
+        """Step the bound ScenePhysics world with per-substep synchronization.
+
+        Use this instead of repeatedly calling ``PhysicsWorld.step()`` when a
+        fixed update represents multiple physics substeps. App's first
+        pre-simulation sync is reused and every later substep receives another
+        sync for forces and kinematic targets.
+        """
+        return super().step_scene_physics(int(substeps))
 
     def create_scene_hook_pipeline(
         self, desc, *, shader_uris=None, shader_languages=None

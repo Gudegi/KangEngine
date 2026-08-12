@@ -14,14 +14,19 @@
 #include "engine/scene/component/material_binding_component.hpp"
 #include "engine/scene/component/mesh_component.hpp"
 #include "engine/scene/component/resource_component.hpp"
+#include "engine/scene/component/rigid_body_component.hpp"
 #include "engine/scene/component/selection_component.hpp"
 #include "engine/scene/component/transform_component.hpp"
 #include "engine/scene/native/xform_token.hpp"
+#ifdef KANGENGINE_USE_PHYSX
+#include "physics/collision/convex_collision.hpp"
+#endif
 #include <IconsFontAwesome7.h>
 #include <algorithm>
 #include <cfloat>
 #include <cstdio>
 #include <cstdint>
+#include <exception>
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <type_traits>
@@ -1060,7 +1065,71 @@ void RendererDebugPanel::buildPanel() {
     ImGui::End();
 }
 
-InspectorPanel::InspectorPanel(App* app) : Panel("Inspector"), _app(app) {}
+struct InspectorPanel::PhysicsDraftState {
+    struct RigidBodyDraft {
+        const Scene::RigidBodyComponent* owner = nullptr;
+        uint64_t version = 0;
+        Scene::RigidBodyType bodyType = Scene::RigidBodyType::Static;
+        float density = 1000.0f;
+        uint32_t collisionGroup = 0;
+        float contactOffset = 0.02f;
+        float restOffset = 0.0f;
+        bool enabled = true;
+        bool dirty = false;
+    } rigidBody;
+
+    struct CollisionDraft {
+        const Scene::CollisionShapeComponent* owner = nullptr;
+        uint64_t version = 0;
+        Scene::CollisionShapeType shapeType =
+            Scene::CollisionShapeType::Sphere;
+        glm::vec3 size{0.0f};
+        float staticFriction = 1.0f;
+        float dynamicFriction = 1.0f;
+        float restitution = 0.0f;
+        int sourceGeomIndex = -1;
+        int condim = -1;
+        float margin = -1.0f;
+        bool clearConvexResource = false;
+        bool dirty = false;
+    } collision;
+
+    void reset() {
+        rigidBody = {};
+        collision = {};
+    }
+
+    void load(const Scene::RigidBodyComponent& component) {
+        rigidBody.owner = &component;
+        rigidBody.version = component.version();
+        rigidBody.bodyType = component.bodyType();
+        rigidBody.density = component.density();
+        rigidBody.collisionGroup = component.collisionGroup();
+        rigidBody.contactOffset = component.contactOffset();
+        rigidBody.restOffset = component.restOffset();
+        rigidBody.enabled = component.isEnabled();
+        rigidBody.dirty = false;
+    }
+
+    void load(const Scene::CollisionShapeComponent& component) {
+        collision.owner = &component;
+        collision.version = component.version();
+        collision.shapeType = component.shapeType();
+        collision.size = component.size();
+        collision.staticFriction = component.staticFriction();
+        collision.dynamicFriction = component.dynamicFriction();
+        collision.restitution = component.restitution();
+        collision.sourceGeomIndex = component.sourceGeomIndex();
+        collision.condim = component.condim();
+        collision.margin = component.margin();
+        collision.clearConvexResource = false;
+        collision.dirty = false;
+    }
+};
+
+InspectorPanel::InspectorPanel(App* app)
+    : Panel("Inspector"), _app(app),
+      _physicsDraft(std::make_unique<PhysicsDraftState>()) {}
 
 InspectorPanel::~InspectorPanel() {}
 
@@ -1092,6 +1161,12 @@ void InspectorPanel::buildPanel() {
     _app->getPrimTransformSource(prim, source);
     const bool external = source == TransformSource::ExternalBuffer;
     const bool resourceMirror = isResourceNamespacePrim(prim);
+    if (_physicsMessageOwner != prim) {
+        _physicsMessageOwner = prim;
+        _physicsDraft->reset();
+        _physicsMessage.clear();
+        _physicsMessageIsError = false;
+    }
 
     ImGui::SeparatorText("Prim");
     if (ImGui::BeginTable("PrimSummary", 2,
@@ -1262,12 +1337,112 @@ void InspectorPanel::buildPanel() {
         }
     }
 
-    if (auto collisionShape = prim->getCollisionShapeComponent()) {
-        ImGui::SeparatorText("Collision Shape");
+    auto rigidBody = prim->getRigidBodyComponent();
+    const bool articulationPrim = prim->hasArticulationComponent() ||
+                                  prim->hasArticulationBindingComponent();
+    const bool canAuthorRigidBody =
+        !external && !resourceMirror && !articulationPrim &&
+        prim->getType() != Scene::PrimType::Root;
+
+    if (!rigidBody && canAuthorRigidBody) {
+        ImGui::SeparatorText("Rigid Body");
+        if (ImGui::Button("Add Rigid Body Component")) {
+            try {
+                prim->addRigidBodyComponent();
+                _physicsMessage = "RigidBodyComponent added.";
+                _physicsMessageIsError = false;
+            } catch (const std::exception& error) {
+                _physicsMessage = error.what();
+                _physicsMessageIsError = true;
+            }
+        }
+    }
+
+    if (rigidBody) {
+        ImGui::SeparatorText("Rigid Body");
         ImGui::Text("Component: attached=%s version=%llu",
-                    collisionShape->isAttached() ? "true" : "false",
-                    static_cast<unsigned long long>(collisionShape->version()));
-        if (ImGui::BeginTable("CollisionShape", 2,
+                    rigidBody->isAttached() ? "true" : "false",
+                    static_cast<unsigned long long>(rigidBody->version()));
+
+        auto& draft = _physicsDraft->rigidBody;
+        if (draft.owner != rigidBody.get() ||
+            (!draft.dirty && draft.version != rigidBody->version())) {
+            _physicsDraft->load(*rigidBody);
+        }
+
+        draft.dirty |=
+            ImGui::Checkbox("Enabled##RigidBody", &draft.enabled);
+
+        const char* bodyTypeLabels[] = {"Static", "Dynamic", "Kinematic"};
+        int bodyType = static_cast<int>(draft.bodyType);
+        if (ImGui::Combo("Type##RigidBody", &bodyType, bodyTypeLabels,
+                         static_cast<int>(std::size(bodyTypeLabels)))) {
+            draft.bodyType = static_cast<Scene::RigidBodyType>(bodyType);
+            draft.dirty = true;
+        }
+
+        if (ImGui::DragFloat("Density##RigidBody", &draft.density, 1.0f,
+                             0.001f, 1000000.0f, "%.3f")) {
+            draft.density = std::max(draft.density, 0.001f);
+            draft.dirty = true;
+        }
+
+        if (ImGui::InputScalar("Collision Group##RigidBody",
+                               ImGuiDataType_U32, &draft.collisionGroup))
+            draft.dirty = true;
+
+        bool offsetsChanged = ImGui::DragFloat(
+            "Contact Offset##RigidBody", &draft.contactOffset, 0.001f);
+        offsetsChanged |= ImGui::DragFloat("Rest Offset##RigidBody",
+                                           &draft.restOffset, 0.001f);
+        if (offsetsChanged) {
+            constexpr float minimumGap = 1e-4f;
+            draft.contactOffset =
+                std::max(draft.contactOffset, minimumGap);
+            draft.restOffset = std::min(
+                draft.restOffset, draft.contactOffset - minimumGap);
+            draft.dirty = true;
+        }
+        ImGui::TextDisabled(
+            "Collider margin >= 0 overrides its contact offset.");
+
+        Scene::ScenePhysicsSystem& physicsSystem =
+            _app->getScenePhysicsSystem();
+        const bool registered = physicsSystem.isRegistered(*rigidBody);
+
+        const bool canApplyRigidBody = draft.dirty;
+        if (!canApplyRigidBody)
+            ImGui::BeginDisabled();
+        if (ImGui::Button("Apply Rigid Body")) {
+            const bool restoreRegistration = registered;
+            try {
+                if (restoreRegistration)
+                    physicsSystem.unregister(*rigidBody);
+                rigidBody->setBodyType(draft.bodyType);
+                rigidBody->setDensity(draft.density);
+                rigidBody->setCollisionGroup(draft.collisionGroup);
+                rigidBody->setContactOffsets(draft.contactOffset,
+                                             draft.restOffset);
+                rigidBody->setEnabled(draft.enabled);
+                if (restoreRegistration)
+                    physicsSystem.registerRigidBody(*prim);
+                _physicsDraft->load(*rigidBody);
+                _physicsMessage = "Rigid body changes applied.";
+                _physicsMessageIsError = false;
+            } catch (const std::exception& error) {
+                _physicsMessage = error.what();
+                _physicsMessageIsError = true;
+            }
+        }
+        if (!canApplyRigidBody)
+            ImGui::EndDisabled();
+        ImGui::SameLine();
+        if (ImGui::Button("Revert##RigidBody"))
+            _physicsDraft->load(*rigidBody);
+        if (draft.dirty)
+            ImGui::TextDisabled("Pending changes are not active yet.");
+
+        if (ImGui::BeginTable("RigidBodyStatus", 2,
                               ImGuiTableFlags_SizingStretchProp)) {
             const auto property = [](const char* label) {
                 ImGui::TableNextRow();
@@ -1275,52 +1450,257 @@ void InspectorPanel::buildPanel() {
                 ImGui::TextDisabled("%s", label);
                 ImGui::TableSetColumnIndex(1);
             };
-            property("Shape");
-            ImGui::TextUnformatted(
-                Scene::collisionShapeTypeLabel(collisionShape->shapeType()));
-            property("Source Geom");
-            if (collisionShape->sourceGeomIndex() >= 0)
-                ImGui::Text("%d", collisionShape->sourceGeomIndex());
-            else
-                ImGui::TextUnformatted("Fallback");
-            property("Size");
-            const glm::vec3& size = collisionShape->size();
-            ImGui::Text("%.4f, %.4f, %.4f", size.x, size.y, size.z);
-            property("Local Pos");
-            const glm::vec3& localPos = collisionShape->localPosition();
-            ImGui::Text("%.4f, %.4f, %.4f", localPos.x, localPos.y, localPos.z);
-            property("Local Rot");
-            const glm::quat& localRot = collisionShape->localRotation();
-            ImGui::Text("w %.4f, x %.4f, y %.4f, z %.4f", localRot.w,
-                        localRot.x, localRot.y, localRot.z);
-            property("From/To");
-            ImGui::TextUnformatted(collisionShape->hasFromTo() ? "Yes" : "No");
-            if (collisionShape->hasFromTo()) {
-                property("From");
-                const glm::vec3& from = collisionShape->fromPosition();
-                ImGui::Text("%.4f, %.4f, %.4f", from.x, from.y, from.z);
-                property("To");
-                const glm::vec3& to = collisionShape->toPosition();
-                ImGui::Text("%.4f, %.4f, %.4f", to.x, to.y, to.z);
+            property("Registered");
+            ImGui::TextUnformatted(registered ? "Yes" : "No");
+            property("Transform Owner");
+            ImGui::TextUnformatted(Scene::physicsTransformModeLabel(
+                rigidBody->transformMode()));
+            property("Colliders");
+            if (registered) {
+                ImGui::Text("%zu",
+                            physicsSystem.collisionShapeCount(*rigidBody));
+            } else {
+                ImGui::TextUnformatted("-");
             }
-            property("Friction");
-            ImGui::Text("static %.4f, dynamic %.4f",
-                        collisionShape->staticFriction(),
-                        collisionShape->dynamicFriction());
-            property("Restitution");
-            ImGui::Text("%.4f", collisionShape->restitution());
-            property("Condim( Unused )");
-            if (collisionShape->condim() >= 0)
-                ImGui::Text("%d", collisionShape->condim());
-            else
-                ImGui::TextUnformatted("<none>");
-            property("Margin");
-            if (collisionShape->margin() >= 0.0f)
-                ImGui::Text("%.4f", collisionShape->margin());
-            else
-                ImGui::TextUnformatted("<none>");
+            property("Runtime Actor");
+            if (physicsSystem.hasRuntimeActor(*rigidBody)) {
+                ImGui::TextUnformatted("Created");
+            } else if (physicsSystem.hasRuntimeWorld()) {
+                ImGui::TextUnformatted("Not created");
+            } else {
+                ImGui::TextUnformatted("Authoring only (no PhysicsWorld)");
+            }
+            property("Contacts");
+            ImGui::Text("%zu", physicsSystem.contactCount(*rigidBody));
             ImGui::EndTable();
         }
+
+        if (registered && !physicsSystem.runtimeError(*rigidBody).empty()) {
+            ImGui::TextColored(
+                ImVec4(0.95f, 0.45f, 0.35f, 1.0f), "Runtime: %s",
+                physicsSystem.runtimeError(*rigidBody).c_str());
+        }
+
+        if (registered) {
+            const std::vector<std::string> colliderPaths =
+                physicsSystem.collisionPrimPaths(*rigidBody);
+            if (ImGui::TreeNode("RegisteredColliders",
+                                "Registered Colliders (%zu)",
+                                colliderPaths.size())) {
+                for (const std::string& path : colliderPaths)
+                    ImGui::BulletText("%s", path.c_str());
+                ImGui::TreePop();
+            }
+        }
+
+        if (registered) {
+            if (ImGui::Button("Unregister Rigid Body")) {
+                physicsSystem.unregister(*rigidBody);
+                _physicsMessage = "Rigid body unregistered.";
+                _physicsMessageIsError = false;
+            }
+        } else {
+            if (!canAuthorRigidBody)
+                ImGui::BeginDisabled();
+            if (ImGui::Button("Register Rigid Body")) {
+                try {
+                    physicsSystem.registerRigidBody(*prim);
+                    _physicsMessage = "Rigid body registered.";
+                    _physicsMessageIsError = false;
+                } catch (const std::exception& error) {
+                    _physicsMessage = error.what();
+                    _physicsMessageIsError = true;
+                }
+            }
+            if (!canAuthorRigidBody)
+                ImGui::EndDisabled();
+        }
+
+        if (ImGui::Button("Remove Rigid Body Component")) {
+            prim->removeRigidBodyComponent();
+            _physicsMessage = "RigidBodyComponent removed.";
+            _physicsMessageIsError = false;
+        }
+        if (!canAuthorRigidBody) {
+            ImGui::TextDisabled(
+                "Scene physics does not accept this Prim ownership path.");
+        }
+    }
+
+    auto collisionShape = prim->getCollisionShapeComponent();
+    const bool canAuthorCollisionShape =
+        !external && !resourceMirror && !articulationPrim &&
+        prim->getType() != Scene::PrimType::Root;
+    if (!collisionShape && canAuthorCollisionShape) {
+        ImGui::SeparatorText("Collision Shape");
+        if (ImGui::Button("Add Collision Shape Component")) {
+            try {
+                auto added = prim->addCollisionShapeComponent();
+                added->setShapeType(Scene::CollisionShapeType::Sphere);
+                added->setSize({0.5f, 0.0f, 0.0f});
+
+                for (Scene::Prim* ancestor = prim; ancestor;
+                     ancestor = ancestor->getParent()) {
+                    auto ancestorRigid = ancestor->getRigidBodyComponent();
+                    if (!ancestorRigid)
+                        continue;
+                    auto& physicsSystem = _app->getScenePhysicsSystem();
+                    if (physicsSystem.isRegistered(*ancestorRigid))
+                        physicsSystem.refresh(*ancestorRigid);
+                    break;
+                }
+
+                _physicsMessage =
+                    "CollisionShapeComponent added as a sphere.";
+                _physicsMessageIsError = false;
+            } catch (const std::exception& error) {
+                _physicsMessage = error.what();
+                _physicsMessageIsError = true;
+            }
+        }
+    }
+
+    if (collisionShape) {
+        ImGui::SeparatorText("Collision Shape");
+        ImGui::Text("Component: attached=%s version=%llu",
+                    collisionShape->isAttached() ? "true" : "false",
+                    static_cast<unsigned long long>(collisionShape->version()));
+
+        auto& draft = _physicsDraft->collision;
+        if (draft.owner != collisionShape.get() ||
+            (!draft.dirty && draft.version != collisionShape->version())) {
+            _physicsDraft->load(*collisionShape);
+        }
+
+        const char* shapeTypeLabels[] = {"Sphere", "Capsule", "Cylinder",
+                                         "Box", "Convex Mesh"};
+        int shapeType = static_cast<int>(draft.shapeType);
+        if (ImGui::Combo("Shape", &shapeType, shapeTypeLabels,
+                         static_cast<int>(std::size(shapeTypeLabels)))) {
+            draft.shapeType =
+                static_cast<Scene::CollisionShapeType>(shapeType);
+            draft.dirty = true;
+        }
+
+        if (draft.shapeType == Scene::CollisionShapeType::ConvexMesh) {
+#ifdef KANGENGINE_USE_PHYSX
+            if (auto resource = collisionShape->convexResource()) {
+                ImGui::Text("Convex Resource: %zu part%s (%s)",
+                            resource->partCount(),
+                            resource->partCount() == 1 ? "" : "s",
+                            resource->isValid() ? "valid" : "expired");
+                if (ImGui::Button("Clear Convex Resource on Apply")) {
+                    draft.clearConvexResource = true;
+                    draft.dirty = true;
+                }
+                if (draft.clearConvexResource)
+                    ImGui::TextDisabled("Convex resource will be cleared.");
+            } else {
+                ImGui::TextColored(
+                    ImVec4(0.95f, 0.68f, 0.25f, 1.0f),
+                    "No convex collision resource is bound.");
+            }
+#else
+            ImGui::TextDisabled(
+                "Convex collision resources require a PhysX build.");
+#endif
+        }
+
+        if (ImGui::DragFloat3("Size", &draft.size.x, 0.01f)) {
+            draft.size = glm::max(draft.size, glm::vec3(0.0f));
+            draft.dirty = true;
+        }
+        ImGui::TextDisabled("Pose is authored by the Collision Prim.");
+
+        if (ImGui::DragFloat("Static Friction", &draft.staticFriction, 0.01f,
+                             0.0f, 10.0f)) {
+            draft.staticFriction = std::max(draft.staticFriction, 0.0f);
+            draft.dirty = true;
+        }
+        if (ImGui::DragFloat("Dynamic Friction", &draft.dynamicFriction,
+                             0.01f, 0.0f, 10.0f)) {
+            draft.dynamicFriction = std::max(draft.dynamicFriction, 0.0f);
+            draft.dirty = true;
+        }
+        if (ImGui::DragFloat("Restitution", &draft.restitution, 0.01f, 0.0f,
+                             1.0f)) {
+            draft.restitution = std::clamp(draft.restitution, 0.0f, 1.0f);
+            draft.dirty = true;
+        }
+
+        draft.dirty |=
+            ImGui::InputInt("Source Geom", &draft.sourceGeomIndex);
+        draft.dirty |= ImGui::InputInt("Condim (unused)", &draft.condim);
+        if (ImGui::DragFloat("Margin", &draft.margin, 0.001f, -1.0f,
+                             10.0f)) {
+            draft.margin = std::max(draft.margin, -1.0f);
+            draft.dirty = true;
+        }
+
+        const bool canApplyCollision = draft.dirty;
+        if (!canApplyCollision)
+            ImGui::BeginDisabled();
+        if (ImGui::Button("Apply Collision Shape")) {
+            Scene::Prim* rigidRoot = nullptr;
+            std::shared_ptr<Scene::RigidBodyComponent> owningRigid;
+            for (Scene::Prim* ancestor = prim; ancestor;
+                 ancestor = ancestor->getParent()) {
+                if (auto candidate = ancestor->getRigidBodyComponent()) {
+                    rigidRoot = ancestor;
+                    owningRigid = std::move(candidate);
+                    break;
+                }
+            }
+
+            auto& physicsSystem = _app->getScenePhysicsSystem();
+            const bool restoreRegistration =
+                owningRigid && physicsSystem.isRegistered(*owningRigid);
+            try {
+                if (restoreRegistration)
+                    physicsSystem.unregister(*owningRigid);
+                collisionShape->setShapeType(draft.shapeType);
+                if (draft.clearConvexResource)
+                    collisionShape->clearConvexResource();
+                collisionShape->setSize(draft.size);
+                collisionShape->setStaticFriction(draft.staticFriction);
+                collisionShape->setDynamicFriction(draft.dynamicFriction);
+                collisionShape->setRestitution(draft.restitution);
+                collisionShape->setSourceGeomIndex(draft.sourceGeomIndex);
+                collisionShape->setCondim(draft.condim);
+                collisionShape->setMargin(draft.margin);
+                if (restoreRegistration)
+                    physicsSystem.registerRigidBody(*rigidRoot);
+                _physicsDraft->load(*collisionShape);
+                _physicsMessage = "Collision shape changes applied.";
+                _physicsMessageIsError = false;
+            } catch (const std::exception& error) {
+                _physicsMessage = error.what();
+                _physicsMessageIsError = true;
+            }
+        }
+        if (!canApplyCollision)
+            ImGui::EndDisabled();
+        ImGui::SameLine();
+        if (ImGui::Button("Revert##CollisionShape"))
+            _physicsDraft->load(*collisionShape);
+        if (draft.dirty)
+            ImGui::TextDisabled("Pending changes are not active yet.");
+
+        if (ImGui::Button("Remove Collision Shape Component")) {
+            prim->removeCollisionShapeComponent();
+            _physicsMessage =
+                "CollisionShapeComponent removed; owning rigid body "
+                "registration invalidated.";
+            _physicsMessageIsError = false;
+        }
+    }
+
+    if (!_physicsMessage.empty()) {
+        const ImVec4 color =
+            _physicsMessageIsError
+                ? ImVec4(0.95f, 0.45f, 0.35f, 1.0f)
+                : ImVec4(0.45f, 0.80f, 0.52f, 1.0f);
+        ImGui::TextColored(color, "%s", _physicsMessage.c_str());
     }
 
     ImGui::SeparatorText("Transform");

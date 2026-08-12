@@ -1,5 +1,4 @@
-#ifndef _FORCE_DRAG_CONTROLLER_HPP_
-#define _FORCE_DRAG_CONTROLLER_HPP_
+#pragma once
 
 #include "PxPhysicsAPI.h"
 #include "physics.hpp"
@@ -33,7 +32,11 @@ class ForceDragController {
     void clearBindings();
 
     bool begin(const RayPickResult& pick, const glm::vec3& target);
+    bool beginDirect(physx::PxRigidDynamic& rigid,
+                     const glm::vec3& hitPosition);
     void update(const glm::vec3& target);
+    void computeForce(const glm::vec3& target);
+    void applyCachedForce();
     void end();
     bool active() const { return _active; }
     const glm::vec3& lastBodyPosition() const { return _lastBodyPosition; }
@@ -63,5 +66,3 @@ class ForceDragController {
 };
 
 } // namespace KE
-
-#endif

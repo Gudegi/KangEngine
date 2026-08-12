@@ -1,23 +1,27 @@
 #include "app.hpp"
 #include "asset/bvh_loader.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
+#include "engine/graphics/material/colors.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
 #include "engine/graphics/renderer/post_processor.hpp"
 #include "engine/scene/component/camera_component.hpp"
 #include "engine/scene/component/light_component.hpp"
 #include "engine/scene/component/render_component.hpp"
 #include "engine/scene/component/selection_component.hpp"
+#include "engine/scene/component/rigid_body_component.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/prim_path.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "engine/scene/debug_draw.hpp"
 #include "engine/core/ui/base_panel.hpp"
+#include "physics/physics.hpp"
 #include "utils/glm_utils.hpp"
 #include "utils/print_debug.hpp"
 #include "utils/asset_path.hpp"
 #include "utils/types.hpp"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstring>
@@ -45,6 +49,10 @@ constexpr const char* SelectedLightOverlayPath =
     "/__editor__/selected_light_overlay";
 constexpr const char* SelectedCameraOverlayPath =
     "/__editor__/selected_camera_overlay";
+constexpr const char* ScenePhysicsDragForcePath =
+    "/__editor__/scene_physics_drag_force";
+constexpr const char* ScenePhysicsDragTargetPath =
+    "/__editor__/scene_physics_drag_target";
 
 std::string defaultMotionScenePath(const std::string& path,
                                    const Animation::SkeletonMotion& motion) {
@@ -195,6 +203,7 @@ void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
         return;
     }
     _sceneResourceManager.bindScene(_scene.get());
+    _scenePhysicsSystem.bind(_scene.get());
 
     _window.init(_width, _height, headless);
     if (_window.getGlfwWindow() == nullptr) {
@@ -618,8 +627,25 @@ void App::renderFrameOnce() {
     this->preUpdate();
     const int fixedUpdateCount = _fixedStepClock.advance(frameDelta);
     const double fixedDt = _fixedStepClock.getStepInterval();
-    for (int i = 0; i < fixedUpdateCount; ++i)
-        this->fixedUpdate(fixedDt);
+    for (int i = 0; i < fixedUpdateCount; ++i) {
+        const bool scenePhysicsPrepared =
+            _scenePhysicsSystem.hasRuntimeWorld();
+        if (scenePhysicsPrepared)
+            _scenePhysicsSystem.syncBeforeSimulation();
+        _scenePhysicsFixedUpdateActive = true;
+        _scenePhysicsStepPrepared = scenePhysicsPrepared;
+        try {
+            this->fixedUpdate(fixedDt);
+        } catch (...) {
+            _scenePhysicsFixedUpdateActive = false;
+            _scenePhysicsStepPrepared = false;
+            throw;
+        }
+        _scenePhysicsFixedUpdateActive = false;
+        _scenePhysicsStepPrepared = false;
+        if (_scenePhysicsSystem.hasRuntimeWorld())
+            _scenePhysicsSystem.syncAfterSimulation();
+    }
 
     const bool useSceneCameraForMainView =
         (_hideUI || _panelManager.getLayoutMode() != UILayoutMode::Editor) &&
@@ -659,20 +685,33 @@ void App::renderFrameOnce() {
             const RayPickResult interactionPick =
                 pickAllowedForMode(pick, _interaction.mode());
             if (_interaction.handlePick(interactionPick, pickLookDir)) {
-                onForceDragBegin(_interaction.forceDragPick(),
-                                 _interaction.forceDragPlanePoint());
+                const RayPickResult& dragPick = _interaction.forceDragPick();
+                const bool scenePhysicsHandled =
+                    dragPick.prim && _scenePhysicsSystem.beginForceDrag(
+                                         *dragPick.prim, dragPick.position,
+                                         _interaction.forceDragPlanePoint());
+                if (!scenePhysicsHandled) {
+                    onForceDragBegin(dragPick,
+                                     _interaction.forceDragPlanePoint());
+                }
             }
             onRayPicked(_interaction.lastPick());
         }
         if (_interaction.isForceDragActive()) {
             glm::vec3 target;
-            if (_interaction.forceDragTarget(getMouseRay(), target))
-                onForceDragUpdate(_interaction.forceDragPick(), target);
+            if (_interaction.forceDragTarget(getMouseRay(), target)) {
+                if (_scenePhysicsSystem.isForceDragActive()) {
+                    _scenePhysicsSystem.updateForceDrag(target);
+                } else {
+                    onForceDragUpdate(_interaction.forceDragPick(), target);
+                }
+            }
         }
         if (_io->isPickMode) {
             _interaction.handleHoverPick(pickMouse());
             onRayPickHover(_interaction.lastPick());
         }
+        renderScenePhysicsForceDragOverlay();
         Camera& shadowCamera =
             useSceneCameraForMainView ? _sceneCamera : _camera;
         _rasterizer->renderShadowMap(shadowCamera, _upAxis, _width, _height);
@@ -820,6 +859,23 @@ void App::setSimulationHotkeysEnabled(bool enabled) {
     _simulationHotkeysEnabled = enabled;
     _simulationPauseKeyWasDown = false;
     _simulationStepKeyWasDown = false;
+}
+
+void App::stepScenePhysics(std::size_t substeps) {
+    PhysicsWorld* world = _scenePhysicsSystem.physicsWorld();
+    if (!world)
+        throw std::runtime_error(
+            "stepScenePhysics requires a bound CPU PhysicsWorld");
+
+    for (std::size_t i = 0; i < substeps; ++i) {
+        if (!_scenePhysicsStepPrepared)
+            _scenePhysicsSystem.syncBeforeSimulation();
+        world->step();
+        _scenePhysicsStepPrepared = false;
+    }
+
+    if (!_scenePhysicsFixedUpdateActive)
+        _scenePhysicsSystem.syncAfterSimulation();
 }
 
 void App::processSimulationHotkeys() {
@@ -1145,7 +1201,23 @@ bool App::removePrim(const std::string& path) {
             subtree.push_back(child);
     });
 
+    if (_interaction.isForceDragActive()) {
+        Scene::Prim* dragPrim = _interaction.forceDragPick().prim;
+        const bool removesDraggedPrim =
+            std::find(subtree.begin(), subtree.end(), dragPrim) !=
+            subtree.end();
+        if (removesDraggedPrim) {
+            const bool scenePhysicsHandled =
+                _scenePhysicsSystem.isForceDragActive();
+            _interaction.endForceDrag();
+            _scenePhysicsSystem.endForceDrag();
+            if (!scenePhysicsHandled)
+                onForceDragEnd();
+        }
+    }
+
     _sceneRenderSystem.detachSubtree(*prim);
+    _scenePhysicsSystem.detachSubtree(*prim);
     for (Scene::Prim* child : subtree)
         getRenderer().removePrim(child);
 
@@ -1535,6 +1607,46 @@ void App::clearDebugPoints(const std::string& path) {
         _rasterizer->clearDebugPoints(path);
 }
 
+void App::renderScenePhysicsForceDragOverlay() {
+    if (!_scenePhysicsSystem.isForceDragActive()) {
+        clearDebugLines(ScenePhysicsDragForcePath);
+        clearDebugPoints(ScenePhysicsDragTargetPath);
+        return;
+    }
+
+    const glm::vec3 start =
+        _scenePhysicsSystem.forceDragAnchorPosition();
+    const glm::vec3 force = _scenePhysicsSystem.forceDragForce();
+    const float forceLength = glm::length(force);
+    if (forceLength < 1e-5f) {
+        clearDebugLines(ScenePhysicsDragForcePath);
+    } else {
+        constexpr float ArrowScale = 0.003f;
+        const glm::vec3 direction = force / forceLength;
+        const glm::vec3 end = start + force * ArrowScale;
+        const float shaftLength = glm::length(end - start);
+        const float headLength =
+            std::clamp(shaftLength * 0.25f, 0.04f, 0.18f);
+
+        glm::vec3 side =
+            glm::cross(direction, glm::vec3(0.0f, 0.0f, 1.0f));
+        if (glm::length(side) < 1e-5f)
+            side = glm::cross(direction, glm::vec3(0.0f, 1.0f, 0.0f));
+        side = glm::normalize(side);
+
+        const glm::vec3 back = end - direction * headLength;
+        const glm::vec3 left = back + side * headLength * 0.45f;
+        const glm::vec3 right = back - side * headLength * 0.45f;
+        const glm::vec4 red = ColorLibrary::getVec4(ColorType::RED);
+        logDebugLines(ScenePhysicsDragForcePath, {start, end, end},
+                      {end, left, right}, {red}, 3.0f);
+    }
+
+    const glm::vec4 magenta = ColorLibrary::getVec4(ColorType::MAGENTA);
+    logDebugPoints(ScenePhysicsDragTargetPath,
+                   {_scenePhysicsSystem.forceDragTarget()}, {magenta}, 10.0f);
+}
+
 void App::setWorldText(const std::string& path, const WorldTextDesc& desc) {
     if (_rasterizer)
         _rasterizer->setWorldText(path, desc);
@@ -1693,8 +1805,12 @@ void App::mouseButtonCallback(GLFWwindow* window, int button, int action,
         _io->isMouseLeftClicked = false;
         _io->isPickMode = false;
         if (_interaction.isForceDragActive()) {
+            const bool scenePhysicsHandled =
+                _scenePhysicsSystem.isForceDragActive();
             _interaction.endForceDrag();
-            onForceDragEnd();
+            _scenePhysicsSystem.endForceDrag();
+            if (!scenePhysicsHandled)
+                onForceDragEnd();
         }
     }
     if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_PRESS)
@@ -1756,8 +1872,13 @@ void App::processInput() {
     if (escPressed && !_io->isEscKeyPressed) {
         bool endedForceDrag = false;
         if (_interaction.cancelActiveInteraction(endedForceDrag)) {
-            if (endedForceDrag)
-                onForceDragEnd();
+            if (endedForceDrag) {
+                const bool scenePhysicsHandled =
+                    _scenePhysicsSystem.isForceDragActive();
+                _scenePhysicsSystem.endForceDrag();
+                if (!scenePhysicsHandled)
+                    onForceDragEnd();
+            }
         } else {
             requestClose();
         }
@@ -2015,6 +2136,12 @@ bool App::getPickTransform(const RayPickResult& result,
         if (!target || !target->isActiveInHierarchy() ||
             !isManipulatablePrim(result.prim) || !isManipulatablePrim(target))
             return false;
+        if (auto rigid =
+                _scenePhysicsSystem.registeredRigidBodyForPrim(*target);
+            rigid && rigid->transformMode() ==
+                         Scene::PhysicsTransformMode::PhysicsToScene) {
+            return false;
+        }
         outTransform = target->computeModelMatrix();
         return true;
     }
@@ -2033,6 +2160,12 @@ bool App::setPickTransform(const RayPickResult& result,
         if (!target || !target->isActiveInHierarchy() ||
             !isManipulatablePrim(result.prim) || !isManipulatablePrim(target))
             return false;
+        if (auto rigid =
+                _scenePhysicsSystem.registeredRigidBodyForPrim(*target);
+            rigid && rigid->transformMode() ==
+                         Scene::PhysicsTransformMode::PhysicsToScene) {
+            return false;
+        }
         target->setWorldMatrix(transform);
         return true;
     }

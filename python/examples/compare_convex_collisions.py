@@ -111,18 +111,24 @@ class ConvexCollisionViewer(ke.App):
             "physx": [-self.args.spacing * 0.5, self.args.height, 0.0],
             "coacd": [self.args.spacing * 0.5, self.args.height, 0.0],
         }
+        self.collision_resources = {
+            "physx": self.physics.create_convex_collision(
+                [self.physx_part], cooking=cooking
+            ),
+            "coacd": self.physics.create_convex_collision(
+                self.coacd_parts, cooking=cooking
+            ),
+        }
         self.actors = {
-            "physx": self.physics.create_dynamic_convex_compound(
-                [self.physx_part],
+            "physx": self.physics.create_dynamic_from_collision(
+                self.collision_resources["physx"],
                 self.initial_positions["physx"],
                 density=self.args.density,
-                cooking=cooking,
             ),
-            "coacd": self.physics.create_dynamic_convex_compound(
-                self.coacd_parts,
+            "coacd": self.physics.create_dynamic_from_collision(
+                self.collision_resources["coacd"],
                 self.initial_positions["coacd"],
                 density=self.args.density,
-                cooking=cooking,
             ),
         }
 
@@ -264,6 +270,14 @@ class ConvexCollisionViewer(ke.App):
             },
             "actors": {
                 name: actor_summary(actor) for name, actor in self.actors.items()
+            },
+            "collision_resources": {
+                name: {
+                    "part_count": resource.part_count,
+                    "vertex_limit": resource.vertex_limit,
+                    "gpu_compatible": resource.gpu_compatible,
+                }
+                for name, resource in self.collision_resources.items()
             },
         }
         print(json.dumps(report, indent=2))

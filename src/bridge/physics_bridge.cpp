@@ -105,23 +105,25 @@ std::vector<Scene::Prim*> PhysicsBridge::addCollisionVisuals(
             Scene::MeshData meshData;
             glm::vec3 localPos{0.f};
             glm::quat localQuat{1.f, 0.f, 0.f, 0.f};
+            glm::vec3 shapeSize(geom.size[0], geom.size[1], geom.size[2]);
 
             if (geom.hasFromTo) {
                 Eigen::Vector3f center = (geom.from + geom.to) * 0.5f;
                 Eigen::Vector3f axis = (geom.to - geom.from).normalized();
                 float halfLen = (geom.to - geom.from).norm() * 0.5f;
                 Eigen::Quaternionf eq = Eigen::Quaternionf::FromTwoVectors(
-                    Eigen::Vector3f::UnitZ(), axis);
+                    Eigen::Vector3f::UnitX(), axis);
                 localPos = glm::vec3(center.x(), center.y(), center.z());
                 localQuat = glm::quat(eq.w(), eq.x(), eq.y(), eq.z());
+                shapeSize[1] = halfLen;
 
                 float r = geom.size[0];
                 if (geom.type == Asset::CollisionGeomDesc::Type::Capsule)
                     meshData = Scene::Prim::createCapsuleData(r, halfLen * 2.f,
-                                                              UpAxis::Z, 12);
+                                                              UpAxis::X, 12);
                 else
                     meshData = Scene::Prim::createCylinderData(r, halfLen * 2.f,
-                                                               UpAxis::Z, 12);
+                                                               UpAxis::X, 12);
             } else {
                 localPos = glm::vec3(geom.pos.x(), geom.pos.y(), geom.pos.z());
                 localQuat = glm::quat(geom.quat.w(), geom.quat.x(),
@@ -132,14 +134,32 @@ std::vector<Scene::Prim*> PhysicsBridge::addCollisionVisuals(
                     meshData =
                         Scene::Prim::createSphereData(geom.size[0], 12, 8);
                     break;
-                case Asset::CollisionGeomDesc::Type::Capsule:
+                case Asset::CollisionGeomDesc::Type::Capsule: {
+                    const Eigen::Vector3f axis =
+                        geom.quat * Eigen::Vector3f::UnitZ();
+                    const Eigen::Quaternionf physicalRotation =
+                        Eigen::Quaternionf::FromTwoVectors(
+                            Eigen::Vector3f::UnitX(), axis);
+                    localQuat = glm::quat(
+                        physicalRotation.w(), physicalRotation.x(),
+                        physicalRotation.y(), physicalRotation.z());
                     meshData = Scene::Prim::createCapsuleData(
-                        geom.size[0], geom.size[1] * 2.f, UpAxis::Z, 12);
+                        geom.size[0], geom.size[1] * 2.f, UpAxis::X, 12);
                     break;
-                case Asset::CollisionGeomDesc::Type::Cylinder:
+                }
+                case Asset::CollisionGeomDesc::Type::Cylinder: {
+                    const Eigen::Vector3f axis =
+                        geom.quat * Eigen::Vector3f::UnitZ();
+                    const Eigen::Quaternionf physicalRotation =
+                        Eigen::Quaternionf::FromTwoVectors(
+                            Eigen::Vector3f::UnitX(), axis);
+                    localQuat = glm::quat(
+                        physicalRotation.w(), physicalRotation.x(),
+                        physicalRotation.y(), physicalRotation.z());
                     meshData = Scene::Prim::createCylinderData(
-                        geom.size[0], geom.size[1] * 2.f, UpAxis::Z, 12);
+                        geom.size[0], geom.size[1] * 2.f, UpAxis::X, 12);
                     break;
+                }
                 case Asset::CollisionGeomDesc::Type::Box:
                     meshData = Scene::Prim::createRectangleData(
                         geom.size[0] * 2.f, geom.size[1] * 2.f,
@@ -174,9 +194,8 @@ std::vector<Scene::Prim*> PhysicsBridge::addCollisionVisuals(
                 rootPath);
             auto collisionShape = prim->addCollisionShapeComponent();
             collisionShape->setShapeMetadata(
-                toCollisionShapeType(geom.type),
-                glm::vec3(geom.size[0], geom.size[1], geom.size[2]), localPos,
-                localQuat, geom.physicsMaterial.staticFriction,
+                toCollisionShapeType(geom.type), shapeSize,
+                geom.physicsMaterial.staticFriction,
                 geom.physicsMaterial.dynamicFriction,
                 geom.physicsMaterial.restitution, geom.condim, geom.margin,
                 geom.isFallback ? -1 : gi);

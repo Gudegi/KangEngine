@@ -112,7 +112,9 @@ CollisionMaterialOverride = _export_native_type("CollisionMaterialOverride")
 ContactPoint = _export_native_type("ContactPoint")
 ConvexMeshPart = _export_native_type("ConvexMeshPart")
 ConvexCookingOptions = _export_native_type("ConvexCookingOptions")
+ConvexCollisionResource = _export_native_type("ConvexCollisionResource")
 RigidDynamic = _export_native_type("RigidDynamic")
+RigidStatic = _export_native_type("RigidStatic")
 ArticulationConfig = _export_native_type("ArticulationConfig")
 GpuPhysicsConfig = _export_native_type("GpuPhysicsConfig")
 PhysicsGpuStateViews = _export_native_type("PhysicsGpuStateViews")
@@ -286,6 +288,66 @@ class PhysicsWorld(_NativeWrapper):
             collision_group,
             contact_offset,
             rest_offset,
+        )
+
+    def create_convex_collision(
+        self,
+        parts: Sequence[ConvexMeshPart],
+        cooking: ConvexCookingOptions | None = None,
+    ) -> ConvexCollisionResource:
+        """Cook convex parts once for reuse by multiple rigid actors."""
+        if cooking is None:
+            cooking = _native_attr("ConvexCookingOptions")()
+        return self._native.create_convex_collision(parts, cooking)
+
+    def create_dynamic_from_collision(
+        self,
+        collision: ConvexCollisionResource,
+        pos: Any,
+        rot_xyzw: Any = (0.0, 0.0, 0.0, 1.0),
+        density: float = 1.0,
+        material: PhysicsMaterialDesc | None = None,
+        collision_group: int = 0,
+        contact_offset: float = 0.02,
+        rest_offset: float = 0.0,
+    ) -> RigidDynamic:
+        """Create a dynamic actor from an already cooked collision resource."""
+        if material is None:
+            material = _native_attr("PhysicsMaterialDesc")()
+        return self._native.create_dynamic_from_collision(
+            collision,
+            pos,
+            rot_xyzw,
+            density,
+            material,
+            collision_group,
+            contact_offset,
+            rest_offset,
+        )
+
+    def create_static_from_collision(
+        self,
+        collision: ConvexCollisionResource,
+        pos: Any = (0.0, 0.0, 0.0),
+        rot_xyzw: Any = (0.0, 0.0, 0.0, 1.0),
+        material: PhysicsMaterialDesc | None = None,
+        collision_group: int = 0,
+        contact_offset: float = 0.02,
+        rest_offset: float = 0.0,
+        register_as_ground: bool = False,
+    ) -> RigidStatic:
+        """Create a static actor from an already cooked collision resource."""
+        if material is None:
+            material = _native_attr("PhysicsMaterialDesc")()
+        return self._native.create_static_from_collision(
+            collision,
+            pos,
+            rot_xyzw,
+            material,
+            collision_group,
+            contact_offset,
+            rest_offset,
+            register_as_ground,
         )
 
     def create_static_convex_compound(
@@ -527,7 +589,9 @@ __all__ = [
         "ContactPoint",
         "ConvexMeshPart",
         "ConvexCookingOptions",
+        "ConvexCollisionResource",
         "RigidDynamic",
+        "RigidStatic",
         "PhysicsWorld",
         "ArticulationConfig",
         "Articulation",

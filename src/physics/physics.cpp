@@ -4,8 +4,8 @@
 #include "asset/articulation_desc.hpp"
 #include "articulation.hpp"
 #include "collision_material_utils.hpp"
+#include "physics/collision/convex_cooker.hpp"
 #include "physics/physx_compat.hpp"
-#include <cooking/PxCooking.h>
 #ifndef __APPLE__
 #include "gpu/PxGpu.h"
 #endif
@@ -404,6 +404,7 @@ PhysicsWorld::PhysicsWorld(PhysicsConfig config) {
 }
 
 PhysicsWorld::~PhysicsWorld() {
+    _resourceLifetimeToken.reset();
     if (_scene)
         _scene->release();
     if (_dispatcher)
@@ -473,112 +474,53 @@ PxShape* PhysicsWorld::createExclusiveShape(
     return PxRigidActorExt::createExclusiveShape(actor, geometry, *shapeMat);
 }
 
-namespace {
-
-std::vector<PxConvexMesh*>
-cookConvexParts(PxPhysics& physics,
-                const std::vector<Physics::ConvexMeshPart>& parts,
-                const Physics::ConvexCookingOptions& options) {
-    if (parts.empty())
-        throw std::invalid_argument(
-            "create convex compound requires at least one part");
-    if (options.vertexLimit < 8 || options.vertexLimit > 255)
-        throw std::invalid_argument("convex vertex_limit must be in [8, 255]");
-    if (options.gpuCompatible && options.vertexLimit > 64)
-        throw std::invalid_argument(
-            "GPU-compatible convex vertex_limit must be <= 64");
-
-    PxCookingParams params(physics.getTolerancesScale());
-    params.buildGPUData = options.gpuCompatible;
-
-    std::vector<PxConvexMesh*> meshes;
-    meshes.reserve(parts.size());
-    try {
-        for (std::size_t partIndex = 0; partIndex < parts.size(); ++partIndex) {
-            const auto& part = parts[partIndex];
-            if (part.vertices.size() < 4) {
-                throw std::invalid_argument("convex part " +
-                                            std::to_string(partIndex) +
-                                            " requires at least four vertices");
-            }
-            if (!part.indices.empty()) {
-                if (part.indices.size() % 3 != 0)
-                    throw std::invalid_argument(
-                        "convex part " + std::to_string(partIndex) +
-                        " indices must contain triangles");
-                for (uint32_t index : part.indices) {
-                    if (index >= part.vertices.size())
-                        throw std::invalid_argument(
-                            "convex part " + std::to_string(partIndex) +
-                            " contains an out-of-range index");
-                }
-            }
-
-            std::vector<PxVec3> points;
-            points.reserve(part.vertices.size());
-            for (const glm::vec3& vertex : part.vertices) {
-                if (!std::isfinite(vertex.x) || !std::isfinite(vertex.y) ||
-                    !std::isfinite(vertex.z)) {
-                    throw std::invalid_argument(
-                        "convex part " + std::to_string(partIndex) +
-                        " contains a non-finite vertex");
-                }
-                points.emplace_back(vertex.x, vertex.y, vertex.z);
-            }
-
-            PxConvexMeshDesc desc;
-            desc.points.data = points.data();
-            desc.points.count = static_cast<PxU32>(points.size());
-            desc.points.stride = sizeof(PxVec3);
-            desc.vertexLimit = static_cast<PxU16>(options.vertexLimit);
-            desc.flags = PxConvexFlag::eCOMPUTE_CONVEX;
-            if (options.gpuCompatible)
-                desc.flags |= PxConvexFlag::eGPU_COMPATIBLE;
-
-            PxConvexMesh* mesh = PxCreateConvexMesh(
-                params, desc, physics.getPhysicsInsertionCallback());
-            if (!mesh) {
-                throw std::runtime_error("PhysX failed to cook convex part " +
-                                         std::to_string(partIndex));
-            }
-            meshes.push_back(mesh);
-        }
-    } catch (...) {
-        for (PxConvexMesh* mesh : meshes)
-            mesh->release();
-        throw;
-    }
-    return meshes;
-}
-
-bool attachConvexParts(PhysicsWorld& world, PxRigidActor& actor,
-                       const std::vector<Physics::ConvexMeshPart>& parts,
-                       const std::vector<PxConvexMesh*>& meshes,
-                       const Physics::PhysicsMaterialDesc& material,
-                       float contactOffset, float restOffset) {
-    for (std::size_t i = 0; i < parts.size(); ++i) {
-        PxShape* shape = world.createExclusiveShape(
-            actor, PxConvexMeshGeometry(meshes[i]), material);
+bool PhysicsWorld::attachConvexCollision(
+    PxRigidActor& actor, const Physics::ConvexCollisionResource& collision,
+    const Physics::PhysicsMaterialDesc& material,
+    const glm::vec3& localPosition, const glm::quat& localRotation,
+    float contactOffset, float restOffset) {
+    if (!collision.isValid() || collision._owner != this)
+        throw std::invalid_argument("convex collision resource belongs to "
+                                    "another or expired PhysicsWorld");
+    const PxTransform outerPose(
+        PxVec3(localPosition.x, localPosition.y, localPosition.z),
+        PxQuat(localRotation.x, localRotation.y, localRotation.z,
+               localRotation.w));
+    for (const auto& part : collision._parts) {
+        PxShape* shape = createExclusiveShape(
+            actor, PxConvexMeshGeometry(part.mesh), material);
         if (!shape)
             return false;
-        const auto& part = parts[i];
-        shape->setLocalPose(
-            PxTransform(PxVec3(part.localPosition.x, part.localPosition.y,
-                               part.localPosition.z),
-                        PxQuat(part.localRotation.x, part.localRotation.y,
-                               part.localRotation.z, part.localRotation.w)));
+        const PxTransform partPose(
+            PxVec3(part.localPosition.x, part.localPosition.y,
+                   part.localPosition.z),
+            PxQuat(part.localRotation.x, part.localRotation.y,
+                   part.localRotation.z, part.localRotation.w));
+        shape->setLocalPose(outerPose * partPose);
         applyRigidContactOffsets(shape, contactOffset, restOffset);
     }
     return true;
 }
 
-void releaseConvexMeshes(std::vector<PxConvexMesh*>& meshes) {
-    for (PxConvexMesh* mesh : meshes)
-        mesh->release();
-    meshes.clear();
+void PhysicsWorld::setRigidCollisionGroup(PxRigidActor& actor,
+                                          PxU32 collisionGroup) {
+    setRigidCollisionFilterData(&actor, collisionGroup);
 }
 
-} // namespace
+void PhysicsWorld::addRigidActor(PxRigidActor& actor) {
+    if (!_scene)
+        throw std::runtime_error("PhysicsWorld has no PhysX scene");
+    _scene->addActor(actor);
+}
+
+void PhysicsWorld::destroyRigidActor(PxRigidActor* actor) {
+    if (!actor)
+        return;
+    unregisterGroundActor(actor);
+    if (PxScene* scene = actor->getScene())
+        scene->removeActor(*actor);
+    actor->release();
+}
 
 PxConvexMesh* PhysicsWorld::getOrCreateConvexMesh(
     std::shared_ptr<const Scene::MeshData> mesh,
@@ -597,11 +539,88 @@ PxConvexMesh* PhysicsWorld::getOrCreateConvexMesh(
     Physics::ConvexMeshPart part;
     part.vertices = mesh->vertices;
     part.indices.assign(mesh->indices.begin(), mesh->indices.end());
-    auto cooked = cookConvexParts(*_physics, {part}, cooking);
+    auto cooked =
+        Physics::ConvexCollisionCooker::cook(*_physics, {part}, cooking);
     PxConvexMesh* result = cooked.front();
     _convexMeshes.push_back(result);
     _convexMeshCache.push_back({std::move(mesh), cooking, result});
     return result;
+}
+
+std::shared_ptr<Physics::ConvexCollisionResource>
+PhysicsWorld::createConvexCollision(
+    const std::vector<Physics::ConvexMeshPart>& parts,
+    const Physics::ConvexCookingOptions& cooking) {
+    _convexMeshes.reserve(_convexMeshes.size() + parts.size());
+    auto meshes =
+        Physics::ConvexCollisionCooker::cook(*_physics, parts, cooking);
+    _convexMeshes.insert(_convexMeshes.end(), meshes.begin(), meshes.end());
+    std::vector<Physics::ConvexCollisionResource::Part> resourceParts;
+    resourceParts.reserve(parts.size());
+    for (std::size_t i = 0; i < parts.size(); ++i) {
+        resourceParts.push_back(
+            {meshes[i], parts[i].localPosition, parts[i].localRotation});
+    }
+    return std::shared_ptr<Physics::ConvexCollisionResource>(
+        new Physics::ConvexCollisionResource(
+            this, _resourceLifetimeToken, std::move(resourceParts), cooking));
+}
+
+PxRigidDynamic* PhysicsWorld::createDynamicFromCollision(
+    const std::shared_ptr<Physics::ConvexCollisionResource>& collision,
+    const glm::vec3& pos, const glm::quat& rot, float density,
+    const Physics::PhysicsMaterialDesc& material, PxU32 collisionGroup,
+    float contactOffset, float restOffset) {
+    if (!collision)
+        throw std::invalid_argument("convex collision resource is null");
+    if (!collision->isValid() || collision->_owner != this)
+        throw std::invalid_argument("convex collision resource belongs to "
+                                    "another or expired PhysicsWorld");
+
+    PxRigidDynamic* actor = _physics->createRigidDynamic(PxTransform(
+        PxVec3(pos.x, pos.y, pos.z), PxQuat(rot.x, rot.y, rot.z, rot.w)));
+    if (!actor ||
+        !attachConvexCollision(*actor, *collision, material, glm::vec3(0.0f),
+                               glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+                               contactOffset, restOffset)) {
+        if (actor)
+            actor->release();
+        return nullptr;
+    }
+
+    PxRigidBodyExt::updateMassAndInertia(*actor, density);
+    setRigidCollisionGroup(*actor, collisionGroup);
+    addRigidActor(*actor);
+    return actor;
+}
+
+PxRigidStatic* PhysicsWorld::createStaticFromCollision(
+    const std::shared_ptr<Physics::ConvexCollisionResource>& collision,
+    const glm::vec3& pos, const glm::quat& rot,
+    const Physics::PhysicsMaterialDesc& material, PxU32 collisionGroup,
+    float contactOffset, float restOffset, bool registerAsGround) {
+    if (!collision)
+        throw std::invalid_argument("convex collision resource is null");
+    if (!collision->isValid() || collision->_owner != this)
+        throw std::invalid_argument("convex collision resource belongs to "
+                                    "another or expired PhysicsWorld");
+
+    PxRigidStatic* actor = _physics->createRigidStatic(PxTransform(
+        PxVec3(pos.x, pos.y, pos.z), PxQuat(rot.x, rot.y, rot.z, rot.w)));
+    if (!actor ||
+        !attachConvexCollision(*actor, *collision, material, glm::vec3(0.0f),
+                               glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+                               contactOffset, restOffset)) {
+        if (actor)
+            actor->release();
+        return nullptr;
+    }
+
+    setRigidCollisionGroup(*actor, collisionGroup);
+    addRigidActor(*actor);
+    if (registerAsGround)
+        registerGroundActor(actor);
+    return actor;
 }
 
 PxRigidDynamic* PhysicsWorld::createDynamicConvexCompound(
@@ -610,23 +629,10 @@ PxRigidDynamic* PhysicsWorld::createDynamicConvexCompound(
     const Physics::ConvexCookingOptions& cooking,
     const Physics::PhysicsMaterialDesc& material, PxU32 collisionGroup,
     float contactOffset, float restOffset) {
-    std::vector<PxConvexMesh*> meshes =
-        cookConvexParts(*_physics, parts, cooking);
-    PxRigidDynamic* actor = _physics->createRigidDynamic(PxTransform(
-        PxVec3(pos.x, pos.y, pos.z), PxQuat(rot.x, rot.y, rot.z, rot.w)));
-    if (!actor || !attachConvexParts(*this, *actor, parts, meshes, material,
-                                     contactOffset, restOffset)) {
-        if (actor)
-            actor->release();
-        releaseConvexMeshes(meshes);
-        return nullptr;
-    }
-
-    PxRigidBodyExt::updateMassAndInertia(*actor, density);
-    setRigidCollisionFilterData(actor, collisionGroup);
-    _scene->addActor(*actor);
-    _convexMeshes.insert(_convexMeshes.end(), meshes.begin(), meshes.end());
-    return actor;
+    auto collision = createConvexCollision(parts, cooking);
+    return createDynamicFromCollision(collision, pos, rot, density, material,
+                                      collisionGroup, contactOffset,
+                                      restOffset);
 }
 
 PxRigidStatic* PhysicsWorld::createStaticConvexCompound(
@@ -634,24 +640,10 @@ PxRigidStatic* PhysicsWorld::createStaticConvexCompound(
     const glm::quat& rot, const Physics::ConvexCookingOptions& cooking,
     const Physics::PhysicsMaterialDesc& material, PxU32 collisionGroup,
     float contactOffset, float restOffset, bool registerAsGround) {
-    std::vector<PxConvexMesh*> meshes =
-        cookConvexParts(*_physics, parts, cooking);
-    PxRigidStatic* actor = _physics->createRigidStatic(PxTransform(
-        PxVec3(pos.x, pos.y, pos.z), PxQuat(rot.x, rot.y, rot.z, rot.w)));
-    if (!actor || !attachConvexParts(*this, *actor, parts, meshes, material,
-                                     contactOffset, restOffset)) {
-        if (actor)
-            actor->release();
-        releaseConvexMeshes(meshes);
-        return nullptr;
-    }
-
-    setRigidCollisionFilterData(actor, collisionGroup);
-    _scene->addActor(*actor);
-    if (registerAsGround)
-        registerGroundActor(actor);
-    _convexMeshes.insert(_convexMeshes.end(), meshes.begin(), meshes.end());
-    return actor;
+    auto collision = createConvexCollision(parts, cooking);
+    return createStaticFromCollision(collision, pos, rot, material,
+                                     collisionGroup, contactOffset, restOffset,
+                                     registerAsGround);
 }
 
 void PhysicsWorld::step() {

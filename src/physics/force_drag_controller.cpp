@@ -71,6 +71,15 @@ bool ForceDragController::begin(const RayPickResult& pick,
     return true;
 }
 
+bool ForceDragController::beginDirect(physx::PxRigidDynamic& rigid,
+                                      const glm::vec3& hitPosition) {
+    end();
+    _activeBinding = Binding{nullptr, &rigid, -1};
+    _localAnchor = rigid.getGlobalPose().transformInv(toPxVec3(hitPosition));
+    _active = true;
+    return true;
+}
+
 void ForceDragController::update(const glm::vec3& target) {
     if (!_active)
         return;
@@ -93,7 +102,10 @@ glm::vec3 ForceDragController::clampForce(glm::vec3 force, float maxForce) {
     return force * (maxForce / len);
 }
 
-void ForceDragController::applyForce(const glm::vec3& target) {
+void ForceDragController::computeForce(const glm::vec3& target) {
+    if (!_active)
+        return;
+
     glm::vec3 pos(0.0f);
     glm::vec3 anchorPos(0.0f);
     glm::vec3 vel(0.0f);
@@ -129,14 +141,26 @@ void ForceDragController::applyForce(const glm::vec3& target) {
     force = clampForce(force, _config.maxForce);
     _lastForce = force;
 
+}
+
+void ForceDragController::applyCachedForce() {
+    if (!_active)
+        return;
     if (_activeBinding.articulation) {
         _activeBinding.articulation->addLinkForceAtPosition(
-            _activeBinding.linkIndex, toPxVec3(force), anchorWorld);
+            _activeBinding.linkIndex, toPxVec3(_lastForce),
+            toPxVec3(_lastAnchorPosition));
     } else if (_activeBinding.rigid) {
         physx::PxRigidBodyExt::addForceAtPos(*_activeBinding.rigid,
-                                             toPxVec3(force), anchorWorld,
+                                             toPxVec3(_lastForce),
+                                             toPxVec3(_lastAnchorPosition),
                                              physx::PxForceMode::eFORCE, true);
     }
+}
+
+void ForceDragController::applyForce(const glm::vec3& target) {
+    computeForce(target);
+    applyCachedForce();
 }
 
 } // namespace KE

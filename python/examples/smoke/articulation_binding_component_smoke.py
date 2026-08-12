@@ -47,6 +47,10 @@ def _write_mjcf(path: Path, mesh_dir: Path) -> None:
                     'rgba="0.4 0.5 0.6 1"/>'
                 ),
                 '      <geom type="box" size="0.1 0.1 0.1" rgba="0.2 0.2 0.2 1"/>',
+                (
+                    '      <geom type="capsule" fromto="0 0 0 0 2 0" '
+                    'size="0.2" rgba="0.3 0.3 0.3 1"/>'
+                ),
                 "    </body>",
                 "  </worldbody>",
                 "</mujoco>",
@@ -122,6 +126,39 @@ def _check_collision_shape(component):
         raise AssertionError(f"restitution mismatch: {component.restitution}")
 
 
+def _check_normalized_capsule(prim):
+    component = prim.get_collision_shape_component()
+    if component.shape_type != ke.scene.CollisionShapeType.CAPSULE:
+        raise AssertionError(f"shape type mismatch: {component.shape_type}")
+    size = component.size
+    if abs(size.x - 0.2) > 1e-5 or abs(size.y - 1.0) > 1e-5:
+        raise AssertionError(f"from/to was not normalized to radius/half-length: {size}")
+    if not component.has_from_to:
+        raise AssertionError("original MJCF from/to metadata was not retained")
+    source_from = component.from_position
+    source_to = component.to_position
+    if (
+        abs(source_from.x) > 1e-5
+        or abs(source_from.y) > 1e-5
+        or abs(source_from.z) > 1e-5
+        or abs(source_to.x) > 1e-5
+        or abs(source_to.y - 2.0) > 1e-5
+        or abs(source_to.z) > 1e-5
+    ):
+        raise AssertionError("original MJCF from/to endpoints changed")
+    position = prim.get_local_translation()
+    if abs(position.x) > 1e-5 or abs(position.y - 1.0) > 1e-5 or abs(position.z) > 1e-5:
+        raise AssertionError(f"from/to center was not stored on the collision Prim: {position}")
+    rotation = prim.get_local_rotation()
+    rotated_x = (
+        1.0 - 2.0 * (rotation.y * rotation.y + rotation.z * rotation.z),
+        2.0 * (rotation.x * rotation.y + rotation.w * rotation.z),
+        2.0 * (rotation.x * rotation.z - rotation.w * rotation.y),
+    )
+    if abs(rotated_x[0]) > 1e-5 or abs(rotated_x[1] - 1.0) > 1e-5 or abs(rotated_x[2]) > 1e-5:
+        raise AssertionError(f"collision Prim X axis was not aligned to from/to: {rotated_x}")
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -191,9 +228,9 @@ def main():
         collision_prims = physics_bridge.add_collision_visuals(
             articulation, scene, "/split_robot/collision", False
         )
-        if len(collision_prims) != 1:
+        if len(collision_prims) != 2:
             raise AssertionError(
-                f"expected one collision visual, got {len(collision_prims)}"
+                f"expected two collision visuals, got {len(collision_prims)}"
             )
         _check_binding(
             collision_prims[0].get_articulation_binding_component(),
@@ -203,6 +240,7 @@ def main():
             "/split_robot",
         )
         _check_collision_shape(collision_prims[0].get_collision_shape_component())
+        _check_normalized_capsule(collision_prims[1])
 
     print("PASS: ArticulationBindingComponent smoke completed")
 
