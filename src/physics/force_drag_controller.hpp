@@ -12,10 +12,21 @@ namespace KE {
 
 class Articulation;
 
+enum class ForceDragScaling {
+    FixedForce,
+    MassAdaptive,
+};
+
 struct ForceDragConfig {
-    float stiffness = 250.0f;
-    float damping = 8.0f;
-    float maxForce = 800.0f;
+    ForceDragScaling scaling = ForceDragScaling::MassAdaptive;
+    float stiffness = 50.0f;
+    float damping = 5.0f;
+    float massBias = 10.0f;
+    float maxAccelerationG = 5.0f;
+    // Used only by FixedForce scaling.
+    float fixedMaxForce = 800.0f;
+    // Optional secondary cap for MassAdaptive scaling. Zero disables it.
+    float absoluteMaxForce = 0.0f;
 };
 
 class ForceDragController {
@@ -46,6 +57,7 @@ class ForceDragController {
         Articulation* articulation = nullptr;
         physx::PxRigidDynamic* rigid = nullptr;
         int linkIndex = -1;
+        float effectiveMass = 0.0f;
     };
 
     ForceDragConfig _config;
@@ -60,6 +72,11 @@ class ForceDragController {
 
     void applyForce(const glm::vec3& target);
     static glm::vec3 clampForce(glm::vec3 force, float maxForce);
+    void applyMassAdaptiveForce(physx::PxRigidBody& body,
+                                const physx::PxTransform& pose,
+                                const physx::PxVec3& anchorWorld,
+                                const glm::vec3& force, float bodyMass,
+                                float maxAcceleration);
 };
 
 } // namespace KE

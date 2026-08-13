@@ -289,11 +289,17 @@ class H1RagdollApp : public App {
         ImGui::Text("Force drag: select Force mode, then Shift + left drag");
         ImGui::Checkbox("Show drag force arrow", &showDragForceArrow);
         if (ImGui::SliderFloat("Drag stiffness", &forceDragConfig.stiffness,
-                               0.0f, 1000.0f) ||
+                               0.0f, 200.0f) ||
             ImGui::SliderFloat("Drag damping", &forceDragConfig.damping, 0.0f,
-                               80.0f) ||
-            ImGui::SliderFloat("Drag max force", &forceDragConfig.maxForce,
-                               0.0f, 1500.0f)) {
+                               40.0f) ||
+            ImGui::SliderFloat("Drag mass bias", &forceDragConfig.massBias,
+                               0.0f, 50.0f) ||
+            ImGui::SliderFloat("Drag max acceleration (g)",
+                               &forceDragConfig.maxAccelerationG, 0.0f,
+                               20.0f) ||
+            ImGui::SliderFloat("Drag absolute force cap (0=off)",
+                               &forceDragConfig.absoluteMaxForce, 0.0f,
+                               3000.0f)) {
             forceDrag.setConfig(forceDragConfig);
         }
         ImGui::SliderFloat("Drag arrow scale", &dragForceArrowScale, 0.0005f,
