@@ -94,9 +94,7 @@ def _sphere_instance_data(centers, radii, colors):
         radii = radii.reshape(-1)
         if len(radii) != len(centers):
             raise ValueError("radii must be scalar or match centers length")
-    if colors is None:
-        colors = np.ones((len(centers), 4), dtype=np.float32)
-    else:
+    if colors is not None:
         colors = np.asarray(colors, dtype=np.float32).reshape(-1, 4)
         if len(colors) == 1 and len(centers) > 1:
             colors = np.repeat(colors, len(centers), axis=0)
