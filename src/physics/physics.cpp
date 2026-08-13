@@ -532,8 +532,6 @@ cookConvexParts(PxPhysics& physics,
             desc.points.stride = sizeof(PxVec3);
             desc.vertexLimit = static_cast<PxU16>(options.vertexLimit);
             desc.flags = PxConvexFlag::eCOMPUTE_CONVEX;
-            if (options.gpuCompatible)
-                desc.flags |= PxConvexFlag::eGPU_COMPATIBLE;
 
             PxConvexMesh* mesh = PxCreateConvexMesh(
                 params, desc, physics.getPhysicsInsertionCallback());
