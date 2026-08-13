@@ -11,6 +11,7 @@ if _assets_dir.exists():
 from ._core import _ke
 from ._public import set_public_module as _set_public_module
 from . import (
+    adapters,
     animation,
     asset,
     geometry,
@@ -53,10 +54,10 @@ _LAZY_IMPORTS = {
     "SimulationRunConfig": (".sim.run_mode", "SimulationRunConfig"),
     "SimulationRunMode": (".sim.run_mode", "SimulationRunMode"),
     "SimulationTimingConfig": (".sim.timing", "SimulationTimingConfig"),
-    "KangEngineEngine": (".mimickit_engine", "KangEngineEngine"),
-    "build_mimickit_engine": (".mimickit_engine", "build_engine"),
+    "KangEngineEngine": (".adapters.mimickit", "KangEngineEngine"),
+    "build_mimickit_engine": (".adapters.mimickit", "build_engine"),
     "install_mimickit_engine_builder": (
-        ".mimickit_engine",
+        ".adapters.mimickit",
         "install_mimickit_engine_builder",
     ),
 }
@@ -72,7 +73,7 @@ if _TYPE_CHECKING:
     from . import sim as sim
     from .sim.run_mode import SimulationPacer, SimulationRunConfig, SimulationRunMode
     from .sim.timing import SimulationTimingConfig
-    from .mimickit_engine import (
+    from .adapters.mimickit import (
         KangEngineEngine,
         build_engine as build_mimickit_engine,
         install_mimickit_engine_builder,
@@ -124,6 +125,7 @@ keys = _ke.keys
 
 __all__ = [
     "App",
+    "adapters",
     "DebugGeometry",
     "DebugOverlay",
     "ObjImportView",

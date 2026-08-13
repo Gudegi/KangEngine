@@ -1,10 +1,6 @@
-"""Compatibility import for the relocated MimicKit adapter.
+"""MimicKit adapter backed by KangEngine's simulation runtime."""
 
-New code should import from :mod:`kangengine.adapters.mimickit`. This module is
-kept so existing MimicKit configurations and user scripts continue to work.
-"""
-
-from .adapters.mimickit import (
+from .engine import (
     KangEngineEngine,
     MimicControlMode,
     MimicObjType,
