@@ -19,6 +19,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 #include <chrono>
+#include <cfloat>
 #include <cmath>
 #include <cstring>
 #include <ctime>
@@ -160,6 +161,7 @@ struct App::IO {
     double deltaMouseX = 0.0;
     double deltaMouseY = 0.0;
     bool isHKeyPressed = false;
+    bool isHelpKeyPressed = false;       // Shift + /
     bool isScreenshotKeyPressed = false; // t
     bool isEscKeyPressed = false;
     bool isSHIFTKeyPressed = false;
@@ -660,9 +662,8 @@ void App::renderFrameOnce() {
             const glm::vec3 pickLookDir = useSceneCameraForMainView
                                               ? _sceneCamera.getCameraLookDir()
                                               : _camera.getCameraLookDir();
-            const RayPickResult interactionPick =
-                pickAllowedForMode(pick, _interaction.mode(),
-                                   _externalForceDragEnabled);
+            const RayPickResult interactionPick = pickAllowedForMode(
+                pick, _interaction.mode(), _externalForceDragEnabled);
             if (_interaction.handlePick(interactionPick, pickLookDir)) {
                 onForceDragBegin(_interaction.forceDragPick(),
                                  _interaction.forceDragPlanePoint());
@@ -751,6 +752,7 @@ void App::renderFrameOnce() {
     // default framebuffer
     if (!_hideUI) {
         _panelManager.render();
+        renderShortcutHelp();
         renderRecordingIndicator();
         if (_panelManager.getLayoutMode() != UILayoutMode::Editor)
             renderSelectionGizmo();
@@ -929,6 +931,70 @@ void App::renderRecordingIndicator() {
         ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoInputs;
     if (ImGui::Begin("##RecordingIndicator", nullptr, flags))
         ImGui::TextColored(ImVec4(1.0f, 0.15f, 0.1f, 1.0f), "REC");
+    ImGui::End();
+}
+
+void App::renderShortcutHelp() {
+    if (!_showShortcutHelp)
+        return;
+
+    ImGui::SetNextWindowSizeConstraints(ImVec2(360.0f, 0.0f),
+                                        ImVec2(FLT_MAX, FLT_MAX));
+    if (!ImGui::Begin("Keyboard & Mouse Help", &_showShortcutHelp,
+                      ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::End();
+        return;
+    }
+
+    const auto shortcut = [](const char* input, const char* action) {
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted(input);
+        ImGui::TableSetColumnIndex(1);
+        ImGui::TextWrapped("%s", action);
+    };
+    const auto section = [](const char* label) {
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextDisabled("%s", label);
+    };
+
+    if (ImGui::BeginTable("ShortcutHelpTable", 2,
+                          ImGuiTableFlags_BordersInnerH |
+                              ImGuiTableFlags_SizingStretchProp)) {
+        ImGui::TableSetupColumn("Input", ImGuiTableColumnFlags_WidthFixed,
+                                140.0f);
+        ImGui::TableSetupColumn("Action", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableHeadersRow();
+
+        section("Camera");
+        shortcut("Left drag", "Orbit Camera");
+        shortcut("Right drag", "Look Around");
+        shortcut("W / S", "Move Up / Down");
+        shortcut("A / D", "Move Left / Right");
+        shortcut("Mouse wheel", "Dolly Camera");
+
+        section("Interaction");
+        shortcut("Shift + Left click", "Select Object");
+        shortcut("Shift + Left drag", "Force Drag");
+        shortcut("Edit mode gizmo", "Transform Object");
+        shortcut("Escape", "Cancel / Close");
+
+        section("Simulation");
+        if (_simulationHotkeysEnabled) {
+            shortcut("Enter", "Pause / Resume");
+            shortcut("Space", "Pause / Step");
+        } else {
+            shortcut("Enter / Space", "Disabled");
+        }
+
+        section("Interface");
+        shortcut("?", "Toggle Help");
+        shortcut("H", "Toggle UI");
+        shortcut("T", "Screenshot");
+        shortcut("Shift + T", "Record Video");
+        ImGui::EndTable();
+    }
     ImGui::End();
 }
 
@@ -1730,6 +1796,15 @@ void App::processInput() {
     bool shiftPressed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
                         glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
     _io->isSHIFTKeyPressed = shiftPressed;
+
+    const bool helpPressed =
+        shiftPressed && glfwGetKey(window, GLFW_KEY_SLASH) == GLFW_PRESS;
+    if (helpPressed && !_io->isHelpKeyPressed) {
+        _showShortcutHelp = !_showShortcutHelp;
+        if (_showShortcutHelp)
+            _hideUI = false;
+    }
+    _io->isHelpKeyPressed = helpPressed;
 
     bool screenshotPressed = glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS;
     if (screenshotPressed && !_io->isScreenshotKeyPressed) {

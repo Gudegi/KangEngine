@@ -80,6 +80,7 @@ class App {
     bool _videoRecordingToggleRequested = false;
     bool _frameCaptureActive = false;
     bool _mousePickRequested = false;
+    bool _showShortcutHelp = false;
     uint64_t _frameIndex = 0;
     float _cameraMoveSpeed = 15.0f;
     glm::mat4 _viewMatrix,
@@ -134,6 +135,7 @@ class App {
     void registerCallbacks();
     bool writeScreenshotFrame();
     void renderRecordingIndicator();
+    void renderShortcutHelp();
     void renderSelectionGizmo();
     void renderSelectionGizmo(Camera& camera, const ImVec2& rectMin,
                               const ImVec2& rectSize, ImDrawList* drawList);
@@ -256,8 +258,8 @@ class App {
     virtual void setup() {}     // 처음에 사용
     virtual void preUpdate() {} // input/state changes before fixed updates
     virtual void fixedUpdate(double fixedDt) {}
-    virtual void preRender() {} // 루프 안에서 사용됨. 렌더 전에 사용
-    virtual void render() {}    // overrideable 실제 렌더링
+    virtual void preRender() {}  // 루프 안에서 사용됨. 렌더 전에 사용
+    virtual void render() {}     // overrideable 실제 렌더링
     virtual void postRender() {} // 렌더링 이후 마무리
     // Internal Python service hook. It is skipped while frame capture is idle.
     virtual void onFrameRenderedInternal() {}

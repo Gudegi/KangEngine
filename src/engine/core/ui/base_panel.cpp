@@ -1550,6 +1550,14 @@ void MenuBarPanel::buildPanel() {
             }
             ImGui::EndMenu();
         }
+        if (ImGui::BeginMenu("Help")) {
+            const bool shortcutHelpOpen = _app && _app->_showShortcutHelp;
+            if (ImGui::MenuItem("Keyboard & Mouse Help", "?", shortcutHelpOpen,
+                                _app != nullptr)) {
+                _app->_showShortcutHelp = !shortcutHelpOpen;
+            }
+            ImGui::EndMenu();
+        }
         /*
         if (ImGui::Button("Play")) {}
         ImGui::SameLine();
