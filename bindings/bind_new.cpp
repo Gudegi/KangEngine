@@ -1064,6 +1064,13 @@ py::class_<glm::vec3>(m, "Vec3")
              "Return the active viewport interaction mode.")
         .def("set_interaction_mode", &App::setInteractionMode, py::arg("mode"),
              "Set the active viewport interaction mode.")
+        .def("set_external_force_drag_enabled",
+             &App::setExternalForceDragEnabled, py::arg("enabled"),
+             "Opt an ExternalBuffer simulation adapter into force-drag "
+             "callbacks. Disabled by default.")
+        .def("get_external_force_drag_enabled",
+             &App::getExternalForceDragEnabled,
+             "Return whether ExternalBuffer force-drag callbacks are enabled.")
         .def("has_selection", &App::hasSelection,
              "Return true when a scene object is selected.")
         .def("clear_selection", &App::clearSelection,

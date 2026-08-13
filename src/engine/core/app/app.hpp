@@ -123,6 +123,7 @@ class App {
     Scene::SceneRenderSystem _sceneRenderSystem;
     Scene::SceneResourceManager _sceneResourceManager;
     InteractionController _interaction;
+    bool _externalForceDragEnabled = false;
     GizmoController _gizmo;
     ViewportPanel* _editorViewportPanel = nullptr;
     std::string _activeSceneCameraPath;
@@ -210,6 +211,12 @@ class App {
     InteractionMode getInteractionMode() const { return _interaction.mode(); }
     void setInteractionMode(InteractionMode mode) {
         _interaction.setMode(mode);
+    }
+    void setExternalForceDragEnabled(bool enabled) {
+        _externalForceDragEnabled = enabled;
+    }
+    bool getExternalForceDragEnabled() const {
+        return _externalForceDragEnabled;
     }
     void selectPrim(Scene::Prim* prim);
     bool setActiveSceneCamera(Scene::Prim* prim);

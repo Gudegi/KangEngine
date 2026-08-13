@@ -75,14 +75,16 @@ bool isManipulatablePrim(const Scene::Prim* prim) {
     return !selection || selection->isManipulatable();
 }
 
-bool allowsForceDragPick(const RayPickResult& pick) {
+bool allowsForceDragPick(const RayPickResult& pick,
+                         bool externalForceDragEnabled) {
     if (!pick.hit)
         return false;
-    // ExternalBuffer transforms are owned by simulation/data streams. They do
-    // not have one Prim per picked instance, so SelectionComponent policy
-    // cannot safely authorize force drag. Keep force drag limited to SceneGraph
-    // picks.
-    if (pick.transformSource != TransformSource::SceneGraph || !pick.prim)
+    // ExternalBuffer transforms are owned by simulation/data streams. Keep
+    // force drag disabled unless their adapter explicitly opts in and handles
+    // the callback without writing render transforms directly.
+    if (pick.transformSource == TransformSource::ExternalBuffer)
+        return externalForceDragEnabled;
+    if (!pick.prim)
         return false;
     auto selection = pick.prim->getSelectionComponent();
     return !selection || selection->isForceDraggable();
@@ -95,8 +97,10 @@ RayPickResult selectablePick(const RayPickResult& pick) {
 }
 
 RayPickResult pickAllowedForMode(const RayPickResult& pick,
-                                 InteractionMode mode) {
-    if (mode == InteractionMode::Force && !allowsForceDragPick(pick))
+                                 InteractionMode mode,
+                                 bool externalForceDragEnabled) {
+    if (mode == InteractionMode::Force &&
+        !allowsForceDragPick(pick, externalForceDragEnabled))
         return RayPickResult{};
     return pick;
 }
@@ -657,7 +661,8 @@ void App::renderFrameOnce() {
                                               ? _sceneCamera.getCameraLookDir()
                                               : _camera.getCameraLookDir();
             const RayPickResult interactionPick =
-                pickAllowedForMode(pick, _interaction.mode());
+                pickAllowedForMode(pick, _interaction.mode(),
+                                   _externalForceDragEnabled);
             if (_interaction.handlePick(interactionPick, pickLookDir)) {
                 onForceDragBegin(_interaction.forceDragPick(),
                                  _interaction.forceDragPlanePoint());
