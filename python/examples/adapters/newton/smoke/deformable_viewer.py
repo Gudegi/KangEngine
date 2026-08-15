@@ -37,7 +37,7 @@ def main():
         k_lambda=1_000.0,
         k_damp=1.0,
     )
-    model = builder.finalize()
+    model = builder.finalize(device="cpu")
     state = model.state()
 
     viewer = NewtonViewer(width=320, height=240, headless=True)

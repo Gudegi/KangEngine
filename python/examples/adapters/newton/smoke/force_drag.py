@@ -18,7 +18,7 @@ def main():
         xform=wp.transform((0.0, 0.0, 1.0), wp.quat_identity())
     )
     builder.add_shape_sphere(body, radius=0.5)
-    model = builder.finalize()
+    model = builder.finalize(device="cpu")
     state = model.state()
 
     viewer = NewtonViewer(width=320, height=240, headless=True)

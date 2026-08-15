@@ -158,14 +158,47 @@ def test_warp_torch_transform_conversion_matches_cpu_conversion():
     xforms = wp.array(
         [[1.0, 2.0, 3.0, 0.0, 0.0, half_sqrt, half_sqrt]],
         dtype=wp.transform,
+        device="cpu",
     )
-    scales = wp.array([[2.0, 3.0, 4.0]], dtype=wp.vec3)
+    scales = wp.array([[2.0, 3.0, 4.0]], dtype=wp.vec3, device="cpu")
 
     torch_matrices, stream = transform_array_to_torch_matrices(xforms, scales)
     numpy_matrices = transform_array_to_glm_matrices(xforms.numpy(), scales.numpy())
 
     assert stream is None
     np.testing.assert_allclose(torch_matrices.numpy(), numpy_matrices, atol=1.0e-6)
+
+
+def test_warp_cuda_transform_conversion_matches_cpu_conversion():
+    import warp as wp
+
+    if not wp.is_cuda_available():
+        return
+
+    half_sqrt = np.sqrt(0.5)
+    transform_values = np.array(
+        [
+            [1.0, 2.0, 3.0, 0.0, 0.0, half_sqrt, half_sqrt],
+            [-4.0, 5.0, -6.0, half_sqrt, 0.0, 0.0, half_sqrt],
+        ],
+        dtype=np.float32,
+    )
+    scale_values = np.array(
+        [[2.0, 3.0, 4.0], [0.5, 1.5, 2.5]], dtype=np.float32
+    )
+    xforms = wp.array(transform_values, dtype=wp.transform, device="cuda:0")
+    scales = wp.array(scale_values, dtype=wp.vec3, device="cuda:0")
+
+    torch_matrices, stream = transform_array_to_torch_matrices(xforms, scales)
+    numpy_matrices = transform_array_to_glm_matrices(
+        transform_values, scale_values
+    )
+
+    assert torch_matrices.device.type == "cuda"
+    assert stream is not None
+    np.testing.assert_allclose(
+        torch_matrices.cpu().numpy(), numpy_matrices, atol=1.0e-6
+    )
 
 
 def test_newton_primitive_mesh_bounds_are_baked_once():
@@ -179,7 +212,7 @@ def test_newton_primitive_mesh_bounds_are_baked_once():
     builder.add_shape_capsule(body, radius=0.3, half_height=0.7)
     builder.add_shape_cylinder(body, radius=0.35, half_height=0.65)
     builder.add_shape_cone(body, radius=0.5, half_height=0.65)
-    model = builder.finalize()
+    model = builder.finalize(device="cpu")
 
     viewer = _CaptureViewer.create()
     viewer.set_model(model)
@@ -222,7 +255,7 @@ def test_shape_local_transform_composes_with_body_and_static_stays_world_space()
         hy=2.0,
         hz=3.0,
     )
-    model = builder.finalize()
+    model = builder.finalize(device="cpu")
 
     viewer = _CaptureViewer.create()
     viewer.set_model(model)
@@ -253,7 +286,7 @@ def test_world_offsets_move_world_shapes_but_not_global_static_shapes():
         hy=0.5,
         hz=0.5,
     )
-    model = builder.finalize()
+    model = builder.finalize(device="cpu")
 
     viewer = _CaptureViewer.create()
     viewer.set_model(model)
@@ -283,7 +316,7 @@ def test_mjcf_articulation_shape_transforms_match_body_local_composition():
         xform=wp.transform((0.25, -0.5, 1.0), wp.quat_identity()),
         enable_self_collisions=False,
     )
-    model = builder.finalize()
+    model = builder.finalize(device="cpu")
     state = model.state()
     newton.eval_fk(model, model.joint_q, model.joint_qd, state)
 
