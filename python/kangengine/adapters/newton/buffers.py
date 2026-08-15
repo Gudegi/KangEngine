@@ -5,6 +5,46 @@ from __future__ import annotations
 from contextlib import nullcontext
 
 import numpy as np
+import torch
+import warp as wp
+
+
+@wp.kernel
+def _transform_to_glm_kernel(
+    xforms: wp.array(dtype=wp.transform),
+    scales: wp.array(dtype=wp.vec3),
+    scale_count: int,
+    matrices: wp.array2d(dtype=float),
+):
+    index = wp.tid()
+    transform = xforms[index]
+    position = wp.transform_get_translation(transform)
+    rotation = wp.normalize(wp.transform_get_rotation(transform))
+    scale = scales[0] if scale_count == 1 else scales[index]
+    x = rotation[0]
+    y = rotation[1]
+    z = rotation[2]
+    w = rotation[3]
+    sx = scale[0]
+    sy = scale[1]
+    sz = scale[2]
+
+    matrices[index, 0] = (1.0 - 2.0 * (y * y + z * z)) * sx
+    matrices[index, 1] = (2.0 * (x * y + z * w)) * sx
+    matrices[index, 2] = (2.0 * (x * z - y * w)) * sx
+    matrices[index, 3] = 0.0
+    matrices[index, 4] = (2.0 * (x * y - z * w)) * sy
+    matrices[index, 5] = (1.0 - 2.0 * (x * x + z * z)) * sy
+    matrices[index, 6] = (2.0 * (y * z + x * w)) * sy
+    matrices[index, 7] = 0.0
+    matrices[index, 8] = (2.0 * (x * z + y * w)) * sz
+    matrices[index, 9] = (2.0 * (y * z - x * w)) * sz
+    matrices[index, 10] = (1.0 - 2.0 * (x * x + y * y)) * sz
+    matrices[index, 11] = 0.0
+    matrices[index, 12] = position[0]
+    matrices[index, 13] = position[1]
+    matrices[index, 14] = position[2]
+    matrices[index, 15] = 1.0
 
 
 def to_numpy(value, *, name: str, allow_cuda_readback: bool = False) -> np.ndarray:
@@ -88,9 +128,6 @@ def transform_array_to_torch_matrices(xforms, scales=None, out=None):
     Torch stream so the renderer descriptor can retain producer ordering.
     """
 
-    import torch
-    import warp as wp
-
     transforms = wp.to_torch(xforms).reshape(-1, 7)
     count = int(transforms.shape[0])
     if scales is None:
@@ -141,4 +178,36 @@ def transform_array_to_torch_matrices(xforms, scales=None, out=None):
         out[:, 3, :3] = transforms[:, :3]
         out[:, 3, 3] = 1.0
 
+    return out, torch_stream
+
+
+def transform_array_to_warp_matrices(xforms, scales, out=None):
+    """Convert Warp transforms to a reused Torch matrix buffer in one kernel."""
+
+    if scales is None:
+        raise ValueError("fused Warp transform conversion requires scales")
+    count = len(xforms)
+    scale_count = len(scales)
+    if scale_count not in (1, count):
+        raise ValueError(
+            f"scales has {scale_count} entries; expected 1 or {count}"
+        )
+    device = wp.to_torch(xforms).device
+    if out is None or out.shape != (count, 4, 4) or out.device != device:
+        out = torch.empty((count, 4, 4), dtype=torch.float32, device=device)
+
+    output = wp.from_torch(out.reshape(count, 16), dtype=wp.float32)
+    wp.launch(
+        kernel=_transform_to_glm_kernel,
+        dim=count,
+        inputs=[xforms, scales, scale_count],
+        outputs=[output],
+        device=xforms.device,
+        record_tape=False,
+    )
+    torch_stream = (
+        wp.stream_to_torch(wp.get_stream(xforms.device))
+        if device.type == "cuda"
+        else None
+    )
     return out, torch_stream

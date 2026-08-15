@@ -19,7 +19,7 @@ from ._dependency import (
     load_picking,
     load_viewer_base,
 )
-from .buffers import rgba_array, to_numpy, transform_array_to_torch_matrices
+from .buffers import rgba_array, to_numpy, transform_array_to_warp_matrices
 from .conventions import transform_array_to_glm_matrices
 from .geometry import compute_vertex_normals, mesh_data_from_arrays
 
@@ -596,21 +596,15 @@ class NewtonViewer(_ViewerBase):
                 allow_cuda_readback=self.allow_cuda_readback,
             )
         )
+        batch = self._instances.get(key)
         try:
-            matrices = transform_array_to_glm_matrices(transform_values, scale_values)
+            matrices = transform_array_to_glm_matrices(
+                transform_values,
+                scale_values,
+                out=None if batch is None else batch.transform_buffer,
+            )
         except ValueError as exc:
             raise ValueError(f"Newton instance batch {name!r}: {exc}") from exc
-        color_values = (
-            None
-            if colors is None
-            else rgba_array(
-                colors,
-                len(matrices),
-                allow_cuda_readback=self.allow_cuda_readback,
-            )
-        )
-
-        batch = self._instances.get(key)
         if (
             batch is None
             or batch.mesh_name != str(mesh)
@@ -624,10 +618,26 @@ class NewtonViewer(_ViewerBase):
                 self.newton_material,
                 transform_source=render_api.TransformSource.EXTERNAL_BUFFER,
             )
+            color_values = (
+                None
+                if colors is None
+                else rgba_array(
+                    colors,
+                    len(matrices),
+                    allow_cuda_readback=self.allow_cuda_readback,
+                )
+            )
             batch = _InstanceBatch(view=view, mesh_name=str(mesh), count=len(matrices))
             self._instances[key] = batch
-        batch.view._render_system.update_instances(
-            batch.view.component, matrices, color_values
+            batch.view._render_system.update_instances(
+                batch.view.component, matrices, color_values
+            )
+        batch.transform_buffer = matrices
+        batch.view.set_transform_buffer(
+            matrices,
+            sim_device="cpu",
+            sync_policy=render_api.ExternalSyncPolicy.VERSIONED,
+            version=self._frame_version,
         )
         batch.view.set_visible(True)
 
@@ -657,7 +667,7 @@ class NewtonViewer(_ViewerBase):
             batch = _InstanceBatch(view=view, mesh_name=str(mesh), count=count)
             self._instances[key] = batch
 
-        matrices, torch_stream = transform_array_to_torch_matrices(
+        matrices, torch_stream = transform_array_to_warp_matrices(
             xforms, scales, out=batch.transform_buffer
         )
         # Keep the reused output tensor alive on the batch. The SimBuffer owner

@@ -10,7 +10,9 @@ from kangengine.adapters.newton.geometry import compute_vertex_normals
 from kangengine.adapters.newton.buffers import (
     rgba_array,
     transform_array_to_torch_matrices,
+    transform_array_to_warp_matrices,
 )
+from kangengine.utils.sim_buffer import to_external_transform_desc
 
 
 class _CaptureViewer:
@@ -111,6 +113,19 @@ def test_transform_array_uses_newton_xyzw_and_glm_storage():
     np.testing.assert_allclose(matrices[0], expected, atol=1.0e-6)
 
 
+def test_numpy_transform_buffer_preserves_storage_and_version():
+    matrices = np.zeros((2, 4, 4), dtype=np.float32)
+    descriptor, buffer = to_external_transform_desc(matrices, version=7)
+
+    assert buffer.data is matrices
+    assert buffer.owner is matrices
+    assert descriptor.count == 2
+    assert descriptor.view.ptr == matrices.__array_interface__["data"][0]
+    assert descriptor.view.shape == [2, 4, 4]
+    assert descriptor.view.strides == [16, 4, 1]
+    assert descriptor.view.version == 7
+
+
 def test_compute_vertex_normals_for_xy_triangle():
     normals = compute_vertex_normals(
         np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]], dtype=np.float32),
@@ -168,6 +183,10 @@ def test_warp_torch_transform_conversion_matches_cpu_conversion():
     assert stream is None
     np.testing.assert_allclose(torch_matrices.numpy(), numpy_matrices, atol=1.0e-6)
 
+    fused_matrices, fused_stream = transform_array_to_warp_matrices(xforms, scales)
+    assert fused_stream is None
+    np.testing.assert_allclose(fused_matrices.numpy(), numpy_matrices, atol=1.0e-6)
+
 
 def test_warp_cuda_transform_conversion_matches_cpu_conversion():
     import warp as wp
@@ -190,14 +209,20 @@ def test_warp_cuda_transform_conversion_matches_cpu_conversion():
     scales = wp.array(scale_values, dtype=wp.vec3, device="cuda:0")
 
     torch_matrices, stream = transform_array_to_torch_matrices(xforms, scales)
+    fused_matrices, fused_stream = transform_array_to_warp_matrices(xforms, scales)
     numpy_matrices = transform_array_to_glm_matrices(
         transform_values, scale_values
     )
 
     assert torch_matrices.device.type == "cuda"
     assert stream is not None
+    assert fused_matrices.device.type == "cuda"
+    assert fused_stream is not None
     np.testing.assert_allclose(
         torch_matrices.cpu().numpy(), numpy_matrices, atol=1.0e-6
+    )
+    np.testing.assert_allclose(
+        fused_matrices.cpu().numpy(), numpy_matrices, atol=1.0e-6
     )
 
 

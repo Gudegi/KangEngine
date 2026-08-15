@@ -1,29 +1,33 @@
 """Compare KangEngine NewtonViewer and Newton ViewerGL update costs.
 
 This microbenchmark does not step a Newton solver. By default it measures two
-paths in KangEngine's ``NewtonViewer``:
+general ExternalBuffer paths exercised through KangEngine's ``NewtonViewer``:
 
-- CPU: Newton CPU transforms -> NumPy -> CPU instance upload -> OpenGL
-- CUDA: Newton CUDA transforms -> Torch CUDA matrices -> CUDA/OpenGL D2D
+- CPU: Newton CPU transforms -> reusable NumPy mat4 -> CPU ExternalBuffer -> OpenGL
+- CUDA: Newton CUDA transforms -> one fused Warp mat4 kernel -> CUDA/OpenGL D2D
   ExternalBuffer copy -> OpenGL
 
-RTX 4090 update results recorded on 2026-08-15 at 1280x720, with 10 warmup
-and 30 measured frames (milliseconds, mean):
+RTX 4090 update results recorded on 2026-08-15 at 1280x720, VSync disabled,
+with 20 warmup and 100 measured frames (milliseconds, mean):
 
 Worlds | KE CPU | KE CUDA | ViewerGL CPU | ViewerGL CUDA
 ------ | ------ | ------- | ------------ | -------------
-1      | 0.249  | 0.845   | 0.138        | 0.479
-64     | 0.315  | 0.610   | 0.156        | 0.274
-1024   | 0.473  | 0.767   | 0.160        | 0.284
-4096   | 0.789  | 0.716   | 0.294        | 0.610
-16384  | 2.317  | 0.653   | 1.002        | 1.138
+1      | 0.200  | 0.194   | 0.130        | 0.493
+64     | 0.194  | 0.223   | 0.139        | 0.246
+1024   | 0.272  | 0.209   | 0.152        | 0.333
+4096   | 0.550  | 0.206   | 0.356        | 0.532
+16384  | 1.396  | 0.227   | 1.001        | 1.096
 
-``update`` measures steady-state ``viewer.log_state(state)``. KangEngine CUDA
-overtook KangEngine CPU at 4096 instances and, at 16384, took 0.653 ms versus
-ViewerGL CUDA's 1.138 ms (about 1.74x faster). Nsight capture at 16384 showed
-that ViewerGL performed 120 D2H copies and 30 context synchronizations over 30
-frames; KangEngine's corresponding steady-state capture used one D2D copy per
-frame with no D2H or device-wide synchronization.
+``update`` measures steady-state ``viewer.log_state(state)``. The optimized
+KangEngine CUDA path is faster than ViewerGL CUDA at every measured size; at
+16384 instances it took 0.227 ms versus 1.096 ms (about 4.83x faster). An
+Nsight capture at 16384 showed one fused conversion kernel and one D2D copy per
+frame, with no D2H or device-wide synchronization. ViewerGL's earlier capture
+performed four D2H copies and one context synchronization per frame.
+
+These numbers diagnose KangEngine's general transform/ExternalBuffer path;
+they are not a goal to specialize KangEngine for Newton. The CPU path also
+uses the same NumPy-backed buffer contract available to ordinary renderables.
 
 Use ``--viewer newton`` to run the same model/state/frame loop with Newton's
 original ``ViewerGL``. Update costs are the direct comparison. Do not compare
@@ -67,6 +71,7 @@ def benchmark(
     device: str,
     cuda_profile_range: bool,
     viewer_backend: str,
+    vsync: bool,
 ):
     import newton
 
@@ -79,11 +84,12 @@ def benchmark(
             headless=True,
             allow_cuda_readback=False,
         )
+        viewer.app.set_vsync(vsync)
     else:
         viewer = newton.viewer.ViewerGL(
             width=width,
             height=height,
-            vsync=False,
+            vsync=vsync,
             headless=True,
         )
     try:
@@ -129,6 +135,7 @@ def benchmark(
 
         return {
             "viewer": viewer_backend,
+            "vsync": vsync,
             "requested_device": device,
             "model_device": str(model.device),
             "transform_device": str(state.body_q.device),
@@ -171,6 +178,11 @@ def main():
         action="store_true",
         help="Bracket steady-state frames with cudaProfilerStart/Stop",
     )
+    parser.add_argument(
+        "--vsync",
+        action="store_true",
+        help="Enable viewer VSync; disabled by default for benchmarking",
+    )
     args = parser.parse_args()
 
     world_counts = [int(value) for value in args.worlds.split(",")]
@@ -189,6 +201,7 @@ def main():
             args.device,
             args.cuda_profile_range,
             args.viewer,
+            args.vsync,
         )
         for count in world_counts
     ]
@@ -196,6 +209,7 @@ def main():
         json.dumps(
             {
                 "viewer": args.viewer,
+                "vsync": args.vsync,
                 "requested_device": args.device,
                 "platform": platform.platform(),
                 "resolution": [args.width, args.height],

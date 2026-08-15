@@ -28,7 +28,7 @@ def xyzw_to_rotation_matrix(quaternions) -> np.ndarray:
     return result
 
 
-def transform_array_to_glm_matrices(xforms, scales=None) -> np.ndarray:
+def transform_array_to_glm_matrices(xforms, scales=None, out=None) -> np.ndarray:
     """Convert Newton ``[px,py,pz,qx,qy,qz,qw]`` to GLM storage matrices.
 
     Python instance uploads expose GLM's column-major memory layout as
@@ -48,9 +48,35 @@ def transform_array_to_glm_matrices(xforms, scales=None) -> np.ndarray:
                 f"scales has {len(scale_values)} entries; expected 1 or {count}"
             )
 
-    rotations = xyzw_to_rotation_matrix(values[:, 3:7])
-    matrices = np.repeat(np.eye(4, dtype=np.float32)[None], count, axis=0)
-    matrices[:, :3, :3] = rotations.transpose(0, 2, 1)
-    matrices[:, :3, :3] *= scale_values[:, :, None]
+    if (
+        out is None
+        or not isinstance(out, np.ndarray)
+        or out.dtype != np.float32
+        or out.shape != (count, 4, 4)
+        or not out.flags.c_contiguous
+    ):
+        matrices = np.empty((count, 4, 4), dtype=np.float32)
+    else:
+        matrices = out
+
+    q = values[:, 3:7]
+    lengths = np.sum(q * q, axis=1, keepdims=True)
+    if np.any(lengths <= 1.0e-12):
+        raise ValueError("Newton transform contains a zero quaternion")
+    q = q / np.sqrt(lengths)
+    x, y, z, w = q.T
+    sx, sy, sz = scale_values.T
+
+    matrices[:, 0, 0] = (1.0 - 2.0 * (y * y + z * z)) * sx
+    matrices[:, 0, 1] = (2.0 * (x * y + z * w)) * sx
+    matrices[:, 0, 2] = (2.0 * (x * z - y * w)) * sx
+    matrices[:, 1, 0] = (2.0 * (x * y - z * w)) * sy
+    matrices[:, 1, 1] = (1.0 - 2.0 * (x * x + z * z)) * sy
+    matrices[:, 1, 2] = (2.0 * (y * z + x * w)) * sy
+    matrices[:, 2, 0] = (2.0 * (x * z + y * w)) * sz
+    matrices[:, 2, 1] = (2.0 * (y * z - x * w)) * sz
+    matrices[:, 2, 2] = (1.0 - 2.0 * (x * x + y * y)) * sz
+    matrices[:, :3, 3] = 0.0
     matrices[:, 3, :3] = values[:, :3]
+    matrices[:, 3, 3] = 1.0
     return matrices

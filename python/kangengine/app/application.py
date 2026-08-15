@@ -262,8 +262,13 @@ class RenderablePrimView:
         *,
         sim_device=None,
         sync_policy=None,
+        version=None,
     ):
-        """Set the ``[N, 4, 4]`` buffer of an ExternalBuffer renderable."""
+        """Set an ExternalBuffer renderable's ``[N, 4, 4]`` transform buffer.
+
+        ``version`` lets a versioned producer mark reused storage as changed
+        without allocating a new NumPy array or Torch tensor.
+        """
         from ..utils.sim_buffer import to_external_transform_desc
 
         descriptor, _ = to_external_transform_desc(
@@ -271,6 +276,7 @@ class RenderablePrimView:
             sim_device=sim_device,
             dtype="float32",
             name=f"{self.path}:transforms",
+            version=version,
             sync_policy=(
                 render_api.ExternalSyncPolicy.NONE
                 if sync_policy is None
