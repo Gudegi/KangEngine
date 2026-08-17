@@ -14,9 +14,14 @@ A lightweight C++/Python engine for visualizing motion, robotics assets, and Phy
 
 <table align="center">
   <tr>
-    <td width="33%" align="center"><img src="images/instanced_robots.png" alt="Instanced robot simulation" style="width:100%;"></td>
-    <td width="33%" align="center"><img src="images/joint_monkey.png" alt="Robot joint control example" style="width:100%;"></td>
-    <td width="33%" align="center"><img src="images/ball_collisions.png" alt="Rigid body collision example" style="width:100%;"></td>
+    <th width="33%" align="center">Character Animation</th>
+    <th width="33%" align="center">Simulation</th>
+    <th width="33%" align="center">Rendering</th>
+  </tr>
+  <tr>
+    <td width="33%" align="center"><img src="docs/images/Character_animation.png" alt="Character animation" style="width:100%;"></td>
+    <td width="33%" align="center"><img src="docs/images/KELAB/demo2.png" alt="Parallel simulation" style="width:100%;"></td>
+    <td width="33%" align="center"><img src="docs/images/Rendering.webp" alt="KangEngine rendering" style="width:100%;"></td>
   </tr>
 </table>
 
