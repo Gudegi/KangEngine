@@ -1,4 +1,18 @@
 document.addEventListener("DOMContentLoaded", () => {
+  const navigation = document.querySelector(".sidebar-tree");
+  if (navigation) {
+    const defaultOpenSections = new Set(["User Guide", "Integrations"]);
+    const topLevelItems = navigation.querySelectorAll(":scope > ul > li");
+    for (const item of topLevelItems) {
+      const link = item.querySelector(":scope > a");
+      if (!defaultOpenSections.has(link?.textContent.trim())) continue;
+      const checkbox = item.querySelector(":scope > .toctree-checkbox");
+      if (checkbox) {
+        checkbox.checked = true;
+      }
+    }
+  }
+
   const toc = document.querySelector(".toc-tree");
   if (!toc) return;
 

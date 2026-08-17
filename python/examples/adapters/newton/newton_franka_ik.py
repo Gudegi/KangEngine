@@ -17,7 +17,7 @@ from pathlib import Path
 import numpy as np
 
 import kangengine as ke
-from kangengine.adapters.newton import NewtonViewer
+from kangengine.adapters.newton import ViewerKE
 
 
 def quaternion_matrix_xyzw(rotation: np.ndarray) -> np.ndarray:
@@ -35,7 +35,7 @@ def quaternion_matrix_xyzw(rotation: np.ndarray) -> np.ndarray:
 
 
 def create_target_prim(
-    viewer: NewtonViewer,
+    viewer: ViewerKE,
     position: np.ndarray,
     rotation: np.ndarray,
 ):
@@ -64,7 +64,7 @@ def target_prim_pose(target_prim) -> tuple[np.ndarray, np.ndarray]:
 
 
 def log_target_axes(
-    viewer: NewtonViewer,
+    viewer: ViewerKE,
     position: np.ndarray,
     rotation: np.ndarray,
 ):
@@ -164,7 +164,7 @@ def main():
         jacobian_mode=ik.IKJacobianType.ANALYTIC,
     )
 
-    viewer = NewtonViewer(
+    viewer = ViewerKE(
         width=args.width,
         height=args.height,
         headless=args.headless,

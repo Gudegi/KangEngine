@@ -8,6 +8,5 @@ getting_started/index
 scene_rendering/INDEX
 simulation/INDEX
 animation/INDEX
-MIMICKIT
 advanced/INDEX
 ```

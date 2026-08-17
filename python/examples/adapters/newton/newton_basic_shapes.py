@@ -11,7 +11,7 @@ import argparse
 
 import numpy as np
 
-from kangengine.adapters.newton import NewtonViewer
+from kangengine.adapters.newton import ViewerKE
 
 
 def main():
@@ -90,7 +90,7 @@ def main():
     contacts = collision_pipeline.contacts()
     solver = newton.solvers.SolverXPBD(model, iterations=10)
 
-    viewer = NewtonViewer(
+    viewer = ViewerKE(
         width=args.width,
         height=args.height,
         headless=args.headless,

@@ -142,7 +142,7 @@ class _NewtonApp(App):
         self.viewer._end_force_drag()
 
 
-class NewtonViewer(_ViewerBase):
+class ViewerKE(_ViewerBase):
     """Render Newton models through KangEngine without owning simulation state.
 
     CPU models use host transform uploads. CUDA model transforms use a

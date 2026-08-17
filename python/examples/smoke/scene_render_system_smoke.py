@@ -12,9 +12,10 @@ def main():
     app.initialize(width=64, height=64, hide_ui=True, headless=True)
 
     material = app.create_standard_materials().common
+    mesh_data = ke.scene.Prim.create_rectangle_data(1.0, 1.0, 1.0)
     view = app.scene.add_mesh(
         "/group/mesh",
-        ke.scene.Prim.create_rectangle_data(1.0, 1.0, 1.0),
+        mesh_data,
         material,
         transform_source=ke.render.TransformSource.EXTERNAL_BUFFER,
     )
@@ -58,20 +59,14 @@ def main():
     assert not component.casts_shadow
     assert component.alpha_mode == ke.render.AlphaMode.MASK
     assert abs(component.alpha_cutoff - 0.4) < 1.0e-6
-    view.update_geometry(
-        [
-            [-0.5, -0.5, 0.0],
-            [0.5, -0.5, 0.0],
-            [0.5, 0.5, 0.0],
-            [-0.5, 0.5, 0.0],
-        ],
-        [
-            [0.0, 0.0, 1.0],
-            [0.0, 0.0, 1.0],
-            [0.0, 0.0, 1.0],
-            [0.0, 0.0, 1.0],
-        ],
-    )
+    # create_rectangle_data() creates a box with 24 face-split vertices so
+    # each face can retain its hard normal and UVs. Dynamic updates must keep
+    # that uploaded topology and vertex count.
+    deformed_positions = [
+        [position.x * 0.9, position.y, position.z]
+        for position in mesh_data.vertices
+    ]
+    view.update_geometry(deformed_positions, mesh_data.normals)
     try:
         view.update_geometry(
             [[0.0, 0.0, 0.0]],

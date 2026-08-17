@@ -2,14 +2,18 @@
 
 Newton owns the tetrahedral particles, contacts, and VBD solver. KangEngine
 renders Newton's boundary triangles as one dynamic, double-sided PBR mesh.
-Use the viewer panel to toggle particles and particle constraints.
+The supported deformable render path is CPU-backed; CUDA can be used only with
+explicit per-frame readback for debugging. Use the viewer panel to toggle
+particles and particle constraints.
 """
+
+# TODO : CUDA deformable geometry zero-copy rendering
 
 from __future__ import annotations
 
 import argparse
 
-from kangengine.adapters.newton import NewtonViewer
+from kangengine.adapters.newton import ViewerKE
 
 
 def main():
@@ -17,6 +21,16 @@ def main():
     parser.add_argument("--width", type=int, default=1600)
     parser.add_argument("--height", type=int, default=900)
     parser.add_argument("--headless", action="store_true")
+    parser.add_argument(
+        "--device",
+        default="cpu",
+        help="Newton simulation device (default: cpu).",
+    )
+    parser.add_argument(
+        "--allow-cuda-readback",
+        action="store_true",
+        help="Allow slow CUDA-to-CPU readback of deformable vertices every rendered frame.",
+    )
     parser.add_argument(
         "--frames",
         type=int,
@@ -26,6 +40,12 @@ def main():
     parser.add_argument("--show-particles", action="store_true")
     parser.add_argument("--show-constraints", action="store_true")
     args = parser.parse_args()
+
+    if str(args.device).startswith("cuda") and not args.allow_cuda_readback:
+        parser.error(
+            "CUDA deformable rendering is not device-resident yet; use the "
+            "default --device cpu, or pass --allow-cuda-readback for debugging."
+        )
 
     import newton
     import warp as wp
@@ -52,7 +72,7 @@ def main():
     # VBD uses this graph coloring for conflict-free particle updates.
     builder.color()
 
-    model = builder.finalize()
+    model = builder.finalize(device=args.device)
     model.soft_contact_ke = 1.0e2
     model.soft_contact_kd = 0.0
     model.soft_contact_mu = 1.0
@@ -69,10 +89,11 @@ def main():
         particle_enable_tile_solve=False,
     )
 
-    viewer = NewtonViewer(
+    viewer = ViewerKE(
         width=args.width,
         height=args.height,
         headless=args.headless,
+        allow_cuda_readback=args.allow_cuda_readback,
     )
     viewer.show_ground = False
     viewer.app.scene.add_ground("/Ground", scale=20.0)

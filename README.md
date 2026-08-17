@@ -35,6 +35,7 @@ KangEngine is built for quick iteration around character motion, robot assets, a
 - **Motion Inspection:** Visualizes skeletal motion, FK poses, root trajectories, contacts, and tracking targets.
 - **Interactive Visualization:** Provides skinned character rendering, skeleton overlays, debug drawing, and scene interaction tools.
 - **PhysX Simulation:** Runs rigid bodies, articulated robots, and motion-tracking control experiments.
+- **[Newton Viewer](docs/NEWTON.md):** Uses KangEngine to visualize Newton simulation state.
 - **Python Workflows:** Provides Python APIs for motion editing, IK/control experiments, simulation scripts, and MimicKit integration.
 
 ## Quick Start

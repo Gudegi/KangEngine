@@ -7,9 +7,10 @@ complete programs.
 
 ```{toctree}
 :maxdepth: 2
-:caption: Guide
+:caption: Documentation
 
 guide/index
+guide/integrations/INDEX
 ```
 
 ```{toctree}

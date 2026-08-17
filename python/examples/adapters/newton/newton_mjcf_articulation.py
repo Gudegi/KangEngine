@@ -11,7 +11,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from kangengine.adapters.newton import NewtonViewer
+from kangengine.adapters.newton import ViewerKE
 
 
 def main():
@@ -82,11 +82,13 @@ def main():
         use_mujoco_cpu=use_mujoco_cpu,
     )
 
-    viewer = NewtonViewer(
+    viewer = ViewerKE(
         width=args.width,
         height=args.height,
         headless=args.headless,
     )
+    viewer.show_ground = False
+    viewer.app.scene.add_ground("/Ground", scale=20.0)
     viewer.set_model(
         model,
         max_worlds=None if args.max_worlds == 0 else args.max_worlds,

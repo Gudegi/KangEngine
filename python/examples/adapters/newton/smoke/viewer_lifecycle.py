@@ -1,6 +1,6 @@
-"""Exercise NewtonViewer model replacement, external stepping, and teardown."""
+"""Exercise ViewerKE model replacement, external stepping, and teardown."""
 
-from kangengine.adapters.newton import NewtonViewer
+from kangengine.adapters.newton import ViewerKE
 
 
 def _make_model(shape: str):
@@ -19,7 +19,7 @@ def _make_model(shape: str):
 
 
 def _exercise_viewer(model_a, model_b):
-    viewer = NewtonViewer(width=320, height=240, headless=True)
+    viewer = ViewerKE(width=320, height=240, headless=True)
     try:
         viewer.set_model(model_a)
         viewer.log_state(model_a.state())
@@ -55,7 +55,7 @@ def main():
     model_b = _make_model("box")
     _exercise_viewer(model_a, model_b)
     _exercise_viewer(model_b, model_a)
-    print("PASS: NewtonViewer model replacement and teardown")
+    print("PASS: ViewerKE model replacement and teardown")
 
 
 if __name__ == "__main__":

@@ -66,7 +66,7 @@ def to_numpy(value, *, name: str, allow_cuda_readback: bool = False) -> np.ndarr
     )
     if is_cuda and not allow_cuda_readback:
         raise RuntimeError(
-            f"{name} is stored on CUDA. This NewtonViewer feature refuses "
+            f"{name} is stored on CUDA. This ViewerKE feature refuses "
             "implicit readback; pass allow_cuda_readback=True for debugging "
             "or use a device-resident adapter path."
         )

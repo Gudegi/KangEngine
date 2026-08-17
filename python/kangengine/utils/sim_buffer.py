@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal, TypeAlias
+from typing import TYPE_CHECKING, Literal, Type, TypeAlias
 
 import numpy as np
 import torch
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 BufferData: TypeAlias = np.ndarray | torch.Tensor
-BufferDType: TypeAlias = np.dtype | torch.dtype | type[np.generic] | str
+BufferDType: TypeAlias = np.dtype | torch.dtype | Type[np.generic] | str
 BufferShape: TypeAlias = tuple[int, ...] | list[int] | torch.Size
 SimDevice: TypeAlias = str | torch.device
 MemoryType: TypeAlias = Literal[

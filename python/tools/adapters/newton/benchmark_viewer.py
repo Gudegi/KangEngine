@@ -1,7 +1,7 @@
-"""Compare KangEngine NewtonViewer and Newton ViewerGL update costs.
+"""Compare KangEngine ViewerKE and Newton ViewerGL update costs.
 
 This microbenchmark does not step a Newton solver. By default it measures two
-general ExternalBuffer paths exercised through KangEngine's ``NewtonViewer``:
+general ExternalBuffer paths exercised through KangEngine's ``ViewerKE``:
 
 - CPU: Newton CPU transforms -> reusable NumPy mat4 -> CPU ExternalBuffer -> OpenGL
 - CUDA: Newton CUDA transforms -> one fused Warp mat4 kernel -> CUDA/OpenGL D2D
@@ -46,7 +46,7 @@ import platform
 from statistics import mean
 from time import perf_counter
 
-from kangengine.adapters.newton import NewtonViewer
+from kangengine.adapters.newton import ViewerKE
 
 
 def _build_model(world_count: int, device: str):
@@ -78,7 +78,7 @@ def benchmark(
     model = _build_model(world_count, device)
     state = model.state()
     if viewer_backend == "kangengine":
-        viewer = NewtonViewer(
+        viewer = ViewerKE(
             width=width,
             height=height,
             headless=True,
