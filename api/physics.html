@@ -192,7 +192,7 @@
   <input type="hidden" name="area" value="default">
 </form>
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
-  <p class="caption" role="heading"><span class="caption-text">Guide</span></p>
+  <p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
 <ul>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../guide/index.html">User Guide</a><input aria-label="Toggle navigation of User Guide" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../guide/API_OVERVIEW.html">API Overview</a></li>
@@ -225,11 +225,11 @@
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/animation/INDEX.html">Animation</a><input aria-label="Toggle navigation of Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l3"><a class="reference internal" href="../guide/animation/SMPL.html">SMPL Models and Motion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/LOAD_MOTION.html">Load and Play Motion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/VISUALS.html">Pose Visualization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/SMPL.html">SMPL Models</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/advanced/INDEX.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/BUILD_FROM_SOURCE.html">Build Guide</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/advanced/RUNTIME_ARCHITECTURE.html">Runtime Architecture</a></li>
@@ -239,10 +239,15 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../guide/integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../guide/NEWTON.html">Newton Viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
+</ul>
+</li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul class="current">
-<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="python.html">kangengine</a></li>
 <li class="toctree-l2"><a class="reference internal" href="scene.html">ke.scene</a></li>
 <li class="toctree-l2"><a class="reference internal" href="geometry.html">ke.geometry</a></li>
@@ -914,6 +919,31 @@ with PhysX bindings.  The wrapper owns a native
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsWorld.create_dynamic_convex_compound">
+<span class="sig-name descname"><span class="pre">create_dynamic_convex_compound</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">parts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">ConvexMeshPart</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">rot_xyzw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(0.0,</span> <span class="pre">0.0,</span> <span class="pre">0.0,</span> <span class="pre">1.0)</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">density</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">cooking</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ConvexCookingOptions</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.PhysicsMaterialDesc" title="kangengine.physics.PhysicsMaterialDesc"><span class="pre">PhysicsMaterialDesc</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">collision_group</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">contact_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.02</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">rest_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.RigidDynamic" title="kangengine.physics.RigidDynamic"><span class="pre">RigidDynamic</span></a></span></span><a class="headerlink" href="#kangengine.physics.PhysicsWorld.create_dynamic_convex_compound" title="Link to this definition">¶</a></dt>
+<dd><p>Cook convex parts as shapes on one dynamic rigid body.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.physics.RigidDynamic" title="kangengine.physics.RigidDynamic"><code class="xref py py-class docutils literal notranslate"><span class="pre">RigidDynamic</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsWorld.create_dynamic_rigid">
 <span class="sig-name descname"><span class="pre">create_dynamic_rigid</span></span><span class="sig-paren">(</span>
 
@@ -951,6 +981,31 @@ with PhysX bindings.  The wrapper owns a native
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.physics.RigidDynamic" title="kangengine.physics.RigidDynamic"><code class="xref py py-class docutils literal notranslate"><span class="pre">RigidDynamic</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsWorld.create_static_convex_compound">
+<span class="sig-name descname"><span class="pre">create_static_convex_compound</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">parts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">ConvexMeshPart</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(0.0,</span> <span class="pre">0.0,</span> <span class="pre">0.0)</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">rot_xyzw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(0.0,</span> <span class="pre">0.0,</span> <span class="pre">0.0,</span> <span class="pre">1.0)</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">cooking</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ConvexCookingOptions</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.PhysicsMaterialDesc" title="kangengine.physics.PhysicsMaterialDesc"><span class="pre">PhysicsMaterialDesc</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">collision_group</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">contact_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.02</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">rest_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">register_as_ground</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Any</span></span></span><a class="headerlink" href="#kangengine.physics.PhysicsWorld.create_static_convex_compound" title="Link to this definition">¶</a></dt>
+<dd><p>Cook convex parts as shapes on one static rigid body.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -1352,6 +1407,16 @@ unchanged after later step(), sync(), or clear_contacts() calls.</p>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.physics.Articulation" title="kangengine.physics.Articulation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Articulation</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.Articulation.get_link_shape_counts">
+<span class="sig-name descname"><span class="pre">get_link_shape_counts</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.physics.Articulation.get_link_shape_counts" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]</span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -1897,8 +1962,10 @@ KangEngine fallback boxes. Visual-only mesh geoms remain render-only.</p>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.clear_contacts"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.clear_contacts()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.clear_ground_actors"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.clear_ground_actors()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.create_dynamic_box"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.create_dynamic_box()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.create_dynamic_convex_compound"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.create_dynamic_convex_compound()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.create_dynamic_rigid"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.create_dynamic_rigid()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.create_dynamic_sphere"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.create_dynamic_sphere()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.create_static_convex_compound"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.create_static_convex_compound()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.get_contact_forces"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.get_contact_forces()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.get_contacts"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.get_contacts()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.get_ground_contact_forces"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.get_ground_contact_forces()</span></code></a></li>
@@ -1944,6 +2011,7 @@ KangEngine fallback boxes. Visual-only mesh geoms remain render-only.</p>
 </li>
 <li><a class="reference internal" href="#kangengine.physics.Articulation"><code class="docutils literal notranslate"><span class="pre">Articulation</span></code></a><ul>
 <li><a class="reference internal" href="#kangengine.physics.Articulation.build"><code class="docutils literal notranslate"><span class="pre">Articulation.build()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.Articulation.get_link_shape_counts"><code class="docutils literal notranslate"><span class="pre">Articulation.get_link_shape_counts()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.Articulation.num_dofs"><code class="docutils literal notranslate"><span class="pre">Articulation.num_dofs()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.Articulation.num_links"><code class="docutils literal notranslate"><span class="pre">Articulation.num_links()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.Articulation.release"><code class="docutils literal notranslate"><span class="pre">Articulation.release()</span></code></a></li>
@@ -2025,6 +2093,6 @@ KangEngine fallback boxes. Visual-only mesh geoms remain render-only.</p>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../_static/copybutton.js?v=fd10adb8"></script>
-    <script src="../_static/kangengine-toc.js?v=14c0e558"></script>
+    <script src="../_static/kangengine-toc.js?v=32ef2ebd"></script>
     </body>
 </html>

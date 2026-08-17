@@ -190,7 +190,7 @@
   <input type="hidden" name="area" value="default">
 </form>
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
-  <p class="caption" role="heading"><span class="caption-text">Guide</span></p>
+  <p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
 <ul>
 <li class="toctree-l1 has-children"><a class="reference internal" href="guide/index.html">User Guide</a><input aria-label="Toggle navigation of User Guide" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="guide/API_OVERVIEW.html">API Overview</a></li>
@@ -223,11 +223,11 @@
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="guide/animation/INDEX.html">Animation</a><input aria-label="Toggle navigation of Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l3"><a class="reference internal" href="guide/animation/SMPL.html">SMPL Models and Motion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="guide/animation/LOAD_MOTION.html">Load and Play Motion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="guide/animation/VISUALS.html">Pose Visualization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="guide/animation/SMPL.html">SMPL Models</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="guide/MIMICKIT.html">RL With MimicKit</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="guide/advanced/INDEX.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="guide/advanced/BUILD_FROM_SOURCE.html">Build Guide</a></li>
 <li class="toctree-l3"><a class="reference internal" href="guide/advanced/RUNTIME_ARCHITECTURE.html">Runtime Architecture</a></li>
@@ -237,10 +237,16 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="guide/integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="guide/KELAB.html">KELab</a></li>
+<li class="toctree-l2"><a class="reference internal" href="guide/NEWTON.html">Newton Viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="guide/MIMICKIT.html">RL With MimicKit</a></li>
+</ul>
+</li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="api/python.html">kangengine</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/scene.html">ke.scene</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/geometry.html">ke.geometry</a></li>
@@ -986,10 +992,10 @@
         </ul></li>
         <li><a href="api/physics.html#kangengine.physics.ArticulationConfig.contact_offset">contact_offset (kangengine.physics.ArticulationConfig property)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/physics.html#kangengine.physics.PhysicsGpuStateViews.contact_pair_body_refs">contact_pair_body_refs (kangengine.physics.PhysicsGpuStateViews property)</a>
 </li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/physics.html#kangengine.physics.PhysicsGpuStateViews.contact_pair_count">contact_pair_count (kangengine.physics.PhysicsGpuStateViews property)</a>
 </li>
         <li><a href="api/physics.html#kangengine.physics.PhysicsGpuStateViews.contact_pair_headers">contact_pair_headers (kangengine.physics.PhysicsGpuStateViews property)</a>
@@ -1080,6 +1086,8 @@
         </ul></li>
         <li><a href="api/physics.html#kangengine.physics.PhysicsWorld.create_dynamic_box">create_dynamic_box() (kangengine.physics.PhysicsWorld method)</a>
 </li>
+        <li><a href="api/physics.html#kangengine.physics.PhysicsWorld.create_dynamic_convex_compound">create_dynamic_convex_compound() (kangengine.physics.PhysicsWorld method)</a>
+</li>
         <li><a href="api/physics.html#kangengine.physics.PhysicsWorld.create_dynamic_rigid">create_dynamic_rigid() (kangengine.physics.PhysicsWorld method)</a>
 </li>
         <li><a href="api/physics.html#kangengine.physics.PhysicsWorld.create_dynamic_sphere">create_dynamic_sphere() (kangengine.physics.PhysicsWorld method)</a>
@@ -1127,6 +1135,8 @@
         <li><a href="api/python.html#kangengine.App.create_standard_materials">create_standard_materials() (kangengine.App method)</a>
 </li>
         <li><a href="api/python.html#kangengine.App.create_standard_shaders">create_standard_shaders() (kangengine.App method)</a>
+</li>
+        <li><a href="api/physics.html#kangengine.physics.PhysicsWorld.create_static_convex_compound">create_static_convex_compound() (kangengine.physics.PhysicsWorld method)</a>
 </li>
         <li><a href="api/rendering.html#kangengine.render.GraphicsDevice.create_texture">create_texture() (kangengine.render.GraphicsDevice method)</a>
 </li>
@@ -1715,6 +1725,8 @@
         <li><a href="api/scene.html#kangengine.scene.Prim.get_light_component">get_light_component() (kangengine.scene.Prim method)</a>
 </li>
         <li><a href="api/scene.html#kangengine.scene.Prim.get_light_type">get_light_type() (kangengine.scene.Prim method)</a>
+</li>
+        <li><a href="api/physics.html#kangengine.physics.Articulation.get_link_shape_counts">get_link_shape_counts() (kangengine.physics.Articulation method)</a>
 </li>
         <li><a href="api/python.html#kangengine.RenderablePrimView.get_local_rotation">get_local_rotation() (kangengine.RenderablePrimView method)</a>
 
@@ -2459,9 +2471,11 @@
 </li>
         <li><a href="api/scene.html#kangengine.scene.ArticulationComponent.mesh_asset_base_path">mesh_asset_base_path (kangengine.scene.ArticulationComponent property)</a>
 </li>
-        <li><a href="api/asset.html#kangengine.asset.FBXMeshInfo.mesh_data">mesh_data (kangengine.asset.FBXMeshInfo property)</a>
+        <li><a href="api/asset.html#kangengine.asset.CollisionGeomDesc.mesh_data">mesh_data (kangengine.asset.CollisionGeomDesc property)</a>
 
         <ul>
+          <li><a href="api/asset.html#kangengine.asset.FBXMeshInfo.mesh_data">(kangengine.asset.FBXMeshInfo property)</a>
+</li>
           <li><a href="api/asset.html#kangengine.asset.FBXSkinnedMeshInfo.mesh_data">(kangengine.asset.FBXSkinnedMeshInfo property)</a>
 </li>
           <li><a href="api/asset.html#kangengine.asset.USDMeshInfo.mesh_data">(kangengine.asset.USDMeshInfo property)</a>
@@ -2473,8 +2487,12 @@
         </ul></li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
-        <li><a href="api/asset.html#kangengine.asset.VisualGeomDesc.mesh_file">mesh_file (kangengine.asset.VisualGeomDesc property)</a>
+        <li><a href="api/asset.html#kangengine.asset.CollisionGeomDesc.mesh_file">mesh_file (kangengine.asset.CollisionGeomDesc property)</a>
+
+        <ul>
+          <li><a href="api/asset.html#kangengine.asset.VisualGeomDesc.mesh_file">(kangengine.asset.VisualGeomDesc property)</a>
 </li>
+        </ul></li>
         <li><a href="api/scene.html#kangengine.scene.MeshComponent.mesh_source_path">mesh_source_path (kangengine.scene.MeshComponent property)</a>
 </li>
         <li><a href="api/scene.html#kangengine.scene.MeshComponent">MeshComponent (class in kangengine.scene)</a>
@@ -4454,6 +4472,6 @@
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="_static/copybutton.js?v=fd10adb8"></script>
-    <script src="_static/kangengine-toc.js?v=14c0e558"></script>
+    <script src="_static/kangengine-toc.js?v=32ef2ebd"></script>
     </body>
 </html>

@@ -3,10 +3,10 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Pose Visualization" href="VISUALS.html"><link rel="prev" title="Animation" href="INDEX.html">
+<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Advanced Topics" href="../advanced/INDEX.html"><link rel="prev" title="Pose Visualization" href="VISUALS.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
-        <title>SMPL Models and Motion - KangEngine Docs</title>
+        <title>SMPL Models - KangEngine Docs</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
@@ -192,7 +192,7 @@
   <input type="hidden" name="area" value="default">
 </form>
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
-  <p class="caption" role="heading"><span class="caption-text">Guide</span></p>
+  <p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
 <ul class="current">
 <li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">User Guide</a><input aria-label="Toggle navigation of User Guide" checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../API_OVERVIEW.html">API Overview</a></li>
@@ -225,11 +225,11 @@
 </ul>
 </li>
 <li class="toctree-l2 current has-children"><a class="reference internal" href="INDEX.html">Animation</a><input aria-label="Toggle navigation of Animation" checked="" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
-<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">SMPL Models and Motion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="LOAD_MOTION.html">Load and Play Motion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="VISUALS.html">Pose Visualization</a></li>
+<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">SMPL Models</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../MIMICKIT.html">RL With MimicKit</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../advanced/INDEX.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/BUILD_FROM_SOURCE.html">Build Guide</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../advanced/RUNTIME_ARCHITECTURE.html">Runtime Architecture</a></li>
@@ -239,10 +239,15 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../NEWTON.html">Newton Viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../MIMICKIT.html">RL With MimicKit</a></li>
+</ul>
+</li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../api/python.html">kangengine</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/scene.html">ke.scene</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/geometry.html">ke.geometry</a></li>
@@ -318,8 +323,8 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="smpl-models-and-motion">
-<h1>SMPL Models and Motion<a class="headerlink" href="#smpl-models-and-motion" title="Link to this heading">¶</a></h1>
+          <section id="smpl-models">
+<h1>SMPL Models<a class="headerlink" href="#smpl-models" title="Link to this heading">¶</a></h1>
 <p><code class="docutils literal notranslate"><span class="pre">ke.asset</span></code> contains SMPL, SMPL-H, and SMPL-X model assets and their body-shape
 evaluation. Renderable surfaces live under <code class="docutils literal notranslate"><span class="pre">ke.visual</span></code>; see
 <a class="reference internal" href="VISUALS.html"><span class="std std-doc">Pose Visualization</span></a>
@@ -382,7 +387,13 @@ rotations plus a root translation.</p>
 </pre></div>
 </div>
 <p>Applications outside the repository can pass their own model path to the same
-<code class="docutils literal notranslate"><span class="pre">load()</span></code> methods.</p>
+<code class="docutils literal notranslate"><span class="pre">load()</span></code> methods. Replace the bracketed path below with the location of the
+downloaded model file:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">model</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">SMPLModel</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">SMPLModel</span><span class="o">.</span><span class="n">load</span><span class="p">(</span>
+    <span class="n">path</span><span class="o">=</span><span class="s2">&quot;[smpl_path/SMPL_NEUTRAL.pkl]&quot;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
 </section>
 </section>
 <section id="create-and-pose-a-body">
@@ -429,23 +440,23 @@ signatures.</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="VISUALS.html">
+          <a class="next-page" href="../advanced/INDEX.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Pose Visualization</div>
+                <div class="title">Advanced Topics</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="INDEX.html">
+          <a class="prev-page" href="VISUALS.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">Animation</div>
+                <div class="title">Pose Visualization</div>
                 
               </div>
             </a>
@@ -479,7 +490,7 @@ signatures.</p>
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">SMPL Models and Motion</a><ul>
+<li><a class="reference internal" href="#">SMPL Models</a><ul>
 <li><a class="reference internal" href="#smpl-model-files">SMPL model files</a><ul>
 <li><a class="reference internal" href="#smpl">SMPL</a></li>
 <li><a class="reference internal" href="#smpl-h">SMPL-H</a></li>
@@ -504,6 +515,6 @@ signatures.</p>
     <script src="../../_static/scripts/furo.js?v=46bd48cc"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=fd10adb8"></script>
-    <script src="../../_static/kangengine-toc.js?v=14c0e558"></script>
+    <script src="../../_static/kangengine-toc.js?v=32ef2ebd"></script>
     </body>
 </html>
