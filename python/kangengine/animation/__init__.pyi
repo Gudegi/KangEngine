@@ -8,7 +8,10 @@ import numpy as np
 import numpy.typing as npt
 import torch
 
-from . import Quat, Vec3
+from .. import Quat, Vec3
+from .retarget import RetargetConfig as RetargetConfig
+from .retarget import Retargeter as Retargeter
+from .retarget import retarget_motion as retarget_motion
 
 _Float32Array: TypeAlias = npt.NDArray[np.float32]
 

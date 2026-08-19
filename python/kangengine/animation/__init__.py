@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from ._core import _ke
-from ._public import export_public_module
+from .._core import _ke
+from .._public import export_public_module
+from .retarget import RetargetConfig, Retargeter, retarget_motion
 
 __all__ = export_public_module(_ke.animation, globals())
+__all__ += ["RetargetConfig", "Retargeter", "retarget_motion"]
 
 # Visual objects are implemented in the native animation binding for now, but
 # the public Python surface owns them under ``kangengine.visual``.
