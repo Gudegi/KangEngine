@@ -77,7 +77,7 @@ class GridCloner:
             template = self.create_articulation_template(
                 template_name,
                 data,
-                config,
+                config=config,
             )
         articulation = self.world.add_articulation_batch(
             template,
