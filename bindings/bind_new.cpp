@@ -7,6 +7,7 @@
 #include "../src/engine/graphics/material/material.hpp"
 #include "../src/engine/graphics/material/colors.hpp"
 #include "engine/graphics/material/phongMaterials.hpp"
+#include "engine/core/ui/file_dialog.hpp"
 #include "py_array_view.hpp"
 
 #include <pybind11/pybind11.h>
@@ -245,6 +246,81 @@ void bind_imgui(py::module& m) {
     imgui.def("button", [](const std::string& label) {
         return ImGui::Button(label.c_str());
     });
+    imgui.def(
+        "colored_button",
+        [](const std::string& label, const glm::vec4& color) {
+            const ImVec4 normal(color.r, color.g, color.b, color.a);
+            const ImVec4 hovered(std::min(color.r + 0.10f, 1.0f),
+                                 std::min(color.g + 0.10f, 1.0f),
+                                 std::min(color.b + 0.10f, 1.0f), color.a);
+            const ImVec4 active(color.r * 0.82f, color.g * 0.82f,
+                                color.b * 0.82f, color.a);
+            ImGui::PushStyleColor(ImGuiCol_Button, normal);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, hovered);
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, active);
+            const bool pressed = ImGui::Button(label.c_str());
+            ImGui::PopStyleColor(3);
+            return pressed;
+        },
+        py::arg("label"), py::arg("color"));
+    imgui.def(
+        "open_file_dialog",
+        [](const std::string& key, const std::string& title,
+           const std::string& filters, const std::string& path) {
+            FileDialogService::instance().openFile(key, title, filters, path);
+        },
+        py::arg("key"), py::arg("title"), py::arg("filters"),
+        py::arg("path") = ".");
+    imgui.def(
+        "open_save_dialog",
+        [](const std::string& key, const std::string& title,
+           const std::string& filters, const std::string& path,
+           const std::string& fileName) {
+            FileDialogService::instance().openSave(key, title, filters, path,
+                                                   fileName);
+        },
+        py::arg("key"), py::arg("title"), py::arg("filters"),
+        py::arg("path") = ".", py::arg("file_name") = "");
+    imgui.def(
+        "open_directory_dialog",
+        [](const std::string& key, const std::string& title,
+           const std::string& path) {
+            FileDialogService::instance().openDirectory(key, title, path);
+        },
+        py::arg("key"), py::arg("title"), py::arg("path") = ".");
+    imgui.def(
+        "display_file_dialog",
+        [](const std::string& key) {
+            const FileDialogResult result =
+                FileDialogService::instance().display(key);
+            return py::make_tuple(result.finished, result.path
+                                                       ? py::cast(*result.path)
+                                                       : py::none());
+        },
+        py::arg("key"),
+        "Render one open dialog and return (finished, selected_path). The "
+        "path is None while pending or after cancellation.");
+    imgui.def("close_file_dialog",
+              []() { FileDialogService::instance().close(); });
+    imgui.def(
+        "selectable",
+        [](const std::string& label, bool selected) {
+            return ImGui::Selectable(label.c_str(), selected);
+        },
+        py::arg("label"), py::arg("selected") = false);
+    imgui.def(
+        "input_text",
+        [](const std::string& label, const std::string& value,
+           size_t capacity) {
+            capacity = std::max(capacity, value.size() + 1);
+            std::vector<char> buffer(capacity, '\0');
+            std::memcpy(buffer.data(), value.data(), value.size());
+            const bool changed =
+                ImGui::InputText(label.c_str(), buffer.data(), buffer.size());
+            return py::make_tuple(changed, std::string(buffer.data()));
+        },
+        py::arg("label"), py::arg("value"), py::arg("capacity") = 4096,
+        "Edit one UTF-8 text value and return (changed, value).");
     imgui.def(
         "checkbox",
         [](const std::string& label, bool value) {
@@ -1676,9 +1752,9 @@ py::class_<glm::vec3>(m, "Vec3")
             },
             py::arg("app"), py::arg("material"), py::arg("fbx_path"),
             py::arg("bind_fbx_path") = py::none(),
-            py::arg("path") = "/fbx_character",
-            py::arg("clip_index") = -1, py::arg("fps") = -1.0f,
-            py::arg("scale") = 0.01f, py::arg("use_materials") = true)
+            py::arg("path") = "/fbx_character", py::arg("clip_index") = -1,
+            py::arg("fps") = -1.0f, py::arg("scale") = 0.01f,
+            py::arg("use_materials") = true)
         .def("apply_time", &Bridge::SkinVisualBridge::applyTime,
              py::arg("time"), py::arg("loop") = true)
         .def(
