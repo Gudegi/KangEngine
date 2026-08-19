@@ -117,5 +117,16 @@ void SkeletalVisualBridge::setShowJoints(bool showJoints) {
         applyState(*_lastState);
 }
 
+bool SkeletalVisualBridge::remove() {
+    if (!_app || _basePath.empty())
+        return false;
+    const bool removed = _app->removePrim(_basePath);
+    _boneHandle = InvalidHandle;
+    _jointHandle = InvalidHandle;
+    _lastState.reset();
+    _app = nullptr;
+    return removed;
+}
+
 } // namespace Bridge
 } // namespace KE

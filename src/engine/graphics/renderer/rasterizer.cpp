@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/graphics/material/material.hpp"
+#include "engine/scene/component/selection_component.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "utils/asset_path.hpp"
@@ -323,6 +324,11 @@ RayPickResult Rasterizer::rayPick(const Geometry::Ray& ray) const {
         if (!inst->findRayIntersection(ray, instanceIndex, distance, &bounds,
                                        &prim))
             continue;
+        if (prim) {
+            const auto selection = prim->getSelectionComponent();
+            if (selection && !selection->isPickable())
+                continue;
+        }
         if (distance >= best.distance)
             continue;
 

@@ -7,6 +7,7 @@
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/scene/component/render_component.hpp"
 #include "engine/scene/component/scene_render_system.hpp"
+#include "engine/scene/component/selection_component.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/prim_path.hpp"
 #include "engine/scene/scene_backend.hpp"
@@ -91,6 +92,7 @@ SkinVisualBridge SkinVisualBridge::fromFBXWithBind(
 
     SkinVisualBridge bridge;
     bridge._app = app;
+    bridge._basePath = primBasePath;
     Asset::FBXCharacterData character =
         (motionFbxPath == bindFbxPath)
             ? Asset::FBXLoader::loadCharacter(motionFbxPath, clipIndex, fps,
@@ -249,6 +251,17 @@ void SkinVisualBridge::setVisible(bool visible) {
     }
 }
 
+void SkinVisualBridge::setPickable(bool pickable) {
+    for (MeshBinding& mesh : _meshes) {
+        if (!mesh.prim)
+            continue;
+        auto selection = mesh.prim->getSelectionComponent();
+        if (!selection)
+            selection = mesh.prim->addSelectionComponent();
+        selection->setPickable(pickable);
+    }
+}
+
 void SkinVisualBridge::setColor(const glm::vec4& color) {
     for (MeshBinding& mesh : _meshes) {
         mesh.baseColor = color;
@@ -262,6 +275,19 @@ void SkinVisualBridge::setCastsShadow(bool castsShadow) {
         if (mesh.component)
             mesh.component->setCastsShadow(castsShadow);
     }
+}
+
+bool SkinVisualBridge::remove() {
+    if (!_app || _basePath.empty())
+        return false;
+    const bool removed = _app->removePrim(_basePath);
+    _meshes.clear();
+    _textures.clear();
+    _fallbackWhiteTexture.reset();
+    _globalTransforms.clear();
+    _globalMatrices.clear();
+    _app = nullptr;
+    return removed;
 }
 
 } // namespace Bridge

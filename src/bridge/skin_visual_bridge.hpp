@@ -66,8 +66,10 @@ class SkinVisualBridge {
     applyPose(const Eigen::Vector3f& rootTranslation,
               const std::vector<Eigen::Quaternionf>& localRotations);
     void setVisible(bool visible);
+    void setPickable(bool pickable);
     void setColor(const glm::vec4& color);
     void setCastsShadow(bool castsShadow);
+    bool remove();
 
     const Animation::SkeletonMotion& motion() const { return _motion; }
     const std::vector<MeshBinding>& meshes() const { return _meshes; }
@@ -77,6 +79,7 @@ class SkinVisualBridge {
     Animation::SkeletonState applyState(const Animation::SkeletonState& state);
 
     App* _app = nullptr;
+    std::string _basePath;
     Animation::SkeletonMotion _motion;
     std::vector<MeshBinding> _meshes;
     std::vector<Animation::Transform> _globalTransforms;

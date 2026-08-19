@@ -1146,6 +1146,8 @@ void bind_animation(py::module& m) {
              py::arg("visible"), "Set visibility for all skeleton visuals.")
         .def("set_show_joints", &SkeletalVisualBridge::setShowJoints,
              py::arg("show_joints"), "Show or hide joint markers.")
+        .def("remove", &SkeletalVisualBridge::remove,
+             "Remove all authored skeleton visual scene objects.")
         .def("bone_handle", &SkeletalVisualBridge::boneHandle,
              "Return the renderable handle used for bones.")
         .def("joint_handle", &SkeletalVisualBridge::jointHandle,

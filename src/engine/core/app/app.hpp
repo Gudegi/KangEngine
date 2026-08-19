@@ -214,6 +214,18 @@ class App {
     void setInteractionMode(InteractionMode mode) {
         _interaction.setMode(mode);
     }
+    UILayoutMode getUILayoutMode() const {
+        return _panelManager.getLayoutMode();
+    }
+    void setUILayoutMode(UILayoutMode mode) {
+        _panelManager.setLayoutMode(mode);
+    }
+    GizmoOperation getGizmoOperation() const { return _gizmo.operation(); }
+    void setGizmoOperation(GizmoOperation operation) {
+        _gizmo.setOperation(operation);
+    }
+    GizmoSpace getGizmoSpace() const { return _gizmo.space(); }
+    void setGizmoSpace(GizmoSpace space) { _gizmo.setSpace(space); }
     void setExternalForceDragEnabled(bool enabled) {
         _externalForceDragEnabled = enabled;
     }

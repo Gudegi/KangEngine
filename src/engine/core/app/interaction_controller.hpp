@@ -22,6 +22,19 @@ enum class InteractionMode {
     // IK       // IK target / effector controls.
 };
 
+enum class GizmoOperation {
+    Translate,
+    Rotate,
+    Scale,
+    TranslateRotate,
+    Universal,
+};
+
+enum class GizmoSpace {
+    Local,
+    World,
+};
+
 class SelectionController {
   public:
     const RayPickResult& lastPick() const { return _lastPick; }
@@ -137,9 +150,17 @@ class InteractionController {
 class GizmoController {
   public:
     bool isUsing() const;
+    GizmoOperation operation() const { return _operation; }
+    void setOperation(GizmoOperation operation) { _operation = operation; }
+    GizmoSpace space() const { return _space; }
+    void setSpace(GizmoSpace space) { _space = space; }
     bool manipulateTransform(Camera& camera, glm::mat4& transform,
                              float x, float y, float width,
                              float height, ImDrawList* drawList = nullptr) const;
+
+  private:
+    GizmoOperation _operation = GizmoOperation::TranslateRotate;
+    GizmoSpace _space = GizmoSpace::World;
 };
 
 } // namespace KE

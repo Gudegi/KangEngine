@@ -450,6 +450,22 @@ PYBIND11_MODULE(_kangengine, m) {
         .value("EDIT", InteractionMode::Edit)
         .value("FORCE", InteractionMode::Force);
 
+    py::enum_<UILayoutMode>(m, "UILayoutMode")
+        .value("VIEWER", UILayoutMode::Viewer)
+        .value("EDITOR", UILayoutMode::Editor)
+        .value("OVERLAY", UILayoutMode::Overlay);
+
+    py::enum_<GizmoOperation>(m, "GizmoOperation")
+        .value("TRANSLATE", GizmoOperation::Translate)
+        .value("ROTATE", GizmoOperation::Rotate)
+        .value("SCALE", GizmoOperation::Scale)
+        .value("TRANSLATE_ROTATE", GizmoOperation::TranslateRotate)
+        .value("UNIVERSAL", GizmoOperation::Universal);
+
+    py::enum_<GizmoSpace>(m, "GizmoSpace")
+        .value("LOCAL", GizmoSpace::Local)
+        .value("WORLD", GizmoSpace::World);
+
     py::class_<RayPickResult>(m, "RayPickResult")
         .def_readonly("hit", &RayPickResult::hit)
         .def_readonly("handle", &RayPickResult::handle)
@@ -1064,6 +1080,21 @@ py::class_<glm::vec3>(m, "Vec3")
              "Return the active viewport interaction mode.")
         .def("set_interaction_mode", &App::setInteractionMode, py::arg("mode"),
              "Set the active viewport interaction mode.")
+        .def("get_ui_layout_mode", &App::getUILayoutMode,
+             "Return the active UI layout mode.")
+        .def("set_ui_layout_mode", &App::setUILayoutMode, py::arg("mode"),
+             "Switch between viewer, editor, and overlay UI layouts.")
+        .def("get_gizmo_operation", &App::getGizmoOperation,
+             "Return the active transform gizmo operation.")
+        .def("set_gizmo_operation", &App::setGizmoOperation,
+             py::arg("operation"),
+             "Set the transform gizmo to translate, rotate, scale, or all.")
+        .def("get_gizmo_space", &App::getGizmoSpace,
+             "Return whether the transform gizmo uses local or world axes.")
+        .def("set_gizmo_space", &App::setGizmoSpace, py::arg("space"),
+             "Set the transform gizmo axis space.")
+        .def("select_prim", &App::selectPrim, py::arg("prim"),
+             "Select a scene prim for viewport editing.")
         .def("set_external_force_drag_enabled",
              &App::setExternalForceDragEnabled, py::arg("enabled"),
              "Opt an ExternalBuffer simulation adapter into force-drag "
@@ -1687,9 +1718,14 @@ py::class_<glm::vec3>(m, "Vec3")
             py::arg("root_translation"), py::arg("local_rotations_wxyz"))
         .def("set_visible", &Bridge::SkinVisualBridge::setVisible,
              py::arg("visible"))
+        .def("set_pickable", &Bridge::SkinVisualBridge::setPickable,
+             py::arg("pickable"),
+             "Choose whether ray picking can hit the skinned meshes.")
         .def("set_color", &Bridge::SkinVisualBridge::setColor, py::arg("color"))
         .def("set_casts_shadow", &Bridge::SkinVisualBridge::setCastsShadow,
              py::arg("enabled") = true)
+        .def("remove", &Bridge::SkinVisualBridge::remove,
+             "Remove all authored skin visual scene objects.")
         .def("motion", &Bridge::SkinVisualBridge::motion,
              py::return_value_policy::reference_internal)
         .def("num_meshes", [](const Bridge::SkinVisualBridge& self) {

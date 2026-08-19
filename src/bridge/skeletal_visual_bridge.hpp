@@ -61,6 +61,7 @@ class SkeletalVisualBridge {
                      bool loop = true);
     void setVisible(bool visible);
     void setShowJoints(bool showJoints);
+    bool remove();
     const SkeletalVisualConfig& config() const { return _config; }
 
     RenderableHandle boneHandle() const { return _boneHandle; }

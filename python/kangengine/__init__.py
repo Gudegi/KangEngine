@@ -103,6 +103,9 @@ def __getattr__(name):
 # heavier simulation and MimicKit APIs stay lazy via _LAZY_IMPORTS.
 UpAxis = _set_public_module(_ke.UpAxis, __name__)
 InteractionMode = _set_public_module(_ke.InteractionMode, __name__)
+UILayoutMode = _set_public_module(_ke.UILayoutMode, __name__)
+GizmoOperation = _set_public_module(_ke.GizmoOperation, __name__)
+GizmoSpace = _set_public_module(_ke.GizmoSpace, __name__)
 RayPickResult = _set_public_module(_ke.RayPickResult, __name__)
 ColorLibrary = _set_public_module(_ke.ColorLibrary, __name__)
 ColorType = _set_public_module(_ke.ColorType, __name__)
@@ -150,6 +153,9 @@ __all__ = [
     "install_mimickit_engine_builder",
     "UpAxis",
     "InteractionMode",
+    "UILayoutMode",
+    "GizmoOperation",
+    "GizmoSpace",
     "RayPickResult",
     "Vec3",
     "Vec2",
