@@ -1,0 +1,9 @@
+{% extends "!base.html" %}
+
+{% block extrahead %}
+{{ super() }}
+{% if pagename == "index" %}
+<meta name="description"
+    content="KangEngine is an open-source C++17 and Python engine for real-time rendering, character animation, robotics, and PhysX-based simulation.">
+{% endif %}
+{% endblock %}

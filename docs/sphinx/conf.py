@@ -46,6 +46,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx_autodoc_typehints",
     "sphinx_copybutton",
+    "sphinx_sitemap",
 ]
 
 source_suffix = {
@@ -63,9 +64,12 @@ exclude_patterns = [
 ]
 
 html_theme = os.environ.get("KANGENGINE_SPHINX_THEME", "furo")
-html_title = "KangEngine Docs"
+html_title = "KangEngine — Animation and Simulation Engine"
+html_baseurl = "https://gudegi.github.io/KangEngine/"
+sitemap_url_scheme = "{link}"
 templates_path = ["_templates"]
 html_static_path = ["_static"]
+html_extra_path = ["robots.txt"]
 html_css_files = ["kangengine.css"]
 html_js_files = ["kangengine-toc.js"]
 html_context = {
