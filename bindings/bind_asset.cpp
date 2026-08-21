@@ -422,12 +422,31 @@ void bind_asset(py::module& m) {
 
     py::class_<MJCFLoader>(asset, "MJCFLoader",
                            "Loader for MJCF/XML articulation descriptions.")
-        .def_static("parse", &MJCFLoader::parse, py::arg("mjcf_path"),
-                    py::arg("scale") = 1.0f, py::arg("order") = "DFS",
-                    "Parse MJCF and return an articulation description with diagnostics.")
-        .def_static("load", &MJCFLoader::load, py::arg("mjcf_path"),
-                    py::arg("scale") = 1.0f, py::arg("order") = "DFS",
-                    "Load MJCF and return an articulation description.");
+        .def_static(
+            "parse",
+            [](const std::string& path, float scale, const std::string& order,
+               const std::string& targetCoordinateSystem) {
+                return MJCFLoader::parse(
+                    path, scale, order,
+                    Utils::coordinateSystemFromString(targetCoordinateSystem));
+            },
+            py::arg("mjcf_path"), py::arg("scale") = 1.0f,
+            py::arg("order") = "DFS",
+            py::arg("target_coordinate_system") = "z_up_x_forward",
+            "Parse MJCF and return an articulation description with "
+            "diagnostics.")
+        .def_static(
+            "load",
+            [](const std::string& path, float scale, const std::string& order,
+               const std::string& targetCoordinateSystem) {
+                return MJCFLoader::load(
+                    path, scale, order,
+                    Utils::coordinateSystemFromString(targetCoordinateSystem));
+            },
+            py::arg("mjcf_path"), py::arg("scale") = 1.0f,
+            py::arg("order") = "DFS",
+            py::arg("target_coordinate_system") = "z_up_x_forward",
+            "Load MJCF and return an articulation description.");
 
     py::class_<BVHImportResult>(asset, "BVHImportResult",
                                 "Parsed BVH skeleton motion plus diagnostics.")
@@ -446,12 +465,15 @@ void bind_asset(py::module& m) {
                           "Loader for BVH skeleton and motion files.")
         .def_static("load_skeleton", &BVHLoader::loadSkeleton,
                     py::arg("bvh_path"), py::arg("scale") = 1.0f,
+                    py::arg("has_armature_joint") = false,
                     "Load only the skeleton hierarchy from a BVH file.")
         .def_static("load_motion", &BVHLoader::loadMotion, py::arg("bvh_path"),
                     py::arg("scale") = 1.0f,
+                    py::arg("has_armature_joint") = false,
                     "Load skeleton motion from a BVH file.")
         .def_static("parse", &BVHLoader::parse, py::arg("bvh_path"),
                     py::arg("scale") = 1.0f,
+                    py::arg("has_armature_joint") = false,
                     "Parse BVH and return motion plus diagnostics.");
 
     py::class_<FBXAnimationClipInfo>(

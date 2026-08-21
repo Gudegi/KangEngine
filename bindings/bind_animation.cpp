@@ -971,14 +971,17 @@ void bind_animation(py::module& m) {
             "from_mjcf",
             [](const std::string& mjcfPath, Scene::SceneBackend* scene,
                const std::string& primBasePath, float scale,
-               const std::string& order, const std::string& meshAssetBasePath) {
+               const std::string& order, const std::string& meshAssetBasePath,
+               const std::string& targetCoordinateSystem) {
                 return ArticulationVisualBridge::fromMJCF(
                     mjcfPath, scene, primBasePath, scale, order,
-                    meshAssetBasePath);
+                    meshAssetBasePath,
+                    Utils::coordinateSystemFromString(targetCoordinateSystem));
             },
-            py::arg("mjcf_path"), py::arg("scene"),
-            py::arg("path") = "/robot", py::arg("scale") = 1.0f,
-            py::arg("order") = "DFS", py::arg("mesh_asset_base_path") = "",
+            py::arg("mjcf_path"), py::arg("scene"), py::arg("path") = "/robot",
+            py::arg("scale") = 1.0f, py::arg("order") = "DFS",
+            py::arg("mesh_asset_base_path") = "",
+            py::arg("target_coordinate_system") = "z_up_x_forward",
             "Create an articulation visual and scene prims from an MJCF file.")
         .def("apply_pose", &ArticulationVisualBridge::applyPose,
              "Apply the current skeleton/body state to scene prims.")
@@ -1046,10 +1049,18 @@ void bind_animation(py::module& m) {
         anim, "ArticulationVisualAsset",
         "Reusable articulated rigid-link visual asset that can instantiate "
         "scene prims.")
-        .def_static("from_mjcf", &ArticulationVisualBridgeAsset::fromMJCF,
-                    py::arg("mjcf_path"), py::arg("scale") = 1.0f,
-                    py::arg("order") = "DFS",
-                    "Load reusable bridge asset data from an MJCF file.")
+        .def_static(
+            "from_mjcf",
+            [](const std::string& path, float scale, const std::string& order,
+               const std::string& targetCoordinateSystem) {
+                return ArticulationVisualBridgeAsset::fromMJCF(
+                    path, scale, order,
+                    Utils::coordinateSystemFromString(targetCoordinateSystem));
+            },
+            py::arg("mjcf_path"), py::arg("scale") = 1.0f,
+            py::arg("order") = "DFS",
+            py::arg("target_coordinate_system") = "z_up_x_forward",
+            "Load reusable bridge asset data from an MJCF file.")
         .def("define_mesh_assets",
              &ArticulationVisualBridgeAsset::defineMeshAssets, py::arg("scene"),
              py::arg("mesh_asset_base_path"),

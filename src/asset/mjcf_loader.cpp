@@ -101,10 +101,9 @@ struct MeshAssetInfo {
 
 std::string lowerExtension(const std::filesystem::path& path) {
     std::string extension = path.extension().string();
-    std::transform(extension.begin(), extension.end(), extension.begin(),
-                   [](unsigned char c) {
-                       return static_cast<char>(std::tolower(c));
-                   });
+    std::transform(
+        extension.begin(), extension.end(), extension.begin(),
+        [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     return extension;
 }
 
@@ -584,7 +583,8 @@ GeomMassData geomMassContribution(const CollisionGeomDesc& g, float density) {
 } // namespace
 
 void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
-                               const std::string& order) {
+                               const std::string& order,
+                               Utils::CoordinateSystem targetCoordinateSystem) {
     tinyxml2::XMLDocument doc;
     if (doc.LoadFile(mjcfPath.c_str()) != tinyxml2::XML_SUCCESS)
         throw std::runtime_error(
@@ -698,8 +698,9 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
                                 ? Eigen::Vector4f(rgbaValues[0], rgbaValues[1],
                                                   rgbaValues[2], rgbaValues[3])
                                 : Eigen::Vector4f(0.15f, 0.15f, 0.15f, 1.0f);
-                        _data.visualGeoms.push_back({bodyName, it->second.file, idx,
-                                                   meshPos, meshQuat, rgba});
+                        _data.visualGeoms.push_back({bodyName, it->second.file,
+                                                     idx, meshPos, meshQuat,
+                                                     rgba});
                     }
                     continue;
                 }
@@ -731,10 +732,9 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
                             .lexically_normal();
                     const Eigen::Vector3f meshScale =
                         assetIt->second.scale * scale;
-                    const std::string cacheKey =
-                        fmt::format("{}|{:.9g},{:.9g},{:.9g}",
-                                    meshPath.string(), meshScale.x(),
-                                    meshScale.y(), meshScale.z());
+                    const std::string cacheKey = fmt::format(
+                        "{}|{:.9g},{:.9g},{:.9g}", meshPath.string(),
+                        meshScale.x(), meshScale.y(), meshScale.z());
                     auto cached = collisionMeshCache.find(cacheKey);
                     if (cached == collisionMeshCache.end()) {
                         try {
@@ -746,8 +746,7 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
                                 vertex.z *= meshScale.z();
                             }
                             cached = collisionMeshCache
-                                         .emplace(cacheKey,
-                                                  std::move(meshData))
+                                         .emplace(cacheKey, std::move(meshData))
                                          .first;
                         } catch (const std::exception& error) {
                             _data.collisionGeoms.try_emplace(idx);
@@ -897,14 +896,67 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
             }
         });
 
+    const Eigen::Quaternionf basis = Utils::coordinateSystemRotation(
+        Utils::CoordinateSystem::ZUpXForward, targetCoordinateSystem);
+    const Eigen::Quaternionf basisInv = basis.conjugate();
+    if (!basis.isApprox(Eigen::Quaternionf::Identity())) {
+        std::vector<Eigen::Vector3f> translations =
+            skelTree.localTranslations();
+        std::vector<Eigen::Quaternionf> rotations = skelTree.localRotations();
+        for (Eigen::Vector3f& value : translations)
+            value = basis * value;
+        for (Eigen::Quaternionf& value : rotations)
+            value = (basis * value * basisInv).normalized();
+        skelTree = SkeletonTree(
+            skelTree.nodeNames(), skelTree.parentIndices(),
+            std::move(translations), std::move(rotations), [&skelTree]() {
+                std::vector<int> counts;
+                counts.reserve(skelTree.numJoints());
+                for (int i = 0; i < skelTree.numJoints(); ++i)
+                    counts.push_back(skelTree.numJointsInBody(i));
+                return counts;
+            }());
+
+        for (VisualGeomDesc& geom : _data.visualGeoms) {
+            geom.pos = basis * geom.pos;
+            // Mesh vertices remain in their authored local frame. Rotate that
+            // complete frame into the converted body coordinates.
+            geom.quat = (basis * geom.quat).normalized();
+        }
+        for (auto& [_, joints] : _data.joints)
+            for (JointDesc& joint : joints)
+                joint.axis = basis * joint.axis;
+        for (auto& [_, site] : _data.sites) {
+            site.pos = basis * site.pos;
+            site.quat = (basis * site.quat * basisInv).normalized();
+            if (site.hasZAxis)
+                site.zaxis = basis * site.zaxis;
+        }
+        for (auto& [_, geoms] : _data.collisionGeoms) {
+            for (CollisionGeomDesc& geom : geoms) {
+                geom.pos = basis * geom.pos;
+                geom.quat = (basis * geom.quat).normalized();
+                if (geom.hasFromTo) {
+                    geom.from = basis * geom.from;
+                    geom.to = basis * geom.to;
+                }
+            }
+        }
+        for (auto& [_, inertial] : _data.inertials) {
+            inertial.com = basis * inertial.com;
+            inertial.quat = (basis * inertial.quat).normalized();
+        }
+    }
     _data.skeletonTree =
         std::make_shared<const SkeletonTree>(std::move(skelTree));
 }
 
-MJCFImportResult MJCFLoader::parse(const std::string& mjcfPath, float scale,
-                                   const std::string& order) {
+MJCFImportResult
+MJCFLoader::parse(const std::string& mjcfPath, float scale,
+                  const std::string& order,
+                  Utils::CoordinateSystem targetCoordinateSystem) {
     MJCFLoader loader;
-    loader.parseIntoData(mjcfPath, scale, order);
+    loader.parseIntoData(mjcfPath, scale, order, targetCoordinateSystem);
 
     MJCFImportResult result;
     result.articulation = std::move(loader._data);
@@ -913,9 +965,12 @@ MJCFImportResult MJCFLoader::parse(const std::string& mjcfPath, float scale,
     return result;
 }
 
-ArticulationDesc MJCFLoader::load(const std::string& mjcfPath, float scale,
-                                  const std::string& order) {
-    return std::move(parse(mjcfPath, scale, order).articulation);
+ArticulationDesc
+MJCFLoader::load(const std::string& mjcfPath, float scale,
+                 const std::string& order,
+                 Utils::CoordinateSystem targetCoordinateSystem) {
+    return std::move(
+        parse(mjcfPath, scale, order, targetCoordinateSystem).articulation);
 }
 
 } // namespace Asset

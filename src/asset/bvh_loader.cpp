@@ -293,7 +293,22 @@ BVHParsedData parseBVH(const std::string& path, float scale) {
     return out;
 }
 
-SkeletonTree makeSkeletonTree(const BVHParsedData& data) {
+void validateArmatureStructure(const BVHParsedData& data) {
+    if (data.joints.size() < 2)
+        throw std::runtime_error("BVH: armature joint has no skeleton child");
+    int childCount = 0;
+    for (size_t i = 1; i < data.joints.size(); ++i)
+        childCount += data.joints[i].parentIndex == 0 ? 1 : 0;
+    if (childCount != 1 || data.joints[1].parentIndex != 0) {
+        throw std::runtime_error(
+            "BVH: armature joint must have exactly one direct skeleton child");
+    }
+}
+
+SkeletonTree makeSkeletonTree(const BVHParsedData& data,
+                              bool hasArmatureJoint) {
+    if (hasArmatureJoint)
+        validateArmatureStructure(data);
     std::vector<std::string> nodeNames;
     std::vector<int> parentIndices;
     std::vector<Eigen::Vector3f> localTranslations;
@@ -306,10 +321,18 @@ SkeletonTree makeSkeletonTree(const BVHParsedData& data) {
     localRotations.reserve(data.joints.size());
     numJointsInBody.reserve(data.joints.size());
 
-    for (const BVHJoint& joint : data.joints) {
+    const size_t first = hasArmatureJoint ? 1 : 0;
+    for (size_t i = first; i < data.joints.size(); ++i) {
+        const BVHJoint& joint = data.joints[i];
         nodeNames.push_back(joint.name);
-        parentIndices.push_back(joint.parentIndex);
-        localTranslations.push_back(joint.offset);
+        parentIndices.push_back(hasArmatureJoint
+                                    ? (joint.parentIndex == 0
+                                           ? -1
+                                           : joint.parentIndex - 1)
+                                    : joint.parentIndex);
+        localTranslations.push_back(hasArmatureJoint && i == 1
+                                        ? Eigen::Vector3f::Zero()
+                                        : joint.offset);
         localRotations.push_back(Eigen::Quaternionf::Identity());
         numJointsInBody.push_back(joint.channels.empty() ? 0 : 1);
     }
@@ -320,9 +343,11 @@ SkeletonTree makeSkeletonTree(const BVHParsedData& data) {
 }
 
 SkeletonMotion makeMotion(const std::string& path, BVHParsedData& data,
-                          float scale) {
-    auto tree = std::make_shared<SkeletonTree>(makeSkeletonTree(data));
-    const int joints = static_cast<int>(data.joints.size());
+                          float scale, bool hasArmatureJoint) {
+    auto tree = std::make_shared<SkeletonTree>(
+        makeSkeletonTree(data, hasArmatureJoint));
+    const int sourceJoints = static_cast<int>(data.joints.size());
+    const int joints = sourceJoints - (hasArmatureJoint ? 1 : 0);
     const float fps = 1.0f / data.frameTime;
 
     std::vector<float> rootTranslations;
@@ -338,7 +363,7 @@ SkeletonMotion makeMotion(const std::string& path, BVHParsedData& data,
         std::vector<Eigen::Quaternionf> frameRotations(
             static_cast<size_t>(joints), Eigen::Quaternionf::Identity());
 
-        for (int j = 0; j < joints; ++j) {
+        for (int j = 0; j < sourceJoints; ++j) {
             Eigen::Quaternionf localRotation = Eigen::Quaternionf::Identity();
             Eigen::Vector3f jointPosition = Eigen::Vector3f::Zero();
             bool hasPositionChannel = false;
@@ -374,7 +399,16 @@ SkeletonMotion makeMotion(const std::string& path, BVHParsedData& data,
                 }
             }
 
-            if (j == 0) {
+            if (hasArmatureJoint && j == 0) {
+                if (jointPosition.norm() > 1e-5f ||
+                    localRotation.angularDistance(
+                        Eigen::Quaternionf::Identity()) > 1e-5f) {
+                    throw std::runtime_error(fmt::format(
+                        "BVH: armature joint '{}' must have identity animation",
+                        data.joints[0].name));
+                }
+            } else if ((!hasArmatureJoint && j == 0) ||
+                       (hasArmatureJoint && j == 1)) {
                 rootTranslation =
                     hasPositionChannel
                         ? jointPosition
@@ -391,7 +425,10 @@ SkeletonMotion makeMotion(const std::string& path, BVHParsedData& data,
                 localRotation = Eigen::Quaternionf::Identity();
             else
                 localRotation.normalize();
-            frameRotations[static_cast<size_t>(j)] = localRotation;
+            if (!hasArmatureJoint || j > 0) {
+                const int outputJoint = j - (hasArmatureJoint ? 1 : 0);
+                frameRotations[static_cast<size_t>(outputJoint)] = localRotation;
+            }
         }
 
         rootTranslations.push_back(rootTranslation.x());
@@ -414,24 +451,27 @@ SkeletonMotion makeMotion(const std::string& path, BVHParsedData& data,
 
 } // namespace
 
-SkeletonTree BVHLoader::loadSkeleton(const std::string& bvhPath, float scale) {
-    return makeSkeletonTree(parseBVH(bvhPath, scale));
+SkeletonTree BVHLoader::loadSkeleton(const std::string& bvhPath, float scale,
+                                     bool hasArmatureJoint) {
+    return makeSkeletonTree(parseBVH(bvhPath, scale), hasArmatureJoint);
 }
 
-SkeletonMotion BVHLoader::loadMotion(const std::string& bvhPath, float scale) {
+SkeletonMotion BVHLoader::loadMotion(const std::string& bvhPath, float scale,
+                                     bool hasArmatureJoint) {
     BVHParsedData data = parseBVH(bvhPath, scale);
-    SkeletonMotion motion = makeMotion(bvhPath, data, scale);
+    SkeletonMotion motion = makeMotion(bvhPath, data, scale, hasArmatureJoint);
     data.diagnostics.printWarnings("BVHLoader " + bvhPath);
     return motion;
 }
 
-BVHImportResult BVHLoader::parse(const std::string& bvhPath, float scale) {
+BVHImportResult BVHLoader::parse(const std::string& bvhPath, float scale,
+                                 bool hasArmatureJoint) {
     BVHParsedData data = parseBVH(bvhPath, scale);
     BVHImportResult result;
     result.frameCount = data.frameCount;
     result.frameTime = data.frameTime;
     result.frameRate = 1.0f / data.frameTime;
-    result.motion = makeMotion(bvhPath, data, scale);
+    result.motion = makeMotion(bvhPath, data, scale, hasArmatureJoint);
     result.diagnostics = std::move(data.diagnostics);
     result.diagnostics.printWarnings("BVHLoader " + bvhPath);
     return result;

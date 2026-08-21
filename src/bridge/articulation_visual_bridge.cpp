@@ -146,7 +146,8 @@ static void appendMesh(Scene::MeshData& dst, Scene::MeshData&& part) {
 
 static std::vector<ArticulationVisualBridgeAsset::VisualGeomAsset>
 buildVisualGeomAssets(const Asset::ArticulationDesc& data) {
-    std::vector<ArticulationVisualBridgeAsset::VisualGeomAsset> visualGeomAssets;
+    std::vector<ArticulationVisualBridgeAsset::VisualGeomAsset>
+        visualGeomAssets;
     visualGeomAssets.reserve(data.visualGeoms.size());
 
     for (const auto& meshInfo : data.visualGeoms) {
@@ -170,7 +171,8 @@ buildVisualGeomAssets(const Asset::ArticulationDesc& data) {
 
 static std::vector<std::shared_ptr<Scene::MeshData>> buildBodyMeshesFromVisuals(
     int numBodies,
-    const std::vector<ArticulationVisualBridgeAsset::VisualGeomAsset>& visualGeomAssets,
+    const std::vector<ArticulationVisualBridgeAsset::VisualGeomAsset>&
+        visualGeomAssets,
     const Asset::CollisionGeomDescMap& collisionGeoms) {
     std::vector<std::shared_ptr<Scene::MeshData>> bodyMeshes(numBodies);
     std::vector<bool> hasVisual(static_cast<size_t>(numBodies), false);
@@ -213,7 +215,8 @@ static std::vector<std::shared_ptr<Scene::MeshData>> buildBodyMeshesFromVisuals(
 
 static std::vector<Eigen::Vector4f> buildBodyColorsFromVisuals(
     int numBodies,
-    const std::vector<ArticulationVisualBridgeAsset::VisualGeomAsset>& visualGeomAssets) {
+    const std::vector<ArticulationVisualBridgeAsset::VisualGeomAsset>&
+        visualGeomAssets) {
     std::vector<Eigen::Vector4f> colors(
         numBodies, Eigen::Vector4f(0.15f, 0.15f, 0.15f, 1.0f));
     std::vector<bool> assigned(static_cast<size_t>(numBodies), false);
@@ -233,7 +236,8 @@ static std::vector<Eigen::Vector4f> buildBodyColorsFromVisuals(
 
 static std::vector<bool> buildBodyHasVisualMap(
     int numBodies,
-    const std::vector<ArticulationVisualBridgeAsset::VisualGeomAsset>& visualGeomAssets) {
+    const std::vector<ArticulationVisualBridgeAsset::VisualGeomAsset>&
+        visualGeomAssets) {
     std::vector<bool> hasVisual(static_cast<size_t>(numBodies), false);
     for (const auto& visual : visualGeomAssets) {
         if (visual.bodyIndex >= 0 && visual.bodyIndex < numBodies &&
@@ -244,36 +248,38 @@ static std::vector<bool> buildBodyHasVisualMap(
     return hasVisual;
 }
 
-ArticulationVisualBridge ArticulationVisualBridge::fromMJCF(const std::string& mjcfPath,
-                                        Scene::SceneBackend* scene,
-                                        const std::string& primBasePath,
-                                        float scale, const std::string& order,
-                                        const std::string& meshAssetBasePath) {
-    auto asset = ArticulationVisualBridgeAsset::fromMJCF(mjcfPath, scale, order);
+ArticulationVisualBridge ArticulationVisualBridge::fromMJCF(
+    const std::string& mjcfPath, Scene::SceneBackend* scene,
+    const std::string& primBasePath, float scale, const std::string& order,
+    const std::string& meshAssetBasePath,
+    Utils::CoordinateSystem targetCoordinateSystem) {
+    auto asset = ArticulationVisualBridgeAsset::fromMJCF(
+        mjcfPath, scale, order, targetCoordinateSystem);
     return asset.instantiate(scene, primBasePath, meshAssetBasePath);
 }
 
-ArticulationVisualBridge ArticulationVisualBridge::fromData(const Asset::ArticulationDesc& data,
-                                        Scene::SceneBackend* scene,
-                                        const std::string& primBasePath,
-                                        float scale,
-                                        const std::string& meshAssetBasePath) {
+ArticulationVisualBridge
+ArticulationVisualBridge::fromData(const Asset::ArticulationDesc& data,
+                                   Scene::SceneBackend* scene,
+                                   const std::string& primBasePath, float scale,
+                                   const std::string& meshAssetBasePath) {
     auto asset = ArticulationVisualBridgeAsset::fromData(data, scale);
     return asset.instantiate(scene, primBasePath, meshAssetBasePath);
 }
 
-ArticulationVisualBridgeAsset ArticulationVisualBridgeAsset::fromMJCF(const std::string& mjcfPath,
-                                                  float scale,
-                                                  const std::string& order) {
-    auto asset =
-        fromData(Asset::MJCFLoader::load(mjcfPath, 1.0f, order), scale);
+ArticulationVisualBridgeAsset ArticulationVisualBridgeAsset::fromMJCF(
+    const std::string& mjcfPath, float scale, const std::string& order,
+    Utils::CoordinateSystem targetCoordinateSystem) {
+    auto asset = fromData(
+        Asset::MJCFLoader::load(mjcfPath, 1.0f, order, targetCoordinateSystem),
+        scale);
     asset._assetPath = mjcfPath;
     return asset;
 }
 
 ArticulationVisualBridgeAsset
 ArticulationVisualBridgeAsset::fromData(const Asset::ArticulationDesc& data,
-                              float scale) {
+                                        float scale) {
     ArticulationVisualBridgeAsset asset;
     asset._data = data;
     asset._scale = scale;
@@ -283,9 +289,9 @@ ArticulationVisualBridgeAsset::fromData(const Asset::ArticulationDesc& data,
     return asset;
 }
 
-void ArticulationVisualBridgeAsset::defineMeshAssets(Scene::SceneBackend* scene,
-                                           const std::string& meshAssetBasePath,
-                                           bool splitVisualGeoms) const {
+void ArticulationVisualBridgeAsset::defineMeshAssets(
+    Scene::SceneBackend* scene, const std::string& meshAssetBasePath,
+    bool splitVisualGeoms) const {
     if (!scene || meshAssetBasePath.empty())
         return;
     const int bodies = numBodies();
@@ -395,7 +401,7 @@ ArticulationVisualBridge ArticulationVisualBridgeAsset::instantiate(
         glm::vec3 pos =
             Animation::toGlm(globalTransforms[i].translation) * _scale;
         glm::quat rot = Animation::toGlm(globalTransforms[i].rotation);
-        prim->setWorldMatrix(glm::translate(glm::mat4(1.0f), pos) *
+        prim->setLocalMatrix(glm::translate(glm::mat4(1.0f), pos) *
                              glm::mat4_cast(rot));
         prim->addArticulationBindingComponent()->setBinding(
             Scene::ArticulationPrimRole::BodyFrame, i, bodyName, primBasePath);
@@ -468,12 +474,13 @@ void ArticulationVisualBridge::applyPose() {
             continue;
         glm::vec3 pos = Animation::toGlm(globals[i].translation) * scale;
         glm::quat rot = Animation::toGlm(globals[i].rotation);
-        _bodyPrims[i]->setWorldMatrix(glm::translate(glm::mat4(1.0f), pos) *
+        _bodyPrims[i]->setLocalMatrix(glm::translate(glm::mat4(1.0f), pos) *
                                       glm::mat4_cast(rot));
     }
 }
 
-void ArticulationVisualBridge::setJointRotation(int idx, const Eigen::Quaternionf& q) {
+void ArticulationVisualBridge::setJointRotation(int idx,
+                                                const Eigen::Quaternionf& q) {
     _fk.setJointRotation(idx, q);
 }
 

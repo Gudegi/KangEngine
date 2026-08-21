@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import numpy.typing as npt
 from types import ModuleType
+from typing import Literal
 
 from .. import UpAxis
 from ..animation import SkeletonMotion, SkeletonTree
+from ..utils import CoordinateSystem
 from ..scene import MeshData, SkinnedMeshData
 from . import amass as amass, smpl as smpl
 from .amass import AMASSInfo as AMASSInfo, AMASSLoader as AMASSLoader
@@ -42,12 +44,17 @@ class MJCFLoader:
 
     @staticmethod
     def load(
-        mjcf_path: str, scale: float = 1.0, order: str = "DFS"
+        mjcf_path: str,
+        scale: float = 1.0,
+        order: Literal["DFS", "BFS"] = "DFS",
+        target_coordinate_system: CoordinateSystem = CoordinateSystem.Z_UP_X_FORWARD,
     ) -> ArticulationDesc: ...
-
     @staticmethod
     def parse(
-        mjcf_path: str, scale: float = 1.0, order: str = "DFS"
+        mjcf_path: str,
+        scale: float = 1.0,
+        order: Literal["DFS", "BFS"] = "DFS",
+        target_coordinate_system: CoordinateSystem = CoordinateSystem.Z_UP_X_FORWARD,
     ) -> MJCFImportResult: ...
 
 class BVHImportResult:
@@ -63,17 +70,29 @@ class BVHLoader:
     """Load a BVH hierarchy or sampled skeleton motion."""
 
     @staticmethod
-    def load_skeleton(bvh_path: str, scale: float = 1.0) -> SkeletonTree:
+    def load_skeleton(
+        bvh_path: str,
+        scale: float = 1.0,
+        has_armature_joint: bool = False,
+    ) -> SkeletonTree:
         """Load only the skeleton hierarchy from ``bvh_path``."""
         ...
 
     @staticmethod
-    def load_motion(bvh_path: str, scale: float = 1.0) -> SkeletonMotion:
+    def load_motion(
+        bvh_path: str,
+        scale: float = 1.0,
+        has_armature_joint: bool = False,
+    ) -> SkeletonMotion:
         """Load the hierarchy and animation frames as a ``SkeletonMotion``."""
         ...
 
     @staticmethod
-    def parse(bvh_path: str, scale: float = 1.0) -> BVHImportResult:
+    def parse(
+        bvh_path: str,
+        scale: float = 1.0,
+        has_armature_joint: bool = False,
+    ) -> BVHImportResult:
         """Load BVH motion together with diagnostics and source timing metadata."""
         ...
 
@@ -276,7 +295,6 @@ class USDLoader:
 
     @staticmethod
     def parse(usd_path: str, scale: float = 1.0) -> USDImportResult: ...
-
     @staticmethod
     def load_meshes(usd_path: str, scale: float = 1.0) -> list[USDMeshInfo]: ...
 

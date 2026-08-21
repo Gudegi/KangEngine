@@ -9,6 +9,7 @@
 #define _ARTICULATION_VISUAL_BRIDGE_HPP_
 
 #include "animation/skeleton_fk.hpp"
+#include "utils/coordinate_system.hpp"
 #include <Eigen/Geometry>
 #include <memory>
 #include <string>
@@ -39,7 +40,9 @@ class ArticulationVisualBridge {
     fromMJCF(const std::string& mjcfPath, Scene::SceneBackend* scene,
              const std::string& primBasePath = "/robot", float scale = 1.0f,
              const std::string& order = "DFS",
-             const std::string& meshAssetBasePath = "");
+             const std::string& meshAssetBasePath = "",
+             Utils::CoordinateSystem targetCoordinateSystem =
+                 Utils::CoordinateSystem::ZUpXForward);
 
     static ArticulationVisualBridge
     fromData(const Asset::ArticulationDesc& data, Scene::SceneBackend* scene,
@@ -82,7 +85,9 @@ class ArticulationVisualBridgeAsset {
 
     static ArticulationVisualBridgeAsset
     fromMJCF(const std::string& mjcfPath, float scale = 1.0f,
-             const std::string& order = "DFS");
+             const std::string& order = "DFS",
+             Utils::CoordinateSystem targetCoordinateSystem =
+                 Utils::CoordinateSystem::ZUpXForward);
 
     static ArticulationVisualBridgeAsset
     fromData(const Asset::ArticulationDesc& data, float scale = 1.0f);

@@ -3,6 +3,7 @@
 
 #include "asset/articulation_desc.hpp"
 #include "asset/import_diagnostics.hpp"
+#include "utils/coordinate_system.hpp"
 
 #include <string>
 
@@ -16,14 +17,18 @@ struct MJCFImportResult {
 
 class MJCFLoader {
   public:
-    static MJCFImportResult parse(const std::string& mjcfPath,
-                                  float scale = 1.0f,
-                                  const std::string& order = "DFS");
+    static MJCFImportResult
+    parse(const std::string& mjcfPath, float scale = 1.0f,
+          const std::string& order = "DFS",
+          Utils::CoordinateSystem targetCoordinateSystem =
+              Utils::CoordinateSystem::ZUpXForward);
 
     // Single-pass parse: returns all data needed for visual + physics.
-    static ArticulationDesc load(const std::string& mjcfPath,
-                                 float scale = 1.0f,
-                                 const std::string& order = "DFS");
+    static ArticulationDesc
+    load(const std::string& mjcfPath, float scale = 1.0f,
+         const std::string& order = "DFS",
+         Utils::CoordinateSystem targetCoordinateSystem =
+             Utils::CoordinateSystem::ZUpXForward);
 
   private:
     MJCFLoader() = default;
@@ -32,7 +37,8 @@ class MJCFLoader {
     ImportDiagnostics _diagnostics;
 
     void parseIntoData(const std::string& mjcfPath, float scale,
-                       const std::string& order);
+                       const std::string& order,
+                       Utils::CoordinateSystem targetCoordinateSystem);
 };
 
 } // namespace Asset

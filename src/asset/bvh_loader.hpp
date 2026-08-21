@@ -23,13 +23,16 @@ class BVHLoader {
     BVHLoader() = delete;
 
     static Animation::SkeletonTree loadSkeleton(const std::string& bvhPath,
-                                                float scale = 1.0f);
+                                                float scale = 1.0f,
+                                                bool hasArmatureJoint = false);
 
     static Animation::SkeletonMotion loadMotion(const std::string& bvhPath,
-                                                float scale = 1.0f);
+                                                float scale = 1.0f,
+                                                bool hasArmatureJoint = false);
 
     static BVHImportResult parse(const std::string& bvhPath,
-                                 float scale = 1.0f);
+                                 float scale = 1.0f,
+                                 bool hasArmatureJoint = false);
 };
 
 } // namespace Asset

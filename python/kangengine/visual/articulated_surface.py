@@ -5,12 +5,13 @@ from __future__ import annotations
 import hashlib
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy.typing as npt
 import numpy as np
 
 from .._core import _ke
+from ..utils import CoordinateSystem
 
 if TYPE_CHECKING:
     from ..animation import SkeletonState, SkeletonTree
@@ -19,9 +20,14 @@ if TYPE_CHECKING:
     from ..scene import Prim
 
 
-def _mesh_asset_path(mjcf_path: Path, scale: float, order: str) -> str:
+def _mesh_asset_path(
+    mjcf_path: Path,
+    scale: float,
+    order: Literal["DFS", "BFS"],
+    target_coordinate_system: CoordinateSystem,
+) -> str:
     stem = re.sub(r"[^A-Za-z0-9_]+", "_", mjcf_path.name).strip("_") or "robot"
-    key = f"{mjcf_path}|{float(scale):.9g}|{order}".encode()
+    key = f"{mjcf_path}|{float(scale):.9g}|{order}|{target_coordinate_system.value}".encode()
     digest = hashlib.sha1(key).hexdigest()[:10]
     return f"/.Resources/Meshes/ArticulatedSurfaces/{stem}_{digest}"
 
@@ -61,14 +67,17 @@ class ArticulatedSurfaceAsset:
         mjcf_path: str | Path,
         *,
         scale: float = 1.0,
-        order: str = "DFS",
+        order: Literal["DFS", "BFS"] = "DFS",
+        target_coordinate_system: CoordinateSystem = CoordinateSystem.Z_UP_X_FORWARD,
     ) -> ArticulatedSurfaceAsset:
         """Load a reusable kinematic surface asset from MJCF."""
         path = Path(mjcf_path).expanduser().resolve()
         native = _ke.animation.ArticulationVisualAsset.from_mjcf(
-            str(path), float(scale), order
+            str(path), float(scale), order, target_coordinate_system.value
         )
-        return cls(native, _mesh_asset_path(path, scale, order))
+        return cls(
+            native, _mesh_asset_path(path, scale, order, target_coordinate_system)
+        )
 
     @property
     def num_bodies(self) -> int:
@@ -91,8 +100,12 @@ class ArticulatedSurfaceAsset:
         native = self._native.instantiate(
             scene, path.rstrip("/"), self._mesh_asset_path, True
         )
-        views = [app.scene.add_renderable(prim, material) for prim in native.render_prims()]
-        surface = ArticulatedSurface(app, path.rstrip("/"), self, native, views, material)
+        views = [
+            app.scene.add_renderable(prim, material) for prim in native.render_prims()
+        ]
+        surface = ArticulatedSurface(
+            app, path.rstrip("/"), self, native, views, material
+        )
         if color is not None:
             surface.set_color(color)
         return surface
@@ -132,11 +145,15 @@ class ArticulatedSurface:
         material: Material,
         color: npt.ArrayLike | None = None,
         scale: float = 1.0,
-        order: str = "DFS",
+        order: Literal["DFS", "BFS"] = "DFS",
+        target_coordinate_system: CoordinateSystem = CoordinateSystem.Z_UP_X_FORWARD,
     ) -> ArticulatedSurface:
         """Load an MJCF asset and create its first kinematic instance."""
         asset = ArticulatedSurfaceAsset.from_mjcf(
-            mjcf_path, scale=scale, order=order
+            mjcf_path,
+            scale=scale,
+            order=order,
+            target_coordinate_system=target_coordinate_system,
         )
         return asset.create(app, path, material=material, color=color)
 
@@ -223,9 +240,7 @@ class ArticulatedSurface:
             self.set_alpha(alpha)
         return self
 
-    def set_alpha_mode(
-        self, mode: Any, cutoff: float = 0.5
-    ) -> ArticulatedSurface:
+    def set_alpha_mode(self, mode: Any, cutoff: float = 0.5) -> ArticulatedSurface:
         self._require_alive()
         for index, view in enumerate(self._views):
             view.set_alpha_mode(mode, cutoff)
@@ -242,9 +257,7 @@ class ArticulatedSurface:
             color = view.get_base_color()
             view.set_base_color((color.x, color.y, color.z, alpha))
             mode = (
-                _ke.AlphaMode.BLEND
-                if alpha < 1.0
-                else self._opaque_alpha_modes[index]
+                _ke.AlphaMode.BLEND if alpha < 1.0 else self._opaque_alpha_modes[index]
             )
             view.set_alpha_mode(mode)
         return self
