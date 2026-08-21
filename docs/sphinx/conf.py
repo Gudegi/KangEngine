@@ -64,7 +64,7 @@ exclude_patterns = [
 ]
 
 html_theme = os.environ.get("KANGENGINE_SPHINX_THEME", "furo")
-html_title = "KangEngine — Animation and Simulation Engine"
+html_title = "KangEngine"
 html_baseurl = "https://gudegi.github.io/KangEngine/"
 sitemap_url_scheme = "{link}"
 templates_path = ["_templates"]
