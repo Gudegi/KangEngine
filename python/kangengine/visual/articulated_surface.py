@@ -274,6 +274,11 @@ class ArticulatedSurface:
             view.set_casts_shadow(enabled)
         return self
 
+    def set_pickable(self, pickable: bool) -> ArticulatedSurface:
+        self._require_alive()
+        self._native.set_pickable(bool(pickable))
+        return self
+
     def remove(self) -> bool:
         """Remove the instance while preserving its shared asset resources."""
         if self._removed:

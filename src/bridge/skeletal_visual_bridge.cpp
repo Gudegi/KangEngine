@@ -1,6 +1,7 @@
 #include "skeletal_visual_bridge.hpp"
 #include "animation/skeleton_math.hpp"
 #include "engine/core/app/app.hpp"
+#include "engine/scene/component/selection_component.hpp"
 #include "engine/scene/debug_draw.hpp"
 #include "engine/scene/native/prim.hpp"
 
@@ -115,6 +116,20 @@ void SkeletalVisualBridge::setShowJoints(bool showJoints) {
     _config.showJoints = showJoints;
     if (_lastState)
         applyState(*_lastState);
+}
+
+void SkeletalVisualBridge::setPickable(bool pickable) {
+    if (!_app)
+        return;
+    for (const char* suffix : {"/bones", "/joints"}) {
+        Scene::Prim* prim = _app->getScene()->getPrimAtPath(_basePath + suffix);
+        if (!prim)
+            continue;
+        auto selection = prim->getSelectionComponent();
+        if (!selection)
+            selection = prim->addSelectionComponent();
+        selection->setPickable(pickable);
+    }
 }
 
 bool SkeletalVisualBridge::remove() {

@@ -4,6 +4,7 @@
 #include "animation/skeleton_math.hpp"
 #include "engine/scene/component/articulation_component.hpp"
 #include "engine/scene/component/articulation_binding_component.hpp"
+#include "engine/scene/component/selection_component.hpp"
 #include "engine/scene/native/prim.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "utils/types.hpp"
@@ -491,6 +492,17 @@ void ArticulationVisualBridge::setRootTranslation(const Eigen::Vector3f& t) {
 void ArticulationVisualBridge::resetToZeroPose() {
     _fk.resetToZeroPose();
     applyPose();
+}
+
+void ArticulationVisualBridge::setPickable(bool pickable) {
+    for (Scene::Prim* prim : _renderPrims) {
+        if (!prim)
+            continue;
+        auto selection = prim->getSelectionComponent();
+        if (!selection)
+            selection = prim->addSelectionComponent();
+        selection->setPickable(pickable);
+    }
 }
 
 } // namespace Bridge

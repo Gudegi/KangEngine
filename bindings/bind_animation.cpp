@@ -1015,6 +1015,9 @@ void bind_animation(py::module& m) {
             py::arg("translation"), "Set the root translation from a vec3.")
         .def("reset_to_zero_pose", &ArticulationVisualBridge::resetToZeroPose,
              "Reset all joint rotations and root translation to zero pose.")
+        .def("set_pickable", &ArticulationVisualBridge::setPickable,
+             py::arg("pickable"),
+             "Set whether rendered geometry can be picked.")
         .def(
             "skeleton",
             [](ArticulationVisualBridge& self) -> const SkeletonTree& {
@@ -1164,6 +1167,9 @@ void bind_animation(py::module& m) {
              py::arg("visible"), "Set visibility for all skeleton visuals.")
         .def("set_show_joints", &SkeletalVisualBridge::setShowJoints,
              py::arg("show_joints"), "Show or hide joint markers.")
+        .def("set_pickable", &SkeletalVisualBridge::setPickable,
+             py::arg("pickable"),
+             "Set whether skeleton geometry can be picked.")
         .def("remove", &SkeletalVisualBridge::remove,
              "Remove all authored skeleton visual scene objects.")
         .def("bone_handle", &SkeletalVisualBridge::boneHandle,

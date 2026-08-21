@@ -11,7 +11,10 @@ import torch
 import kangengine as ke
 from kangengine import animation, asset, imgui, scene, visual
 from kangengine.exports import save_motion_bvh
-from kangengine.utils.batched_rotations import quat_wxyz_multiply
+from kangengine.utils.batched_rotations import (
+    quat_wxyz_from_angle_axis,
+    quat_wxyz_multiply,
+)
 
 
 def _color(color_type: ke.ColorType) -> ke.Vec4:
@@ -40,9 +43,15 @@ class EditMode(Enum):
     MAPPING = auto()
 
 
-def _load_motion(path: Path, scale: float) -> animation.SkeletonMotion:
+def _load_motion(
+    path: Path, scale: float, *, has_armature_joint: bool = False
+) -> animation.SkeletonMotion:
     if path.suffix.lower() == ".bvh":
-        return asset.BVHLoader.load_motion(bvh_path=str(path), scale=scale)
+        return asset.BVHLoader.load_motion(
+            bvh_path=str(path),
+            scale=scale,
+            has_armature_joint=has_armature_joint,
+        )
     if path.suffix.lower() == ".fbx":
         return asset.FBXLoader.load_motion(fbx_path=str(path), scale=scale)
     raise ValueError("source motion must be BVH or FBX")
@@ -53,7 +62,14 @@ def _load_skeleton(path: Path, scale: float) -> animation.SkeletonTree:
         return asset.BVHLoader.load_skeleton(bvh_path=str(path), scale=scale)
     if path.suffix.lower() == ".fbx":
         return asset.FBXLoader.load_skeleton(fbx_path=str(path), scale=scale)
-    raise ValueError("target skeleton must be BVH or FBX")
+    if path.suffix.lower() == ".xml":
+        return asset.MJCFLoader.load(
+            str(path),
+            scale=scale,
+            order="DFS",
+            target_coordinate_system=ke.utils.CoordinateSystem.Y_UP_Z_FORWARD,
+        ).skeleton_tree
+    raise ValueError("target skeleton must be BVH, FBX, or MJCF XML")
 
 
 def _default_scale(path: Path) -> float:
@@ -150,6 +166,7 @@ class EditableSkeleton:
         bind_root: tuple[float, float, float],
         x_offset: float,
         color: tuple[float, float, float, float],
+        initial_local_rotations: np.ndarray | None = None,
     ) -> None:
         self.app = app
         self.label = label
@@ -165,7 +182,19 @@ class EditableSkeleton:
         self.joint_paths: dict[str, int] = {}
         self.handles = []
         self.skin: visual.SkinVisual | None = None
+        self.surface: visual.ArticulatedSurface | None = None
+        self.bvh_overlay: visual.SkeletalVisual | None = None
         sphere = scene.Prim.create_sphere_data(0.028, 12, 8)
+        self.default_local_rotations = (
+            np.asarray(initial_local_rotations, dtype=np.float32).copy()
+            if initial_local_rotations is not None
+            else np.asarray(
+                [_quat_tuple(tree.local_rotation(i)) for i in range(tree.num_joints())],
+                dtype=np.float32,
+            )
+        )
+        if self.default_local_rotations.shape != (tree.num_joints(), 4):
+            raise ValueError("initial_local_rotations must have shape [joints, 4]")
 
         for joint, name in enumerate(tree.node_names()):
             parent = tree.parent_index(joint)
@@ -176,7 +205,7 @@ class EditableSkeleton:
             prim = scene.Prim.define_manipulation_group(app.scene.native, path)
             translation = bind_root if joint == 0 else tree.local_translation(joint)
             prim.set_local_translation(translation)
-            prim.set_local_rotation(tree.local_rotation(joint))
+            prim.set_local_rotation(ke.Quat(*self.default_local_rotations[joint]))
             handle = app.scene.add_mesh(f"{path}/handle", sphere, app.materials.common)
             handle.set_base_color(color)
             self.joint_prims.append(prim)
@@ -199,6 +228,45 @@ class EditableSkeleton:
                 self.sync_skin()
             except Exception as error:
                 app.status = f"Skeleton loaded; skinned mesh unavailable: {error}"
+        elif asset_path.suffix.lower() == ".xml":
+            try:
+                self.surface = visual.ArticulatedSurface.create_from_mjcf(
+                    app=app,
+                    path=f"{self.root_path}/surface",
+                    mjcf_path=asset_path,
+                    material=app.materials.common,
+                    color=(*color[:3], 0.18),
+                    scale=_default_scale(asset_path),
+                    order="DFS",
+                    target_coordinate_system=ke.utils.CoordinateSystem.Y_UP_Z_FORWARD,
+                )
+                self.surface.set_casts_shadow(False)
+                self.surface.set_pickable(False)
+                self.sync_skin()
+            except Exception as error:
+                app.status = f"Skeleton loaded; MJCF surface unavailable: {error}"
+        elif asset_path.suffix.lower() == ".bvh":
+            try:
+                config = visual.SkeletalVisualConfig(
+                    bone_color=ke.Vec4(*color),
+                    joint_color=ke.Vec4(*color),
+                    bone_radius=0.018,
+                    joint_radius=0.0,
+                    segments=8,
+                    visible=True,
+                    show_joints=False,
+                )
+                state = self._world_position_state()
+                self.bvh_overlay = visual.SkeletalVisual.define(
+                    app=app,
+                    material=app.materials.common,
+                    path=f"{self.root_path}/bvh_overlay",
+                    state=state,
+                    config=config,
+                )
+                self.bvh_overlay.set_pickable(False)
+            except Exception as error:
+                app.status = f"Skeleton loaded; BVH surface unavailable: {error}"
 
     def joint_from_prim(self, prim) -> int | None:
         if prim is None:
@@ -215,9 +283,37 @@ class EditableSkeleton:
         return rotations
 
     def sync_skin(self) -> None:
-        if self.skin is None:
-            return
-        self.skin.apply_pose(self.bind_root, self.local_rotations())
+        if self.skin is not None:
+            self.skin.apply_pose(self.bind_root, self.local_rotations())
+        if self.surface is not None:
+            state = animation.SkeletonState.from_rotation_and_root_translation(
+                self.tree, self.local_rotations(), self.bind_root, True
+            )
+            self.surface.apply_state(state)
+        if self.bvh_overlay is not None:
+            self.bvh_overlay.apply_state(self._world_position_state())
+
+    def _world_position_state(self) -> animation.SkeletonState:
+        positions = np.asarray(
+            [_vec3_tuple(prim.get_world_translation()) for prim in self.joint_prims],
+            dtype=np.float32,
+        )
+        parents = self.tree.parent_indices()
+        translations = positions.copy()
+        for joint, parent in enumerate(parents):
+            if parent >= 0:
+                translations[joint] -= positions[parent]
+        rotations = np.zeros((self.tree.num_joints(), 4), dtype=np.float32)
+        rotations[:, 0] = 1.0
+        world_tree = animation.SkeletonTree(
+            self.tree.node_names(), parents, translations, rotations
+        )
+        return animation.SkeletonState.from_rotation_and_root_translation(
+            world_tree,
+            rotations,
+            positions[0],
+            True,
+        )
 
     def set_local_rotations(
         self, rotations: dict[str, tuple[float, float, float, float]]
@@ -233,7 +329,9 @@ class EditableSkeleton:
         self.joint_prims[0].set_local_translation(value)
 
     def reset_joint(self, joint: int) -> None:
-        self.joint_prims[joint].set_local_rotation(self.tree.local_rotation(joint))
+        self.joint_prims[joint].set_local_rotation(
+            ke.Quat(*self.default_local_rotations[joint])
+        )
 
     def reset_all(self) -> None:
         for joint in range(self.tree.num_joints()):
@@ -247,6 +345,10 @@ class EditableSkeleton:
                 self.skin.set_color((*self.color[:3], 0.18))
             else:
                 self.skin.set_visible(False)
+        if self.surface is not None:
+            self.surface.set_visible(visible)
+        if self.bvh_overlay is not None:
+            self.bvh_overlay.set_visible(visible)
         if not visible:
             self.app.clear_debug_lines(f"{self.root_path}/bones")
             for joint in range(self.tree.num_joints()):
@@ -301,6 +403,11 @@ class EditableSkeleton:
         self.root_prim.set_local_scale(ke.Vec3(value, value, value))
         return value
 
+    def multiply_root_scale(self, factor: float) -> float:
+        value = max(self.uniform_root_scale() * factor, 1.0e-4)
+        self.root_prim.set_local_scale(ke.Vec3(value, value, value))
+        return value
+
 
 class RetargetEditor(ke.App):
     def __init__(
@@ -316,6 +423,10 @@ class RetargetEditor(ke.App):
             "retarget_config_retarget.json" if config_path is None else str(config_path)
         )
         self.motion_path_text = "retargeted_motion.bvh"
+        self.source_coordinates = ke.utils.CoordinateSystem.Y_UP_Z_FORWARD
+        self.target_coordinates = ke.utils.CoordinateSystem.Y_UP_Z_FORWARD
+        self.output_coordinates = ke.utils.CoordinateSystem.Y_UP_Z_FORWARD
+        self.source_has_armature_joint = False
 
     def setup(self) -> None:
         self.set_ui_layout_mode(ke.UILayoutMode.EDITOR)
@@ -339,6 +450,7 @@ class RetargetEditor(ke.App):
         self.target_preview: visual.SkeletalVisual | None = None
         self.source_preview_skin: visual.SkinVisual | None = None
         self.target_preview_skin: visual.SkinVisual | None = None
+        self.target_preview_surface: visual.ArticulatedSurface | None = None
         self.preview_source_motion: animation.SkeletonMotion | None = None
         self.preview_target_motion: animation.SkeletonMotion | None = None
         self.preview_source_rotations: np.ndarray | None = None
@@ -374,12 +486,49 @@ class RetargetEditor(ke.App):
             parent = Path.cwd()
         return str(parent.resolve()), candidate.name
 
+    def _render_coordinate_selector(self, label: str, attribute: str) -> None:
+        current = getattr(self, attribute)
+        imgui.text(label)
+        imgui.same_line()
+        for index, (value, text) in enumerate(
+            (
+                (ke.utils.CoordinateSystem.Y_UP_Z_FORWARD, "Y-up / Z-forward"),
+                (
+                    ke.utils.CoordinateSystem.Y_UP_NEG_Z_FORWARD,
+                    "Y-up / -Z-forward",
+                ),
+                (ke.utils.CoordinateSystem.Z_UP_X_FORWARD, "Z-up / X-forward"),
+            )
+        ):
+            active = current == value
+            if _button(
+                f"{'* ' if active else ''}{text}##{attribute}",
+                "primary" if active else "neutral",
+            ):
+                setattr(self, attribute, value)
+                suffix = (
+                    " It will be applied when saving."
+                    if attribute == "output_coordinates"
+                    else " Reload its asset to apply."
+                )
+                self.status = f"{label} set to {text}.{suffix}"
+            if index != 2:
+                imgui.same_line()
+
     def _load_source(self) -> None:
         try:
             path = self._path(self.source_path_text)
             if not path.is_file():
                 raise FileNotFoundError(path)
-            self.source_motion = _load_motion(path, _default_scale(path))
+            self.source_motion = animation.convert_motion_coordinates(
+                _load_motion(
+                    path,
+                    _default_scale(path),
+                    has_armature_joint=self.source_has_armature_joint,
+                ),
+                source=self.source_coordinates,
+                target=ke.utils.CoordinateSystem.Y_UP_Z_FORWARD,
+            )
             self.source_edit = EditableSkeleton(
                 self,
                 "A",
@@ -388,6 +537,11 @@ class RetargetEditor(ke.App):
                 tuple(float(v) for v in self.source_motion.root_translations()[0]),
                 -1.5,
                 (0.25, 0.65, 1.0, 1.0),
+                (
+                    self.source_motion.local_rotations_wxyz()[0]
+                    if self.source_has_armature_joint
+                    else None
+                ),
             )
             self.source_path_text = str(path)
             self.status = f"Loaded source A: {path.name}"
@@ -400,7 +554,16 @@ class RetargetEditor(ke.App):
             path = self._path(self.target_path_text)
             if not path.is_file():
                 raise FileNotFoundError(path)
-            tree = _load_skeleton(path, _default_scale(path))
+            loaded_tree = _load_skeleton(path, _default_scale(path))
+            tree = (
+                loaded_tree
+                if path.suffix.lower() == ".xml"
+                else animation.convert_skeleton_coordinates(
+                    loaded_tree,
+                    source=self.target_coordinates,
+                    target=ke.utils.CoordinateSystem.Y_UP_Z_FORWARD,
+                )
+            )
             self.target_edit = EditableSkeleton(
                 self,
                 "B",
@@ -409,6 +572,7 @@ class RetargetEditor(ke.App):
                 _vec3_tuple(tree.local_translation(0)),
                 1.5,
                 (1.0, 0.55, 0.2, 1.0),
+                None,
             )
             self.target_path_text = str(path)
             self.status = f"Loaded target B: {path.name}"
@@ -423,6 +587,10 @@ class RetargetEditor(ke.App):
             joint_map={},
             source_skeleton=self.source_path_text,
             target_skeleton=self.target_path_text,
+            source_coordinate_system=self.source_coordinates.value,
+            target_coordinate_system=self.target_coordinates.value,
+            output_coordinate_system=self.output_coordinates.value,
+            source_has_armature_joint=self.source_has_armature_joint,
         )
         self._set_edit_mode(EditMode.INSPECT)
         self.status = "A and B are ready. Choose any edit mode."
@@ -444,6 +612,8 @@ class RetargetEditor(ke.App):
             self.source_preview_skin.set_visible(False)
         if self.target_preview_skin is not None:
             self.target_preview_skin.set_visible(False)
+        if self.target_preview_surface is not None:
+            self.target_preview_surface.set_visible(False)
 
     def _clear_preview(self) -> None:
         self.sequencer.set_playing(False)
@@ -465,6 +635,8 @@ class RetargetEditor(ke.App):
         for preview in (self.source_preview_skin, self.target_preview_skin):
             if preview is not None:
                 preview.remove()
+        if self.target_preview_surface is not None:
+            self.target_preview_surface.remove()
         for preview in (self.source_preview, self.target_preview):
             if preview is not None:
                 preview.remove()
@@ -473,6 +645,7 @@ class RetargetEditor(ke.App):
         self.target_preview = None
         self.source_preview_skin = None
         self.target_preview_skin = None
+        self.target_preview_surface = None
         self.active_preview = None
         self.preview_needs_rebuild = False
 
@@ -560,6 +733,60 @@ class RetargetEditor(ke.App):
         self.overlapped = True
         self.status = "Moved B root onto A root."
 
+    def _multiply_scale(self, side: str, factor: float) -> None:
+        editable = self.source_edit if side == "A" else self.target_edit
+        if editable is None:
+            return
+        value = editable.multiply_root_scale(factor)
+        if self.showing_result:
+            self._show_calibration()
+        self.preview_needs_rebuild = True
+        self.status = (
+            f"Scaled {side} by {factor:g}; current scale is {value:g}. "
+            "Recompute preview to apply the new retarget scale."
+        )
+
+    def _rotate_target_facing_y(self, degrees: float) -> None:
+        if self.target_edit is None:
+            return
+        angle = torch.tensor(np.deg2rad(degrees), dtype=torch.float32)
+        axis = torch.tensor((0.0, 1.0, 0.0), dtype=torch.float32)
+        delta = quat_wxyz_from_angle_axis(angle, axis)
+        current = torch.tensor(
+            _quat_tuple(self.target_edit.root_prim.get_local_rotation()),
+            dtype=torch.float32,
+        )
+        rotation = quat_wxyz_multiply(delta, current)
+        self.target_edit.root_prim.set_local_rotation(ke.Quat(*rotation.tolist()))
+        self.preview_needs_rebuild = True
+        self.status = f"Rotated target B facing by {degrees:+g} degrees around Y."
+
+    def _render_quick_scale(self, side: str) -> None:
+        editable = self.source_edit if side == "A" else self.target_edit
+        if editable is None:
+            return
+        imgui.text(f"{side} quick scale: {editable.uniform_root_scale():g}")
+        imgui.same_line()
+        factors = (100.0, 10.0, 0.1, 0.01)
+        for index, factor in enumerate(factors):
+            if _button(f"x{factor:g}##quick_scale_{side}_{factor:g}"):
+                self._multiply_scale(side, factor)
+            if index != len(factors) - 1:
+                imgui.same_line()
+
+    def _match_target_root_height(self) -> None:
+        if self.source_edit is None or self.target_edit is None:
+            return
+        scale = (
+            self.source_edit.uniform_root_scale()
+            / self.target_edit.uniform_root_scale()
+        )
+        target = list(self.target_edit.bind_root)
+        target[1] = self.source_edit.bind_root[1] * scale
+        self.target_edit.set_bind_root(tuple(target))
+        self.preview_needs_rebuild = True
+        self.status = f"Matched target B bind-root height to A: Y={target[1]:g}."
+
     def _sync_config(self) -> animation.RetargetConfig:
         if self.source_edit is None or self.target_edit is None or self.config is None:
             raise RuntimeError("source and target are not ready")
@@ -590,6 +817,10 @@ class RetargetEditor(ke.App):
         # editor's side-by-side and overlap transforms are viewport-only.
         self.config.source_bind_root = self.source_edit.bind_root
         self.config.target_bind_root = self.target_edit.bind_root
+        self.config.source_coordinate_system = self.source_coordinates.value
+        self.config.target_coordinate_system = self.target_coordinates.value
+        self.config.output_coordinate_system = self.output_coordinates.value
+        self.config.source_has_armature_joint = self.source_has_armature_joint
         return self.config
 
     def _load_config(self) -> None:
@@ -629,6 +860,16 @@ class RetargetEditor(ke.App):
 
             self.source_path_text = str(source_path)
             self.target_path_text = str(target_path)
+            self.source_coordinates = ke.utils.CoordinateSystem(
+                config.source_coordinate_system
+            )
+            self.target_coordinates = ke.utils.CoordinateSystem(
+                config.target_coordinate_system
+            )
+            self.output_coordinates = ke.utils.CoordinateSystem(
+                config.output_coordinate_system
+            )
+            self.source_has_armature_joint = config.source_has_armature_joint
             self._load_source()
             self._load_target()
             if self.source_edit is None or self.target_edit is None:
@@ -838,6 +1079,8 @@ class RetargetEditor(ke.App):
             self.target_preview.set_visible(False)
         if self.target_preview_skin is not None:
             self.target_preview_skin.set_visible(False)
+        if self.target_preview_surface is not None:
+            self.target_preview_surface.set_visible(False)
         self.preview_source_motion = source
         self.preview_source_rotations = source.local_rotations_wxyz()
         self.sequencer.set_motions(["Source"], [source.num_frames()], [source.fps()])
@@ -914,12 +1157,27 @@ class RetargetEditor(ke.App):
                 use_materials=True,
             )
             self.target_preview_skin.set_pickable(False)
+        if self.target_preview_surface is None and target_path.suffix.lower() == ".xml":
+            self.target_preview_surface = visual.ArticulatedSurface.create_from_mjcf(
+                app=self,
+                path="/RetargetPreview/B/surface",
+                mjcf_path=target_path,
+                material=self.materials.common,
+                color=(1.0, 0.55, 0.2, 0.35),
+                scale=_default_scale(target_path),
+                order="DFS",
+                target_coordinate_system=ke.utils.CoordinateSystem.Y_UP_Z_FORWARD,
+            )
+            self.target_preview_surface.set_casts_shadow(False)
+            self.target_preview_surface.set_pickable(False)
         self.source_preview.set_visible(True)
         self.target_preview.set_visible(True)
         if self.source_preview_skin is not None:
             self.source_preview_skin.set_visible(True)
         if self.target_preview_skin is not None:
             self.target_preview_skin.set_visible(True)
+        if self.target_preview_surface is not None:
+            self.target_preview_surface.set_visible(True)
         self.preview_source_motion = source
         self.preview_source_rotations = source.local_rotations_wxyz()
         self.preview_target_rotations = (
@@ -973,6 +1231,8 @@ class RetargetEditor(ke.App):
                 _vec3_tuple(target_state.root_translation()),
                 self.preview_target_rotations[frame],
             )
+        if self.target_preview_surface is not None:
+            self.target_preview_surface.apply_state(target_state)
 
     def _save_motion(self) -> None:
         if self.result_motion is None:
@@ -983,7 +1243,12 @@ class RetargetEditor(ke.App):
                 self.motion_path_text = "retargeted_motion.bvh"
             output_path = _motion_output_path(self._path(self.motion_path_text))
             self.motion_path_text = str(output_path)
-            path = save_motion_bvh(output_path, self.result_motion)
+            output_motion = animation.convert_motion_coordinates(
+                self.result_motion,
+                source=ke.utils.CoordinateSystem.Y_UP_Z_FORWARD,
+                target=self.output_coordinates,
+            )
+            path = save_motion_bvh(output_path, output_motion)
             self.status = f"Motion saved: {path}"
         except Exception as error:
             self.status = f"Motion save failed: {error}"
@@ -1055,6 +1320,12 @@ class RetargetEditor(ke.App):
             self._apply_preview_time(self.sequencer.current_time())
 
     def _render_load(self) -> None:
+        self._render_coordinate_selector("Source A input", "source_coordinates")
+        _, self.source_has_armature_joint = imgui.checkbox(
+            "Source has armature joint", self.source_has_armature_joint
+        )
+        imgui.same_line()
+        imgui.text_disabled("Removes the top-level container; its child becomes root.")
         _, self.source_path_text = imgui.input_text(
             "Source motion A", self.source_path_text
         )
@@ -1066,6 +1337,8 @@ class RetargetEditor(ke.App):
             )
         if _button("Load Source A", "primary"):
             self._load_source()
+        self._render_quick_scale("A")
+        self._render_coordinate_selector("Target B input", "target_coordinates")
         _, self.target_path_text = imgui.input_text(
             "Target skeleton B", self.target_path_text
         )
@@ -1075,11 +1348,12 @@ class RetargetEditor(ke.App):
             imgui.open_file_dialog(
                 "target_skeleton",
                 "Select Target Skeleton",
-                "Skeleton files{.bvh,.fbx}",
+                "Skeleton files{.bvh,.fbx,.xml}",
                 path,
             )
         if _button("Load Target B", "primary"):
             self._load_target()
+        self._render_quick_scale("B")
         _, self.config_path_text = imgui.input_text(
             "Retarget config", self.config_path_text
         )
@@ -1238,6 +1512,10 @@ class RetargetEditor(ke.App):
             self._toggle_overlap()
         imgui.same_line()
         imgui.text_disabled("Moves B root to A root; click again to restore.")
+        if _button("Match B Root Height to A", "primary"):
+            self._match_target_root_height()
+        imgui.same_line()
+        imgui.text_disabled("Updates retarget bind height; not a viewport offset.")
 
         if self.edit_mode == EditMode.BIND_POSE and not self.showing_result:
             if _button("Reset Selected Joint", "warning"):
@@ -1269,6 +1547,12 @@ class RetargetEditor(ke.App):
                     self.source_edit.reset_all()
                 if self.target_edit is not None:
                     self.target_edit.reset_all()
+        elif self.edit_mode == EditMode.FACING and not self.showing_result:
+            if _button("Rotate Y -90 deg", "primary"):
+                self._rotate_target_facing_y(-90.0)
+            imgui.same_line()
+            if _button("Rotate Y +90 deg", "primary"):
+                self._rotate_target_facing_y(90.0)
         elif self.edit_mode == EditMode.SCALE and not self.showing_result:
             source_prefix = "* " if self.scale_side == "A" else ""
             target_prefix = "* " if self.scale_side == "B" else ""
@@ -1311,6 +1595,7 @@ class RetargetEditor(ke.App):
             f"{self.result_motion.fps():.2f} fps"
         )
         imgui.text_disabled("Playback and frame seeking are in Motion Sequencer.")
+        self._render_coordinate_selector("Output coordinates", "output_coordinates")
         _, self.motion_path_text = imgui.input_text(
             "Motion output", self.motion_path_text
         )

@@ -56,6 +56,7 @@ class ArticulationVisualBridge {
     void setJointRotation(int idx, const Eigen::Quaternionf& q);
     void setRootTranslation(const Eigen::Vector3f& t);
     void resetToZeroPose();
+    void setPickable(bool pickable);
 
     // Accessors
     Animation::SkeletonFK& fk() { return _fk; }
