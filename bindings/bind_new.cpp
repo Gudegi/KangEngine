@@ -9,6 +9,7 @@
 #include "engine/graphics/material/phongMaterials.hpp"
 #include "engine/core/ui/file_dialog.hpp"
 #include "py_array_view.hpp"
+#include "utils/coordinate_system.hpp"
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -421,6 +422,27 @@ void bind_imgui(py::module& m) {
         py::arg("legend_width") = 200.0f);
 }
 
+void bind_utils(py::module& m) {
+    py::module utils =
+        m.def_submodule("utils", "Shared KangEngine utility functions.");
+    utils.def(
+        "coordinate_conversion_matrix",
+        [](const std::string& source, const std::string& target) {
+            const Eigen::Matrix3f matrix = Utils::coordinateConversionMatrix(
+                Utils::coordinateSystemFromString(source),
+                Utils::coordinateSystemFromString(target));
+            py::array_t<float> result({py::ssize_t(3), py::ssize_t(3)});
+            auto view = result.mutable_unchecked<2>();
+            for (int row = 0; row < 3; ++row)
+                for (int column = 0; column < 3; ++column)
+                    view(row, column) = matrix(row, column);
+            return result;
+        },
+        py::arg("source"), py::arg("target"),
+        "Return the rotation matrix converting vectors between coordinate "
+        "systems.");
+}
+
 void bind_keys(py::module& m) {
     py::module keys = m.def_submodule("keys", "GLFW keyboard key constants");
 
@@ -557,6 +579,7 @@ PYBIND11_MODULE(_kangengine, m) {
     bind_asset(m);
     bind_articulation_desc(m);
     bind_imgui(m);
+    bind_utils(m);
     bind_keys(m);
     // bind_physics is called after GLM types are registered (uses glm defaults)
 

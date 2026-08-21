@@ -1,3 +1,7 @@
+import numpy as np
+from enum import Enum
+
+from .._core import _ke
 from .color import preset_rgba
 from .debug_draw import log_debug_axes
 from .joint_mapping import (
@@ -25,6 +29,24 @@ from .math import (
     quat_xyzw_normalize,
     quat_xyzw_rotate,
 )
+
+
+class CoordinateSystem(str, Enum):
+    """Right-handed coordinate-system presets used by shared converters."""
+
+    Y_UP_Z_FORWARD = "y_up_z_forward"
+    Y_UP_NEG_Z_FORWARD = "y_up_neg_z_forward"
+    Z_UP_X_FORWARD = "z_up_x_forward"
+
+
+def coordinate_conversion_matrix(
+    source: CoordinateSystem | str, target: CoordinateSystem | str
+) -> np.ndarray:
+    """Return the 3x3 rotation matrix converting source vectors to target axes."""
+    source_value = getattr(source, "value", source)
+    target_value = getattr(target, "value", target)
+    return _ke.utils.coordinate_conversion_matrix(source_value, target_value)
+
 
 _LAZY_IMPORTS = {
     "as_cpu_numpy": (".tensor", "as_cpu_numpy"),
@@ -106,6 +128,8 @@ def __getattr__(name):
 
 
 __all__ = [
+    "CoordinateSystem",
+    "coordinate_conversion_matrix",
     "preset_rgba",
     "log_debug_axes",
     "COMMON",

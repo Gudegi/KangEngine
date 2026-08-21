@@ -22,6 +22,7 @@ from . import (
     render,
     scene,
     terrain,
+    utils,
     visual,
 )
 from .app import (
@@ -148,6 +149,7 @@ __all__ = [
     "recording",
     "visual",
     "terrain",
+    "utils",
     "KangEngineEngine",
     "build_mimickit_engine",
     "install_mimickit_engine_builder",

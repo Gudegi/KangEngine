@@ -170,6 +170,10 @@ class SkeletonState:
     def num_joints(self) -> int:
         """Return S, the number of skeleton nodes."""
         ...
+    @property
+    def skeleton_tree(self) -> SkeletonTree:
+        """Return the state's read-only skeleton hierarchy."""
+        ...
     def is_local(self) -> bool:
         """Return whether rotations are local to parent nodes."""
         ...

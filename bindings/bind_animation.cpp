@@ -867,6 +867,13 @@ void bind_animation(py::module& m) {
             "Create a pose from WXYZ rotations and root translation.")
         .def("num_joints", &SkeletonState::numJoints,
              "Return the number of joints.")
+        .def_property_readonly(
+            "skeleton_tree",
+            [](const SkeletonState& self) {
+                return std::const_pointer_cast<SkeletonTree>(
+                    self.skeletonTreePtr());
+            },
+            "Return the state's read-only skeleton hierarchy.")
         .def("is_local", &SkeletonState::isLocal,
              "Return true if rotations are stored in local space.")
         .def("compute_global_transforms",
