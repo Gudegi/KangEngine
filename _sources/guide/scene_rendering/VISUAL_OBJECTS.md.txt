@@ -1,2 +1,0 @@
-```{include} ../../../../docs/scene_rendering/VISUAL_OBJECTS.md
-```

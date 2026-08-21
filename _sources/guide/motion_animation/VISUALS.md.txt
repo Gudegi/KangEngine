@@ -1,2 +1,0 @@
-```{include} ../../../../docs/motion_animation/VISUALS.md
-```

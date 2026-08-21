@@ -1,7 +1,7 @@
-# KangEngine Documentation
+# KangEngine — Animation and Simulation Engine
 
-KangEngine is a C++/Python engine for rendering, character animation, robotics,
-and PhysX-based simulation. Start with the guide for runnable workflows, use
+KangEngine is an open-source C++17 and Python engine for real-time rendering, character animation, robotics, and PhysX-based simulation.
+Start with the guide for runnable workflows, use
 the API reference for exact Python signatures, and browse the examples for
 complete programs.
 

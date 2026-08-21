@@ -4,9 +4,10 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="ke.scene" href="scene.html"><link rel="prev" title="API Reference" href="index.html">
+        <link rel="canonical" href="https://gudegi.github.io/KangEngine/api/python.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
-        <title>kangengine - KangEngine Docs</title>
+        <title>kangengine - KangEngine — Animation and Simulation Engine</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
@@ -36,7 +37,10 @@
       }
     }
   }
-</style></head>
+</style>
+
+
+</head>
   <body>
     
     <script>
@@ -163,7 +167,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">KangEngine Docs</div></a>
+      <a href="../index.html"><div class="brand">KangEngine — Animation and Simulation Engine</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -184,7 +188,7 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
-  <span class="sidebar-brand-text">KangEngine Docs</span>
+  <span class="sidebar-brand-text">KangEngine — Animation and Simulation Engine</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -227,6 +231,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/animation/INDEX.html">Animation</a><input aria-label="Toggle navigation of Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/LOAD_MOTION.html">Load and Play Motion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/VISUALS.html">Pose Visualization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/RETARGETING.html">Motion Retargeting</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/SMPL.html">SMPL Models</a></li>
 </ul>
 </li>
@@ -240,6 +245,7 @@
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../guide/integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../guide/KELAB.html">KELab</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/NEWTON.html">Newton Viewer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
 </ul>
@@ -1458,9 +1464,25 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <dd></dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.close_file_dialog">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">close_file_dialog</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.imgui.close_file_dialog" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.colored_button">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">colored_button</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">glm::vec&lt;4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">(glm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">:qualifier)0&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.imgui.colored_button" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="kangengine.imgui.cursor_screen_pos">
 <span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">cursor_screen_pos</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.imgui.cursor_screen_pos" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.display_file_dialog">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">display_file_dialog</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.imgui.display_file_dialog" title="Link to this definition">¶</a></dt>
+<dd><p>Render one open dialog and return (finished, selected_path). The path is None while pending or after cancellation.</p>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.imgui.draw_circle_filled">
@@ -1552,6 +1574,12 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <dd></dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.input_text">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">input_text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">capacity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">4096</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.imgui.input_text" title="Link to this definition">¶</a></dt>
+<dd><p>Edit one UTF-8 text value and return (changed, value).</p>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="kangengine.imgui.main_viewport_work_rect">
 <span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">main_viewport_work_rect</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.imgui.main_viewport_work_rect" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
@@ -1596,6 +1624,31 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <dd></dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.open_directory_dialog">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">open_directory_dialog</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'.'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.imgui.open_directory_dialog" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.open_file_dialog">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">open_file_dialog</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'.'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.imgui.open_file_dialog" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.open_save_dialog">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">open_save_dialog</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">filters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'.'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">file_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.imgui.open_save_dialog" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="kangengine.imgui.progress_bar">
 <span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">progress_bar</span></span><span class="sig-paren">(</span>
 
@@ -1612,6 +1665,11 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.imgui.same_line">
 <span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">same_line</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.imgui.same_line" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.selectable">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">selectable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">selected</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.imgui.selectable" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py function">
@@ -2244,7 +2302,10 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <li><a class="reference internal" href="#kangengine.imgui.begin_child"><code class="docutils literal notranslate"><span class="pre">begin_child()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.button"><code class="docutils literal notranslate"><span class="pre">button()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.checkbox"><code class="docutils literal notranslate"><span class="pre">checkbox()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.close_file_dialog"><code class="docutils literal notranslate"><span class="pre">close_file_dialog()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.colored_button"><code class="docutils literal notranslate"><span class="pre">colored_button()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.cursor_screen_pos"><code class="docutils literal notranslate"><span class="pre">cursor_screen_pos()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.display_file_dialog"><code class="docutils literal notranslate"><span class="pre">display_file_dialog()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.draw_circle_filled"><code class="docutils literal notranslate"><span class="pre">draw_circle_filled()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.draw_convex_polygon_filled"><code class="docutils literal notranslate"><span class="pre">draw_convex_polygon_filled()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.draw_line"><code class="docutils literal notranslate"><span class="pre">draw_line()</span></code></a></li>
@@ -2252,11 +2313,16 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <li><a class="reference internal" href="#kangengine.imgui.end"><code class="docutils literal notranslate"><span class="pre">end()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.end_child"><code class="docutils literal notranslate"><span class="pre">end_child()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.image"><code class="docutils literal notranslate"><span class="pre">image()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.input_text"><code class="docutils literal notranslate"><span class="pre">input_text()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.main_viewport_work_rect"><code class="docutils literal notranslate"><span class="pre">main_viewport_work_rect()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.motion_sequencer"><code class="docutils literal notranslate"><span class="pre">motion_sequencer()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.motion_sequencer_resizable"><code class="docutils literal notranslate"><span class="pre">motion_sequencer_resizable()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.open_directory_dialog"><code class="docutils literal notranslate"><span class="pre">open_directory_dialog()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.open_file_dialog"><code class="docutils literal notranslate"><span class="pre">open_file_dialog()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.open_save_dialog"><code class="docutils literal notranslate"><span class="pre">open_save_dialog()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.progress_bar"><code class="docutils literal notranslate"><span class="pre">progress_bar()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.same_line"><code class="docutils literal notranslate"><span class="pre">same_line()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.selectable"><code class="docutils literal notranslate"><span class="pre">selectable()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.separator"><code class="docutils literal notranslate"><span class="pre">separator()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.set_next_window_pos"><code class="docutils literal notranslate"><span class="pre">set_next_window_pos()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.set_next_window_size"><code class="docutils literal notranslate"><span class="pre">set_next_window_size()</span></code></a></li>

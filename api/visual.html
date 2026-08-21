@@ -4,9 +4,10 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="ke.utils" href="utils.html"><link rel="prev" title="ke.terrain" href="terrain.html">
+        <link rel="canonical" href="https://gudegi.github.io/KangEngine/api/visual.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
-        <title>ke.visual - KangEngine Docs</title>
+        <title>ke.visual - KangEngine — Animation and Simulation Engine</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
@@ -36,7 +37,10 @@
       }
     }
   }
-</style></head>
+</style>
+
+
+</head>
   <body>
     
     <script>
@@ -163,7 +167,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">KangEngine Docs</div></a>
+      <a href="../index.html"><div class="brand">KangEngine — Animation and Simulation Engine</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -184,7 +188,7 @@
       
       <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
-  <span class="sidebar-brand-text">KangEngine Docs</span>
+  <span class="sidebar-brand-text">KangEngine — Animation and Simulation Engine</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -227,6 +231,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/animation/INDEX.html">Animation</a><input aria-label="Toggle navigation of Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/LOAD_MOTION.html">Load and Play Motion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/VISUALS.html">Pose Visualization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/animation/RETARGETING.html">Motion Retargeting</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/animation/SMPL.html">SMPL Models</a></li>
 </ul>
 </li>
@@ -240,6 +245,7 @@
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../guide/integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../guide/KELAB.html">KELab</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/NEWTON.html">Newton Viewer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
 </ul>
@@ -411,6 +417,7 @@ state visualization.</p>
 <dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">mesh_asset_base_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">target_coordinate_system</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'z_up_x_forward'</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">kangengine.animation.ArticulationVisual</span></span></span><a class="headerlink" href="#kangengine.visual.ArticulationVisual.from_mjcf" title="Link to this definition">¶</a></dt>
@@ -471,6 +478,19 @@ state visualization.</p>
 <li><p>set_joint_rotation(self: kangengine.animation.ArticulationVisual, index: int, rotation: glm::qua&lt;float, (glm::qualifier)0&gt;) -&gt; None</p></li>
 </ol>
 <p>Set a joint rotation from a quaternion.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulationVisual.set_pickable">
+<span class="sig-name descname"><span class="pre">set_pickable</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.animation.ArticulationVisual</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">pickable</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.visual.ArticulationVisual.set_pickable" title="Link to this definition">¶</a></dt>
+<dd><p>Set whether rendered geometry can be picked.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -540,6 +560,7 @@ state visualization.</p>
 <dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">target_coordinate_system</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'z_up_x_forward'</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">kangengine.animation.ArticulationVisualAsset</span></span></span><a class="headerlink" href="#kangengine.visual.ArticulationVisualAsset.from_mjcf" title="Link to this definition">¶</a></dt>
@@ -588,7 +609,8 @@ state visualization.</p>
 <dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'DFS'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'BFS'</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">target_coordinate_system</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">CoordinateSystem</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">CoordinateSystem.Z_UP_X_FORWARD</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.ArticulatedSurfaceAsset" title="kangengine.visual.articulated_surface.ArticulatedSurfaceAsset"><span class="pre">ArticulatedSurfaceAsset</span></a></span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurfaceAsset.from_mjcf" title="Link to this definition">¶</a></dt>
@@ -655,7 +677,8 @@ state visualization.</p>
 <dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="material.html#kangengine.material.Material" title="kangengine.material.Material"><span class="pre">Material</span></a></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'DFS'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'BFS'</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">target_coordinate_system</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">CoordinateSystem</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">CoordinateSystem.Z_UP_X_FORWARD</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><span class="pre">ArticulatedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurface.create_from_mjcf" title="Link to this definition">¶</a></dt>
@@ -816,6 +839,22 @@ state visualization.</p>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><span class="pre">ArticulatedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurface.set_casts_shadow" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArticulatedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulatedSurface.set_pickable">
+<span class="sig-name descname"><span class="pre">set_pickable</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">pickable</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><span class="pre">ArticulatedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurface.set_pickable" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArticulatedSurface</span></code></a></span></p>
@@ -1406,6 +1445,12 @@ dynamic bounds handling. It is not a supported cloth/soft-body visual API.</p>
 <dd></dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.SkinVisual.remove">
+<span class="sig-name descname"><span class="pre">remove</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.SkinVisual</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#kangengine.visual.SkinVisual.remove" title="Link to this definition">¶</a></dt>
+<dd><p>Remove all authored skin visual scene objects.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.SkinVisual.set_casts_shadow">
 <span class="sig-name descname"><span class="pre">set_casts_shadow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.SkinVisual</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enabled</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.visual.SkinVisual.set_casts_shadow" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
@@ -1414,6 +1459,12 @@ dynamic bounds handling. It is not a supported cloth/soft-body visual API.</p>
 <dt class="sig sig-object py" id="kangengine.visual.SkinVisual.set_color">
 <span class="sig-name descname"><span class="pre">set_color</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.SkinVisual</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.Vec4</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.visual.SkinVisual.set_color" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.SkinVisual.set_pickable">
+<span class="sig-name descname"><span class="pre">set_pickable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.SkinVisual</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pickable</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.visual.SkinVisual.set_pickable" title="Link to this definition">¶</a></dt>
+<dd><p>Choose whether ray picking can hit the skinned meshes.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.SkinVisual.set_visible">
@@ -1549,6 +1600,25 @@ dynamic bounds handling. It is not a supported cloth/soft-body visual API.</p>
 <dt class="sig sig-object py" id="kangengine.visual.SkeletalVisual.joint_handle">
 <span class="sig-name descname"><span class="pre">joint_handle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.animation.SkeletalVisual</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.visual.SkeletalVisual.joint_handle" title="Link to this definition">¶</a></dt>
 <dd><p>Return the renderable handle used for joints.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.SkeletalVisual.remove">
+<span class="sig-name descname"><span class="pre">remove</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.animation.SkeletalVisual</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#kangengine.visual.SkeletalVisual.remove" title="Link to this definition">¶</a></dt>
+<dd><p>Remove all authored skeleton visual scene objects.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.SkeletalVisual.set_pickable">
+<span class="sig-name descname"><span class="pre">set_pickable</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">self</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">kangengine.animation.SkeletalVisual</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">pickable</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.visual.SkeletalVisual.set_pickable" title="Link to this definition">¶</a></dt>
+<dd><p>Set whether skeleton geometry can be picked.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -2326,6 +2396,7 @@ exposed as <code class="docutils literal notranslate"><span class="pre">kangengi
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisual.render_prims"><code class="docutils literal notranslate"><span class="pre">ArticulationVisual.render_prims()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisual.reset_to_zero_pose"><code class="docutils literal notranslate"><span class="pre">ArticulationVisual.reset_to_zero_pose()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisual.set_joint_rotation"><code class="docutils literal notranslate"><span class="pre">ArticulationVisual.set_joint_rotation()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulationVisual.set_pickable"><code class="docutils literal notranslate"><span class="pre">ArticulationVisual.set_pickable()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisual.set_root_translation"><code class="docutils literal notranslate"><span class="pre">ArticulationVisual.set_root_translation()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisual.skeleton"><code class="docutils literal notranslate"><span class="pre">ArticulationVisual.skeleton()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisual.state"><code class="docutils literal notranslate"><span class="pre">ArticulationVisual.state()</span></code></a></li>
@@ -2358,6 +2429,7 @@ exposed as <code class="docutils literal notranslate"><span class="pre">kangengi
 <li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface.set_alpha"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface.set_alpha()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface.set_visible"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface.set_visible()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface.set_casts_shadow"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface.set_casts_shadow()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface.set_pickable"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface.set_pickable()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface.remove"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface.remove()</span></code></a></li>
 </ul>
 </li>
@@ -2415,8 +2487,10 @@ exposed as <code class="docutils literal notranslate"><span class="pre">kangengi
 <li><a class="reference internal" href="#kangengine.visual.SkinVisual.from_fbx"><code class="docutils literal notranslate"><span class="pre">SkinVisual.from_fbx()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.SkinVisual.motion"><code class="docutils literal notranslate"><span class="pre">SkinVisual.motion()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.SkinVisual.num_meshes"><code class="docutils literal notranslate"><span class="pre">SkinVisual.num_meshes()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinVisual.remove"><code class="docutils literal notranslate"><span class="pre">SkinVisual.remove()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.SkinVisual.set_casts_shadow"><code class="docutils literal notranslate"><span class="pre">SkinVisual.set_casts_shadow()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.SkinVisual.set_color"><code class="docutils literal notranslate"><span class="pre">SkinVisual.set_color()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkinVisual.set_pickable"><code class="docutils literal notranslate"><span class="pre">SkinVisual.set_pickable()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.SkinVisual.set_visible"><code class="docutils literal notranslate"><span class="pre">SkinVisual.set_visible()</span></code></a></li>
 </ul>
 </li>
@@ -2437,6 +2511,8 @@ exposed as <code class="docutils literal notranslate"><span class="pre">kangengi
 <li><a class="reference internal" href="#kangengine.visual.SkeletalVisual.bone_handle"><code class="docutils literal notranslate"><span class="pre">SkeletalVisual.bone_handle()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.SkeletalVisual.define"><code class="docutils literal notranslate"><span class="pre">SkeletalVisual.define()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.SkeletalVisual.joint_handle"><code class="docutils literal notranslate"><span class="pre">SkeletalVisual.joint_handle()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkeletalVisual.remove"><code class="docutils literal notranslate"><span class="pre">SkeletalVisual.remove()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.SkeletalVisual.set_pickable"><code class="docutils literal notranslate"><span class="pre">SkeletalVisual.set_pickable()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.SkeletalVisual.set_show_joints"><code class="docutils literal notranslate"><span class="pre">SkeletalVisual.set_show_joints()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.SkeletalVisual.set_visible"><code class="docutils literal notranslate"><span class="pre">SkeletalVisual.set_visible()</span></code></a></li>
 </ul>
