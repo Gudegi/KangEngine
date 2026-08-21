@@ -11,6 +11,7 @@ import numpy as np
 import torch
 
 from .._core import _ke
+from .coordinates import CoordinateSystem
 from ..utils.batched_rotations import (
     quat_wxyz_conjugate,
     quat_wxyz_multiply,
@@ -77,6 +78,10 @@ class RetargetConfig:
     translation_scale: float = 1.0
     source_skeleton: str = ""
     target_skeleton: str = ""
+    source_coordinate_system: str = CoordinateSystem.Y_UP_Z_FORWARD.value
+    target_coordinate_system: str = CoordinateSystem.Y_UP_Z_FORWARD.value
+    output_coordinate_system: str = CoordinateSystem.Y_UP_Z_FORWARD.value
+    source_has_armature_joint: bool = False
 
     def __post_init__(self) -> None:
         joint_map = {
@@ -104,6 +109,16 @@ class RetargetConfig:
         self.translation_scale = scale
         self.source_skeleton = str(self.source_skeleton)
         self.target_skeleton = str(self.target_skeleton)
+        self.source_coordinate_system = CoordinateSystem(
+            self.source_coordinate_system
+        ).value
+        self.target_coordinate_system = CoordinateSystem(
+            self.target_coordinate_system
+        ).value
+        self.output_coordinate_system = CoordinateSystem(
+            self.output_coordinate_system
+        ).value
+        self.source_has_armature_joint = bool(self.source_has_armature_joint)
 
     def to_dict(self) -> dict[str, object]:
         """Return the versioned JSON-compatible representation."""
@@ -111,6 +126,10 @@ class RetargetConfig:
             "version": 1,
             "source_skeleton": self.source_skeleton,
             "target_skeleton": self.target_skeleton,
+            "source_coordinate_system": self.source_coordinate_system,
+            "target_coordinate_system": self.target_coordinate_system,
+            "output_coordinate_system": self.output_coordinate_system,
+            "source_has_armature_joint": self.source_has_armature_joint,
             "joint_map": self.joint_map,
             "source_bind_local_wxyz": self.source_bind_local_wxyz,
             "target_bind_local_wxyz": self.target_bind_local_wxyz,
@@ -150,6 +169,18 @@ class RetargetConfig:
             translation_scale=float(data.get("translation_scale", 1.0)),
             source_skeleton=str(data.get("source_skeleton", "")),
             target_skeleton=str(data.get("target_skeleton", "")),
+            source_coordinate_system=str(
+                data.get("source_coordinate_system", "y_up_z_forward")
+            ),
+            target_coordinate_system=str(
+                data.get("target_coordinate_system", "y_up_z_forward")
+            ),
+            output_coordinate_system=str(
+                data.get("output_coordinate_system", "y_up_z_forward")
+            ),
+            source_has_armature_joint=bool(
+                data.get("source_has_armature_joint", False)
+            ),
         )
 
     @classmethod

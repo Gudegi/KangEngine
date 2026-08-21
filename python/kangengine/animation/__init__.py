@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .._core import _ke
 from .._public import export_public_module
+from .retarget_batch import RetargetBatchProcessor, RetargetBatchResult
 from .coordinates import (
     CoordinateSystem,
     convert_motion_coordinates,
@@ -18,6 +19,8 @@ __all__ = export_public_module(_ke.animation, globals())
 __all__ += [
     "CoordinateSystem",
     "RetargetConfig",
+    "RetargetBatchProcessor",
+    "RetargetBatchResult",
     "Retargeter",
     "convert_motion_coordinates",
     "convert_skeleton_coordinates",

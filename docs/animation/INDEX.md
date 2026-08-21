@@ -5,6 +5,7 @@ skeletons or skinned characters, and provides a motion sequencer panel.
 
 - [Load and Play Motion](LOAD_MOTION.md)
 - [Pose Visualization](VISUALS.md)
+- [Motion Retargeting](RETARGETING.md)
 - [SMPL Models](SMPL.md)
 
 All supported motion sources produce the same `ke.animation.SkeletonMotion`
