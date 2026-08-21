@@ -69,7 +69,10 @@ html_baseurl = "https://gudegi.github.io/KangEngine/"
 sitemap_url_scheme = "{link}"
 templates_path = ["_templates"]
 html_static_path = ["_static"]
-html_extra_path = ["robots.txt"]
+html_extra_path = [
+    "robots.txt",
+    "google90ea93bc97b66e82.html",
+]
 html_css_files = ["kangengine.css"]
 html_js_files = ["kangengine-toc.js"]
 html_context = {
