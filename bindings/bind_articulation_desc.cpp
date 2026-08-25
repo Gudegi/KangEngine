@@ -176,6 +176,8 @@ void bind_articulation_desc(py::module& m) {
         "joint, and site payloads.")
         .def_readonly("skeleton_tree", &ArticulationDesc::skeletonTree,
                       "Imported skeleton hierarchy.")
+        .def_readonly("traversal_order", &ArticulationDesc::traversalOrder,
+                      "Body traversal order used by the imported model.")
         .def_readonly("visual_geoms", &ArticulationDesc::visualGeoms,
                       "Visual mesh descriptions.")
         .def_readonly("asset_dir", &ArticulationDesc::assetDir,

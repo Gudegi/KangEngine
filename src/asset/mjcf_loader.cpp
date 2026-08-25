@@ -949,6 +949,7 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
     }
     _data.skeletonTree =
         std::make_shared<const SkeletonTree>(std::move(skelTree));
+    _data.traversalOrder = order;
 }
 
 MJCFImportResult

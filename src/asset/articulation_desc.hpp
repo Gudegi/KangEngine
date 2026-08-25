@@ -127,6 +127,9 @@ using CollisionGeomDescMap = std::unordered_map<int, std::vector<CollisionGeomDe
 
 struct ArticulationDesc {
     std::shared_ptr<const Animation::SkeletonTree> skeletonTree;
+    // Body/joint traversal used to construct skeletonTree. MJCF currently
+    // supports only "BFS" and "DFS".
+    std::string traversalOrder;
     std::vector<VisualGeomDesc> visualGeoms;
     std::string assetDir;
     JointDescMap joints;

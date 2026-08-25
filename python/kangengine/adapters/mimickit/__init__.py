@@ -7,6 +7,7 @@ from .engine import (
     build_engine,
     install_mimickit_engine_builder,
 )
+from .motion import load_articulation_motion
 
 __all__ = [
     "KangEngineEngine",
@@ -14,4 +15,5 @@ __all__ = [
     "MimicObjType",
     "build_engine",
     "install_mimickit_engine_builder",
+    "load_articulation_motion",
 ]

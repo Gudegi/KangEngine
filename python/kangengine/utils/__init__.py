@@ -21,6 +21,11 @@ from .joint_mapping import (
 )
 from .math import (
     normalize_vector,
+    quat_wxyz_from_rotation_vector_numpy,
+    quat_wxyz_multiply_numpy,
+    quat_wxyz_rotate_numpy,
+    quat_wxyz_slerp_numpy,
+    quat_wxyz_to_rotation_vector_numpy,
     quat_wxyz_to_xyzw,
     quat_wxyz_twist_angle,
     quat_xyzw_conjugate,
@@ -28,6 +33,7 @@ from .math import (
     quat_xyzw_multiply,
     quat_xyzw_normalize,
     quat_xyzw_rotate,
+    quat_xyzw_to_wxyz,
 )
 
 
@@ -79,6 +85,7 @@ _LAZY_IMPORTS = {
         ".batched_rotations",
         "quat_wxyz_rotate_inverse",
     ),
+    "quat_wxyz_slerp": (".batched_rotations", "quat_wxyz_slerp"),
     "quat_wxyz_to_matrix": (".batched_rotations", "quat_wxyz_to_matrix"),
     "quat_wxyz_to_tangent_normal": (
         ".batched_rotations",
@@ -146,6 +153,9 @@ __all__ = [
     "MIXAMO",
     "normalize_joint_name",
     "normalize_vector",
+    "quat_wxyz_from_rotation_vector_numpy",
+    "quat_wxyz_multiply_numpy",
+    "quat_wxyz_to_rotation_vector_numpy",
     "as_cpu_numpy",
     "as_sim_buffer",
     "as_tensor",
@@ -163,6 +173,7 @@ __all__ = [
     "quat_wxyz_normalize",
     "quat_wxyz_rotate",
     "quat_wxyz_rotate_inverse",
+    "quat_wxyz_slerp",
     "quat_wxyz_to_matrix",
     "quat_wxyz_to_tangent_normal",
     "matrix_to_rotation_6d",
@@ -177,6 +188,9 @@ __all__ = [
     "quat_xyzw_to_tangent_normal",
     "rotation_6d_to_matrix",
     "quat_wxyz_to_xyzw",
+    "quat_xyzw_to_wxyz",
+    "quat_wxyz_rotate_numpy",
+    "quat_wxyz_slerp_numpy",
     "quat_wxyz_twist_angle",
     "quat_xyzw_conjugate",
     "quat_xyzw_from_two_vectors",

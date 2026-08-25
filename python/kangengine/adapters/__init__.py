@@ -2,7 +2,7 @@
 
 from importlib import import_module
 
-__all__ = ["mimickit", "newton"]
+__all__ = ["mimickit", "mujoco", "newton", "physx"]
 
 
 def __getattr__(name):

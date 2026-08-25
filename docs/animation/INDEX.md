@@ -4,6 +4,7 @@ KangEngine can load BVH, FBX, and AMASS motion, evaluates skeleton poses, displa
 skeletons or skinned characters, and provides a motion sequencer panel.
 
 - [Load and Play Motion](LOAD_MOTION.md)
+- [Articulation Motion](ARTICULATION_MOTION.md)
 - [Pose Visualization](VISUALS.md)
 - [Motion Retargeting](RETARGETING.md)
 - [SMPL Models](SMPL.md)

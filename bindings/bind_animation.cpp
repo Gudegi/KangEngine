@@ -13,6 +13,8 @@
 #include "py_array_view.hpp"
 
 #include "asset/articulation_desc.hpp"
+#include "animation/articulation_motion.hpp"
+#include "animation/articulation_motion_mapper.hpp"
 #include "animation/skeleton_math.hpp"
 #include "animation/full_body_ik.hpp"
 #include "animation/skeleton_motion.hpp"
@@ -339,11 +341,154 @@ std::vector<Eigen::Matrix4f> eigenMat4ArrayFromPy(const FloatArray& array,
     return result;
 }
 
+py::array_t<float>
+articulationMotionArray(KE::Animation::ArticulationMotion& motion,
+                        bool velocity) {
+    std::vector<float>& values = velocity ? motion.qdFlat() : motion.qFlat();
+    const py::ssize_t frames = motion.numFrames();
+    const py::ssize_t width =
+        velocity ? motion.layout().nv() : motion.layout().nq();
+    py::object owner = py::cast(&motion, py::return_value_policy::reference);
+    return py::array_t<float>({frames, width},
+                              {static_cast<py::ssize_t>(sizeof(float)) * width,
+                               static_cast<py::ssize_t>(sizeof(float))},
+                              values.data(), owner);
+}
+
 } // namespace
 
 void bind_animation(py::module& m) {
     py::module anim = m.def_submodule(
         "animation", "Skeleton animation, skinning, and visualization APIs.");
+
+    py::enum_<ArticulationCoordinateType>(anim,
+                                          "ArticulationCoordinateType")
+        .value("FIXED", ArticulationCoordinateType::Fixed)
+        .value("REVOLUTE", ArticulationCoordinateType::Revolute)
+        .value("PRISMATIC", ArticulationCoordinateType::Prismatic)
+        .value("SPHERICAL", ArticulationCoordinateType::Spherical)
+        .value("FREE", ArticulationCoordinateType::Free);
+
+    py::class_<ArticulationCoordinateBlock>(anim,
+                                            "ArticulationCoordinateBlock")
+        .def_readonly("body_index", &ArticulationCoordinateBlock::bodyIndex)
+        .def_readonly("parent_body_index",
+                      &ArticulationCoordinateBlock::parentBodyIndex)
+        .def_readonly("joint_index_in_body",
+                      &ArticulationCoordinateBlock::jointIndexInBody)
+        .def_readonly("body_name", &ArticulationCoordinateBlock::bodyName)
+        .def_readonly("joint_name", &ArticulationCoordinateBlock::jointName)
+        .def_readonly("type", &ArticulationCoordinateBlock::type)
+        .def_property_readonly("axis",
+                               [](const ArticulationCoordinateBlock& block) {
+                                   return KE::Animation::toGlm(block.axis);
+                               })
+        .def_property_readonly("reference_translation",
+                               [](const ArticulationCoordinateBlock& block) {
+                                   return KE::Animation::toGlm(
+                                       block.referenceTranslation);
+                               })
+        .def_property_readonly("reference_rotation",
+                               [](const ArticulationCoordinateBlock& block) {
+                                   return KE::Animation::toGlm(
+                                       block.referenceRotation);
+                               })
+        .def_readonly("lower_limit", &ArticulationCoordinateBlock::lowerLimit)
+        .def_readonly("upper_limit", &ArticulationCoordinateBlock::upperLimit)
+        .def_readonly("q_offset", &ArticulationCoordinateBlock::qOffset)
+        .def_readonly("q_size", &ArticulationCoordinateBlock::qSize)
+        .def_readonly("qd_offset", &ArticulationCoordinateBlock::qdOffset)
+        .def_readonly("qd_size", &ArticulationCoordinateBlock::qdSize);
+
+    py::class_<ArticulationCoordinateLayout>(anim,
+                                             "ArticulationCoordinateLayout")
+        .def_static("from_data", &ArticulationCoordinateLayout::fromData,
+                    py::arg("data"), py::arg("free_root") = false)
+        .def_property_readonly("nq", &ArticulationCoordinateLayout::nq)
+        .def_property_readonly("nv", &ArticulationCoordinateLayout::nv)
+        .def_property_readonly("has_free_root",
+                               &ArticulationCoordinateLayout::hasFreeRoot)
+        .def_property_readonly("traversal_order",
+                               &ArticulationCoordinateLayout::traversalOrder)
+        .def_property_readonly("model_signature",
+                               &ArticulationCoordinateLayout::modelSignature)
+        .def_property_readonly("blocks", &ArticulationCoordinateLayout::blocks);
+
+    py::class_<ArticulationMappingResult>(anim,
+                                          "ArticulationMappingResult")
+        .def_readonly("q", &ArticulationMappingResult::q)
+        .def_readonly("residual_angles",
+                      &ArticulationMappingResult::residualAngles);
+
+    py::class_<ArticulationMotionMappingResult>(
+        anim, "ArticulationMotionMappingResult")
+        .def_readonly("motion", &ArticulationMotionMappingResult::motion)
+        .def_readonly("residual_angles",
+                      &ArticulationMotionMappingResult::residualAngles);
+
+    py::class_<ArticulationMotionMapper>(anim,
+                                         "ArticulationMotionMapper")
+        .def(py::init<ArticulationCoordinateLayout>(), py::arg("layout"))
+        .def("to_articulation_coordinates",
+             &ArticulationMotionMapper::toArticulationCoordinates,
+             py::arg("state"), py::arg("clamp_to_limits") = false)
+        .def(
+            "to_skeleton_state",
+            [](const ArticulationMotionMapper& mapper, const FloatArray& q) {
+                const py::buffer_info info = q.request();
+                if (info.ndim != 1)
+                    throw py::value_error("q expected shape [layout.nq]");
+                const auto* data = static_cast<const float*>(info.ptr);
+                return mapper.toSkeletonState(
+                    std::vector<float>(data, data + info.size));
+            },
+            py::arg("q"))
+        .def("to_articulation_motion",
+             &ArticulationMotionMapper::toArticulationMotion, py::arg("motion"),
+             py::arg("clamp_to_limits") = false)
+        .def("to_skeleton_motion", &ArticulationMotionMapper::toSkeletonMotion,
+             py::arg("motion"))
+        .def_property_readonly("layout", &ArticulationMotionMapper::layout,
+                               py::return_value_policy::reference_internal);
+
+    py::class_<ArticulationMotion>(anim, "ArticulationMotion")
+        .def_static(
+            "from_arrays",
+            [](const ArticulationCoordinateLayout& layout, const FloatArray& q,
+               const FloatArray& qd, float fps, std::string motionName) {
+                const py::buffer_info qInfo = q.request();
+                const py::buffer_info qdInfo = qd.request();
+                if (qInfo.ndim != 2 || qInfo.shape[1] != layout.nq())
+                    throw py::value_error(
+                        "q expected shape [frames, layout.nq]");
+                if (qdInfo.ndim != 2 || qdInfo.shape[0] != qInfo.shape[0] ||
+                    qdInfo.shape[1] != layout.nv())
+                    throw py::value_error(
+                        "qd expected shape [frames, layout.nv]");
+                const auto* qData = static_cast<const float*>(qInfo.ptr);
+                const auto* qdData = static_cast<const float*>(qdInfo.ptr);
+                return ArticulationMotion(
+                    layout, static_cast<int>(qInfo.shape[0]), fps,
+                    std::move(motionName),
+                    std::vector<float>(qData, qData + qInfo.size),
+                    std::vector<float>(qdData, qdData + qdInfo.size));
+            },
+            py::arg("layout"), py::arg("q"), py::arg("qd"), py::arg("fps"),
+            py::arg("motion_name") = "Motion")
+        .def("num_frames", &ArticulationMotion::numFrames)
+        .def("fps", &ArticulationMotion::fps)
+        .def("duration", &ArticulationMotion::duration)
+        .def("motion_name", &ArticulationMotion::motionName)
+        .def_property_readonly("layout", &ArticulationMotion::layout,
+                               py::return_value_policy::reference_internal)
+        .def_property_readonly("q",
+                               [](ArticulationMotion& motion) {
+                                   return articulationMotionArray(motion,
+                                                                  false);
+                               })
+        .def_property_readonly("qd", [](ArticulationMotion& motion) {
+            return articulationMotionArray(motion, true);
+        });
 
     anim.def(
         "cpu_skin",

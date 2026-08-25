@@ -57,15 +57,15 @@ py::dict cudaArrayInterface(const KE::Sim::GpuArrayView& view) {
     result["version"] = 3;
     result["shape"] = intVectorTuple(view.shape);
     result["typestr"] = typestr;
-    result["data"] = py::make_tuple(
-        reinterpret_cast<uintptr_t>(view.data), false);
+    result["data"] =
+        py::make_tuple(reinterpret_cast<uintptr_t>(view.data), false);
 
     if (!view.strides.empty()) {
         py::tuple strides(view.strides.size());
         size_t itemSize = KE::Sim::simDTypeSize(view.dtype);
         for (size_t i = 0; i < view.strides.size(); ++i)
-            strides[i] = static_cast<int64_t>(
-                view.strides[i] * static_cast<int64_t>(itemSize));
+            strides[i] = static_cast<int64_t>(view.strides[i] *
+                                              static_cast<int64_t>(itemSize));
         result["strides"] = strides;
     }
     if (view.streamHandle != 0)
@@ -153,13 +153,12 @@ void bind_sim(py::module& m) {
                 }
                 PyObject* retained = owner.ptr();
                 Py_INCREF(retained);
-                self.owner = std::shared_ptr<void>(
-                    retained, [](void* value) {
-                        if (!value || !Py_IsInitialized())
-                            return;
-                        py::gil_scoped_acquire gil;
-                        Py_DECREF(reinterpret_cast<PyObject*>(value));
-                    });
+                self.owner = std::shared_ptr<void>(retained, [](void* value) {
+                    if (!value || !Py_IsInitialized())
+                        return;
+                    py::gil_scoped_acquire gil;
+                    Py_DECREF(reinterpret_cast<PyObject*>(value));
+                });
             },
             py::arg("owner"),
             "Keep a Python buffer owner alive with this metadata view.")
@@ -169,8 +168,7 @@ void bind_sim(py::module& m) {
         .def_property_readonly("is_cpu", &GpuArrayView::isCpu)
         .def_property_readonly("numel", &GpuArrayView::numel)
         .def_property_readonly("byte_size", &GpuArrayView::byteSize)
-        .def_property_readonly("__cuda_array_interface__",
-                               &cudaArrayInterface)
+        .def_property_readonly("__cuda_array_interface__", &cudaArrayInterface)
         .def("torch", &gpuArrayViewTorch,
              "Return a zero-copy Torch CUDA tensor view of this buffer.");
 
@@ -181,16 +179,14 @@ void bind_sim(py::module& m) {
           "Gather selected rigid state rows into CUDA Mat4 transforms.");
     m.def("articulation_link_state_to_mat4_cuda",
           &launchArticulationLinkStateToMat4CUDA,
-          py::arg("articulation_link_state"),
-          py::arg("articulation_rows"), py::arg("link_indices"),
-          py::arg("transforms"), py::arg("link_count"),
+          py::arg("articulation_link_state"), py::arg("articulation_rows"),
+          py::arg("link_indices"), py::arg("transforms"), py::arg("link_count"),
           "Gather articulation link state into link-major CUDA Mat4 "
           "transforms.");
     m.def("articulation_link_state_to_mapped_mat4_cuda",
           &launchArticulationLinkStateToMappedMat4CUDA,
-          py::arg("articulation_link_state"),
-          py::arg("articulation_rows"), py::arg("link_indices"),
-          py::arg("mapped_transforms"),
+          py::arg("articulation_link_state"), py::arg("articulation_rows"),
+          py::arg("link_indices"), py::arg("mapped_transforms"),
           "Write articulation link transforms directly into mapped graphics "
           "buffers.");
 #endif
@@ -204,24 +200,24 @@ void bind_sim(py::module& m) {
              py::arg("renderable_handles"),
              "Compatibility helper for one shape per body. Expects internal "
              "renderable handles from low-level renderer paths.")
-        .def("add_shape",
-             [](KE::SimModel& self, int bodyId, KE::RenderableHandle renderable,
-                py::sequence localPos, py::sequence localRot,
-                const std::string& name) {
-                 return self.addShape(bodyId, renderable,
-                                      vec3FromSequence(localPos),
-                                      quatFromXYZWSequence(localRot), name);
-             },
-             py::arg("body_id"), py::arg("renderable_handle"),
-             py::arg("local_pos") = py::make_tuple(0.0f, 0.0f, 0.0f),
-             py::arg("local_rot") = py::make_tuple(0.0f, 0.0f, 0.0f, 1.0f),
-             py::arg("name") = "",
-             "Add one shape-to-renderable mapping for native visual batches. "
-             "Regular scene objects should be authored through app.scene "
-             "instead.")
+        .def(
+            "add_shape",
+            [](KE::SimModel& self, int bodyId, KE::RenderableHandle renderable,
+               py::sequence localPos, py::sequence localRot,
+               const std::string& name) {
+                return self.addShape(bodyId, renderable,
+                                     vec3FromSequence(localPos),
+                                     quatFromXYZWSequence(localRot), name);
+            },
+            py::arg("body_id"), py::arg("renderable_handle"),
+            py::arg("local_pos") = py::make_tuple(0.0f, 0.0f, 0.0f),
+            py::arg("local_rot") = py::make_tuple(0.0f, 0.0f, 0.0f, 1.0f),
+            py::arg("name") = "",
+            "Add one shape-to-renderable mapping for native visual batches. "
+            "Regular scene objects should be authored through app.scene "
+            "instead.")
         .def("add_object_boundary", &KE::SimModel::addObjectBoundary,
-             py::arg("body_start"), py::arg("body_count"),
-             py::arg("name") = "")
+             py::arg("body_start"), py::arg("body_count"), py::arg("name") = "")
         .def_property_readonly("body_count", &KE::SimModel::bodyCount)
         .def_property_readonly("shape_count", &KE::SimModel::shapeCount)
         .def("is_valid", &KE::SimModel::isValid)
@@ -235,14 +231,15 @@ void bind_sim(py::module& m) {
         .def(py::init<>())
         .def("resize", &KE::SimState::resize)
         .def("body_index", &KE::SimState::bodyIndex)
-        .def("set_body_transform",
-             [](KE::SimState& self, int envId, int bodyId, py::sequence pos,
-                py::sequence rot) {
-                 self.setBodyTransform(envId, bodyId, vec3FromSequence(pos),
-                                       quatFromXYZWSequence(rot));
-             },
-             py::arg("env_id"), py::arg("body_id"), py::arg("pos"),
-             py::arg("rot"))
+        .def(
+            "set_body_transform",
+            [](KE::SimState& self, int envId, int bodyId, py::sequence pos,
+               py::sequence rot) {
+                self.setBodyTransform(envId, bodyId, vec3FromSequence(pos),
+                                      quatFromXYZWSequence(rot));
+            },
+            py::arg("env_id"), py::arg("body_id"), py::arg("pos"),
+            py::arg("rot"))
         .def("get_body_pos",
              [](const KE::SimState& self, int envId, int bodyId) {
                  return vec3Tuple(self.bodyPos[static_cast<size_t>(
@@ -274,15 +271,14 @@ void bind_sim(py::module& m) {
         .def("prepare_from_state", &KE::SimVisualBatch::prepareFromState)
         .def_property_readonly("renderable_count",
                                &KE::SimVisualBatch::renderableCount)
-        .def("renderable", &KE::SimVisualBatch::renderable,
-             py::arg("shape_id"),
+        .def("renderable", &KE::SimVisualBatch::renderable, py::arg("shape_id"),
              "Return the internal renderable handle for a native batch shape.")
         .def("transforms",
              [](const KE::SimVisualBatch& self, int shapeId) {
                  return mat4List(self.transforms(shapeId));
              })
         .def("external_transform_desc",
-             &KE::SimVisualBatch::externalTransformDesc,
-             py::arg("shape_id"), py::arg("version"),
+             &KE::SimVisualBatch::externalTransformDesc, py::arg("shape_id"),
+             py::arg("version"),
              py::arg("name") = "sim_visual_batch_transforms");
 }

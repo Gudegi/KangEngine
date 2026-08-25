@@ -18,6 +18,31 @@ def quat_wxyz_normalize(quat: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
     return torch.where(norm >= eps, normalized, identity)
 
 
+def quat_wxyz_slerp(
+    first: torch.Tensor,
+    second: torch.Tensor,
+    blend: torch.Tensor,
+) -> torch.Tensor:
+    """Slerp broadcast-compatible wxyz quaternion batches."""
+    _require_last_dim(first, 4, "first")
+    _require_last_dim(second, 4, "second")
+    first, second = torch.broadcast_tensors(first, second)
+    blend = torch.as_tensor(blend, dtype=first.dtype, device=first.device)
+    blend = torch.broadcast_to(blend, first.shape[:-1]).unsqueeze(-1)
+    dot = torch.sum(first * second, dim=-1, keepdim=True)
+    second = torch.where(dot < 0.0, -second, second)
+    dot = dot.abs().clamp(0.0, 1.0)
+    theta = torch.acos(dot)
+    sin_theta = torch.sin(theta)
+    denominator = sin_theta.clamp_min(1e-8)
+    first_weight = torch.sin((1.0 - blend) * theta) / denominator
+    second_weight = torch.sin(blend * theta) / denominator
+    close = sin_theta < 1e-6
+    first_weight = torch.where(close, 1.0 - blend, first_weight)
+    second_weight = torch.where(close, blend, second_weight)
+    return quat_wxyz_normalize(first_weight * first + second_weight * second)
+
+
 def quat_wxyz_multiply(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     """Multiply broadcast-compatible wxyz quaternion batches."""
     _require_last_dim(a, 4, "a")
@@ -40,6 +65,17 @@ def quat_wxyz_conjugate(quat: torch.Tensor) -> torch.Tensor:
     """Return the conjugate of wxyz quaternion batches."""
     _require_last_dim(quat, 4, "quat")
     return torch.cat((quat[..., :1], -quat[..., 1:]), dim=-1)
+
+
+def quat_wxyz_to_rotation_vector(quat: torch.Tensor) -> torch.Tensor:
+    """Convert normalized WXYZ quaternion batches to exponential-map vectors."""
+
+    quat = quat_wxyz_normalize(quat)
+    quat = torch.where(quat[..., :1] < 0.0, -quat, quat)
+    sin_half = torch.linalg.vector_norm(quat[..., 1:], dim=-1, keepdim=True)
+    angle = 2.0 * torch.atan2(sin_half, quat[..., :1])
+    scale = torch.where(sin_half > 1e-8, angle / sin_half, torch.full_like(angle, 2.0))
+    return quat[..., 1:] * scale
 
 
 def quat_wxyz_rotate(quat: torch.Tensor, vector: torch.Tensor) -> torch.Tensor:
@@ -95,9 +131,7 @@ def quat_wxyz_heading_xz(quat: torch.Tensor) -> torch.Tensor:
     return torch.atan2(direction[..., 2], direction[..., 0])
 
 
-def _heading_quat_wxyz(
-    quat: torch.Tensor, plane: str, inverse: bool
-) -> torch.Tensor:
+def _heading_quat_wxyz(quat: torch.Tensor, plane: str, inverse: bool) -> torch.Tensor:
     if plane == "xy":
         angle = quat_wxyz_heading_xy(quat)
         axis_index = 2
@@ -166,30 +200,46 @@ def matrix_to_quat_wxyz(matrix: torch.Tensor) -> torch.Tensor:
         trace = torch.trace(value)
         if trace > 0:
             scale = torch.sqrt(trace + 1.0) * 2.0
-            quat = torch.stack((0.25 * scale,
-                                (value[2, 1] - value[1, 2]) / scale,
-                                (value[0, 2] - value[2, 0]) / scale,
-                                (value[1, 0] - value[0, 1]) / scale))
+            quat = torch.stack(
+                (
+                    0.25 * scale,
+                    (value[2, 1] - value[1, 2]) / scale,
+                    (value[0, 2] - value[2, 0]) / scale,
+                    (value[1, 0] - value[0, 1]) / scale,
+                )
+            )
         else:
             index = int(torch.argmax(torch.diagonal(value)))
             if index == 0:
                 scale = torch.sqrt(1.0 + value[0, 0] - value[1, 1] - value[2, 2]) * 2.0
-                quat = torch.stack(((value[2, 1] - value[1, 2]) / scale,
-                                    0.25 * scale,
-                                    (value[0, 1] + value[1, 0]) / scale,
-                                    (value[0, 2] + value[2, 0]) / scale))
+                quat = torch.stack(
+                    (
+                        (value[2, 1] - value[1, 2]) / scale,
+                        0.25 * scale,
+                        (value[0, 1] + value[1, 0]) / scale,
+                        (value[0, 2] + value[2, 0]) / scale,
+                    )
+                )
             elif index == 1:
                 scale = torch.sqrt(1.0 + value[1, 1] - value[0, 0] - value[2, 2]) * 2.0
-                quat = torch.stack(((value[0, 2] - value[2, 0]) / scale,
-                                    (value[0, 1] + value[1, 0]) / scale,
-                                    0.25 * scale,
-                                    (value[1, 2] + value[2, 1]) / scale))
+                quat = torch.stack(
+                    (
+                        (value[0, 2] - value[2, 0]) / scale,
+                        (value[0, 1] + value[1, 0]) / scale,
+                        0.25 * scale,
+                        (value[1, 2] + value[2, 1]) / scale,
+                    )
+                )
             else:
                 scale = torch.sqrt(1.0 + value[2, 2] - value[0, 0] - value[1, 1]) * 2.0
-                quat = torch.stack(((value[1, 0] - value[0, 1]) / scale,
-                                    (value[0, 2] + value[2, 0]) / scale,
-                                    (value[1, 2] + value[2, 1]) / scale,
-                                    0.25 * scale))
+                quat = torch.stack(
+                    (
+                        (value[1, 0] - value[0, 1]) / scale,
+                        (value[0, 2] + value[2, 0]) / scale,
+                        (value[1, 2] + value[2, 1]) / scale,
+                        0.25 * scale,
+                    )
+                )
         result.append(quat_wxyz_normalize(quat))
     return torch.stack(result).reshape(matrix.shape[:-2] + (4,))
 
@@ -240,16 +290,12 @@ def quat_xyzw_rotate(quat: torch.Tensor, vector: torch.Tensor) -> torch.Tensor:
     return vector + w * t + torch.cross(xyz, t, dim=-1)
 
 
-def quat_xyzw_rotate_inverse(
-    quat: torch.Tensor, vector: torch.Tensor
-) -> torch.Tensor:
+def quat_xyzw_rotate_inverse(quat: torch.Tensor, vector: torch.Tensor) -> torch.Tensor:
     """Rotate vectors by the inverse of normalized XYZW quaternions."""
     return quat_xyzw_rotate(quat_xyzw_conjugate(quat), vector)
 
 
-def quat_xyzw_from_angle_axis(
-    angle: torch.Tensor, axis: torch.Tensor
-) -> torch.Tensor:
+def quat_xyzw_from_angle_axis(angle: torch.Tensor, axis: torch.Tensor) -> torch.Tensor:
     """Build normalized XYZW quaternions from angles and axes."""
     _require_last_dim(axis, 3, "axis")
     norm = torch.linalg.vector_norm(axis, dim=-1, keepdim=True)
@@ -287,9 +333,7 @@ def quat_xyzw_heading_xz(quat: torch.Tensor) -> torch.Tensor:
     return torch.atan2(direction[..., 2], direction[..., 0])
 
 
-def _heading_quat_xyzw(
-    quat: torch.Tensor, plane: str, inverse: bool
-) -> torch.Tensor:
+def _heading_quat_xyzw(quat: torch.Tensor, plane: str, inverse: bool) -> torch.Tensor:
     if plane == "xy":
         angle = quat_xyzw_heading_xy(quat)
         axis_index = 2
