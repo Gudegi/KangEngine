@@ -3,12 +3,12 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Animation" href="../animation/INDEX.html"><link rel="prev" title="Simulation Visualization" href="VISUALIZATION.html">
-        <link rel="canonical" href="https://gudegi.github.io/KangEngine/guide/simulation/RUN_MODES.html">
+<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Multi-Environment Simulation" href="MULTI_ENV.html"><link rel="prev" title="Control DOFs" href="DOF_CONTROL.html">
+        <link rel="canonical" href="https://gudegi.github.io/KangEngine/guide/simulation/ARTICULATION_MOTION.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
 
-<title>Simulation Run Modes — KangEngine</title>
+<title>Articulation Motion — KangEngine</title>
 
 <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
@@ -223,16 +223,16 @@
 <li class="toctree-l3"><a class="reference internal" href="FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
 <li class="toctree-l3"><a class="reference internal" href="MJCF_ARTICULATION.html">Load an MJCF Articulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="DOF_CONTROL.html">Control DOFs</a></li>
+<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Articulation Motion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="MULTI_ENV.html">Multi-Environment Simulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
 <li class="toctree-l3"><a class="reference internal" href="CONTACT_SENSORS.html">Contact Sensors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="VISUALIZATION.html">Simulation Visualization</a></li>
-<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Simulation Run Modes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="RUN_MODES.html">Simulation Run Modes</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../animation/INDEX.html">Animation</a><input aria-label="Toggle navigation of Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../animation/LOAD_MOTION.html">Load and Play Motion</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../animation/ARTICULATION_MOTION.html">Articulation Motion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../animation/VISUALS.html">Pose Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../animation/RETARGETING.html">Motion Retargeting</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../animation/SMPL.html">SMPL Models</a></li>
@@ -315,7 +315,7 @@
   </a>
 </div>
 <div class="view-this-page">
-  <a class="muted-link" href="../../_sources/guide/simulation/RUN_MODES.md.txt" title="View this page">
+  <a class="muted-link" href="../../_sources/guide/simulation/ARTICULATION_MOTION.md.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -332,123 +332,198 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="simulation-run-modes">
-<h1>Simulation Run Modes<a class="headerlink" href="#simulation-run-modes" title="Link to this heading">¶</a></h1>
-<p><code class="docutils literal notranslate"><span class="pre">SimulationTimingConfig</span></code> defines rates and time intervals. <code class="docutils literal notranslate"><span class="pre">SimulationRunConfig</span></code>
-defines how an externally stepped loop relates those intervals to wall time.
-The supported run modes are:</p>
-<div class="table-wrapper colwidths-auto docutils container">
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>Mode</p></th>
-<th class="head"><p>Rendering</p></th>
-<th class="head"><p>Wall-clock wait</p></th>
-<th class="head"><p>Catch-up</p></th>
-<th class="head"><p>Primary use</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">HEADLESS_FAST</span></code></p></td>
-<td><p>Disabled</p></td>
-<td><p>No</p></td>
-<td><p>No</p></td>
-<td><p>RL training and benchmarks</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">OFFSCREEN_FAST</span></code></p></td>
-<td><p>Offscreen, on request</p></td>
-<td><p>No</p></td>
-<td><p>No</p></td>
-<td><p>Image capture, evaluation, and datasets</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">PACED</span></code></p></td>
-<td><p>Human window</p></td>
-<td><p>Yes</p></td>
-<td><p>No</p></td>
-<td><p>Wall-clock-paced policy playback (real-time pace)</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<p><strong>Wall-clock wait</strong> means that a step finishing faster than its configured
-<code class="docutils literal notranslate"><span class="pre">step_dt</span></code> waits for the remaining real-world time. <strong>Catch-up</strong> means executing
-multiple steps after a delay to recover the difference between simulation time
-and wall-clock time. PACED waits when it is ahead but does not catch up when it
-falls behind.</p>
-<p>Create an explicit policy with:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">run_config</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">SimulationRunConfig</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;paced&quot;</span><span class="p">)</span>
+          <section id="articulation-motion">
+<h1>Articulation Motion<a class="headerlink" href="#articulation-motion" title="Link to this heading">¶</a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code> stores character poses as root translation and local joint
+quaternions. <code class="docutils literal notranslate"><span class="pre">ArticulationMotion</span></code> stores the same motion in an articulation’s
+canonical configuration (<code class="docutils literal notranslate"><span class="pre">q</span></code>) and tangent velocity (<code class="docutils literal notranslate"><span class="pre">qd</span></code>) layout.</p>
+<p>Use this conversion when preparing animation data for robot control, motion
+tracking, or simulation datasets.</p>
+<section id="convert-a-motion">
+<h2>Convert a motion<a class="headerlink" href="#convert-a-motion" title="Link to this heading">¶</a></h2>
+<p>Build the layout from the same <code class="docutils literal notranslate"><span class="pre">ArticulationDesc</span></code> used by the simulator. The
+layout preserves the loader’s BFS or DFS body order.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ke</span>
+
+<span class="n">data</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">MJCFLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">mjcf_path</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s2">&quot;DFS&quot;</span><span class="p">)</span>
+<span class="n">layout</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">ArticulationCoordinateLayout</span><span class="o">.</span><span class="n">from_data</span><span class="p">(</span>
+    <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+    <span class="n">free_root</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">mapper</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">ArticulationMotionMapper</span><span class="p">(</span><span class="n">layout</span><span class="p">)</span>
+
+<span class="n">result</span> <span class="o">=</span> <span class="n">mapper</span><span class="o">.</span><span class="n">to_articulation_motion</span><span class="p">(</span><span class="n">skeleton_motion</span><span class="p">)</span>
+<span class="n">articulation_motion</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">motion</span>
+
+<span class="n">q</span> <span class="o">=</span> <span class="n">articulation_motion</span><span class="o">.</span><span class="n">q</span>    <span class="c1"># [frames, layout.nq], float32 NumPy view</span>
+<span class="n">qd</span> <span class="o">=</span> <span class="n">articulation_motion</span><span class="o">.</span><span class="n">qd</span>  <span class="c1"># [frames, layout.nv], float32 NumPy view</span>
 </pre></div>
 </div>
-<section id="kelab-defaults">
-<h2>KELab defaults<a class="headerlink" href="#kelab-defaults" title="Link to this heading">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">DirectRLEnv</span></code> chooses a mode from Gym’s <code class="docutils literal notranslate"><span class="pre">render_mode</span></code> when no explicit
-<code class="docutils literal notranslate"><span class="pre">run_config</span></code> is supplied:</p>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>render_mode=None          -&gt; HEADLESS_FAST
-render_mode=&quot;human&quot;       -&gt; PACED
-render_mode=&quot;rgb_array&quot;   -&gt; OFFSCREEN_FAST
-</pre></div>
-</div>
-<p>Each mode has one rendering configuration. <code class="docutils literal notranslate"><span class="pre">HEADLESS_FAST</span></code> requires
-<code class="docutils literal notranslate"><span class="pre">render_mode=None</span></code>, <code class="docutils literal notranslate"><span class="pre">OFFSCREEN_FAST</span></code> requires <code class="docutils literal notranslate"><span class="pre">render_mode=&quot;rgb_array&quot;</span></code>, and
-<code class="docutils literal notranslate"><span class="pre">PACED</span></code> requires <code class="docutils literal notranslate"><span class="pre">render_mode=&quot;human&quot;</span></code>. Human rendering is performed
-automatically after each reset and environment step. RGB array rendering
-occurs without wall-clock waiting when the caller invokes <code class="docutils literal notranslate"><span class="pre">env.render()</span></code>.</p>
-<p>PACED renders per environment step, not per physics substep:</p>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>environment step
-├─ apply action
-├─ physics step x decimation
-├─ observations, rewards, termination, and reset
-├─ render latest state
-└─ wait until step_dt has elapsed
-</pre></div>
-</div>
-<p>The environment rates are:</p>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>physics_hz = 1 / sim.dt
-step_dt = sim.dt * decimation
-step_hz = control_hz = 1 / step_dt
-</pre></div>
-</div>
-<p>Current task examples:</p>
-<div class="table-wrapper colwidths-auto docutils container">
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>Task</p></th>
-<th class="head text-right"><p>Physics rate</p></th>
-<th class="head text-right"><p>Decimation</p></th>
-<th class="head text-right"><p>PACED target</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Humanoid-v0</span></code></p></td>
-<td class="text-right"><p>120 Hz</p></td>
-<td class="text-right"><p>2</p></td>
-<td class="text-right"><p>60 Hz</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Pi-Locomotion-v0</span></code></p></td>
-<td class="text-right"><p>1000 Hz</p></td>
-<td class="text-right"><p>20</p></td>
-<td class="text-right"><p>50 Hz</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<p><code class="docutils literal notranslate"><span class="pre">SimulationPacer</span></code> waits only when processing finishes ahead of the next
-deadline. If policy inference, physics, or rendering exceeds <code class="docutils literal notranslate"><span class="pre">step_dt</span></code>, the
-loop does not issue multiple catch-up steps; playback becomes slower than wall
-time. This matches the MimicKit-style playback behavior and avoids catch-up
-bursts in an externally stepped loop.</p>
+<p><code class="docutils literal notranslate"><span class="pre">residual_angles</span></code> reports, in radians, rotation that the target articulation
+could not represent after joint decomposition and limit clamping. Use it to
+detect unsuitable mappings or motions outside the robot’s range.</p>
 </section>
-<section id="native-app-scheduling">
-<h2>Native App scheduling<a class="headerlink" href="#native-app-scheduling" title="Link to this heading">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">SimulationRunConfig</span></code> does not select the native <code class="docutils literal notranslate"><span class="pre">App</span></code> scheduler. <code class="docutils literal notranslate"><span class="pre">App.start()</span></code>
-uses <code class="docutils literal notranslate"><span class="pre">FixedStepClock</span></code>, which accumulates wall time and may invoke
-<code class="docutils literal notranslate"><span class="pre">fixed_update()</span></code> zero or more times per rendered frame. This is appropriate for
-interactive simulations whose physics should remain independent of rendering.</p>
-<p>Do not use <code class="docutils literal notranslate"><span class="pre">SimulationPacer</span></code> inside an App <code class="docutils literal notranslate"><span class="pre">fixed_update()</span></code> callback. Keep App
-physics in <code class="docutils literal notranslate"><span class="pre">fixed_update()</span></code> and let <code class="docutils literal notranslate"><span class="pre">FixedStepClock</span></code> schedule it.</p>
-<p><code class="docutils literal notranslate"><span class="pre">renderFrameOnce()</span></code> is supported for manually driven rendering. Despite its
-name, it currently processes input and advances App frame scheduling in
-addition to drawing. Do not treat it as a render-only function or call it from
-inside <code class="docutils literal notranslate"><span class="pre">fixed_update()</span></code>.</p>
+<section id="coordinate-layout">
+<h2>Coordinate layout<a class="headerlink" href="#coordinate-layout" title="Link to this heading">¶</a></h2>
+<p>Each <code class="docutils literal notranslate"><span class="pre">layout.blocks</span></code> entry describes one joint coordinate block and its offsets
+inside <code class="docutils literal notranslate"><span class="pre">q</span></code> and <code class="docutils literal notranslate"><span class="pre">qd</span></code>.</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Joint type</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">q</span></code></p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">qd</span></code></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Fixed</p></td>
+<td><p>none</p></td>
+<td><p>none</p></td>
+</tr>
+<tr class="row-odd"><td><p>Revolute</p></td>
+<td><p>angle</p></td>
+<td><p>angular velocity</p></td>
+</tr>
+<tr class="row-even"><td><p>Prismatic</p></td>
+<td><p>position</p></td>
+<td><p>linear velocity</p></td>
+</tr>
+<tr class="row-odd"><td><p>Spherical</p></td>
+<td><p>quaternion <code class="docutils literal notranslate"><span class="pre">(w,</span> <span class="pre">x,</span> <span class="pre">y,</span> <span class="pre">z)</span></code></p></td>
+<td><p>angular velocity <code class="docutils literal notranslate"><span class="pre">(x,</span> <span class="pre">y,</span> <span class="pre">z)</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Free root</p></td>
+<td><p>position + quaternion</p></td>
+<td><p>linear + angular velocity</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Therefore <code class="docutils literal notranslate"><span class="pre">layout.nq</span></code> and <code class="docutils literal notranslate"><span class="pre">layout.nv</span></code> may differ. Quaternion orientations use
+four configuration values but have only three tangent velocity coordinates.</p>
+<p>The layout also contains a <code class="docutils literal notranslate"><span class="pre">model_signature</span></code>. Motions and mappers must have the
+same signature; this prevents accidentally applying coordinates with a
+different body order, joint layout, reference pose, or limits.</p>
+</section>
+<section id="convert-back-for-inspection">
+<h2>Convert back for inspection<a class="headerlink" href="#convert-back-for-inspection" title="Link to this heading">¶</a></h2>
+<p>Convert the complete clip back to <code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code> for visualization or BVH
+export:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">preview_motion</span> <span class="o">=</span> <span class="n">mapper</span><span class="o">.</span><span class="n">to_skeleton_motion</span><span class="p">(</span><span class="n">articulation_motion</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Single poses can be converted in either direction:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mapped</span> <span class="o">=</span> <span class="n">mapper</span><span class="o">.</span><span class="n">to_articulation_coordinates</span><span class="p">(</span><span class="n">skeleton_state</span><span class="p">)</span>
+<span class="n">restored_state</span> <span class="o">=</span> <span class="n">mapper</span><span class="o">.</span><span class="n">to_skeleton_state</span><span class="p">(</span><span class="n">mapped</span><span class="o">.</span><span class="n">q</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">SkeletonState</span></code> cannot represent non-zero prismatic joint translation. Such a
+coordinate can remain in <code class="docutils literal notranslate"><span class="pre">ArticulationMotion</span></code>, but converting it back to a
+<code class="docutils literal notranslate"><span class="pre">SkeletonState</span></code> or <code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code> raises an error.</p>
+</section>
+<section id="numpy-and-torch">
+<h2>NumPy and Torch<a class="headerlink" href="#numpy-and-torch" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">q</span></code> and <code class="docutils literal notranslate"><span class="pre">qd</span></code> are mutable, frame-major NumPy arrays owned by the native motion.
+For dataset or training use, convert them to Torch explicitly:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="n">q_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">articulation_motion</span><span class="o">.</span><span class="n">q</span><span class="p">)</span>
+<span class="n">qd_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">articulation_motion</span><span class="o">.</span><span class="n">qd</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The mapper itself is an offline CPU conversion path. Move the resulting tensors
+to the simulation device after conversion when GPU training is required.</p>
+</section>
+<section id="reference-motion-library">
+<h2>Reference motion library<a class="headerlink" href="#reference-motion-library" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">ArticulationMotionLibrary</span></code> stores multiple clips with the same layout and
+samples canonical <code class="docutils literal notranslate"><span class="pre">q</span></code> and <code class="docutils literal notranslate"><span class="pre">qd</span></code> without requiring any simulation backend.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">library</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">ArticulationMotionLibrary</span><span class="p">(</span>
+    <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">,</span>
+    <span class="n">motions</span><span class="o">=</span><span class="p">[</span><span class="n">walk_motion</span><span class="p">,</span> <span class="n">run_motion</span><span class="p">],</span>
+    <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cuda:0&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">sample</span> <span class="o">=</span> <span class="n">library</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span>
+    <span class="n">motion_ids</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+    <span class="n">times</span><span class="o">=</span><span class="p">[</span><span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.75</span><span class="p">],</span>
+    <span class="n">loop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">q</span> <span class="o">=</span> <span class="n">sample</span><span class="o">.</span><span class="n">q</span>
+<span class="n">qd</span> <span class="o">=</span> <span class="n">sample</span><span class="o">.</span><span class="n">qd</span>
+</pre></div>
+</div>
+<p>The native clips remain NumPy-backed, but the library uploads all frames and
+clip metadata to packed Torch buffers when clips are registered. Motion IDs,
+times, and returned samples are Torch tensors on <code class="docutils literal notranslate"><span class="pre">library.device</span></code>; Python and
+NumPy inputs are accepted and copied to that device. Sampling uses Torch SLERP
+for free/spherical quaternions, shortest-path interpolation for revolute
+angles, and linear interpolation for the remaining coordinates and velocities.
+Use <code class="docutils literal notranslate"><span class="pre">sample_times(...)</span></code> for device-side random times and <code class="docutils literal notranslate"><span class="pre">sample_frames(...)</span></code>
+when exact stored frames are required. <code class="docutils literal notranslate"><span class="pre">library.to(device)</span></code> moves the packed
+library without rebuilding its native clips.</p>
+</section>
+<section id="backend-buffers">
+<h2>Backend buffers<a class="headerlink" href="#backend-buffers" title="Link to this heading">¶</a></h2>
+<p>Backend adapters require only the canonical layout. The backend model or live
+articulation can be checked explicitly before simulation, but it is not part of
+reference motion storage or sampling.</p>
+<section id="mujoco">
+<h3>MuJoCo<a class="headerlink" href="#mujoco" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">kangengine.adapters.mujoco</span><span class="w"> </span><span class="kn">import</span> <span class="n">MuJoCoMotionAdapter</span>
+
+<span class="n">adapter</span> <span class="o">=</span> <span class="n">MuJoCoMotionAdapter</span><span class="p">(</span><span class="n">layout</span><span class="p">)</span>
+<span class="n">adapter</span><span class="o">.</span><span class="n">validate_model</span><span class="p">(</span><span class="n">mj_model</span><span class="p">)</span>  <span class="c1"># optional compatibility check</span>
+<span class="n">buffers</span> <span class="o">=</span> <span class="n">adapter</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">articulation_motion</span><span class="p">)</span>
+<span class="c1"># buffers.qpos: [frames, layout.nq]</span>
+<span class="c1"># buffers.qvel: [frames, layout.nv]</span>
+
+<span class="n">restored</span> <span class="o">=</span> <span class="n">adapter</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span>
+    <span class="n">buffers</span><span class="o">.</span><span class="n">qpos</span><span class="p">,</span>
+    <span class="n">buffers</span><span class="o">.</span><span class="n">qvel</span><span class="p">,</span>
+    <span class="n">fps</span><span class="o">=</span><span class="n">articulation_motion</span><span class="o">.</span><span class="n">fps</span><span class="p">(),</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>MuJoCo and canonical quaternions are both WXYZ. The adapter additionally
+converts canonical free/ball angular velocities into MuJoCo’s local tangent
+frame.</p>
+</section>
+<section id="newton">
+<h3>Newton<a class="headerlink" href="#newton" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">kangengine.adapters.newton</span><span class="w"> </span><span class="kn">import</span> <span class="n">NewtonMotionAdapter</span>
+
+<span class="n">adapter</span> <span class="o">=</span> <span class="n">NewtonMotionAdapter</span><span class="p">(</span><span class="n">layout</span><span class="p">)</span>
+<span class="n">adapter</span><span class="o">.</span><span class="n">validate_model</span><span class="p">(</span><span class="n">newton_model</span><span class="p">)</span>  <span class="c1"># optional compatibility check</span>
+<span class="n">buffers</span> <span class="o">=</span> <span class="n">adapter</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">articulation_motion</span><span class="p">)</span>
+<span class="c1"># buffers.joint_q:  [frames, layout.nq]</span>
+<span class="c1"># buffers.joint_qd: [frames, layout.nv]</span>
+</pre></div>
+</div>
+<p>The adapter handles Newton’s XYZW quaternion storage. Optional validation also
+checks grouped D6 offsets and authored axis order. The result remains one
+reference trajectory; broadcasting it across worlds or selecting a different
+frame per world belongs to the simulation or training layer.</p>
+</section>
+<section id="physx">
+<h3>PhysX<a class="headerlink" href="#physx" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">kangengine.adapters.physx</span><span class="w"> </span><span class="kn">import</span> <span class="n">PhysXMotionAdapter</span>
+
+<span class="n">adapter</span> <span class="o">=</span> <span class="n">PhysXMotionAdapter</span><span class="p">(</span><span class="n">layout</span><span class="p">)</span>
+<span class="n">adapter</span><span class="o">.</span><span class="n">validate_articulation</span><span class="p">(</span><span class="n">articulation</span><span class="p">)</span>  <span class="c1"># optional compatibility check</span>
+<span class="n">buffers</span> <span class="o">=</span> <span class="n">adapter</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">articulation_motion</span><span class="p">)</span>
+<span class="c1"># buffers.root_positions / root_rotations_xyzw</span>
+<span class="c1"># buffers.root_linear_velocities / root_angular_velocities</span>
+<span class="c1"># buffers.joint_positions / joint_velocities</span>
+</pre></div>
+</div>
+<p>PhysX root state is separate from logical joint state. Authored scalar
+revolute/prismatic DOFs use the stable canonical order. Native
+spherical blocks currently raise <code class="docutils literal notranslate"><span class="pre">NotImplementedError</span></code> instead of silently
+discarding rotation, because KangEngine’s PhysX wrapper does not yet expose a
+complete three-axis spherical state.</p>
+</section>
 </section>
 </section>
 
@@ -457,23 +532,23 @@ inside <code class="docutils literal notranslate"><span class="pre">fixed_update
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="../animation/INDEX.html">
+          <a class="next-page" href="MULTI_ENV.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Animation</div>
+                <div class="title">Multi-Environment Simulation</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="VISUALIZATION.html">
+          <a class="prev-page" href="DOF_CONTROL.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">Simulation Visualization</div>
+                <div class="title">Control DOFs</div>
                 
               </div>
             </a>
@@ -507,9 +582,18 @@ inside <code class="docutils literal notranslate"><span class="pre">fixed_update
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">Simulation Run Modes</a><ul>
-<li><a class="reference internal" href="#kelab-defaults">KELab defaults</a></li>
-<li><a class="reference internal" href="#native-app-scheduling">Native App scheduling</a></li>
+<li><a class="reference internal" href="#">Articulation Motion</a><ul>
+<li><a class="reference internal" href="#convert-a-motion">Convert a motion</a></li>
+<li><a class="reference internal" href="#coordinate-layout">Coordinate layout</a></li>
+<li><a class="reference internal" href="#convert-back-for-inspection">Convert back for inspection</a></li>
+<li><a class="reference internal" href="#numpy-and-torch">NumPy and Torch</a></li>
+<li><a class="reference internal" href="#reference-motion-library">Reference motion library</a></li>
+<li><a class="reference internal" href="#backend-buffers">Backend buffers</a><ul>
+<li><a class="reference internal" href="#mujoco">MuJoCo</a></li>
+<li><a class="reference internal" href="#newton">Newton</a></li>
+<li><a class="reference internal" href="#physx">PhysX</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

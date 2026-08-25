@@ -3,12 +3,12 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Advanced Topics" href="../advanced/INDEX.html"><link rel="prev" title="Motion Retargeting" href="RETARGETING.html">
-        <link rel="canonical" href="https://gudegi.github.io/KangEngine/guide/animation/SMPL.html">
+<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Pose Visualization" href="VISUALS.html"><link rel="prev" title="Load and Play Motion" href="LOAD_MOTION.html">
+        <link rel="canonical" href="https://gudegi.github.io/KangEngine/guide/animation/ARTICULATION_MOTION.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
 
-<title>SMPL Models — KangEngine</title>
+<title>Articulation Motion — KangEngine</title>
 
 <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
@@ -232,10 +232,10 @@
 </li>
 <li class="toctree-l2 current has-children"><a class="reference internal" href="INDEX.html">Animation</a><input aria-label="Toggle navigation of Animation" checked="" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="LOAD_MOTION.html">Load and Play Motion</a></li>
-<li class="toctree-l3"><a class="reference internal" href="ARTICULATION_MOTION.html">Articulation Motion</a></li>
+<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Articulation Motion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="VISUALS.html">Pose Visualization</a></li>
 <li class="toctree-l3"><a class="reference internal" href="RETARGETING.html">Motion Retargeting</a></li>
-<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">SMPL Models</a></li>
+<li class="toctree-l3"><a class="reference internal" href="SMPL.html">SMPL Models</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../advanced/INDEX.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -315,7 +315,7 @@
   </a>
 </div>
 <div class="view-this-page">
-  <a class="muted-link" href="../../_sources/guide/animation/SMPL.md.txt" title="View this page">
+  <a class="muted-link" href="../../_sources/guide/animation/ARTICULATION_MOTION.md.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -332,115 +332,207 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="smpl-models">
-<h1>SMPL Models<a class="headerlink" href="#smpl-models" title="Link to this heading">¶</a></h1>
-<p><code class="docutils literal notranslate"><span class="pre">ke.asset</span></code> contains SMPL, SMPL-H, and SMPL-X model assets and their body-shape
-evaluation. Renderable surfaces live under <code class="docutils literal notranslate"><span class="pre">ke.visual</span></code>; see
-<a class="reference internal" href="VISUALS.html"><span class="std std-doc">Pose Visualization</span></a>
-for the boundary between deformation producers and their visual objects.</p>
-<p><code class="docutils literal notranslate"><span class="pre">ke.asset.SMPLModel</span></code> adapts an SMPL NPZ or PKL file to
-<code class="docutils literal notranslate"><span class="pre">ke.visual.SkinnedSurface</span></code>.
-Shape coefficients are baked once and each pose is supplied as WXYZ local joint
-rotations plus a root translation.</p>
-<section id="smpl-model-files">
-<h2>SMPL model files<a class="headerlink" href="#smpl-model-files" title="Link to this heading">¶</a></h2>
-<p>Repository examples select a neutral, male, or female model from
-<code class="docutils literal notranslate"><span class="pre">assets/external/smpl_models</span></code>. Only the selected model file is needed.</p>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>assets/
-└── external/
-    └── smpl_models/
-        ├── smpl/
-        │   ├── SMPL_NEUTRAL.pkl
-        │   ├── SMPL_MALE.pkl
-        │   └── SMPL_FEMALE.pkl
-        ├── smplh/
-        │   ├── neutral/model.npz
-        │   ├── male/model.npz
-        │   └── female/model.npz
-        └── smplx/
-            ├── SMPLX_NEUTRAL.npz
-            ├── SMPLX_MALE.npz
-            └── SMPLX_FEMALE.npz
+          <section id="articulation-motion">
+<h1>Articulation Motion<a class="headerlink" href="#articulation-motion" title="Link to this heading">¶</a></h1>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code> stores character poses as a world-space root translation, a world-space root rotation, and parent-local joint rotations, with all rotations represented as WXYZ quaternions.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ArticulationMotion</span></code> stores a sampled articulation trajectory as frame-major generalized configurations <code class="docutils literal notranslate"><span class="pre">q</span></code> and generalized tangent velocities <code class="docutils literal notranslate"><span class="pre">qd</span></code>, arranged according to an <code class="docutils literal notranslate"><span class="pre">ArticulationCoordinateLayout</span></code>.</p></li>
+</ul>
+<p>Use this conversion when preparing animation data for robot control, motion
+tracking, or simulation datasets.</p>
+<section id="convert-a-motion">
+<h2>Convert a motion<a class="headerlink" href="#convert-a-motion" title="Link to this heading">¶</a></h2>
+<p>Build the layout from the same <code class="docutils literal notranslate"><span class="pre">ArticulationDesc</span></code> used by the simulator. The
+layout preserves the loader’s BFS or DFS body order.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ke</span>
+
+<span class="n">data</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">MJCFLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">mjcf_path</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s2">&quot;DFS&quot;</span><span class="p">)</span>
+<span class="n">layout</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">animation</span><span class="o">.</span><span class="n">ArticulationCoordinateLayout</span><span class="o">.</span><span class="n">from_data</span><span class="p">(</span>
+    <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+    <span class="n">free_root</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">mapper</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">animation</span><span class="o">.</span><span class="n">ArticulationMotionMapper</span><span class="p">(</span><span class="n">layout</span><span class="p">)</span>
+
+<span class="n">result</span> <span class="o">=</span> <span class="n">mapper</span><span class="o">.</span><span class="n">to_articulation_motion</span><span class="p">(</span><span class="n">skeleton_motion</span><span class="p">)</span>
+<span class="n">articulation_motion</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">motion</span>
+
+<span class="n">q</span> <span class="o">=</span> <span class="n">articulation_motion</span><span class="o">.</span><span class="n">q</span>    <span class="c1"># [frames, layout.nq], float32 NumPy view</span>
+<span class="n">qd</span> <span class="o">=</span> <span class="n">articulation_motion</span><span class="o">.</span><span class="n">qd</span>  <span class="c1"># [frames, layout.nv], float32 NumPy view</span>
 </pre></div>
 </div>
-<section id="smpl">
-<h3>SMPL<a class="headerlink" href="#smpl" title="Link to this heading">¶</a></h3>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-
-<span class="kn">import</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ke</span>
-
-<span class="n">model_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">smpl</span><span class="o">.</span><span class="n">repository_smpl_model_path</span><span class="p">(</span><span class="n">gender</span><span class="o">=</span><span class="s2">&quot;neutral&quot;</span><span class="p">)</span>
-<span class="n">model</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">SMPLModel</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">SMPLModel</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">model_path</span><span class="p">)</span>
-</pre></div>
-</div>
+<p><code class="docutils literal notranslate"><span class="pre">residual_angles</span></code> reports, in radians, rotation that the target articulation
+could not represent after joint decomposition and limit clamping. Use it to
+detect unsuitable mappings or motions outside the robot’s range.</p>
 </section>
-<section id="smpl-h">
-<h3>SMPL-H<a class="headerlink" href="#smpl-h" title="Link to this heading">¶</a></h3>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-
-<span class="kn">import</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ke</span>
-
-<span class="n">model_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">smpl</span><span class="o">.</span><span class="n">repository_smplh_model_path</span><span class="p">(</span><span class="n">gender</span><span class="o">=</span><span class="s2">&quot;neutral&quot;</span><span class="p">)</span>
-<span class="n">model</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">SMPLHModel</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">SMPLHModel</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">model_path</span><span class="p">)</span>
-</pre></div>
+<section id="coordinate-layout">
+<h2>Coordinate layout<a class="headerlink" href="#coordinate-layout" title="Link to this heading">¶</a></h2>
+<p>Each <code class="docutils literal notranslate"><span class="pre">layout.blocks</span></code> entry describes one joint coordinate block and its offsets
+inside <code class="docutils literal notranslate"><span class="pre">q</span></code> and <code class="docutils literal notranslate"><span class="pre">qd</span></code>.</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Joint type</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">q</span></code> value</p></th>
+<th class="head text-right"><p><code class="docutils literal notranslate"><span class="pre">q</span></code> dimension</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">qd</span></code> value</p></th>
+<th class="head text-right"><p><code class="docutils literal notranslate"><span class="pre">qd</span></code> dimension</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Fixed</p></td>
+<td><p>none</p></td>
+<td class="text-right"><p>0</p></td>
+<td><p>none</p></td>
+<td class="text-right"><p>0</p></td>
+</tr>
+<tr class="row-odd"><td><p>Revolute</p></td>
+<td><p>angle</p></td>
+<td class="text-right"><p>1</p></td>
+<td><p>angular velocity</p></td>
+<td class="text-right"><p>1</p></td>
+</tr>
+<tr class="row-even"><td><p>Prismatic</p></td>
+<td><p>position</p></td>
+<td class="text-right"><p>1</p></td>
+<td><p>linear velocity</p></td>
+<td class="text-right"><p>1</p></td>
+</tr>
+<tr class="row-odd"><td><p>Spherical(Ball)</p></td>
+<td><p>quaternion <code class="docutils literal notranslate"><span class="pre">(w,</span> <span class="pre">x,</span> <span class="pre">y,</span> <span class="pre">z)</span></code></p></td>
+<td class="text-right"><p>4</p></td>
+<td><p>angular velocity <code class="docutils literal notranslate"><span class="pre">(x,</span> <span class="pre">y,</span> <span class="pre">z)</span></code></p></td>
+<td class="text-right"><p>3</p></td>
+</tr>
+<tr class="row-even"><td><p>Free root</p></td>
+<td><p>position <code class="docutils literal notranslate"><span class="pre">(x,</span> <span class="pre">y,</span> <span class="pre">z)</span></code> + quaternion <code class="docutils literal notranslate"><span class="pre">(w,</span> <span class="pre">x,</span> <span class="pre">y,</span> <span class="pre">z)</span></code></p></td>
+<td class="text-right"><p>7</p></td>
+<td><p>linear velocity <code class="docutils literal notranslate"><span class="pre">(x,</span> <span class="pre">y,</span> <span class="pre">z)</span></code> + angular velocity <code class="docutils literal notranslate"><span class="pre">(x,</span> <span class="pre">y,</span> <span class="pre">z)</span></code></p></td>
+<td class="text-right"><p>6</p></td>
+</tr>
+</tbody>
+</table>
 </div>
+<p>Therefore <code class="docutils literal notranslate"><span class="pre">layout.nq</span></code> and <code class="docutils literal notranslate"><span class="pre">layout.nv</span></code> may differ. Quaternion orientations use
+four configuration values but have only three tangent velocity coordinates.</p>
+<p>The layout also contains a <code class="docutils literal notranslate"><span class="pre">model_signature</span></code>. Motions and mappers must have the
+same signature; this prevents accidentally applying coordinates with a
+different body order, joint layout, reference pose, or limits.</p>
 </section>
-<section id="smpl-x">
-<h3>SMPL-X<a class="headerlink" href="#smpl-x" title="Link to this heading">¶</a></h3>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-
-<span class="kn">import</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ke</span>
-
-<span class="n">model_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">smpl</span><span class="o">.</span><span class="n">repository_smplx_model_path</span><span class="p">(</span><span class="n">gender</span><span class="o">=</span><span class="s2">&quot;neutral&quot;</span><span class="p">)</span>
-<span class="n">model</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">SMPLXModel</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">SMPLXModel</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">model_path</span><span class="p">)</span>
+<section id="convert-back-for-inspection">
+<h2>Convert back for inspection<a class="headerlink" href="#convert-back-for-inspection" title="Link to this heading">¶</a></h2>
+<p>Convert the complete clip back to <code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code> for visualization or BVH
+export:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">preview_motion</span> <span class="o">=</span> <span class="n">mapper</span><span class="o">.</span><span class="n">to_skeleton_motion</span><span class="p">(</span><span class="n">articulation_motion</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Applications outside the repository can pass their own model path to the same
-<code class="docutils literal notranslate"><span class="pre">load()</span></code> methods. Replace the bracketed path below with the location of the
-downloaded model file:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">model</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">SMPLModel</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">SMPLModel</span><span class="o">.</span><span class="n">load</span><span class="p">(</span>
-    <span class="n">path</span><span class="o">=</span><span class="s2">&quot;[smpl_path/SMPL_NEUTRAL.pkl]&quot;</span>
+<p>Single poses can be converted in either direction:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mapped</span> <span class="o">=</span> <span class="n">mapper</span><span class="o">.</span><span class="n">to_articulation_coordinates</span><span class="p">(</span><span class="n">skeleton_state</span><span class="p">)</span>
+<span class="n">restored_state</span> <span class="o">=</span> <span class="n">mapper</span><span class="o">.</span><span class="n">to_skeleton_state</span><span class="p">(</span><span class="n">mapped</span><span class="o">.</span><span class="n">q</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">SkeletonState</span></code> cannot represent non-zero prismatic joint translation. Such a
+coordinate can remain in <code class="docutils literal notranslate"><span class="pre">ArticulationMotion</span></code>, but converting it back to a
+<code class="docutils literal notranslate"><span class="pre">SkeletonState</span></code> or <code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code> raises an error.</p>
+</section>
+<section id="reference-motion-library">
+<h2>Reference motion library<a class="headerlink" href="#reference-motion-library" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">MotionLibrary</span></code> stores the backend-independent quaternion form: root position,
+root rotation, and local joint rotations. It accepts either <code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code>
+or <code class="docutils literal notranslate"><span class="pre">ArticulationMotion</span></code>; the latter is converted once when registered.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">adapter</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">adapters</span><span class="o">.</span><span class="n">physx</span><span class="o">.</span><span class="n">PhysXMotionAdapter</span><span class="p">(</span><span class="n">layout</span><span class="p">)</span>
+<span class="n">library</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">animation</span><span class="o">.</span><span class="n">MotionLibrary</span><span class="p">(</span>
+    <span class="n">motions</span><span class="o">=</span><span class="p">[</span><span class="n">walk_motion</span><span class="p">,</span> <span class="n">run_motion</span><span class="p">],</span>
+    <span class="n">adapter</span><span class="o">=</span><span class="n">adapter</span><span class="p">,</span>
+    <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cuda:0&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">sample</span> <span class="o">=</span> <span class="n">library</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span>
+    <span class="n">motion_ids</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+    <span class="n">times</span><span class="o">=</span><span class="p">[</span><span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.75</span><span class="p">],</span>
+    <span class="n">loop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">local_rotation</span> <span class="o">=</span> <span class="n">sample</span><span class="o">.</span><span class="n">local_rotations_wxyz</span>
+<span class="n">body_state</span> <span class="o">=</span> <span class="n">library</span><span class="o">.</span><span class="n">forward_kinematics</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span>
+<span class="n">body_position</span> <span class="o">=</span> <span class="n">body_state</span><span class="o">.</span><span class="n">body_positions</span>
+<span class="n">body_rotation</span> <span class="o">=</span> <span class="n">body_state</span><span class="o">.</span><span class="n">body_rotations_wxyz</span>
+<span class="n">physx_joint_position</span> <span class="o">=</span> <span class="n">sample</span><span class="o">.</span><span class="n">backend_state</span><span class="o">.</span><span class="n">joint_positions</span>
+<span class="n">physx_joint_velocity</span> <span class="o">=</span> <span class="n">sample</span><span class="o">.</span><span class="n">backend_state</span><span class="o">.</span><span class="n">joint_velocities</span>
+</pre></div>
+</div>
+<p>The library uploads all clips and metadata to packed Torch buffers. It uses
+linear root-position interpolation and quaternion SLERP, then asks the optional
+adapter to produce simulator-native tensors on the same device. Use
+<code class="docutils literal notranslate"><span class="pre">forward_kinematics(sample)</span></code> when imitation observations need robot-body
+positions or rotations; FK runs after sampling and does not store per-frame
+global-pose copies. Source <code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code> objects are not retained by default;
+pass <code class="docutils literal notranslate"><span class="pre">keep_source_motions=True</span></code> only when <code class="docutils literal notranslate"><span class="pre">library.motion(id)</span></code> is needed for
+inspection, editing, or export. <code class="docutils literal notranslate"><span class="pre">ArticulationMotion</span></code> input keeps its existing <code class="docutils literal notranslate"><span class="pre">q/qd</span></code> as the
+adapter’s prepared fast path instead of recomputing it. Use
+<code class="docutils literal notranslate"><span class="pre">sample_motion_ids(...)</span></code> for weighted clip IDs, <code class="docutils literal notranslate"><span class="pre">sample_times(...)</span></code> for random
+times, and <code class="docutils literal notranslate"><span class="pre">sample_frames(...)</span></code> for exact stored frames. <code class="docutils literal notranslate"><span class="pre">library.to(device)</span></code>
+moves the packed library without rebuilding clips.</p>
+</section>
+<section id="backend-buffers">
+<h2>Backend buffers<a class="headerlink" href="#backend-buffers" title="Link to this heading">¶</a></h2>
+<p>Backend adapters require only the canonical layout. The backend model or live
+articulation can be checked explicitly before simulation, but it is not part of
+reference motion storage or sampling.</p>
+<section id="mujoco">
+<h3>MuJoCo<a class="headerlink" href="#mujoco" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">kangengine.adapters.mujoco</span><span class="w"> </span><span class="kn">import</span> <span class="n">MuJoCoMotionAdapter</span>
+
+<span class="n">adapter</span> <span class="o">=</span> <span class="n">MuJoCoMotionAdapter</span><span class="p">(</span><span class="n">layout</span><span class="p">)</span>
+<span class="n">adapter</span><span class="o">.</span><span class="n">validate_model</span><span class="p">(</span><span class="n">mj_model</span><span class="p">)</span>  <span class="c1"># optional compatibility check</span>
+<span class="n">buffers</span> <span class="o">=</span> <span class="n">adapter</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">articulation_motion</span><span class="p">)</span>
+<span class="c1"># buffers.qpos: [frames, layout.nq]</span>
+<span class="c1"># buffers.qvel: [frames, layout.nv]</span>
+
+<span class="n">restored</span> <span class="o">=</span> <span class="n">adapter</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span>
+    <span class="n">buffers</span><span class="o">.</span><span class="n">qpos</span><span class="p">,</span>
+    <span class="n">buffers</span><span class="o">.</span><span class="n">qvel</span><span class="p">,</span>
+    <span class="n">fps</span><span class="o">=</span><span class="n">articulation_motion</span><span class="o">.</span><span class="n">fps</span><span class="p">(),</span>
 <span class="p">)</span>
 </pre></div>
 </div>
+<p>MuJoCo and canonical quaternions are both WXYZ. The adapter additionally
+converts canonical free/ball angular velocities into MuJoCo’s local tangent
+frame.</p>
 </section>
-</section>
-<section id="create-and-pose-a-body">
-<h2>Create and pose a body<a class="headerlink" href="#create-and-pose-a-body" title="Link to this heading">¶</a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">body</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">SMPLBody</span> <span class="o">|</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">SMPLHBody</span> <span class="o">|</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">SMPLXBody</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="n">model</span><span class="o">.</span><span class="n">create_body</span><span class="p">(</span><span class="n">betas</span><span class="o">=</span><span class="n">betas</span><span class="p">)</span>
-<span class="p">)</span>
-<span class="n">surface</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">visual</span><span class="o">.</span><span class="n">SkinnedSurface</span> <span class="o">=</span> <span class="n">body</span><span class="o">.</span><span class="n">create_visual</span><span class="p">(</span>
-    <span class="n">app</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
-    <span class="n">path</span><span class="o">=</span><span class="s2">&quot;/character&quot;</span><span class="p">,</span>
-    <span class="n">material</span><span class="o">=</span><span class="n">material</span><span class="p">,</span>
-<span class="p">)</span>
+<section id="newton">
+<h3>Newton<a class="headerlink" href="#newton" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">kangengine.adapters.newton</span><span class="w"> </span><span class="kn">import</span> <span class="n">NewtonMotionAdapter</span>
 
-<span class="n">surface</span><span class="o">.</span><span class="n">apply_pose</span><span class="p">(</span>
-    <span class="n">root_translation</span><span class="o">=</span><span class="n">root_translation</span><span class="p">,</span>
-    <span class="n">local_rotations_wxyz</span><span class="o">=</span><span class="n">local_rotations_wxyz</span><span class="p">,</span>
-<span class="p">)</span>
+<span class="n">adapter</span> <span class="o">=</span> <span class="n">NewtonMotionAdapter</span><span class="p">(</span><span class="n">layout</span><span class="p">)</span>
+<span class="n">adapter</span><span class="o">.</span><span class="n">validate_model</span><span class="p">(</span><span class="n">newton_model</span><span class="p">)</span>  <span class="c1"># optional compatibility check</span>
+<span class="n">buffers</span> <span class="o">=</span> <span class="n">adapter</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">articulation_motion</span><span class="p">)</span>
+<span class="c1"># buffers.joint_q:  [frames, layout.nq]</span>
+<span class="c1"># buffers.joint_qd: [frames, layout.nv]</span>
 </pre></div>
 </div>
-<p>For AMASS playback, <code class="docutils literal notranslate"><span class="pre">AMASSLoader.load_motion()</span></code> returns a native
-<code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code> for the selected SMPL, SMPL-H, or SMPL-X skeleton:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>python/examples/view_smpl_motion.py<span class="w"> </span>--motion<span class="w"> </span>/path/to/amass_motion.npz
+<p>The adapter handles Newton’s XYZW quaternion storage. Optional validation also
+checks grouped D6 offsets and authored axis order. The result remains one
+reference trajectory; broadcasting it across worlds or selecting a different
+frame per world belongs to the simulation or training layer.</p>
+</section>
+<section id="physx">
+<h3>PhysX<a class="headerlink" href="#physx" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">kangengine.adapters.physx</span><span class="w"> </span><span class="kn">import</span> <span class="n">PhysXMotionAdapter</span>
+
+<span class="n">adapter</span> <span class="o">=</span> <span class="n">PhysXMotionAdapter</span><span class="p">(</span><span class="n">layout</span><span class="p">)</span>
+<span class="n">adapter</span><span class="o">.</span><span class="n">validate_articulation</span><span class="p">(</span><span class="n">articulation</span><span class="p">)</span>  <span class="c1"># optional compatibility check</span>
+<span class="n">buffers</span> <span class="o">=</span> <span class="n">adapter</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">articulation_motion</span><span class="p">)</span>
+<span class="c1"># buffers.root_positions / root_rotations_xyzw</span>
+<span class="c1"># buffers.root_linear_velocities / root_angular_velocities</span>
+<span class="c1"># buffers.joint_positions / joint_velocities</span>
 </pre></div>
 </div>
-<p>AMASS archives are Z-up. The loader keeps Z-up when requested, while the SMPL
-viewer asks it to convert root translation and orientation to Y-up.</p>
-<p><code class="docutils literal notranslate"><span class="pre">SMPLBody.update_pose_correctives(surface,</span> <span class="pre">state)</span></code> enables the hybrid path: the
-SMPL adapter evaluates pose-dependent blend shapes (pose correctives) on the
-CPU before <code class="docutils literal notranslate"><span class="pre">surface.apply_state(state)</span></code>. It computes pose offsets from
-<code class="docutils literal notranslate"><span class="pre">posedirs</span> <span class="pre">×</span> <span class="pre">(R</span> <span class="pre">-</span> <span class="pre">I)</span></code>, adds them to the shaped template vertices before
-skinning, and updates the vertex and normal streams.
-Linear blend skinning (LBS) still runs on the GPU. This path is opt-in because
-recalculating vertices and normals is substantially more expensive than
-uploading only the joint matrix palette. The default path remains matrix-only
-GPU LBS. The same process applies to <code class="docutils literal notranslate"><span class="pre">SMPLHBody</span></code> and <code class="docutils literal notranslate"><span class="pre">SMPLXBody</span></code> with their
-larger joint palettes. See the
-<a class="reference internal" href="../../api/asset.html"><span class="doc">Asset API Reference</span></a> for the exact model and body class
-signatures.</p>
+<p>PhysX root state is separate from logical joint state. Authored scalar
+revolute/prismatic DOFs use the stable canonical order. Native
+spherical blocks currently raise <code class="docutils literal notranslate"><span class="pre">NotImplementedError</span></code> instead of silently
+discarding rotation, because KangEngine’s PhysX wrapper does not yet expose a
+complete three-axis spherical state.</p>
+</section>
 </section>
 </section>
 
@@ -449,23 +541,23 @@ signatures.</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="../advanced/INDEX.html">
+          <a class="next-page" href="VISUALS.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Advanced Topics</div>
+                <div class="title">Pose Visualization</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="RETARGETING.html">
+          <a class="prev-page" href="LOAD_MOTION.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">Motion Retargeting</div>
+                <div class="title">Load and Play Motion</div>
                 
               </div>
             </a>
@@ -499,14 +591,17 @@ signatures.</p>
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">SMPL Models</a><ul>
-<li><a class="reference internal" href="#smpl-model-files">SMPL model files</a><ul>
-<li><a class="reference internal" href="#smpl">SMPL</a></li>
-<li><a class="reference internal" href="#smpl-h">SMPL-H</a></li>
-<li><a class="reference internal" href="#smpl-x">SMPL-X</a></li>
+<li><a class="reference internal" href="#">Articulation Motion</a><ul>
+<li><a class="reference internal" href="#convert-a-motion">Convert a motion</a></li>
+<li><a class="reference internal" href="#coordinate-layout">Coordinate layout</a></li>
+<li><a class="reference internal" href="#convert-back-for-inspection">Convert back for inspection</a></li>
+<li><a class="reference internal" href="#reference-motion-library">Reference motion library</a></li>
+<li><a class="reference internal" href="#backend-buffers">Backend buffers</a><ul>
+<li><a class="reference internal" href="#mujoco">MuJoCo</a></li>
+<li><a class="reference internal" href="#newton">Newton</a></li>
+<li><a class="reference internal" href="#physx">PhysX</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#create-and-pose-a-body">Create and pose a body</a></li>
 </ul>
 </li>
 </ul>

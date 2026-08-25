@@ -1,0 +1,2 @@
+```{include} ../../../../docs/simulation/ARTICULATION_MOTION.md
+```
