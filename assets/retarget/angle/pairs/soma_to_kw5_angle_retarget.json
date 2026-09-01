@@ -1,11 +1,8 @@
 {
-  "version": 1,
-  "source_skeleton": "../dataset/seed/uniform_test/walk_forward_amateur_002__A001_M.bvh",
-  "target_skeleton": "../characters/kw/kw5.xml",
-  "source_coordinate_system": "y_up_neg_z_forward",
-  "target_coordinate_system": "z_up_x_forward",
+  "version": 2,
+  "source_profile": "../../motions/soma_motion.json",
+  "target_profile": "../targets/kw5_angle_target.json",
   "output_coordinate_system": "y_up_z_forward",
-  "source_has_armature_joint": true,
   "joint_map": {
     "Hips": "Hips",
     "Chest": "Chest",

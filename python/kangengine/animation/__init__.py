@@ -15,15 +15,33 @@ from .articulation_motion import (
     ArticulationCoordinateLayout,
     ArticulationCoordinateType,
 )
-from .retarget_batch import RetargetBatchProcessor, RetargetBatchResult
+from .articulation_io import (
+    load_articulation_motion_npz,
+    save_articulation_motion_npz,
+)
 from .coordinates import (
     CoordinateSystem,
     convert_motion_coordinates,
     convert_skeleton_coordinates,
     convert_state_coordinates,
 )
-from . import IK as IK, filter as filter
-from .retarget import RetargetConfig, Retargeter, retarget_motion
+from . import IK as IK, datasets as datasets, filter as filter
+from .retarget import (
+    AngleRetargetConfig,
+    AngleRetargetProcessor,
+    AngleRetargetResult,
+    AngleRetargeter,
+    AngleTargetProfile,
+    AuxiliaryRetargetPoint,
+    IKEffectorMapping,
+    IKRetargetConfig,
+    IKRetargetProcessor,
+    IKRetargetResult,
+    IKTargetProfile,
+    MotionSourceProfile,
+    retarget_angle_motion,
+    scale_skeleton_motion,
+)
 from .transform import transform_motion
 
 __all__ = export_public_module(_ke.animation, globals())
@@ -35,24 +53,37 @@ __all__ += [
     "ArticulationCoordinateBlock",
     "ArticulationCoordinateLayout",
     "ArticulationCoordinateType",
+    "AuxiliaryRetargetPoint",
     "CoordinateSystem",
-    "RetargetConfig",
-    "RetargetBatchProcessor",
-    "RetargetBatchResult",
-    "Retargeter",
+    "AngleRetargetConfig",
+    "AngleRetargetProcessor",
+    "AngleRetargetResult",
+    "AngleRetargeter",
     "convert_motion_coordinates",
     "convert_skeleton_coordinates",
     "convert_state_coordinates",
+    "datasets",
     "filter",
     "IK",
+    "IKEffectorMapping",
+    "MotionSourceProfile",
+    "AngleTargetProfile",
+    "IKRetargetConfig",
+    "IKRetargetProcessor",
+    "IKRetargetResult",
+    "IKTargetProfile",
     "MotionKinematics",
     "MotionLibrary",
     "MotionSample",
-    "retarget_motion",
+    "load_articulation_motion_npz",
+    "retarget_angle_motion",
+    "save_articulation_motion_npz",
+    "scale_skeleton_motion",
     "transform_motion",
 ]
 
 for _type in (
+    AuxiliaryRetargetPoint,
     ArticulationMotion,
     ArticulationMappingResult,
     ArticulationMotionMappingResult,
@@ -60,6 +91,11 @@ for _type in (
     ArticulationCoordinateBlock,
     ArticulationCoordinateLayout,
     ArticulationCoordinateType,
+    IKEffectorMapping,
+    MotionSourceProfile,
+    AngleTargetProfile,
+    IKRetargetConfig,
+    IKTargetProfile,
 ):
     set_public_module(_type, __name__)
 
@@ -81,6 +117,7 @@ def __getattr__(name: str):
     set_public_module(value, __name__)
     globals()[name] = value
     return value
+
 
 # Visual objects are implemented in the native animation binding for now, but
 # the public Python surface owns them under ``kangengine.visual``.

@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "name": "soma",
+  "coordinate_system": "y_up_neg_z_forward",
+  "translation_unit_scale": 1.0,
+  "has_armature_joint": true,
+  "reference_skeleton": "dataset://seed/uniform_test/walk_forward_amateur_002__A001_M.bvh"
+}

@@ -62,6 +62,8 @@ class SkeletalVisualBridge {
     void setVisible(bool visible);
     void setShowJoints(bool showJoints);
     void setPickable(bool pickable);
+    void setBonePickable(bool pickable);
+    void setJointPickable(bool pickable);
     bool remove();
     const SkeletalVisualConfig& config() const { return _config; }
 

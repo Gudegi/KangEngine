@@ -1,11 +1,8 @@
 {
-  "version": 1,
-  "source_skeleton": "smpl_24_reference.bvh",
-  "target_skeleton": "../characters/kw/kw5.xml",
-  "source_coordinate_system": "y_up_z_forward",
-  "target_coordinate_system": "z_up_x_forward",
+  "version": 2,
+  "source_profile": "../../motions/smpl_motion.json",
+  "target_profile": "../targets/kw5_angle_target.json",
   "output_coordinate_system": "z_up_x_forward",
-  "source_has_armature_joint": false,
   "joint_map": {
     "left_ankle": "LeftAnkle",
     "left_elbow": "LeftElbow",

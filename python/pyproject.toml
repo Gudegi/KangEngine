@@ -32,6 +32,11 @@ mimickit-full = [
     "gymnasium",
     "pyyaml",
 ]
+pyroki = [
+    "jaxls @ git+https://github.com/brentyi/jaxls.git@50a58be88c5ef74532f09e3f55268b4f02c490e3",
+    "pyroki @ git+https://github.com/chungmin99/pyroki.git@388e43e1fc0d0ee382968d3dd72970fd62a0450c",
+    "tqdm>=4.67",
+]
 
 [tool.setuptools]
 include-package-data = true

@@ -1315,6 +1315,10 @@ void bind_animation(py::module& m) {
         .def("set_pickable", &SkeletalVisualBridge::setPickable,
              py::arg("pickable"),
              "Set whether skeleton geometry can be picked.")
+        .def("set_bone_pickable", &SkeletalVisualBridge::setBonePickable,
+             py::arg("pickable"), "Set whether bone geometry can be picked.")
+        .def("set_joint_pickable", &SkeletalVisualBridge::setJointPickable,
+             py::arg("pickable"), "Set whether joint markers can be picked.")
         .def("remove", &SkeletalVisualBridge::remove,
              "Remove all authored skeleton visual scene objects.")
         .def("bone_handle", &SkeletalVisualBridge::boneHandle,

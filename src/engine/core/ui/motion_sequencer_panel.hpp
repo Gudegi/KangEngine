@@ -22,6 +22,7 @@ class MotionSequencerPanel : public Panel {
     void setMotion(std::string motionName, int numFrames, float fps);
     void setMotions(std::vector<std::string> motionNames,
                     std::vector<int> numFrames, std::vector<float> fps);
+    void clearMotions();
     void setCurrentTime(float time);
     float currentTime() const { return _time; }
     float duration() const;

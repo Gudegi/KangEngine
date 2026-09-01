@@ -110,6 +110,18 @@ void MotionSequencerPanel::setMotions(std::vector<std::string> motionNames,
     _selectedTrack = -1;
 }
 
+void MotionSequencerPanel::clearMotions() {
+    setPlaying(false);
+    _motionName = "Motion";
+    _trackNames.clear();
+    _trackEndFrames.clear();
+    _numFrames = 1;
+    _fps = 30.0f;
+    _time = 0.0f;
+    _firstFrame = 0;
+    _selectedTrack = -1;
+}
+
 void MotionSequencerPanel::setCurrentTime(float time) {
     _time = std::max(0.0f, time);
     wrapOrClampTime();

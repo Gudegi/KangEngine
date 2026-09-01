@@ -119,17 +119,32 @@ void SkeletalVisualBridge::setShowJoints(bool showJoints) {
 }
 
 void SkeletalVisualBridge::setPickable(bool pickable) {
+    setBonePickable(pickable);
+    setJointPickable(pickable);
+}
+
+void SkeletalVisualBridge::setBonePickable(bool pickable) {
     if (!_app)
         return;
-    for (const char* suffix : {"/bones", "/joints"}) {
-        Scene::Prim* prim = _app->getScene()->getPrimAtPath(_basePath + suffix);
-        if (!prim)
-            continue;
-        auto selection = prim->getSelectionComponent();
-        if (!selection)
-            selection = prim->addSelectionComponent();
-        selection->setPickable(pickable);
-    }
+    Scene::Prim* prim = _app->getScene()->getPrimAtPath(_basePath + "/bones");
+    if (!prim)
+        return;
+    auto selection = prim->getSelectionComponent();
+    if (!selection)
+        selection = prim->addSelectionComponent();
+    selection->setPickable(pickable);
+}
+
+void SkeletalVisualBridge::setJointPickable(bool pickable) {
+    if (!_app)
+        return;
+    Scene::Prim* prim = _app->getScene()->getPrimAtPath(_basePath + "/joints");
+    if (!prim)
+        return;
+    auto selection = prim->getSelectionComponent();
+    if (!selection)
+        selection = prim->addSelectionComponent();
+    selection->setPickable(pickable);
 }
 
 bool SkeletalVisualBridge::remove() {

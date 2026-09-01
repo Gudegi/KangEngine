@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "name": "mixamo",
+  "coordinate_system": "y_up_z_forward",
+  "translation_unit_scale": 0.01,
+  "has_armature_joint": false,
+  "reference_skeleton": "dataset://Mixamo/bvh/T-Pose.bvh"
+}

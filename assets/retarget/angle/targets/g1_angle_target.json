@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "name": "g1",
+  "skeleton": "../../../characters/g1/g1.xml",
+  "coordinate_system": "z_up_x_forward"
+}

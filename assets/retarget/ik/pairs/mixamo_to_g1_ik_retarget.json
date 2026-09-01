@@ -1,0 +1,426 @@
+{
+  "version": 1,
+  "source_profile": "../../motions/mixamo_motion.json",
+  "target_profile": "../targets/g1_29dof_ik_target.json",
+  "source_root_joint": "mixamorig:Hips",
+  "target_root_link": "pelvis",
+  "translation_scale": 0.8679999709129333,
+  "link_mappings": [
+    {
+      "source_joint": "mixamorig:Hips",
+      "target_link": "pelvis",
+      "region": null,
+      "position_weight": 1.0,
+      "rotation_weight": 0.0,
+      "position_scale": null,
+      "position_offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_offset_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "source_joint": "mixamorig:LeftUpLeg",
+      "target_link": "left_hip_pitch_link",
+      "region": "lower_body",
+      "position_weight": 1.0,
+      "rotation_weight": 0.0,
+      "position_scale": null,
+      "position_offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_offset_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "source_joint": "mixamorig:LeftLeg",
+      "target_link": "left_knee_link",
+      "region": "lower_body",
+      "position_weight": 1.0,
+      "rotation_weight": 0.0,
+      "position_scale": null,
+      "position_offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_offset_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "source_joint": "mixamorig:LeftFoot",
+      "target_link": "left_ankle_roll_link",
+      "region": "lower_body",
+      "position_weight": 1.0,
+      "rotation_weight": 0.0,
+      "position_scale": null,
+      "position_offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_offset_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "source_joint": "mixamorig:LeftFoot",
+      "target_link": "left_foot_link",
+      "region": "lower_body",
+      "position_weight": 1.0,
+      "rotation_weight": 0.0,
+      "position_scale": null,
+      "position_offset": [
+        0.18,
+        0.0,
+        0.0
+      ],
+      "rotation_offset_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "source_joint": "mixamorig:RightUpLeg",
+      "target_link": "right_hip_pitch_link",
+      "region": "lower_body",
+      "position_weight": 1.0,
+      "rotation_weight": 0.0,
+      "position_scale": null,
+      "position_offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_offset_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "source_joint": "mixamorig:RightLeg",
+      "target_link": "right_knee_link",
+      "region": "lower_body",
+      "position_weight": 1.0,
+      "rotation_weight": 0.0,
+      "position_scale": null,
+      "position_offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_offset_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "source_joint": "mixamorig:RightFoot",
+      "target_link": "right_ankle_roll_link",
+      "region": "lower_body",
+      "position_weight": 1.0,
+      "rotation_weight": 0.0,
+      "position_scale": null,
+      "position_offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_offset_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "source_joint": "mixamorig:RightFoot",
+      "target_link": "right_foot_link",
+      "region": "lower_body",
+      "position_weight": 1.0,
+      "rotation_weight": 0.0,
+      "position_scale": null,
+      "position_offset": [
+        0.18,
+        0.0,
+        0.0
+      ],
+      "rotation_offset_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "source_joint": "mixamorig:Spine",
+      "target_link": "torso_link",
+      "region": "upper_body",
+      "position_weight": 1.0,
+      "rotation_weight": 0.0,
+      "position_scale": null,
+      "position_offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_offset_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "source_joint": "mixamorig:LeftArm",
+      "target_link": "left_shoulder_pitch_link",
+      "region": "upper_body",
+      "position_weight": 1.0,
+      "rotation_weight": 0.0,
+      "position_scale": null,
+      "position_offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_offset_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "source_joint": "mixamorig:LeftForeArm",
+      "target_link": "left_elbow_link",
+      "region": "upper_body",
+      "position_weight": 1.0,
+      "rotation_weight": 0.0,
+      "position_scale": null,
+      "position_offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_offset_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "source_joint": "mixamorig:LeftHand",
+      "target_link": "left_wrist_roll_link",
+      "region": "upper_body",
+      "position_weight": 1.0,
+      "rotation_weight": 0.0,
+      "position_scale": null,
+      "position_offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_offset_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "source_joint": "mixamorig:RightArm",
+      "target_link": "right_shoulder_pitch_link",
+      "region": "upper_body",
+      "position_weight": 1.0,
+      "rotation_weight": 0.0,
+      "position_scale": null,
+      "position_offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_offset_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "source_joint": "mixamorig:RightForeArm",
+      "target_link": "right_elbow_link",
+      "region": "upper_body",
+      "position_weight": 1.0,
+      "rotation_weight": 0.0,
+      "position_scale": null,
+      "position_offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_offset_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "source_joint": "mixamorig:RightHand",
+      "target_link": "right_wrist_roll_link",
+      "region": "upper_body",
+      "position_weight": 1.0,
+      "rotation_weight": 0.0,
+      "position_scale": null,
+      "position_offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_offset_wxyz": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "region_scales": {
+    "lower_body": [
+      1.0,
+      1.7940000295639038,
+      1.0
+    ],
+    "upper_body": [
+      1.0,
+      1.2139999866485596,
+      1.0
+    ]
+  },
+  "root_position_scale": null,
+  "root_height_offset": 0.03,
+  "auxiliary_points": [
+    {
+      "name": "chest",
+      "source_joint": "mixamorig:Spine2",
+      "target_link": "torso_link",
+      "target_offset": [
+        0.0,
+        0.0,
+        0.187
+      ],
+      "source_offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "region": "upper_body",
+      "weight": 1.0
+    },
+    {
+      "name": "head",
+      "source_joint": "mixamorig:Head",
+      "target_link": "torso_link",
+      "target_offset": [
+        0.0,
+        0.0,
+        0.366
+      ],
+      "source_offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "region": "upper_body",
+      "weight": 0.25
+    }
+  ],
+  "local_alignment_pairs": [
+    [
+      "pelvis",
+      "torso_link"
+    ],
+    [
+      "left_shoulder_pitch_link",
+      "left_elbow_link"
+    ],
+    [
+      "right_shoulder_pitch_link",
+      "right_elbow_link"
+    ],
+    [
+      "left_elbow_link",
+      "left_wrist_roll_link"
+    ],
+    [
+      "right_elbow_link",
+      "right_wrist_roll_link"
+    ],
+    [
+      "left_hip_pitch_link",
+      "left_knee_link"
+    ],
+    [
+      "right_hip_pitch_link",
+      "right_knee_link"
+    ],
+    [
+      "left_knee_link",
+      "left_ankle_roll_link"
+    ],
+    [
+      "right_knee_link",
+      "right_ankle_roll_link"
+    ],
+    [
+      "left_ankle_roll_link",
+      "left_foot_link"
+    ],
+    [
+      "right_ankle_roll_link",
+      "right_foot_link"
+    ]
+  ],
+  "foot_shape_pairs": [
+    [
+      "left_ankle_roll_link",
+      "left_foot_link"
+    ],
+    [
+      "right_ankle_roll_link",
+      "right_foot_link"
+    ]
+  ],
+  "contact_links": [
+    "left_ankle_roll_link",
+    "left_foot_link",
+    "right_ankle_roll_link",
+    "right_foot_link"
+  ]
+}

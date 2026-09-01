@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "name": "smpl",
+  "coordinate_system": "y_up_z_forward",
+  "translation_unit_scale": 1.0,
+  "has_armature_joint": false,
+  "reference_skeleton": "../smpl_24_reference.bvh"
+}

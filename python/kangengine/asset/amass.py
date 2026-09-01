@@ -54,6 +54,7 @@ class AMASSLoader:
         """Load an AMASS NPZ directly into ``animation.SkeletonMotion``."""
         import torch
 
+        from .smpl import SMPLH_JOINT_NAMES, SMPLX_JOINT_NAMES, SMPL_JOINT_NAMES
         from ..utils import quat_wxyz_from_angle_axis, quat_wxyz_multiply
 
         source_path = Path(path).expanduser().resolve()
@@ -79,10 +80,12 @@ class AMASSLoader:
             rotations = torch.zeros((len(poses), 24, 4), dtype=torch.float32)
             rotations[..., 0] = 1.0
             rotations[:, :22] = source_rotations[:, :22]
+            canonical_names = SMPL_JOINT_NAMES
         elif kind == "smplh":
             if skeleton_tree.num_joints() != 52:
                 raise ValueError("SMPL-H motion requires a 52-joint skeleton_tree")
             rotations = source_rotations
+            canonical_names = SMPLH_JOINT_NAMES
         elif kind == "smplx":
             if skeleton_tree.num_joints() != 55:
                 raise ValueError("SMPL-X motion requires a 55-joint skeleton_tree")
@@ -90,14 +93,34 @@ class AMASSLoader:
             rotations[..., 0] = 1.0
             rotations[:, :22] = source_rotations[:, :22]
             rotations[:, 25:] = source_rotations[:, 22:]
+            canonical_names = SMPLX_JOINT_NAMES
         else:
             raise ValueError("model_type must be 'smpl', 'smplh', or 'smplx'")
+
+        target_names = tuple(skeleton_tree.node_names())
+        canonical_set = set(canonical_names)
+        target_set = set(target_names)
+        if target_set == canonical_set:
+            canonical_index = {name: index for index, name in enumerate(canonical_names)}
+            rotations = rotations[
+                :, [canonical_index[name] for name in target_names]
+            ]
+        elif not target_set.isdisjoint(canonical_set):
+            missing = sorted(canonical_set - target_set)
+            unexpected = sorted(target_set - canonical_set)
+            raise ValueError(
+                f"{kind.upper()} skeleton joint names are incomplete; "
+                f"missing={missing}, unexpected={unexpected}"
+            )
 
         if up_axis == _ke.UpAxis.Y:
             angle = torch.tensor(-np.pi / 2.0, dtype=torch.float32)
             axis = torch.tensor([1.0, 0.0, 0.0], dtype=torch.float32)
             basis = quat_wxyz_from_angle_axis(angle, axis)
-            rotations[:, 0] = quat_wxyz_multiply(basis, rotations[:, 0])
+            root_index = target_names.index(canonical_names[0]) if target_set == canonical_set else 0
+            rotations[:, root_index] = quat_wxyz_multiply(
+                basis, rotations[:, root_index]
+            )
             translations = translations[:, [0, 2, 1]]
             translations[:, 2] *= -1.0
         elif up_axis != _ke.UpAxis.Z:

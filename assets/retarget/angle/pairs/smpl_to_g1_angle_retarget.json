@@ -1,0 +1,374 @@
+{
+    "version": 2,
+    "source_profile": "../../motions/smpl_motion.json",
+    "target_profile": "../targets/g1_angle_target.json",
+    "output_coordinate_system": "y_up_z_forward",
+    "joint_map": {
+        "pelvis": "pelvis",
+        "left_hip": "left_hip_pitch_link",
+        "left_knee": "left_knee_link",
+        "left_ankle": "left_ankle_pitch_link",
+        "left_foot": "left_ankle_roll_link",
+        "right_hip": "right_hip_pitch_link",
+        "right_knee": "right_knee_link",
+        "right_ankle": "right_ankle_pitch_link",
+        "right_foot": "right_ankle_roll_link",
+        "spine1": "waist_yaw_link",
+        "spine2": "waist_roll_link",
+        "spine3": "torso_link",
+        "head": "head_link",
+        "left_shoulder": "left_shoulder_pitch_link",
+        "left_elbow": "left_elbow_link",
+        "left_wrist": "left_wrist_roll_link",
+        "left_hand": "left_wrist_yaw_link",
+        "right_shoulder": "right_shoulder_pitch_link",
+        "right_elbow": "right_elbow_link",
+        "right_wrist": "right_wrist_roll_link",
+        "right_hand": "right_wrist_yaw_link"
+    },
+    "source_bind_local_wxyz": {
+        "pelvis": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "left_hip": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "left_knee": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "left_ankle": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "left_foot": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "right_hip": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "right_knee": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "right_ankle": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "right_foot": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "spine1": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "spine2": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "spine3": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "neck": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "head": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "left_collar": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "left_shoulder": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "left_elbow": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "left_wrist": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "left_hand": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "right_collar": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "right_shoulder": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "right_elbow": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "right_wrist": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "right_hand": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ]
+    },
+    "target_bind_local_wxyz": {
+        "pelvis": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "left_hip_pitch_link": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "left_hip_roll_link": [
+            0.9961786866188049,
+            -0.08733856678009033,
+            0.0,
+            0.0
+        ],
+        "left_hip_yaw_link": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "left_knee_link": [
+            0.9961786866188049,
+            0.08733856678009033,
+            0.0,
+            0.0
+        ],
+        "left_ankle_pitch_link": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "left_ankle_roll_link": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "right_hip_pitch_link": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "right_hip_roll_link": [
+            0.9961786866188049,
+            -0.08733856678009033,
+            0.0,
+            0.0
+        ],
+        "right_hip_yaw_link": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "right_knee_link": [
+            0.9961786866188049,
+            0.08733856678009033,
+            0.0,
+            0.0
+        ],
+        "right_ankle_pitch_link": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "right_ankle_roll_link": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "waist_yaw_link": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "waist_roll_link": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "torso_link": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "head_link": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "left_shoulder_pitch_link": [
+            0.9902642369270325,
+            1.3887884961150121e-05,
+            -9.864570165518671e-05,
+            0.1392010599374771
+        ],
+        "left_shoulder_roll_link": [
+            0.7958959937095642,
+            -2.354848260832654e-10,
+            5.499202759828847e-10,
+            0.6054333448410034
+        ],
+        "left_shoulder_yaw_link": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "left_elbow_link": [
+            0.7053845524787903,
+            0.708824872970581,
+            5.32817956422349e-11,
+            -3.422594846425042e-11
+        ],
+        "left_wrist_roll_link": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "left_wrist_pitch_link": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "left_wrist_yaw_link": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "right_shoulder_pitch_link": [
+            0.9902642369270325,
+            1.3887884961150121e-05,
+            9.864570165518671e-05,
+            -0.1392010599374771
+        ],
+        "right_shoulder_roll_link": [
+            0.8030962944030762,
+            0.0005541059654206038,
+            -0.0015720570227131248,
+            -0.5958471298217773
+        ],
+        "right_shoulder_yaw_link": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "right_elbow_link": [
+            0.7053066492080688,
+            0.7088232636451721,
+            -0.0097110066562891,
+            -0.004237846937030554
+        ],
+        "right_wrist_roll_link": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "right_wrist_pitch_link": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "right_wrist_yaw_link": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+        ]
+    },
+    "source_bind_root": [
+        0.0762569010257721,
+        1.0723799467086792,
+        -0.06889019906520844
+    ],
+    "target_bind_root": [
+        0.0,
+        0.8003845693631106,
+        0.0
+    ],
+    "translation_scale": 0.7463628649711609
+}

@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "name": "kw5",
+  "skeleton": "../../../characters/kw/kw5.xml",
+  "coordinate_system": "z_up_x_forward"
+}

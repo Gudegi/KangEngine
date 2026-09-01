@@ -1,16 +1,20 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 import unittest
 
 import numpy as np
 
 from kangengine.animation import (
-    RetargetConfig,
-    Retargeter,
+    AngleRetargetConfig,
+    AngleRetargeter,
+    AngleTargetProfile,
+    MotionSourceProfile,
     SkeletonMotion,
     SkeletonTree,
-    retarget_motion,
+    retarget_angle_motion,
+    scale_skeleton_motion,
 )
 
 
@@ -43,13 +47,29 @@ def _motion(tree: SkeletonTree) -> SkeletonMotion:
 
 
 class RetargetTest(unittest.TestCase):
+    def test_scale_skeleton_motion_scales_offsets_and_root_translation(self) -> None:
+        source = _motion(_tree())
+
+        result = scale_skeleton_motion(source, 2.0)
+
+        child_offset = result.skeleton_tree.local_translation(1)
+        np.testing.assert_allclose(
+            (child_offset.x, child_offset.y, child_offset.z), (0, 2, 0)
+        )
+        np.testing.assert_allclose(
+            result.root_translations(), source.root_translations() * 2.0
+        )
+        np.testing.assert_allclose(
+            result.local_rotations_wxyz(), source.local_rotations_wxyz()
+        )
+
     def test_retargeter_handles_live_pose_and_state(self) -> None:
         tree = _tree()
         source = _motion(tree)
-        retargeter = Retargeter(
+        retargeter = AngleRetargeter(
             tree,
             tree,
-            RetargetConfig(joint_map={"root": "root", "child": "child"}),
+            AngleRetargetConfig(joint_map={"root": "root", "child": "child"}),
         )
 
         pose = retargeter.retarget_pose(
@@ -70,9 +90,9 @@ class RetargetTest(unittest.TestCase):
     def test_identity_retarget_preserves_motion(self) -> None:
         tree = _tree()
         source = _motion(tree)
-        config = RetargetConfig(joint_map={"root": "root", "child": "child"})
+        config = AngleRetargetConfig(joint_map={"root": "root", "child": "child"})
 
-        result = retarget_motion(source, tree, config)
+        result = retarget_angle_motion(source, tree, config)
 
         np.testing.assert_allclose(
             result.root_translations(), source.root_translations()
@@ -89,9 +109,9 @@ class RetargetTest(unittest.TestCase):
         )
         source = _motion(_tree())
         target = _tree(target_bind)
-        config = RetargetConfig(joint_map={"root": "root"})
+        config = AngleRetargetConfig(joint_map={"root": "root"})
 
-        result = retarget_motion(source, target, config)
+        result = retarget_angle_motion(source, target, config)
 
         np.testing.assert_allclose(
             result.local_rotations_wxyz()[:, 1],
@@ -111,9 +131,9 @@ class RetargetTest(unittest.TestCase):
             30.0,
             "bind",
         )
-        config = RetargetConfig(joint_map={"root": "root", "child": "child"})
+        config = AngleRetargetConfig(joint_map={"root": "root", "child": "child"})
 
-        result = retarget_motion(source, target_tree, config)
+        result = retarget_angle_motion(source, target_tree, config)
 
         np.testing.assert_allclose(
             result.local_rotations_wxyz()[0], target_bind, atol=1.0e-6
@@ -122,35 +142,43 @@ class RetargetTest(unittest.TestCase):
     def test_root_translation_is_bind_relative(self) -> None:
         tree = _tree()
         source = _motion(tree)
-        config = RetargetConfig(
+        config = AngleRetargetConfig(
             joint_map={"root": "root"},
             source_bind_root=(1, 2, 3),
             target_bind_root=(10, 20, 30),
             translation_scale=2.0,
         )
 
-        result = retarget_motion(source, tree, config)
+        result = retarget_angle_motion(source, tree, config)
 
         np.testing.assert_allclose(
             result.root_translations(), ((10, 20, 30), (12, 20, 30))
         )
 
     def test_config_round_trip_requires_retarget_suffix(self) -> None:
-        config = RetargetConfig(
+        config = AngleRetargetConfig(
             joint_map={"root": "pelvis"},
             source_bind_local_wxyz={"root": (2, 0, 0, 0)},
-            source_skeleton="source.fbx",
-            target_skeleton="target.xml",
+            source_profile=MotionSourceProfile(
+                "source",
+                translation_unit_scale=0.01,
+                reference_skeleton=Path("source.fbx"),
+            ),
+            target_profile=AngleTargetProfile("target", Path("target.xml")),
         )
         with self.subTest("round trip"):
             import tempfile
-            from pathlib import Path
 
             with tempfile.TemporaryDirectory() as directory:
-                path = Path(directory) / "source_to_target_retarget.json"
+                path = Path(directory) / "source_to_target_angle_retarget.json"
                 self.assertEqual(config.save(path), path)
-                self.assertEqual(RetargetConfig.load(path), config)
-                self.assertEqual(json.loads(path.read_text())["version"], 1)
+                self.assertEqual(AngleRetargetConfig.load(path), config)
+                data = json.loads(path.read_text())
+                self.assertEqual(data["version"], 2)
+                self.assertEqual(data["source_profile"], "motions/source_motion.json")
+                self.assertEqual(
+                    data["target_profile"], "targets/target_angle_target.json"
+                )
                 with self.assertRaisesRegex(ValueError, "_retarget.json"):
                     config.save(Path(directory) / "wrong.json")
 

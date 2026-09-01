@@ -1,28 +1,30 @@
-"""Skeleton retargeting configuration and bind-relative motion transfer."""
+"""Angle-retarget configuration and bind-relative motion transfer."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 import json
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
 
-from .._core import _ke
-from .coordinates import CoordinateSystem
-from ..utils.batched_rotations import (
+from ..._core import _ke
+from ..coordinates import CoordinateSystem
+from .profile import AngleTargetProfile, MotionSourceProfile
+from ...utils.batched_rotations import (
     quat_wxyz_conjugate,
     quat_wxyz_multiply,
     quat_wxyz_normalize,
 )
 
 if TYPE_CHECKING:
-    from . import SkeletonMotion, SkeletonState, SkeletonTree
+    from .. import SkeletonMotion, SkeletonState, SkeletonTree
 
 
-_RETARGET_SUFFIX = "_retarget.json"
+_RETARGET_SUFFIX = "_angle_retarget.json"
 
 
 def _vec3(value: object, name: str) -> tuple[float, float, float]:
@@ -57,7 +59,7 @@ def _quaternion_map(
 
 
 @dataclass
-class RetargetConfig:
+class AngleRetargetConfig:
     """Serializable calibration between a source and target skeleton.
 
     ``joint_map`` maps source joint names to target joint names. Bind rotation
@@ -76,12 +78,11 @@ class RetargetConfig:
     source_bind_root: tuple[float, float, float] = (0.0, 0.0, 0.0)
     target_bind_root: tuple[float, float, float] = (0.0, 0.0, 0.0)
     translation_scale: float = 1.0
-    source_skeleton: str = ""
-    target_skeleton: str = ""
-    source_coordinate_system: str = CoordinateSystem.Y_UP_Z_FORWARD.value
-    target_coordinate_system: str = CoordinateSystem.Y_UP_Z_FORWARD.value
     output_coordinate_system: str = CoordinateSystem.Y_UP_Z_FORWARD.value
-    source_has_armature_joint: bool = False
+    source_profile_path: str = ""
+    target_profile_path: str = ""
+    source_profile: MotionSourceProfile | None = None
+    target_profile: AngleTargetProfile | None = None
 
     def __post_init__(self) -> None:
         joint_map = {
@@ -107,29 +108,35 @@ class RetargetConfig:
         self.source_bind_root = _vec3(self.source_bind_root, "source_bind_root")
         self.target_bind_root = _vec3(self.target_bind_root, "target_bind_root")
         self.translation_scale = scale
-        self.source_skeleton = str(self.source_skeleton)
-        self.target_skeleton = str(self.target_skeleton)
-        self.source_coordinate_system = CoordinateSystem(
-            self.source_coordinate_system
-        ).value
-        self.target_coordinate_system = CoordinateSystem(
-            self.target_coordinate_system
-        ).value
         self.output_coordinate_system = CoordinateSystem(
             self.output_coordinate_system
         ).value
-        self.source_has_armature_joint = bool(self.source_has_armature_joint)
+        self.source_profile_path = str(self.source_profile_path)
+        self.target_profile_path = str(self.target_profile_path)
 
-    def to_dict(self) -> dict[str, object]:
+    def to_dict(self, *, owner_path: Path | None = None) -> dict[str, object]:
         """Return the versioned JSON-compatible representation."""
+        if not self.source_profile_path or not self.target_profile_path:
+            raise ValueError(
+                "serializing requires source_profile_path and target_profile_path"
+            )
+        source_profile = Path(self.source_profile_path)
+        target_profile = Path(self.target_profile_path)
+        if owner_path is not None:
+            source_value = os.path.relpath(
+                source_profile.resolve(), owner_path.parent.resolve()
+            )
+            target_value = os.path.relpath(
+                target_profile.resolve(), owner_path.parent.resolve()
+            )
+        else:
+            source_value = str(source_profile)
+            target_value = str(target_profile)
         return {
-            "version": 1,
-            "source_skeleton": self.source_skeleton,
-            "target_skeleton": self.target_skeleton,
-            "source_coordinate_system": self.source_coordinate_system,
-            "target_coordinate_system": self.target_coordinate_system,
+            "version": 2,
+            "source_profile": source_value,
+            "target_profile": target_value,
             "output_coordinate_system": self.output_coordinate_system,
-            "source_has_armature_joint": self.source_has_armature_joint,
             "joint_map": self.joint_map,
             "source_bind_local_wxyz": self.source_bind_local_wxyz,
             "target_bind_local_wxyz": self.target_bind_local_wxyz,
@@ -139,17 +146,32 @@ class RetargetConfig:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, object]) -> RetargetConfig:
+    def from_dict(
+        cls, data: dict[str, object], *, owner_path: str | Path
+    ) -> AngleRetargetConfig:
         """Construct a config from its versioned JSON representation."""
         if not isinstance(data, dict):
             raise ValueError("retarget config root must be a JSON object")
-        if data.get("version") != 1:
+        if data.get("version") != 2:
             raise ValueError(
                 f"unsupported retarget config version: {data.get('version')!r}"
             )
         joint_map = data.get("joint_map")
         if not isinstance(joint_map, dict):
             raise ValueError("joint_map must be a JSON object")
+        config_path = Path(owner_path)
+        source_profile_path = _referenced_path(
+            config_path, data.get("source_profile"), "source_profile"
+        )
+        target_profile_path = _referenced_path(
+            config_path, data.get("target_profile"), "target_profile"
+        )
+        source_profile = MotionSourceProfile.load(source_profile_path)
+        target_profile = AngleTargetProfile.load(target_profile_path)
+        if source_profile.reference_skeleton is None:
+            raise ValueError(
+                "angle retarget source profile requires reference_skeleton"
+            )
         return cls(
             joint_map={
                 str(source): str(target) for source, target in joint_map.items()
@@ -167,38 +189,109 @@ class RetargetConfig:
                 data.get("target_bind_root", (0, 0, 0)), "target_bind_root"
             ),
             translation_scale=float(data.get("translation_scale", 1.0)),
-            source_skeleton=str(data.get("source_skeleton", "")),
-            target_skeleton=str(data.get("target_skeleton", "")),
-            source_coordinate_system=str(
-                data.get("source_coordinate_system", "y_up_z_forward")
-            ),
-            target_coordinate_system=str(
-                data.get("target_coordinate_system", "y_up_z_forward")
-            ),
             output_coordinate_system=str(
                 data.get("output_coordinate_system", "y_up_z_forward")
             ),
-            source_has_armature_joint=bool(
-                data.get("source_has_armature_joint", False)
-            ),
+            source_profile_path=str(source_profile_path),
+            target_profile_path=str(target_profile_path),
+            source_profile=source_profile,
+            target_profile=target_profile,
         )
 
     @classmethod
-    def load(cls, path: str | Path) -> RetargetConfig:
+    def load(cls, path: str | Path) -> AngleRetargetConfig:
         """Load a ``*_retarget.json`` calibration file."""
         config_path = _validated_path(path)
         with config_path.open("r", encoding="utf-8") as stream:
             data = json.load(stream)
-        return cls.from_dict(data)
+        return cls.from_dict(data, owner_path=config_path)
 
     def save(self, path: str | Path) -> Path:
         """Save this calibration to a ``*_retarget.json`` file."""
         config_path = _validated_path(path)
+        self._ensure_profile_files(config_path)
         config_path.parent.mkdir(parents=True, exist_ok=True)
         with config_path.open("w", encoding="utf-8") as stream:
-            json.dump(self.to_dict(), stream, indent=2, ensure_ascii=False)
+            json.dump(
+                self.to_dict(owner_path=config_path),
+                stream,
+                indent=2,
+                ensure_ascii=False,
+            )
             stream.write("\n")
         return config_path
+
+    def _ensure_profile_files(self, config_path: Path) -> None:
+        if self.source_profile is None or self.target_profile is None:
+            raise ValueError("saving requires source_profile and target_profile")
+        if self.source_profile.reference_skeleton is None:
+            raise ValueError("angle source profile requires reference_skeleton")
+        source_reference = Path(self.source_profile.reference_skeleton).expanduser()
+        target_reference = Path(self.target_profile.skeleton).expanduser()
+        if not source_reference.is_absolute():
+            source_reference = (config_path.parent / source_reference).resolve()
+        else:
+            source_reference = source_reference.resolve()
+        if not target_reference.is_absolute():
+            target_reference = (config_path.parent / target_reference).resolve()
+        else:
+            target_reference = target_reference.resolve()
+
+        if not self.source_profile_path:
+            name = source_reference.stem or "source"
+            root = (
+                config_path.parent.parent.parent
+                if config_path.parent.name == "pairs"
+                and config_path.parent.parent.name == "angle"
+                else config_path.parent
+            )
+            source_path = root / "motions" / f"{name}_motion.json"
+        else:
+            source_path = Path(self.source_profile_path).expanduser()
+            if not source_path.is_absolute():
+                source_path = config_path.parent / source_path
+            source_path = source_path.resolve()
+            name = (
+                MotionSourceProfile.load(source_path).name
+                if source_path.exists()
+                else source_path.name.removesuffix("_motion.json")
+            )
+        MotionSourceProfile(
+            name=name,
+            coordinate_system=self.source_profile.coordinate_system,
+            translation_unit_scale=self.source_profile.translation_unit_scale,
+            has_armature_joint=self.source_profile.has_armature_joint,
+            reference_skeleton=source_reference,
+        ).save(source_path)
+        self.source_profile = MotionSourceProfile.load(source_path)
+        self.source_profile_path = str(source_path)
+
+        if not self.target_profile_path:
+            name = target_reference.stem or "target"
+            root = (
+                config_path.parent.parent
+                if config_path.parent.name == "pairs"
+                and config_path.parent.parent.name == "angle"
+                else config_path.parent
+            )
+            target_path = root / "targets" / f"{name}_angle_target.json"
+        else:
+            target_path = Path(self.target_profile_path).expanduser()
+            if not target_path.is_absolute():
+                target_path = config_path.parent / target_path
+            target_path = target_path.resolve()
+            name = (
+                AngleTargetProfile.load(target_path).name
+                if target_path.exists()
+                else target_path.name.removesuffix("_angle_target.json")
+            )
+        AngleTargetProfile(
+            name=name,
+            coordinate_system=self.target_profile.coordinate_system,
+            skeleton=target_reference,
+        ).save(target_path)
+        self.target_profile = AngleTargetProfile.load(target_path)
+        self.target_profile_path = str(target_path)
 
 
 def _validated_path(path: str | Path) -> Path:
@@ -206,6 +299,15 @@ def _validated_path(path: str | Path) -> Path:
     if not result.name.endswith(_RETARGET_SUFFIX):
         raise ValueError(f"retarget config filename must end with {_RETARGET_SUFFIX!r}")
     return result
+
+
+def _referenced_path(owner: Path, value: object, name: str) -> Path:
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{name} must be a non-empty path string")
+    result = Path(value).expanduser()
+    if not result.is_absolute():
+        result = owner.parent / result
+    return result.resolve()
 
 
 def _normalized_rotations(values: object) -> torch.Tensor:
@@ -259,7 +361,7 @@ def _hemisphere_continuous(rotations: torch.Tensor) -> None:
         rotations[frame, flip] *= -1.0
 
 
-class Retargeter:
+class AngleRetargeter:
     """Compiled bind-relative mapping reusable for motions and live poses.
 
     Joint names, bind globals, and bind correction rotations are resolved once
@@ -270,7 +372,7 @@ class Retargeter:
         self,
         source_skeleton: SkeletonTree,
         target_skeleton: SkeletonTree,
-        config: RetargetConfig,
+        config: AngleRetargetConfig,
     ) -> None:
         self.source_skeleton = source_skeleton
         self.target_skeleton = target_skeleton
@@ -443,15 +545,15 @@ class Retargeter:
         )
 
 
-def retarget_motion(
+def retarget_angle_motion(
     source_motion: SkeletonMotion,
     target_skeleton: SkeletonTree,
-    config: RetargetConfig,
+    config: AngleRetargetConfig,
 ) -> SkeletonMotion:
-    """Retarget a motion with a temporary ``Retargeter``."""
-    return Retargeter(
+    """Retarget a motion with a temporary ``AngleRetargeter``."""
+    return AngleRetargeter(
         source_motion.skeleton_tree, target_skeleton, config
     ).retarget_motion(source_motion)
 
 
-__all__ = ["RetargetConfig", "Retargeter", "retarget_motion"]
+__all__ = ["AngleRetargetConfig", "AngleRetargeter", "retarget_angle_motion"]

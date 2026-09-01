@@ -21,6 +21,7 @@
 #include "engine/scene/component/camera_component.hpp"
 #include "engine/scene/component/material_binding_component.hpp"
 #include "engine/scene/component/resource_component.hpp"
+#include "engine/scene/component/selection_component.hpp"
 #include "engine/scene/component/articulation_component.hpp"
 #include "engine/scene/component/articulation_binding_component.hpp"
 #include "engine/scene/component/collision_shape_component.hpp"
@@ -888,6 +889,16 @@ void bind_scene(py::module& m) {
              "Find a descendant prim by absolute path.")
         .def("get_children", &KE::Scene::Prim::getChildren,
              "Return direct child prims.")
+        .def(
+            "set_pickable",
+            [](KE::Scene::Prim& prim, bool pickable) {
+                auto selection = prim.getSelectionComponent();
+                if (!selection)
+                    selection = prim.addSelectionComponent();
+                selection->setPickable(pickable);
+            },
+            py::arg("pickable"),
+            "Choose whether ray picking can hit this prim.")
         // Components
         .def("add_render_component", &KE::Scene::Prim::addRenderComponent,
              "Attach and return this prim's render component.")

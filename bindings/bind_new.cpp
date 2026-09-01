@@ -133,6 +133,8 @@ void bind_imgui(py::module& m) {
         py::int_(static_cast<int>(ImGuiWindowFlags_NoMove));
     imgui.attr("WindowFlags_NoScrollbar") =
         py::int_(static_cast<int>(ImGuiWindowFlags_NoScrollbar));
+    imgui.attr("WindowFlags_HorizontalScrollbar") =
+        py::int_(static_cast<int>(ImGuiWindowFlags_HorizontalScrollbar));
     imgui.def(
         "begin",
         [](const std::string& name, int flags) {
@@ -143,11 +145,13 @@ void bind_imgui(py::module& m) {
     imgui.def("end", []() { ImGui::End(); });
     imgui.def(
         "begin_child",
-        [](const std::string& id, float width, float height, bool border) {
-            return ImGui::BeginChild(id.c_str(), ImVec2(width, height), border);
+        [](const std::string& id, float width, float height, bool border,
+           int flags) {
+            return ImGui::BeginChild(id.c_str(), ImVec2(width, height), border,
+                                     static_cast<ImGuiWindowFlags>(flags));
         },
         py::arg("id"), py::arg("width") = 0.0f, py::arg("height") = 0.0f,
-        py::arg("border") = false);
+        py::arg("border") = false, py::arg("flags") = 0);
     imgui.def("end_child", []() { ImGui::EndChild(); });
     imgui.def("text", [](const std::string& text) {
         ImGui::TextUnformatted(text.c_str());
@@ -303,6 +307,10 @@ void bind_imgui(py::module& m) {
         "path is None while pending or after cancellation.");
     imgui.def("close_file_dialog",
               []() { FileDialogService::instance().close(); });
+    imgui.def("set_next_item_width",
+              [](float width) { ImGui::SetNextItemWidth(width); },
+              py::arg("width"),
+              "Set the width of the next ImGui input widget.");
     imgui.def(
         "selectable",
         [](const std::string& label, bool selected) {
@@ -335,9 +343,33 @@ void bind_imgui(py::module& m) {
         [](const std::string& label, float value, float min, float max) {
             float v = value;
             bool changed = ImGui::SliderFloat(label.c_str(), &v, min, max);
+            const std::string popupLabel =
+                "Edit value##slider_float_" + label;
+            if (ImGui::IsItemHovered() &&
+                ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+                // A double click should enter the original value rather than
+                // retain the value produced by the slider click itself.
+                v = value;
+                changed = false;
+                ImGui::OpenPopup(popupLabel.c_str());
+            }
+            if (ImGui::BeginPopup(popupLabel.c_str())) {
+                if (ImGui::IsWindowAppearing())
+                    ImGui::SetKeyboardFocusHere();
+                ImGui::SetNextItemWidth(160.0f);
+                if (ImGui::InputFloat(
+                        "##slider_float_value", &v, 0.0f, 0.0f, "%.6g",
+                        ImGuiInputTextFlags_EnterReturnsTrue)) {
+                    v = std::clamp(v, min, max);
+                    changed = true;
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
+            }
             return py::make_tuple(changed, v);
         },
-        py::arg("label"), py::arg("value"), py::arg("min"), py::arg("max"));
+        py::arg("label"), py::arg("value"), py::arg("min"), py::arg("max"),
+        "Drag to adjust, or double-click to enter an exact value.");
     imgui.def(
         "progress_bar",
         [](float fraction, float width, float height,
@@ -590,6 +622,8 @@ PYBIND11_MODULE(_kangengine, m) {
         .def("set_motions", &MotionSequencerPanel::setMotions,
              py::arg("motion_names"), py::arg("num_frames"), py::arg("fps"),
              "Display multiple motion tracks on one shared time axis.")
+        .def("clear_motions", &MotionSequencerPanel::clearMotions,
+             "Remove every motion track and reset playback state.")
         .def("set_current_time", &MotionSequencerPanel::setCurrentTime)
         .def("current_time", &MotionSequencerPanel::currentTime)
         .def("duration", &MotionSequencerPanel::duration)
