@@ -1415,22 +1415,25 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_NoBackground</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_HorizontalScrollbar</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">2048</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_NoBackground</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">128</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_NoMove</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_NoMove</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">4</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_NoResize</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_NoResize</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">2</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_NoScrollbar</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_NoScrollbar</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">8</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_NoTitleBar</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_NoTitleBar</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">1</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_None</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ke.imgui.WindowFlags_None</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">0</span></code></p></td>
 </tr>
 </tbody>
@@ -1451,6 +1454,7 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <dd><em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">border</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">flags</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>,</dd>
 </dl>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.imgui.begin_child" title="Link to this definition">¶</a></dt>
@@ -1681,6 +1685,12 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <dd></dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="kangengine.imgui.set_next_item_width">
+<span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">set_next_item_width</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.imgui.set_next_item_width" title="Link to this definition">¶</a></dt>
+<dd><p>Set the width of the next ImGui input widget.</p>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="kangengine.imgui.set_next_window_pos">
 <span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">set_next_window_pos</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.imgui.set_next_window_pos" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
@@ -1693,7 +1703,8 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.imgui.slider_float">
 <span class="sig-prename descclassname"><span class="pre">kangengine.imgui.</span></span><span class="sig-name descname"><span class="pre">slider_float</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span></span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.imgui.slider_float" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Drag to adjust, or double-click to enter an exact value.</p>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.imgui.text">
@@ -2327,6 +2338,7 @@ functions through <code class="docutils literal notranslate"><span class="pre">k
 <li><a class="reference internal" href="#kangengine.imgui.same_line"><code class="docutils literal notranslate"><span class="pre">same_line()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.selectable"><code class="docutils literal notranslate"><span class="pre">selectable()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.separator"><code class="docutils literal notranslate"><span class="pre">separator()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.imgui.set_next_item_width"><code class="docutils literal notranslate"><span class="pre">set_next_item_width()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.set_next_window_pos"><code class="docutils literal notranslate"><span class="pre">set_next_window_pos()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.set_next_window_size"><code class="docutils literal notranslate"><span class="pre">set_next_window_size()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.imgui.slider_float"><code class="docutils literal notranslate"><span class="pre">slider_float()</span></code></a></li>

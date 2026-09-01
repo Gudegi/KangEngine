@@ -334,38 +334,82 @@
         <article role="main" id="furo-main-content">
           <section id="motion-retargeting">
 <h1>Motion Retargeting<a class="headerlink" href="#motion-retargeting" title="Link to this heading">¶</a></h1>
-<p>KangEngine retargets BVH or FBX motion between compatible skeletons. A
-<code class="docutils literal notranslate"><span class="pre">*_retarget.json</span></code> config stores the reference skeletons, bind poses, joint
-mapping, scale, and coordinate systems.</p>
-<section id="create-a-config">
-<h2>Create a config<a class="headerlink" href="#create-a-config" title="Link to this heading">¶</a></h2>
-<p>Launch the editor without arguments, load source and target references, adjust
-their bind poses, map joints, preview the result, and export the config.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>python/tools/animation/retarget_editor.py
+<p>KangEngine provides <code class="docutils literal notranslate"><span class="pre">angle</span> <span class="pre">(local-rotation</span> <span class="pre">transfer)</span></code> and <code class="docutils literal notranslate"><span class="pre">IK</span> <span class="pre">(trajectory</span> <span class="pre">optimization)</span></code> retargeting.
+Both workflows use three configuration levels:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">MotionSourceProfile</span></code>: source format, coordinate system, unit scale, and
+reference skeleton/motion shared by one motion family.</p></li>
+<li><p>Target profile: target skeleton or articulation structure and target-wide
+properties.</p></li>
+<li><p>Pair config: the concrete source-to-target mapping, bind calibration,
+scale/offset, weights, and constraints.</p></li>
+</ul>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>assets/retarget/
+├── motions/        shared source motion profiles
+├── angle/
+│   ├── targets/    angle target profiles
+│   └── pairs/      angle source-target pair configs
+└── ik/
+    ├── targets/    IK articulation target profiles
+    └── pairs/      IK source-target pair configs
 </pre></div>
 </div>
-<p>The reference source only needs a skeleton and bind pose. Motions processed
-later must use the same joint names and hierarchy.</p>
+<section id="demos">
+<h2>Demos<a class="headerlink" href="#demos" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Angle retargeting</p></th>
+<th class="head"><p>IK retargeting</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference external" href="https://youtu.be/G91RUK9cr9I"><img alt="Angle retargeting demo" src="https://img.youtube.com/vi/G91RUK9cr9I/hqdefault.jpg" /></a></p></td>
+<td><p><a class="reference external" href="https://youtu.be/Lnh4u59aO7M"><img alt="IK retargeting demo" src="https://img.youtube.com/vi/Lnh4u59aO7M/hqdefault.jpg" /></a></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="create-a-config">
+<h2>Create a config<a class="headerlink" href="#create-a-config" title="Link to this heading">¶</a></h2>
+<blockquote>
+<div><p>TODO: Add a detailed visual guide for the angle and IK editor workflows.</p>
+</div></blockquote>
+<p>Use the shared launcher to select an editor mode:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>python/tools/animation/retarget_editor.py<span class="w"> </span>--mode<span class="w"> </span>angle
+</pre></div>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>python/tools/animation/retarget_editor.py<span class="w"> </span>--mode<span class="w"> </span>ik
+</pre></div>
+</div>
+<p>A source clip can be replaced without changing its motion-family profile or
+pair config.</p>
+<p>For angle retargeting, load source and target references, adjust
+their bind poses, map joints, preview the result, and export the config.</p>
+<p>The reference source contains a skeleton and a reference pose used to calibrate
+the source and target bind poses. Motions processed later may be different
+clips from the same family, but must use the same joint names and hierarchy.</p>
 <p>Enable <strong>Source has armature joint</strong> when a BVH has a top-level container above
 the actual skeleton root. KangEngine removes that container and promotes its
 only child (for example <code class="docutils literal notranslate"><span class="pre">Hips</span></code>) to the motion root. The choice is stored as
-<code class="docutils literal notranslate"><span class="pre">source_has_armature_joint</span></code> in the config and is also used by headless jobs.</p>
+<code class="docutils literal notranslate"><span class="pre">has_armature_joint</span></code> in the shared motion source profile and is also used by
+headless jobs.</p>
 </section>
 <section id="headless-conversion">
 <h2>Headless conversion<a class="headerlink" href="#headless-conversion" title="Link to this heading">¶</a></h2>
 <p>Convert one motion without opening a window:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>python/tools/animation/retarget_motion.py<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--config<span class="w"> </span>character_retarget.json<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>python/tools/animation/angle_retarget_motion.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--config<span class="w"> </span>character_angle_retarget.json<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--input<span class="w"> </span>walk.bvh<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--output<span class="w"> </span>walk_kw.bvh
 </pre></div>
 </div>
 <p>Convert a directory:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>python/tools/animation/retarget_motion.py<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--config<span class="w"> </span>character_retarget.json<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>python/tools/animation/angle_retarget_motion.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--config<span class="w"> </span>character_angle_retarget.json<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--input-dir<span class="w"> </span>motions<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--output-dir<span class="w"> </span>retargeted<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--suffix<span class="w"> </span>_kw
@@ -374,16 +418,29 @@ only child (for example <code class="docutils literal notranslate"><span class="
 </section>
 <section id="python-api">
 <h2>Python API<a class="headerlink" href="#python-api" title="Link to this heading">¶</a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">kangengine.animation</span><span class="w"> </span><span class="kn">import</span> <span class="n">RetargetBatchProcessor</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">kangengine.animation</span><span class="w"> </span><span class="kn">import</span> <span class="n">AngleRetargetProcessor</span>
 
-<span class="n">processor</span> <span class="o">=</span> <span class="n">RetargetBatchProcessor</span><span class="p">(</span><span class="s2">&quot;character_retarget.json&quot;</span><span class="p">)</span>
+<span class="n">processor</span> <span class="o">=</span> <span class="n">AngleRetargetProcessor</span><span class="p">(</span><span class="s2">&quot;character_angle_retarget.json&quot;</span><span class="p">)</span>
 <span class="n">processor</span><span class="o">.</span><span class="n">process_file</span><span class="p">(</span><span class="s2">&quot;walk.bvh&quot;</span><span class="p">,</span> <span class="s2">&quot;walk_retargeted.bvh&quot;</span><span class="p">)</span>
 <span class="n">processor</span><span class="o">.</span><span class="n">process_files</span><span class="p">([</span><span class="s2">&quot;run.bvh&quot;</span><span class="p">,</span> <span class="s2">&quot;jump.bvh&quot;</span><span class="p">],</span> <span class="s2">&quot;retargeted&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
+<p>IK uses the corresponding processor and CLI shape:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">kangengine.animation</span><span class="w"> </span><span class="kn">import</span> <span class="n">IKRetargetProcessor</span>
+
+<span class="n">processor</span> <span class="o">=</span> <span class="n">IKRetargetProcessor</span><span class="p">(</span><span class="s2">&quot;character_ik_retarget.json&quot;</span><span class="p">)</span>
+<span class="n">processor</span><span class="o">.</span><span class="n">process_file</span><span class="p">(</span><span class="s2">&quot;walk.bvh&quot;</span><span class="p">,</span> <span class="s2">&quot;walk_retargeted.npz&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>IK output is saved as an <code class="docutils literal notranslate"><span class="pre">ArticulationMotion</span></code> NPZ.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>python/tools/animation/ik_retarget_motion.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--config<span class="w"> </span>character_ik_retarget.json<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--input<span class="w"> </span>walk.bvh<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--output<span class="w"> </span>walk_retargeted.npz
+</pre></div>
+</div>
 <p>Input motions are converted to KangEngine’s internal coordinate system before
-retargeting and converted to the config’s output coordinate system when saved.
-The headless processor does not create an application, renderer, or window.</p>
+retargeting and converted to the config’s output coordinate system when saved.</p>
 </section>
 </section>
 
@@ -443,6 +500,7 @@ The headless processor does not create an application, renderer, or window.</p>
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">Motion Retargeting</a><ul>
+<li><a class="reference internal" href="#demos">Demos</a></li>
 <li><a class="reference internal" href="#create-a-config">Create a config</a></li>
 <li><a class="reference internal" href="#headless-conversion">Headless conversion</a></li>
 <li><a class="reference internal" href="#python-api">Python API</a></li>
