@@ -8,6 +8,7 @@ Python API treats them as visualizers, not simulation state owners.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -732,7 +733,7 @@ class SimWorldVisualizer:
         self,
         env_id: int,
         obj_id: int,
-        mjcf_path: str,
+        asset_path: str,
         *,
         path: str = "/robot",
         scale: float = 1.0,
@@ -760,7 +761,7 @@ class SimWorldVisualizer:
 
         articulation = self.world.articulation(key[0], key[1])
         asset, mesh_asset_base_path = self._articulation_visual_asset(
-            mjcf_path, scale, order
+            asset_path, scale, order
         )
         articulation_visual = asset.instantiate(
             self.scene,
@@ -1347,15 +1348,33 @@ class SimWorldVisualizer:
             return
         record.set_color(color)
 
-    def _articulation_visual_asset(self, mjcf_path: str, scale: float, order: str):
+    def _articulation_visual_asset(
+        self,
+        asset_path: str,
+        scale: float,
+        order: str,
+    ):
         scale = float(scale)
-        key = (str(mjcf_path), scale, str(order))
+        suffix = Path(asset_path).suffix.lower()
+        key = (str(asset_path), scale, str(order))
         record = self._articulation_visual_assets.get(key)
         if record is not None:
             return record
 
-        asset = ArticulationVisualAsset.from_mjcf(mjcf_path, scale, order)
-        mesh_asset_base_path = _mesh_asset_base_path(mjcf_path, scale, order)
+        if suffix == ".xml":
+            data = self.world.load_mjcf(asset_path, scale=scale, order=order)
+        elif suffix == ".urdf":
+            data = self.world.load_urdf(asset_path, scale=scale, order=order)
+        else:
+            raise ValueError(
+                f"articulation asset path must end in .xml or .urdf: {asset_path}"
+            )
+        asset = ArticulationVisualAsset.from_data(
+            data=data,
+            scale=1.0,
+            asset_path=asset_path,
+        )
+        mesh_asset_base_path = _mesh_asset_base_path(asset_path, scale, order)
         asset.define_mesh_assets(self.scene, mesh_asset_base_path)
         record = (asset, mesh_asset_base_path)
         self._articulation_visual_assets[key] = record

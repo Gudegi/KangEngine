@@ -45,6 +45,8 @@ class MjcfDofControlApp(ke.App):
     default_contact_force_scale = 0.002
     contact_force_threshold = 1e-3
     visual_alpha_with_collision = 0.1
+    drag_force_debug_path = "/debug/mjcf_drag_force"
+    drag_force_target_debug_path = "/debug/mjcf_drag_force_target"
 
     def __init__(self, mjcf_path: str | Path):
         super().__init__()
@@ -310,8 +312,8 @@ class MjcfDofControlApp(ke.App):
         )
 
     def _clear_drag_force_arrow(self):
-        self.clear_debug_lines("/debug/mjcf_drag_force")
-        self.clear_debug_points("/debug/mjcf_drag_force_target")
+        self.clear_debug_lines(self.drag_force_debug_path)
+        self.clear_debug_points(self.drag_force_target_debug_path)
 
     def _update_drag_force_arrow(self):
         if (
@@ -350,14 +352,14 @@ class MjcfDofControlApp(ke.App):
         self.drag_force_line_ends[1] = left
         self.drag_force_line_ends[2] = right
         self.log_debug_lines(
-            "/debug/mjcf_drag_force",
+            self.drag_force_debug_path,
             self.drag_force_line_starts,
             self.drag_force_line_ends,
             self.drag_force_line_color,
             3.0,
         )
         self.log_debug_points(
-            "/debug/mjcf_drag_force_target",
+            self.drag_force_target_debug_path,
             self._drag_force_target.reshape(1, 3),
             self.drag_force_target_color,
             10.0,
@@ -584,6 +586,8 @@ class MjcfDofControlApp(ke.App):
         imgui.end()
 
     def cleanup(self):
+        if hasattr(self, "visual"):
+            self.visual.release()
         if hasattr(self, "world"):
             self.world.release()
 

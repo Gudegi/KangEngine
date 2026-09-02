@@ -1048,8 +1048,8 @@ class KangSimWorld:
         self._gpu_root_reset_batches: list[GpuRootStateResetBatch] = []
         self._gpu_dof_reset_batches: list[GpuDofStateResetBatch] = []
         self._active_body_force_keys: set[tuple[int, int]] = set()
-        self._mjcf_cache: dict[tuple[str, float, str], object] = {}
-        self._mjcf_load_count = 0
+        self._articulation_asset_cache: dict[tuple[str, float, str], object] = {}
+        self._articulation_asset_load_count = 0
         self.sim_time = 0.0
         self.sim_dt = float(physics_config.dt)
         self._advance_time_remainder = 0.0
@@ -1410,19 +1410,49 @@ class KangSimWorld:
         return selected
 
     def load_mjcf(self, mjcf_path: str, scale: float = 1.0, order: str = "DFS"):
-        key = (str(Path(mjcf_path).expanduser().resolve()), float(scale), str(order))
-        data = self._mjcf_cache.get(key)
+        return self._load_articulation_asset(
+            mjcf_path,
+            scale=scale,
+            order=order,
+            expected_suffix=".xml",
+        )
+
+    def load_urdf(self, urdf_path: str, scale: float = 1.0, order: str = "DFS"):
+        return self._load_articulation_asset(
+            urdf_path,
+            scale=scale,
+            order=order,
+            expected_suffix=".urdf",
+        )
+
+    def _load_articulation_asset(
+        self,
+        asset_path: str,
+        *,
+        scale: float,
+        order: str,
+        expected_suffix: str,
+    ):
+        resolved_path = Path(asset_path).expanduser().resolve()
+        suffix = resolved_path.suffix.lower()
+        if suffix != expected_suffix:
+            raise ValueError(
+                f"expected a {expected_suffix} articulation asset, got: {resolved_path}"
+            )
+        key = (str(resolved_path), float(scale), str(order))
+        data = self._articulation_asset_cache.get(key)
         if data is None:
-            data = _ke.asset.MJCFLoader.load(key[0], scale=key[1], order=key[2])
-            self._mjcf_cache[key] = data
-            self._mjcf_load_count += 1
+            loader = _ke.asset.MJCFLoader if suffix == ".xml" else _ke.asset.URDFLoader
+            data = loader.load(key[0], scale=key[1], order=key[2])
+            self._articulation_asset_cache[key] = data
+            self._articulation_asset_load_count += 1
         return data
 
-    def get_mjcf_cache_size(self) -> int:
-        return len(self._mjcf_cache)
+    def get_articulation_asset_cache_size(self) -> int:
+        return len(self._articulation_asset_cache)
 
-    def get_mjcf_load_count(self) -> int:
-        return self._mjcf_load_count
+    def get_articulation_asset_load_count(self) -> int:
+        return self._articulation_asset_load_count
 
     def set_cmd(
         self,

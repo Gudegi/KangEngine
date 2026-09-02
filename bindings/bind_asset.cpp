@@ -15,6 +15,7 @@
 #include "asset/heightmap_loader.hpp"
 #include "asset/mesh_loader.hpp"
 #include "asset/mjcf_loader.hpp"
+#include "asset/urdf_loader.hpp"
 #include "asset/usd_loader.hpp"
 #include "animation/skeleton_math.hpp"
 #include "animation/skeleton_motion.hpp"
@@ -447,6 +448,41 @@ void bind_asset(py::module& m) {
             py::arg("order") = "DFS",
             py::arg("target_coordinate_system") = "z_up_x_forward",
             "Load MJCF and return an articulation description.");
+
+    py::class_<URDFImportResult>(asset, "URDFImportResult",
+                                 "Parsed URDF articulation plus diagnostics.")
+        .def_readonly("articulation", &URDFImportResult::articulation,
+                      "Imported articulation description.")
+        .def_readonly("diagnostics", &URDFImportResult::diagnostics,
+                      "Importer diagnostics.");
+
+    py::class_<URDFLoader>(asset, "URDFLoader",
+                           "Loader for URDF articulation descriptions.")
+        .def_static(
+            "parse",
+            [](const std::string& path, float scale, const std::string& order,
+               const std::string& targetCoordinateSystem) {
+                return URDFLoader::parse(
+                    path, scale, order,
+                    Utils::coordinateSystemFromString(targetCoordinateSystem));
+            },
+            py::arg("urdf_path"), py::arg("scale") = 1.0f,
+            py::arg("order") = "DFS",
+            py::arg("target_coordinate_system") = "z_up_x_forward",
+            "Parse URDF and return an articulation description with "
+            "diagnostics.")
+        .def_static(
+            "load",
+            [](const std::string& path, float scale, const std::string& order,
+               const std::string& targetCoordinateSystem) {
+                return URDFLoader::load(
+                    path, scale, order,
+                    Utils::coordinateSystemFromString(targetCoordinateSystem));
+            },
+            py::arg("urdf_path"), py::arg("scale") = 1.0f,
+            py::arg("order") = "DFS",
+            py::arg("target_coordinate_system") = "z_up_x_forward",
+            "Load URDF and return an articulation description.");
 
     py::class_<BVHImportResult>(asset, "BVHImportResult",
                                 "Parsed BVH skeleton motion plus diagnostics.")

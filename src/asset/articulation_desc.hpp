@@ -30,6 +30,7 @@ struct VisualGeomDesc {
     Eigen::Vector3f pos = Eigen::Vector3f::Zero();
     Eigen::Quaternionf quat = Eigen::Quaternionf::Identity();
     Eigen::Vector4f rgba = Eigen::Vector4f(0.15f, 0.15f, 0.15f, 1.0f);
+    Eigen::Vector3f scale = Eigen::Vector3f::Ones();
 };
 
 struct JointDesc {
@@ -43,6 +44,7 @@ struct JointDesc {
     float kd = 0.f;
     float armature = 0.f;
     float effortLimit = FLT_MAX;
+    float velocityLimit = FLT_MAX;
 };
 
 // Named body-local reference frame parsed from MJCF <site> elements.
@@ -119,7 +121,8 @@ struct CollisionGeomDesc {
 using JointDescMap = std::unordered_map<int, std::vector<JointDesc>>;
 using SiteDescMap = std::unordered_map<std::string, SiteDesc>;
 using InertialDescMap = std::unordered_map<int, InertialDesc>;
-using CollisionGeomDescMap = std::unordered_map<int, std::vector<CollisionGeomDesc>>;
+using CollisionGeomDescMap =
+    std::unordered_map<int, std::vector<CollisionGeomDesc>>;
 
 // ---------------------------------------------------------------------------
 // Aggregate output

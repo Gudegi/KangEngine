@@ -59,6 +59,28 @@ class MJCFLoader:
         target_coordinate_system: CoordinateSystem = CoordinateSystem.Z_UP_X_FORWARD,
     ) -> MJCFImportResult: ...
 
+class URDFImportResult:
+    articulation: ArticulationDesc
+    diagnostics: ImportDiagnostics
+
+class URDFLoader:
+    """Load URDF articulation descriptions."""
+
+    @staticmethod
+    def load(
+        urdf_path: str,
+        scale: float = 1.0,
+        order: Literal["DFS", "BFS"] = "DFS",
+        target_coordinate_system: CoordinateSystem = CoordinateSystem.Z_UP_X_FORWARD,
+    ) -> ArticulationDesc: ...
+    @staticmethod
+    def parse(
+        urdf_path: str,
+        scale: float = 1.0,
+        order: Literal["DFS", "BFS"] = "DFS",
+        target_coordinate_system: CoordinateSystem = CoordinateSystem.Z_UP_X_FORWARD,
+    ) -> URDFImportResult: ...
+
 class BVHImportResult:
     """BVH motion and source-file metadata returned by :meth:`BVHLoader.parse`."""
 

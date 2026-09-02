@@ -44,6 +44,15 @@ class ArticulationVisualBridge {
              Utils::CoordinateSystem targetCoordinateSystem =
                  Utils::CoordinateSystem::ZUpXForward);
 
+    // Load URDF through the same visual construction path as MJCF.
+    static ArticulationVisualBridge
+    fromURDF(const std::string& urdfPath, Scene::SceneBackend* scene,
+             const std::string& primBasePath = "/robot", float scale = 1.0f,
+             const std::string& order = "DFS",
+             const std::string& meshAssetBasePath = "",
+             Utils::CoordinateSystem targetCoordinateSystem =
+                 Utils::CoordinateSystem::ZUpXForward);
+
     static ArticulationVisualBridge
     fromData(const Asset::ArticulationDesc& data, Scene::SceneBackend* scene,
              const std::string& primBasePath = "/robot", float scale = 1.0f,
@@ -91,7 +100,14 @@ class ArticulationVisualBridgeAsset {
                  Utils::CoordinateSystem::ZUpXForward);
 
     static ArticulationVisualBridgeAsset
-    fromData(const Asset::ArticulationDesc& data, float scale = 1.0f);
+    fromURDF(const std::string& urdfPath, float scale = 1.0f,
+             const std::string& order = "DFS",
+             Utils::CoordinateSystem targetCoordinateSystem =
+                 Utils::CoordinateSystem::ZUpXForward);
+
+    static ArticulationVisualBridgeAsset
+    fromData(const Asset::ArticulationDesc& data, float scale = 1.0f,
+             const std::string& assetPath = "");
 
     void defineMeshAssets(Scene::SceneBackend* scene,
                           const std::string& meshAssetBasePath,

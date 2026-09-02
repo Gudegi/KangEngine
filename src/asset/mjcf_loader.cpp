@@ -698,9 +698,10 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
                                 ? Eigen::Vector4f(rgbaValues[0], rgbaValues[1],
                                                   rgbaValues[2], rgbaValues[3])
                                 : Eigen::Vector4f(0.15f, 0.15f, 0.15f, 1.0f);
-                        _data.visualGeoms.push_back({bodyName, it->second.file,
-                                                     idx, meshPos, meshQuat,
-                                                     rgba});
+                        VisualGeomDesc visual{bodyName, it->second.file, idx,
+                                              meshPos,  meshQuat,        rgba};
+                        visual.scale = it->second.scale * scale;
+                        _data.visualGeoms.push_back(std::move(visual));
                     }
                     continue;
                 }
@@ -831,6 +832,30 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
                     jd.axis =
                         Eigen::Vector3f(axisVals[0], axisVals[1], axisVals[2])
                             .normalized();
+
+                // MJCF permits multiple primitive joints on one body. PhysX
+                // represents those DOFs with one inbound articulation joint,
+                // which cannot contain two independent collinear axes. Keep
+                // the first authored axis and omit later parallel axes as a
+                // compatibility fallback (commonly used for backlash).
+                const auto existingJoints = _data.joints.find(idx);
+                if (existingJoints != _data.joints.end()) {
+                    const auto duplicate = std::find_if(
+                        existingJoints->second.begin(),
+                        existingJoints->second.end(),
+                        [&](const JointDesc& existing) {
+                            return std::abs(existing.axis.dot(jd.axis)) >=
+                                   1.f - 1e-5f;
+                        });
+                    if (duplicate != existingJoints->second.end()) {
+                        _diagnostics.warnings.push_back(fmt::format(
+                            "Ignored joint '{}' on body '{}' because its axis "
+                            "is collinear with earlier joint '{}'.",
+                            jd.name, bodyName ? bodyName : "", duplicate->name));
+                        continue;
+                    }
+                }
+
                 auto rangeVals = splitFloats(jElem->Attribute("range"));
                 if (rangeVals.size() >= 2) {
                     jd.loLimit = rangeVals[0] * degToRad;

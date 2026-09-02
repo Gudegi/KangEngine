@@ -27,6 +27,7 @@
 #include "engine/graphics/material/colors.hpp"
 
 #include "asset/mjcf_loader.hpp"
+#include "asset/urdf_loader.hpp"
 #include "bridge/physics_bridge.hpp"
 #include "bridge/articulation_visual_bridge.hpp"
 #include "bridge/skeletal_visual_bridge.hpp"

@@ -21,13 +21,13 @@ if TYPE_CHECKING:
 
 
 def _mesh_asset_path(
-    mjcf_path: Path,
+    asset_path: Path,
     scale: float,
     order: Literal["DFS", "BFS"],
     target_coordinate_system: CoordinateSystem,
 ) -> str:
-    stem = re.sub(r"[^A-Za-z0-9_]+", "_", mjcf_path.name).strip("_") or "robot"
-    key = f"{mjcf_path}|{float(scale):.9g}|{order}|{target_coordinate_system.value}".encode()
+    stem = re.sub(r"[^A-Za-z0-9_]+", "_", asset_path.name).strip("_") or "robot"
+    key = f"{asset_path}|{float(scale):.9g}|{order}|{target_coordinate_system.value}".encode()
     digest = hashlib.sha1(key).hexdigest()[:10]
     return f"/.Resources/Meshes/ArticulatedSurfaces/{stem}_{digest}"
 
@@ -53,7 +53,7 @@ def _alpha_from_color(color: npt.ArrayLike) -> float | None:
 
 
 class ArticulatedSurfaceAsset:
-    """Reusable MJCF skeleton and rigid-link mesh asset."""
+    """Reusable articulation skeleton and rigid-link mesh asset."""
 
     def __init__(self, native: Any, mesh_asset_path: str):
         self._native = native
@@ -73,6 +73,24 @@ class ArticulatedSurfaceAsset:
         """Load a reusable kinematic surface asset from MJCF."""
         path = Path(mjcf_path).expanduser().resolve()
         native = _ke.animation.ArticulationVisualAsset.from_mjcf(
+            str(path), float(scale), order, target_coordinate_system.value
+        )
+        return cls(
+            native, _mesh_asset_path(path, scale, order, target_coordinate_system)
+        )
+
+    @classmethod
+    def from_urdf(
+        cls,
+        urdf_path: str | Path,
+        *,
+        scale: float = 1.0,
+        order: Literal["DFS", "BFS"] = "DFS",
+        target_coordinate_system: CoordinateSystem = CoordinateSystem.Z_UP_X_FORWARD,
+    ) -> ArticulatedSurfaceAsset:
+        """Load a reusable kinematic surface asset from URDF."""
+        path = Path(urdf_path).expanduser().resolve()
+        native = _ke.animation.ArticulationVisualAsset.from_urdf(
             str(path), float(scale), order, target_coordinate_system.value
         )
         return cls(
@@ -151,6 +169,28 @@ class ArticulatedSurface:
         """Load an MJCF asset and create its first kinematic instance."""
         asset = ArticulatedSurfaceAsset.from_mjcf(
             mjcf_path,
+            scale=scale,
+            order=order,
+            target_coordinate_system=target_coordinate_system,
+        )
+        return asset.create(app, path, material=material, color=color)
+
+    @classmethod
+    def create_from_urdf(
+        cls,
+        app: App,
+        path: str,
+        urdf_path: str | Path,
+        *,
+        material: Material,
+        color: npt.ArrayLike | None = None,
+        scale: float = 1.0,
+        order: Literal["DFS", "BFS"] = "DFS",
+        target_coordinate_system: CoordinateSystem = CoordinateSystem.Z_UP_X_FORWARD,
+    ) -> ArticulatedSurface:
+        """Load a URDF asset and create its first kinematic instance."""
+        asset = ArticulatedSurfaceAsset.from_urdf(
+            urdf_path,
             scale=scale,
             order=order,
             target_coordinate_system=target_coordinate_system,

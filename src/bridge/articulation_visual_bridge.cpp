@@ -1,6 +1,7 @@
 #include "articulation_visual_bridge.hpp"
 #include "asset/mesh_loader.hpp"
 #include "asset/mjcf_loader.hpp"
+#include "asset/urdf_loader.hpp"
 #include "animation/skeleton_math.hpp"
 #include "engine/scene/component/articulation_component.hpp"
 #include "engine/scene/component/articulation_binding_component.hpp"
@@ -126,10 +127,14 @@ static void applyMeshInfoTransform(Scene::MeshData& mesh,
     glm::vec3 localPos(meshInfo.pos.x(), meshInfo.pos.y(), meshInfo.pos.z());
     glm::quat localQuat(meshInfo.quat.w(), meshInfo.quat.x(), meshInfo.quat.y(),
                         meshInfo.quat.z());
+    const glm::vec3 localScale(meshInfo.scale.x(), meshInfo.scale.y(),
+                               meshInfo.scale.z());
     for (auto& v : mesh.vertices)
-        v = localQuat * v + localPos;
+        v = localQuat * (v * localScale) + localPos;
+    const glm::vec3 inverseScale(1.f / localScale.x, 1.f / localScale.y,
+                                 1.f / localScale.z);
     for (auto& n : mesh.normals)
-        n = localQuat * n;
+        n = glm::normalize(localQuat * (n * inverseScale));
 }
 
 static void appendMesh(Scene::MeshData& dst, Scene::MeshData&& part) {
@@ -155,8 +160,6 @@ buildVisualGeomAssets(const Asset::ArticulationDesc& data) {
         std::string meshPath = (fs::path(data.assetDir) / meshInfo.meshFile)
                                    .lexically_normal()
                                    .string();
-        fmt::print("Loading mesh [{}] {}: {}\n", meshInfo.bodyIndex,
-                   meshInfo.bodyName, meshPath);
         auto part = loadVisualMesh(meshPath);
         applyMeshInfoTransform(part, meshInfo);
 
@@ -259,6 +262,16 @@ ArticulationVisualBridge ArticulationVisualBridge::fromMJCF(
     return asset.instantiate(scene, primBasePath, meshAssetBasePath);
 }
 
+ArticulationVisualBridge ArticulationVisualBridge::fromURDF(
+    const std::string& urdfPath, Scene::SceneBackend* scene,
+    const std::string& primBasePath, float scale, const std::string& order,
+    const std::string& meshAssetBasePath,
+    Utils::CoordinateSystem targetCoordinateSystem) {
+    auto asset = ArticulationVisualBridgeAsset::fromURDF(
+        urdfPath, scale, order, targetCoordinateSystem);
+    return asset.instantiate(scene, primBasePath, meshAssetBasePath);
+}
+
 ArticulationVisualBridge
 ArticulationVisualBridge::fromData(const Asset::ArticulationDesc& data,
                                    Scene::SceneBackend* scene,
@@ -278,12 +291,24 @@ ArticulationVisualBridgeAsset ArticulationVisualBridgeAsset::fromMJCF(
     return asset;
 }
 
+ArticulationVisualBridgeAsset ArticulationVisualBridgeAsset::fromURDF(
+    const std::string& urdfPath, float scale, const std::string& order,
+    Utils::CoordinateSystem targetCoordinateSystem) {
+    auto asset = fromData(
+        Asset::URDFLoader::load(urdfPath, 1.0f, order, targetCoordinateSystem),
+        scale);
+    asset._assetPath = urdfPath;
+    return asset;
+}
+
 ArticulationVisualBridgeAsset
 ArticulationVisualBridgeAsset::fromData(const Asset::ArticulationDesc& data,
-                                        float scale) {
+                                        float scale,
+                                        const std::string& assetPath) {
     ArticulationVisualBridgeAsset asset;
     asset._data = data;
     asset._scale = scale;
+    asset._assetPath = assetPath;
     asset._visualGeomAssets = buildVisualGeomAssets(data);
     fmt::print("ArticulationVisualBridgeAsset loaded: {} bodies, {} meshes\n",
                asset.numBodies(), data.visualGeoms.size());

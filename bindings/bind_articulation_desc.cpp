@@ -24,6 +24,12 @@ void bind_articulation_desc(py::module& m) {
         .def_readonly("lo_limit", &JointDesc::loLimit, "Lower joint limit.")
         .def_readonly("hi_limit", &JointDesc::hiLimit, "Upper joint limit.")
         .def_readonly("armature", &JointDesc::armature, "Joint-space armature.")
+        .def_readonly("kp", &JointDesc::kp, "Joint stiffness.")
+        .def_readonly("kd", &JointDesc::kd, "Joint damping.")
+        .def_readonly("effort_limit", &JointDesc::effortLimit,
+                      "Maximum absolute joint effort.")
+        .def_readonly("velocity_limit", &JointDesc::velocityLimit,
+                      "Maximum absolute joint velocity.")
         .def_property_readonly(
             "axis", [](const JointDesc& j) { return Animation::toGlm(j.axis); },
             "Joint axis.");
@@ -107,7 +113,11 @@ void bind_articulation_desc(py::module& m) {
                 return glm::vec4(m.rgba.x(), m.rgba.y(), m.rgba.z(),
                                  m.rgba.w());
             },
-            "Mesh display color.");
+            "Mesh display color.")
+        .def_property_readonly(
+            "scale",
+            [](const VisualGeomDesc& m) { return Animation::toGlm(m.scale); },
+            "Scale applied to mesh-local vertices before the visual pose.");
 
     py::enum_<CollisionGeomDesc::Type>(
         asset, "CollisionGeomDescType",
@@ -182,7 +192,8 @@ void bind_articulation_desc(py::module& m) {
                       "Visual mesh descriptions.")
         .def_readonly("asset_dir", &ArticulationDesc::assetDir,
                       "Directory used to resolve mesh files.")
-        .def_readonly("sites", &ArticulationDesc::sites, "Imported site markers.")
+        .def_readonly("sites", &ArticulationDesc::sites,
+                      "Imported site markers.")
         .def_property_readonly(
             "joints",
             [](const ArticulationDesc& d) {

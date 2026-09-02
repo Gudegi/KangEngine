@@ -361,16 +361,14 @@ void bind_animation(py::module& m) {
     py::module anim = m.def_submodule(
         "animation", "Skeleton animation, skinning, and visualization APIs.");
 
-    py::enum_<ArticulationCoordinateType>(anim,
-                                          "ArticulationCoordinateType")
+    py::enum_<ArticulationCoordinateType>(anim, "ArticulationCoordinateType")
         .value("FIXED", ArticulationCoordinateType::Fixed)
         .value("REVOLUTE", ArticulationCoordinateType::Revolute)
         .value("PRISMATIC", ArticulationCoordinateType::Prismatic)
         .value("SPHERICAL", ArticulationCoordinateType::Spherical)
         .value("FREE", ArticulationCoordinateType::Free);
 
-    py::class_<ArticulationCoordinateBlock>(anim,
-                                            "ArticulationCoordinateBlock")
+    py::class_<ArticulationCoordinateBlock>(anim, "ArticulationCoordinateBlock")
         .def_readonly("body_index", &ArticulationCoordinateBlock::bodyIndex)
         .def_readonly("parent_body_index",
                       &ArticulationCoordinateBlock::parentBodyIndex)
@@ -414,8 +412,7 @@ void bind_animation(py::module& m) {
                                &ArticulationCoordinateLayout::modelSignature)
         .def_property_readonly("blocks", &ArticulationCoordinateLayout::blocks);
 
-    py::class_<ArticulationMappingResult>(anim,
-                                          "ArticulationMappingResult")
+    py::class_<ArticulationMappingResult>(anim, "ArticulationMappingResult")
         .def_readonly("q", &ArticulationMappingResult::q)
         .def_readonly("residual_angles",
                       &ArticulationMappingResult::residualAngles);
@@ -426,8 +423,7 @@ void bind_animation(py::module& m) {
         .def_readonly("residual_angles",
                       &ArticulationMotionMappingResult::residualAngles);
 
-    py::class_<ArticulationMotionMapper>(anim,
-                                         "ArticulationMotionMapper")
+    py::class_<ArticulationMotionMapper>(anim, "ArticulationMotionMapper")
         .def(py::init<ArticulationCoordinateLayout>(), py::arg("layout"))
         .def("to_articulation_coordinates",
              &ArticulationMotionMapper::toArticulationCoordinates,
@@ -1128,6 +1124,22 @@ void bind_animation(py::module& m) {
             py::arg("mesh_asset_base_path") = "",
             py::arg("target_coordinate_system") = "z_up_x_forward",
             "Create an articulation visual and scene prims from an MJCF file.")
+        .def_static(
+            "from_urdf",
+            [](const std::string& urdfPath, Scene::SceneBackend* scene,
+               const std::string& primBasePath, float scale,
+               const std::string& order, const std::string& meshAssetBasePath,
+               const std::string& targetCoordinateSystem) {
+                return ArticulationVisualBridge::fromURDF(
+                    urdfPath, scene, primBasePath, scale, order,
+                    meshAssetBasePath,
+                    Utils::coordinateSystemFromString(targetCoordinateSystem));
+            },
+            py::arg("urdf_path"), py::arg("scene"), py::arg("path") = "/robot",
+            py::arg("scale") = 1.0f, py::arg("order") = "DFS",
+            py::arg("mesh_asset_base_path") = "",
+            py::arg("target_coordinate_system") = "z_up_x_forward",
+            "Create an articulation visual and scene prims from a URDF file.")
         .def("apply_pose", &ArticulationVisualBridge::applyPose,
              "Apply the current skeleton/body state to scene prims.")
         .def(
@@ -1197,6 +1209,11 @@ void bind_animation(py::module& m) {
         anim, "ArticulationVisualAsset",
         "Reusable articulated rigid-link visual asset that can instantiate "
         "scene prims.")
+        .def_static("from_data", &ArticulationVisualBridgeAsset::fromData,
+                    py::arg("data"), py::arg("scale") = 1.0f,
+                    py::arg("asset_path") = "",
+                    "Build reusable bridge asset data from a parsed "
+                    "articulation description.")
         .def_static(
             "from_mjcf",
             [](const std::string& path, float scale, const std::string& order,
@@ -1209,6 +1226,18 @@ void bind_animation(py::module& m) {
             py::arg("order") = "DFS",
             py::arg("target_coordinate_system") = "z_up_x_forward",
             "Load reusable bridge asset data from an MJCF file.")
+        .def_static(
+            "from_urdf",
+            [](const std::string& path, float scale, const std::string& order,
+               const std::string& targetCoordinateSystem) {
+                return ArticulationVisualBridgeAsset::fromURDF(
+                    path, scale, order,
+                    Utils::coordinateSystemFromString(targetCoordinateSystem));
+            },
+            py::arg("urdf_path"), py::arg("scale") = 1.0f,
+            py::arg("order") = "DFS",
+            py::arg("target_coordinate_system") = "z_up_x_forward",
+            "Load reusable bridge asset data from a URDF file.")
         .def("define_mesh_assets",
              &ArticulationVisualBridgeAsset::defineMeshAssets, py::arg("scene"),
              py::arg("mesh_asset_base_path"),
