@@ -74,6 +74,7 @@ __all__ += [
     "IKTargetProfile",
     "MotionKinematics",
     "MotionLibrary",
+    "MotionLibraryBuffers",
     "MotionSample",
     "load_articulation_motion_npz",
     "retarget_angle_motion",
@@ -102,6 +103,7 @@ for _type in (
 _LAZY_IMPORTS = {
     "MotionKinematics": (".motion_library", "MotionKinematics"),
     "MotionLibrary": (".motion_library", "MotionLibrary"),
+    "MotionLibraryBuffers": (".motion_library", "MotionLibraryBuffers"),
     "MotionSample": (".motion_library", "MotionSample"),
 }
 

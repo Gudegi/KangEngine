@@ -41,6 +41,7 @@ copyright = "2026, KangEngine contributors"
 
 extensions = [
     "myst_parser",
+    "sphinxcontrib.mermaid",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
@@ -86,6 +87,7 @@ myst_enable_extensions = [
     "colon_fence",
     "deflist",
 ]
+myst_fence_as_directive = ["mermaid"]
 
 copybutton_prompt_text = r">>> |\.\.\. |\$ "
 copybutton_prompt_is_regexp = True

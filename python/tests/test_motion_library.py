@@ -38,6 +38,27 @@ def _motion(layout, *, name: str, fps: float = 2.0):
     )
 
 
+def _write_bvh(path: Path) -> None:
+    path.write_text(
+        "HIERARCHY\n"
+        "ROOT Hips\n"
+        "{\n"
+        "  OFFSET 0 0 0\n"
+        "  CHANNELS 6 Xposition Yposition Zposition Zrotation Xrotation Yrotation\n"
+        "  End Site\n"
+        "  {\n"
+        "    OFFSET 0 1 0\n"
+        "  }\n"
+        "}\n"
+        "MOTION\n"
+        "Frames: 2\n"
+        "Frame Time: 0.0333333333\n"
+        "0 0 0 0 0 0\n"
+        "1 0 0 0 0 0\n",
+        encoding="utf-8",
+    )
+
+
 def test_motion_library_normalizes_articulation_motion_and_samples_frames():
     layout = _layout()
     motion = _motion(layout, name="clip")
@@ -58,6 +79,34 @@ def test_motion_library_normalizes_articulation_motion_and_samples_frames():
         torch.from_numpy(skeleton_motion.root_translations()),
     )
     assert torch.equal(sample.frame_indices, torch.tensor([0, 1]))
+
+
+def test_motion_library_loads_weighted_yaml_of_relative_bvh_files(tmp_path):
+    motion_path = tmp_path / "walk.bvh"
+    _write_bvh(motion_path)
+    manifest = tmp_path / "motions.yaml"
+    manifest.write_text(
+        "motions:\n"
+        "- file: walk.bvh\n"
+        "  weight: 0.0\n"
+        "- file: walk.bvh\n"
+        "  weight: 1.0\n",
+        encoding="utf-8",
+    )
+
+    library = ke.animation.MotionLibrary.from_file(manifest)
+
+    assert library.num_motions == 2
+    assert library.motion_names == ("0:walk", "1:walk")
+    assert torch.equal(library.frame_counts, torch.tensor([2, 2]))
+    buffers = library.packed_buffers()
+    assert torch.equal(buffers.frame_offsets, torch.tensor([0, 2]))
+    assert buffers.root_positions.shape == (4, 3)
+    assert buffers.root_positions.is_contiguous()
+    assert buffers.local_rotations_wxyz.is_contiguous()
+    assert torch.equal(library.sample_motion_ids(16), torch.ones(16, dtype=torch.long))
+    sample = library.sample_frames([0, 1], [1, 1], loop=False)
+    torch.testing.assert_close(sample.root_positions[0], sample.root_positions[1])
 
 
 def test_motion_library_slerps_quaternions_and_root_position():
@@ -119,6 +168,54 @@ def test_motion_library_runs_fk_after_quaternion_sampling():
     assert torch.allclose(midpoint.body_positions, expected_positions, atol=1.0e-6)
 
 
+def test_motion_library_exposes_precomputed_packed_kinematics():
+    layout = _layout()
+    library = ke.animation.MotionLibrary(
+        [_motion(layout, name="clip")],
+        keep_source_motions=True,
+        precompute_kinematics=True,
+    )
+    motion = library.motion(0)
+    buffers = library.packed_buffers()
+
+    assert buffers.global_positions is not None
+    assert buffers.global_rotations_wxyz is not None
+    assert buffers.global_linear_velocities is not None
+    assert buffers.global_angular_velocities is not None
+    assert torch.allclose(
+        buffers.global_positions,
+        torch.from_numpy(motion.global_positions()),
+    )
+    assert torch.allclose(
+        buffers.global_linear_velocities,
+        torch.from_numpy(motion.global_linear_velocities()),
+    )
+    expected_rotations = torch.from_numpy(motion.global_rotations_wxyz())
+    assert torch.allclose(
+        torch.abs(
+            torch.sum(buffers.global_rotations_wxyz * expected_rotations, dim=-1)
+        ),
+        torch.ones_like(expected_rotations[..., 0]),
+        atol=1.0e-6,
+    )
+    assert torch.allclose(
+        buffers.global_angular_velocities,
+        torch.from_numpy(motion.global_angular_velocities()),
+    )
+    assert (
+        buffers.root_positions.data_ptr()
+        == library.packed_buffers().root_positions.data_ptr()
+    )
+    assert torch.equal(buffers.fps, torch.tensor([motion.fps()]))
+
+    sample = library.sample(0, 0.5 / motion.fps(), loop=False)
+    kinematics = library.sample_kinematics(sample)
+    expected_positions = 0.5 * (
+        buffers.global_positions[0] + buffers.global_positions[1]
+    )
+    assert torch.allclose(kinematics.body_positions, expected_positions)
+
+
 def test_motion_library_physx_adapter_returns_backend_torch_state():
     layout = _layout()
     motion = _motion(layout, name="clip")
@@ -128,8 +225,21 @@ def test_motion_library_physx_adapter_returns_backend_torch_state():
     )
     sample = library.sample_frames(0, 1)
     expected = adapter.pack_skeleton_motion(library.motion(0))
+    packed = library.packed_buffers().backend_frame_data
 
     assert sample.backend_state is not None
+    assert packed is not None
+    joint_count = len(adapter.joint_names)
+    assert torch.allclose(
+        packed[:, :joint_count],
+        torch.from_numpy(expected.joint_positions),
+        atol=1.0e-6,
+    )
+    assert torch.allclose(
+        packed[:, joint_count:],
+        torch.from_numpy(expected.joint_velocities),
+        atol=1.0e-6,
+    )
     assert torch.allclose(
         sample.backend_state.joint_positions,
         torch.from_numpy(expected.joint_positions[1]),

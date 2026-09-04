@@ -206,9 +206,9 @@ class PhysXArticulationMotionApp(ke.App):
                     physical_offset, physical_offset + size
                 )
                 physical_offset += size
-            policy_to_physics = []
+            dof_indices = []
             for name in policy_body_names:
-                policy_to_physics.extend(physical_spans[name])
+                dof_indices.extend(physical_spans[name])
             self.root_positions = self.motion_lib._root_pos.clone()
             self.root_rotations = self.motion_lib._root_rot
             self.root_velocities = self.motion_lib._root_vel
@@ -219,8 +219,8 @@ class PhysXArticulationMotionApp(ke.App):
             self.dof_velocities = self.motion_lib._dof_vel.new_empty(
                 self.motion_lib._dof_vel.shape
             )
-            self.dof_positions[:, policy_to_physics] = self.motion_lib._dof_pos
-            self.dof_velocities[:, policy_to_physics] = self.motion_lib._dof_vel
+            self.dof_positions[:, dof_indices] = self.motion_lib._dof_pos
+            self.dof_velocities[:, dof_indices] = self.motion_lib._dof_vel
             self.num_frames = self.motion_lib.num_frames
             self.motion_fps = self.motion_lib._fps
             self.max_residual = 0.0

@@ -6,6 +6,70 @@
 Use this conversion when preparing animation data for robot control, motion
 tracking, or simulation datasets.
 
+## Motion data flow
+
+KangEngine normalizes animation files and dataset-specific arrays into
+`SkeletonMotion`. An articulation layout can then map the same motion into
+`ArticulationMotion`. `MotionLibrary` accepts `SkeletonMotion` and articulation
+motions that can be converted back to that representation, then provides packed
+sampling and optional backend-native state generation.
+
+```mermaid
+flowchart LR
+    subgraph Sources["Motion sources"]
+        direction TB
+        FILES["<b>BVH / FBX</b>"]
+        DATASETS["<b>NPZ / NPY / PKL</b><br/>AMASS · other SMPL-family data"]
+        ARTNPZ["<b>Articulation NPZ</b><br/>q + qd + model signature"]
+        ROBOT["<b>MJCF / URDF</b>"]
+    end
+
+    subgraph Canonical["Skeleton Animation"]
+        direction TB
+        LOADER["<b>Motion loader</b>"]
+        DATASET_ADAPTER["<b>Dataset adapter</b>"]
+        SKELETON["<b>SkeletonMotion</b><br/>SkeletonTree + root transform<br/>+ parent-local WXYZ rotations"]
+    end
+
+    subgraph Mapping["Articulation Animation"]
+        direction TB
+        DESC["<b>ArticulationDesc</b>"]
+        LAYOUT["<b>ArticulationCoordinateLayout</b>"]
+        MAPPER["<b>ArticulationMotionMapper</b><br/>joint decomposition + optional limit clamping"]
+        ARTLOADER["<b>load_articulation_motion_npz()</b>"]
+        ARTICULATION["<b>ArticulationMotion</b><br/>q + qd"]
+    end
+
+    subgraph Runtime["Runtime sampling"]
+        direction TB
+        LIBRARY["<b>MotionLibrary</b><br/>weighted multi-clip sampling"]
+        ADAPTER["<b>Optional MotionAdapter</b><br/>PhysX · Newton · MuJoCo"]
+        PACKED["<b>Packed Torch buffers</b><br/>skeleton frames + optional simulator frame data"]
+        SAMPLE["<b>MotionSample</b><br/>skeleton pose + optional simulator state"]
+    end
+
+    FILES --> LOADER --> SKELETON
+    DATASETS --> DATASET_ADAPTER --> SKELETON
+    ROBOT --> DESC --> LAYOUT
+    SKELETON --> MAPPER
+    LAYOUT --> MAPPER
+    MAPPER --> ARTICULATION
+    ARTNPZ --> ARTLOADER
+    LAYOUT --> ARTLOADER
+    ARTLOADER --> ARTICULATION
+    ARTICULATION -.->|inspect / export| SKELETON
+    SKELETON --> LIBRARY
+    ARTICULATION --> LIBRARY
+    ADAPTER -.->|configured with| LIBRARY
+    LIBRARY -->|owns| PACKED
+    ADAPTER -.->|prepare_motion| PACKED
+    PACKED -->|sample / interpolate| SAMPLE
+    ADAPTER -.->|pack_sample| SAMPLE
+
+    classDef primary fill:#eaf5e3,stroke:#568b32,stroke-width:3px,color:#28322c
+    class SKELETON,ARTICULATION,LIBRARY primary
+```
+
 ## Convert a motion
 
 Build the layout from the same `ArticulationDesc` used by the simulator. The
@@ -28,9 +92,10 @@ q = articulation_motion.q    # [frames, layout.nq], float32 NumPy view
 qd = articulation_motion.qd  # [frames, layout.nv], float32 NumPy view
 ```
 
-`residual_angles` reports, in radians, rotation that the target articulation
-could not represent after joint decomposition and limit clamping. Use it to
-detect unsuitable mappings or motions outside the robot's range.
+`residual_angles` reports, in radians, rotation that joint decomposition could
+not represent. When `clamp_to_limits=True`, the residual also includes error
+introduced by limit clamping. Use it to detect unsuitable mappings or motions
+outside the robot's range.
 
 ## Coordinate layout
 
@@ -48,9 +113,11 @@ inside `q` and `qd`.
 Therefore `layout.nq` and `layout.nv` may differ. Quaternion orientations use
 four configuration values but have only three tangent velocity coordinates.
 
-The layout also contains a `model_signature`. Motions and mappers must have the
-same signature; this prevents accidentally applying coordinates with a
-different body order, joint layout, reference pose, or limits.
+The layout also contains a `model_signature`. Mappers and backend adapters
+require matching signatures. `load_articulation_motion_npz()` instead requires
+matching `nq` and `nv`; it warns but still loads when only the signature differs.
+This permits compatible extensions, but the warning may indicate a different
+body order, joint layout, reference pose, or limits.
 
 ## Convert back for inspection
 
@@ -68,15 +135,17 @@ mapped = mapper.to_articulation_coordinates(skeleton_state)
 restored_state = mapper.to_skeleton_state(mapped.q)
 ```
 
-`SkeletonState` cannot represent non-zero prismatic joint translation. Such a
-coordinate can remain in `ArticulationMotion`, but converting it back to a
-`SkeletonState` or `SkeletonMotion` raises an error.
+`SkeletonState` and `SkeletonMotion` cannot represent prismatic joints. An
+`ArticulationMotion` containing prismatic joints therefore cannot be converted
+back to either representation.
 
 ## Reference motion library
 
 `MotionLibrary` stores the backend-independent quaternion form: root position,
 root rotation, and local joint rotations. It accepts either `SkeletonMotion`
-or `ArticulationMotion`; the latter is converted once when registered.
+or `ArticulationMotion`; the latter is converted to `SkeletonMotion` for
+canonical storage when registered. Consequently, articulation motion containing
+prismatic joints cannot be registered.
 
 ```python
 adapter = ke.adapters.physx.PhysXMotionAdapter(layout)
@@ -84,6 +153,7 @@ library = ke.animation.MotionLibrary(
     motions=[walk_motion, run_motion],
     adapter=adapter,
     device="cuda:0",
+    precompute_kinematics=True,
 )
 
 sample = library.sample(
@@ -93,22 +163,39 @@ sample = library.sample(
 )
 
 local_rotation = sample.local_rotations_wxyz
-body_state = library.forward_kinematics(sample)
+body_state = library.sample_kinematics(sample)
 body_position = body_state.body_positions
 body_rotation = body_state.body_rotations_wxyz
 physx_joint_position = sample.backend_state.joint_positions
 physx_joint_velocity = sample.backend_state.joint_velocities
+
+# If using MuJoCoMotionAdapter:
+# mujoco_qpos = sample.backend_state.qpos
+# mujoco_qvel = sample.backend_state.qvel
+
+# If using NewtonMotionAdapter:
+# newton_joint_q = sample.backend_state.joint_q
+# newton_joint_qd = sample.backend_state.joint_qd
+
+buffers = library.packed_buffers()
+global_position_frames = buffers.global_positions
 ```
 
 The library uploads all clips and metadata to packed Torch buffers. It uses
 linear root-position interpolation and quaternion SLERP, then asks the optional
 adapter to produce simulator-native tensors on the same device. Use
-`forward_kinematics(sample)` when imitation observations need robot-body
-positions or rotations; FK runs after sampling and does not store per-frame
-global-pose copies. Source `SkeletonMotion` objects are not retained by default;
+`forward_kinematics(sample)` when occasional samples need robot-body positions
+or rotations. For high-frequency imitation and GPU kernels, construct the
+library with `precompute_kinematics=True` and obtain persistent frame-major
+position, rotation, linear-velocity, and angular-velocity tensors through
+`packed_buffers()`. These borrowed tensors can be shared with runtimes such as
+Warp without a copy; acquire the view again after adding clips or calling
+`library.to(device)`. Source `SkeletonMotion` objects are not retained by default;
 pass `keep_source_motions=True` only when `library.motion(id)` is needed for
-inspection, editing, or export. `ArticulationMotion` input keeps its existing `q/qd` as the
-adapter's prepared fast path instead of recomputing it. Use
+inspection, editing, or export. The optional adapter also receives the original
+input during registration. Newton and MuJoCo adapters can reuse an
+`ArticulationMotion` input's existing `q/qd`; the PhysX adapter derives its
+logical DOFs from the converted skeleton rotations. Use
 `sample_motion_ids(...)` for weighted clip IDs, `sample_times(...)` for random
 times, and `sample_frames(...)` for exact stored frames. `library.to(device)`
 moves the packed library without rebuilding clips.

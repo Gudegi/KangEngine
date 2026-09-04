@@ -12,6 +12,7 @@ dependencies = [
     "imageio>=2.37",
     "imageio-ffmpeg>=0.6",
     "numpy>=1.26",
+    "pyyaml>=6.0",
     "torch>=1.9.1",
 ]
 
@@ -22,15 +23,14 @@ docs = [
     "sphinx-autodoc-typehints>=3",
     "sphinx-copybutton>=0.5",
     "sphinx-sitemap>=2.6",
+    "sphinxcontrib-mermaid>=1",
     "furo>=2024.8.6",
 ]
 mimickit = [
     "gymnasium",
-    "pyyaml",
 ]
 mimickit-full = [
     "gymnasium",
-    "pyyaml",
 ]
 pyroki = [
     "jaxls @ git+https://github.com/brentyi/jaxls.git@50a58be88c5ef74532f09e3f55268b4f02c490e3",

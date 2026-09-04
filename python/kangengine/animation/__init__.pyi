@@ -41,6 +41,7 @@ from .retarget import (
 from .motion_library import (
     MotionKinematics as MotionKinematics,
     MotionLibrary as MotionLibrary,
+    MotionLibraryBuffers as MotionLibraryBuffers,
     MotionSample as MotionSample,
 )
 

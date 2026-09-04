@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from typing import Sequence
 
 import numpy as np
 import numpy.typing as npt
@@ -110,6 +111,25 @@ def _physx_group_jacobian(angles: FloatArray, blocks) -> FloatArray:
     return jacobian
 
 
+def _twist_angles_wxyz(quaternion: FloatArray, axis: FloatArray) -> FloatArray:
+    """Return the signed quaternion twist around one normalized axis."""
+
+    normalized_axis = np.asarray(axis, dtype=np.float32)
+    normalized_axis /= np.linalg.norm(normalized_axis)
+    quaternion = quaternion / np.maximum(
+        np.linalg.norm(quaternion, axis=-1, keepdims=True),
+        1.0e-8,
+    )
+    half_angle = np.arctan2(
+        quaternion[:, 1:] @ normalized_axis,
+        quaternion[:, 0],
+    )
+    return np.arctan2(
+        np.sin(2.0 * half_angle),
+        np.cos(2.0 * half_angle),
+    )
+
+
 @dataclass(frozen=True)
 class PhysXMotionBuffers:
     """Frame-major PhysX root and logical joint state buffers."""
@@ -176,6 +196,119 @@ class PhysXMotionAdapter:
     def joint_names(self) -> tuple[str, ...]:
         return self._joint_names
 
+    def make_dof_mapping(
+        self,
+        body_names: Sequence[str] | None = None,
+        *,
+        dof_offsets: Sequence[int] | None = None,
+    ) -> tuple[int, ...]:
+        """Map a requested body-grouped DOF order to PhysX logical indices.
+
+        Omitting ``body_names`` returns the identity mapping. ``dof_offsets``
+        optionally verifies the expected number of scalar coordinates in each
+        requested body group.
+        """
+
+        if body_names is None:
+            if dof_offsets is not None:
+                raise ValueError("dof_offsets require body_names")
+            return tuple(range(len(self._scalar_blocks)))
+
+        requested = tuple(str(name) for name in body_names)
+        if len(set(requested)) != len(requested):
+            raise ValueError("body_names must not contain duplicates")
+        indices_by_body: dict[str, list[int]] = {}
+        for index, block in enumerate(self._scalar_blocks):
+            indices_by_body.setdefault(block.body_name, []).append(index)
+
+        offsets = (
+            tuple(int(value) for value in dof_offsets)
+            if dof_offsets is not None
+            else None
+        )
+        if offsets is not None:
+            if len(offsets) != len(requested) + 1 or offsets[0] != 0:
+                raise ValueError("dof_offsets must delimit every requested body")
+            if any(end <= start for start, end in zip(offsets, offsets[1:])):
+                raise ValueError("dof_offsets must be strictly increasing")
+
+        mapping = []
+        for body_id, body_name in enumerate(requested):
+            indices = indices_by_body.get(body_name)
+            if indices is None:
+                raise ValueError(f"PhysX layout has no scalar DOF for {body_name!r}")
+            if offsets is not None:
+                expected = offsets[body_id + 1] - offsets[body_id]
+                if len(indices) != expected:
+                    raise ValueError(
+                        f"PhysX DOF count for {body_name!r} differs from "
+                        f"requested order: {len(indices)} != {expected}"
+                    )
+            mapping.extend(indices)
+        return tuple(mapping)
+
+    def reorder_joint_values(self, values, mapping: Sequence[int] | None = None):
+        """Return joint values in requested order, or unchanged without a mapping."""
+
+        if mapping is None:
+            return values
+        indices = self._validate_dof_mapping(mapping, require_permutation=False)
+        if isinstance(values, torch.Tensor):
+            index = torch.as_tensor(indices, dtype=torch.long, device=values.device)
+            return torch.index_select(values, -1, index)
+        array = np.asarray(values)
+        return np.take(array, indices, axis=-1)
+
+    def restore_joint_values_order(self, values, mapping: Sequence[int] | None = None):
+        """Restore reordered joint values to PhysX logical order."""
+
+        if mapping is None:
+            return values
+        indices = self._validate_dof_mapping(mapping, require_permutation=True)
+        if values.shape[-1] != len(indices):
+            raise ValueError("joint value width does not match DOF mapping")
+        result = (
+            torch.empty_like(values)
+            if isinstance(values, torch.Tensor)
+            else np.empty_like(values)
+        )
+        result[..., list(indices)] = values
+        return result
+
+    def reorder_joint_state(
+        self,
+        state: PhysXMotionBuffers | PhysXMotionTensorSample,
+        mapping: Sequence[int] | None = None,
+    ) -> PhysXMotionBuffers | PhysXMotionTensorSample:
+        """Return a PhysX motion state with reordered joint position and velocity."""
+
+        if mapping is None:
+            return state
+        return replace(
+            state,
+            joint_positions=self.reorder_joint_values(state.joint_positions, mapping),
+            joint_velocities=self.reorder_joint_values(state.joint_velocities, mapping),
+        )
+
+    def restore_joint_state_order(
+        self,
+        state: PhysXMotionBuffers | PhysXMotionTensorSample,
+        mapping: Sequence[int] | None = None,
+    ) -> PhysXMotionBuffers | PhysXMotionTensorSample:
+        """Return a reordered state restored to PhysX logical joint order."""
+
+        if mapping is None:
+            return state
+        return replace(
+            state,
+            joint_positions=self.restore_joint_values_order(
+                state.joint_positions, mapping
+            ),
+            joint_velocities=self.restore_joint_values_order(
+                state.joint_velocities, mapping
+            ),
+        )
+
     def validate_articulation(self, articulation) -> None:
         """Verify a live PhysX articulation uses canonical logical DOF order."""
 
@@ -223,14 +356,18 @@ class PhysXMotionAdapter:
             relative = quat_wxyz_multiply_numpy(
                 reference_inverse, rotations[:, body_index]
             )
-            # Three-axis PhysX spherical joints use exp-map components. A
-            # one-axis hinge is the same angle-axis vector projected onto its
-            # authored axis.
-            rotation_vector = quat_wxyz_to_rotation_vector_numpy(relative)
-            for index, item in group:
-                axis = np.asarray(item.axis, dtype=np.float32)
-                axis /= np.linalg.norm(axis)
-                joint_positions[:, index] = rotation_vector @ axis
+            if len(group) == 1:
+                index, item = group[0]
+                joint_positions[:, index] = _twist_angles_wxyz(
+                    relative,
+                    np.asarray(item.axis, dtype=np.float32),
+                )
+            else:
+                rotation_vector = quat_wxyz_to_rotation_vector_numpy(relative)
+                for index, item in group:
+                    axis = np.asarray(item.axis, dtype=np.float32)
+                    axis /= np.linalg.norm(axis)
+                    joint_positions[:, index] = rotation_vector @ axis
 
         joint_velocities = np.zeros_like(joint_positions)
         if frames > 1:
@@ -239,8 +376,8 @@ class PhysXMotionAdapter:
                 inverse = rotations[:-1, body_index].copy()
                 inverse[:, 1:] *= -1.0
                 delta = quat_wxyz_multiply_numpy(inverse, rotations[1:, body_index])
-                angular_velocity = (
-                    quat_wxyz_to_rotation_vector_numpy(delta) * float(motion.fps())
+                angular_velocity = quat_wxyz_to_rotation_vector_numpy(delta) * float(
+                    motion.fps()
                 )
                 for index, block in group:
                     axis = np.asarray(block.axis, dtype=np.float32)
@@ -273,11 +410,15 @@ class PhysXMotionAdapter:
         )
 
     def prepare_motion(self, motion) -> FloatArray:
-        """Precompute frame velocities consumed by MotionLibrary sampling."""
+        """Pack frame-major joint positions and velocities for MotionLibrary."""
 
         if isinstance(motion, ArticulationMotion):
             motion = ArticulationMotionMapper(self._layout).to_skeleton_motion(motion)
-        return self.pack_skeleton_motion(motion).joint_velocities
+        buffers = self.pack_skeleton_motion(motion)
+        return np.concatenate(
+            (buffers.joint_positions, buffers.joint_velocities),
+            axis=-1,
+        )
 
     def pack_sample(
         self,
@@ -294,7 +435,8 @@ class PhysXMotionAdapter:
         """Project sampled local quaternions into PhysX logical DOFs."""
 
         del next_backend_frame_data, blend
-        shape = local_rotations_wxyz.shape[:-2] + (len(self._scalar_blocks),)
+        joint_count = len(self._scalar_blocks)
+        shape = local_rotations_wxyz.shape[:-2] + (joint_count,)
         joint_positions = torch.empty(
             shape,
             dtype=local_rotations_wxyz.dtype,
@@ -311,20 +453,41 @@ class PhysXMotionAdapter:
                 quat_wxyz_conjugate(reference),
                 local_rotations_wxyz[..., body_index, :],
             )
-            rotation_vector = quat_wxyz_to_rotation_vector(relative)
-            for index, block in group:
+            if len(group) == 1:
+                index, block = group[0]
                 axis = torch.as_tensor(
                     np.asarray(block.axis, dtype=np.float32),
                     dtype=local_rotations_wxyz.dtype,
                     device=local_rotations_wxyz.device,
                 )
                 axis = axis / torch.linalg.vector_norm(axis).clamp_min(1.0e-8)
-                joint_positions[..., index] = torch.sum(rotation_vector * axis, dim=-1)
+                half_angle = torch.atan2(
+                    torch.sum(relative[..., 1:] * axis, dim=-1),
+                    relative[..., 0],
+                )
+                joint_positions[..., index] = torch.atan2(
+                    torch.sin(2.0 * half_angle),
+                    torch.cos(2.0 * half_angle),
+                )
+            else:
+                rotation_vector = quat_wxyz_to_rotation_vector(relative)
+                for index, block in group:
+                    axis = torch.as_tensor(
+                        np.asarray(block.axis, dtype=np.float32),
+                        dtype=local_rotations_wxyz.dtype,
+                        device=local_rotations_wxyz.device,
+                    )
+                    axis = axis / torch.linalg.vector_norm(axis).clamp_min(1.0e-8)
+                    joint_positions[..., index] = torch.sum(
+                        rotation_vector * axis,
+                        dim=-1,
+                    )
+        joint_velocities = backend_frame_data[..., joint_count:]
 
         has_root = self._free_block is not None
         return PhysXMotionTensorSample(
             joint_positions=joint_positions,
-            joint_velocities=backend_frame_data,
+            joint_velocities=joint_velocities,
             root_positions=root_positions if has_root else None,
             root_rotations_xyzw=(
                 root_rotations_wxyz[..., [1, 2, 3, 0]] if has_root else None
@@ -438,3 +601,19 @@ class PhysXMotionAdapter:
     def _validate_motion(self, motion: ArticulationMotion) -> None:
         if motion.layout.model_signature != self._model_signature:
             raise ValueError("ArticulationMotion layout does not match adapter layout")
+
+    def _validate_dof_mapping(
+        self,
+        mapping: Sequence[int],
+        *,
+        require_permutation: bool,
+    ) -> tuple[int, ...]:
+        indices = tuple(int(value) for value in mapping)
+        dof_count = len(self._scalar_blocks)
+        if len(set(indices)) != len(indices):
+            raise ValueError("DOF mapping must not contain duplicates")
+        if any(index < 0 or index >= dof_count for index in indices):
+            raise ValueError("DOF mapping index is outside PhysX logical order")
+        if require_permutation and len(indices) != dof_count:
+            raise ValueError("restoring PhysX order requires a complete DOF mapping")
+        return indices

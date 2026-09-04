@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 
 import kangengine as ke
-from kangengine.adapters.physx import PhysXMotionAdapter
+from kangengine.adapters.physx import PhysXMotionAdapter, PhysXMotionBuffers
 
 
 class _LogicalArticulation:
@@ -100,3 +100,42 @@ def test_physx_validation_rejects_a_different_logical_order():
     except ValueError:
         return
     raise AssertionError("different PhysX logical order was accepted")
+
+
+def test_physx_adapter_reorders_body_grouped_joint_state():
+    path = Path(__file__).parents[4] / "assets/characters/kw/kw5.xml"
+    data = ke.asset.MJCFLoader.load(str(path), order="DFS")
+    layout = ke.animation.ArticulationCoordinateLayout.from_data(data=data, free_root=True)
+    adapter = PhysXMotionAdapter(layout)
+
+    body_counts = {}
+    for block in layout.blocks:
+        if block.joint_name in adapter.joint_names:
+            body_counts[block.body_name] = body_counts.get(block.body_name, 0) + 1
+    body_names = tuple(reversed(body_counts))
+    offsets = [0]
+    for body_name in body_names:
+        offsets.append(offsets[-1] + body_counts[body_name])
+
+    mapping = adapter.make_dof_mapping(body_names, dof_offsets=offsets)
+    assert sorted(mapping) == list(range(len(adapter.joint_names)))
+
+    frames = 2
+    values = np.arange(frames * len(mapping), dtype=np.float32).reshape(
+        frames, len(mapping)
+    )
+    state = PhysXMotionBuffers(
+        joint_positions=values,
+        joint_velocities=-values,
+        root_positions=None,
+        root_rotations_xyzw=None,
+        root_linear_velocities=None,
+        root_angular_velocities=None,
+    )
+    assert adapter.reorder_joint_state(state) is state
+
+    reordered = adapter.reorder_joint_state(state, mapping)
+    np.testing.assert_array_equal(reordered.joint_positions, values[:, mapping])
+    restored = adapter.restore_joint_state_order(reordered, mapping)
+    np.testing.assert_array_equal(restored.joint_positions, state.joint_positions)
+    np.testing.assert_array_equal(restored.joint_velocities, state.joint_velocities)
