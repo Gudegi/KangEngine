@@ -351,7 +351,7 @@ state visualization.</p>
 <td><p>Application-owned FK surface composed of rigid link meshes.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#kangengine.visual.ArticulatedSurfaceAsset" title="kangengine.visual.ArticulatedSurfaceAsset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ArticulatedSurfaceAsset</span></code></a></p></td>
-<td><p>Reusable MJCF skeleton and rigid-link mesh asset.</p></td>
+<td><p>Reusable articulation skeleton and rigid-link mesh asset.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.visual.DeformableSurface" title="kangengine.visual.DeformableSurface"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DeformableSurface</span></code></a></p></td>
 <td><p>TODO scaffold for directly streamed deformable geometry.</p></td>
@@ -425,6 +425,24 @@ state visualization.</p>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">kangengine.animation.ArticulationVisual</span></span></span><a class="headerlink" href="#kangengine.visual.ArticulationVisual.from_mjcf" title="Link to this definition">¶</a></dt>
 <dd><p>Create an articulation visual and scene prims from an MJCF file.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulationVisual.from_urdf">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_urdf</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">urdf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="scene.html#kangengine.scene.SceneBackend" title="kangengine.scene.SceneBackend"><span class="pre">SceneBackend</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/robot'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">mesh_asset_base_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">target_coordinate_system</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'z_up_x_forward'</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">kangengine.animation.ArticulationVisual</span></span></span><a class="headerlink" href="#kangengine.visual.ArticulationVisual.from_urdf" title="Link to this definition">¶</a></dt>
+<dd><p>Create an articulation visual and scene prims from a URDF file.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -556,6 +574,20 @@ state visualization.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulationVisualAsset.from_data">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_data</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">KE::Asset::ArticulationDesc</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">asset_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">kangengine.animation.ArticulationVisualAsset</span></span></span><a class="headerlink" href="#kangengine.visual.ArticulationVisualAsset.from_data" title="Link to this definition">¶</a></dt>
+<dd><p>Build reusable bridge asset data from a parsed articulation description.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.ArticulationVisualAsset.from_mjcf">
 <span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_mjcf</span></span><span class="sig-paren">(</span>
 
@@ -568,6 +600,21 @@ state visualization.</p>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">kangengine.animation.ArticulationVisualAsset</span></span></span><a class="headerlink" href="#kangengine.visual.ArticulationVisualAsset.from_mjcf" title="Link to this definition">¶</a></dt>
 <dd><p>Load reusable bridge asset data from an MJCF file.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulationVisualAsset.from_urdf">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_urdf</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">urdf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">target_coordinate_system</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'z_up_x_forward'</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">kangengine.animation.ArticulationVisualAsset</span></span></span><a class="headerlink" href="#kangengine.visual.ArticulationVisualAsset.from_urdf" title="Link to this definition">¶</a></dt>
+<dd><p>Load reusable bridge asset data from a URDF file.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -603,7 +650,7 @@ state visualization.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.visual.ArticulatedSurfaceAsset">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.visual.</span></span><span class="sig-name descname"><span class="pre">ArticulatedSurfaceAsset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">native</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh_asset_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurfaceAsset" title="Link to this definition">¶</a></dt>
-<dd><p>Reusable MJCF skeleton and rigid-link mesh asset.</p>
+<dd><p>Reusable articulation skeleton and rigid-link mesh asset.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.visual.ArticulatedSurfaceAsset.from_mjcf">
 <span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_mjcf</span></span><span class="sig-paren">(</span>
@@ -618,6 +665,27 @@ state visualization.</p>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.ArticulatedSurfaceAsset" title="kangengine.visual.articulated_surface.ArticulatedSurfaceAsset"><span class="pre">ArticulatedSurfaceAsset</span></a></span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurfaceAsset.from_mjcf" title="Link to this definition">¶</a></dt>
 <dd><p>Load a reusable kinematic surface asset from MJCF.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.ArticulatedSurfaceAsset" title="kangengine.visual.articulated_surface.ArticulatedSurfaceAsset"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArticulatedSurfaceAsset</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulatedSurfaceAsset.from_urdf">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_urdf</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">urdf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'DFS'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'BFS'</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">target_coordinate_system</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">CoordinateSystem</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">CoordinateSystem.Z_UP_X_FORWARD</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.ArticulatedSurfaceAsset" title="kangengine.visual.articulated_surface.ArticulatedSurfaceAsset"><span class="pre">ArticulatedSurfaceAsset</span></a></span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurfaceAsset.from_urdf" title="Link to this definition">¶</a></dt>
+<dd><p>Load a reusable kinematic surface asset from URDF.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.ArticulatedSurfaceAsset" title="kangengine.visual.articulated_surface.ArticulatedSurfaceAsset"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArticulatedSurfaceAsset</span></code></a></span></p>
@@ -686,6 +754,31 @@ state visualization.</p>
 
 <span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><span class="pre">ArticulatedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurface.create_from_mjcf" title="Link to this definition">¶</a></dt>
 <dd><p>Load an MJCF asset and create its first kinematic instance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArticulatedSurface</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.visual.ArticulatedSurface.create_from_urdf">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">create_from_urdf</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">app</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="python.html#kangengine.App" title="kangengine.App"><span class="pre">App</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">urdf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="material.html#kangengine.material.Material" title="kangengine.material.Material"><span class="pre">Material</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'DFS'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'BFS'</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">target_coordinate_system</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">CoordinateSystem</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">CoordinateSystem.Z_UP_X_FORWARD</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><span class="pre">ArticulatedSurface</span></a></span></span><a class="headerlink" href="#kangengine.visual.ArticulatedSurface.create_from_urdf" title="Link to this definition">¶</a></dt>
+<dd><p>Load a URDF asset and create its first kinematic instance.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.visual.ArticulatedSurface" title="kangengine.visual.articulated_surface.ArticulatedSurface"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArticulatedSurface</span></code></a></span></p>
@@ -1744,7 +1837,7 @@ per-environment SceneGraph visual is required.</p>
 <dl>
 <dd><em class="sig-param"><span class="n"><span class="pre">env_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
-<dd><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">asset_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'/robot'</span></span></em>,</dd>
 <dd><em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
@@ -2420,6 +2513,7 @@ exposed as <code class="docutils literal notranslate"><span class="pre">kangengi
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisual.body_prim"><code class="docutils literal notranslate"><span class="pre">ArticulationVisual.body_prim()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisual.body_prims"><code class="docutils literal notranslate"><span class="pre">ArticulationVisual.body_prims()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisual.from_mjcf"><code class="docutils literal notranslate"><span class="pre">ArticulationVisual.from_mjcf()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulationVisual.from_urdf"><code class="docutils literal notranslate"><span class="pre">ArticulationVisual.from_urdf()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisual.num_bodies"><code class="docutils literal notranslate"><span class="pre">ArticulationVisual.num_bodies()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisual.render_prim_body_indices"><code class="docutils literal notranslate"><span class="pre">ArticulationVisual.render_prim_body_indices()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisual.render_prims"><code class="docutils literal notranslate"><span class="pre">ArticulationVisual.render_prims()</span></code></a></li>
@@ -2433,19 +2527,23 @@ exposed as <code class="docutils literal notranslate"><span class="pre">kangengi
 </li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisualAsset"><code class="docutils literal notranslate"><span class="pre">ArticulationVisualAsset</span></code></a><ul>
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisualAsset.define_mesh_assets"><code class="docutils literal notranslate"><span class="pre">ArticulationVisualAsset.define_mesh_assets()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulationVisualAsset.from_data"><code class="docutils literal notranslate"><span class="pre">ArticulationVisualAsset.from_data()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisualAsset.from_mjcf"><code class="docutils literal notranslate"><span class="pre">ArticulationVisualAsset.from_mjcf()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulationVisualAsset.from_urdf"><code class="docutils literal notranslate"><span class="pre">ArticulationVisualAsset.from_urdf()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisualAsset.instantiate"><code class="docutils literal notranslate"><span class="pre">ArticulationVisualAsset.instantiate()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulationVisualAsset.num_bodies"><code class="docutils literal notranslate"><span class="pre">ArticulationVisualAsset.num_bodies()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulatedSurfaceAsset"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurfaceAsset</span></code></a><ul>
 <li><a class="reference internal" href="#kangengine.visual.ArticulatedSurfaceAsset.from_mjcf"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurfaceAsset.from_mjcf()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulatedSurfaceAsset.from_urdf"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurfaceAsset.from_urdf()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulatedSurfaceAsset.num_bodies"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurfaceAsset.num_bodies</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulatedSurfaceAsset.create"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurfaceAsset.create()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface</span></code></a><ul>
 <li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface.create_from_mjcf"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface.create_from_mjcf()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface.create_from_urdf"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface.create_from_urdf()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface.asset"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface.asset</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface.skeleton_tree"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface.skeleton_tree</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.visual.ArticulatedSurface.prims"><code class="docutils literal notranslate"><span class="pre">ArticulatedSurface.prims</span></code></a></li>

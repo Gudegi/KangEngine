@@ -527,9 +527,27 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 </dd></dl>
 
 <dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.JointDesc.effort_limit">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">effort_limit</span></span><a class="headerlink" href="#kangengine.asset.JointDesc.effort_limit" title="Link to this definition">¶</a></dt>
+<dd><p>Maximum absolute joint effort.</p>
+</dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.JointDesc.hi_limit">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">hi_limit</span></span><a class="headerlink" href="#kangengine.asset.JointDesc.hi_limit" title="Link to this definition">¶</a></dt>
 <dd><p>Upper joint limit.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.JointDesc.kd">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">kd</span></span><a class="headerlink" href="#kangengine.asset.JointDesc.kd" title="Link to this definition">¶</a></dt>
+<dd><p>Joint damping.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.JointDesc.kp">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">kp</span></span><a class="headerlink" href="#kangengine.asset.JointDesc.kp" title="Link to this definition">¶</a></dt>
+<dd><p>Joint stiffness.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -542,6 +560,12 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <dt class="sig sig-object py" id="kangengine.asset.JointDesc.name">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#kangengine.asset.JointDesc.name" title="Link to this definition">¶</a></dt>
 <dd><p>Joint name.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.JointDesc.velocity_limit">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">velocity_limit</span></span><a class="headerlink" href="#kangengine.asset.JointDesc.velocity_limit" title="Link to this definition">¶</a></dt>
+<dd><p>Maximum absolute joint velocity.</p>
 </dd></dl>
 
 </dd></dl>
@@ -674,6 +698,12 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <dt class="sig sig-object py" id="kangengine.asset.VisualGeomDesc.rgba">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">rgba</span></span><a class="headerlink" href="#kangengine.asset.VisualGeomDesc.rgba" title="Link to this definition">¶</a></dt>
 <dd><p>Mesh display color.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.VisualGeomDesc.scale">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">scale</span></span><a class="headerlink" href="#kangengine.asset.VisualGeomDesc.scale" title="Link to this definition">¶</a></dt>
+<dd><p>Scale applied to mesh-local vertices before the visual pose.</p>
 </dd></dl>
 
 </dd></dl>
@@ -1916,9 +1946,13 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <li><a class="reference internal" href="#kangengine.asset.JointDesc"><code class="docutils literal notranslate"><span class="pre">JointDesc</span></code></a><ul>
 <li><a class="reference internal" href="#kangengine.asset.JointDesc.armature"><code class="docutils literal notranslate"><span class="pre">JointDesc.armature</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.JointDesc.axis"><code class="docutils literal notranslate"><span class="pre">JointDesc.axis</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.JointDesc.effort_limit"><code class="docutils literal notranslate"><span class="pre">JointDesc.effort_limit</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.JointDesc.hi_limit"><code class="docutils literal notranslate"><span class="pre">JointDesc.hi_limit</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.JointDesc.kd"><code class="docutils literal notranslate"><span class="pre">JointDesc.kd</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.JointDesc.kp"><code class="docutils literal notranslate"><span class="pre">JointDesc.kp</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.JointDesc.lo_limit"><code class="docutils literal notranslate"><span class="pre">JointDesc.lo_limit</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.JointDesc.name"><code class="docutils literal notranslate"><span class="pre">JointDesc.name</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.JointDesc.velocity_limit"><code class="docutils literal notranslate"><span class="pre">JointDesc.velocity_limit</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.asset.SiteDesc"><code class="docutils literal notranslate"><span class="pre">SiteDesc</span></code></a><ul>
@@ -1947,6 +1981,7 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <li><a class="reference internal" href="#kangengine.asset.VisualGeomDesc.pos"><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc.pos</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.VisualGeomDesc.quat"><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc.quat</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.VisualGeomDesc.rgba"><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc.rgba</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.VisualGeomDesc.scale"><code class="docutils literal notranslate"><span class="pre">VisualGeomDesc.scale</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.asset.CollisionGeomDesc"><code class="docutils literal notranslate"><span class="pre">CollisionGeomDesc</span></code></a><ul>

@@ -658,6 +658,14 @@ step is due.</p></li>
 <dd></dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.compact_gpu_mask_indices">
+<span class="sig-name descname"><span class="pre">compact_gpu_mask_indices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mask</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.compact_gpu_mask_indices" title="Link to this definition">¶</a></dt>
+<dd><p>Return ascending indices selected by a CUDA boolean mask.</p>
+<p>The returned tensor aliases a fixed-capacity native buffer. Its values
+remain valid until the next call to this method on the same world.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.create_articulation_template">
 <span class="sig-name descname"><span class="pre">create_articulation_template</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.create_articulation_template" title="Link to this definition">¶</a></dt>
 <dd><p>Precompute immutable articulation resources for repeated instances.</p>
@@ -676,6 +684,26 @@ step is due.</p></li>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.sim.SimArticulation" title="kangengine.sim.SimArticulation"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimArticulation</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_articulation_asset_cache_size">
+<span class="sig-name descname"><span class="pre">get_articulation_asset_cache_size</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.sim.KangSimWorld.get_articulation_asset_cache_size" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_articulation_asset_load_count">
+<span class="sig-name descname"><span class="pre">get_articulation_asset_load_count</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.sim.KangSimWorld.get_articulation_asset_load_count" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -868,26 +896,6 @@ articulation’s generalized DOF count.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_mjcf_cache_size">
-<span class="sig-name descname"><span class="pre">get_mjcf_cache_size</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.sim.KangSimWorld.get_mjcf_cache_size" title="Link to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_mjcf_load_count">
-<span class="sig-name descname"><span class="pre">get_mjcf_load_count</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.sim.KangSimWorld.get_mjcf_load_count" title="Link to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.get_object">
 <span class="sig-name descname"><span class="pre">get_object</span></span><span class="sig-paren">(</span>
 
@@ -975,6 +983,11 @@ high-level setter.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.load_mjcf">
 <span class="sig-name descname"><span class="pre">load_mjcf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mjcf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.load_mjcf" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.load_urdf">
+<span class="sig-name descname"><span class="pre">load_urdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">urdf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.load_urdf" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -2628,6 +2641,26 @@ snapshot refresh and updates the canonical CUDA frame cache instead.</p>
 </dl>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.SimulationRuntime.set_articulation_state_packed">
+<span class="sig-name descname"><span class="pre">set_articulation_state_packed</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">obj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">env_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">root_state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">dof_state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.sim.SimulationRuntime.set_articulation_state_packed" title="Link to this definition">¶</a></dt>
+<dd><p>Apply packed GPU root <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">13)</span></code> and DOF <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">D,</span> <span class="pre">2)</span></code> state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.sim.SimulationRuntime.sim_device">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">sim_device</span></span><a class="headerlink" href="#kangengine.sim.SimulationRuntime.sim_device" title="Link to this definition">¶</a></dt>
@@ -3305,8 +3338,11 @@ contact data to the host.</p>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.clear_body_forces"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.clear_body_forces()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.clear_cmd"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.clear_cmd()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.clear_sensor_outputs"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.clear_sensor_outputs()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.compact_gpu_mask_indices"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.compact_gpu_mask_indices()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.create_articulation_template"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.create_articulation_template()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_articulation"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_articulation()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_articulation_asset_cache_size"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_articulation_asset_cache_size()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_articulation_asset_load_count"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_articulation_asset_load_count()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_articulation_batch"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_articulation_batch()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_centroidal_dynamics"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_articulation_centroidal_dynamics()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_articulation_com_root"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_articulation_com_root()</span></code></a></li>
@@ -3336,8 +3372,6 @@ contact data to the host.</p>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_contact_points"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_contact_points()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_rigid_accelerations"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_rigid_accelerations()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_gpu_rigid_data"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_gpu_rigid_data()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_mjcf_cache_size"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_mjcf_cache_size()</span></code></a></li>
-<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_mjcf_load_count"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_mjcf_load_count()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_object"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_object()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_object_batch"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_object_batch()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.get_rigid"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.get_rigid()</span></code></a></li>
@@ -3345,6 +3379,7 @@ contact data to the host.</p>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.gpu_system"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.gpu_system</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.init_gpu_system"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.init_gpu_system()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.load_mjcf"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.load_mjcf()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.load_urdf"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.load_urdf()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.refresh"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.refresh()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.refresh_sensors"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.refresh_sensors()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.release"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.release()</span></code></a></li>
@@ -3502,6 +3537,7 @@ contact data to the host.</p>
 <li><a class="reference internal" href="#kangengine.sim.SimulationRuntime.is_closed"><code class="docutils literal notranslate"><span class="pre">SimulationRuntime.is_closed</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimulationRuntime.is_initialized"><code class="docutils literal notranslate"><span class="pre">SimulationRuntime.is_initialized</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimulationRuntime.set_articulation_state"><code class="docutils literal notranslate"><span class="pre">SimulationRuntime.set_articulation_state()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.SimulationRuntime.set_articulation_state_packed"><code class="docutils literal notranslate"><span class="pre">SimulationRuntime.set_articulation_state_packed()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimulationRuntime.sim_device"><code class="docutils literal notranslate"><span class="pre">SimulationRuntime.sim_device</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimulationRuntime.step"><code class="docutils literal notranslate"><span class="pre">SimulationRuntime.step()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.SimulationRuntime.uses_gpu_sim"><code class="docutils literal notranslate"><span class="pre">SimulationRuntime.uses_gpu_sim</span></code></a></li>
