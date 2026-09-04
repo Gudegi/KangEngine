@@ -2732,6 +2732,31 @@ class KangSimWorld:
             keys, device=device, name="kangsimworld_articulation_indices"
         )
 
+    def compact_gpu_mask_indices(self, mask):
+        """Return ascending indices selected by a CUDA boolean mask.
+
+        The returned tensor aliases a fixed-capacity native buffer. Its values
+        remain valid until the next call to this method on the same world.
+        """
+        from ..utils import to_gpu_array_view
+
+        torch = _torch()
+        if self._gpu_system is None:
+            raise RuntimeError(
+                "compact_gpu_mask_indices() requires init_gpu_system()"
+            )
+        if not torch.is_tensor(mask) or mask.device.type != "cuda":
+            raise ValueError("mask must be a CUDA tensor")
+        if mask.dtype != torch.bool or mask.ndim != 1:
+            raise ValueError("mask must be a one-dimensional bool tensor")
+        mask = mask.contiguous()
+        mask_view = to_gpu_array_view(
+            mask,
+            dtype=torch.bool,
+            name="kangsimworld_compact_mask",
+        )
+        return self.gpu_system.compact_mask_indices(mask_view).torch()
+
     def get_gpu_rigid_data(self, *, fetch: bool = True):
         """Return the full PhysX GPU rigid mirror as a Torch CUDA view."""
         return self.state.gpu.rigid_data_tensor(fetch=fetch)

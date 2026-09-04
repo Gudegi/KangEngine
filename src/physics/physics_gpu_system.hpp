@@ -3,6 +3,7 @@
 
 #include "sim/gpu_array_view.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <stdexcept>
 #include <unordered_map>
@@ -253,6 +254,7 @@ class PhysicsGpuSystem {
         const Sim::GpuArrayView* indices = nullptr);
     void clearRigidCommands(const Sim::GpuArrayView* indices = nullptr);
     void clearArticulationCommands(const Sim::GpuArrayView* indices = nullptr);
+    Sim::GpuArrayView compactMaskIndices(const Sim::GpuArrayView& mask);
 
     void updateArticulationKinematics();
     void syncPosesGpuToCpu();
@@ -322,6 +324,11 @@ class PhysicsGpuSystem {
     void* _articulationComWorldBuffer = nullptr;
     void* _articulationComRootBuffer = nullptr;
     void* _articulationCentroidalWorkspaceBuffer = nullptr;
+    void* _compactMaskIndexBuffer = nullptr;
+    void* _compactMaskCountBuffer = nullptr;
+    void* _compactMaskWorkspaceBuffer = nullptr;
+    size_t _compactMaskWorkspaceBytes = 0;
+    uint32_t _compactMaskCapacity = 0;
     void* _contactPairBuffer = nullptr;
     void* _contactPairCountBuffer = nullptr;
     void* _contactPairHeaderBuffer = nullptr;

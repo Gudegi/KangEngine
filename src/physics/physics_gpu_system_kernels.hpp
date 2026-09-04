@@ -9,6 +9,16 @@
 namespace KE {
 namespace PhysicsGpuKernels {
 
+// Return the temporary CUB storage size required to compact a mask.
+size_t compactMaskWorkspaceSizeCUDA(uint32_t capacity,
+                                    uint64_t streamHandle);
+
+// Compact mask [0, 1, 0, 1] into indices [1, 3] and return their count.
+uint32_t compactMaskIndicesCUDA(const Sim::GpuArrayView& mask,
+                                void* compactIndices, void* countBuffer,
+                                void* workspace, size_t workspaceBytes,
+                                uint32_t capacity, uint64_t streamHandle);
+
 void packSparseRigidCommandCUDA(const Sim::GpuArrayView& logicalIndices,
                                 const void* physxGpuIndices,
                                 const void* denseCommand,

@@ -340,6 +340,9 @@ void bind_physics_gpu(py::module& m) {
         .def("clear_articulation_commands",
              &PhysicsGpuSystem::clearArticulationCommands,
              py::arg("indices") = nullptr)
+        .def("compact_mask_indices", &PhysicsGpuSystem::compactMaskIndices,
+             py::arg("mask"),
+             "Compact a CUDA boolean mask into a fixed native index buffer.")
         .def("update_articulation_kinematics",
              &PhysicsGpuSystem::updateArticulationKinematics)
         .def("sync_poses_gpu_to_cpu", &PhysicsGpuSystem::syncPosesGpuToCpu)

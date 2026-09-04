@@ -769,6 +769,12 @@ class GPUStateBackend:
         self._row_index_tensors = {}
         self._link_index_tensors = {}
         self._dof_index_tensors = {}
+        self._records_by_obj = {}
+        self._object_kinds = {}
+        self._row_index_slices = {}
+        self._link_index_slices = {}
+        self._dof_index_slices = {}
+        self._gather_buffers = {}
         self._frame_cache = {}
         # Lazy caches used only by PhysX articulation dynamics compute APIs.
         self._articulation_dynamics_generation = 0
@@ -779,6 +785,12 @@ class GPUStateBackend:
         self._row_index_tensors.clear()
         self._link_index_tensors.clear()
         self._dof_index_tensors.clear()
+        self._records_by_obj.clear()
+        self._object_kinds.clear()
+        self._row_index_slices.clear()
+        self._link_index_slices.clear()
+        self._dof_index_slices.clear()
+        self._gather_buffers.clear()
         self.clear_frame_cache()
         return self
 
@@ -859,6 +871,9 @@ class GPUStateBackend:
     def _records_for_obj(self, obj_id: int):
         backend = self._require_metadata_backend()
         obj_id = int(obj_id)
+        records = self._records_by_obj.get(obj_id)
+        if records is not None:
+            return records
         if obj_id not in backend._complete_obj_ids:
             registered = backend._registered_env_ids.get(obj_id, set())
             missing = [
@@ -867,15 +882,26 @@ class GPUStateBackend:
             raise KeyError(
                 f"object obj={obj_id} is missing env registrations: {missing}"
             )
-        return [backend.record(env_id, obj_id) for env_id in range(self.num_envs)]
+        records = tuple(
+            backend.record(env_id, obj_id) for env_id in range(self.num_envs)
+        )
+        self._records_by_obj[obj_id] = records
+        return records
 
     def _object_kind(self, obj_id: int):
+        obj_id = int(obj_id)
+        kind = self._object_kinds.get(obj_id)
+        if kind is not None:
+            return kind
         record = self._records_for_obj(obj_id)[0]
         if isinstance(record.cache, ArticulationStateCache):
-            return "articulation"
-        if isinstance(record.cache, RigidStateCache):
-            return "rigid"
-        raise TypeError(f"unsupported object cache type for obj={obj_id}")
+            kind = "articulation"
+        elif isinstance(record.cache, RigidStateCache):
+            kind = "rigid"
+        else:
+            raise TypeError(f"unsupported object cache type for obj={obj_id}")
+        self._object_kinds[obj_id] = kind
+        return kind
 
     def _row_indices(self, obj_id: int, kind: str, *, device):
         key = (kind, int(obj_id), str(device))
@@ -894,6 +920,7 @@ class GPUStateBackend:
             raise TypeError(f"unsupported GPU state object kind: {kind}")
         tensor = torch.tensor(rows, dtype=torch.long, device=device)
         self._row_index_tensors[key] = tensor
+        self._row_index_slices[key] = self._contiguous_index_slice(rows)
         return tensor
 
     def _articulation_link_indices(self, obj_id: int, *, device):
@@ -911,6 +938,7 @@ class GPUStateBackend:
                 )
         tensor = torch.tensor(first, dtype=torch.long, device=device)
         self._link_index_tensors[key] = tensor
+        self._link_index_slices[key] = self._contiguous_index_slice(first)
         return tensor
 
     def _articulation_dof_indices(self, obj_id: int, *, device):
@@ -927,7 +955,59 @@ class GPUStateBackend:
                     f"articulation obj={obj_id} has inconsistent DOF GPU maps"
                 )
         self._dof_index_tensors[key] = first
+        self._dof_index_slices[key] = self._contiguous_index_slice(first.tolist())
         return first
+
+    @staticmethod
+    def _contiguous_index_slice(indices):
+        if not indices:
+            return slice(0, 0)
+        start = int(indices[0])
+        if all(int(value) == start + offset for offset, value in enumerate(indices)):
+            return slice(start, start + len(indices))
+        return None
+
+    def _persistent_index_select(self, source, dim, indices, key):
+        shape = list(source.shape)
+        shape[dim] = int(indices.numel())
+        buffer = self._gather_buffers.get(key)
+        if (
+            buffer is None
+            or list(buffer.shape) != shape
+            or buffer.dtype != source.dtype
+            or buffer.device != source.device
+        ):
+            buffer = torch.empty(shape, dtype=source.dtype, device=source.device)
+            self._gather_buffers[key] = buffer
+        torch.index_select(source, dim, indices, out=buffer)
+        return buffer
+
+    def _select_rows_and_columns(
+        self,
+        source,
+        rows,
+        row_slice,
+        columns,
+        column_slice,
+        key,
+    ):
+        if row_slice is not None:
+            selected_rows = source[row_slice]
+        else:
+            selected_rows = self._persistent_index_select(
+                source,
+                0,
+                rows,
+                (key, "rows"),
+            )
+        if column_slice is not None:
+            return selected_rows[:, column_slice]
+        return self._persistent_index_select(
+            selected_rows,
+            1,
+            columns,
+            (key, "columns"),
+        )
 
     def _articulation_link_tensor(
         self, obj_id: int, *, fetch_pose=True, fetch_velocity=True
@@ -947,7 +1027,18 @@ class GPUStateBackend:
                 self._frame_cache["articulation_link_data"] = raw
         rows = self._row_indices(obj_id, "articulation", device=raw.device)
         links = self._articulation_link_indices(obj_id, device=raw.device)
-        value = raw[rows][:, links]
+        row_key = ("articulation", int(obj_id), str(raw.device))
+        link_key = (int(obj_id), str(raw.device))
+        row_slice = self._row_index_slices[row_key]
+        link_slice = self._link_index_slices[link_key]
+        value = self._select_rows_and_columns(
+            raw,
+            rows,
+            row_slice,
+            links,
+            link_slice,
+            ("articulation_link", int(obj_id)),
+        )
         if not fetch_pose and not fetch_velocity:
             self._frame_cache[cache_key] = value
         return value
@@ -965,7 +1056,18 @@ class GPUStateBackend:
                 self._frame_cache[cache_name] = raw
         rows = self._row_indices(obj_id, "articulation", device=raw.device)
         dofs = self._articulation_dof_indices(obj_id, device=raw.device)
-        value = raw[rows][:, dofs]
+        row_key = ("articulation", int(obj_id), str(raw.device))
+        dof_key = (int(obj_id), str(raw.device))
+        row_slice = self._row_index_slices[row_key]
+        dof_slice = self._dof_index_slices[dof_key]
+        value = self._select_rows_and_columns(
+            raw,
+            rows,
+            row_slice,
+            dofs,
+            dof_slice,
+            ("articulation_dof", int(obj_id), cache_name),
+        )
         if not fetch and cache_key is not None:
             self._frame_cache[cache_key] = value
         return value
@@ -976,7 +1078,17 @@ class GPUStateBackend:
             return self._frame_cache[cache_key]
         raw = self.rigid_data_tensor(fetch=fetch)
         rows = self._row_indices(obj_id, "rigid", device=raw.device)
-        value = raw[rows]
+        row_key = ("rigid", int(obj_id), str(raw.device))
+        row_slice = self._row_index_slices[row_key]
+        if row_slice is not None:
+            value = raw[row_slice]
+        else:
+            value = self._persistent_index_select(
+                raw,
+                0,
+                rows,
+                (("rigid", int(obj_id)), "rows"),
+            )
         if not fetch:
             self._frame_cache[cache_key] = value
         return value

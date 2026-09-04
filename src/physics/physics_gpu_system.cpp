@@ -466,6 +466,22 @@ void PhysicsGpuSystem::init() {
                   "cudaMemset(articulation link incoming joint forces)");
     }
 
+    _compactMaskCapacity =
+        _rigidCount > _articulationCount ? _rigidCount : _articulationCount;
+    if (_compactMaskCapacity > 0) {
+        checkCuda(cudaMalloc(&_compactMaskIndexBuffer,
+                             sizeof(int64_t) * _compactMaskCapacity),
+                  "cudaMalloc(compact mask indices)");
+        checkCuda(cudaMalloc(&_compactMaskCountBuffer, sizeof(uint32_t)),
+                  "cudaMalloc(compact mask count)");
+        _compactMaskWorkspaceBytes =
+            PhysicsGpuKernels::compactMaskWorkspaceSizeCUDA(
+                _compactMaskCapacity, _streamHandle);
+        checkCuda(cudaMalloc(&_compactMaskWorkspaceBuffer,
+                             _compactMaskWorkspaceBytes),
+                  "cudaMalloc(compact mask workspace)");
+    }
+
     if (_config.maxContactPairs > 0) {
         checkCuda(cudaMalloc(&_contactPairBuffer,
                              sizeof(PxGpuContactPair) *
@@ -1998,6 +2014,34 @@ void PhysicsGpuSystem::syncPosesGpuToCpu() {
     notImplemented("syncPosesGpuToCpu");
 }
 
+Sim::GpuArrayView
+PhysicsGpuSystem::compactMaskIndices(const Sim::GpuArrayView& mask) {
+    checkInitialized();
+#ifdef KANGENGINE_USE_CUDA
+    if (mask.deviceId != _config.cudaDeviceId)
+        throw std::runtime_error(
+            "compact mask device_id does not match PhysicsGpuSystem");
+    const uint32_t count = PhysicsGpuKernels::compactMaskIndicesCUDA(
+        mask, _compactMaskIndexBuffer, _compactMaskCountBuffer,
+        _compactMaskWorkspaceBuffer, _compactMaskWorkspaceBytes,
+        _compactMaskCapacity, _streamHandle);
+    Sim::GpuArrayView result;
+    result.data = _compactMaskIndexBuffer;
+    result.memoryType = Sim::SimMemoryType::CUDADevice;
+    result.dtype = Sim::SimDType::Int64;
+    result.lifetime = Sim::SimLifetimePolicy::Borrowed;
+    result.deviceId = _config.cudaDeviceId;
+    result.shape = {static_cast<int64_t>(count)};
+    result.strides = {1};
+    result.streamHandle = _streamHandle;
+    result.name = "physics_compact_mask_indices";
+    return result;
+#else
+    (void)mask;
+    notImplemented("compactMaskIndices");
+#endif
+}
+
 void PhysicsGpuSystem::notImplemented(const char* functionName) const {
     throw std::runtime_error(std::string("PhysicsGpuSystem::") + functionName +
                              " is not implemented yet");
@@ -2307,6 +2351,12 @@ void PhysicsGpuSystem::releaseGpuBuffers() {
         cudaFree(_articulationComRootBuffer);
     if (_articulationCentroidalWorkspaceBuffer)
         cudaFree(_articulationCentroidalWorkspaceBuffer);
+    if (_compactMaskIndexBuffer)
+        cudaFree(_compactMaskIndexBuffer);
+    if (_compactMaskCountBuffer)
+        cudaFree(_compactMaskCountBuffer);
+    if (_compactMaskWorkspaceBuffer)
+        cudaFree(_compactMaskWorkspaceBuffer);
     if (_contactPairBuffer)
         cudaFree(_contactPairBuffer);
     if (_contactPairCountBuffer)
@@ -2362,6 +2412,11 @@ void PhysicsGpuSystem::releaseGpuBuffers() {
     _articulationComWorldBuffer = nullptr;
     _articulationComRootBuffer = nullptr;
     _articulationCentroidalWorkspaceBuffer = nullptr;
+    _compactMaskIndexBuffer = nullptr;
+    _compactMaskCountBuffer = nullptr;
+    _compactMaskWorkspaceBuffer = nullptr;
+    _compactMaskWorkspaceBytes = 0;
+    _compactMaskCapacity = 0;
     _contactPairBuffer = nullptr;
     _contactPairCountBuffer = nullptr;
     _contactPairHeaderBuffer = nullptr;

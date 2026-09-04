@@ -2,6 +2,8 @@
 
 #include <PxContact.h>
 #include <cuda_runtime.h>
+#include <cub/device/device_select.cuh>
+#include <thrust/iterator/counting_iterator.h>
 
 #include <initializer_list>
 #include <stdexcept>
@@ -483,6 +485,66 @@ void validateContactSensorView(const Sim::GpuArrayView& view,
 }
 
 } // namespace
+
+size_t compactMaskWorkspaceSizeCUDA(uint32_t capacity, uint64_t streamHandle) {
+    if (capacity == 0)
+        return 0;
+    size_t workspaceBytes = 0;
+    auto stream = reinterpret_cast<cudaStream_t>(streamHandle);
+    thrust::counting_iterator<int64_t> indices(0);
+    checkCUDA(cub::DeviceSelect::Flagged(nullptr, workspaceBytes, indices,
+                                         static_cast<const uint8_t*>(nullptr),
+                                         static_cast<int64_t*>(nullptr),
+                                         static_cast<uint32_t*>(nullptr),
+                                         static_cast<int>(capacity), stream),
+              "cub::DeviceSelect::Flagged(workspace size)");
+    return workspaceBytes;
+}
+
+uint32_t compactMaskIndicesCUDA(const Sim::GpuArrayView& mask,
+                                void* compactIndices, void* countBuffer,
+                                void* workspace, size_t workspaceBytes,
+                                uint32_t capacity, uint64_t streamHandle) {
+    if (!mask.isCUDA() || !mask.data)
+        throw std::runtime_error("compact mask requires a non-null CUDA view");
+    if (mask.dtype != Sim::SimDType::Bool && mask.dtype != Sim::SimDType::UInt8)
+        throw std::runtime_error("compact mask must be bool or uint8");
+    if (mask.shape.size() != 1)
+        throw std::runtime_error("compact mask must have shape [count]");
+    if (!mask.strides.empty() &&
+        (mask.strides.size() != 1 || mask.strides[0] != 1))
+        throw std::runtime_error("compact mask must be contiguous");
+    const int64_t count = mask.numel();
+    if (count < 0 || count > static_cast<int64_t>(capacity))
+        throw std::runtime_error("compact mask exceeds native capacity");
+    if (!compactIndices || !countBuffer || !workspace || workspaceBytes == 0)
+        throw std::runtime_error("compact mask native buffers are unavailable");
+
+    if (mask.deviceId >= 0)
+        checkCUDA(cudaSetDevice(mask.deviceId),
+                  "cudaSetDevice(compact mask indices)");
+    auto stream = reinterpret_cast<cudaStream_t>(streamHandle);
+    if (mask.readyEventHandle != 0) {
+        auto event = reinterpret_cast<cudaEvent_t>(mask.readyEventHandle);
+        checkCUDA(cudaStreamWaitEvent(stream, event, 0),
+                  "cudaStreamWaitEvent(compact mask indices)");
+    }
+    thrust::counting_iterator<int64_t> indices(0);
+    checkCUDA(cub::DeviceSelect::Flagged(workspace, workspaceBytes, indices,
+                                         static_cast<const uint8_t*>(mask.data),
+                                         static_cast<int64_t*>(compactIndices),
+                                         static_cast<uint32_t*>(countBuffer),
+                                         static_cast<int>(count), stream),
+              "cub::DeviceSelect::Flagged(compact mask)");
+
+    uint32_t selectedCount = 0;
+    checkCUDA(cudaMemcpyAsync(&selectedCount, countBuffer, sizeof(uint32_t),
+                              cudaMemcpyDeviceToHost, stream),
+              "cudaMemcpyAsync(compact mask count)");
+    checkCUDA(cudaStreamSynchronize(stream),
+              "cudaStreamSynchronize(compact mask count)");
+    return selectedCount;
+}
 
 void packSparseRigidCommandCUDA(const Sim::GpuArrayView& logicalIndices,
                                 const void* physxGpuIndices,

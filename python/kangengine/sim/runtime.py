@@ -93,8 +93,11 @@ class SimulationRuntime:
             return self
         if self.uses_gpu_sim:
             device_id = self.sim_device.index
+            # Get torch's CUDA stream handle
+            stream_handle = int(torch.cuda.current_stream(self.sim_device).cuda_stream)
             self.world.init_gpu_system(
-                cuda_device_id=0 if device_id is None else device_id
+                cuda_device_id=0 if device_id is None else device_id,
+                stream_handle=stream_handle,
             )
         if self.uses_gpu_state:
             self.world.state.set_strict_snapshot_reads(True)
@@ -176,14 +179,10 @@ class SimulationRuntime:
                 (dof_pos, dof_vel),
                 dim=-1,
             ).contiguous()
-            self.world.set_gpu_root_state_batch(
-                env_ids,
+            self.set_articulation_state_packed(
                 obj_id,
+                env_ids,
                 root_state,
-            )
-            self.world.set_gpu_dof_state_batch(
-                env_ids,
-                obj_id,
                 dof_state,
             )
             return
@@ -203,6 +202,20 @@ class SimulationRuntime:
             dof_pos,
             dof_vel,
         )
+
+    def set_articulation_state_packed(
+        self,
+        obj_id: int,
+        env_ids: torch.Tensor,
+        root_state: torch.Tensor,
+        dof_state: torch.Tensor,
+    ) -> None:
+        """Apply packed GPU root ``(N, 13)`` and DOF ``(N, D, 2)`` state."""
+        self._require_initialized()
+        if not self.uses_gpu_state:
+            raise RuntimeError("packed articulation state requires GPU state access")
+        self.world.set_gpu_root_state_batch(env_ids, obj_id, root_state)
+        self.world.set_gpu_dof_state_batch(env_ids, obj_id, dof_state)
 
     def close(self) -> None:
         """Release the owned world. This operation is idempotent."""
