@@ -309,6 +309,19 @@ def quat_xyzw_from_angle_axis(angle: torch.Tensor, axis: torch.Tensor) -> torch.
     return quat_xyzw_normalize(torch.cat((xyz, w), dim=-1))
 
 
+def quat_xyzw_from_rotation_vector(rotation: torch.Tensor) -> torch.Tensor:
+    """Convert exponential-map rotation vectors to XYZW quaternions."""
+    _require_last_dim(rotation, 3, "rotation")
+    angle = torch.linalg.vector_norm(rotation, dim=-1, keepdim=True)
+    half_angle = 0.5 * angle
+    scale = torch.where(
+        angle > 1.0e-5,
+        torch.sin(half_angle) / angle,
+        0.5 - angle.square() / 48.0,
+    )
+    return torch.cat((rotation * scale, torch.cos(half_angle)), dim=-1)
+
+
 def quat_xyzw_heading_xy(quat: torch.Tensor) -> torch.Tensor:
     """Angle of local +X projected onto XY, measured from world +X."""
     reference = torch.zeros_like(quat[..., :3])
