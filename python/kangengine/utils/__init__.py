@@ -97,6 +97,10 @@ _LAZY_IMPORTS = {
         ".batched_rotations",
         "quat_xyzw_from_angle_axis",
     ),
+    "quat_xyzw_from_rotation_vector": (
+        ".batched_rotations",
+        "quat_xyzw_from_rotation_vector",
+    ),
     "quat_xyzw_heading_quat": (
         ".batched_rotations",
         "quat_xyzw_heading_quat",
@@ -178,6 +182,7 @@ __all__ = [
     "quat_wxyz_to_tangent_normal",
     "matrix_to_rotation_6d",
     "matrix_to_quat_wxyz",
+    "quat_xyzw_from_rotation_vector",
     "quat_xyzw_heading_quat",
     "quat_xyzw_heading_quat_inverse",
     "quat_xyzw_heading_xy",
