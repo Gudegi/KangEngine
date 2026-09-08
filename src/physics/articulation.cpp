@@ -181,7 +181,12 @@ void attachCollisionShapes(
                 PxQuat(g.quat.x(), g.quat.y(), g.quat.z(), g.quat.w()));
             break;
         case Type::ConvexMesh: {
-            PxConvexMesh* convex = physics.getOrCreateConvexMesh(g.meshData);
+            Physics::ConvexCookingOptions cooking;
+            if (physics.isGpuEnabled()) {
+                cooking.gpuCompatible = true;
+                cooking.vertexLimit = 64;
+            }
+            PxConvexMesh* convex = physics.getOrCreateConvexMesh(g.meshData, cooking);
             shape = physics.createExclusiveShape(
                 *link, PxConvexMeshGeometry(convex), material);
             localPose = PxTransform(
@@ -771,8 +776,27 @@ Articulation::build(PhysicsWorld& physics,
             throw std::runtime_error(
                 "Failed to add articulation to PhysX aggregate");
         }
+#if PX_PHYSICS_VERSION_MAJOR > 5 || (PX_PHYSICS_VERSION_MAJOR == 5 && PX_PHYSICS_VERSION_MINOR >= 8)
+        // Reject cross-environment candidates in GPU broadphase, before shape
+        // filtering. Group zero remains shared (terrain/world objects). Large
+        // user-defined groups retain the existing shader-only filtering path.
+        if (physics.canUseGpuEnvironmentFiltering() &&
+            cfg.collisionGroup > 0 && cfg.collisionGroup < (1u << 24)) {
+            if (!artic._aggregate->setEnvironmentID(cfg.collisionGroup - 1))
+                throw std::runtime_error("Failed to set aggregate environment ID");
+        }
+#endif
         physics.getScene()->addAggregate(*artic._aggregate);
     } else {
+#if PX_PHYSICS_VERSION_MAJOR > 5 || (PX_PHYSICS_VERSION_MAJOR == 5 && PX_PHYSICS_VERSION_MINOR >= 8)
+        if (physics.canUseGpuEnvironmentFiltering() &&
+            cfg.collisionGroup > 0 && cfg.collisionGroup < (1u << 24)) {
+            for (auto* link : artic._links) {
+                if (!link->setEnvironmentID(cfg.collisionGroup - 1))
+                    throw std::runtime_error("Failed to set articulation link environment ID");
+            }
+        }
+#endif
         physics.getScene()->addArticulation(*artic._artic);
     }
     const PxU32 physxDofCount = artic._artic->getDofs();

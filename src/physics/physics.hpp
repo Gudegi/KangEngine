@@ -286,6 +286,9 @@ class PhysicsWorld {
     }
     PxScene* getScene() { return _scene; }
     const PxScene* getScene() const { return _scene; }
+    // Enable GPU environment filtering only with built-in filter shaders.
+    // Custom shaders may allow collisions between different collision groups.
+    bool canUseGpuEnvironmentFiltering() const;
     PxCudaContextManager* getCudaContextManager() {
         return _cudaContextManager;
     }

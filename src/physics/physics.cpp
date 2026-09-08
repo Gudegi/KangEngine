@@ -531,12 +531,18 @@ cookConvexParts(PxPhysics& physics,
             desc.points.count = static_cast<PxU32>(points.size());
             desc.points.stride = sizeof(PxVec3);
             desc.vertexLimit = static_cast<PxU16>(options.vertexLimit);
+            desc.polygonLimit = options.gpuCompatible ? 64 : 255;
             desc.flags = PxConvexFlag::eCOMPUTE_CONVEX;
 
             PxConvexMesh* mesh = PxCreateConvexMesh(
                 params, desc, physics.getPhysicsInsertionCallback());
             if (!mesh) {
                 throw std::runtime_error("PhysX failed to cook convex part " +
+                                         std::to_string(partIndex));
+            }
+            if (options.gpuCompatible && !mesh->isGpuCompatible()) {
+                mesh->release();
+                throw std::runtime_error("PhysX convex part is not GPU compatible: " +
                                          std::to_string(partIndex));
             }
             meshes.push_back(mesh);
@@ -650,6 +656,12 @@ PxRigidStatic* PhysicsWorld::createStaticConvexCompound(
         registerGroundActor(actor);
     _convexMeshes.insert(_convexMeshes.end(), meshes.begin(), meshes.end());
     return actor;
+}
+
+bool PhysicsWorld::canUseGpuEnvironmentFiltering() const {
+    const auto shader = _scene->getFilterShader();
+    return _scene->getBroadPhaseType() == PxBroadPhaseType::eGPU &&
+           (shader == kangFilterShader || shader == contactReportFilterShader);
 }
 
 void PhysicsWorld::step() {
@@ -860,7 +872,12 @@ PxRigidDynamic* PhysicsWorld::createDynamicRigid(
                     PxQuat(g.quat.x(), g.quat.y(), g.quat.z(), g.quat.w()));
                 break;
             case Type::ConvexMesh: {
-                PxConvexMesh* convex = getOrCreateConvexMesh(g.meshData);
+                Physics::ConvexCookingOptions cooking;
+                if (isGpuEnabled()) {
+                    cooking.gpuCompatible = true;
+                    cooking.vertexLimit = 64;
+                }
+                PxConvexMesh* convex = getOrCreateConvexMesh(g.meshData, cooking);
                 shape = createExclusiveShape(
                     *actor, PxConvexMeshGeometry(convex), material);
                 localPose = PxTransform(
@@ -963,7 +980,12 @@ PxRigidStatic* PhysicsWorld::createStaticRigid(
                     PxQuat(g.quat.x(), g.quat.y(), g.quat.z(), g.quat.w()));
                 break;
             case Type::ConvexMesh: {
-                PxConvexMesh* convex = getOrCreateConvexMesh(g.meshData);
+                Physics::ConvexCookingOptions cooking;
+                if (isGpuEnabled()) {
+                    cooking.gpuCompatible = true;
+                    cooking.vertexLimit = 64;
+                }
+                PxConvexMesh* convex = getOrCreateConvexMesh(g.meshData, cooking);
                 shape = createExclusiveShape(
                     *actor, PxConvexMeshGeometry(convex), material);
                 localPose = PxTransform(
