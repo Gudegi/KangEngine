@@ -114,6 +114,30 @@ def test_urdf_inertia_tensor_is_diagonalized(tmp_path: Path):
     )
 
 
+def test_urdf_prismatic_joint_scales_linear_limits(tmp_path: Path):
+    path = tmp_path / "slider.urdf"
+    path.write_text(
+        """<robot name="slider">
+  <link name="root"/>
+  <link name="cart"/>
+  <joint name="slide" type="prismatic">
+    <parent link="root"/><child link="cart"/>
+    <axis xyz="1 0 0"/><limit lower="-1" upper="2" effort="10" velocity="3"/>
+  </joint>
+</robot>
+""",
+        encoding="utf-8",
+    )
+
+    data = ke.asset.URDFLoader.load(str(path), scale=2.0)
+    joint = data.joints[1][0]
+    layout = ke.animation.ArticulationCoordinateLayout.from_data(data)
+
+    assert joint.lo_limit == pytest.approx(-2.0)
+    assert joint.hi_limit == pytest.approx(4.0)
+    assert layout.blocks[0].type == ke.animation.ArticulationCoordinateType.PRISMATIC
+
+
 def test_urdf_resolves_package_mesh_from_its_package_directory(tmp_path: Path):
     package = tmp_path / "test_robot_description"
     urdf_directory = package / "urdf"

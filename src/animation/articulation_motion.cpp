@@ -35,6 +35,8 @@ ArticulationCoordinateType coordinateType(Asset::JointDesc::Type type) {
         return ArticulationCoordinateType::Fixed;
     case Asset::JointDesc::Type::Revolute:
         return ArticulationCoordinateType::Revolute;
+    case Asset::JointDesc::Type::Prismatic:
+        return ArticulationCoordinateType::Prismatic;
     case Asset::JointDesc::Type::Spherical:
         return ArticulationCoordinateType::Spherical;
     }

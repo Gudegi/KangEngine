@@ -385,14 +385,16 @@ void URDFLoader::parseIntoData(const std::string& urdfPath, float scale,
 
         if (joint.type == "fixed")
             continue;
-        if (joint.type != "revolute")
+        if (joint.type != "revolute" && joint.type != "prismatic")
             throw std::runtime_error(
                 fmt::format("URDF joint '{}' has unsupported type '{}'",
                             joint.name, joint.type));
 
         JointDesc descriptor;
         descriptor.name = joint.name;
-        descriptor.type = JointDesc::Type::Revolute;
+        descriptor.type = joint.type == "prismatic"
+                              ? JointDesc::Type::Prismatic
+                              : JointDesc::Type::Revolute;
         descriptor.axis = parseVec3(
             joint.element->FirstChildElement("axis")
                 ? joint.element->FirstChildElement("axis")->Attribute("xyz")
@@ -408,8 +410,12 @@ void URDFLoader::parseIntoData(const std::string& urdfPath, float scale,
                 tinyxml2::XML_SUCCESS ||
             limit->QueryFloatAttribute("upper", &descriptor.hiLimit) !=
                 tinyxml2::XML_SUCCESS)
-            throw std::runtime_error("URDF revolute joint requires limits: " +
+            throw std::runtime_error("URDF movable joint requires limits: " +
                                      joint.name);
+        if (descriptor.type == JointDesc::Type::Prismatic) {
+            descriptor.loLimit *= scale;
+            descriptor.hiLimit *= scale;
+        }
         limit->QueryFloatAttribute("effort", &descriptor.effortLimit);
         limit->QueryFloatAttribute("velocity", &descriptor.velocityLimit);
         if (auto* dynamics = joint.element->FirstChildElement("dynamics"))

@@ -34,7 +34,7 @@ struct VisualGeomDesc {
 };
 
 struct JointDesc {
-    enum class Type { Revolute, Spherical, Fixed };
+    enum class Type { Revolute, Prismatic, Spherical, Fixed };
     Type type = Type::Revolute;
     std::string name;
     Eigen::Vector3f axis = Eigen::Vector3f::UnitZ();

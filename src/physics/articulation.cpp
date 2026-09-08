@@ -593,7 +593,10 @@ std::shared_ptr<ArticulationTemplate> ArticulationTemplate::create(
             const auto& jd = jit->second[0];
             result->_jointFrames[static_cast<size_t>(i)] =
                 axisAlignQuat(jd.axis);
-            result->_dofs.push_back({i, jd.name, PxArticulationAxis::eTWIST,
+            const auto axis = jd.type == Asset::JointDesc::Type::Prismatic
+                                  ? PxArticulationAxis::eX
+                                  : PxArticulationAxis::eTWIST;
+            result->_dofs.push_back({i, jd.name, axis,
                                      jd.loLimit, jd.hiLimit, jd.kp, jd.kd,
                                      jd.armature, jd.effortLimit});
             continue;
@@ -711,17 +714,21 @@ Articulation::build(PhysicsWorld& physics,
             joint->setChildPose(PxTransform(PxIdentity));
         } else if (ndof == 1) {
             const auto& jd = jit->second[0];
-            joint->setJointType(PxArticulationJointType::eREVOLUTE);
+            const bool prismatic =
+                jd.type == Asset::JointDesc::Type::Prismatic;
+            const auto axis = prismatic ? PxArticulationAxis::eX
+                                        : PxArticulationAxis::eTWIST;
+            joint->setJointType(prismatic ? PxArticulationJointType::ePRISMATIC
+                                          : PxArticulationJointType::eREVOLUTE);
             const PxTransform childPose(
                 PxVec3(0.f),
                 artic._template->_jointFrames[static_cast<size_t>(i)]);
             joint->setParentPose(parentWorld.getInverse() * childWorld *
                                  childPose);
             joint->setChildPose(childPose);
-            joint->setMotion(PxArticulationAxis::eTWIST,
-                             PxArticulationMotion::eLIMITED);
-            PhysXCompat::setArticulationLimit(
-                *joint, PxArticulationAxis::eTWIST, jd.loLimit, jd.hiLimit);
+            joint->setMotion(axis, PxArticulationMotion::eLIMITED);
+            PhysXCompat::setArticulationLimit(*joint, axis, jd.loLimit,
+                                              jd.hiLimit);
         } else {
             joint->setJointType(PxArticulationJointType::eSPHERICAL);
             const PxTransform childPose(
