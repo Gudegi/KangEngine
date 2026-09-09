@@ -3,7 +3,11 @@
 #include "asset/mesh_loader.hpp"
 #include "geometry/mesh_utils.hpp"
 
+#include <algorithm>
 #include <filesystem>
+#include <functional>
+#include <map>
+#include <cmath>
 #include <stdexcept>
 #include <unordered_set>
 
@@ -12,6 +16,11 @@
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usdGeom/mesh.h>
+#include <pxr/usd/usdGeom/metrics.h>
+#include <pxr/usd/usdPhysics/rigidBodyAPI.h>
+#include <pxr/usd/usdPhysics/metrics.h>
+#include <pxr/usd/usdPhysics/joint.h>
+#include <pxr/usd/usdPhysics/collisionAPI.h>
 #include <pxr/usd/usdGeom/primvarsAPI.h>
 #include <pxr/usd/usdGeom/subset.h>
 #include <pxr/usd/usdGeom/xformCache.h>
@@ -447,5 +456,353 @@ std::vector<USDMeshInfo> USDLoader::loadMeshes(const std::string& usdPath,
     return parse(usdPath, scale).meshes;
 }
 
+} // namespace Asset
+} // namespace KE
+
+namespace KE {
+namespace Asset {
+USDArticulationImportResult
+USDLoader::parseArticulation(const std::string& usdPath,
+                             const std::string& primPath,
+                             const std::string& order) {
+#ifndef KANGENGINE_USE_USD
+    throw std::runtime_error("USD support not compiled");
+#else
+    using namespace pxr;
+    // 1. Open the selected robot subtree and validate units/order supported by
+    // ArticulationDesc. No stage-wide unit or axis conversion is performed.
+    if (order != "DFS")
+        throw std::runtime_error(
+            "USD articulation currently supports DFS order only");
+    auto stage = UsdStage::Open(usdPath);
+    if (!stage)
+        throw std::runtime_error("Cannot open USD articulation: " + usdPath);
+    if (UsdGeomGetStageUpAxis(stage) != TfToken("Z") ||
+        std::abs(UsdGeomGetStageMetersPerUnit(stage) - 1.0) > 1e-9 ||
+        std::abs(UsdPhysicsGetStageKilogramsPerUnit(stage) - 1.0) > 1e-9)
+        throw std::runtime_error("USD articulation currently requires Z-up and "
+                                 "meter units with kilograms");
+    auto root = primPath.empty() ? stage->GetDefaultPrim()
+                                 : stage->GetPrimAtPath(SdfPath(primPath));
+    if (!root)
+        throw std::runtime_error("USD articulation root prim is missing");
+    // Attribute readers provide defaults for omitted scalar/vector/rotation data.
+    auto attr = [](const UsdPrim& p, const char* name) {
+        return p.GetAttribute(TfToken(name));
+    };
+    auto scalar = [&](const UsdPrim& p, const char* name, float fallback) {
+        float v = fallback;
+        auto a = attr(p, name);
+        if (a && a.HasAuthoredValueOpinion() && !a.Get(&v))
+            throw std::runtime_error("Invalid USD numeric attribute: " +
+                                     a.GetPath().GetString());
+        return v;
+    };
+    auto vec = [&](const UsdPrim& p, const char* name) {
+        GfVec3f v(0);
+        auto a = attr(p, name);
+        if (a)
+            a.Get(&v);
+        return Eigen::Vector3f(v[0], v[1], v[2]);
+    };
+    auto quat = [&](const UsdPrim& p, const char* name) {
+        GfQuatf v(1);
+        auto a = attr(p, name);
+        if (a)
+            a.Get(&v);
+        return Eigen::Quaternionf(v.GetReal(), v.GetImaginary()[0],
+                                  v.GetImaginary()[1], v.GetImaginary()[2])
+            .normalized();
+    };
+    // 2. Collect rigid bodies, including bodies inside USD instances.
+    UsdGeomXformCache cache;
+    std::map<std::string, UsdPrim> bodies, inbound;
+    std::map<std::string, std::vector<std::string>> children;
+    for (auto p : UsdPrimRange(root, UsdTraverseInstanceProxies())) {
+        if (p.HasAPI<UsdPhysicsRigidBodyAPI>())
+            bodies[p.GetPath().GetString()] = p;
+    }
+    // 3. Build the body0 -> body1 joint graph. Each child must have one parent;
+    // unsupported joint types and connections outside the selection are rejected.
+    for (auto p : UsdPrimRange(root, UsdTraverseInstanceProxies())) {
+        if (!p.IsA<UsdPhysicsJoint>())
+            continue;
+        auto type = p.GetTypeName().GetString();
+        if (type != "PhysicsFixedJoint" && type != "PhysicsRevoluteJoint" &&
+            type != "PhysicsPrismaticJoint")
+            throw std::runtime_error("Unsupported USD joint: " +
+                                     p.GetPath().GetString());
+        bool enabled = true;
+        auto en = attr(p, "physics:jointEnabled");
+        if (en)
+            en.Get(&enabled);
+        if (!enabled)
+            throw std::runtime_error(
+                "Disabled joints require explicit handling: " +
+                p.GetPath().GetString());
+        SdfPathVector b0, b1;
+        p.GetRelationship(TfToken("physics:body0")).GetTargets(&b0);
+        p.GetRelationship(TfToken("physics:body1")).GetTargets(&b1);
+        if (b0.size() != 1 || b1.size() != 1 ||
+            !bodies.count(b0[0].GetString()) ||
+            !bodies.count(b1[0].GetString()))
+            throw std::runtime_error(
+                "Joint must connect two bodies inside selected USD prim: " +
+                p.GetPath().GetString());
+        auto child = b1[0].GetString();
+        if (inbound.count(child))
+            throw std::runtime_error(
+                "USD closed chains/multiple inbound joints unsupported");
+        inbound[child] = p;
+        children[b0[0].GetString()].push_back(child);
+    }
+    // A free-base tree has exactly one body without an inbound joint.
+    std::vector<std::string> roots;
+    for (auto& [name, p] : bodies)
+        if (!inbound.count(name))
+            roots.push_back(name);
+    if (roots.size() != 1)
+        throw std::runtime_error(
+            "Select exactly one connected free-base articulation");
+
+    // 4. Traverse parent-first to assign common indices to the skeleton,
+    // joint descriptors, inertials, and the geometry imported below.
+    USDArticulationImportResult result;
+    auto& out = result.articulation;
+    out.assetDir = std::filesystem::path(usdPath).parent_path().string();
+    out.traversalOrder = order;
+    std::vector<std::string> names;
+    std::vector<int> parents, counts;
+    std::vector<Eigen::Vector3f> positions;
+    std::vector<Eigen::Quaternionf> rotations;
+    std::map<std::string, int> indices;
+    std::function<void(std::string, int)> visit = [&](std::string path,
+                                                      int parent) {
+        if (indices.count(path))
+            throw std::runtime_error("USD joint cycle");
+        // Validate each body before assigning its skeleton index.
+        auto p = bodies.at(path);
+        const auto transform = cache.GetLocalToWorldTransform(p);
+        Eigen::Matrix3d basis;
+        for (int row = 0; row < 3; ++row)
+            for (int col = 0; col < 3; ++col)
+                basis(row, col) = transform[row][col];
+        if (!(basis * basis.transpose())
+                 .isApprox(Eigen::Matrix3d::Identity(), 1e-5) ||
+            basis.determinant() < 0)
+            throw std::runtime_error(
+                "Scaled or reflected USD rigid body transforms unsupported: " +
+                path);
+        int i = names.size();
+        indices[path] = i;
+        bool active = true, kinematic = false;
+        UsdPhysicsRigidBodyAPI(p).GetRigidBodyEnabledAttr().Get(&active);
+        UsdPhysicsRigidBodyAPI(p).GetKinematicEnabledAttr().Get(&kinematic);
+        if (!active || kinematic)
+            throw std::runtime_error(
+                "USD articulation requires enabled dynamic bodies: " + path);
+        std::string name = p.GetName().GetString();
+        if (std::find(names.begin(), names.end(), name) != names.end())
+            throw std::runtime_error("Duplicate USD body names");
+        names.push_back(name);
+        parents.push_back(parent);
+        Eigen::Vector3f pos = Eigen::Vector3f::Zero();
+        Eigen::Quaternionf rot = Eigen::Quaternionf::Identity();
+        int n = 0;
+        // Derive the zero-position child body pose from the two local joint
+        // frames. The root stays at identity; its world pose is caller-owned.
+        if (parent >= 0) {
+            auto j = inbound.at(path);
+            auto q0 = quat(j, "physics:localRot0"),
+                 q1 = quat(j, "physics:localRot1");
+            auto p1 = vec(j, "physics:localPos1");
+            rot = q0 * q1.conjugate();
+            pos = vec(j, "physics:localPos0") - rot * p1;
+            if (j.GetTypeName() != TfToken("PhysicsFixedJoint")) {
+                if (p1.norm() > 1e-7)
+                    throw std::runtime_error("Nonzero movable child joint "
+                                             "anchor is not representable yet");
+                // Fixed joints add no DOF. Movable joints contribute one axis
+                // expressed in the child body's frame.
+                JointDesc d;
+                d.name = j.GetName().GetString();
+                bool revolute =
+                    j.GetTypeName() == TfToken("PhysicsRevoluteJoint");
+                d.type = revolute ? JointDesc::Type::Revolute
+                                  : JointDesc::Type::Prismatic;
+                TfToken axis("X");
+                attr(j, "physics:axis").Get(&axis);
+                if (axis != TfToken("X") && axis != TfToken("Y") &&
+                    axis != TfToken("Z"))
+                    throw std::runtime_error("Invalid USD joint axis");
+                Eigen::Vector3f unit =
+                    axis == TfToken("X")   ? Eigen::Vector3f::UnitX()
+                    : axis == TfToken("Y") ? Eigen::Vector3f::UnitY()
+                                           : Eigen::Vector3f::UnitZ();
+                d.axis = q1 * unit;
+                // USD angular limits/velocities use degrees; engine values use
+                // radians. Prismatic values already use the validated meter unit.
+                float conversion = revolute ? float(M_PI / 180.) : 1.f;
+                d.loLimit =
+                    scalar(j, "physics:lowerLimit", -FLT_MAX) * conversion;
+                d.hiLimit =
+                    scalar(j, "physics:upperLimit", FLT_MAX) * conversion;
+                if (d.loLimit > d.hiLimit)
+                    throw std::runtime_error("Invalid USD joint limits");
+                // Import force-drive gains, effort limits and PhysX joint data;
+                // reject drive/friction modes the descriptor cannot represent.
+                auto prefix = revolute ? "drive:angular:physics:"
+                                       : "drive:linear:physics:";
+                TfToken driveType("force");
+                auto driveTypeAttr =
+                    attr(j, (std::string(prefix) + "type").c_str());
+                if (driveTypeAttr)
+                    driveTypeAttr.Get(&driveType);
+                if (driveType != TfToken("force"))
+                    throw std::runtime_error(
+                        "USD acceleration drives are not supported");
+                if (scalar(j, "physxJoint:jointFriction", 0) != 0)
+                    throw std::runtime_error("USD joint friction is not "
+                                             "represented by ArticulationDesc");
+                d.kp =
+                    scalar(j, (std::string(prefix) + "stiffness").c_str(), 0);
+                d.kd = scalar(j, (std::string(prefix) + "damping").c_str(), 0);
+                d.effortLimit = scalar(
+                    j, (std::string(prefix) + "maxForce").c_str(), FLT_MAX);
+                d.armature = scalar(j, "physxJoint:armature", 0);
+                d.velocityLimit =
+                    scalar(j, "physxJoint:maxJointVelocity", FLT_MAX) *
+                    conversion;
+                out.joints[i].push_back(d);
+                n = 1;
+            }
+        }
+        positions.push_back(pos);
+        rotations.push_back(rot);
+        counts.push_back(n);
+        // Import explicit mass, COM and principal inertia in the body frame.
+        InertialDesc mass;
+        mass.mass = scalar(p, "physics:mass", -1);
+        mass.com = vec(p, "physics:centerOfMass");
+        mass.quat = quat(p, "physics:principalAxes");
+        mass.diagInertia = vec(p, "physics:diagonalInertia");
+        // USD sentinel values request geometry-based mass computation. Empty
+        // auxiliary links have no geometry from which to derive a COM/frame.
+        bool hasCollider = false;
+        for (auto descendant : UsdPrimRange(p, UsdTraverseInstanceProxies())) {
+            auto owner = descendant;
+            while (owner && !owner.HasAPI<UsdPhysicsRigidBodyAPI>())
+                owner = owner.GetParent();
+            if (owner == p && descendant.HasAPI<UsdPhysicsCollisionAPI>()) {
+                bool enabled = true;
+                UsdPhysicsCollisionAPI(descendant)
+                    .GetCollisionEnabledAttr()
+                    .Get(&enabled);
+                hasCollider |= enabled;
+            }
+        }
+        if (!mass.com.allFinite() && !hasCollider) {
+            mass.com.setZero();
+            result.diagnostics.warnings.push_back(
+                "USD collider-free body uses origin COM: " + path);
+        }
+        if (mass.quat.squaredNorm() < 1e-12f &&
+            mass.diagInertia.isApprox(
+                Eigen::Vector3f::Constant(mass.diagInertia.x()))) {
+            mass.quat.setIdentity();
+        }
+        if (!mass.quat.coeffs().allFinite() || mass.quat.squaredNorm() < 1e-12f)
+            throw std::runtime_error(
+                "USD automatic principal-axis computation is unsupported: " +
+                path);
+        if (!std::isfinite(mass.mass) || !mass.diagInertia.allFinite() ||
+            !mass.com.allFinite() || mass.mass <= 0 ||
+            mass.diagInertia.minCoeff() <= 0)
+            throw std::runtime_error(
+                "Explicit positive USD mass and inertia required: " + path);
+        out.inertials[i] = mass;
+        for (auto child : children[path])
+            visit(child, i);
+    };
+    // Finish the skeleton only after every collected body has been reached.
+    visit(roots[0], -1);
+    if (indices.size() != bodies.size())
+        throw std::runtime_error("Disconnected USD bodies");
+    out.skeletonTree = std::make_shared<Animation::SkeletonTree>(
+        names, parents, positions, rotations, counts);
+    // 5. Attach mesh geometry to its nearest rigid-body ancestor. Geometry
+    // outside a body is skipped; unsupported colliders fail explicitly.
+    for (auto p : UsdPrimRange(root, UsdTraverseInstanceProxies())) {
+        auto owner = p;
+        while (owner && !owner.HasAPI<UsdPhysicsRigidBodyAPI>())
+            owner = owner.GetParent();
+        if (!owner)
+            continue;
+        bool collision = false;
+        if (p.HasAPI<UsdPhysicsCollisionAPI>())
+            UsdPhysicsCollisionAPI(p).GetCollisionEnabledAttr().Get(&collision);
+        if (!p.IsA<UsdGeomMesh>()) {
+            if (collision)
+                throw std::runtime_error(
+                    "USD articulation collider type unsupported: " +
+                    p.GetPath().GetString());
+            if (p.IsA<UsdGeomGprim>())
+                result.diagnostics.warnings.push_back(
+                    "Unsupported USD visual geometry: " +
+                    p.GetPath().GetString());
+            continue;
+        }
+        int i = indices.at(owner.GetPath().GetString());
+        // loadMeshData returns world geometry; undo the authored body pose.
+        auto mesh = loadMeshData(p, nullptr);
+        auto inv = cache.GetLocalToWorldTransform(owner).GetInverse();
+        auto normal = inv.GetInverse().GetTranspose();
+        for (auto& v : mesh.vertices) {
+            auto w = inv.Transform(GfVec3d(v.x, v.y, v.z));
+            v = glm::vec3(w[0], w[1], w[2]);
+        }
+        for (auto& n : mesh.normals) {
+            auto w = normal.TransformDir(GfVec3d(n.x, n.y, n.z));
+            n = glm::normalize(glm::vec3(w[0], w[1], w[2]));
+        }
+        if (mesh.vertices.empty() || mesh.indices.empty())
+            throw std::runtime_error("Empty USD articulation mesh: " +
+                                     p.GetPath().GetString());
+        // The same body-local mesh can serve collision and visualization.
+        // Only authored convexHull colliders are accepted; no decomposition is done.
+        auto data = std::make_shared<Scene::MeshData>(std::move(mesh));
+        if (collision) {
+            TfToken approximation;
+            attr(p, "physics:approximation").Get(&approximation);
+            if (approximation != TfToken("convexHull"))
+                throw std::runtime_error("USD articulation requires explicit "
+                                         "convexHull mesh collision");
+            CollisionGeomDesc d;
+            d.name = p.GetName().GetString();
+            d.type = CollisionGeomDesc::Type::ConvexMesh;
+            d.meshData = data;
+            d.margin = scalar(p, "physxCollision:contactOffset", -1);
+            out.collisionGeoms[i].push_back(d);
+        }
+        // Visual geometry follows USD visibility independently of collision.
+        if (UsdGeomImageable(p).ComputeVisibility() !=
+            UsdGeomTokens->invisible) {
+            VisualGeomDesc d;
+            d.bodyName = names[i];
+            d.bodyIndex = i;
+            d.meshData = data;
+            out.visualGeoms.push_back(d);
+        }
+    }
+    // 6. Report the settings left to the caller instead of silently implying
+    // that the imported descriptor reproduces every USD simulation property.
+    result.diagnostics.warnings.push_back(
+        "USD articulation: root pose, initial joint state, drive targets, "
+        "damping, solver settings and self-collision are supplied by the "
+        "caller. Physics material bindings, rest offsets, collision filtering "
+        "and mesh material appearance are not imported.");
+    return result;
+#endif
+}
 } // namespace Asset
 } // namespace KE

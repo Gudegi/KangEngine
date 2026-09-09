@@ -6,7 +6,7 @@ simulation guide:
 - [First Simulation](getting_started/FIRST_SIMULATION.md)
 - [Fixed Timestep and Rendering](simulation/FIXED_TIMESTEP.md)
 - [Rigid Bodies](simulation/RIGID_BODIES.md)
-- [Load an MJCF Articulation](simulation/MJCF_ARTICULATION.md)
+- [Articulations](simulation/ARTICULATION.md)
 - [Control DOFs](simulation/DOF_CONTROL.md)
 - [Multi-Environment Simulation](simulation/MULTI_ENV.md)
 - [Contact Sensors](simulation/CONTACT_SENSORS.md)

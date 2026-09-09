@@ -1048,7 +1048,9 @@ class KangSimWorld:
         self._gpu_root_reset_batches: list[GpuRootStateResetBatch] = []
         self._gpu_dof_reset_batches: list[GpuDofStateResetBatch] = []
         self._active_body_force_keys: set[tuple[int, int]] = set()
-        self._articulation_asset_cache: dict[tuple[str, float, str], object] = {}
+        self._articulation_asset_cache: dict[
+            tuple[str, float, str] | tuple[str, str, str, str], object
+        ] = {}
         self._articulation_asset_load_count = 0
         self.sim_time = 0.0
         self.sim_dt = float(physics_config.dt)
@@ -1424,6 +1426,26 @@ class KangSimWorld:
             order=order,
             expected_suffix=".urdf",
         )
+
+    def load_usd(self, usd_path: str, *, prim_path: str = "", order: str = "DFS"):
+        """Load a meter/Z-up USD articulation; select a robot with ``prim_path``.
+
+        Returns the same articulation descriptor as ``load_mjcf``/``load_urdf``.
+        Unsupported joint/collider structures raise; import diagnostics report
+        properties that remain caller-owned or are not imported.
+        """
+        resolved_path = Path(usd_path).expanduser().resolve()
+        if resolved_path.suffix.lower() not in (".usd", ".usda", ".usdc"):
+            raise ValueError(f"expected a USD articulation asset, got: {resolved_path}")
+        key = (str(resolved_path), "USD", str(prim_path), str(order))
+        data = self._articulation_asset_cache.get(key)
+        if data is None:
+            data = _ke.asset.USDLoader.load_articulation(
+                str(resolved_path), prim_path=prim_path, order=order
+            )
+            self._articulation_asset_cache[key] = data
+            self._articulation_asset_load_count += 1
+        return data
 
     def _load_articulation_asset(
         self,

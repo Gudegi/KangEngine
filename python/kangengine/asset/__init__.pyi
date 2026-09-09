@@ -314,8 +314,17 @@ class USDImportResult:
     meshes: list[USDMeshInfo]
     diagnostics: ImportDiagnostics
 
+class USDArticulationImportResult:
+    articulation: ArticulationDesc
+    diagnostics: ImportDiagnostics
+
 class USDLoader:
-    """Load meshes from USD scenes."""
+    """Load USD meshes or a supported free-base articulation."""
+
+    @staticmethod
+    def parse_articulation(usd_path: str, prim_path: str = "", order: str = "DFS") -> USDArticulationImportResult: ...
+    @staticmethod
+    def load_articulation(usd_path: str, prim_path: str = "", order: str = "DFS") -> ArticulationDesc: ...
 
     @staticmethod
     def parse(usd_path: str, scale: float = 1.0) -> USDImportResult: ...

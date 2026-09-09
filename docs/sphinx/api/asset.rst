@@ -103,6 +103,9 @@ Inspect ``ImportDiagnostics`` for supported non-fatal import warnings.
 
 .. autoclass:: USDLoader
 
+.. autoclass:: USDArticulationImportResult
+   :members:
+
 .. autoclass:: USDImportResult
 
 .. autoclass:: USDMeshInfo

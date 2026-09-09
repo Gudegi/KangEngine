@@ -1417,6 +1417,21 @@ void bind_physics(py::module& m) {
                 return counts;
             },
             "Return the number of collision shapes attached to each link.")
+        .def("set_armatures", &Articulation::setArmatures, py::arg("values"),
+             "Set per-DOF armature in get_dof_names order.")
+        .def("set_armature", [](Articulation& self, float value) {
+            if (!std::isfinite(value) || value < 0.f)
+                throw py::value_error("armature must be finite and nonnegative");
+            for (auto* link : self.links()) {
+                if (auto* joint = link->getInboundJoint()) {
+                    for (int i = 0; i < PxArticulationAxis::eCOUNT; ++i) {
+                        const auto axis = static_cast<PxArticulationAxis::Enum>(i);
+                        if (joint->getMotion(axis) != PxArticulationMotion::eLOCKED)
+                            joint->setArmature(axis, value);
+                    }
+                }
+            }
+        }, py::arg("value"), "Set uniform armature on movable articulation axes.")
         .def("num_dofs", &Articulation::numDofs,
              "Return the number of controllable DOFs.")
         .def("release", &Articulation::release,

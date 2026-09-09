@@ -1,5 +1,8 @@
 # Load Assets
 
+For simulated MJCF, URDF, and USD robots, see
+[Articulations](../simulation/ARTICULATION.md).
+
 Asset loaders parse files into data. Scene helpers or visual classes decide how
 that data is displayed.
 

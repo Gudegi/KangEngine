@@ -884,7 +884,17 @@ void bind_asset(py::module& m) {
         .def_readonly("diagnostics", &USDImportResult::diagnostics,
                       "Importer diagnostics.");
 
-    py::class_<USDLoader>(asset, "USDLoader", "Loader for USD mesh scenes.")
+    py::class_<USDArticulationImportResult>(asset, "USDArticulationImportResult")
+        .def_readonly("articulation", &USDArticulationImportResult::articulation)
+        .def_readonly("diagnostics", &USDArticulationImportResult::diagnostics);
+    py::class_<USDLoader>(asset, "USDLoader", "Loader for USD scenes and articulations.")
+        .def_static("parse_articulation", &USDLoader::parseArticulation,
+                    py::arg("usd_path"), py::arg("prim_path") = "", py::arg("order") = "DFS")
+        .def_static("load_articulation", [](const std::string& path, const std::string& prim, const std::string& order) {
+            auto result = USDLoader::parseArticulation(path, prim, order);
+            result.diagnostics.printWarnings("USDLoader " + path);
+            return result.articulation;
+        }, py::arg("usd_path"), py::arg("prim_path") = "", py::arg("order") = "DFS")
         .def_static("parse", &USDLoader::parse, py::arg("usd_path"),
                     py::arg("scale") = 1.0f,
                     "Parse USD and return meshes plus diagnostics.")

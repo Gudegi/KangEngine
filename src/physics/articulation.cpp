@@ -311,6 +311,20 @@ void Articulation::release() {
     _appliedForces.clear();
 }
 
+void Articulation::setArmatures(const std::vector<float>& values) {
+    if (values.size() != static_cast<size_t>(numDofs()))
+        throw std::invalid_argument("setArmatures: size must match numDofs()");
+    for (float value : values)
+        if (!std::isfinite(value) || value < 0.f)
+            throw std::invalid_argument("armature must be finite and nonnegative");
+    if (!_template) return;
+    for (size_t i = 0; i < values.size(); ++i) {
+        const auto& dof = _template->_dofs[i];
+        if (auto* joint = inboundJoint(_links, dof.linkIndex))
+            joint->setArmature(dof.axis, values[i]);
+    }
+}
+
 void Articulation::setKPs(const std::vector<float>& kps) {
     if (static_cast<int>(kps.size()) != numDofs())
         throw std::runtime_error("setKPs: size must match numDofs()");

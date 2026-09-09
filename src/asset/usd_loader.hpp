@@ -2,6 +2,7 @@
 #define _USD_LOADER_HPP_
 
 #include "asset/import_diagnostics.hpp"
+#include "asset/articulation_desc.hpp"
 #include "engine/scene/scene_backend.hpp"
 
 #include <string>
@@ -24,9 +25,17 @@ struct USDImportResult {
     ImportDiagnostics diagnostics;
 };
 
+struct USDArticulationImportResult {
+    ArticulationDesc articulation;
+    ImportDiagnostics diagnostics;
+};
+
 class USDLoader {
   public:
     USDLoader() = delete;
+
+    static USDArticulationImportResult parseArticulation(const std::string& usdPath,
+        const std::string& primPath = "", const std::string& order = "DFS");
 
     static USDImportResult parse(const std::string& usdPath,
                                  float scale = 1.0f);

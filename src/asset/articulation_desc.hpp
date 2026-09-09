@@ -31,6 +31,7 @@ struct VisualGeomDesc {
     Eigen::Quaternionf quat = Eigen::Quaternionf::Identity();
     Eigen::Vector4f rgba = Eigen::Vector4f(0.15f, 0.15f, 0.15f, 1.0f);
     Eigen::Vector3f scale = Eigen::Vector3f::Ones();
+    std::shared_ptr<const Scene::MeshData> meshData;
 };
 
 struct JointDesc {

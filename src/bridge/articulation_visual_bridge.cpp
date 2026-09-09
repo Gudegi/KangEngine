@@ -160,7 +160,7 @@ buildVisualGeomAssets(const Asset::ArticulationDesc& data) {
         std::string meshPath = (fs::path(data.assetDir) / meshInfo.meshFile)
                                    .lexically_normal()
                                    .string();
-        auto part = loadVisualMesh(meshPath);
+        auto part = meshInfo.meshData ? *meshInfo.meshData : loadVisualMesh(meshPath);
         applyMeshInfoTransform(part, meshInfo);
 
         ArticulationVisualBridgeAsset::VisualGeomAsset asset;

@@ -158,6 +158,7 @@ class Articulation {
     int setCollisionMaterialOverrides(
         PhysicsWorld& physics,
         const std::vector<Physics::CollisionMaterialOverride>& overrides);
+    void setArmatures(const std::vector<float>& values);
     void setKPs(const std::vector<float>& kps);
     const std::vector<float>& getKPs() const { return _KPs; }
     void setKDs(const std::vector<float>& kds);
