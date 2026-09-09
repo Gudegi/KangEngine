@@ -4,5 +4,5 @@
 ```{toctree}
 :maxdepth: 1
 
-KELAB_BENCHMARKS
+Performance Benchmarks <KELAB_BENCHMARKS>
 ```
