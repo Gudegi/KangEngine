@@ -56,6 +56,10 @@ class ContactPointData:
     All Cartesian values retain the PhysX world-space convention.  ``normal_w``
     and ``normal_impulse_w`` point toward the sensor body, so the two endpoints
     of the same contact receive opposite vectors.
+
+    ``body_slot`` indexes the sensor's public ``body_ids`` selection, after
+    translating PhysX link indices. ``other_body`` retains the raw PhysX
+    internal link index for an articulation on the opposite endpoint.
     """
 
     environment: torch.Tensor
@@ -227,6 +231,24 @@ class ContactSensor:
             )
         return values
 
+    def _gpu_body_ids(self):
+        """Map public skeleton body IDs to PhysX's internal link indices."""
+        if self._kind == 0:
+            return self.body_ids
+        mappings = [
+            tuple(
+                self.world.articulations[
+                    (env_id, self.obj_id)
+                ].articulation.get_link_indices()
+            )
+            for env_id in self.env_ids
+        ]
+        if any(mapping != mappings[0] for mapping in mappings[1:]):
+            raise RuntimeError(
+                "contact sensor articulation link index maps differ between environments"
+            )
+        return tuple(mappings[0][body] for body in self.body_ids)
+
     def _resolve_kind(self) -> int:
         keys = {(env_id, self.obj_id) for env_id in self.env_ids}
         if keys.issubset(self.world.rigids):
@@ -306,15 +328,11 @@ class _ContactSensorBatch:
             raise RuntimeError("contact sensor batch has not been prepared")
         descriptor = self._descriptors[id(sensor)]
         pair_refs = (
-            self.world.gpu_system.contact_pair_body_refs()
-            .torch()
-            .reshape(-1, 2, 3)
+            self.world.gpu_system.contact_pair_body_refs().torch().reshape(-1, 2, 3)
         )
         pair_count = self.world.gpu_system.contact_pair_count().torch().reshape(-1)
         points = self.world.gpu_system.contact_points().torch().reshape(-1, 10)
-        point_count = (
-            self.world.gpu_system.contact_point_count().torch().reshape(-1)
-        )
+        point_count = self.world.gpu_system.contact_point_count().torch().reshape(-1)
         point_pairs = (
             self.world.gpu_system.contact_point_pair_indices().torch().reshape(-1)
         )
@@ -351,9 +369,7 @@ class _ContactSensorBatch:
             safe_body = body.clamp(0, descriptor.body_map_count - 1).to(torch.int64)
             environment = row_map[safe_row]
             body_slot = body_map[safe_body]
-            selected = (
-                valid_point & in_bounds & (environment >= 0) & (body_slot >= 0)
-            )
+            selected = valid_point & in_bounds & (environment >= 0) & (body_slot >= 0)
             other = refs[:, 1 - endpoint]
             outputs.append(
                 (
@@ -412,8 +428,9 @@ class _ContactSensorBatch:
             row_map = [-1] * (max(rows) + 1)
             for environment, row in enumerate(rows):
                 row_map[row] = environment
-            body_map = [-1] * (max(sensor.body_ids) + 1)
-            for slot, body in enumerate(sensor.body_ids):
+            gpu_body_ids = sensor._gpu_body_ids()
+            body_map = [-1] * (max(gpu_body_ids) + 1)
+            for slot, body in enumerate(gpu_body_ids):
                 body_map[body] = slot
 
             descriptors.append(
@@ -464,8 +481,7 @@ class _ContactSensorBatch:
             net_impulse,
         )
         self._descriptors = {
-            id(sensor): descriptor
-            for sensor, descriptor in zip(sensors, descriptors)
+            id(sensor): descriptor for sensor, descriptor in zip(sensors, descriptors)
         }
         self._native_views = tuple(
             to_gpu_array_view(tensor, dtype=tensor.dtype, name=name)
