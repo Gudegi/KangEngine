@@ -1248,6 +1248,29 @@ void bind_scene(py::module& m) {
         scene, "MeshData",
         "Static mesh payload with vertex attributes and triangle indices.")
         .def(py::init<>(), "Create empty mesh data.")
+        .def_static("from_arrays", [](const FloatArray& vertices, const IntArray& indices) {
+            auto points = vec3ArrayView(vertices, "vertices");
+            auto indexInfo = indices.request();
+            if (indexInfo.size % 3)
+                throw py::value_error("indices must contain triangles");
+            auto mesh = std::make_shared<KE::Scene::MeshData>();
+            mesh->vertices.reserve(points.count);
+            for (size_t i = 0; i < points.count; ++i) {
+                const float* p = points.data + 3 * i;
+                if (!std::isfinite(p[0]) || !std::isfinite(p[1]) || !std::isfinite(p[2]))
+                    throw py::value_error("vertices must be finite");
+                mesh->vertices.emplace_back(p[0], p[1], p[2]);
+            }
+            const int* data = static_cast<const int*>(indexInfo.ptr);
+            for (py::ssize_t i = 0; i < indexInfo.size; ++i) {
+                if (data[i] < 0 || size_t(data[i]) >= points.count)
+                    throw py::value_error("mesh index out of range");
+                mesh->indices.push_back(static_cast<unsigned int>(data[i]));
+            }
+            mesh->fillMissingAttributes();
+            return mesh;
+        }, py::arg("vertices"), py::arg("indices"),
+           "Create a mesh from CPU vertex [N,3] and triangle index arrays.")
         .def_readwrite("vertices", &KE::Scene::MeshData::vertices,
                        "Vertex positions.")
         .def_readwrite("normals", &KE::Scene::MeshData::normals,

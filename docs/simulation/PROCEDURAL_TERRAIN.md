@@ -144,3 +144,33 @@ The public generators modify a `SubTerrain` in place and can be composed:
 
 Use a single `SubTerrain` for one patch or a `TerrainGrid` for tiled training
 and visualization environments.
+
+## GPU collision and mesh height queries
+
+Use `TerrainMesh` for GPU triangle-mesh collision and height queries.
+It converts a height field to a Z-up mesh:
+
+```python
+from kangengine import physics, terrain
+
+field: terrain.SubTerrain = terrain.SubTerrain(
+    width=161, length=161, horizontal_scale=0.05, vertical_scale=0.005)
+terrain.random_uniform_terrain(field, min_height=-0.05, max_height=0.05)
+asset: terrain.TerrainMesh = terrain.TerrainMesh.from_heightfield(field)
+config: physics.PhysicsConfig = physics.PhysicsConfig.z_up()
+config.enable_gpu = True
+world: physics.PhysicsWorld = physics.PhysicsWorld(config)
+instance: terrain.TerrainInstance = asset.create(world, position=(0, 0, 0))
+# Optional visualization: instance.add_visual(app.scene, "/terrain", material=material)
+# Optional CPU/CUDA float32 tensor query: heights = instance.sample_height(positions)
+instance.remove()  # Before closing the viewer or physics world.
+```
+
+Install `kangengine[terrain]` to use `sample_height()`. It accepts CPU or CUDA
+float32 position tensors and returns heights on the same device; misses return
+`-inf`. Pass a render material to `add_visual()` and a physics material to
+`create()`.
+
+`PhysicsWorld.add_heightfield()` uses native heightfield collision. PhysX 5.8.0
+has a GPU sphere-heightfield boundary-contact error. Use triangle-mesh
+collision for GPU terrain where boundary contacts are possible.

@@ -98,14 +98,18 @@ std::vector<PxHeightFieldSample> makeHeightFieldSamples(const float* heights,
                                                         UpAxis upAxis,
                                                         float& outHeightScale) {
     float maxAbsHeight = 0.f;
-    const int count = rows * cols;
-    for (int i = 0; i < count; ++i)
+    const size_t count = size_t(rows) * size_t(cols);
+    for (size_t i = 0; i < count; ++i) {
+        if (!std::isfinite(heights[i]))
+            throw std::invalid_argument("heightfield heights must be finite");
         maxAbsHeight = std::max(maxAbsHeight, std::abs(heights[i]));
+    }
 
     outHeightScale = maxAbsHeight > 1e-6f
                          ? maxAbsHeight / static_cast<float>(
                                               std::numeric_limits<PxI16>::max())
                          : 1.0f;
+    outHeightScale = std::max(outHeightScale, PX_MIN_HEIGHTFIELD_Y_SCALE);
 
     // PhysX local X is sample row and local Z is sample column. KangEngine
     // height grids are source row-major where col is X and row is horizontal Z
@@ -120,8 +124,8 @@ std::vector<PxHeightFieldSample> makeHeightFieldSamples(const float* heights,
             const int hfRow = srcCol;
             const int hfCol =
                 (upAxis == UpAxis::Z) ? (rows - 1 - srcRow) : srcRow;
-            auto& sample = samples[static_cast<size_t>(hfRow * hfCols + hfCol)];
-            const float h = heights[srcRow * cols + srcCol];
+            auto& sample = samples[size_t(hfRow) * size_t(hfCols) + size_t(hfCol)];
+            const float h = heights[size_t(srcRow) * size_t(cols) + size_t(srcCol)];
             const float scaled = h / outHeightScale;
             sample.height = static_cast<PxI16>(std::clamp(
                 std::lround(scaled),
@@ -419,6 +423,9 @@ PhysicsWorld::~PhysicsWorld() {
             heightField->release();
     }
     _heightFields.clear();
+    for (const auto& cached : _triangleMeshCache)
+        cached.mesh->release();
+    _triangleMeshCache.clear();
     for (auto* convexMesh : _convexMeshes) {
         if (convexMesh)
             convexMesh->release();
@@ -667,7 +674,10 @@ bool PhysicsWorld::canUseGpuEnvironmentFiltering() const {
 void PhysicsWorld::step() {
     clearContacts();
     _scene->simulate(_dt); // _dt is already deltaTime (1/60)
-    _scene->fetchResults(true);
+    PxU32 error = 0;
+    if (!_scene->fetchResults(true, &error) || error)
+        throw std::runtime_error("PhysX fetchResults failed (error " +
+                                 std::to_string(error) + ")");
 }
 
 void PhysicsWorld::fecthData() {
@@ -727,8 +737,10 @@ PxRigidStatic* PhysicsWorld::createStaticHeightField(
     const float* heights, int rows, int cols, float horizontalScale,
     const Physics::PhysicsMaterialDesc& material, UpAxis upAxis, bool center,
     bool registerAsGround) {
-    if (!heights || rows < 2 || cols < 2 || horizontalScale <= 0.f)
-        return nullptr;
+    if (!heights || rows < 2 || cols < 2 || !std::isfinite(horizontalScale) ||
+        horizontalScale < PX_MIN_HEIGHTFIELD_XZ_SCALE ||
+        size_t(rows) * size_t(cols) > std::numeric_limits<PxU32>::max() / sizeof(PxHeightFieldSample))
+        throw std::invalid_argument("invalid heightfield dimensions or horizontal_scale");
 
     float heightScale = 1.f;
     std::vector<PxHeightFieldSample> samples =
@@ -747,25 +759,112 @@ PxRigidStatic* PhysicsWorld::createStaticHeightField(
         PxCreateHeightField(desc, _physics->getPhysicsInsertionCallback());
     if (!heightField)
         return nullptr;
-    _heightFields.push_back(heightField);
 
     PxHeightFieldGeometry geometry(heightField, PxMeshGeometryFlags(),
                                    heightScale, horizontalScale,
                                    horizontalScale);
-    if (!geometry.isValid())
+    if (!geometry.isValid()) {
+        heightField->release();
         return nullptr;
+    }
 
     PxRigidStatic* actor = _physics->createRigidStatic(
         heightFieldPose(rows, cols, horizontalScale, upAxis, center));
-    if (!actor)
+    if (!actor) {
+        heightField->release();
         return nullptr;
+    }
 
     PxShape* shape = createExclusiveShape(*actor, geometry, material);
+    if (!shape) {
+        actor->release();
+        heightField->release();
+        return nullptr;
+    }
     applyRigidContactOffsets(shape, 0.02f, 0.0f);
     _scene->addActor(*actor);
     if (registerAsGround)
         registerGroundActor(actor);
+    _heightFields.push_back(heightField);
     return actor;
+}
+
+PxRigidStatic* PhysicsWorld::createStaticTriangleMesh(
+    std::shared_ptr<const Scene::MeshData> mesh, const glm::vec3& position,
+    const glm::quat& rotation, const Physics::PhysicsMaterialDesc& material,
+    bool gpuCompatible, float contactOffset, float restOffset, bool registerAsGround,
+    uint32_t numPrimsPerLeaf, float weldTolerance) {
+    if (numPrimsPerLeaf < 2 || numPrimsPerLeaf > 15 ||
+        !std::isfinite(weldTolerance) || weldTolerance < 0.f)
+        throw std::invalid_argument("triangle mesh cooking requires leaf size 2..15 and finite nonnegative weld tolerance");
+    const PxTransform pose(PxVec3(position.x, position.y, position.z),
+                           PxQuat(rotation.x, rotation.y, rotation.z, rotation.w));
+    if (!pose.isValid() || !std::isfinite(contactOffset) ||
+        !std::isfinite(restOffset) || contactOffset <= restOffset || contactOffset <= 0.f)
+        throw std::invalid_argument("invalid triangle mesh pose or contact offsets");
+    if (!mesh || mesh->vertices.size() < 3 || mesh->indices.empty() ||
+        mesh->indices.size() % 3 || mesh->vertices.size() > std::numeric_limits<PxU32>::max() ||
+        mesh->indices.size() / 3 > std::numeric_limits<PxU32>::max())
+        throw std::invalid_argument("triangle collision mesh requires vertices and triangle indices");
+    PxTriangleMesh* cooked = nullptr;
+    for (const auto& cached : _triangleMeshCache) {
+        if (cached.source.get() == mesh.get() && cached.gpuCompatible == gpuCompatible &&
+            cached.numPrimsPerLeaf == numPrimsPerLeaf && cached.weldTolerance == weldTolerance) {
+            cooked = cached.mesh;
+            break;
+        }
+    }
+    if (!cooked) {
+        std::vector<PxVec3> vertices;
+        vertices.reserve(mesh->vertices.size());
+        for (const auto& vertex : mesh->vertices) {
+            if (!std::isfinite(vertex.x) || !std::isfinite(vertex.y) || !std::isfinite(vertex.z))
+                throw std::invalid_argument("triangle collision vertices must be finite");
+            vertices.emplace_back(vertex.x, vertex.y, vertex.z);
+        }
+        for (auto index : mesh->indices)
+            if (index >= vertices.size())
+                throw std::invalid_argument("triangle collision index out of range");
+        PxTriangleMeshDesc desc;
+        desc.points.count = PxU32(vertices.size());
+        desc.points.stride = sizeof(PxVec3);
+        desc.points.data = vertices.data();
+        desc.triangles.count = PxU32(mesh->indices.size() / 3);
+        desc.triangles.stride = 3 * sizeof(unsigned int);
+        desc.triangles.data = mesh->indices.data();
+        PxCookingParams params(_physics->getTolerancesScale());
+        params.buildGPUData = gpuCompatible;
+        params.midphaseDesc.setToDefault(PxMeshMidPhase::eBVH34);
+        params.midphaseDesc.mBVH34Desc.numPrimsPerLeaf = numPrimsPerLeaf;
+        params.meshWeldTolerance = weldTolerance;
+        if (weldTolerance > 0.f)
+            params.meshPreprocessParams |= PxMeshPreprocessingFlag::eWELD_VERTICES;
+        PxTriangleMeshCookingResult::Enum result;
+        cooked = PxCreateTriangleMesh(params, desc, _physics->getPhysicsInsertionCallback(), &result);
+        if (!cooked)
+            throw std::runtime_error("PhysX triangle mesh cooking failed: " + std::to_string(int(result)));
+        _triangleMeshCache.push_back({mesh, gpuCompatible, numPrimsPerLeaf, weldTolerance, cooked});
+    }
+    PxRigidStatic* actor = _physics->createRigidStatic(pose);
+    if (!actor)
+        throw std::runtime_error("PhysX static actor creation failed");
+    PxShape* shape = createExclusiveShape(*actor, PxTriangleMeshGeometry(cooked), material);
+    if (!shape) {
+        actor->release();
+        throw std::runtime_error("PhysX triangle mesh shape creation failed");
+    }
+    applyRigidContactOffsets(shape, contactOffset, restOffset);
+    _scene->addActor(*actor);
+    if (registerAsGround)
+        registerGroundActor(actor);
+    return actor;
+}
+
+void PhysicsWorld::removeStaticActor(PxRigidStatic& actor) {
+    if (actor.getScene() != _scene)
+        throw std::invalid_argument("static actor belongs to a different world");
+    unregisterGroundActor(&actor);
+    actor.release();
 }
 
 PxRigidDynamic* PhysicsWorld::createDynamicBox(const glm::vec3& halfExtents,

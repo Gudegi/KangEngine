@@ -815,6 +815,8 @@ void bind_physics(py::module& m) {
              "Return render meshes reconstructed from cooked convex shapes.")
         .def("release", &PxRigidStatic::release);
 
+    physics.attr("RigidStatic") = m.attr("RigidStatic");
+
     // PhysicsWorld (non-copyable, non-movable — Python must keep it alive)
     py::class_<PhysicsWorld>(
         physics, "PhysicsWorld",
@@ -823,6 +825,43 @@ void bind_physics(py::module& m) {
              "Create a physics world from configuration.")
         .def("step", &PhysicsWorld::step,
              "Advance simulation by one configured timestep.")
+        .def("get_simulation_statistics", [](const PhysicsWorld& self) {
+            PxSimulationStatistics stats;
+            self.getScene()->getSimulationStatistics(stats);
+            py::dict result;
+            result["contact_pairs"] = stats.nbDiscreteContactPairsTotal;
+#if PX_PHYSICS_VERSION_MAJOR == 5 && PX_PHYSICS_VERSION_MINOR >= 8
+            const auto& memory = stats.gpuDynamicsMemoryConfigStatistics;
+            result["rigid_contact_count"] = memory.rigidContactCount;
+            result["rigid_patch_count"] = memory.rigidPatchCount;
+            result["found_lost_pairs"] = memory.foundLostPairs;
+            result["collision_stack_size"] = memory.collisionStackSize;
+            result["gpu_heap_bytes"] = stats.gpuMemHeap;
+#endif
+            return result;
+        })
+        .def("num_cached_triangle_meshes", &PhysicsWorld::numCachedTriangleMeshes)
+        .def("remove_static_actor", &PhysicsWorld::removeStaticActor, py::arg("actor"))
+        .def("add_triangle_mesh", [](PhysicsWorld& self,
+                std::shared_ptr<Scene::MeshData> mesh, const std::vector<float>& position,
+                const std::vector<float>& rotation, const PhysicsMaterialDesc& material,
+                bool gpuCompatible, float contactOffset, float restOffset, bool registerAsGround,
+                uint32_t numPrimsPerLeaf, float weldTolerance) {
+            if (position.size() != 3 || rotation.size() != 4)
+                throw py::value_error("position requires 3 values and rotation_xyzw requires 4");
+            return self.createStaticTriangleMesh(mesh,
+                glm::vec3(position[0], position[1], position[2]),
+                glm::quat(rotation[3], rotation[0], rotation[1], rotation[2]),
+                material, gpuCompatible, contactOffset, restOffset, registerAsGround,
+                numPrimsPerLeaf, weldTolerance);
+        }, py::arg("mesh"), py::kw_only(),
+           py::arg("position") = std::vector<float>{0, 0, 0},
+           py::arg("rotation_xyzw") = std::vector<float>{0, 0, 0, 1},
+           py::arg("material") = PhysicsMaterialDesc{}, py::arg("gpu_compatible") = true,
+           py::arg("contact_offset") = 0.02f, py::arg("rest_offset") = 0.f,
+           py::arg("register_as_ground") = true,
+           py::arg("num_prims_per_leaf") = 4, py::arg("weld_tolerance") = 0.f,
+           py::return_value_policy::reference_internal)
         .def("add_default_ground", &PhysicsWorld::addDefaultGround,
              "Add a default static ground plane.")
         .def("clear_ground_actors", &PhysicsWorld::clearGroundActors,
@@ -870,7 +909,7 @@ void bind_physics(py::module& m) {
                 if (rows < 2 || cols < 2)
                     throw py::value_error(
                         "add_heightfield expects rows >= 2 and cols >= 2");
-                if (h.count != static_cast<size_t>(rows * cols))
+                if (h.count != size_t(rows) * size_t(cols))
                     throw py::value_error(
                         "add_heightfield expects heights.size == rows * cols");
                 return self.createStaticHeightField(

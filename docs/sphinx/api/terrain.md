@@ -20,6 +20,11 @@ Terrain generation, heightfields, and terrain-to-mesh conversion workflows.
    discrete_obstacles_terrain
    height_field_to_mesh
    height_field_to_mesh_python
+   TerrainMesh
+   TerrainInstance
+   pyramid_stairs_mesh
+   pyramid_sloped_mesh
+   random_grid_mesh
 ```
 
 ```{eval-rst}

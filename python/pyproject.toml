@@ -17,6 +17,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+terrain = ["warp-lang>=1.16,<2.0"]
 docs = [
     "sphinx>=8",
     "myst-parser>=4",

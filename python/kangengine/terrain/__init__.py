@@ -1,6 +1,8 @@
 """Height-field terrain construction and mesh conversion."""
 
 from .._public import set_public_module
+from .terrain_mesh import TerrainMesh, TerrainInstance
+from .mesh_generators import pyramid_sloped_mesh, pyramid_stairs_mesh, random_grid_mesh
 from .heightfield import (
     SubTerrain,
     TerrainGrid,
@@ -15,6 +17,11 @@ from .heightfield import (
 )
 
 __all__ = [
+    "TerrainMesh",
+    "TerrainInstance",
+    "pyramid_stairs_mesh",
+    "pyramid_sloped_mesh",
+    "random_grid_mesh",
     "SubTerrain",
     "TerrainGrid",
     "discrete_obstacles_terrain",
@@ -28,6 +35,11 @@ __all__ = [
 ]
 
 for _value in (
+    TerrainMesh,
+    TerrainInstance,
+    pyramid_stairs_mesh,
+    pyramid_sloped_mesh,
+    random_grid_mesh,
     SubTerrain,
     TerrainGrid,
     discrete_obstacles_terrain,

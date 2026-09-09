@@ -65,12 +65,12 @@ Scene::MeshData heightFieldToMesh(const float* heights, int rows, int cols,
             const unsigned int i3 = i2 + 1;
 
             meshData.indices.emplace_back(i0);
-            meshData.indices.emplace_back(i2);
-            meshData.indices.emplace_back(i1);
+            meshData.indices.emplace_back(options.upAxis == UpAxis::Z ? i1 : i2);
+            meshData.indices.emplace_back(options.upAxis == UpAxis::Z ? i2 : i1);
 
             meshData.indices.emplace_back(i1);
-            meshData.indices.emplace_back(i2);
-            meshData.indices.emplace_back(i3);
+            meshData.indices.emplace_back(options.upAxis == UpAxis::Z ? i3 : i2);
+            meshData.indices.emplace_back(options.upAxis == UpAxis::Z ? i2 : i3);
         }
     }
 

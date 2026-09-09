@@ -343,7 +343,10 @@ def height_field_to_mesh_python(
             i1 = i0 + 1
             i2 = next_row_base + col
             i3 = i2 + 1
-            indices.extend((i0, i2, i1, i1, i2, i3))
+            if up_axis == _ke.UpAxis.Z:
+                indices.extend((i0, i1, i2, i1, i3, i2))
+            else:
+                indices.extend((i0, i2, i1, i1, i2, i3))
 
     normals = _height_field_normals(positions, indices)
 

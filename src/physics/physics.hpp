@@ -146,6 +146,14 @@ class PhysicsWorld {
         physx::PxConvexMesh* mesh = nullptr;
     };
     std::vector<CachedConvexMesh> _convexMeshCache;
+    struct CachedTriangleMesh {
+        std::shared_ptr<const Scene::MeshData> source;
+        bool gpuCompatible;
+        uint32_t numPrimsPerLeaf;
+        float weldTolerance;
+        physx::PxTriangleMesh* mesh;
+    };
+    std::vector<CachedTriangleMesh> _triangleMeshCache;
 
     float _dt;
     UpAxis _upAxis;
@@ -217,6 +225,15 @@ class PhysicsWorld {
         const float* heights, int rows, int cols, float horizontalScale,
         const Physics::PhysicsMaterialDesc& material, UpAxis upAxis = UpAxis::Y,
         bool center = true, bool registerAsGround = true);
+
+    physx::PxRigidStatic* createStaticTriangleMesh(
+        std::shared_ptr<const Scene::MeshData> mesh, const glm::vec3& position,
+        const glm::quat& rotation, const Physics::PhysicsMaterialDesc& material,
+        bool gpuCompatible = true, float contactOffset = 0.02f,
+        float restOffset = 0.0f, bool registerAsGround = true,
+        uint32_t numPrimsPerLeaf = 4, float weldTolerance = 0.0f);
+    void removeStaticActor(physx::PxRigidStatic& actor);
+    size_t numCachedTriangleMeshes() const { return _triangleMeshCache.size(); }
 
     physx::PxRigidDynamic*
     createDynamicBox(const glm::vec3& halfExtents, const glm::vec3& pos,

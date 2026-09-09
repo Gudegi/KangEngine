@@ -113,6 +113,7 @@ ContactPoint = _export_native_type("ContactPoint")
 ConvexMeshPart = _export_native_type("ConvexMeshPart")
 ConvexCookingOptions = _export_native_type("ConvexCookingOptions")
 RigidDynamic = _export_native_type("RigidDynamic")
+RigidStatic = _export_native_type("RigidStatic")
 ArticulationConfig = _export_native_type("ArticulationConfig")
 GpuPhysicsConfig = _export_native_type("GpuPhysicsConfig")
 PhysicsGpuStateViews = _export_native_type("PhysicsGpuStateViews")
@@ -186,6 +187,30 @@ class PhysicsWorld(_NativeWrapper):
         return self._native.add_static_box(
             half_extents, pos, rot_xyzw, register_as_ground
         )
+
+    def add_triangle_mesh(
+        self, mesh, *, position=(0.0, 0.0, 0.0),
+        rotation_xyzw=(0.0, 0.0, 0.0, 1.0), material=None,
+        gpu_compatible=True, contact_offset=0.02, rest_offset=0.0,
+        register_as_ground=True, num_prims_per_leaf=4, weld_tolerance=0.0,
+    ) -> RigidStatic:
+        """Cook/cache an immutable source mesh and create an exclusive static shape."""
+        options = dict(position=position, rotation_xyzw=rotation_xyzw,
+                       gpu_compatible=gpu_compatible, contact_offset=contact_offset,
+                       rest_offset=rest_offset, register_as_ground=register_as_ground,
+                       num_prims_per_leaf=num_prims_per_leaf, weld_tolerance=weld_tolerance)
+        if material is not None:
+            options["material"] = material
+        return self._native.add_triangle_mesh(mesh, **options)
+
+    def get_simulation_statistics(self):
+        """Return contact counts and SDK-supported GPU memory demand statistics."""
+        return self._native.get_simulation_statistics()
+
+    # TODO: Add remove_dynamic_actor() with simulation/GPU registration cleanup.
+    def remove_static_actor(self, actor):
+        """Remove a static actor and its ground registration; invalidates actor."""
+        return self._native.remove_static_actor(unwrap_native(actor))
 
     def add_heightfield(
         self,
@@ -528,6 +553,7 @@ __all__ = [
         "ConvexMeshPart",
         "ConvexCookingOptions",
         "RigidDynamic",
+        "RigidStatic",
         "PhysicsWorld",
         "ArticulationConfig",
         "Articulation",
