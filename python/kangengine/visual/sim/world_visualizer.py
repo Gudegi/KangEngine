@@ -1365,9 +1365,13 @@ class SimWorldVisualizer:
             data = self.world.load_mjcf(asset_path, scale=scale, order=order)
         elif suffix == ".urdf":
             data = self.world.load_urdf(asset_path, scale=scale, order=order)
+        elif suffix in (".usd", ".usda", ".usdc"):
+            if scale != 1.0:
+                raise ValueError("USD articulation visuals require scale=1")
+            data = self.world.load_usd(asset_path, order=order)
         else:
             raise ValueError(
-                f"articulation asset path must end in .xml or .urdf: {asset_path}"
+                f"unsupported articulation asset extension: {asset_path}"
             )
         asset = ArticulationVisualAsset.from_data(
             data=data,

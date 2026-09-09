@@ -457,7 +457,10 @@ bool buildCollisionGeom(
     auto typeStr = geomElem->Attribute("type")
                        ? std::string(geomElem->Attribute("type"))
                        : defs.type;
-    if (typeStr.empty() || typeStr == "plane")
+    // MJCF defaults unspecified geom types to sphere (including foot contacts).
+    if (typeStr.empty())
+        typeStr = "sphere";
+    if (typeStr == "plane")
         return false;
 
     auto size = splitFloats(geomElem->Attribute("size"));
