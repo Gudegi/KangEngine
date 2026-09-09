@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<robot name="cartpole">
+  <link name="rail">
+    <inertial>
+      <origin xyz="0 0 0"/>
+      <mass value="1"/>
+      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+    </inertial>
+    <visual>
+      <geometry><mesh filename="box.obj" scale="6.4 0.08 0.08"/></geometry>
+      <material name="rail"><color rgba="0.25 0.25 0.25 1"/></material>
+    </visual>
+  </link>
+  <link name="cart">
+    <inertial>
+      <origin xyz="0 0 0"/>
+      <mass value="1"/>
+      <inertia ixx="0.0108" ixy="0" ixz="0" iyy="0.0167" iyz="0" izz="0.0208"/>
+    </inertial>
+    <visual>
+      <geometry><mesh filename="box.obj" scale="0.4 0.3 0.2"/></geometry>
+      <material name="cart"><color rgba="0.2 0.45 0.8 1"/></material>
+    </visual>
+    <collision><geometry><box size="0.4 0.3 0.2"/></geometry></collision>
+  </link>
+  <joint name="slider_to_cart" type="prismatic">
+    <parent link="rail"/>
+    <child link="cart"/>
+    <origin xyz="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="-3.2" upper="3.2" effort="400" velocity="100"/>
+    <dynamics damping="10" friction="0"/>
+  </joint>
+  <link name="pole">
+    <inertial>
+      <origin xyz="0 0 0.5"/>
+      <mass value="0.1"/>
+      <inertia ixx="0.00835" ixy="0" ixz="0" iyy="0.00835" iyz="0" izz="0.00008"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0.5"/>
+      <geometry><mesh filename="box.obj" scale="0.08 0.08 1"/></geometry>
+      <material name="pole"><color rgba="0.85 0.35 0.15 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.5"/>
+      <geometry><cylinder radius="0.04" length="1"/></geometry>
+    </collision>
+  </link>
+  <joint name="cart_to_pole" type="revolute">
+    <parent link="cart"/>
+    <child link="pole"/>
+    <origin xyz="0 0 0.1"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-6.283185" upper="6.283185" effort="400" velocity="100"/>
+    <dynamics damping="0" friction="0"/>
+  </joint>
+</robot>
