@@ -1432,6 +1432,23 @@ void bind_physics(py::module& m) {
                 }
             }
         }, py::arg("value"), "Set uniform armature on movable articulation axes.")
+        .def("get_local_debug_frames", [](const Articulation& self) {
+            py::list frames;
+            for (size_t i = 0; i < self.links().size(); ++i) {
+                const auto* link = self.links()[i];
+                py::dict frame;
+                frame["body_index"] = i;
+                const auto pack = [](const PxTransform& pose) {
+                    return std::vector<float>{pose.p.x, pose.p.y, pose.p.z,
+                        pose.q.x, pose.q.y, pose.q.z, pose.q.w};
+                };
+                frame["com"] = pack(link->getCMassLocalPose());
+                if (const auto* joint = link->getInboundJoint())
+                    frame["joint"] = pack(joint->getChildPose());
+                frames.append(frame);
+            }
+            return frames;
+        }, "Return body-local COM and inbound joint frames in public body order.")
         .def("num_dofs", &Articulation::numDofs,
              "Return the number of controllable DOFs.")
         .def("release", &Articulation::release,
