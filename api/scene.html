@@ -221,7 +221,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MJCF_ARTICULATION.html">Load an MJCF Articulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/ARTICULATION.html">Articulations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
@@ -248,7 +248,10 @@
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../guide/integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../guide/KELAB.html">KELab</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/KELAB.html">KELab</a><input aria-label="Toggle navigation of KELab" class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/KELAB_BENCHMARKS.html">Performance Benchmarks</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/NEWTON.html">Newton Viewer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
 </ul>
@@ -256,7 +259,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul class="current">
-<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="python.html">kangengine</a></li>
 <li class="toctree-l2 current current-page"><a class="current reference internal" href="#">ke.scene</a></li>
 <li class="toctree-l2"><a class="reference internal" href="geometry.html">ke.geometry</a></li>
@@ -2697,6 +2700,19 @@
 <dt class="sig sig-object py" id="kangengine.scene.MeshData">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.scene.</span></span><span class="sig-name descname"><span class="pre">MeshData</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.scene.MeshData" title="Link to this definition">¶</a></dt>
 <dd><p>Static mesh payload with vertex attributes and triangle indices.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.scene.MeshData.from_arrays">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_arrays</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">vertices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">npt.ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">torch.Tensor</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">npt.ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">torch.Tensor</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.scene.MeshData" title="kangengine.scene.MeshData"><span class="pre">MeshData</span></a></span></span><a class="headerlink" href="#kangengine.scene.MeshData.from_arrays" title="Link to this definition">¶</a></dt>
+<dd><p>Create a mesh from CPU vertex [N,3] and triangle index arrays.</p>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.scene.MeshData.indices">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">indices</span></span><a class="headerlink" href="#kangengine.scene.MeshData.indices" title="Link to this definition">¶</a></dt>
@@ -3459,6 +3475,7 @@ physics collision still runs normally but there is no scene component to inspect
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.scene.MeshData"><code class="docutils literal notranslate"><span class="pre">MeshData</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.scene.MeshData.from_arrays"><code class="docutils literal notranslate"><span class="pre">MeshData.from_arrays()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.MeshData.indices"><code class="docutils literal notranslate"><span class="pre">MeshData.indices</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.MeshData.normals"><code class="docutils literal notranslate"><span class="pre">MeshData.normals</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.scene.MeshData.uvs"><code class="docutils literal notranslate"><span class="pre">MeshData.uvs</span></code></a></li>

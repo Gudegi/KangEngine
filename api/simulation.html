@@ -221,7 +221,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MJCF_ARTICULATION.html">Load an MJCF Articulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/ARTICULATION.html">Articulations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
@@ -248,7 +248,10 @@
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../guide/integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../guide/KELAB.html">KELab</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/KELAB.html">KELab</a><input aria-label="Toggle navigation of KELab" class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/KELAB_BENCHMARKS.html">Performance Benchmarks</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/NEWTON.html">Newton Viewer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
 </ul>
@@ -256,7 +259,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul class="current">
-<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="python.html">kangengine</a></li>
 <li class="toctree-l2"><a class="reference internal" href="scene.html">ke.scene</a></li>
 <li class="toctree-l2"><a class="reference internal" href="geometry.html">ke.geometry</a></li>
@@ -989,6 +992,15 @@ high-level setter.</p>
 <dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.load_urdf">
 <span class="sig-name descname"><span class="pre">load_urdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">urdf_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.load_urdf" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.load_usd">
+<span class="sig-name descname"><span class="pre">load_usd</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">usd_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">prim_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.sim.KangSimWorld.load_usd" title="Link to this definition">¶</a></dt>
+<dd><p>Load a meter/Z-up USD articulation; select a robot with <code class="docutils literal notranslate"><span class="pre">prim_path</span></code>.</p>
+<p>Returns the same articulation descriptor as <code class="docutils literal notranslate"><span class="pre">load_mjcf</span></code>/<code class="docutils literal notranslate"><span class="pre">load_urdf</span></code>.
+Unsupported joint/collider structures raise; import diagnostics report
+properties that remain caller-owned or are not imported.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.sim.KangSimWorld.refresh">
@@ -3380,6 +3392,7 @@ contact data to the host.</p>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.init_gpu_system"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.init_gpu_system()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.load_mjcf"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.load_mjcf()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.load_urdf"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.load_urdf()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.sim.KangSimWorld.load_usd"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.load_usd()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.refresh"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.refresh()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.refresh_sensors"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.refresh_sensors()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.sim.KangSimWorld.release"><code class="docutils literal notranslate"><span class="pre">KangSimWorld.release()</span></code></a></li>

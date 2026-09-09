@@ -221,7 +221,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MJCF_ARTICULATION.html">Load an MJCF Articulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/ARTICULATION.html">Articulations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
@@ -248,7 +248,10 @@
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../guide/integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../guide/KELAB.html">KELab</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/KELAB.html">KELab</a><input aria-label="Toggle navigation of KELab" class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/KELAB_BENCHMARKS.html">Performance Benchmarks</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/NEWTON.html">Newton Viewer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
 </ul>
@@ -256,7 +259,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul class="current">
-<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="python.html">kangengine</a></li>
 <li class="toctree-l2"><a class="reference internal" href="scene.html">ke.scene</a></li>
 <li class="toctree-l2"><a class="reference internal" href="geometry.html">ke.geometry</a></li>
@@ -889,6 +892,33 @@ with PhysX bindings.  The wrapper owns a native
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsWorld.add_triangle_mesh">
+<span class="sig-name descname"><span class="pre">add_triangle_mesh</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">mesh</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">position</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.0,</span> <span class="pre">0.0,</span> <span class="pre">0.0)</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">rotation_xyzw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.0,</span> <span class="pre">0.0,</span> <span class="pre">0.0,</span> <span class="pre">1.0)</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">gpu_compatible</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">contact_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.02</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">rest_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">register_as_ground</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">num_prims_per_leaf</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">weld_tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">RigidStatic</span></span></span><a class="headerlink" href="#kangengine.physics.PhysicsWorld.add_triangle_mesh" title="Link to this definition">¶</a></dt>
+<dd><p>Cook/cache an immutable source mesh and create an exclusive static shape.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">RigidStatic</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsWorld.clear_contacts">
 <span class="sig-name descname"><span class="pre">clear_contacts</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.PhysicsWorld.clear_contacts" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
@@ -1106,6 +1136,17 @@ unchanged after later step(), sync(), or clear_contacts() calls.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsWorld.get_simulation_statistics">
+<span class="sig-name descname"><span class="pre">get_simulation_statistics</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.physics.PhysicsWorld.get_simulation_statistics" title="Link to this definition">¶</a></dt>
+<dd><p>Return contact counts and SDK-supported GPU memory demand statistics.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsWorld.num_body_actors">
 <span class="sig-name descname"><span class="pre">num_body_actors</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.physics.PhysicsWorld.num_body_actors" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
@@ -1141,6 +1182,17 @@ unchanged after later step(), sync(), or clear_contacts() calls.</p>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsWorld.remove_static_actor">
+<span class="sig-name descname"><span class="pre">remove_static_actor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">actor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">RigidStatic</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.PhysicsWorld.remove_static_actor" title="Link to this definition">¶</a></dt>
+<dd><p>Remove a static actor and its ground registration; invalidates actor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -1968,6 +2020,7 @@ KangEngine fallback boxes. Visual-only mesh geoms remain render-only.</p>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.add_heightfield"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.add_heightfield()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.add_heightmap_collision"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.add_heightmap_collision()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.add_static_box"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.add_static_box()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.add_triangle_mesh"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.add_triangle_mesh()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.clear_contacts"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.clear_contacts()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.clear_ground_actors"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.clear_ground_actors()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.create_dynamic_box"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.create_dynamic_box()</span></code></a></li>
@@ -1980,10 +2033,12 @@ KangEngine fallback boxes. Visual-only mesh geoms remain render-only.</p>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.get_ground_contact_forces"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.get_ground_contact_forces()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.get_rigid_contact_force"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.get_rigid_contact_force()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.get_rigid_ground_contact_force"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.get_rigid_ground_contact_force()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.get_simulation_statistics"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.get_simulation_statistics()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.num_body_actors"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.num_body_actors()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.num_cached_materials"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.num_cached_materials()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.num_contacts"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.num_contacts()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.num_ground_actors"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.num_ground_actors()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.remove_static_actor"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.remove_static_actor()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.set_dt"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.set_dt()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.set_rigid_collision_material"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.set_rigid_collision_material()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.set_rigid_collision_material_overrides"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.set_rigid_collision_material_overrides()</span></code></a></li>

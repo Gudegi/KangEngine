@@ -221,7 +221,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MJCF_ARTICULATION.html">Load an MJCF Articulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/ARTICULATION.html">Articulations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
@@ -248,7 +248,10 @@
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../guide/integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../guide/KELAB.html">KELab</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/KELAB.html">KELab</a><input aria-label="Toggle navigation of KELab" class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/KELAB_BENCHMARKS.html">Performance Benchmarks</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/NEWTON.html">Newton Viewer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
 </ul>
@@ -256,7 +259,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul class="current">
-<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="python.html">kangengine</a></li>
 <li class="toctree-l2"><a class="reference internal" href="scene.html">ke.scene</a></li>
 <li class="toctree-l2"><a class="reference internal" href="geometry.html">ke.geometry</a></li>
@@ -370,10 +373,174 @@
 <tr class="row-even"><td><p><a class="reference internal" href="#kangengine.terrain.height_field_to_mesh_python" title="kangengine.terrain.height_field_to_mesh_python"><code class="xref py py-obj docutils literal notranslate"><span class="pre">height_field_to_mesh_python</span></code></a></p></td>
 <td><p>Pure Python height field to <code class="docutils literal notranslate"><span class="pre">scene.MeshData</span></code> conversion.</p></td>
 </tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.terrain.TerrainMesh" title="kangengine.terrain.TerrainMesh"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TerrainMesh</span></code></a></p></td>
+<td><p>Immutable Z-up terrain surface.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.terrain.TerrainInstance" title="kangengine.terrain.TerrainInstance"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TerrainInstance</span></code></a></p></td>
+<td><p>World-owned static actors and optional registered render prims.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.terrain.pyramid_stairs_mesh" title="kangengine.terrain.pyramid_stairs_mesh"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pyramid_stairs_mesh</span></code></a></p></td>
+<td><p>Create closed stair rings and a central platform, including risers.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.terrain.pyramid_sloped_mesh" title="kangengine.terrain.pyramid_sloped_mesh"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pyramid_sloped_mesh</span></code></a></p></td>
+<td><p>Create a pyramid clipped at the central platform's corner height.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.terrain.random_grid_mesh" title="kangengine.terrain.random_grid_mesh"><code class="xref py py-obj docutils literal notranslate"><span class="pre">random_grid_mesh</span></code></a></p></td>
+<td><p>Create random box tops and a flat raised central platform.</p></td>
+</tr>
 </tbody>
 </table>
 </div>
 <p id="module-kangengine.terrain">Height-field terrain construction and mesh conversion.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.terrain.TerrainMesh">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.terrain.</span></span><span class="sig-name descname"><span class="pre">TerrainMesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vertices</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">indices</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_triangles_per_chunk</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">250000</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.terrain.TerrainMesh" title="Link to this definition">¶</a></dt>
+<dd><p>Immutable Z-up terrain surface. Cooking is cached per world/source mesh.</p>
+<p>Mesh queries optionally require <code class="docutils literal notranslate"><span class="pre">kangengine[terrain]</span></code> (Warp). Terrain
+construction and PhysX collision do not require Warp or a graphics context.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.terrain.TerrainMesh.create">
+<span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">world</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">position</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.0,</span> <span class="pre">0.0,</span> <span class="pre">0.0)</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">num_prims_per_leaf</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">weld_tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><a class="headerlink" href="#kangengine.terrain.TerrainMesh.create" title="Link to this definition">¶</a></dt>
+<dd><p>Create static GPU-compatible collision instances in a physics world.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.terrain.TerrainMesh.from_heightfield">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_heightfield</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">terrain</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">center</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">slope_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">diagonal</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'anti'</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><a class="headerlink" href="#kangengine.terrain.TerrainMesh.from_heightfield" title="Link to this definition">¶</a></dt>
+<dd><p>Build from an existing SubTerrain or TerrainGrid without changing it.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.terrain.TerrainMesh.sample_height">
+<span class="sig-name descname"><span class="pre">sample_height</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">positions</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">ray_start_height</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.terrain.TerrainMesh.sample_height" title="Link to this definition">¶</a></dt>
+<dd><p>Return downward mesh hits at world XY on the input tensor’s device.</p>
+<p>No hit returns -inf. A supplied ray_start_height matches a height
+scanner’s finite origin; otherwise rays start above the entire mesh.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.terrain.TerrainInstance">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.terrain.</span></span><span class="sig-name descname"><span class="pre">TerrainInstance</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">asset</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">world</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">position</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">material</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">num_prims_per_leaf</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">weld_tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.terrain.TerrainInstance" title="Link to this definition">¶</a></dt>
+<dd><p>World-owned static actors and optional registered render prims.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.terrain.TerrainInstance.add_visual">
+<span class="sig-name descname"><span class="pre">add_visual</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scene</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">material</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.terrain.TerrainInstance.add_visual" title="Link to this definition">¶</a></dt>
+<dd><p>Register source meshes/materials through the normal scene API.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.terrain.TerrainInstance.remove">
+<span class="sig-name descname"><span class="pre">remove</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.terrain.TerrainInstance.remove" title="Link to this definition">¶</a></dt>
+<dd><p>Remove instances before closing their world; cooked data stays cached.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.terrain.TerrainInstance.remove_visual">
+<span class="sig-name descname"><span class="pre">remove_visual</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.terrain.TerrainInstance.remove_visual" title="Link to this definition">¶</a></dt>
+<dd><p>Remove render prims before closing their scene/viewer.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.terrain.TerrainInstance.sample_height">
+<span class="sig-name descname"><span class="pre">sample_height</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">positions</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">ray_start_height</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.terrain.TerrainInstance.sample_height" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.terrain.pyramid_stairs_mesh">
+<span class="sig-prename descclassname"><span class="pre">kangengine.terrain.</span></span><span class="sig-name descname"><span class="pre">pyramid_stairs_mesh</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(8.0,</span> <span class="pre">8.0)</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">step_height</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">step_width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.3</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">platform_width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">border_width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">inverted</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.terrain.pyramid_stairs_mesh" title="Link to this definition">¶</a></dt>
+<dd><p>Create closed stair rings and a central platform, including risers.</p>
+<p>Dimensions follow IsaacLab’s pyramid stair convention: the first ring is
+one step above/below the border and the platform is one further step.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.terrain.pyramid_sloped_mesh">
+<span class="sig-prename descclassname"><span class="pre">kangengine.terrain.</span></span><span class="sig-name descname"><span class="pre">pyramid_sloped_mesh</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(8.0,</span> <span class="pre">8.0)</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">slope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">platform_width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">border_width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.25</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">horizontal_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">vertical_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.005</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">slope_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.75</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.terrain.pyramid_sloped_mesh" title="Link to this definition">¶</a></dt>
+<dd><p>Create a pyramid clipped at the central platform’s corner height.</p>
+<p>Unlike the legacy raised-platform heightfield generator, clipping keeps
+the platform continuous with the surrounding slopes. Negative slopes
+produce an inverted pyramid. The border remains at height zero.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kangengine.terrain.random_grid_mesh">
+<span class="sig-prename descclassname"><span class="pre">kangengine.terrain.</span></span><span class="sig-name descname"><span class="pre">random_grid_mesh</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(8.0,</span> <span class="pre">8.0)</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">grid_width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.45</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">grid_height</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">platform_width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">rng</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.terrain.random_grid_mesh" title="Link to this definition">¶</a></dt>
+<dd><p>Create random box tops and a flat raised central platform.</p>
+</dd></dl>
+
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.terrain.SubTerrain">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.terrain.</span></span><span class="sig-name descname"><span class="pre">SubTerrain</span></span><span class="sig-paren">(</span>
@@ -714,6 +881,22 @@ when mesh generation itself becomes a hot path.</p>
             <ul>
 <li><a class="reference internal" href="#">ke.terrain</a><ul>
 <li><a class="reference internal" href="#api-overview">API overview</a><ul>
+<li><a class="reference internal" href="#kangengine.terrain.TerrainMesh"><code class="docutils literal notranslate"><span class="pre">TerrainMesh</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.terrain.TerrainMesh.create"><code class="docutils literal notranslate"><span class="pre">TerrainMesh.create()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.terrain.TerrainMesh.from_heightfield"><code class="docutils literal notranslate"><span class="pre">TerrainMesh.from_heightfield()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.terrain.TerrainMesh.sample_height"><code class="docutils literal notranslate"><span class="pre">TerrainMesh.sample_height()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.terrain.TerrainInstance"><code class="docutils literal notranslate"><span class="pre">TerrainInstance</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.terrain.TerrainInstance.add_visual"><code class="docutils literal notranslate"><span class="pre">TerrainInstance.add_visual()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.terrain.TerrainInstance.remove"><code class="docutils literal notranslate"><span class="pre">TerrainInstance.remove()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.terrain.TerrainInstance.remove_visual"><code class="docutils literal notranslate"><span class="pre">TerrainInstance.remove_visual()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.terrain.TerrainInstance.sample_height"><code class="docutils literal notranslate"><span class="pre">TerrainInstance.sample_height()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.terrain.pyramid_stairs_mesh"><code class="docutils literal notranslate"><span class="pre">pyramid_stairs_mesh()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.terrain.pyramid_sloped_mesh"><code class="docutils literal notranslate"><span class="pre">pyramid_sloped_mesh()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.terrain.random_grid_mesh"><code class="docutils literal notranslate"><span class="pre">random_grid_mesh()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.terrain.SubTerrain"><code class="docutils literal notranslate"><span class="pre">SubTerrain</span></code></a><ul>
 <li><a class="reference internal" href="#kangengine.terrain.SubTerrain.height_meters"><code class="docutils literal notranslate"><span class="pre">SubTerrain.height_meters()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.terrain.SubTerrain.horizontal_scale"><code class="docutils literal notranslate"><span class="pre">SubTerrain.horizontal_scale</span></code></a></li>

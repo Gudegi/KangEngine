@@ -221,7 +221,7 @@
 <li class="toctree-l2 current has-children"><a class="reference internal" href="INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" checked="" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="RIGID_BODIES.html">Rigid Bodies</a></li>
 <li class="toctree-l3"><a class="reference internal" href="FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
-<li class="toctree-l3"><a class="reference internal" href="MJCF_ARTICULATION.html">Load an MJCF Articulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ARTICULATION.html">Articulations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="MULTI_ENV.html">Multi-Environment Simulation</a></li>
 <li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Procedural Terrain and Collision</a></li>
@@ -248,7 +248,10 @@
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../KELAB.html">KELab</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../KELAB.html">KELab</a><input aria-label="Toggle navigation of KELab" class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../KELAB_BENCHMARKS.html">Performance Benchmarks</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="../NEWTON.html">Newton Viewer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../MIMICKIT.html">RL With MimicKit</a></li>
 </ul>
@@ -256,7 +259,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../api/python.html">kangengine</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/scene.html">ke.scene</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../api/geometry.html">ke.geometry</a></li>
@@ -793,6 +796,33 @@ and synchronization for both spheres and boxes.</p>
 <p>Use a single <code class="docutils literal notranslate"><span class="pre">SubTerrain</span></code> for one patch or a <code class="docutils literal notranslate"><span class="pre">TerrainGrid</span></code> for tiled training
 and visualization environments.</p>
 </section>
+<section id="gpu-collision-and-mesh-height-queries">
+<h2>GPU collision and mesh height queries<a class="headerlink" href="#gpu-collision-and-mesh-height-queries" title="Link to this heading">¶</a></h2>
+<p>Use <code class="docutils literal notranslate"><span class="pre">TerrainMesh</span></code> for GPU triangle-mesh collision and height queries.
+It converts a height field to a Z-up mesh:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="kn">import</span> <span class="n">physics</span><span class="p">,</span> <span class="n">terrain</span>
+
+<span class="n">field</span><span class="p">:</span> <span class="n">terrain</span><span class="o">.</span><span class="n">SubTerrain</span> <span class="o">=</span> <span class="n">terrain</span><span class="o">.</span><span class="n">SubTerrain</span><span class="p">(</span>
+    <span class="n">width</span><span class="o">=</span><span class="mi">161</span><span class="p">,</span> <span class="n">length</span><span class="o">=</span><span class="mi">161</span><span class="p">,</span> <span class="n">horizontal_scale</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">vertical_scale</span><span class="o">=</span><span class="mf">0.005</span><span class="p">)</span>
+<span class="n">terrain</span><span class="o">.</span><span class="n">random_uniform_terrain</span><span class="p">(</span><span class="n">field</span><span class="p">,</span> <span class="n">min_height</span><span class="o">=-</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">max_height</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+<span class="n">asset</span><span class="p">:</span> <span class="n">terrain</span><span class="o">.</span><span class="n">TerrainMesh</span> <span class="o">=</span> <span class="n">terrain</span><span class="o">.</span><span class="n">TerrainMesh</span><span class="o">.</span><span class="n">from_heightfield</span><span class="p">(</span><span class="n">field</span><span class="p">)</span>
+<span class="n">config</span><span class="p">:</span> <span class="n">physics</span><span class="o">.</span><span class="n">PhysicsConfig</span> <span class="o">=</span> <span class="n">physics</span><span class="o">.</span><span class="n">PhysicsConfig</span><span class="o">.</span><span class="n">z_up</span><span class="p">()</span>
+<span class="n">config</span><span class="o">.</span><span class="n">enable_gpu</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="n">world</span><span class="p">:</span> <span class="n">physics</span><span class="o">.</span><span class="n">PhysicsWorld</span> <span class="o">=</span> <span class="n">physics</span><span class="o">.</span><span class="n">PhysicsWorld</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+<span class="n">instance</span><span class="p">:</span> <span class="n">terrain</span><span class="o">.</span><span class="n">TerrainInstance</span> <span class="o">=</span> <span class="n">asset</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">world</span><span class="p">,</span> <span class="n">position</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+<span class="c1"># Optional visualization: instance.add_visual(app.scene, &quot;/terrain&quot;, material=material)</span>
+<span class="c1"># Optional CPU/CUDA float32 tensor query: heights = instance.sample_height(positions)</span>
+<span class="n">instance</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>  <span class="c1"># Before closing the viewer or physics world.</span>
+</pre></div>
+</div>
+<p>Install <code class="docutils literal notranslate"><span class="pre">kangengine[terrain]</span></code> to use <code class="docutils literal notranslate"><span class="pre">sample_height()</span></code>. It accepts CPU or CUDA
+float32 position tensors and returns heights on the same device; misses return
+<code class="docutils literal notranslate"><span class="pre">-inf</span></code>. Pass a render material to <code class="docutils literal notranslate"><span class="pre">add_visual()</span></code> and a physics material to
+<code class="docutils literal notranslate"><span class="pre">create()</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.add_heightfield()</span></code> uses native heightfield collision. PhysX 5.8.0
+has a GPU sphere-heightfield boundary-contact error. Use triangle-mesh
+collision for GPU terrain where boundary contacts are possible.</p>
+</section>
 </section>
 
         </article>
@@ -855,6 +885,7 @@ and visualization environments.</p>
 <li><a class="reference internal" href="#render-the-terrain">Render the terrain</a></li>
 <li><a class="reference internal" href="#add-physx-collision">Add PhysX collision</a></li>
 <li><a class="reference internal" href="#terrain-generators">Terrain generators</a></li>
+<li><a class="reference internal" href="#gpu-collision-and-mesh-height-queries">GPU collision and mesh height queries</a></li>
 </ul>
 </li>
 </ul>

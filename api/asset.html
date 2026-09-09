@@ -221,7 +221,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../guide/simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MJCF_ARTICULATION.html">Load an MJCF Articulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/ARTICULATION.html">Articulations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
@@ -248,7 +248,10 @@
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../guide/integrations/INDEX.html">Integrations</a><input aria-label="Toggle navigation of Integrations" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../guide/KELAB.html">KELab</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../guide/KELAB.html">KELab</a><input aria-label="Toggle navigation of KELab" class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../guide/KELAB_BENCHMARKS.html">Performance Benchmarks</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/NEWTON.html">Newton Viewer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../guide/MIMICKIT.html">RL With MimicKit</a></li>
 </ul>
@@ -256,7 +259,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul class="current">
-<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="python.html">kangengine</a></li>
 <li class="toctree-l2"><a class="reference internal" href="scene.html">ke.scene</a></li>
 <li class="toctree-l2"><a class="reference internal" href="geometry.html">ke.geometry</a></li>
@@ -351,7 +354,7 @@ SMPL, SMPL-H, and SMPL-X.</p>
 <td><p>Load FBX skeletons, animation clips, and character data.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#kangengine.asset.USDLoader" title="kangengine.asset.USDLoader"><code class="xref py py-obj docutils literal notranslate"><span class="pre">USDLoader</span></code></a></p></td>
-<td><p>Load meshes from USD scenes.</p></td>
+<td><p>Load USD meshes or a supported free-base articulation.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.asset.AMASSLoader" title="kangengine.asset.AMASSLoader"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AMASSLoader</span></code></a></p></td>
 <td><p>Load AMASS body and hand poses as a native <code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code>.</p></td>
@@ -1473,7 +1476,20 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.USDLoader">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">USDLoader</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.USDLoader" title="Link to this definition">¶</a></dt>
-<dd><p>Load meshes from USD scenes.</p>
+<dd><p>Load USD meshes or a supported free-base articulation.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.asset.USDLoader.load_articulation">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_articulation</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">usd_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">prim_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">KE::Asset::ArticulationDesc</span></span></span><a class="headerlink" href="#kangengine.asset.USDLoader.load_articulation" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="kangengine.asset.USDLoader.load_meshes">
 <span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">load_meshes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">usd_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#kangengine.asset.USDLoader.load_meshes" title="Link to this definition">¶</a></dt>
@@ -1485,6 +1501,34 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">parse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">usd_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.USDImportResult" title="kangengine.asset.USDImportResult"><span class="pre">USDImportResult</span></a></span></span><a class="headerlink" href="#kangengine.asset.USDLoader.parse" title="Link to this definition">¶</a></dt>
 <dd><p>Parse USD and return meshes plus diagnostics.</p>
 </dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.asset.USDLoader.parse_articulation">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">parse_articulation</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">usd_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">prim_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DFS'</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.asset.USDArticulationImportResult" title="kangengine.asset.USDArticulationImportResult"><span class="pre">USDArticulationImportResult</span></a></span></span><a class="headerlink" href="#kangengine.asset.USDLoader.parse_articulation" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.asset.USDArticulationImportResult">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">USDArticulationImportResult</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.USDArticulationImportResult" title="Link to this definition">¶</a></dt>
+<dd><dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.USDArticulationImportResult.articulation">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">articulation</span></span><a class="headerlink" href="#kangengine.asset.USDArticulationImportResult.articulation" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.USDArticulationImportResult.diagnostics">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">diagnostics</span></span><a class="headerlink" href="#kangengine.asset.USDArticulationImportResult.diagnostics" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
 
 </dd></dl>
 
@@ -1734,11 +1778,11 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <dd><em class="sig-param"><span class="n"><span class="pre">rotations_wxyz</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span></span></em>,</dd>
 </dl>
 
-<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">float32</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.asset.SMPLBody.corrected_bind_vertices" title="Link to this definition">¶</a></dt>
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">NDArray</span><span class="p"><span class="pre">[</span></span><span class="pre">float32</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.asset.SMPLBody.corrected_bind_vertices" title="Link to this definition">¶</a></dt>
 <dd><p>Evaluate SMPL pose blend shapes before LBS.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">...</span></code>], <code class="xref py py-class docutils literal notranslate"><span class="pre">dtype</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float32</span></code>]]</span></p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">GenericAlias</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float32</span></code>]</span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -2126,8 +2170,15 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.asset.USDLoader"><code class="docutils literal notranslate"><span class="pre">USDLoader</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.asset.USDLoader.load_articulation"><code class="docutils literal notranslate"><span class="pre">USDLoader.load_articulation()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.USDLoader.load_meshes"><code class="docutils literal notranslate"><span class="pre">USDLoader.load_meshes()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.USDLoader.parse"><code class="docutils literal notranslate"><span class="pre">USDLoader.parse()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.USDLoader.parse_articulation"><code class="docutils literal notranslate"><span class="pre">USDLoader.parse_articulation()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.asset.USDArticulationImportResult"><code class="docutils literal notranslate"><span class="pre">USDArticulationImportResult</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.asset.USDArticulationImportResult.articulation"><code class="docutils literal notranslate"><span class="pre">USDArticulationImportResult.articulation</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.USDArticulationImportResult.diagnostics"><code class="docutils literal notranslate"><span class="pre">USDArticulationImportResult.diagnostics</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.asset.USDImportResult"><code class="docutils literal notranslate"><span class="pre">USDImportResult</span></code></a><ul>
