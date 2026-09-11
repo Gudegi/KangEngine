@@ -36,6 +36,16 @@
           "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
           "CMAKE_BUILD_TYPE": "RelWithDebInfo"
         }
+      },
+      {
+        "name": "wheel-vcpkg",
+        "inherits": "vcpkg",
+        "binaryDir": "${sourceDir}/build/wheel",
+        "cacheVariables": {
+          "VCPKG_MANIFEST_FEATURES": "wheel-usd",
+          "KANGENGINE_USD_PROVIDER": "vcpkg",
+          "KANGENGINE_PYTHON_OUTPUT_DIR": "${sourceDir}/build/wheel/python/kangengine"
+        }
       }
     ]
   }

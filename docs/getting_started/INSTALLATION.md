@@ -31,8 +31,8 @@ uv sync --project python
 make build_python
 ```
 
-The normal Python build intentionally disables OpenUSD. To build an optional
-USD-enabled development extension instead:
+The normal Python build intentionally disables OpenUSD. To build a USD-enabled
+development extension against `$HOME/usd_build` instead:
 
 ```bash
 make build_usd_python
@@ -58,8 +58,8 @@ python -c "import kangengine as ke; print(ke.__file__)"
 
 KangEngine wheels are platform-specific. The Linux CUDA wheel additionally
 requires a compatible NVIDIA driver and the GPU runtime described in
-[PhysX GPU Simulation](../advanced/PHYSX_GPU.md). Distributed wheels do not
-include OpenUSD support.
+[PhysX GPU Simulation](../advanced/PHYSX_GPU.md). The default wheel bundles the
+vcpkg OpenUSD runtime; users do not need a separate OpenUSD installation.
 
 Continue with [Verify Installation](VERIFY_INSTALLATION.md).
 

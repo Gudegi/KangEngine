@@ -386,29 +386,36 @@ Tested with Apple Silicon.
 
 Common make targets:
 
-```bash
-make build
-make build_debug
-make build_python
-make build_all
-make build_cuda
-make build_python_cuda
-make build_usd
-make build_usd_python
-make wheel
-make wheel_cuda
-make validate_wheel
-make validate_wheel_cuda
-make validate_physx_gpu
-make validate_physx_gpu_cpp
-make run2
-```
+| Target | Runtime | USD | Output or action |
+| --- | --- | --- | --- |
+| `make build` | C++ CPU | disabled | `build/release/KangEngine` |
+| `make build_cuda` | C++ CUDA | disabled | `build/release/KangEngine` |
+| `make build_usd` | C++ CPU | local | `build/release/KangEngine` |
+| `make build_python` | Python CPU | disabled | development extension |
+| `make build_python_cuda` | Python CUDA | disabled | development extension |
+| `make build_usd_python` | Python CPU | local | development extension |
+| `make build_all` | Python CPU on macOS, CUDA on Linux | local | executable and development extension |
+| `make build_wheel` | Python CPU on macOS, CUDA on Linux | vcpkg | wheel extension under `build/wheel` |
+| `make wheel` | platform default | bundled vcpkg | `python/dist/*.whl` |
+| `make wheel_minimal` | Python CPU | disabled | `python/dist/*.whl` |
+| `make wheel_cuda_minimal` | Python CUDA | disabled | `python/dist/*.whl` |
+| `make validate_wheel` | platform default | bundled vcpkg | isolated wheel validation |
+| `make validate_wheel_minimal` | Python CPU | disabled | isolated wheel validation |
+| `make validate_wheel_cuda_minimal` | Python CUDA | disabled | isolated wheel validation |
+| `make validate_physx_gpu` | Python CUDA | disabled | GPU regression tests |
+| `make validate_physx_gpu_cpp` | C++ CUDA | disabled | native GPU smoke test |
+| `make run2` | current release configuration | current cache | build and run executable |
+
+Development extensions are written to `python/kangengine/_kangengine.so`.
+Debug variants are available as `build_debug`, `build_usd_debug`,
+`build_python_debug`, and `build_usd_python_debug`.
 
 The executable target is selected in `CMakeLists.txt` by changing the active `MAIN_FILE` entry near the example list.
 
 ## OpenUSD Optional
 
-OpenUSD is only needed when configuring KangEngine with `-DUSE_USD=ON`.
+Development builds use OpenUSD from `USD_DIR` (default: `~/usd_build`). Wheel
+builds use vcpkg OpenUSD in the separate `build/wheel` directory.
 
 1. Clone OpenUSD.
 
@@ -472,19 +479,18 @@ use `python/.venv/bin/python` by default, so activating the development virtual
 environment is optional. Create and populate that environment as described in
 the previous section before building a wheel.
 
-The distributed wheels intentionally disable OpenUSD. This keeps the native
-extension independent of OpenUSD, TBB, and USD plugin resources. USD-enabled
-development builds remain available through `make build_usd_python`, but a
-USD-enabled distribution wheel is not currently produced.
+The default wheel bundles the OpenUSD runtime; no separate OpenUSD installation is required.
 
 Build and preserve a wheel under `python/dist`:
 
 ```bash
-# macOS, CPU PhysX
+# macOS: CPU + vcpkg USD
+# Linux: CUDA + vcpkg USD
 make wheel
 
-# Linux, CUDA and the configured GPU PhysX build
-make wheel_cuda
+# Optional reduced variants without USD
+make wheel_minimal       # CPU
+make wheel_cuda_minimal  # CUDA
 ```
 
 The filename records the active CPython ABI and platform, for example:
@@ -503,13 +509,12 @@ environment, run:
 
 ```bash
 make validate_wheel
-make validate_wheel_cuda  # Linux CUDA host only
+make validate_wheel_minimal
+make validate_wheel_cuda_minimal  # Linux CUDA host only
 ```
 
-Validation checks the native platform tag, no-USD build policy, package
-contents, public API, and type-stub surface. It installs KangEngine into a
-temporary target directory, reuses the development environment's Python
-dependencies, and removes the temporary wheel and installation afterward.
+`validate_wheel` installs the wheel into a temporary directory and checks its
+package contents, public API, type stubs, and USDA/USDC save-load path.
 
 To test the preserved wheel as a consumer, create a separate environment with
 the matching Python version and install the wheel there:
@@ -519,10 +524,10 @@ python3.12 -m venv /tmp/kangengine-wheel-venv
 source /tmp/kangengine-wheel-venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install python/dist/kangengine-0.1.0-cp312-cp312-macosx_26_0_arm64.whl
-python -c "import kangengine as ke; assert not ke.scene.has_usd_support()"
+python -c "import kangengine as ke; assert ke.scene.has_usd_support()"
 ```
 
-Use the corresponding filename emitted by `make wheel_cuda` on Linux.
+Use the corresponding filename emitted by `make wheel` on Linux.
 
 The macOS wheel contains the statically linked PhysX CPU libraries. The Linux
 CUDA wheel still requires a compatible NVIDIA driver, CUDA runtime policy, and

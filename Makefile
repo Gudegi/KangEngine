@@ -1,9 +1,11 @@
 .PHONY: build build_all build_cuda build_smokes build_smokes_cuda build_current build_debug build_release build_relWithDebInfo \
         build_usd build_usd_debug build_python build_python_debug \
-        build_python_cuda build_usd_python build_usd_python_debug wheel wheel_cuda \
+        build_python_cuda build_usd_python build_usd_python_debug build_wheel \
+        wheel wheel_minimal wheel_cuda_minimal \
         validate_physx_gpu validate_physx_gpu_cpp validate_fixed_update_gpu \
         validate_sim_visual_batch \
-        check_python_api_style validate_python_api validate_render_component validate_wheel validate_wheel_cuda \
+        check_python_api_style validate_python_api validate_render_component \
+        validate_wheel validate_wheel_minimal validate_wheel_cuda_minimal \
         docs docs_clean \
         run run2 run_debug run_release run_relWithDebInfo \
         clean_all clean_debug clean_release clean_relWithDebInfo
@@ -12,6 +14,7 @@ BUILD_DIR := build
 RELEASE_DIR := $(BUILD_DIR)/release
 DEBUG_DIR := $(BUILD_DIR)/debug
 REL_DIR := $(BUILD_DIR)/relWithDebInfo
+WHEEL_DIR := $(BUILD_DIR)/wheel
 EXECUTABLE := KangEngine
 PYTHON ?= python/.venv/bin/python
 UV ?= uv
@@ -39,55 +42,63 @@ define do_cuda_build
 	@cp -f $(2)/compile_commands.json $(BUILD_DIR)/compile_commands.json 2>/dev/null || true
 endef
 
-# Default build (Release)
+# build C++ + CPU + no USD
 build:
-	$(call do_build,vcpkg,$(RELEASE_DIR),)
+	$(call do_build,vcpkg,$(RELEASE_DIR),-DUSE_USD=OFF -DIS_PYTHON_LIB=OFF)
 
 ifeq ($(UNAME_S),Linux)
+# build Python + CUDA + local USD
 build_all:
-	$(call do_cuda_build,vcpkg,$(RELEASE_DIR),-DUSE_USD=ON -DIS_PYTHON_LIB=ON)
+	$(call do_cuda_build,vcpkg,$(RELEASE_DIR),-DUSE_USD=ON -DIS_PYTHON_LIB=ON -DKANGENGINE_USD_PROVIDER=local)
 else
+# build Python + CPU + local USD
 build_all:
-	$(call do_build,vcpkg,$(RELEASE_DIR),-DUSE_USD=ON -DIS_PYTHON_LIB=ON)
+	$(call do_build,vcpkg,$(RELEASE_DIR),-DUSE_USD=ON -DIS_PYTHON_LIB=ON -DKANGENGINE_USD_PROVIDER=local)
 endif
 
+# build C++ + CUDA + no USD
 build_cuda:
-	$(call do_cuda_build,vcpkg,$(RELEASE_DIR),)
+	$(call do_cuda_build,vcpkg,$(RELEASE_DIR),-DUSE_USD=OFF -DIS_PYTHON_LIB=OFF)
 
+# build C++ smokes + CPU + no USD
 build_smokes:
-	$(call do_build,vcpkg,$(RELEASE_DIR),-DKANGENGINE_BUILD_SMOKES=ON)
+	$(call do_build,vcpkg,$(RELEASE_DIR),-DUSE_USD=OFF -DIS_PYTHON_LIB=OFF -DKANGENGINE_BUILD_SMOKES=ON)
 
+# build C++ smokes + CUDA + no USD
 build_smokes_cuda:
-	$(call do_cuda_build,vcpkg,$(RELEASE_DIR),-DKANGENGINE_BUILD_SMOKES=ON)
+	$(call do_cuda_build,vcpkg,$(RELEASE_DIR),-DUSE_USD=OFF -DIS_PYTHON_LIB=OFF -DKANGENGINE_BUILD_SMOKES=ON)
 
 build_current:
 	cmake --build $(RELEASE_DIR)
 
-# Debug build
+# build C++ + CPU + no USD + Debug
 build_debug:
-	$(call do_build,vcpkg-debug,$(DEBUG_DIR),)
+	$(call do_build,vcpkg-debug,$(DEBUG_DIR),-DUSE_USD=OFF -DIS_PYTHON_LIB=OFF)
 
-# Release build (explicit)
+# build C++ + CPU + no USD + Release
 build_release: build
 
-# RelWithDebInfo build
+# build C++ + CPU + no USD + RelWithDebInfo
 build_relWithDebInfo:
-	$(call do_build,vcpkg-relWithDebInfo,$(REL_DIR),)
+	$(call do_build,vcpkg-relWithDebInfo,$(REL_DIR),-DUSE_USD=OFF -DIS_PYTHON_LIB=OFF)
 
-# USD builds
+# build C++ + CPU + local USD
 build_usd:
-	$(call do_build,vcpkg,$(RELEASE_DIR),-DUSE_USD=ON)
+	$(call do_build,vcpkg,$(RELEASE_DIR),-DUSE_USD=ON -DIS_PYTHON_LIB=OFF -DKANGENGINE_USD_PROVIDER=local)
 
+# build C++ + CPU + local USD + Debug
 build_usd_debug:
-	$(call do_build,vcpkg-debug,$(DEBUG_DIR),-DUSE_USD=ON)
+	$(call do_build,vcpkg-debug,$(DEBUG_DIR),-DUSE_USD=ON -DIS_PYTHON_LIB=OFF -DKANGENGINE_USD_PROVIDER=local)
 
-# Python builds
+# build Python + CPU + no USD
 build_python:
 	$(call do_build,vcpkg,$(RELEASE_DIR),-DUSE_USD=OFF -DIS_PYTHON_LIB=ON)
 
+# build Python + CPU + no USD + Debug
 build_python_debug:
-	$(call do_build,vcpkg-debug,$(DEBUG_DIR),-DIS_PYTHON_LIB=ON)
+	$(call do_build,vcpkg-debug,$(DEBUG_DIR),-DUSE_USD=OFF -DIS_PYTHON_LIB=ON)
 
+# build Python + CUDA + no USD
 build_python_cuda:
 	$(call do_cuda_build,vcpkg,$(RELEASE_DIR),-DUSE_USD=OFF -DIS_PYTHON_LIB=ON)
 
@@ -133,23 +144,38 @@ validate_python_api: check_python_api_style build_python
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/public_api_surface_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/public_stub_surface_smoke.py
 
-# TODO: USD support
-# macOS
-wheel: build_python
-	$(PYTHON) python/scripts/validate_wheel.py --python $(PYTHON) --uv $(UV) \
-		--expect-no-usd --build-only --output-dir python/dist
-# Linux + cuda(13.0)
-wheel_cuda: build_python_cuda
+# wheel CPU + no USD
+wheel_minimal: build_python
 	$(PYTHON) python/scripts/validate_wheel.py --python $(PYTHON) --uv $(UV) \
 		--expect-no-usd --build-only --output-dir python/dist
 
-validate_wheel: build_python
+# wheel CUDA + no USD
+wheel_cuda_minimal: build_python_cuda
+	$(PYTHON) python/scripts/validate_wheel.py --python $(PYTHON) --uv $(UV) \
+		--expect-no-usd --build-only --output-dir python/dist
+
+# wheel macOS CPU / Linux CUDA + vcpkg USD
+wheel: build_wheel
+	$(PYTHON) python/scripts/validate_wheel.py --python $(PYTHON) --uv $(UV) \
+		--expect-usd --usd-runtime $(WHEEL_DIR)/vcpkg_installed \
+		--extension $(WHEEL_DIR)/python/kangengine/_kangengine.so \
+		--build-only --output-dir python/dist
+
+# validate wheel CPU + no USD
+validate_wheel_minimal: build_python
 	$(PYTHON) python/scripts/validate_wheel.py --python $(PYTHON) --uv $(UV) \
 		--expect-no-usd
 
-validate_wheel_cuda: build_python_cuda
+# validate wheel CUDA + no USD
+validate_wheel_cuda_minimal: build_python_cuda
 	$(PYTHON) python/scripts/validate_wheel.py --python $(PYTHON) --uv $(UV) \
 		--expect-no-usd
+
+# validate wheel macOS CPU / Linux CUDA + vcpkg USD
+validate_wheel: build_wheel
+	$(PYTHON) python/scripts/validate_wheel.py --python $(PYTHON) --uv $(UV) \
+		--expect-usd --usd-runtime $(WHEEL_DIR)/vcpkg_installed \
+		--extension $(WHEEL_DIR)/python/kangengine/_kangengine.so
 
 validate_render_component: build_python
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/obj_material_loader_smoke.py
@@ -168,12 +194,23 @@ validate_render_component: build_python
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/scene_render_system_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/scene_render_instancing_smoke.py
 
-# USD + Python builds
+# build Python + CPU + local USD
 build_usd_python:
-	$(call do_build,vcpkg,$(RELEASE_DIR),-DUSE_USD=ON -DIS_PYTHON_LIB=ON)
+	$(call do_build,vcpkg,$(RELEASE_DIR),-DUSE_USD=ON -DIS_PYTHON_LIB=ON -DKANGENGINE_USD_PROVIDER=local)
 
+# build Python + CPU + local USD + Debug
 build_usd_python_debug:
-	$(call do_build,vcpkg-debug,$(DEBUG_DIR),-DUSE_USD=ON -DIS_PYTHON_LIB=ON)
+	$(call do_build,vcpkg-debug,$(DEBUG_DIR),-DUSE_USD=ON -DIS_PYTHON_LIB=ON -DKANGENGINE_USD_PROVIDER=local)
+
+ifeq ($(UNAME_S),Linux)
+# build wheel CUDA + vcpkg USD
+build_wheel:
+	$(call do_cuda_build,wheel-vcpkg,$(WHEEL_DIR),-DUSE_USD=ON -DIS_PYTHON_LIB=ON)
+else
+# build wheel CPU + vcpkg USD
+build_wheel:
+	$(call do_build,wheel-vcpkg,$(WHEEL_DIR),-DUSE_USD=ON -DIS_PYTHON_LIB=ON)
+endif
 
 # Documentation
 docs:

@@ -8,7 +8,8 @@ python/.venv/bin/python -c \
   "import kangengine as ke; print(ke.__file__); print('USD:', ke.scene.has_usd_support())"
 ```
 
-A normal wheel or `make build_python` build should print `USD: False`.
+The default wheel should print `USD: True`. A `make build_python` development
+build or a `wheel_minimal` build should print `USD: False`.
 
 ## Verify the public API
 

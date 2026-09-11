@@ -91,7 +91,9 @@ See [Build Guide](docs/BUILD.md) for platform setup, PhysX, USD, and Python bind
 - FBX: skeletons, animation clips, static meshes, and skinned meshes.
 - BVH: skeleton hierarchy, frame time, root motion, and local joint rotations.
 - MJCF: articulated characters, collision geometry, joints, and inertials.
-- USD (optional development build): mesh traversal, material subsets, and diffuse texture loading. Distributed wheels do not currently include USD support.
+- USD: mesh traversal, material subsets, texture loading, and scene
+  serialization(TODO). Development builds use a local OpenUSD installation; release
+  wheels bundle the vcpkg OpenUSD runtime.
 - OBJ/STL static mesh import.
 
 ### Simulation & Animation

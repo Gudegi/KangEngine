@@ -49,6 +49,10 @@ include = ["kangengine*"]
 [tool.setuptools.package-data]
 kangengine = [
     "_kangengine.so",
+    "_native/lib/*.dylib",
+    "_native/lib/*.so*",
+    "_native/lib/usd/**/*",
+    "licenses/**/*",
     "**/*.pyi",
     "py.typed",
     "assets/**/*",

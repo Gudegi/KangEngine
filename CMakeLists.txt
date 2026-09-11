@@ -37,19 +37,31 @@ option(USE_USD "Enable USD support" OFF) # Use -DUSE_USD=ON to enable
 option(USE_PHYSX "Enable Physx support" ON) # Use -DUSE_PHYSX=ON to enable
 option(USE_CUDA_INTEROP "Enable CUDA/graphics buffer interop when explicitly configured" OFF)
 option(KANGENGINE_BUILD_SMOKES "Build C++ smoke-test executables" OFF)
-set(USD_DIR "$ENV{HOME}/usd_build" CACHE PATH "OpenUSD installation prefix")
+set(KANGENGINE_USD_PROVIDER "local" CACHE STRING "OpenUSD provider: local or vcpkg")
+set_property(CACHE KANGENGINE_USD_PROVIDER PROPERTY STRINGS local vcpkg)
+set(USD_DIR "$ENV{HOME}/usd_build" CACHE PATH "Local OpenUSD installation prefix")
 
 
 ##### Link pre-compiled libs #####
 add_library(pre_compiled_ext INTERFACE)
 
 if(USE_USD)
-    if(NOT EXISTS "${USD_DIR}")
-        message(FATAL_ERROR "USD_DIR path '${USD_DIR}' does not exist. Please check your OpenUSD installation prefix.")
+    if(KANGENGINE_USD_PROVIDER STREQUAL "local")
+        if(NOT EXISTS "${USD_DIR}")
+            message(FATAL_ERROR "USD_DIR path '${USD_DIR}' does not exist")
+        endif()
+        # pxrConfig.cmake may discover OpenSubdiv and other dependencies that
+        # were installed alongside the local OpenUSD build.
+        list(PREPEND CMAKE_PREFIX_PATH "${USD_DIR}")
+        unset(pxr_DIR CACHE)
+        find_package(pxr CONFIG REQUIRED PATHS "${USD_DIR}" NO_DEFAULT_PATH)
+    elseif(KANGENGINE_USD_PROVIDER STREQUAL "vcpkg")
+        find_package(pxr CONFIG REQUIRED)
+    else()
+        message(FATAL_ERROR
+            "KANGENGINE_USD_PROVIDER must be 'local' or 'vcpkg', got '${KANGENGINE_USD_PROVIDER}'"
+        )
     endif()
-    list(PREPEND CMAKE_PREFIX_PATH "${USD_DIR}")
-    set(pxr_DIR "${USD_DIR}" CACHE PATH "OpenUSD package location derived from USD_DIR" FORCE)
-    find_package(pxr REQUIRED)
 
     target_compile_definitions(pre_compiled_ext INTERFACE KANGENGINE_USE_USD)
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -60,21 +72,18 @@ if(USE_USD)
         )
     endif()
 
-    target_include_directories(pre_compiled_ext INTERFACE ${USD_DIR}/include)
-    target_link_directories(pre_compiled_ext INTERFACE ${USD_DIR}/lib)
     target_link_libraries(pre_compiled_ext INTERFACE
         usd
         usdGeom
+        usdLux
         usdPhysics
         usdShade
+        usdSkel
         sdf
         tf
     )
 
-    message(STATUS "USD support enabled")
-    message(STATUS "USD installation prefix: ${USD_DIR}")
-    message(STATUS "USD include dir: ${USD_DIR}/include")
-    message(STATUS "USD lib dir: ${USD_DIR}/lib")
+    message(STATUS "USD support enabled (${KANGENGINE_USD_PROVIDER})")
 endif()
 
 if(USE_PHYSX)
@@ -294,7 +303,11 @@ file(CREATE_LINK
 if(IS_PYTHON_LIB)
     set(PYTHON_MODULE_NAME "_kangengine")
     set(PYTHON_PACKAGE_NAME "kangengine")
-    set(PYTHON_DL_DIR "${CMAKE_SOURCE_DIR}/python/${PYTHON_PACKAGE_NAME}")
+    set(KANGENGINE_PYTHON_OUTPUT_DIR
+        "${CMAKE_SOURCE_DIR}/python/${PYTHON_PACKAGE_NAME}"
+        CACHE PATH "Output directory for the Python extension and its assets"
+    )
+    set(PYTHON_DL_DIR "${KANGENGINE_PYTHON_OUTPUT_DIR}")
     #file(GLOB_RECURSE PYBIND_SOURCE_FILES "${BIND_DIR}/*.cpp")
     file(GLOB PYBIND_SOURCE_FILES
         "${BIND_DIR}/bind_new.cpp"

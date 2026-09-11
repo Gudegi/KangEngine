@@ -22,5 +22,16 @@
     "tinyobjloader",
     "tinyxml2",
     "mikktspace"
-  ]
+  ],
+  "features": {
+    "wheel-usd": {
+      "description": "Build the redistributable wheel with the OpenUSD runtime",
+      "dependencies": [
+        {
+          "name": "usd",
+          "default-features": false
+        }
+      ]
+    }
+  }
 }
