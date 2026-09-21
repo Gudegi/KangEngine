@@ -51,3 +51,50 @@ def test_mjcf_omitted_geom_type_is_sphere(tmp_path: Path):
     assert geoms[0].type == geoms[1].type
     assert np.allclose(geoms[0].size, [0.005, 0, 0])
     assert np.allclose(_vec3(geoms[0].pos), [0.12, 0.03, -0.03])
+
+
+def test_visual_bridge_does_not_render_empty_root_body(tmp_path: Path):
+    mesh_path = tmp_path / "body.stl"
+    mesh_path.write_text(
+        """solid body
+facet normal 0 0 1
+outer loop
+vertex 0 0 0
+vertex 1 0 0
+vertex 0 1 0
+endloop
+endfacet
+endsolid body
+""",
+        encoding="utf-8",
+    )
+    path = tmp_path / "empty_root.xml"
+    path.write_text(
+        """<mujoco model="empty_root">
+  <asset><mesh name="body_mesh" file="body.stl"/></asset>
+  <worldbody>
+    <body name="base">
+      <freejoint/>
+      <body name="body">
+        <geom type="mesh" mesh="body_mesh"/>
+      </body>
+    </body>
+  </worldbody>
+</mujoco>
+""",
+        encoding="utf-8",
+    )
+
+    asset = ke.visual.ArticulationVisualAsset.from_mjcf(str(path))
+    scene = ke.scene.create_backend(ke.scene.BackendType.NATIVE)
+    bridge = asset.instantiate(
+        scene,
+        "/robot",
+        "/.Resources/test_empty_root",
+        True,
+    )
+
+    assert bridge.body_prim(0).get_type() == ke.scene.PrimType.XFORM
+    assert [prim.get_path() for prim in bridge.render_prims()] == [
+        "/robot/body/visual_0"
+    ]

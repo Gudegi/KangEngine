@@ -160,7 +160,8 @@ buildVisualGeomAssets(const Asset::ArticulationDesc& data) {
         std::string meshPath = (fs::path(data.assetDir) / meshInfo.meshFile)
                                    .lexically_normal()
                                    .string();
-        auto part = meshInfo.meshData ? *meshInfo.meshData : loadVisualMesh(meshPath);
+        auto part =
+            meshInfo.meshData ? *meshInfo.meshData : loadVisualMesh(meshPath);
         applyMeshInfoTransform(part, meshInfo);
 
         ArticulationVisualBridgeAsset::VisualGeomAsset asset;
@@ -403,19 +404,24 @@ ArticulationVisualBridge ArticulationVisualBridgeAsset::instantiate(
         std::string primPath = primBasePath + "/" + bodyName;
         std::string meshSourcePath =
             meshAssetBasePath + "/body_" + std::to_string(i);
-        const bool hasBodyMesh =
-            useMeshInstances || (i < static_cast<int>(bodyMeshes.size()) &&
-                                 bodyMeshes[i] != nullptr);
         const bool hasSplitVisual =
             i < static_cast<int>(bodyHasVisual.size()) &&
             bodyHasVisual[static_cast<size_t>(i)];
+        // Collision descriptors do not guarantee that a mesh was generated.
+        const auto* meshSourcePrim =
+            useMeshInstances ? scene->getPrimAtPath(meshSourcePath) : nullptr;
+        const bool hasBodyMesh =
+            useMeshInstances ? (meshSourcePrim && meshSourcePrim->getMeshData())
+                             : (i < static_cast<int>(bodyMeshes.size()) &&
+                                bodyMeshes[i] != nullptr);
         const bool bodyIsRenderable = !splitVisualGeoms || !hasSplitVisual;
+        const bool renderBodyMesh = bodyIsRenderable && hasBodyMesh;
         auto* prim = scene->definePrim(
-            primPath, bodyIsRenderable
+            primPath, renderBodyMesh
                           ? (useMeshInstances ? Scene::PrimType::MeshInstance
                                               : Scene::PrimType::Mesh)
                           : Scene::PrimType::Xform);
-        if (bodyIsRenderable && useMeshInstances)
+        if (renderBodyMesh && useMeshInstances)
             prim->setMeshSourcePath(meshSourcePath);
         glm::vec4 displayColor(0.15f, 0.15f, 0.15f, 1.0f);
         if (i < static_cast<int>(bodyColors.size())) {
@@ -433,9 +439,9 @@ ArticulationVisualBridge ArticulationVisualBridgeAsset::instantiate(
             Scene::ArticulationPrimRole::BodyFrame, i, bodyName, primBasePath);
         bridge._bodyPrims[i] = prim;
 
-        if (bodyIsRenderable && !useMeshInstances && hasBodyMesh)
+        if (renderBodyMesh && !useMeshInstances)
             prim->setMeshData(bodyMeshes[i]);
-        if (bodyIsRenderable) {
+        if (renderBodyMesh) {
             bridge._renderPrims.push_back(prim);
             bridge._renderPrimBodyIndices.push_back(i);
         }
