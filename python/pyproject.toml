@@ -14,6 +14,7 @@ dependencies = [
     "numpy>=1.26",
     "pyyaml>=6.0",
     "torch>=1.9.1",
+    "nvidia-cuda-runtime==13.0.96; sys_platform == 'linux'",
 ]
 
 [project.optional-dependencies]

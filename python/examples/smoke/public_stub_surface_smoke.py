@@ -13,7 +13,12 @@ def _declared_names(stub_path: Path) -> set[str]:
     tree = ast.parse(stub_path.read_text(), filename=str(stub_path))
     names: set[str] = set()
     for node in tree.body:
-        if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            # PEP 484 explicit re-exports use `Name as Name` in stub files.
+            names.update(
+                alias.asname for alias in node.names if alias.asname == alias.name
+            )
+        elif isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
             names.add(node.name)
         elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
             names.add(node.target.id)
@@ -39,8 +44,7 @@ def _stub_class_attributes(stub_path: Path) -> dict[str, set[str]]:
         node.name: {
             child.target.id
             for child in node.body
-            if isinstance(child, ast.AnnAssign)
-            and isinstance(child.target, ast.Name)
+            if isinstance(child, ast.AnnAssign) and isinstance(child.target, ast.Name)
         }
         for node in tree.body
         if isinstance(node, ast.ClassDef)

@@ -8,6 +8,8 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tomllib
+import re
 import tempfile
 import zipfile
 
@@ -50,7 +52,7 @@ def bundle_usd_runtime(package: Path, runtime: Path) -> None:
         raise FileNotFoundError(f"USD plugin resources not found under {lib_dir}")
 
     destination = package / "_native" / "lib"
-    destination.mkdir(parents=True)
+    destination.mkdir(parents=True, exist_ok=True)
     libraries = sorted(lib_dir.glob("libusd_*.dylib"))
     libraries += sorted(lib_dir.glob("libusd_*.so*"))
     if not libraries:
@@ -61,7 +63,7 @@ def bundle_usd_runtime(package: Path, runtime: Path) -> None:
     shutil.copytree(lib_dir / "usd", destination / "usd")
 
     licenses = package / "licenses"
-    licenses.mkdir()
+    licenses.mkdir(exist_ok=True)
     for package_name, output_name in (
         ("usd", "OpenUSD.txt"),
         ("tbb", "oneTBB.txt"),
@@ -87,6 +89,8 @@ def stage_project(
     destination: Path,
     usd_runtime: Path | None = None,
     extension: Path | None = None,
+    physx_runtime: Path | None = None,
+    physx_license: Path | None = None,
 ) -> None:
     shutil.copy2(source / "pyproject.toml", destination)
     shutil.copy2(source / "setup.py", destination)
@@ -110,14 +114,41 @@ def stage_project(
         shutil.copy2(extension, destination / "kangengine" / "_kangengine.so")
     if usd_runtime is not None:
         bundle_usd_runtime(destination / "kangengine", usd_runtime)
+    if sys.platform == "linux":
+        from wheel_linux import bundle_linux_runtime
+
+        bundle_linux_runtime(
+            destination / "kangengine",
+            physx_runtime,
+            physx_license,
+        )
 
 
-def inspect_wheel(wheel: Path, expect_usd: bool) -> None:
+def inspect_wheel(
+    wheel: Path, expect_usd: bool, cuda_runtime_version: str | None = None
+) -> None:
     if wheel.name.endswith("-none-any.whl"):
         raise AssertionError(f"native wheel has a pure-Python tag: {wheel.name}")
 
     with zipfile.ZipFile(wheel) as archive:
         names = set(archive.namelist())
+        if cuda_runtime_version:
+            for required in (
+                "kangengine/_native/lib/libPhysXGpu_64.so",
+                "kangengine/licenses/PhysX.txt",
+            ):
+                if required not in names:
+                    raise AssertionError(f"CUDA wheel is missing {required}")
+            metadata_name = next(
+                name for name in names if name.endswith(".dist-info/METADATA")
+            )
+            metadata = archive.read(metadata_name).decode()
+            if f"nvidia-cuda-runtime=={cuda_runtime_version}" not in metadata:
+                raise AssertionError("CUDA runtime dependency is missing from METADATA")
+            if any("libcudart.so" in name for name in names):
+                raise AssertionError(
+                    "CUDA runtime must come from the NVIDIA dependency"
+                )
         if "kangengine/_kangengine.so" not in names:
             raise AssertionError("wheel does not contain kangengine/_kangengine.so")
         bundled_usd = any(
@@ -145,7 +176,18 @@ def main() -> None:
     parser.add_argument("--usd-runtime", type=Path)
     parser.add_argument("--extension", type=Path)
     parser.add_argument("--output-dir", type=Path)
+    parser.add_argument("--physx-runtime", type=Path)
+    parser.add_argument("--physx-license", type=Path)
+    parser.add_argument(
+        "--gpu-smoke",
+        action="store_true",
+        help="Run installed-wheel PhysX GPU/Torch validation (requires NVIDIA GPU)",
+    )
     args = parser.parse_args()
+    if sys.platform != "linux" and args.physx_runtime:
+        parser.error("CUDA/PhysX GPU runtime staging is supported only on Linux")
+    if args.gpu_smoke and (sys.platform != "linux" or args.build_only):
+        parser.error("--gpu-smoke requires Linux and validation enabled")
     if args.expect_usd and args.expect_no_usd:
         parser.error("--expect-usd and --expect-no-usd are mutually exclusive")
     if args.expect_usd and args.usd_runtime is None:
@@ -154,6 +196,25 @@ def main() -> None:
         parser.error(f"--extension does not exist: {args.extension}")
 
     source = Path(__file__).resolve().parents[1]
+    cuda_runtime_version = None
+    if sys.platform == "linux":
+        project = tomllib.loads((source / "pyproject.toml").read_text())
+        requirements = [
+            r
+            for r in project["project"]["dependencies"]
+            if r.startswith("nvidia-cuda-runtime==")
+        ]
+        if len(requirements) != 1:
+            raise ValueError(
+                "Expected one pinned CUDA runtime dependency in pyproject.toml"
+            )
+        match = re.fullmatch(
+            r"nvidia-cuda-runtime==(13\.\d+\.\d+);\s*sys_platform == ['\"]linux['\"]",
+            requirements[0],
+        )
+        if match is None:
+            raise ValueError("Expected a Linux-only CUDA 13 runtime dependency")
+        cuda_runtime_version = match.group(1)
     # Keep a venv interpreter path intact instead of resolving its symlink to
     # the base interpreter; the smoke tests reuse the venv's dependencies but
     # install KangEngine itself only into the temporary target directory.
@@ -181,11 +242,20 @@ def main() -> None:
         staged.mkdir()
         wheelhouse.mkdir()
         target.mkdir()
-        stage_project(source, staged, args.usd_runtime, args.extension)
+        stage_project(
+            source,
+            staged,
+            args.usd_runtime,
+            args.extension,
+            args.physx_runtime,
+            args.physx_license,
+        )
 
         run(
             args.uv,
             "build",
+            "--python",
+            python_executable,
             "--wheel",
             "--out-dir",
             str(wheelhouse),
@@ -195,7 +265,7 @@ def main() -> None:
         if len(wheels) != 1:
             raise AssertionError(f"expected one wheel, found {len(wheels)}")
         wheel = wheels[0]
-        inspect_wheel(wheel, args.expect_usd)
+        inspect_wheel(wheel, args.expect_usd, cuda_runtime_version)
 
         if args.output_dir is not None:
             output_dir = args.output_dir.absolute()
@@ -219,6 +289,20 @@ def main() -> None:
             str(wheel),
         )
         environment = os.environ.copy()
+        environment.pop("LD_LIBRARY_PATH", None)
+        environment.pop("LD_PRELOAD", None)
+        if cuda_runtime_version:
+            run(
+                args.uv,
+                "pip",
+                "install",
+                "--python",
+                python_executable,
+                "--target",
+                str(target),
+                "--no-deps",
+                f"nvidia-cuda-runtime=={cuda_runtime_version}",
+            )
         environment["PYTHONPATH"] = str(target)
         environment["PYTHONPYCACHEPREFIX"] = str(temp / "pycache")
         if args.expect_usd:
@@ -249,6 +333,25 @@ def main() -> None:
             cwd=temp,
             env=environment,
         )
+
+        if args.gpu_smoke:
+            run(
+                python_executable,
+                "-c",
+                (
+                    "import runpy; from pathlib import Path; "
+                    f"runpy.run_path({str(smoke / 'physics_gpu_system_smoke.py')!r}, run_name='__main__'); "
+                    "paths = {line.split()[-1] for line in Path('/proc/self/maps').read_text().splitlines() if '/' in line}; "
+                    f"root = Path({str(target)!r}); "
+                    "required = ('libPhysXGpu_64.so', 'libcudart.so.13'); "
+                    "selected = [p for p in paths if any(Path(p).name.startswith(n) for n in required)]; "
+                    "assert all(any(Path(p).name.startswith(n) for p in selected) for n in required), selected; "
+                    "assert all(Path(p).is_relative_to(root) for p in selected), selected; "
+                    "print('PASS: PhysX GPU and CUDA runtime loaded from wheel installation', selected)"
+                ),
+                cwd=temp,
+                env=environment,
+            )
 
         print(f"PASS: isolated wheel {wheel.name}")
 

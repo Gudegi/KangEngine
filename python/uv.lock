@@ -613,6 +613,7 @@ dependencies = [
     { name = "imageio" },
     { name = "imageio-ffmpeg" },
     { name = "numpy" },
+    { name = "nvidia-cuda-runtime", marker = "sys_platform == 'linux'" },
     { name = "pyyaml" },
     { name = "torch" },
 ]
@@ -657,6 +658,7 @@ requires-dist = [
     { name = "jaxls", marker = "extra == 'pyroki'", git = "https://github.com/brentyi/jaxls.git?rev=50a58be88c5ef74532f09e3f55268b4f02c490e3" },
     { name = "myst-parser", marker = "extra == 'docs'", specifier = ">=4" },
     { name = "numpy", specifier = ">=1.26" },
+    { name = "nvidia-cuda-runtime", marker = "sys_platform == 'linux'", specifier = "==13.0.96" },
     { name = "pyroki", marker = "extra == 'pyroki'", git = "https://github.com/chungmin99/pyroki.git?rev=388e43e1fc0d0ee382968d3dd72970fd62a0450c" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "sphinx", marker = "extra == 'docs'", specifier = ">=8" },

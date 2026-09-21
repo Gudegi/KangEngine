@@ -1,11 +1,11 @@
 .PHONY: build build_all build_cuda build_smokes build_smokes_cuda build_current build_debug build_release build_relWithDebInfo \
         build_usd build_usd_debug build_python build_python_debug \
         build_python_cuda build_usd_python build_usd_python_debug build_wheel \
-        wheel wheel_minimal wheel_cuda_minimal \
+        wheel \
         validate_physx_gpu validate_physx_gpu_cpp validate_fixed_update_gpu \
         validate_sim_visual_batch \
         check_python_api_style validate_python_api validate_render_component \
-        validate_wheel validate_wheel_minimal validate_wheel_cuda_minimal \
+        validate_wheel \
         docs docs_clean \
         run run2 run_debug run_release run_relWithDebInfo \
         clean_all clean_debug clean_release clean_relWithDebInfo
@@ -22,6 +22,11 @@ UNAME_S := $(shell uname -s)
 DEFAULT_CMAKE_FLAGS := -DUSE_CUDA_INTEROP=OFF -DKANGENGINE_BUILD_SMOKES=OFF
 CUDA_TOOLKIT_ROOT ?= /usr/local/cuda
 PHYSX_CUDA_BIN_PLATFORM ?= linux.x86_64
+PHYSX_SDK_DIR ?= $(HOME)/Physics/PhysX/physx
+ifeq ($(UNAME_S),Linux)
+WHEEL_PHYSX_FLAGS := --physx-runtime $(PHYSX_SDK_DIR)/bin/$(PHYSX_CUDA_BIN_PLATFORM)/release --physx-license $(PHYSX_SDK_DIR)/../LICENSE.md
+WHEEL_GPU_FLAGS := $(WHEEL_PHYSX_FLAGS)
+endif
 CUDA_INTEROP_CMAKE_FLAGS := -DUSE_CUDA_INTEROP=ON -DKANGENGINE_BUILD_SMOKES=OFF -DCUDAToolkit_ROOT=$(CUDA_TOOLKIT_ROOT) -DCUDAToolkit_NVCC_EXECUTABLE=$(CUDA_TOOLKIT_ROOT)/bin/nvcc -DPHYSX_BIN_PLATFORM=$(PHYSX_CUDA_BIN_PLATFORM)
 
 # Easy workflow
@@ -144,37 +149,17 @@ validate_python_api: check_python_api_style build_python
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/public_api_surface_smoke.py
 	PYTHONPATH=python $(PYTHON) python/examples/smoke/public_stub_surface_smoke.py
 
-# wheel CPU + no USD
-wheel_minimal: build_python
-	$(PYTHON) python/scripts/validate_wheel.py --python $(PYTHON) --uv $(UV) \
-		--expect-no-usd --build-only --output-dir python/dist
-
-# wheel CUDA + no USD
-wheel_cuda_minimal: build_python_cuda
-	$(PYTHON) python/scripts/validate_wheel.py --python $(PYTHON) --uv $(UV) \
-		--expect-no-usd --build-only --output-dir python/dist
-
 # wheel macOS CPU / Linux CUDA + vcpkg USD
 wheel: build_wheel
 	$(PYTHON) python/scripts/validate_wheel.py --python $(PYTHON) --uv $(UV) \
-		--expect-usd --usd-runtime $(WHEEL_DIR)/vcpkg_installed \
+		--expect-usd $(WHEEL_GPU_FLAGS) --usd-runtime $(WHEEL_DIR)/vcpkg_installed \
 		--extension $(WHEEL_DIR)/python/kangengine/_kangengine.so \
 		--build-only --output-dir python/dist
-
-# validate wheel CPU + no USD
-validate_wheel_minimal: build_python
-	$(PYTHON) python/scripts/validate_wheel.py --python $(PYTHON) --uv $(UV) \
-		--expect-no-usd
-
-# validate wheel CUDA + no USD
-validate_wheel_cuda_minimal: build_python_cuda
-	$(PYTHON) python/scripts/validate_wheel.py --python $(PYTHON) --uv $(UV) \
-		--expect-no-usd
 
 # validate wheel macOS CPU / Linux CUDA + vcpkg USD
 validate_wheel: build_wheel
 	$(PYTHON) python/scripts/validate_wheel.py --python $(PYTHON) --uv $(UV) \
-		--expect-usd --usd-runtime $(WHEEL_DIR)/vcpkg_installed \
+		--expect-usd $(WHEEL_GPU_FLAGS) --usd-runtime $(WHEEL_DIR)/vcpkg_installed \
 		--extension $(WHEEL_DIR)/python/kangengine/_kangengine.so
 
 validate_render_component: build_python
