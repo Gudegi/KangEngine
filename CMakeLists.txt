@@ -180,8 +180,9 @@ if(UNIX AND NOT APPLE AND USE_CUDA_INTEROP)
         set(KANGENGINE_HAS_CUDA ON)
         enable_language(CUDA)
         if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-            # 89 : 40xx graphics card
-            set(CMAKE_CUDA_ARCHITECTURES 89 CACHE STRING "CUDA architectures for KangEngine CUDA kernels")
+            # 89 : 40xx graphics card(tested)
+            # 86:30xx, 120:50xx, 
+            set(CMAKE_CUDA_ARCHITECTURES "80;86;89;90;100;120" CACHE STRING "CUDA architectures for KangEngine CUDA kernels")
         endif()
     else()
         message(FATAL_ERROR "USE_CUDA_INTEROP=ON requires an explicitly configured CUDA Toolkit")

@@ -148,9 +148,9 @@ void checkCudaRuntime(cudaError_t result, const char* operation) {
 
 CUcontext getCurrentCudaDriverContext() {
     using CuCtxGetCurrentFn = CUresult (*)(CUcontext*);
-    void* libcuda = dlopen("libcuda.so", RTLD_NOW | RTLD_GLOBAL);
+    void* libcuda = dlopen("libcuda.so.1", RTLD_NOW | RTLD_GLOBAL);
     if (!libcuda)
-        throw std::runtime_error("failed to dlopen libcuda.so");
+        throw std::runtime_error("failed to dlopen libcuda.so.1");
     auto* cuCtxGetCurrent =
         reinterpret_cast<CuCtxGetCurrentFn>(dlsym(libcuda, "cuCtxGetCurrent"));
     if (!cuCtxGetCurrent)

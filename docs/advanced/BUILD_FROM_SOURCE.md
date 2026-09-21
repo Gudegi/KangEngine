@@ -397,11 +397,7 @@ Common make targets:
 | `make build_all` | Python CPU on macOS, CUDA on Linux | local | executable and development extension |
 | `make build_wheel` | Python CPU on macOS, CUDA on Linux | vcpkg | wheel extension under `build/wheel` |
 | `make wheel` | platform default | bundled vcpkg | `python/dist/*.whl` |
-| `make wheel_minimal` | Python CPU | disabled | `python/dist/*.whl` |
-| `make wheel_cuda_minimal` | Python CUDA | disabled | `python/dist/*.whl` |
 | `make validate_wheel` | platform default | bundled vcpkg | isolated wheel validation |
-| `make validate_wheel_minimal` | Python CPU | disabled | isolated wheel validation |
-| `make validate_wheel_cuda_minimal` | Python CUDA | disabled | isolated wheel validation |
 | `make validate_physx_gpu` | Python CUDA | disabled | GPU regression tests |
 | `make validate_physx_gpu_cpp` | C++ CUDA | disabled | native GPU smoke test |
 | `make run2` | current release configuration | current cache | build and run executable |
@@ -487,10 +483,6 @@ Build and preserve a wheel under `python/dist`:
 # macOS: CPU + vcpkg USD
 # Linux: CUDA + vcpkg USD
 make wheel
-
-# Optional reduced variants without USD
-make wheel_minimal       # CPU
-make wheel_cuda_minimal  # CUDA
 ```
 
 The filename records the active CPython ABI and platform, for example:
@@ -509,8 +501,6 @@ environment, run:
 
 ```bash
 make validate_wheel
-make validate_wheel_minimal
-make validate_wheel_cuda_minimal  # Linux CUDA host only
 ```
 
 `validate_wheel` installs the wheel into a temporary directory and checks its
@@ -529,11 +519,16 @@ python -c "import kangengine as ke; assert ke.scene.has_usd_support()"
 
 Use the corresponding filename emitted by `make wheel` on Linux.
 
-The macOS wheel contains the statically linked PhysX CPU libraries. The Linux
-CUDA wheel still requires a compatible NVIDIA driver, CUDA runtime policy, and
-GPU PhysX environment for full simulation validation. Build and test each
-wheel on the same operating-system and architecture family on which it will be
-distributed.
+The `kangengine` package uses a CPU wheel on macOS and a CUDA wheel on Linux.
+Both bundle OpenUSD and PhysX; Linux installs the CUDA runtime through the
+dependency in `python/pyproject.toml`. Wheel users do not need the CUDA Toolkit
+or PhysX SDK. The Linux target is Ubuntu 24.04 x86-64 with NVIDIA driver 580+
+and a compatible GPU; runtime testing currently covers the RTX 4090.
+
+Linux wheel builds additionally require `patchelf` on `PATH`.
+Override `PHYSX_SDK_DIR` and `PHYSX_CUDA_BIN_PLATFORM` if needed.
+Before publishing, check Linux compatibility with `auditwheel show`; current
+local wheels use the `linux_x86_64` tag and still need manylinux release validation.
 
 ## Build the Documentation
 

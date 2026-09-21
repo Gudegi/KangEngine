@@ -56,10 +56,9 @@ python -m pip install /path/to/kangengine-0.1.0-cp312-cp312-platform.whl
 python -c "import kangengine as ke; print(ke.__file__)"
 ```
 
-KangEngine wheels are platform-specific. The Linux CUDA wheel additionally
-requires a compatible NVIDIA driver and the GPU runtime described in
-[PhysX GPU Simulation](../advanced/PHYSX_GPU.md). The default wheel bundles the
-vcpkg OpenUSD runtime; users do not need a separate OpenUSD installation.
+The `kangengine` package provides a CPU wheel for macOS and a CUDA wheel for
+Linux. The Linux target is **Ubuntu 24.04 x86-64 with NVIDIA driver 580+** and a
+compatible GPU (tested on RTX 4090). Wheels bundle OpenUSD and PhysX, and pip installs the CUDA runtime on Linux.
 
 Continue with [Verify Installation](VERIFY_INSTALLATION.md).
 
