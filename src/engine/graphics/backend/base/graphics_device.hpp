@@ -6,6 +6,7 @@
 #define _GRAPHICS_DEVICE_HPP_
 
 #include "rhi_types.hpp"
+#include "profile_types.hpp"
 #include "shader_preprocessor.hpp"
 #include "sim/gpu_array_view.hpp"
 #include "utils/types.hpp"
@@ -184,7 +185,25 @@ class Framebuffer;
 
 class GraphicsDevice {
   public:
+    const std::shared_ptr<ProfileContext>& profileContext() const {
+        return _profileContext;
+    }
     virtual ~GraphicsDevice() = default;
+    virtual ProfilerCapabilities profilerCapabilities() const { return {}; }
+    // Called on the render thread; GPU readback is always nonblocking.
+    virtual void prepareProfiler() {}
+    virtual std::vector<ProfileQueryResult> pollProfileResults(uint64_t) {
+        return {};
+    }
+    ProfilePassOptions profilePass(std::string_view path) const {
+        return {_profileContext.get(), path};
+    }
+    // Does not imply support for arbitrary recorded/in-pass timestamps.
+    virtual std::unique_ptr<ExternalProfileScope>
+    profileExternalScope(std::string_view path) {
+        _profileContext->gpuSample(path, ProfileSampleStatus::Unsupported);
+        return {};
+    }
 
     virtual void initialize() = 0;
     virtual void shutdown() = 0;
@@ -284,6 +303,10 @@ class GraphicsDevice {
         throw std::runtime_error(
             "CUDA buffer unmap is unsupported by this graphics backend");
     }
+
+  private:
+    std::shared_ptr<ProfileContext> _profileContext =
+        std::make_shared<ProfileContext>();
 };
 
 class Buffer {
@@ -343,6 +366,13 @@ class CommandEncoder {
     virtual ~CommandEncoder() = default;
     virtual std::unique_ptr<RenderPassEncoder>
     beginRenderPass(RenderTarget* target) = 0;
+    virtual std::unique_ptr<RenderPassEncoder>
+    beginRenderPass(RenderTarget* target, const ProfilePassOptions& options) {
+        if (options.context)
+            options.context->gpuSample(options.path,
+                                       ProfileSampleStatus::Unsupported);
+        return beginRenderPass(target);
+    }
     virtual std::unique_ptr<CommandBuffer> finish() = 0;
 };
 

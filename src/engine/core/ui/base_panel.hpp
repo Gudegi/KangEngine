@@ -6,7 +6,9 @@
 #define _BASE_PANEL_HPP_
 #include "imgui.h"
 #include "panel.hpp"
+#include "engine/core/diagnostics/resource_monitor.hpp"
 #include <string>
+#include <map>
 
 namespace KE {
 
@@ -16,6 +18,22 @@ class Camera;
 class PerformancePanel : public Panel {
   private:
     App* _app;
+    int _profileStatistic = 0;
+    int _profileWindow = 120;
+    float _profileTargetFps = 0.0f;
+    bool _profileTargetInitialized = false;
+    ResourceMonitor _resourceMonitor;
+    struct MemoryPeaks {
+        std::optional<uint64_t> system, process;
+    };
+    std::map<std::string, MemoryPeaks> _memoryPeaks;
+    void buildTimingPlot();
+    void buildResourceUsage();
+    void buildMemoryUsage(const char* label, const std::string& key,
+                          std::optional<uint64_t> system,
+                          std::optional<uint64_t> process,
+                          std::optional<uint64_t> capacity,
+                          const char* tooltip);
 
   public:
     PerformancePanel(App* app = nullptr);

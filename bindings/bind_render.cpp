@@ -359,16 +359,157 @@ void bind_render(py::module& m) {
             py::arg("data"), py::arg("usage"), py::arg("label") = "",
             "Create a GPU buffer initialized from a contiguous Python buffer.");
 
+    py::class_<Backend::ProfilerCapabilities>(m, "ProfilerCapabilities")
+        .def_readonly("cpu_scopes", &Backend::ProfilerCapabilities::cpuScopes)
+        .def_readonly("gpu_timestamps",
+                      &Backend::ProfilerCapabilities::gpuTimestamps)
+        .def_readonly("pass_timestamps",
+                      &Backend::ProfilerCapabilities::passTimestamps)
+        .def_readonly("external_timestamps",
+                      &Backend::ProfilerCapabilities::externalTimestamps)
+        .def_readonly("command_timestamps",
+                      &Backend::ProfilerCapabilities::commandTimestamps)
+        .def_readonly("in_pass_timestamps",
+                      &Backend::ProfilerCapabilities::inPassTimestamps)
+        .def_readonly("debug_groups",
+                      &Backend::ProfilerCapabilities::debugGroups)
+        .def_readonly("timestamp_capacity",
+                      &Backend::ProfilerCapabilities::timestampCapacity);
+    py::enum_<Backend::ProfileTimingDomain>(m, "ProfileTimingDomain")
+        .value("CPU", Backend::ProfileTimingDomain::Cpu)
+        .value("GPU", Backend::ProfileTimingDomain::Gpu);
+    py::enum_<Backend::ProfileSampleStatus>(m, "ProfileSampleStatus")
+        .value("PENDING", Backend::ProfileSampleStatus::Pending)
+        .value("READY", Backend::ProfileSampleStatus::Ready)
+        .value("UNSUPPORTED", Backend::ProfileSampleStatus::Unsupported)
+        .value("CAPACITY_EXCEEDED",
+               Backend::ProfileSampleStatus::CapacityExceeded)
+        .value("DROPPED", Backend::ProfileSampleStatus::Dropped)
+        .value("INVALID", Backend::ProfileSampleStatus::Invalid)
+        .value("DEVICE_LOST", Backend::ProfileSampleStatus::DeviceLost);
+    py::class_<Backend::ProfileSample>(m, "ProfileSample")
+        .def_readonly("sample_id", &Backend::ProfileSample::sampleId)
+        .def_readonly("parent_sample_id",
+                      &Backend::ProfileSample::parentSampleId)
+        .def_readonly("path", &Backend::ProfileSample::path)
+        .def_readonly("domain", &Backend::ProfileSample::domain)
+        .def_readonly("duration_ms", &Backend::ProfileSample::durationMs)
+        .def_readonly("status", &Backend::ProfileSample::status)
+        .def_property_readonly("available", &Backend::ProfileSample::available);
+    py::class_<Backend::RenderCounters>(m, "RenderCounters")
+        .def_readonly("draw_calls", &Backend::RenderCounters::drawCalls)
+        .def_readonly("indexed_draw_calls",
+                      &Backend::RenderCounters::indexedDrawCalls)
+        .def_readonly("instances", &Backend::RenderCounters::instances)
+        .def_readonly("triangles", &Backend::RenderCounters::triangles)
+        .def_readonly("buffer_upload_bytes",
+                      &Backend::RenderCounters::bufferUploadBytes)
+        .def_readonly("texture_upload_bytes",
+                      &Backend::RenderCounters::textureUploadBytes)
+        .def_readonly("external_buffer_bytes",
+                      &Backend::RenderCounters::externalBufferBytes)
+        .def_readonly("buffer_allocations",
+                      &Backend::RenderCounters::bufferAllocations)
+        .def_readonly("buffer_allocated_bytes",
+                      &Backend::RenderCounters::bufferAllocatedBytes);
+    py::class_<Backend::FrameProfile>(m, "FrameProfile")
+        .def_readonly("capture_id", &Backend::FrameProfile::captureId)
+        .def_readonly("frame_index", &Backend::FrameProfile::frameIndex)
+        .def_readonly("revision", &Backend::FrameProfile::revision)
+        .def_readonly("finalized", &Backend::FrameProfile::finalized)
+        .def_readonly("backend", &Backend::FrameProfile::backend)
+        .def_readonly("gpu_latency_frames",
+                      &Backend::FrameProfile::gpuLatencyFrames)
+        .def_readonly("dropped_samples", &Backend::FrameProfile::droppedSamples)
+        .def_property_readonly(
+            "counters",
+            [](const Backend::FrameProfile& f) { return f.counters; })
+        .def_property_readonly(
+            "metadata",
+            [](const Backend::FrameProfile& f) { return f.metadata; })
+        .def_property_readonly("samples", [](const Backend::FrameProfile& f) {
+            py::tuple samples(f.samples.size());
+            for (size_t i = 0; i < f.samples.size(); ++i)
+                samples[i] = py::cast(f.samples[i]);
+            return samples;
+        });
+
+    py::class_<Backend::ScopeProfileSummary>(m, "ScopeProfileSummary")
+        .def_readonly("path", &Backend::ScopeProfileSummary::path)
+        .def_readonly("domain", &Backend::ScopeProfileSummary::domain)
+        .def_readonly("sample_count",
+                      &Backend::ScopeProfileSummary::sampleCount)
+        .def_readonly("ready_frames",
+                      &Backend::ScopeProfileSummary::readyFrames)
+        .def_readonly("pending_frames",
+                      &Backend::ScopeProfileSummary::pendingFrames)
+        .def_readonly("unavailable_frames",
+                      &Backend::ScopeProfileSummary::unavailableFrames)
+        .def_readonly("mean_ms", &Backend::ScopeProfileSummary::meanMs)
+        .def_readonly("median_ms", &Backend::ScopeProfileSummary::medianMs)
+        .def_readonly("p95_ms", &Backend::ScopeProfileSummary::p95Ms)
+        .def_readonly("max_ms", &Backend::ScopeProfileSummary::maxMs);
+    py::class_<Backend::ProfileSummary>(m, "ProfileSummary")
+        .def_readonly("capture_id", &Backend::ProfileSummary::captureId)
+        .def_readonly("frame_count", &Backend::ProfileSummary::frameCount)
+        .def_readonly("first_frame_index",
+                      &Backend::ProfileSummary::firstFrameIndex)
+        .def_readonly("last_frame_index",
+                      &Backend::ProfileSummary::lastFrameIndex)
+        .def_property_readonly(
+            "scopes", [](const Backend::ProfileSummary& summary) {
+                py::tuple scopes(summary.scopes.size());
+                for (size_t i = 0; i < summary.scopes.size(); ++i)
+                    scopes[i] = py::cast(summary.scopes[i]);
+                return scopes;
+            });
+
     py::class_<Renderer>(
         m, "Renderer",
         "Renderer facade for updating renderable resources and draw settings.")
+        .def("set_profiler_enabled", &Renderer::setProfilerEnabled,
+             py::arg("enabled"),
+             "Enable CPU/GPU pass profiling at the next frame boundary. "
+             "Disabled by "
+             "default.")
+        .def_property_readonly("profiler_enabled", &Renderer::profilerEnabled)
+        .def_property_readonly("profiler_capabilities",
+                               &Renderer::profilerCapabilities)
+        .def(
+            "latest_frame_profile",
+            [](const Renderer& renderer)
+                -> std::optional<Backend::FrameProfile> {
+                const auto frame = renderer.latestFrameProfile();
+                if (!frame)
+                    return std::nullopt;
+                return *frame;
+            },
+            "Return an immutable snapshot of the latest captured frame, or "
+            "None.")
+        .def(
+            "frame_profile_history",
+            [](const Renderer& renderer) {
+                const auto history = renderer.frameProfileHistory();
+                py::tuple frames(history.size());
+                for (size_t i = 0; i < history.size(); ++i)
+                    frames[i] = py::cast(*history[i]);
+                return frames;
+            },
+            "Return up to 240 immutable frame snapshots, oldest first.")
+        .def("export_profile_json", &Renderer::exportProfileJson,
+             py::arg("path"), py::kw_only(), py::arg("max_frames") = 240,
+             "Write up to max_frames raw snapshots and latest-capture summary "
+             "without GPU waits.")
+        .def("profile_summary", &Renderer::profileSummary, py::kw_only(),
+             py::arg("max_frames") = 240,
+             "Summarize the latest capture using complete per-frame scope "
+             "sums; max_frames is 1..240.")
         .def(
             "device", [](Renderer& self) { return self.device(); },
             py::return_value_policy::reference,
             "Return the graphics device owned by this renderer.")
-        .def("create_scene_hook_pipeline",
-             &Renderer::createSceneHookPipeline, py::arg("desc"),
-             py::return_value_policy::take_ownership,
+        .def("create_scene_hook_pipeline", &Renderer::createSceneHookPipeline,
+             py::arg("desc"), py::return_value_policy::take_ownership,
              "Create a custom graphics pipeline compatible with the scene "
              "render targets.")
         .def(
@@ -493,6 +634,4 @@ void bind_render(py::module& m) {
             },
             py::arg("handle"), py::arg("bone_matrices"),
             "Update bone matrices for a skinned renderable.");
-
-
 }

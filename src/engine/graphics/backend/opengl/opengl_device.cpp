@@ -3,6 +3,7 @@
 ///
 
 #include "opengl_device.hpp"
+#include "opengl_timestamp_pool.hpp"
 #include "../base/base_utils.hpp"
 #include <algorithm>
 #include <cstddef>
@@ -106,8 +107,10 @@ GLenum toGLTextureMagFilter(TextureFilter filter) {
 } // namespace
 
 // OpenGLBuffer Implementation
-OpenGLBuffer::OpenGLBuffer(const BufferDesc& desc, const void* data)
-    : _size(desc.size), _usage(desc.usage) {
+OpenGLBuffer::OpenGLBuffer(const BufferDesc& desc, const void* data,
+                           std::shared_ptr<ProfileContext> profileContext)
+    : _size(desc.size), _usage(desc.usage),
+      _profileContext(std::move(profileContext)) {
     if (_size == 0 || _usage == BufferUsage::None)
         throw std::invalid_argument("portable buffer requires size and usage");
     if (hasFlag(_usage, BufferUsage::Vertex)) {
@@ -126,6 +129,11 @@ OpenGLBuffer::OpenGLBuffer(const BufferDesc& desc, const void* data)
                  hasFlag(_usage, BufferUsage::CopyDst) ? GL_DYNAMIC_DRAW
                                                        : GL_STATIC_DRAW);
     glBindBuffer(_target, 0);
+    if (_profileContext) {
+        _profileContext->recordBufferAllocation(_size);
+        if (data)
+            _profileContext->recordBufferUpload(_size);
+    }
     if (glObjectLabel != nullptr && !desc.label.empty())
         glObjectLabel(GL_BUFFER, _buffer, -1, desc.label.c_str());
 }
@@ -143,6 +151,8 @@ void OpenGLBuffer::bind() { glBindBuffer(_target, _buffer); }
 void OpenGLBuffer::unbind() { glBindBuffer(_target, 0); }
 
 void OpenGLBuffer::setData(const void* data, size_t size, size_t offset) {
+    auto scope = _profileContext ? _profileContext->cpuScope("upload/buffer")
+                                 : ProfileContext::CpuScope{};
     if (offset + size > _size) {
         std::cerr << "OpenGLBuffer::setData: out of bounds (offset=" << offset
                   << " size=" << size << " buffer_size=" << _size << ")\n";
@@ -150,6 +160,8 @@ void OpenGLBuffer::setData(const void* data, size_t size, size_t offset) {
     }
     glBindBuffer(_target, _buffer);
     glBufferSubData(_target, offset, size, data);
+    if (_profileContext)
+        _profileContext->recordBufferUpload(size);
     glBindBuffer(_target, 0);
 }
 
@@ -177,6 +189,9 @@ cudaGraphicsResource* OpenGLBuffer::cudaResource() {
 bool OpenGLBuffer::setExternalData(const Sim::GpuArrayView& view, size_t count,
                                    size_t elementSize,
                                    size_t sourceStrideBytes) {
+    auto scope = _profileContext
+                     ? _profileContext->cpuScope("upload/cuda_interop")
+                     : ProfileContext::CpuScope{};
     if (!view.isCuda())
         return false;
     if (!view.data)
@@ -225,6 +240,9 @@ bool OpenGLBuffer::setExternalData(const Sim::GpuArrayView& view, size_t count,
         cudaGraphicsUnmapResources(1, &_cudaResource, stream);
         checkCudaInterop(copyResult, "cudaMemcpy2DAsync");
     }
+
+    if (_profileContext)
+        _profileContext->recordExternalCopy(count * elementSize);
 
     checkCudaInterop(cudaGraphicsUnmapResources(1, &_cudaResource, stream),
                      "cudaGraphicsUnmapResources");
@@ -1411,6 +1429,8 @@ GLenum toGLTopology(PrimitiveTopology topology) {
 
 struct BeginPassCommand {
     OpenGLRenderTarget* target = nullptr;
+    std::shared_ptr<OpenGLTimestampPool::Lease> timing;
+    std::string label;
 };
 struct ViewportCommand {
     float x = 0.0f;
@@ -1466,6 +1486,7 @@ struct DrawIndexedCommand {
 };
 struct EndPassCommand {
     OpenGLRenderTarget* target = nullptr;
+    std::shared_ptr<OpenGLTimestampPool::Lease> timing;
 };
 
 using OpenGLCommand =
@@ -1488,6 +1509,7 @@ struct OpenGLRecordingState {
     IndexFormat indexFormat = IndexFormat::Uint32;
     uint64_t indexBufferOffset = 0;
     bool finished = false;
+    std::shared_ptr<OpenGLTimestampPool::Lease> activeTiming;
 };
 
 class OpenGLCommandBuffer final : public CommandBuffer {
@@ -1708,7 +1730,9 @@ class OpenGLRenderPassEncoder final : public RenderPassEncoder {
 
     void end() override {
         requireActive();
-        _state->commands.emplace_back(EndPassCommand{_state->activeTarget});
+        _state->commands.emplace_back(
+            EndPassCommand{_state->activeTarget, _state->activeTiming});
+        _state->activeTiming.reset();
         _state->passActive = false;
         _state->activeTarget = nullptr;
         _state->pipelineSet = false;
@@ -1732,10 +1756,21 @@ class OpenGLRenderPassEncoder final : public RenderPassEncoder {
 
 class OpenGLCommandEncoder final : public CommandEncoder {
   public:
-    OpenGLCommandEncoder() : _state(std::make_shared<OpenGLRecordingState>()) {}
+    explicit OpenGLCommandEncoder(
+        std::shared_ptr<ProfileContext> profile,
+        std::shared_ptr<OpenGLTimestampPool> timestampPool)
+        : _state(std::make_shared<OpenGLRecordingState>()),
+          _profile(std::move(profile)),
+          _recordScope(_profile->cpuScope("command_record")),
+          _timestampPool(std::move(timestampPool)) {}
 
     std::unique_ptr<RenderPassEncoder>
     beginRenderPass(RenderTarget* target) override {
+        return beginRenderPass(target, {});
+    }
+    std::unique_ptr<RenderPassEncoder>
+    beginRenderPass(RenderTarget* target,
+                    const ProfilePassOptions& options) override {
         requireRecording();
         if (_state->passActive)
             throw std::logic_error("nested render passes are not allowed");
@@ -1743,7 +1778,19 @@ class OpenGLCommandEncoder final : public CommandEncoder {
         if (!glTarget)
             throw std::invalid_argument(
                 "OpenGL command encoder requires an OpenGL render target");
-        _state->commands.emplace_back(BeginPassCommand{glTarget});
+        if (options.context && options.context != _profile.get())
+            throw std::invalid_argument(
+                "pass profiling belongs to another device");
+        if (_timestampPool)
+            _state->activeTiming = _timestampPool->reserve(options);
+        else if (options.context)
+            options.context->gpuSample(options.path,
+                                       ProfileSampleStatus::Unsupported);
+        _state->commands.emplace_back(
+            BeginPassCommand{glTarget, _state->activeTiming,
+                             options.context && options.context->active()
+                                 ? std::string(options.path)
+                                 : std::string{}});
         _state->passActive = true;
         _state->activeTarget = glTarget;
         _state->pipelineSet = false;
@@ -1761,6 +1808,7 @@ class OpenGLCommandEncoder final : public CommandEncoder {
             throw std::logic_error(
                 "cannot finish a command encoder with an active render pass");
         _state->finished = true;
+        _recordScope.end();
         return std::make_unique<OpenGLCommandBuffer>(
             std::move(_state->commands));
     }
@@ -1772,6 +1820,9 @@ class OpenGLCommandEncoder final : public CommandEncoder {
     }
 
     std::shared_ptr<OpenGLRecordingState> _state;
+    std::shared_ptr<ProfileContext> _profile;
+    ProfileContext::CpuScope _recordScope;
+    std::shared_ptr<OpenGLTimestampPool> _timestampPool;
 };
 
 } // namespace
@@ -1796,6 +1847,16 @@ void OpenGLDevice::initialize() {
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
     _renderThread = std::this_thread::get_id();
+    _timestampSupported = OpenGLTimestampPool::supported();
+    auto glString = [](GLenum name) {
+        const auto* value = glGetString(name);
+        return value ? std::string(reinterpret_cast<const char*>(value))
+                     : "unavailable";
+    };
+    profileContext()->setDeviceMetadata(
+        {{"gpu", glString(GL_RENDERER)},
+         {"vendor", glString(GL_VENDOR)},
+         {"driver_gl_version", glString(GL_VERSION)}});
     _initialized = true;
 
     std::cout << "OpenGL Device initialized" << std::endl;
@@ -1805,12 +1866,86 @@ void OpenGLDevice::shutdown() {
     if (!_initialized)
         return;
 
+    if (_timestampPool) {
+        auto results = _timestampPool->shutdown();
+        _retiredProfileResults.insert(_retiredProfileResults.end(),
+                                      results.begin(), results.end());
+        _timestampPool.reset();
+    }
+    _timestampSupported = false;
     _initialized = false;
     std::cout << "OpenGL Device shutdown" << std::endl;
 }
 
 void OpenGLDevice::beginFrame() {
     // Nothing specific needed for OpenGL
+}
+
+ProfilerCapabilities OpenGLDevice::profilerCapabilities() const {
+    ProfilerCapabilities result;
+    result.gpuTimestamps = result.passTimestamps = _timestampSupported;
+    result.externalTimestamps = _timestampSupported;
+    result.timestampCapacity =
+        _timestampSupported ? OpenGLTimestampPool::DefaultCapacity * 2 : 0;
+    result.debugGroups = _initialized && glPushDebugGroup && glPopDebugGroup;
+    return result;
+}
+namespace {
+class OpenGLExternalProfileScope final : public ExternalProfileScope {
+  public:
+    OpenGLExternalProfileScope(
+        std::shared_ptr<OpenGLTimestampPool> pool,
+        std::shared_ptr<OpenGLTimestampPool::Lease> lease)
+        : _pool(std::move(pool)), _lease(std::move(lease)) {
+        _pool->write(_lease, false);
+    }
+    ~OpenGLExternalProfileScope() override {
+        try {
+            _pool->write(_lease, true);
+        } catch (...) {
+            // Shutdown reports DeviceLost; otherwise an unfinished lease is
+            // reclaimed as Dropped. Never throw while unwinding an App frame.
+        }
+    }
+
+  private:
+    std::shared_ptr<OpenGLTimestampPool> _pool;
+    std::shared_ptr<OpenGLTimestampPool::Lease> _lease;
+};
+} // namespace
+std::unique_ptr<ExternalProfileScope>
+OpenGLDevice::profileExternalScope(std::string_view path) {
+    if (!profileContext()->active())
+        return {};
+    if (!_timestampPool)
+        return GraphicsDevice::profileExternalScope(path);
+    auto lease = _timestampPool->reserve(profilePass(path));
+    if (!lease)
+        return {};
+    return std::make_unique<OpenGLExternalProfileScope>(_timestampPool,
+                                                        std::move(lease));
+}
+void OpenGLDevice::prepareProfiler() {
+    if (!_initialized || std::this_thread::get_id() != _renderThread)
+        throw std::runtime_error(
+            "profiler preparation requires the render thread");
+    if (_timestampSupported && !_timestampPool) {
+        _timestampPool = std::make_shared<OpenGLTimestampPool>();
+        _timestampPool->poll(_profileFrameIndex);
+    }
+}
+std::vector<ProfileQueryResult>
+OpenGLDevice::pollProfileResults(uint64_t frameIndex) {
+    if (_initialized && std::this_thread::get_id() != _renderThread)
+        throw std::runtime_error("profiler polling requires the render thread");
+    _profileFrameIndex = frameIndex;
+    auto results = std::move(_retiredProfileResults);
+    _retiredProfileResults.clear();
+    if (_timestampPool) {
+        auto ready = _timestampPool->poll(frameIndex);
+        results.insert(results.end(), ready.begin(), ready.end());
+    }
+    return results;
 }
 
 void OpenGLDevice::endFrame() {
@@ -1829,14 +1964,20 @@ void OpenGLDevice::setViewport(int x, int y, int width, int height) {
 void OpenGLDevice::drawIndexed(size_t indexCount) {
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indexCount),
                    GL_UNSIGNED_INT, 0);
+    profileContext()->recordDraw(PrimitiveTopology::TriangleList, indexCount, 1,
+                                 true);
 }
 
 void OpenGLDevice::drawLines(size_t vertexCount) {
     glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(vertexCount));
+    profileContext()->recordDraw(PrimitiveTopology::LineList, vertexCount, 1,
+                                 false);
 }
 
 void OpenGLDevice::drawPoints(size_t vertexCount) {
     glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(vertexCount));
+    profileContext()->recordDraw(PrimitiveTopology::PointList, vertexCount, 1,
+                                 false);
 }
 
 void OpenGLDevice::drawIndexedInstanced(size_t indexCount,
@@ -1844,6 +1985,8 @@ void OpenGLDevice::drawIndexedInstanced(size_t indexCount,
     glDrawElementsInstanced(GL_TRIANGLES, static_cast<GLsizei>(indexCount),
                             GL_UNSIGNED_INT, 0,
                             static_cast<GLsizei>(instanceCount));
+    profileContext()->recordDraw(PrimitiveTopology::TriangleList, indexCount,
+                                 instanceCount, true);
 }
 
 void OpenGLDevice::checkError() {
@@ -1882,7 +2025,8 @@ std::unique_ptr<Buffer> OpenGLDevice::createBuffer(const BufferDesc& desc,
     if (!_initialized || std::this_thread::get_id() != _renderThread)
         throw std::runtime_error(
             "OpenGL buffers must be created on the render thread");
-    return std::make_unique<OpenGLBuffer>(desc, data);
+    auto scope = profileContext()->cpuScope("upload/buffer_create");
+    return std::make_unique<OpenGLBuffer>(desc, data, profileContext());
 }
 
 void OpenGLDevice::bindUniformBuffer(Buffer* buffer, int slot) {
@@ -1891,19 +2035,35 @@ void OpenGLDevice::bindUniformBuffer(Buffer* buffer, int slot) {
 }
 
 std::unique_ptr<Texture> OpenGLDevice::createTexture(const TextureDesc& desc) {
-    return std::make_unique<OpenGLTexture>(desc);
+    auto scope = profileContext()->cpuScope("upload/texture");
+    auto texture = std::make_unique<OpenGLTexture>(desc);
+    if (desc.data)
+        profileContext()->recordTextureUpload(
+            static_cast<uint64_t>(desc.width) * desc.height * desc.channels);
+    return texture;
 }
 
 std::unique_ptr<Texture>
 OpenGLDevice::createTexture(const TextureDesc& desc,
                             const SamplerDesc& sampler) {
-    return std::make_unique<OpenGLTexture>(desc, sampler);
+    auto scope = profileContext()->cpuScope("upload/texture");
+    auto texture = std::make_unique<OpenGLTexture>(desc, sampler);
+    if (desc.data)
+        profileContext()->recordTextureUpload(
+            static_cast<uint64_t>(desc.width) * desc.height * desc.channels);
+    return texture;
 }
 
 std::unique_ptr<Texture>
 OpenGLDevice::createTexture(const TextureResourceDesc& desc,
                             const TextureInitialData* initialData) {
-    return std::make_unique<OpenGLTexture>(desc, initialData);
+    auto scope = profileContext()->cpuScope("upload/texture");
+    auto texture = std::make_unique<OpenGLTexture>(desc, initialData);
+    if (initialData)
+        profileContext()->recordTextureUpload(
+            static_cast<uint64_t>(desc.extent.width) * desc.extent.height *
+            toGLTextureFormat(desc.format).bytesPerPixel);
+    return texture;
 }
 
 std::unique_ptr<TextureView>
@@ -2008,10 +2168,16 @@ TextureReadback OpenGLDevice::readTexture(TextureView* view) {
 }
 
 std::unique_ptr<CommandEncoder> OpenGLDevice::createCommandEncoder() {
-    return std::make_unique<OpenGLCommandEncoder>();
+    // Worker recording is supported, but this first profiler records scopes on
+    // the render thread only. Do not race pool creation with worker recording.
+    auto pool =
+        std::this_thread::get_id() == _renderThread ? _timestampPool : nullptr;
+    return std::make_unique<OpenGLCommandEncoder>(profileContext(),
+                                                  std::move(pool));
 }
 
 void OpenGLDevice::submit(CommandBuffer& commandBuffer) {
+    auto scope = profileContext()->cpuScope("submit");
     if (!_initialized || std::this_thread::get_id() != _renderThread)
         throw std::runtime_error(
             "OpenGL command buffers must be submitted on the render thread");
@@ -2134,11 +2300,19 @@ void OpenGLDevice::submit(CommandBuffer& commandBuffer) {
                 [&](const auto& value) {
                     using T = std::decay_t<decltype(value)>;
                     if constexpr (std::is_same_v<T, BeginPassCommand>) {
+                        if (value.timing) {
+                            if (!_timestampPool)
+                                throw std::logic_error(
+                                    "stale profiled command buffer");
+                            _timestampPool->write(value.timing, false);
+                        }
                         value.target->beginPass();
                         passActive = true;
                         if (glPushDebugGroup != nullptr) {
                             const std::string& label =
-                                value.target->getDesc().label;
+                                value.label.empty()
+                                    ? value.target->getDesc().label
+                                    : value.label;
                             glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1,
                                              label.empty() ? "RenderPass"
                                                            : label.c_str());
@@ -2189,6 +2363,9 @@ void OpenGLDevice::submit(CommandBuffer& commandBuffer) {
                             static_cast<GLint>(value.firstVertex),
                             static_cast<GLsizei>(value.vertexCount),
                             static_cast<GLsizei>(value.instanceCount));
+                        profileContext()->recordDraw(
+                            value.topology, value.vertexCount,
+                            value.instanceCount, false);
                     } else if constexpr (std::is_same_v<T,
                                                         DrawIndexedCommand>) {
                         const GLenum type = value.format == IndexFormat::Uint16
@@ -2205,10 +2382,15 @@ void OpenGLDevice::submit(CommandBuffer& commandBuffer) {
                             static_cast<GLsizei>(value.indexCount), type,
                             indices, static_cast<GLsizei>(value.instanceCount),
                             value.baseVertex);
+                        profileContext()->recordDraw(value.topology,
+                                                     value.indexCount,
+                                                     value.instanceCount, true);
                     } else if constexpr (std::is_same_v<T, EndPassCommand>) {
                         if (glPopDebugGroup != nullptr)
                             glPopDebugGroup();
                         value.target->endPass();
+                        if (value.timing)
+                            _timestampPool->write(value.timing, true);
                         passActive = false;
                         activePipeline = nullptr;
                     }
@@ -2289,7 +2471,7 @@ void OpenGLDevice::submit(CommandBuffer& commandBuffer) {
 std::unique_ptr<Texture> OpenGLDevice::createTexture(const std::string path,
                                                      bool flip) {
     TextureDesc desc = loadImage(path, flip);
-    auto texture = std::make_unique<OpenGLTexture>(desc);
+    auto texture = createTexture(desc);
     stbi_image_free((void*)desc.data); // release memory
     return texture;
 }
@@ -2298,7 +2480,7 @@ std::unique_ptr<Texture>
 OpenGLDevice::createTexture(const std::string path, bool flip,
                             const SamplerDesc& sampler) {
     TextureDesc desc = loadImage(path, flip);
-    auto texture = std::make_unique<OpenGLTexture>(desc, sampler);
+    auto texture = createTexture(desc, sampler);
     stbi_image_free((void*)desc.data); // release memory
     return texture;
 }
@@ -2307,9 +2489,13 @@ std::unique_ptr<Texture> OpenGLDevice::createTexture(const std::string path,
                                                      bool flip, float warpParam,
                                                      float minFilferParam,
                                                      float maxFilterParam) {
+    auto scope = profileContext()->cpuScope("upload/texture");
     TextureDesc desc = loadImage(path, flip);
     auto texture = std::make_unique<OpenGLTexture>(
         desc, warpParam, minFilferParam, maxFilterParam);
+    if (desc.data)
+        profileContext()->recordTextureUpload(
+            static_cast<uint64_t>(desc.width) * desc.height * desc.channels);
     stbi_image_free((void*)desc.data); // release memory
     return texture;
 }

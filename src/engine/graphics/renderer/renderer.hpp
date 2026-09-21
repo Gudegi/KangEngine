@@ -4,6 +4,7 @@
 #include "engine/graphics/renderer/light.hpp"
 #include "engine/graphics/renderer/post_processor.hpp"
 #include "engine/graphics/renderer/renderer_types.hpp"
+#include "engine/graphics/renderer/renderer_profiler.hpp"
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -79,6 +80,28 @@ class Renderer {
               PostProcessor* postProcessor,
               SelectionOutlineProcessor* selectionOutlineProcessor);
     void setViewportSize(int width, int height);
+    RendererProfiler& profiler() { return _profiler; }
+    void setProfilerEnabled(bool enabled) { _profiler.setEnabled(enabled); }
+    bool profilerEnabled() const { return _profiler.enabled(); }
+    Backend::ProfilerCapabilities profilerCapabilities() const {
+        return _device ? _device->profilerCapabilities()
+                       : Backend::ProfilerCapabilities{};
+    }
+    RendererProfiler::Snapshot latestFrameProfile() const {
+        return _profiler.latestFrameProfile();
+    }
+    std::vector<RendererProfiler::Snapshot> frameProfileHistory() const {
+        return _profiler.frameProfileHistory();
+    }
+    Backend::ProfileSummary
+    profileSummary(size_t maxFrames = RendererProfiler::HistoryCapacity) const {
+        return _profiler.profileSummary(maxFrames);
+    }
+    void exportProfileJson(
+        const std::string& path,
+        size_t maxFrames = RendererProfiler::HistoryCapacity) const {
+        _profiler.exportJson(path, maxFrames);
+    }
 
     Backend::GraphicsDevice* device() { return _device; }
     const Backend::GraphicsDevice* device() const { return _device; }
@@ -165,6 +188,7 @@ class Renderer {
         RenderableHandle handle, const std::vector<glm::mat4>& boneMatrices);
 
   private:
+    RendererProfiler _profiler;
     void ensureOffscreenSceneTarget(Backend::Framebuffer* target, int width,
                                     int height);
     void ensureOffscreenClearTarget(const glm::vec4& clearColor);

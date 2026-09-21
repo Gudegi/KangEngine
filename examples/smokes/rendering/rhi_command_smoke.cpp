@@ -79,6 +79,20 @@ int main() {
 
     OpenGLDevice device;
     device.initialize();
+    device.profileContext()->beginFrame(1, 0, BackendType::OpenGL);
+    std::array<uint8_t, 64> upload{};
+    BufferDesc uploadDesc;
+    uploadDesc.size = upload.size();
+    uploadDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
+    auto uploadBuffer = device.createBuffer(uploadDesc, upload.data());
+    uploadBuffer->setData(upload.data(), 16);
+    // Rejected out-of-bounds updates must not inflate upload counters.
+    uploadBuffer->setData(upload.data(), 16, 60);
+    TextureDesc uploadTextureDesc;
+    uploadTextureDesc.width = 2;
+    uploadTextureDesc.height = 2;
+    uploadTextureDesc.data = upload.data();
+    auto uploadTexture = device.createTexture(uploadTextureDesc);
     auto first = makeTarget(device, "command_first",
                             {0.2f, 0.4f, 0.6f, 1.0f});
     auto second = makeTarget(device, "command_second",
@@ -164,6 +178,14 @@ int main() {
     device.submit(*workerRecordedCommands);
 
     glDisable(GL_SCISSOR_TEST);
+    const auto profile = device.profileContext()->endFrame();
+    require(profile->counters.bufferAllocations == 1 &&
+                profile->counters.bufferAllocatedBytes == 64 &&
+                profile->counters.bufferUploadBytes == 80 &&
+                profile->counters.textureUploadBytes == 16,
+            "backend profiler upload counters mismatch");
+    require(profile->counters.drawCalls == 0,
+            "clear-only command buffers counted as draws");
     require(glGetError() == GL_NO_ERROR,
             "OpenGL error in command encoder smoke test");
     std::cout << "PASS: recorded render passes, submission, and state validation"

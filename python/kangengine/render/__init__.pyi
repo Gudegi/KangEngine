@@ -313,8 +313,260 @@ class GraphicsDevice:
         """Create a GPU buffer initialized from a contiguous Python buffer."""
         ...
 
+class ProfilerCapabilities:
+    """Backend timing support; pass timing does not imply arbitrary timestamps."""
+    @property
+    def cpu_scopes(self) -> bool:
+        """Whether CPU scopes are supported."""
+        ...
+    @property
+    def gpu_timestamps(self) -> bool:
+        """Whether any GPU timestamp path is available."""
+        ...
+    @property
+    def pass_timestamps(self) -> bool:
+        """Whether render-pass begin/end timestamps are supported."""
+        ...
+    @property
+    def command_timestamps(self) -> bool:
+        """Whether arbitrary command timestamps are supported."""
+        ...
+    @property
+    def external_timestamps(self) -> bool:
+        """Whether native render scopes outside command buffers are supported."""
+        ...
+    @property
+    def in_pass_timestamps(self) -> bool:
+        """Whether arbitrary in-pass timestamps are supported."""
+        ...
+    @property
+    def debug_groups(self) -> bool:
+        """Whether backend pass debug labels are supported."""
+        ...
+    @property
+    def timestamp_capacity(self) -> int:
+        """Maximum timestamp slots; each measured pass uses two slots."""
+        ...
+
+class ProfileTimingDomain(Enum):
+    """Clock domain of a profiler sample."""
+    CPU: ProfileTimingDomain
+    GPU: ProfileTimingDomain
+
+class ProfileSampleStatus(Enum):
+    """Availability or failure reason for a timing sample."""
+    PENDING: ProfileSampleStatus
+    READY: ProfileSampleStatus
+    UNSUPPORTED: ProfileSampleStatus
+    CAPACITY_EXCEEDED: ProfileSampleStatus
+    DROPPED: ProfileSampleStatus
+    INVALID: ProfileSampleStatus
+    DEVICE_LOST: ProfileSampleStatus
+
+class ProfileSample:
+    """Immutable inclusive timing sample with explicit parent identity."""
+    @property
+    def sample_id(self) -> int:
+        """Frame-local sample identity."""
+        ...
+    @property
+    def parent_sample_id(self) -> int | None:
+        """Parent scope identity, or None for a root scope."""
+        ...
+    @property
+    def path(self) -> str:
+        """Semantic scope path."""
+        ...
+    @property
+    def domain(self) -> ProfileTimingDomain:
+        """CPU or GPU timing domain."""
+        ...
+    @property
+    def duration_ms(self) -> float | None:
+        """Inclusive duration, or None when unavailable."""
+        ...
+    @property
+    def status(self) -> ProfileSampleStatus:
+        """Availability or failure reason."""
+        ...
+    @property
+    def available(self) -> bool:
+        """Whether a valid duration is present."""
+        ...
+
+class RenderCounters:
+    """Submitted RHI workload and requested upload bytes for one frame."""
+    @property
+    def draw_calls(self) -> int:
+        """Executed RHI draws, including indexed draws."""
+        ...
+    @property
+    def indexed_draw_calls(self) -> int:
+        """Indexed subset of draw_calls."""
+        ...
+    @property
+    def instances(self) -> int:
+        """Sum of submitted instances across all passes."""
+        ...
+    @property
+    def triangles(self) -> int:
+        """Submitted triangle count including repeated passes."""
+        ...
+    @property
+    def buffer_upload_bytes(self) -> int:
+        """Requested CPU-to-buffer payload bytes."""
+        ...
+    @property
+    def texture_upload_bytes(self) -> int:
+        """Requested CPU-to-texture payload bytes."""
+        ...
+    @property
+    def external_buffer_bytes(self) -> int:
+        """Requested external device copy payload bytes."""
+        ...
+    @property
+    def buffer_allocations(self) -> int:
+        """Buffer creation or reallocation count."""
+        ...
+    @property
+    def buffer_allocated_bytes(self) -> int:
+        """Requested buffer allocation capacity in bytes."""
+        ...
+
+class FrameProfile:
+    """Immutable revision of a frame snapshot with explicit GPU result status."""
+    @property
+    def capture_id(self) -> int:
+        """Capture identity, incremented when capture restarts."""
+        ...
+    @property
+    def frame_index(self) -> int:
+        """Original App frame index."""
+        ...
+    @property
+    def revision(self) -> int:
+        """Snapshot revision for this capture and frame."""
+        ...
+    @property
+    def finalized(self) -> bool:
+        """Whether all timing results have a terminal status."""
+        ...
+    @property
+    def backend(self) -> BackendType:
+        """Backend that rendered the captured frame."""
+        ...
+    @property
+    def gpu_latency_frames(self) -> int | None:
+        """GPU result delay, or None when GPU timing is unavailable."""
+        ...
+    @property
+    def dropped_samples(self) -> int:
+        """Scopes omitted because sample capacity was exhausted."""
+        ...
+    @property
+    def counters(self) -> RenderCounters:
+        """Immutable workload counters."""
+        ...
+    @property
+    def samples(self) -> tuple[ProfileSample, ...]:
+        """Immutable sequence of timing samples."""
+        ...
+    @property
+    def metadata(self) -> dict[str, str]:
+        """Copy of settings, backend information and coverage metadata."""
+        ...
+
+class ScopeProfileSummary:
+    """Inclusive per-frame scope statistics; absent and incomplete frames are excluded."""
+    @property
+    def path(self) -> str:
+        """Scope path grouped within its timing domain."""
+        ...
+    @property
+    def domain(self) -> ProfileTimingDomain:
+        """CPU or GPU timing domain."""
+        ...
+    @property
+    def sample_count(self) -> int:
+        """Number of observed samples, including unavailable results."""
+        ...
+    @property
+    def ready_frames(self) -> int:
+        """Frames with a complete valid sum for this scope."""
+        ...
+    @property
+    def pending_frames(self) -> int:
+        """Frames awaiting results with no terminal failures."""
+        ...
+    @property
+    def unavailable_frames(self) -> int:
+        """Frames excluded by failed samples or capture overflow."""
+        ...
+    @property
+    def mean_ms(self) -> float | None:
+        """Mean of complete per-frame sums, or None."""
+        ...
+    @property
+    def median_ms(self) -> float | None:
+        """Median of complete per-frame sums, or None."""
+        ...
+    @property
+    def p95_ms(self) -> float | None:
+        """Nearest-rank 95th percentile of complete per-frame sums."""
+        ...
+    @property
+    def max_ms(self) -> float | None:
+        """Maximum complete per-frame sum, or None."""
+        ...
+
+class ProfileSummary:
+    """Immutable summary of the latest retained capture, recomputed from current revisions."""
+    @property
+    def capture_id(self) -> int:
+        """Latest retained capture ID, or zero when empty."""
+        ...
+    @property
+    def frame_count(self) -> int:
+        """Number of retained frames in the selected capture window."""
+        ...
+    @property
+    def first_frame_index(self) -> int | None:
+        """First frame index in the window, or None."""
+        ...
+    @property
+    def last_frame_index(self) -> int | None:
+        """Last frame index in the window, or None."""
+        ...
+    @property
+    def scopes(self) -> tuple[ScopeProfileSummary, ...]:
+        """Statistics grouped by domain and scope path."""
+        ...
+
 class Renderer:
     """Facade for custom pipelines and renderable resource updates."""
+    def set_profiler_enabled(self, enabled: bool) -> None:
+        """Enable or disable CPU/GPU pass capture at the next frame boundary."""
+        ...
+    @property
+    def profiler_enabled(self) -> bool:
+        """Requested profiling state, applied at the next frame boundary."""
+        ...
+    @property
+    def profiler_capabilities(self) -> ProfilerCapabilities:
+        """Return timing capabilities of the current backend."""
+        ...
+    def latest_frame_profile(self) -> FrameProfile | None:
+        """Return the latest captured CPU frame, or None before capture."""
+        ...
+    def frame_profile_history(self) -> tuple[FrameProfile, ...]:
+        """Return at most 240 immutable snapshots, oldest first."""
+        ...
+    def profile_summary(self, *, max_frames: int = 240) -> ProfileSummary:
+        """Summarize the latest capture; max_frames must be between 1 and 240."""
+        ...
+    def export_profile_json(self, path: str, *, max_frames: int = 240) -> None:
+        """Write the last max_frames snapshots and latest-capture summary without GPU waits."""
+        ...
     def device(self) -> GraphicsDevice:
         """Return the renderer-owned graphics device."""
         ...
