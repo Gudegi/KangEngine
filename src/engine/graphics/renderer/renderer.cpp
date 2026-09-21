@@ -44,6 +44,7 @@ void Renderer::bind(Backend::GraphicsDevice* device, Rasterizer* rasterizer,
                     PostProcessor* postProcessor,
                     SelectionOutlineProcessor* selectionOutlineProcessor) {
     _device = device;
+    _profiler.bind(device->profileContext(), device);
     _rasterizer = rasterizer;
     _postProcessor = postProcessor;
     _selectionOutlineProcessor = selectionOutlineProcessor;
@@ -441,7 +442,9 @@ void Renderer::recordOffscreenFormatConversion(int width, int height) {
     if (!_offscreenIntermediateColor)
         return;
     auto encoder = _device->createCommandEncoder();
-    auto pass = encoder->beginRenderPass(_offscreenOutputTarget.get());
+    auto pass = encoder->beginRenderPass(
+        _offscreenOutputTarget.get(),
+        _device->profilePass("render/offscreen/convert"));
     FullscreenPass::record(
         *pass, _offscreenCopyPipeline.get(), static_cast<uint32_t>(width),
         static_cast<uint32_t>(height), _offscreenCopyBindGroup.get());
@@ -464,7 +467,9 @@ void Renderer::renderSceneToFramebuffer(const glm::mat4& view,
     if (clear) {
         ensureOffscreenClearTarget(_settings.background.backgroundColor);
         auto encoder = _device->createCommandEncoder();
-        auto pass = encoder->beginRenderPass(_offscreenClearTarget.get());
+        auto pass = encoder->beginRenderPass(
+            _offscreenClearTarget.get(),
+            _device->profilePass("render/offscreen/clear"));
         pass->end();
         auto commands = encoder->finish();
         _device->submit(*commands);
@@ -472,7 +477,9 @@ void Renderer::renderSceneToFramebuffer(const glm::mat4& view,
     _rasterizer->render(view, proj, _offscreenDrawTarget.get());
     {
         auto encoder = _device->createCommandEncoder();
-        auto pass = encoder->beginRenderPass(_offscreenResolveTarget.get());
+        auto pass = encoder->beginRenderPass(
+            _offscreenResolveTarget.get(),
+            _device->profilePass("render/offscreen/resolve"));
         pass->end();
         auto commands = encoder->finish();
         _device->submit(*commands);

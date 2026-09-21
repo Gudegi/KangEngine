@@ -18,6 +18,7 @@
 
 namespace KE {
 namespace Backend {
+class OpenGLTimestampPool;
 
 class OpenGLBuffer : public Buffer {
   private:
@@ -25,12 +26,14 @@ class OpenGLBuffer : public Buffer {
     GLenum _target;
     BufferUsage _usage = BufferUsage::None;
     size_t _size;
+    std::shared_ptr<ProfileContext> _profileContext;
 #ifdef KANGENGINE_USE_CUDA_GL_INTEROP
     cudaGraphicsResource* _cudaResource = nullptr;
 #endif
 
   public:
-    OpenGLBuffer(const BufferDesc& desc, const void* data = nullptr);
+    OpenGLBuffer(const BufferDesc& desc, const void* data = nullptr,
+                 std::shared_ptr<ProfileContext> profileContext = {});
     ~OpenGLBuffer() override;
 
     void bind() override;
@@ -271,6 +274,10 @@ class OpenGLDevice : public GraphicsDevice {
     bool _initialized;
     bool _validationEnabled = false;
     std::thread::id _renderThread;
+    std::shared_ptr<OpenGLTimestampPool> _timestampPool;
+    std::vector<ProfileQueryResult> _retiredProfileResults;
+    bool _timestampSupported = false;
+    uint64_t _profileFrameIndex = 0;
 
     // 6 individual face images: +X, -X, +Y, -Y, +Z, -Z(OpenGL Y up frame)
     GLuint loadCubemap(const std::vector<std::string>& paths);
@@ -284,6 +291,12 @@ class OpenGLDevice : public GraphicsDevice {
     void initialize() override;
     void shutdown() override;
     BackendType getBackendType() const override { return BackendType::OpenGL; }
+    ProfilerCapabilities profilerCapabilities() const override;
+    void prepareProfiler() override;
+    std::unique_ptr<ExternalProfileScope>
+    profileExternalScope(std::string_view path) override;
+    std::vector<ProfileQueryResult>
+    pollProfileResults(uint64_t frameIndex) override;
     void setValidationEnabled(bool enabled) override {
         _validationEnabled = enabled;
     }

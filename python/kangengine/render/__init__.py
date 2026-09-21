@@ -46,6 +46,14 @@ RenderHookContext = set_public_module(_ke.RenderHookContext, __name__)
 RenderPassEncoder = set_public_module(_ke.RenderPassEncoder, __name__)
 
 Renderer = set_public_module(_ke.Renderer, __name__)
+ProfileTimingDomain = set_public_module(_ke.ProfileTimingDomain, __name__)
+ProfilerCapabilities = set_public_module(_ke.ProfilerCapabilities, __name__)
+ProfileSampleStatus = set_public_module(_ke.ProfileSampleStatus, __name__)
+ProfileSample = set_public_module(_ke.ProfileSample, __name__)
+RenderCounters = set_public_module(_ke.RenderCounters, __name__)
+FrameProfile = set_public_module(_ke.FrameProfile, __name__)
+ScopeProfileSummary = set_public_module(_ke.ScopeProfileSummary, __name__)
+ProfileSummary = set_public_module(_ke.ProfileSummary, __name__)
 GraphicsDevice = set_public_module(_ke.GraphicsDevice, __name__)
 Texture = set_public_module(_ke.Texture, __name__)
 Buffer = set_public_module(_ke.Buffer, __name__)
@@ -53,6 +61,14 @@ GraphicsPipeline = set_public_module(_ke.GraphicsPipeline, __name__)
 
 
 __all__ = [
+    "ProfilerCapabilities",
+    "ProfileTimingDomain",
+    "ProfileSampleStatus",
+    "ProfileSample",
+    "RenderCounters",
+    "FrameProfile",
+    "ScopeProfileSummary",
+    "ProfileSummary",
     "AlphaMode",
     "BackendType",
     "Buffer",

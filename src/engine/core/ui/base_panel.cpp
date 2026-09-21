@@ -2,9 +2,11 @@
 #define IMVIEWGUIZMO_IMPLEMENTATION
 #include "ImViewGuizmo.h"
 #include "imgui.h"
+#include <implot.h>
 #include "engine/core/app/app.hpp"
 #include "engine/graphics/backend/base/graphics_device.hpp"
 #include "engine/graphics/material/material.hpp"
+#include "engine/graphics/material/colors.hpp"
 #include "engine/graphics/renderer/rasterizer.hpp"
 #include "engine/scene/component/camera_component.hpp"
 #include "engine/scene/component/articulation_component.hpp"
@@ -19,11 +21,16 @@
 #include "engine/scene/native/xform_token.hpp"
 #include <IconsFontAwesome7.h>
 #include <algorithm>
+#include <array>
 #include <cfloat>
+#include <charconv>
+#include <cmath>
 #include <cstdio>
 #include <cstdint>
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtx/quaternion.hpp>
+#include <map>
+#include <limits>
 #include <type_traits>
 #include <unordered_set>
 #include <vector>
@@ -808,26 +815,575 @@ PerformancePanel::PerformancePanel(App* app)
 
 PerformancePanel::~PerformancePanel() {}
 
+void PerformancePanel::buildTimingPlot() {
+    if (!ImGui::CollapsingHeader("Performance Profiler",
+                                 ImGuiTreeNodeFlags_DefaultOpen))
+        return;
+    if (!_profileTargetInitialized) {
+        // Timing can be configured after the panel is constructed.
+        const float hz = _app->getRenderHz();
+        _profileTargetFps = std::isfinite(hz) && hz > 0.0f ? hz : 0.0f;
+        _profileTargetInitialized = true;
+    }
+    constexpr size_t capacity = RendererProfiler::HistoryCapacity;
+    struct Series {
+        const char* label;
+        ColorType color;
+        const char* tooltip;
+        std::array<double, capacity> values;
+        double sum = 0;
+        size_t valid = 0, latest = 0;
+    };
+    std::array<Series, 5> series{
+        {{"Total", ColorType::GOLD,
+          "Interval between frame starts, including pacing and present."},
+         {"CPU", ColorType::SKY_BLUE,
+          "CPU frame wall time, including present; excludes pacing outside the "
+          "frame."},
+         {"GPU", ColorType::ORCHID,
+          "Latest available GPU frame interval; includes idle gaps, excludes "
+          "present/CUDA. Results arrive several frames later."},
+         {"Update", ColorType::LIME_GREEN,
+          "Sum of pre-update, fixed-update and pre-render callbacks."},
+         {"Present", ColorType::ORANGE,
+          "CPU time in buffer swap. This is not a measurement of GPU-only "
+          "waiting."}}};
+    for (auto& s : series)
+        s.values.fill(std::numeric_limits<double>::quiet_NaN());
+    std::array<double, capacity> frames{};
+    const auto history = _app->getRenderer().frameProfileHistory();
+    size_t count = 0;
+    if (!history.empty()) {
+        const auto& latest = history.back();
+        for (const auto& frame : history) {
+            if (frame->captureId != latest->captureId ||
+                latest->frameIndex - frame->frameIndex >= capacity ||
+                count == capacity)
+                continue;
+            frames[count] =
+                -static_cast<double>(latest->frameIndex - frame->frameIndex);
+            const auto interval = frame->metadata.find("frame_interval_ms");
+            if (interval != frame->metadata.end()) {
+                double value = 0;
+                const auto& text = interval->second;
+                const auto parsed = std::from_chars(
+                    text.data(), text.data() + text.size(), value);
+                if (parsed.ec == std::errc{} &&
+                    parsed.ptr == text.data() + text.size() &&
+                    std::isfinite(value) && value > 0)
+                    series[0].values[count] = value;
+            }
+            double update = 0;
+            bool preUpdate = false, preRender = false, updateComplete = true;
+            for (const auto& sample : frame->samples) {
+                const bool ready = sample.available() && sample.durationMs &&
+                                   std::isfinite(*sample.durationMs);
+                if (sample.domain == Backend::ProfileTimingDomain::Cpu) {
+                    if (sample.path == "frame" && ready)
+                        series[1].values[count] = *sample.durationMs;
+                    if (sample.path == "present" && ready)
+                        series[4].values[count] = *sample.durationMs;
+                    if (sample.path == "simulation/pre_update" ||
+                        sample.path == "simulation/fixed_update" ||
+                        sample.path == "simulation/pre_render") {
+                        preUpdate |= sample.path == "simulation/pre_update";
+                        preRender |= sample.path == "simulation/pre_render";
+                        if (ready)
+                            update += *sample.durationMs;
+                        else
+                            updateComplete = false;
+                    }
+                } else if (sample.path == "frame" && ready) {
+                    series[2].values[count] = *sample.durationMs;
+                }
+            }
+            if (preUpdate && preRender && updateComplete &&
+                !frame->droppedSamples)
+                series[3].values[count] = update;
+            for (auto& s : series) {
+                if (std::isfinite(s.values[count])) {
+                    s.sum += s.values[count];
+                    ++s.valid;
+                    s.latest = count;
+                }
+            }
+            ++count;
+        }
+    }
+    const auto color = [](ColorType type) {
+        const auto& c = ColorLibrary::get(type);
+        return ImVec4(c.r, c.g, c.b, c.a);
+    };
+    const bool sideBySide =
+        ImGui::GetContentRegionAvail().x >= ImGui::GetFontSize() * 32;
+    const bool layout =
+        sideBySide && ImGui::BeginTable("Timing layout", 2,
+                                        ImGuiTableFlags_SizingStretchProp);
+    if (layout) {
+        ImGui::TableSetupColumn("Summary", ImGuiTableColumnFlags_WidthStretch,
+                                0.57f);
+        ImGui::TableSetupColumn("History", ImGuiTableColumnFlags_WidthStretch,
+                                0.43f);
+        ImGui::TableNextColumn();
+    }
+    if (ImGui::BeginTable("Timing values", 2,
+                          ImGuiTableFlags_SizingStretchProp)) {
+        ImGui::TableSetupColumn("Timing", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn("Current / average");
+        for (const auto& s : series) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::TextColored(color(s.color), "%s", s.label);
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("%s", s.tooltip);
+            ImGui::TableNextColumn();
+            if (s.valid) {
+                ImGui::TextColored(color(s.color), "%.2f ms (Avg: %.2f ms)",
+                                   s.values[s.latest], s.sum / s.valid);
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip(
+                        "%zu valid samples; latest is %.0f frames behind. %s",
+                        s.valid, -frames[s.latest], s.tooltip);
+            } else {
+                ImGui::TextDisabled("N/A (Avg: N/A)");
+            }
+        }
+        ImGui::EndTable();
+    }
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 4);
+    ImGui::DragFloat("Target FPS", &_profileTargetFps, 1.0f, 0.0f, 1000.0f,
+                     "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Initially uses render Hz. Visual budget only; zero "
+                          "disables the target.");
+    const double targetMs =
+        _profileTargetFps > 0 ? 1000.0 / _profileTargetFps : 0.0;
+    ImGui::SameLine();
+    if (targetMs > 0)
+        ImGui::TextColored(color(ColorType::SALMON), "%.2f ms", targetMs);
+    else
+        ImGui::TextDisabled("Unlimited");
+    if (layout)
+        ImGui::TableNextColumn();
+    ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, ImVec2(0.0f, 0.2f));
+    if (ImPlot::BeginPlot("##Frame timings",
+                          ImVec2(-1, ImGui::GetTextLineHeightWithSpacing() * 8),
+                          ImPlotFlags_NoLegend | ImPlotFlags_NoTitle)) {
+        ImPlot::SetupAxes("Recent frames", "ms", ImPlotAxisFlags_NoInitialFit,
+                          ImPlotAxisFlags_AutoFit);
+        ImPlot::SetupAxisLimits(ImAxis_X1, -static_cast<double>(capacity - 1),
+                                0, ImPlotCond_Always);
+        ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, DBL_MAX);
+        for (const auto& s : series) {
+            ImPlot::SetNextLineStyle(color(s.color));
+            // NaNs leave gaps, while asynchronous revisions retain the original
+            // frame position.
+            ImPlot::PlotLine(s.label, frames.data(), s.values.data(),
+                             static_cast<int>(count));
+        }
+        if (targetMs > 0) {
+            const double x[] = {-static_cast<double>(capacity - 1), 0};
+            const double y[] = {targetMs, targetMs};
+            ImPlot::SetNextLineStyle(color(ColorType::SALMON), 2);
+            ImPlot::PlotLine("Target", x, y, 2);
+        }
+        ImPlot::EndPlot();
+    }
+    ImPlot::PopStyleVar();
+    if (layout)
+        ImGui::EndTable();
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled(
+        "Recent 240 frames; timings overlap. GPU results are delayed.");
+    ImGui::PopTextWrapPos();
+}
+
+void PerformancePanel::buildMemoryUsage(const char* label,
+                                        const std::string& key,
+                                        std::optional<uint64_t> system,
+                                        std::optional<uint64_t> process,
+                                        std::optional<uint64_t> capacity,
+                                        const char* tooltip) {
+    ImGui::PushID(key.c_str());
+    ImGui::SeparatorText(label);
+    auto& peaks = _memoryPeaks[key];
+    const auto row = [&](const char* name, std::optional<uint64_t> used,
+                         std::optional<uint64_t>& peak, ColorType type) {
+        constexpr double gib = 1024.0 * 1024.0 * 1024.0;
+        if (used)
+            peak = std::max(peak.value_or(0), *used);
+        ImGui::TextUnformatted(name);
+        ImGui::SameLine();
+        if (used && capacity)
+            ImGui::Text("%.2f / %.2f GiB", *used / gib, *capacity / gib);
+        else
+            ImGui::TextDisabled("N/A");
+        ImGui::SameLine();
+        if (peak)
+            ImGui::Text("(Peak: %.2f GiB)", *peak / gib);
+        const auto& color = ColorLibrary::get(type);
+        ImGui::PushStyleColor(ImGuiCol_PlotHistogram,
+                              ImVec4(color.r, color.g, color.b, color.a));
+        const float fraction = used && capacity && *capacity
+                                   ? static_cast<float>(std::clamp(
+                                         double(*used) / *capacity, 0.0, 1.0))
+                                   : 0.0f;
+        ImGui::ProgressBar(fraction, ImVec2(-1, ImGui::GetFontSize() * 0.45f),
+                           "");
+        ImGui::PopStyleColor();
+        if (peak && capacity && *capacity) {
+            const auto lo = ImGui::GetItemRectMin();
+            const auto hi = ImGui::GetItemRectMax();
+            const float x =
+                lo.x + (hi.x - lo.x) *
+                           static_cast<float>(
+                               std::clamp(double(*peak) / *capacity, 0.0, 1.0));
+            const auto& marker = ColorLibrary::get(ColorType::ORANGE);
+            ImGui::GetWindowDrawList()->AddLine(
+                ImVec2(x, lo.y), ImVec2(x, hi.y),
+                ImGui::ColorConvertFloat4ToU32(
+                    ImVec4(marker.r, marker.g, marker.b, marker.a)),
+                2);
+        }
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip(
+                "%s\nUsed / physical capacity, not a process budget.\n"
+                "Orange marker: peak observed while this panel is "
+                "sampling.\n%s",
+                name, tooltip);
+    };
+    row("System", system, peaks.system, ColorType::SKY_BLUE);
+    row("This process", process, peaks.process, ColorType::LIME_GREEN);
+    ImGui::PopID();
+}
+
+void PerformancePanel::buildResourceUsage() {
+    if (!ImGui::CollapsingHeader("Resources", ImGuiTreeNodeFlags_DefaultOpen))
+        return;
+    auto& renderer = _app->getRenderer();
+    _resourceMonitor.requestSample();
+    const auto usage = _resourceMonitor.snapshot();
+    if (!usage.sequence) {
+        ImGui::TextDisabled("Waiting for resource measurements...");
+    } else {
+        const double age =
+            std::chrono::duration<double>(std::chrono::steady_clock::now() -
+                                          usage.sampledAt)
+                .count();
+        if (age > 2.5)
+            ImGui::TextDisabled("Refresh pending (%.1f s old)", age);
+        if (ImGui::BeginTable("CPU usage", 3,
+                              ImGuiTableFlags_SizingStretchProp)) {
+            ImGui::TableSetupColumn("Resource",
+                                    ImGuiTableColumnFlags_WidthFixed);
+            ImGui::TableSetupColumn("System");
+            ImGui::TableSetupColumn("This process");
+            ImGui::TableHeadersRow();
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted("CPU");
+            ImGui::TableNextColumn();
+            if (usage.systemCpuPercent)
+                ImGui::Text("%.2f%%", *usage.systemCpuPercent);
+            else
+                ImGui::TextDisabled("N/A");
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip(
+                    "Total host CPU usage. Sampled about once per "
+                    "second; needs two samples.\n%s",
+                    usage.status.c_str());
+            ImGui::TableNextColumn();
+            if (usage.processCpuPercent && usage.logicalCpuCount)
+                ImGui::Text("%.2f%%",
+                            *usage.processCpuPercent / usage.logicalCpuCount);
+            else
+                ImGui::TextDisabled("N/A");
+            if (ImGui::IsItemHovered()) {
+                ImGui::BeginTooltip();
+                ImGui::TextUnformatted(
+                    "This PID only, normalized to total host CPU capacity.");
+                if (usage.processCpuPercent)
+                    ImGui::Text("Per core: %.2f%% (100%% = one logical CPU)",
+                                *usage.processCpuPercent);
+                ImGui::TextUnformatted(
+                    "Sampled about once per second; needs two samples.");
+                if (!usage.status.empty())
+                    ImGui::TextWrapped("%s", usage.status.c_str());
+                ImGui::EndTooltip();
+            }
+            ImGui::EndTable();
+        }
+        if (usage.gpus.empty()) {
+            ImGui::TextDisabled("GPU / VRAM: N/A");
+            if (ImGui::IsItemHovered() && !usage.gpuStatus.empty())
+                ImGui::SetTooltip("%s", usage.gpuStatus.c_str());
+        }
+        for (const auto& gpu : usage.gpus) {
+            const auto label = "VRAM " + std::to_string(gpu.index);
+            const auto key =
+                "gpu/" +
+                (gpu.uuid.empty() ? std::to_string(gpu.index) : gpu.uuid);
+            std::string note =
+                gpu.memoryIncludesReserved
+                    ? "Legacy device counter includes driver reservations. "
+                    : "Device counter excludes driver reservations. ";
+            note += gpu.processMemoryStatus;
+            if (!gpu.status.empty())
+                note += "\n" + gpu.status;
+            buildMemoryUsage(label.c_str(), key, gpu.memoryUsedBytes,
+                             gpu.processMemoryBytes, gpu.memoryTotalBytes,
+                             note.c_str());
+            if (gpu.utilizationPercent)
+                ImGui::Text("GPU %u total activity: %.2f%%", gpu.index,
+                            double(*gpu.utilizationPercent));
+            else
+                ImGui::TextDisabled("GPU %u total activity: N/A", gpu.index);
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("%s; includes all applications.\n%s",
+                                  gpu.name.c_str(), gpu.status.c_str());
+        }
+        const auto ramUsed =
+            usage.ramTotalBytes && usage.ramAvailableBytes
+                ? std::optional<uint64_t>(*usage.ramTotalBytes -
+                                          *usage.ramAvailableBytes)
+                : std::nullopt;
+        const std::string ramNote =
+            "System = total - available; process = RSS (may include shared "
+            "pages). Host RAM is not a container budget.\n" +
+            usage.status;
+        buildMemoryUsage("RAM Usage", "ram", ramUsed, usage.processRssBytes,
+                         usage.ramTotalBytes, ramNote.c_str());
+    }
+
+    if (ImGui::TreeNode("Hardware details")) {
+        if (const auto* device = renderer.device()) {
+            const auto backend = device->getBackendType();
+            ImGui::Text("Render backend: %s",
+                        backend == Backend::BackendType::OpenGL   ? "OpenGL"
+                        : backend == Backend::BackendType::WebGPU ? "WebGPU"
+                                                                  : "Vulkan");
+            const auto& metadata = device->profileContext()->deviceMetadata();
+            auto deviceText = [&](const char* label, const char* key) {
+                const auto found = metadata.find(key);
+                ImGui::TextWrapped(
+                    "%s: %s", label,
+                    found == metadata.end() ? "N/A" : found->second.c_str());
+            };
+            deviceText("Render device", "gpu");
+            deviceText("Vendor", "vendor");
+            deviceText("Driver / GL version", "driver_gl_version");
+        }
+        ImGui::TextWrapped("OS: %s",
+                           usage.os.empty() ? "N/A" : usage.os.c_str());
+        ImGui::TextWrapped(
+            "CPU: %s", usage.cpuModel.empty() ? "N/A" : usage.cpuModel.c_str());
+        if (usage.logicalCpuCount)
+            ImGui::Text("Logical CPUs: %u", usage.logicalCpuCount);
+        if (!usage.gpuDriver.empty())
+            ImGui::Text("NVIDIA driver: %s", usage.gpuDriver.c_str());
+        for (const auto& gpu : usage.gpus)
+            ImGui::TextWrapped("GPU %u: %s", gpu.index, gpu.name.c_str());
+        ImGui::TextWrapped("GPU indices above are not automatically "
+                           "matched to the render device.");
+        ImGui::TreePop();
+    }
+}
+
 void PerformancePanel::buildPanel() {
     if (!ImGui::Begin(name().c_str(), openPtr())) {
         ImGui::End();
         return;
     }
-    ImGui::Text("Performance");
-    ImGui::Separator();
     if (_app) {
         bool vsync = _app->getVSync();
         if (ImGui::Checkbox("VSync", &vsync))
             _app->setVSync(vsync);
-        ImGui::Text("Displayed FPS: %.1f", _app->getMeasuredRenderFPS());
-        ImGui::Text("Frame CPU: %.3f ms", _app->getFrameCPUTimeMs());
-        ImGui::Text("Update CPU: %.3f ms", _app->getUpdateCPUTimeMs());
-        ImGui::Text("Render CPU: %.3f ms", _app->getRenderCPUTimeMs());
-        ImGui::Text("Present: %.3f ms", _app->getPresentCPUTimeMs());
+        ImGui::SameLine();
+        ImGui::Text("Displayed FPS: %.2f", _app->getMeasuredRenderFPS());
+        auto& renderer = _app->getRenderer();
+        bool enabled = renderer.profilerEnabled();
+        if (ImGui::Checkbox("Renderer Profiler", &enabled))
+            renderer.setProfilerEnabled(enabled);
+        if (renderer.latestFrameProfile())
+            buildTimingPlot();
+        else
+            ImGui::TextDisabled(
+                "Enable Renderer Profiler to collect frame timings.");
+        buildResourceUsage();
+        if (const auto frame = renderer.latestFrameProfile();
+            frame && ImGui::CollapsingHeader("Profiler details")) {
+            ImGui::Text("Capture %llu / frame %llu",
+                        (unsigned long long)frame->captureId,
+                        (unsigned long long)frame->frameIndex);
+            ImGui::TextDisabled("RHI counters exclude ImGui");
+            const auto& c = frame->counters;
+            ImGui::Text("Draws: %llu  Instances: %llu  Triangles: %llu",
+                        (unsigned long long)c.drawCalls,
+                        (unsigned long long)c.instances,
+                        (unsigned long long)c.triangles);
+            ImGui::Text("Upload: %llu bytes  Allocations: %llu",
+                        (unsigned long long)(c.bufferUploadBytes +
+                                             c.textureUploadBytes),
+                        (unsigned long long)c.bufferAllocations);
+            if (ImGui::TreeNode("Scope statistics")) {
+                ImGui::Combo("Statistic", &_profileStatistic,
+                             "Mean\0Median\0p95\0Max\0");
+                ImGui::SliderInt("Recent frames", &_profileWindow, 1, 240);
+                const auto summary = renderer.profileSummary(_profileWindow);
+                ImGui::Text("Capture %llu: %llu frames",
+                            (unsigned long long)summary.captureId,
+                            (unsigned long long)summary.frameCount);
+                ImGui::TextDisabled("Per-frame inclusive sums; "
+                                    "absent/incomplete scopes excluded");
+                if (ImGui::BeginTable("Scope summary", 5,
+                                      ImGuiTableFlags_Borders |
+                                          ImGuiTableFlags_RowBg)) {
+                    ImGui::TableSetupColumn("Scope");
+                    ImGui::TableSetupColumn("ms");
+                    ImGui::TableSetupColumn("Ready");
+                    ImGui::TableSetupColumn("Pending");
+                    ImGui::TableSetupColumn("Unavailable");
+                    ImGui::TableHeadersRow();
+                    for (const auto& scope : summary.scopes) {
+                        const auto value =
+                            _profileStatistic == 1   ? scope.medianMs
+                            : _profileStatistic == 2 ? scope.p95Ms
+                            : _profileStatistic == 3 ? scope.maxMs
+                                                     : scope.meanMs;
+                        ImGui::TableNextRow();
+                        ImGui::TableNextColumn();
+                        ImGui::Text("%s %s",
+                                    scope.domain ==
+                                            Backend::ProfileTimingDomain::Cpu
+                                        ? "CPU"
+                                        : "GPU",
+                                    scope.path.c_str());
+                        ImGui::TableNextColumn();
+                        if (value)
+                            ImGui::Text("%.3f", *value);
+                        else
+                            ImGui::TextUnformatted("--");
+                        ImGui::TableNextColumn();
+                        ImGui::Text("%llu",
+                                    (unsigned long long)scope.readyFrames);
+                        ImGui::TableNextColumn();
+                        ImGui::Text("%llu",
+                                    (unsigned long long)scope.pendingFrames);
+                        ImGui::TableNextColumn();
+                        ImGui::Text(
+                            "%llu",
+                            (unsigned long long)scope.unavailableFrames);
+                    }
+                    ImGui::EndTable();
+                }
+                ImGui::TreePop();
+            }
+            if (ImGui::TreeNode("CPU scopes (inclusive)")) {
+                ImGui::TextDisabled("Latest frame: total per name / calls; "
+                                    "expand for individual calls");
+                ImGui::TextDisabled(
+                    "Inclusive times overlap; do not sum different scopes");
+                std::map<std::string,
+                         std::vector<const Backend::ProfileSample*>>
+                    groups;
+                for (const auto& sample : frame->samples)
+                    if (sample.domain == Backend::ProfileTimingDomain::Cpu)
+                        groups[sample.path].push_back(&sample);
+                for (const auto& [path, samples] : groups) {
+                    double totalMs = 0;
+                    bool complete = frame->droppedSamples == 0;
+                    for (const auto* sample : samples) {
+                        if (sample->available() && sample->durationMs)
+                            totalMs += *sample->durationMs;
+                        else
+                            complete = false;
+                    }
+                    // The path, rather than changing timings/counts, owns the
+                    // ImGui ID so expansion survives subsequent frames.
+                    const bool expanded =
+                        complete ? ImGui::TreeNodeEx(
+                                       path.c_str(), ImGuiTreeNodeFlags_None,
+                                       "%s: %.3f ms (%zu calls)", path.c_str(),
+                                       totalMs, samples.size())
+                                 : ImGui::TreeNodeEx(
+                                       path.c_str(), ImGuiTreeNodeFlags_None,
+                                       "%s: total unavailable (%zu calls)",
+                                       path.c_str(), samples.size());
+                    if (!expanded)
+                        continue;
+                    if (frame->droppedSamples)
+                        ImGui::TextDisabled(
+                            "Capture overflow: some calls may be missing");
+                    for (const auto* sample : samples) {
+                        const char* parent = "root";
+                        if (sample->parentSampleId &&
+                            *sample->parentSampleId < frame->samples.size())
+                            parent = frame->samples[*sample->parentSampleId]
+                                         .path.c_str();
+                        if (sample->available() && sample->durationMs)
+                            ImGui::Text("#%llu: %.3f ms (in %s)",
+                                        (unsigned long long)sample->sampleId,
+                                        *sample->durationMs, parent);
+                        else
+                            ImGui::TextDisabled(
+                                "#%llu: %s (in %s)",
+                                (unsigned long long)sample->sampleId,
+                                sample->status ==
+                                        Backend::ProfileSampleStatus::Pending
+                                    ? "pending"
+                                    : "unavailable",
+                                parent);
+                    }
+                    ImGui::TreePop();
+                }
+                ImGui::TreePop();
+            }
+            if (!renderer.profilerCapabilities().passTimestamps) {
+                ImGui::TextDisabled("GPU pass timing unavailable");
+            } else if (ImGui::TreeNode("GPU timings (inclusive)")) {
+                const auto history = renderer.frameProfileHistory();
+                auto found = std::find_if(
+                    history.rbegin(), history.rend(), [&](const auto& f) {
+                        return f->captureId == frame->captureId &&
+                               f->finalized &&
+                               std::any_of(
+                                   f->samples.begin(), f->samples.end(),
+                                   [](const auto& sample) {
+                                       return sample.domain ==
+                                                  Backend::ProfileTimingDomain::
+                                                      Gpu &&
+                                              sample.available();
+                                   });
+                    });
+                if (found == history.rend())
+                    ImGui::TextUnformatted("Waiting for GPU results");
+                else {
+                    ImGui::Text("Measured frame %llu",
+                                (unsigned long long)(*found)->frameIndex);
+                    if ((*found)->gpuLatencyFrames)
+                        ImGui::Text("Result delay: %u frames",
+                                    *(*found)->gpuLatencyFrames);
+                    else
+                        ImGui::TextDisabled("Some GPU scopes unavailable");
+                    for (const auto& sample : (*found)->samples)
+                        if (sample.domain ==
+                                Backend::ProfileTimingDomain::Gpu &&
+                            sample.available())
+                            ImGui::Text("%s: %.3f ms", sample.path.c_str(),
+                                        *sample.durationMs);
+                }
+                if (renderer.profilerCapabilities().externalTimestamps)
+                    ImGui::TextDisabled(
+                        "Frame: GL interval before swap, includes idle gaps");
+                else
+                    ImGui::TextDisabled(
+                        "Whole-frame/UI/native timing unavailable");
+                ImGui::TextDisabled(
+                    "Excludes present/CUDA timing; do not sum scopes");
+                ImGui::TreePop();
+            }
+        }
     }
-    const float imguiFPS = ImGui::GetIO().Framerate;
-    ImGui::Text("ImGui FPS: %.1f (%.3f ms/frame)", imguiFPS,
-                imguiFPS > 0.0f ? 1000.0f / imguiFPS : 0.0f);
     ImGui::End();
 }
 

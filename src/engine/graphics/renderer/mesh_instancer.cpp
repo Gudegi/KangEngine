@@ -208,6 +208,7 @@ void MeshInstancer::_reallocate(int newMax) {
 
 void MeshInstancer::_updateWorldBounds(
     const std::vector<glm::mat4>& transforms) {
+    auto scope = _device->profileContext()->cpuScope("upload/world_bounds");
     _worldBounds.clear();
     _combinedWorldBounds = Geometry::AABB::empty();
 
@@ -240,6 +241,7 @@ bool MeshInstancer::_hasVisibleOwnerPrim() const {
 void MeshInstancer::_uploadInstanceData(
     const std::vector<glm::mat4>& transforms,
     const std::vector<glm::vec4>& colors) {
+    auto scope = _device->profileContext()->cpuScope("upload/instance_data");
     _visibleCount = static_cast<int>(transforms.size());
     if (_visibleCount == 0)
         return;
@@ -367,6 +369,8 @@ void MeshInstancer::prepareDirectCudaTransforms(int count) {
 }
 
 void MeshInstancer::_consumeExternalBuffer() {
+    auto scope =
+        _device->profileContext()->cpuScope("upload/external_buffer_consume");
     const ExternalBufferDesc& desc = _externalBufferDesc;
     const Sim::GpuArrayView& view = desc.view;
 

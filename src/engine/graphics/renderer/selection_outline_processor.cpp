@@ -178,6 +178,8 @@ void SelectionOutlineProcessor::renderOutlineCompositePass(
         return;
 
     ensurePassBindings(sceneColor, selectionMask);
+    auto scope =
+        _device->profileContext()->cpuScope("render/selection_outline");
     OutlineParams params;
     params.texelSizeAndRadius =
         glm::vec4(1.0f / static_cast<float>(_width),
@@ -186,7 +188,8 @@ void SelectionOutlineProcessor::renderOutlineCompositePass(
     _paramsBuffer->setData(&params, sizeof(params));
 
     auto encoder = _device->createCommandEncoder();
-    auto pass = encoder->beginRenderPass(_outputTarget.get());
+    auto pass = encoder->beginRenderPass(
+        _outputTarget.get(), _device->profilePass("render/selection_outline"));
     FullscreenPass::record(*pass, _pipeline.get(),
                            static_cast<uint32_t>(_width),
                            static_cast<uint32_t>(_height),

@@ -636,12 +636,16 @@ void PostProcessor::renderBrightExtractPass(Backend::Texture* src,
         !_brightExtractOutputTarget || _bloomWidth <= 0 || _bloomHeight <= 0)
         return;
     ensureBrightExtractBindings(src);
+    auto scope =
+        _device->profileContext()->cpuScope("render/post/bloom/extract");
     BrightExtractParams params;
     params.values.x = threshold;
     _brightExtractParamsBuffer->setData(&params, sizeof(params));
 
     auto encoder = _device->createCommandEncoder();
-    auto pass = encoder->beginRenderPass(_brightExtractOutputTarget.get());
+    auto pass = encoder->beginRenderPass(
+        _brightExtractOutputTarget.get(),
+        _device->profilePass("render/post/bloom/extract"));
     FullscreenPass::record(*pass, _brightExtractPipeline.get(),
                            static_cast<uint32_t>(_bloomWidth),
                            static_cast<uint32_t>(_bloomHeight),
@@ -658,13 +662,16 @@ Backend::Texture* PostProcessor::renderBloomBlurPass(Backend::Texture* src,
     bool horizontal = true;
 
     for (int i = 0; i < iterations; ++i) {
+        auto scope =
+            _device->profileContext()->cpuScope("render/post/bloom/blur");
         const size_t targetIndex = horizontal ? 1 : 0;
         BlurParams params;
         params.values.x = horizontal ? 1.0f : 0.0f;
         _blurParamsBuffer->setData(&params, sizeof(params));
         auto encoder = _device->createCommandEncoder();
-        auto pass =
-            encoder->beginRenderPass(_blurOutputTargets[targetIndex].get());
+        auto pass = encoder->beginRenderPass(
+            _blurOutputTargets[targetIndex].get(),
+            _device->profilePass("render/post/bloom/blur"));
         FullscreenPass::record(*pass, _blurPipeline.get(),
                                static_cast<uint32_t>(_bloomWidth),
                                static_cast<uint32_t>(_bloomHeight),
@@ -687,12 +694,15 @@ void PostProcessor::renderBloomCompositePass(Backend::Texture* scene,
         !_bloomCompositeOutputTarget)
         return;
     ensureBloomCompositeBindings(scene, bloom);
+    auto scope =
+        _device->profileContext()->cpuScope("render/post/bloom/composite");
     BloomCompositeParams params;
     params.values.x = intensity;
     _bloomCompositeParamsBuffer->setData(&params, sizeof(params));
     auto encoder = _device->createCommandEncoder();
-    auto pass =
-        encoder->beginRenderPass(_bloomCompositeOutputTarget.get());
+    auto pass = encoder->beginRenderPass(
+        _bloomCompositeOutputTarget.get(),
+        _device->profilePass("render/post/bloom/composite"));
     FullscreenPass::record(*pass, _bloomCompositePipeline.get(),
                            static_cast<uint32_t>(_width),
                            static_cast<uint32_t>(_height),
@@ -708,6 +718,7 @@ void PostProcessor::renderToneMapPass(Backend::Texture* src, float gamma,
     if (!src || !_toneMapOutputTarget || _width <= 0 || _height <= 0)
         return;
     ensureToneMapBindings(src);
+    auto scope = _device->profileContext()->cpuScope("render/post/tone_map");
     ToneMapParams params;
     params.values =
         glm::vec4(gamma < 0.01f ? 1.0f : gamma,
@@ -715,7 +726,9 @@ void PostProcessor::renderToneMapPass(Backend::Texture* src, float gamma,
     _toneMapParamsBuffer->setData(&params, sizeof(params));
 
     auto encoder = _device->createCommandEncoder();
-    auto pass = encoder->beginRenderPass(_toneMapOutputTarget.get());
+    auto pass =
+        encoder->beginRenderPass(_toneMapOutputTarget.get(),
+                                 _device->profilePass("render/post/tone_map"));
     FullscreenPass::record(*pass, _toneMapPipeline.get(),
                            static_cast<uint32_t>(_width),
                            static_cast<uint32_t>(_height),

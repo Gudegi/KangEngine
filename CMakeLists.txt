@@ -167,6 +167,7 @@ find_package(glm CONFIG REQUIRED)
 find_package(Stb REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 find_package(imguizmo CONFIG REQUIRED)
+find_package(implot CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(tinyobjloader CONFIG REQUIRED)
 find_package(Eigen3 CONFIG REQUIRED)
@@ -220,6 +221,7 @@ target_link_libraries(engine_core PUBLIC
     glm::glm
     imgui::imgui
     imguizmo::imguizmo
+    implot::implot
     fmt::fmt
     tinyobjloader::tinyobjloader
     Eigen3::Eigen
@@ -228,6 +230,18 @@ target_link_libraries(engine_core PUBLIC
     mikktspace::mikktspace
 )
 target_link_libraries(engine_core PUBLIC pre_compiled_ext)
+find_package(Threads REQUIRED)
+target_link_libraries(engine_core PRIVATE Threads::Threads ${CMAKE_DL_LIBS})
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    # NVML is optional and loaded at runtime: CPU/RAM monitoring and rendering
+    # remain available without the toolkit header or NVIDIA driver library.
+    find_path(KANGENGINE_NVML_INCLUDE_DIR nvml.h
+        HINTS ${CUDAToolkit_INCLUDE_DIRS} /usr/local/cuda/include /opt/cuda/include)
+    if(KANGENGINE_NVML_INCLUDE_DIR)
+        target_include_directories(engine_core SYSTEM PRIVATE ${KANGENGINE_NVML_INCLUDE_DIR})
+        target_compile_definitions(engine_core PRIVATE KANGENGINE_HAS_NVML_HEADER=1)
+    endif()
+endif()
 if(KANGENGINE_HAS_CUDA)
     target_sources(engine_core PRIVATE
         ${SRC_DIR}/sim/gpu_transform_kernels.cu

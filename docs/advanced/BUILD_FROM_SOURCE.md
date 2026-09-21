@@ -14,6 +14,9 @@ This guide contains the detailed build setup for KangEngine. The root README kee
 ## vcpkg
 
 KangEngine uses vcpkg manifest mode for most third-party C++ dependencies.
+ImGui, ImGuizmo, and ImPlot are installed through this manifest and linked as
+CMake package targets. ImPlot powers the Performance panel's frame timing graph;
+its context is created and destroyed alongside ImGui in `PanelManager`.
 
 1. Clone and bootstrap vcpkg.
 
@@ -534,6 +537,57 @@ CUDA wheel still requires a compatible NVIDIA driver, CUDA runtime policy, and
 GPU PhysX environment for full simulation validation. Build and test each
 wheel on the same operating-system and architecture family on which it will be
 distributed.
+
+## Optional Hardware / Resource Usage Monitor
+
+Open **Performance > Resources** to show resource measurements, and expand
+**Hardware details** for render-device information. Linux CPU/RAM monitoring
+requires access to `/proc`.
+Measurements run on a worker at most once per second while the panel requests
+them; the frame profiler does not need to be enabled.
+
+NVIDIA GPU utilization and VRAM monitoring is optional. CMake looks for `nvml.h`
+in the CUDA toolkit include directories and common installation paths. For a
+custom installation, configure the existing build with:
+
+```bash
+cmake -S . -B build/release -DKANGENGINE_NVML_INCLUDE_DIR=/path/to/nvml/include
+cmake --build build/release --target KangEngine _kangengine -j 4
+```
+
+This feature does not require enabling CUDA interop. At runtime the monitor
+loads `libnvidia-ml.so.1` from the NVIDIA driver. Missing headers, driver library,
+permissions, or unsupported counters produce `N/A`; they do not prevent CPU/RAM
+monitoring or rendering. Device-wide GPU measurements include other processes
+and are listed by device name/index separately from the active render device.
+The CPU table compares **System** and **This process**. RAM and VRAM show both
+scopes as used / total capacity bars with the peak observed while sampling.
+GPU utilization is shown once per device as total activity.
+Percentages and RAM/VRAM used / total capacity use two decimal places. Process
+CPU is normalized to total host CPU capacity for comparison; the per-core value
+is available in the CPU tooltip. Measurement notes and failure reasons are also
+shown in the relevant tooltips. UUIDs are retained internally for device identity
+and are not displayed.
+VRAM prefers NVML v2 allocated memory, excluding driver reservations, to match
+`nvidia-smi`. Legacy-only drivers use the v1 counter and its tooltip notes that
+reservations are included. Values are displayed in GiB (MiB divided by 1024).
+
+Process GPU utilization is not queried. Process VRAM is queried from graphics and
+compute process lists without double-counting the same PID. Child processes
+are excluded.
+
+Raw process CPU uses 100% per logical CPU; RAM usage is host `MemTotal - MemAvailable`,
+not a container memory limit. See the [NVML device query reference](https://docs.nvidia.com/deploy/nvml-api/api/group__nvmlDeviceQueries.html)
+and [Linux memory counter definitions](https://www.man7.org/linux/man-pages/man5/proc_meminfo.5.html)
+for the underlying counters.
+
+With `KANGENGINE_BUILD_SMOKES=ON`, validate without a display using:
+
+```bash
+cmake --build build/release --target resource_monitor_smoke -j 4
+./build/release/resource_monitor_smoke
+./build/release/resource_monitor_smoke --require-gpu  # Requires accessible NVIDIA hardware
+```
 
 ## Build the Documentation
 

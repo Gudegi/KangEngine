@@ -610,6 +610,44 @@ void App::renderFrameOnce() {
     if (window == nullptr || glfwWindowShouldClose(window))
         return;
 
+    auto profileFrame = getRenderer().profiler().frame(
+        _frameIndex, _graphicsDevice->getBackendType());
+    auto& profile = *_graphicsDevice->profileContext();
+    auto gpuFrame = _graphicsDevice->profileExternalScope("frame");
+    if (profile.active()) {
+        if (_graphicsDevice->profilerCapabilities().externalTimestamps) {
+            profile.setMetadata("gpu_timing_exclusions",
+                                "present,cuda,worker_recording");
+            profile.setMetadata("gpu_frame_semantics",
+                                "gl_interval_before_swap_includes_idle_gaps");
+        }
+        profile.setMetadata("width", std::to_string(_width));
+        profile.setMetadata("height", std::to_string(_height));
+        profile.setMetadata("vsync", getVSync() ? "true" : "false");
+        profile.setMetadata("ui", _hideUI ? "false" : "true");
+        profile.setMetadata(
+            "window_visible",
+            glfwGetWindowAttrib(window, GLFW_VISIBLE) ? "true" : "false");
+        profile.setMetadata("render_hz", std::to_string(_renderHz));
+        profile.setMetadata("pacing_coverage", "outside_frame_excluded");
+        profile.setMetadata("tone_map_mode",
+                            std::to_string(static_cast<int>(
+                                getRenderer().settings().toneMapMode)));
+        profile.setMetadata(
+            "bloom", getRenderer().settings().bloom.enabled ? "true" : "false");
+        profile.setMetadata(
+            "scene_msaa", std::to_string(_sceneRenderTarget->getSampleCount()));
+        profile.setMetadata("shadow_distance",
+                            std::to_string(_rasterizer->getShadowDistance()));
+        profile.setMetadata("shadow_cascades",
+                            std::to_string(_rasterizer->getCascadeCount()));
+        profile.setMetadata("culling", _rasterizer->isFrustumCullingEnabled()
+                                           ? "true"
+                                           : "false");
+        profile.setMetadata("ui_layout", std::to_string(static_cast<int>(
+                                             _panelManager.getLayoutMode())));
+    }
+
     const double currentFrame = glfwGetTime();
     const double frameDelta =
         _renderVariable->lastFrameTime > 0.0
@@ -617,15 +655,26 @@ void App::renderFrameOnce() {
             : 0.0;
     _renderVariable->deltaTime = static_cast<float>(frameDelta);
     _renderVariable->lastFrameTime = currentFrame;
+    if (profile.active() && frameDelta > 0.0)
+        profile.setMetadata("frame_interval_ms",
+                            std::to_string(frameDelta * 1000.0));
 
     processInput();
     processSimulationHotkeys();
     const double updateStart = glfwGetTime();
-    this->preUpdate();
+    {
+        auto scope = profile.cpuScope("simulation/pre_update");
+        this->preUpdate();
+    }
     const int fixedUpdateCount = _fixedStepClock.advance(frameDelta);
     const double fixedDt = _fixedStepClock.getStepInterval();
-    for (int i = 0; i < fixedUpdateCount; ++i)
+    for (int i = 0; i < fixedUpdateCount; ++i) {
+        auto scope = profile.cpuScope("simulation/fixed_update");
         this->fixedUpdate(fixedDt);
+    }
+    if (profile.active())
+        profile.setMetadata("fixed_update_count",
+                            std::to_string(fixedUpdateCount));
 
     const bool useSceneCameraForMainView =
         (_hideUI || _panelManager.getLayoutMode() != UILayoutMode::Editor) &&
@@ -649,13 +698,18 @@ void App::renderFrameOnce() {
         _panelManager.preRender();
     }
 
-    this->preRender();
+    {
+        auto scope = profile.cpuScope("simulation/pre_render");
+        this->preRender();
+    }
     renderSelectedLightOverlay();
     renderSelectedCameraOverlay();
     const double updateEnd = glfwGetTime();
     if (_rasterizer) {
+        auto sceneSync = profile.cpuScope("scene_sync");
         getRenderer().syncSceneLights(getScene());
         _rasterizer->updateFrameData(_viewMatrix, _projectionMatrix);
+        sceneSync.end();
         if (_mousePickRequested) {
             const RayPickResult pick = selectablePick(pickMouse());
             _mousePickRequested = false;
@@ -690,17 +744,24 @@ void App::renderFrameOnce() {
     rebuildSceneClearTarget(color);
     {
         auto encoder = _graphicsDevice->createCommandEncoder();
-        auto pass = encoder->beginRenderPass(_sceneClearTarget.get());
+        auto pass = encoder->beginRenderPass(
+            _sceneClearTarget.get(),
+            _graphicsDevice->profilePass("render/clear"));
         pass->end();
         auto commands = encoder->finish();
         _graphicsDevice->submit(*commands);
     }
 
-    coreRender(); // records ImGui widgets, no GL ImGui draw yet
-    this->render();
+    {
+        auto scope = profile.cpuScope("render/scene");
+        coreRender(); // records ImGui widgets, no GL ImGui draw yet
+        this->render();
+    }
     {
         auto encoder = _graphicsDevice->createCommandEncoder();
-        auto pass = encoder->beginRenderPass(_sceneRenderTarget.get());
+        auto pass = encoder->beginRenderPass(
+            _sceneRenderTarget.get(),
+            _graphicsDevice->profilePass("render/final_resolve"));
         pass->end();
         auto commands = encoder->finish();
         _graphicsDevice->submit(*commands);
@@ -727,19 +788,30 @@ void App::renderFrameOnce() {
         !_hideUI && _panelManager.getLayoutMode() == UILayoutMode::Editor;
 
     if (_postProcessor) {
+        auto postScope = profile.cpuScope("render/post");
         _postProcessor->process(finalSource, settings.gamma,
                                 settings.toneMapMode, settings.toneMapExposure,
                                 settings.bloom);
         _lastPresentedFramebuffer = _postProcessor->getOutputFramebuffer();
-        if (!editorViewportMode)
+        if (!editorViewportMode) {
+            auto cpuBlit = profile.cpuScope("render/native_blit");
+            auto gpuBlit =
+                _graphicsDevice->profileExternalScope("render/native_blit");
             _postProcessor->blitToScreen(_width, _height);
+        }
     } else {
         _lastPresentedFramebuffer = _framebuffer.get();
-        if (!editorViewportMode)
+        if (!editorViewportMode) {
+            auto cpuBlit = profile.cpuScope("render/native_blit");
+            auto gpuBlit =
+                _graphicsDevice->profileExternalScope("render/native_blit");
             _framebuffer->blitToScreen(_width, _height);
+        }
     }
 
     if (editorViewportMode) {
+        auto gpuClear =
+            _graphicsDevice->profileExternalScope("render/ui_clear");
         _graphicsDevice->setViewport(0, 0, _width, _height);
         _graphicsDevice->clear(0.1f, 0.1f, 0.13f, 1.0f);
     }
@@ -751,22 +823,35 @@ void App::renderFrameOnce() {
 
     // default framebuffer
     if (!_hideUI) {
+        auto uiScope = profile.cpuScope("render/ui");
         _panelManager.render();
         renderShortcutHelp();
         renderRecordingIndicator();
         if (_panelManager.getLayoutMode() != UILayoutMode::Editor)
             renderSelectionGizmo();
+        auto gpuUI = _graphicsDevice->profileExternalScope("render/ui");
         _panelManager.postRender();
     }
-    this->postRender();
+    {
+        auto scope = profile.cpuScope("render/post_callback");
+        this->postRender();
+    }
     if (_videoRecordingToggleRequested || _frameCaptureActive) {
         this->onFrameRenderedInternal();
         _videoRecordingToggleRequested = false;
     }
     const double renderEnd = glfwGetTime();
+    // End the ordered GL interval before swap/VSync and event polling.
+    gpuFrame.reset();
 
-    glfwSwapBuffers(window);
-    glfwPollEvents();
+    {
+        auto scope = profile.cpuScope("present");
+        glfwSwapBuffers(window);
+    }
+    {
+        auto scope = profile.cpuScope("event_poll");
+        glfwPollEvents();
+    }
     const double frameEnd = glfwGetTime();
     ++_frameIndex;
 

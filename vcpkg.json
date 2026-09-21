@@ -16,6 +16,7 @@
       ]
     },
     "imguizmo",
+    "implot",
     "openfbx",
     "pybind11",
     "stb",

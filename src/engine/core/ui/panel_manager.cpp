@@ -4,6 +4,7 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <imgui_internal.h>
+#include <implot.h>
 
 namespace KE {
 
@@ -12,12 +13,14 @@ PanelManager::PanelManager() {}
 PanelManager::~PanelManager() {
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
+    ImPlot::DestroyContext();
     ImGui::DestroyContext();
 }
 
 void PanelManager::init(GLFWwindow* window) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImPlot::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     (void)io;
     io.ConfigFlags |=
@@ -206,8 +209,8 @@ void PanelManager::initLayout(ImGuiID dockspace_id) {
         dock_id_scene, ImGuiDir_Down, 0.58f, nullptr, &dock_id_scene);
 
     ImGui::DockBuilderDockWindow(PANEL_SCENE, dock_id_scene);
+    ImGui::DockBuilderDockWindow(PANEL_PERFORMANCE, dock_id_scene);
     ImGui::DockBuilderDockWindow(PANEL_RENDERER_DEBUG, dock_id_debug);
-    ImGui::DockBuilderDockWindow(PANEL_PERFORMANCE, dock_id_debug);
     ImGui::DockBuilderDockWindow(PANEL_INSPECTOR, dock_id_debug);
     if (_layoutMode == UILayoutMode::Editor) {
         if (isPanelOpen(PANEL_CAMERA_VIEW)) {

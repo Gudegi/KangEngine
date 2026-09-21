@@ -677,7 +677,8 @@ void Rasterizer::recordRenderHooks(RenderHookPhase phase,
         return;
 
     auto encoder = _graphicsDevice->createCommandEncoder();
-    auto pass = encoder->beginRenderPass(sceneDrawTarget);
+    auto pass = encoder->beginRenderPass(
+        sceneDrawTarget, _graphicsDevice->profilePass("render/hooks"));
     RenderHookContext context{*pass, *sceneDrawTarget,
                               _forwardPass.frameBindGroup(), _viewportWidth,
                               _viewportHeight};
@@ -714,6 +715,8 @@ void Rasterizer::bindShadowTextures(Backend::Texture* shadowTexture) {
 // -------------------------------------------------------------------------
 void Rasterizer::renderOpaquePass(Backend::Texture* shadowTexture,
                                   Backend::RenderTarget* sceneDrawTarget) {
+    auto scope =
+        _graphicsDevice->profileContext()->cpuScope("render/scene/opaque");
     if (!sceneDrawTarget || !_forwardPass.frameBindGroup() ||
         !_shadowPass.samplingBindGroup())
         return;
@@ -741,7 +744,8 @@ void Rasterizer::renderOpaquePass(Backend::Texture* shadowTexture,
     auto prepared = _forwardPass.prepare(drawables, false);
 
     auto encoder = _graphicsDevice->createCommandEncoder();
-    auto pass = encoder->beginRenderPass(sceneDrawTarget);
+    auto pass = encoder->beginRenderPass(
+        sceneDrawTarget, _graphicsDevice->profilePass("render/scene/opaque"));
     pass->setViewport(0.0f, 0.0f, static_cast<float>(_viewportWidth),
                       static_cast<float>(_viewportHeight));
     pass->setPolygonMode(_wireframeEnabled ? Backend::PolygonMode::Line
@@ -762,7 +766,8 @@ void Rasterizer::renderSkyboxPass(const glm::mat4& view, const glm::mat4& proj,
         return;
     }
     auto encoder = _graphicsDevice->createCommandEncoder();
-    auto pass = encoder->beginRenderPass(sceneDrawTarget);
+    auto pass = encoder->beginRenderPass(
+        sceneDrawTarget, _graphicsDevice->profilePass("render/skybox"));
     pass->setViewport(0.0f, 0.0f, static_cast<float>(_viewportWidth),
                       static_cast<float>(_viewportHeight));
     _skyboxPass.record(*pass, _forwardPass.frameBindGroup());
@@ -776,6 +781,8 @@ void Rasterizer::renderSkyboxPass(const glm::mat4& view, const glm::mat4& proj,
 // -------------------------------------------------------------------------
 void Rasterizer::renderTransparentPass(Backend::Texture* shadowTexture,
                                        Backend::RenderTarget* sceneDrawTarget) {
+    auto scope =
+        _graphicsDevice->profileContext()->cpuScope("render/scene/transparent");
     if (!sceneDrawTarget || !_forwardPass.frameBindGroup() ||
         !_shadowPass.samplingBindGroup())
         return;
@@ -790,7 +797,9 @@ void Rasterizer::renderTransparentPass(Backend::Texture* shadowTexture,
     auto prepared = _forwardPass.prepare(drawables, true);
 
     auto encoder = _graphicsDevice->createCommandEncoder();
-    auto pass = encoder->beginRenderPass(sceneDrawTarget);
+    auto pass = encoder->beginRenderPass(
+        sceneDrawTarget,
+        _graphicsDevice->profilePass("render/scene/transparent"));
     pass->setViewport(0.0f, 0.0f, static_cast<float>(_viewportWidth),
                       static_cast<float>(_viewportHeight));
     pass->setPolygonMode(_wireframeEnabled ? Backend::PolygonMode::Line
@@ -806,13 +815,15 @@ void Rasterizer::renderTransparentPass(Backend::Texture* shadowTexture,
 // -------------------------------------------------------------------------
 void Rasterizer::renderDebugOverlayPass(
     Backend::RenderTarget* sceneDrawTarget) {
+    auto scope = _graphicsDevice->profileContext()->cpuScope("render/debug");
     updateDebugRenderAABB();
     _textRenderer.prepare(_viewportWidth, _viewportHeight);
     if (!sceneDrawTarget ||
         (!_debugRenderer.hasDraws() && !_textRenderer.hasDraws()))
         return;
     auto encoder = _graphicsDevice->createCommandEncoder();
-    auto pass = encoder->beginRenderPass(sceneDrawTarget);
+    auto pass = encoder->beginRenderPass(
+        sceneDrawTarget, _graphicsDevice->profilePass("render/debug"));
     pass->setViewport(0.0f, 0.0f, static_cast<float>(_viewportWidth),
                       static_cast<float>(_viewportHeight));
     _debugRenderer.record(*pass);
@@ -890,8 +901,12 @@ void Rasterizer::renderSelectionMaskPass(const RayPickResult& selection,
         return;
     auto prepared =
         _selectionMaskPass.prepare(inst, selection.instanceIndex, target);
+    auto scope =
+        _graphicsDevice->profileContext()->cpuScope("render/selection_mask");
     auto encoder = _graphicsDevice->createCommandEncoder();
-    auto pass = encoder->beginRenderPass(_selectionMaskPass.target());
+    auto pass = encoder->beginRenderPass(
+        _selectionMaskPass.target(),
+        _graphicsDevice->profilePass("render/selection_mask"));
     pass->setViewport(0.0f, 0.0f, static_cast<float>(width),
                       static_cast<float>(height));
     _selectionMaskPass.record(*pass, prepared);
@@ -1114,6 +1129,7 @@ glm::mat4 Rasterizer::computeLightSpaceMatrix(Camera& camera,
 
 void Rasterizer::renderShadowMap(Camera& camera, UpAxis upAxis,
                                  int viewportWidth, int viewportHeight) {
+    auto scope = _graphicsDevice->profileContext()->cpuScope("render/shadow");
     if (!_shadowPass.singleDepthTarget() || _shadowDistance <= 0.0f) {
         _shadowMap = nullptr;
         updateShadowUBO(0.0f);
@@ -1176,7 +1192,8 @@ void Rasterizer::drawShadowCasters(Backend::RenderTarget* target, int mapSize) {
     auto prepared = _shadowPass.prepare(casters);
 
     auto encoder = _graphicsDevice->createCommandEncoder();
-    auto pass = encoder->beginRenderPass(target);
+    auto pass = encoder->beginRenderPass(
+        target, _graphicsDevice->profilePass("render/shadow"));
     pass->setViewport(0.0f, 0.0f, static_cast<float>(mapSize),
                       static_cast<float>(mapSize));
     _shadowPass.record(*pass, prepared);
