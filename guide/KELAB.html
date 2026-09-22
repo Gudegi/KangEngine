@@ -358,17 +358,14 @@ Gymnasium tasks and training workflows for RL Games, RSL-RL, and MimicKit.</p>
 training documentation; this page covers the shortest KangEngine setup path.</p>
 <section id="install">
 <h2>Install<a class="headerlink" href="#install" title="Link to this heading">¶</a></h2>
-<p>Until KangEngine wheels are available, build KangEngine and install both
-projects into the KELab environment:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># KangEngine</span>
-<span class="nb">cd</span><span class="w"> </span>/path/to/KangEngine
-make<span class="w"> </span>build_python_cuda
-
-<span class="c1"># KELab</span>
+<p>From a KELab checkout, install KangEngine and the training dependencies into
+the same environment. See <a class="reference internal" href="getting_started/INSTALLATION.html"><span class="std std-doc">KangEngine requirements</span></a>
+for supported Linux/NVIDIA systems.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># KELab</span>
 <span class="nb">cd</span><span class="w"> </span>/path/to/KELab
 uv<span class="w"> </span>venv<span class="w"> </span>--python<span class="w"> </span>python3.12
 <span class="nb">source</span><span class="w"> </span>.venv/bin/activate
-uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>/path/to/KangEngine/python
+uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>kangengine
 uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[rl-games]&quot;</span>
 </pre></div>
 </div>

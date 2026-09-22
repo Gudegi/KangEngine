@@ -180,7 +180,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
       </label>
     </div>
@@ -330,7 +330,7 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
           </label>
         </div>
@@ -341,14 +341,11 @@
 <a class="reference external" href="https://github.com/xbpeng/MimicKit">MimicKit</a> through KangEngine’s Python
 package. Use the <code class="docutils literal notranslate"><span class="pre">backend_kangengine</span></code> branch of MimicKit and keep MimicKit in a
 separate Python environment.</p>
-<blockquote>
-<div><p><strong>Note:</strong> GPU contact sensors provide contact count, contact state, and
-accumulated normal impulse and force. Tangential friction impulse and a full
-six-axis contact wrench are not currently exposed as sensor outputs.</p>
-</div></blockquote>
+<p>Check <a class="reference internal" href="getting_started/INSTALLATION.html"><span class="std std-doc">Installation</span></a> for the wheel’s platform
+and NVIDIA driver requirements.</p>
 <p><img alt="MimicKit running with KangEngine" src="../_images/Mimickit_kangengine_1.png" /></p>
-<details>
-<summary>MimicKit setup and run commands</summary>
+<section id="mimickit-setup-and-run-commands">
+<h2>MimicKit setup and run commands<a class="headerlink" href="#mimickit-setup-and-run-commands" title="Link to this heading">¶</a></h2>
 <ol class="arabic">
 <li><p>Clone the KangEngine-enabled MimicKit fork branch.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>-b<span class="w"> </span>backend_kangengine<span class="w"> </span>https://github.com/Gudegi/MimicKit.git
@@ -362,14 +359,8 @@ uv<span class="w"> </span>venv<span class="w"> </span>.venv<span class="w"> </sp
 </pre></div>
 </div>
 </li>
-<li><p>Build KangEngine’s Python extension from the KangEngine repo.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>/path/to/KangEngine
-make<span class="w"> </span>build_python
-</pre></div>
-</div>
-</li>
-<li><p>Install KangEngine’s Python package into the MimicKit environment.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>./python
+<li><p>Install KangEngine into the active MimicKit environment.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>kangengine
 </pre></div>
 </div>
 </li>
@@ -429,7 +420,7 @@ uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </s
 <p>The <code class="docutils literal notranslate"><span class="pre">backend_kangengine</span></code> branch already includes
 <code class="docutils literal notranslate"><span class="pre">data/engines/kangengine_engine.yaml</span></code>, so you usually do not need to create it
 manually.</p>
-</details>
+</section>
 </section>
 
         </article>
@@ -475,8 +466,27 @@ manually.</p>
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">RL With MimicKit</a><ul>
+<li><a class="reference internal" href="#mimickit-setup-and-run-commands">MimicKit setup and run commands</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>

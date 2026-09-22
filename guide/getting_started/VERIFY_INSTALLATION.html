@@ -337,29 +337,31 @@
         <article role="main" id="furo-main-content">
           <section id="verify-installation">
 <h1>Verify Installation<a class="headerlink" href="#verify-installation" title="Link to this heading">¶</a></h1>
-<p>First verify that Python can import the package and report its optional USD
-capability.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python/.venv/bin/python<span class="w"> </span>-c<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span><span class="s2">&quot;import kangengine as ke; print(ke.__file__); print(&#39;USD:&#39;, ke.scene.has_usd_support())&quot;</span>
+<p>Run in the environment where you installed KangEngine:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import kangengine as ke; print(ke.__file__); print(&#39;USD:&#39;, ke.scene.has_usd_support())&quot;</span>
+python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>check
 </pre></div>
 </div>
-<p>A normal wheel or <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">build_python</span></code> build should print <code class="docutils literal notranslate"><span class="pre">USD:</span> <span class="pre">False</span></code>.</p>
-<section id="verify-the-public-api">
-<h2>Verify the public API<a class="headerlink" href="#verify-the-public-api" title="Link to this heading">¶</a></h2>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span>validate_python_api
-</pre></div>
-</div>
-<p>This builds the extension and checks the canonical package surface and type
-information.</p>
-</section>
+<p>The PyPI wheel should report <code class="docutils literal notranslate"><span class="pre">USD:</span> <span class="pre">True</span></code>. The printed path should point to
+your installed package. Source builds can disable USD.</p>
 <section id="open-a-window">
 <h2>Open a window<a class="headerlink" href="#open-a-window" title="Link to this heading">¶</a></h2>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>./python/examples/render_prim_scene.py
-</pre></div>
-</div>
-<p>Expected result: a checkerboard ground, an orange box, and a blue sphere.</p>
-<p>If the import succeeds but the window does not open, verify the platform OpenGL
-requirements before debugging Python packaging.</p>
+<p>Save and run the complete <a class="reference internal" href="HELLO_APP.html"><span class="std std-doc">Hello App</span></a> example. Expect an orange
+cube on a ground plane.</p>
+</section>
+<section id="common-problems">
+<h2>Common problems<a class="headerlink" href="#common-problems" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><strong>No matching distribution:</strong> check Python version, OS version, and CPU
+architecture against <a class="reference internal" href="INSTALLATION.html"><span class="std std-doc">Installation</span></a>.</p></li>
+<li><p><strong>Import fails on Linux:</strong> check that the NVIDIA driver meets the documented
+requirement and the PhysX GPU and CUDA runtime packages installed successfully.</p></li>
+<li><p><strong>Import works but no window opens:</strong> check your graphical session and OpenGL
+support. A headless server needs a separate rendering setup.</p></li>
+</ul>
+<p>Source contributors can use <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">validate_python_api</span></code> from a checkout.
+That command rebuilds the development extension; it is not needed to verify
+a pip installation.</p>
 <p>Next: <a class="reference internal" href="HELLO_APP.html"><span class="std std-doc">Hello App</span></a>.</p>
 </section>
 </section>
@@ -420,8 +422,8 @@ requirements before debugging Python packaging.</p>
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">Verify Installation</a><ul>
-<li><a class="reference internal" href="#verify-the-public-api">Verify the public API</a></li>
 <li><a class="reference internal" href="#open-a-window">Open a window</a></li>
+<li><a class="reference internal" href="#common-problems">Common problems</a></li>
 </ul>
 </li>
 </ul>

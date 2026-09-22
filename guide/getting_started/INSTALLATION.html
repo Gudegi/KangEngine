@@ -337,64 +337,54 @@
         <article role="main" id="furo-main-content">
           <section id="installation">
 <h1>Installation<a class="headerlink" href="#installation" title="Link to this heading">¶</a></h1>
-<p>KangEngine currently ships as platform-specific wheels built from a source
-checkout. Use Python 3.12 and build the wheel on the same OS and architecture
-family where it will run.</p>
-<section id="requirements">
-<h2>Requirements<a class="headerlink" href="#requirements" title="Link to this heading">¶</a></h2>
-<ul class="simple">
-<li><p>macOS on Apple Silicon, or Ubuntu 24.04</p></li>
-<li><p>Python 3.12</p></li>
-<li><p>CMake, a C++17 compiler, and vcpkg</p></li>
-<li><p>PhysX under <code class="docutils literal notranslate"><span class="pre">$HOME/Physics/PhysX</span></code></p></li>
-</ul>
-<p>Linux/NVIDIA GPU simulation additionally requires the supported PhysX 5.8 GPU
-build and CUDA toolkit. Start with the CPU build unless GPU simulation is the
-reason you are installing KangEngine.</p>
-</section>
-<section id="create-the-development-environment">
-<h2>Create the development environment<a class="headerlink" href="#create-the-development-environment" title="Link to this heading">¶</a></h2>
-<p>From the repository root:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>venv<span class="w"> </span>python/.venv<span class="w"> </span>--python<span class="w"> </span><span class="m">3</span>.12
-<span class="nb">source</span><span class="w"> </span>python/.venv/bin/activate
-uv<span class="w"> </span>sync<span class="w"> </span>--project<span class="w"> </span>python
-</pre></div>
-</div>
-</section>
-<section id="build-the-python-extension">
-<h2>Build the Python extension<a class="headerlink" href="#build-the-python-extension" title="Link to this heading">¶</a></h2>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span>build_python
-</pre></div>
-</div>
-<p>The normal Python build intentionally disables OpenUSD. To build an optional
-USD-enabled development extension instead:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span>build_usd_python
-</pre></div>
-</div>
-</section>
-<section id="install-for-development">
-<h2>Install for development<a class="headerlink" href="#install-for-development" title="Link to this heading">¶</a></h2>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>./python
-</pre></div>
-</div>
-</section>
-<section id="install-a-built-wheel">
-<h2>Install a Built Wheel<a class="headerlink" href="#install-a-built-wheel" title="Link to this heading">¶</a></h2>
-<p>If you received a wheel built for your operating system, architecture, and
-Python 3.12 ABI, install it into an isolated environment:</p>
+<p>Install KangEngine from PyPI in a Python 3.12 environment:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3.12<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
 <span class="nb">source</span><span class="w"> </span>.venv/bin/activate
-python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>/path/to/kangengine-0.1.0-cp312-cp312-platform.whl
-python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import kangengine as ke; print(ke.__file__)&quot;</span>
+python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>kangengine
 </pre></div>
 </div>
-<p>KangEngine wheels are platform-specific. The Linux CUDA wheel additionally
-requires a compatible NVIDIA driver and the GPU runtime described in
-<a class="reference internal" href="../advanced/PHYSX_GPU.html"><span class="std std-doc">PhysX GPU Simulation</span></a>. Distributed wheels do not
-include OpenUSD support.</p>
-<p>Continue with <a class="reference internal" href="VERIFY_INSTALLATION.html"><span class="std std-doc">Verify Installation</span></a>.</p>
-<p>For platform-specific PhysX setup, source builds, CUDA 13 notes, and wheel
-production, see <a class="reference internal" href="../advanced/BUILD_FROM_SOURCE.html"><span class="std std-doc">Build from Source</span></a>.</p>
+<p>If you use uv, run <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">pip</span> <span class="pre">install</span> <span class="pre">kangengine</span></code> in your active environment.</p>
+<section id="requirements">
+<h2>Requirements<a class="headerlink" href="#requirements" title="Link to this heading">¶</a></h2>
+<p>The current release provides these wheels:</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Platform</p></th>
+<th class="head"><p>Requirements</p></th>
+<th class="head"><p>Simulation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>macOS</p></td>
+<td><p>macOS 26+, Apple Silicon, CPython 3.12</p></td>
+<td><p>PhysX CPU</p></td>
+</tr>
+<tr class="row-odd"><td><p>Linux</p></td>
+<td><p>x86-64, glibc 2.39+ (Ubuntu 24.04 tested), CPython 3.12</p></td>
+<td><p>PhysX CPU/GPU</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Linux also requires an NVIDIA driver version 580+ and a compatible GPU
+(tested on RTX 4090). pip installs the CUDA runtime and PhysX GPU packages
+automatically; a separate CUDA Toolkit is not required for wheel installation.</p>
+<p>Both wheels include OpenUSD. Opening a viewer requires a graphical session
+with OpenGL 4.1 support.</p>
+</section>
+<section id="verify-installation">
+<h2>Verify installation<a class="headerlink" href="#verify-installation" title="Link to this heading">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import kangengine as ke; print(ke.__file__); print(&#39;USD:&#39;, ke.scene.has_usd_support())&quot;</span>
+</pre></div>
+</div>
+<p>Expect <code class="docutils literal notranslate"><span class="pre">USD:</span> <span class="pre">True</span></code>. Continue with <a class="reference internal" href="HELLO_APP.html"><span class="std std-doc">Hello App</span></a> to create a visible
+scene, or <a class="reference internal" href="VERIFY_INSTALLATION.html"><span class="std std-doc">Verify Installation</span></a> if installation fails.</p>
+</section>
+<section id="development-installation">
+<h2>Development installation<a class="headerlink" href="#development-installation" title="Link to this heading">¶</a></h2>
+<p>For editable installs, C++ builds, or platforms without a matching wheel, use
+<a class="reference internal" href="../advanced/BUILD_FROM_SOURCE.html"><span class="std std-doc">Build from Source</span></a>.</p>
 </section>
 </section>
 
@@ -455,10 +445,8 @@ production, see <a class="reference internal" href="../advanced/BUILD_FROM_SOURC
             <ul>
 <li><a class="reference internal" href="#">Installation</a><ul>
 <li><a class="reference internal" href="#requirements">Requirements</a></li>
-<li><a class="reference internal" href="#create-the-development-environment">Create the development environment</a></li>
-<li><a class="reference internal" href="#build-the-python-extension">Build the Python extension</a></li>
-<li><a class="reference internal" href="#install-for-development">Install for development</a></li>
-<li><a class="reference internal" href="#install-a-built-wheel">Install a Built Wheel</a></li>
+<li><a class="reference internal" href="#verify-installation">Verify installation</a></li>
+<li><a class="reference internal" href="#development-installation">Development installation</a></li>
 </ul>
 </li>
 </ul>

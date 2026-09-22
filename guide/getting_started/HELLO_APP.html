@@ -180,7 +180,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
       </label>
     </div>
@@ -330,27 +330,30 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
           </label>
         </div>
         <article role="main" id="furo-main-content">
           <section id="hello-app">
 <h1>Hello App<a class="headerlink" href="#hello-app" title="Link to this heading">¶</a></h1>
-<p><code class="docutils literal notranslate"><span class="pre">ke.App</span></code> owns the window, render loop, camera, scene facade, and renderer. A
-Python application subclasses it and implements lifecycle callbacks.</p>
+<p>After <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">kangengine</span></code>, save this as <code class="docutils literal notranslate"><span class="pre">hello_app.py</span></code>. It creates a cube
+and ground plane using built-in geometry and materials.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ke</span>
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">HelloApp</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">App</span><span class="p">):</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">set_camera_view</span><span class="p">([</span><span class="mf">3.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">4.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">])</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">pre_render</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">pass</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">pass</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">materials</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_standard_materials</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scene</span><span class="o">.</span><span class="n">add_ground</span><span class="p">(</span><span class="s2">&quot;/ground&quot;</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">10.0</span><span class="p">)</span>
+        <span class="n">box</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scene</span><span class="o">.</span><span class="n">add_mesh</span><span class="p">(</span>
+            <span class="s2">&quot;/box&quot;</span><span class="p">,</span>
+            <span class="n">ke</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">create_cube_data</span><span class="p">(</span><span class="mf">1.0</span><span class="p">),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">materials</span><span class="o">.</span><span class="n">common</span><span class="p">,</span>
+            <span class="n">color</span><span class="o">=</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec4</span><span class="p">(</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">box</span><span class="o">.</span><span class="n">set_local_translation</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_camera_view</span><span class="p">([</span><span class="mf">3.0</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">])</span>
 
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">HelloApp</span><span class="p">()</span>
@@ -358,26 +361,56 @@ Python application subclasses it and implements lifecycle callbacks.</p>
 <span class="n">app</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
 </pre></div>
 </div>
-<p>Save this as <code class="docutils literal notranslate"><span class="pre">hello_app.py</span></code> and run:</p>
+<p>Run in a graphical session:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>hello_app.py
 </pre></div>
 </div>
-<p>Lifecycle callback names retain their C++ virtual spelling, while normal
-Python methods use snake_case.</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">setup()</span></code>: create resources and scene objects once.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pre_update()</span></code>: process input and other once-per-rendered-frame state.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">fixed_update(fixed_dt)</span></code>: run zero or more fixed control/physics updates.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pre_render()</span></code>: synchronize the latest state and prepare visuals.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">render()</span></code>: build ImGui panels or other per-frame UI.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">post_render()</span></code>: perform work after drawing.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">cleanup()</span></code>: release explicitly owned simulation resources.</p></li>
-</ul>
-<p>See <a class="reference internal" href="../simulation/FIXED_TIMESTEP.html"><span class="std std-doc">Fixed Timestep and Rendering</span></a> before
-adding physics to an application.</p>
-<p>The complete scene example used by the next page is
-<code class="docutils literal notranslate"><span class="pre">python/examples/render_prim_scene.py</span></code>.</p>
-<p>Next: <a class="reference internal" href="FIRST_SCENE.html"><span class="std std-doc">First Scene</span></a>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">setup()</span></code> creates the scene once; <code class="docutils literal notranslate"><span class="pre">start()</span></code> runs the window and render loop.
+Close the window to exit. No external assets or repository checkout are needed.</p>
+<section id="lifecycle-callbacks">
+<h2>Lifecycle callbacks<a class="headerlink" href="#lifecycle-callbacks" title="Link to this heading">¶</a></h2>
+<p>Override these methods in your <code class="docutils literal notranslate"><span class="pre">ke.App</span></code> subclass using the Python names below.
+Only implement the callbacks your application needs.</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Callback</p></th>
+<th class="head"><p>When it runs and what to put there</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">setup()</span></code></p></td>
+<td><p>Once before the main loop; create scene objects and resources.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pre_update()</span></code></p></td>
+<td><p>Once per frame, before fixed updates; handle input and per-frame state.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">fixed_update(fixed_dt)</span></code></p></td>
+<td><p>Zero or more times per frame; advance control and physics by the supplied duration in seconds.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pre_render()</span></code></p></td>
+<td><p>Before scene rendering; synchronize visuals with the latest state.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">render()</span></code></p></td>
+<td><p>Each frame; add ImGui UI and custom per-frame drawing.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">post_render()</span></code></p></td>
+<td><p>After rendering; perform end-of-frame work.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">cleanup()</span></code></p></td>
+<td><p>When <code class="docutils literal notranslate"><span class="pre">start()</span></code> exits, including on exceptions; release resources owned by your application.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Within each frame, callbacks run in this order:
+<code class="docutils literal notranslate"><span class="pre">pre_update()</span></code> → <code class="docutils literal notranslate"><span class="pre">fixed_update()</span></code> (zero or more calls) → <code class="docutils literal notranslate"><span class="pre">pre_render()</span></code> →
+<code class="docutils literal notranslate"><span class="pre">render()</span></code> → <code class="docutils literal notranslate"><span class="pre">post_render()</span></code>.</p>
+<p>Advance physics in <code class="docutils literal notranslate"><span class="pre">fixed_update()</span></code>. See
+<a class="reference internal" href="../simulation/FIXED_TIMESTEP.html"><span class="std std-doc">Fixed Timestep and Rendering</span></a> for timing
+configuration and simulation examples.</p>
+<p>Next: <a class="reference internal" href="FIRST_SCENE.html"><span class="std std-doc">First Scene</span></a> or <a class="reference internal" href="FIRST_SIMULATION.html"><span class="std std-doc">First Simulation</span></a>.</p>
+</section>
 </section>
 
         </article>
@@ -423,8 +456,27 @@ adding physics to an application.</p>
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Hello App</a><ul>
+<li><a class="reference internal" href="#lifecycle-callbacks">Lifecycle callbacks</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>

@@ -448,7 +448,7 @@ uses <code class="docutils literal notranslate"><span class="pre">FixedStepClock
 interactive simulations whose physics should remain independent of rendering.</p>
 <p>Do not use <code class="docutils literal notranslate"><span class="pre">SimulationPacer</span></code> inside an App <code class="docutils literal notranslate"><span class="pre">fixed_update()</span></code> callback. Keep App
 physics in <code class="docutils literal notranslate"><span class="pre">fixed_update()</span></code> and let <code class="docutils literal notranslate"><span class="pre">FixedStepClock</span></code> schedule it.</p>
-<p><code class="docutils literal notranslate"><span class="pre">renderFrameOnce()</span></code> is supported for manually driven rendering. Despite its
+<p><code class="docutils literal notranslate"><span class="pre">render_frame_once()</span></code> is supported for manually driven rendering. Despite its
 name, it currently processes input and advances App frame scheduling in
 addition to drawing. Do not treat it as a render-only function or call it from
 inside <code class="docutils literal notranslate"><span class="pre">fixed_update()</span></code>.</p>

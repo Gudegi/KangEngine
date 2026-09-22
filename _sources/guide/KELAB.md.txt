@@ -1,4 +1,5 @@
 ```{include} ../../../docs/KELAB.md
+:relative-images:
 ```
 
 ```{toctree}

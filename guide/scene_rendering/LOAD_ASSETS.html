@@ -686,7 +686,7 @@ that data is displayed.</p>
 </section>
 <section id="fbx-mesh">
 <h2>FBX mesh<a class="headerlink" href="#fbx-mesh" title="Link to this heading">¶</a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">meshes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">FBXStaticMeshInfo</span><span class="p">]</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">FBXLoader</span><span class="o">.</span><span class="n">load_meshes</span><span class="p">(</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">meshes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">FBXMeshInfo</span><span class="p">]</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">FBXLoader</span><span class="o">.</span><span class="n">load_meshes</span><span class="p">(</span>
     <span class="n">fbx_path</span><span class="o">=</span><span class="n">fbx_file</span><span class="p">,</span>
     <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">,</span>
 <span class="p">)</span>
@@ -699,11 +699,8 @@ that data is displayed.</p>
 </pre></div>
 </div>
 </section>
-<section id="usd">
-<h2>USD<a class="headerlink" href="#usd" title="Link to this heading">¶</a></h2>
-<p>USD is available only in an explicitly USD-enabled development build. The
-distributed wheel configuration intentionally disables it.</p>
-<p>Examples:</p>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Link to this heading">¶</a></h2>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">python/examples/view_fbx_mesh.py</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">python/examples/view_obj_scene.py</span></code></p></li>
@@ -772,7 +769,7 @@ distributed wheel configuration intentionally disables it.</p>
 <li><a class="reference internal" href="#">Load Assets</a><ul>
 <li><a class="reference internal" href="#obj-with-materials">OBJ with materials</a></li>
 <li><a class="reference internal" href="#fbx-mesh">FBX mesh</a></li>
-<li><a class="reference internal" href="#usd">USD</a></li>
+<li><a class="reference internal" href="#examples">Examples</a></li>
 </ul>
 </li>
 </ul>

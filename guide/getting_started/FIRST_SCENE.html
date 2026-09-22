@@ -339,7 +339,8 @@
 <h1>First Scene<a class="headerlink" href="#first-scene" title="Link to this heading">¶</a></h1>
 <p>This example creates geometry data, inserts it into the scene, and demonstrates
 materials, hierarchy, local/world transforms, quaternion input, and debug axes.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ke</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">ke</span><span class="o">.</span><span class="n">App</span><span class="p">):</span>
@@ -428,7 +429,8 @@ API.</p>
 <p><code class="docutils literal notranslate"><span class="pre">debug_overlay</span></code> draws directly through the graphics debug renderer and does not
 create scene prims. <code class="docutils literal notranslate"><span class="pre">scene.debug_geometry</span></code> creates mesh-based renderables that
 appear in the SceneGraph and returns a <code class="docutils literal notranslate"><span class="pre">DebugPrimitiveView</span></code>.</p>
-<p>Run the complete example:</p>
+<p>To run the complete example below, clone the repository and run from its root
+(the example scripts are not installed by pip):</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>./python/examples/render_prim_scene.py
 </pre></div>
 </div>

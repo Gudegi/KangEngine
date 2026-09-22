@@ -504,6 +504,24 @@
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.render.Renderer.export_profile_json">
+<span class="sig-name descname"><span class="pre">export_profile_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_frames</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">240</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.export_profile_json" title="Link to this definition">¶</a></dt>
+<dd><p>Write the last max_frames snapshots and latest-capture summary without GPU waits.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.render.Renderer.frame_profile_history">
+<span class="sig-name descname"><span class="pre">frame_profile_history</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">FrameProfile</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.render.Renderer.frame_profile_history" title="Link to this definition">¶</a></dt>
+<dd><p>Return at most 240 immutable snapshots, oldest first.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.render.Renderer.latest_frame_profile">
+<span class="sig-name descname"><span class="pre">latest_frame_profile</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">FrameProfile</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.latest_frame_profile" title="Link to this definition">¶</a></dt>
+<dd><p>Return the latest captured CPU frame, or None before capture.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.render.Renderer.map_renderable_cuda_transform_buffers">
 <span class="sig-name descname"><span class="pre">map_renderable_cuda_transform_buffers</span></span><span class="sig-paren">(</span>
 
@@ -525,6 +543,24 @@
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.render.Renderer.profile_summary">
+<span class="sig-name descname"><span class="pre">profile_summary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_frames</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">240</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ProfileSummary</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.profile_summary" title="Link to this definition">¶</a></dt>
+<dd><p>Summarize the latest capture; max_frames must be between 1 and 240.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.render.Renderer.profiler_capabilities">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">profiler_capabilities</span></span><a class="headerlink" href="#kangengine.render.Renderer.profiler_capabilities" title="Link to this definition">¶</a></dt>
+<dd><p>Return timing capabilities of the current backend.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.render.Renderer.profiler_enabled">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">profiler_enabled</span></span><a class="headerlink" href="#kangengine.render.Renderer.profiler_enabled" title="Link to this definition">¶</a></dt>
+<dd><p>Requested profiling state, applied at the next frame boundary.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.render.Renderer.remove_render_hook">
 <span class="sig-name descname"><span class="pre">remove_render_hook</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">handle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.remove_render_hook" title="Link to this definition">¶</a></dt>
 <dd><p>Remove a previously registered render hook.</p>
@@ -534,6 +570,12 @@
 <dt class="sig sig-object py" id="kangengine.render.Renderer.set_point_lights">
 <span class="sig-name descname"><span class="pre">set_point_lights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lights</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.set_point_lights" title="Link to this definition">¶</a></dt>
 <dd><p>Replace the renderer’s point-light list.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.render.Renderer.set_profiler_enabled">
+<span class="sig-name descname"><span class="pre">set_profiler_enabled</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">enabled</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.render.Renderer.set_profiler_enabled" title="Link to this definition">¶</a></dt>
+<dd><p>Enable or disable CPU/GPU pass capture at the next frame boundary.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1293,10 +1335,17 @@
 <li><a class="reference internal" href="#kangengine.render.Renderer.add_render_hook"><code class="docutils literal notranslate"><span class="pre">Renderer.add_render_hook()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.Renderer.create_scene_hook_pipeline"><code class="docutils literal notranslate"><span class="pre">Renderer.create_scene_hook_pipeline()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.Renderer.device"><code class="docutils literal notranslate"><span class="pre">Renderer.device()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.Renderer.export_profile_json"><code class="docutils literal notranslate"><span class="pre">Renderer.export_profile_json()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.Renderer.frame_profile_history"><code class="docutils literal notranslate"><span class="pre">Renderer.frame_profile_history()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.Renderer.latest_frame_profile"><code class="docutils literal notranslate"><span class="pre">Renderer.latest_frame_profile()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.Renderer.map_renderable_cuda_transform_buffers"><code class="docutils literal notranslate"><span class="pre">Renderer.map_renderable_cuda_transform_buffers()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.Renderer.point_lights"><code class="docutils literal notranslate"><span class="pre">Renderer.point_lights()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.Renderer.profile_summary"><code class="docutils literal notranslate"><span class="pre">Renderer.profile_summary()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.Renderer.profiler_capabilities"><code class="docutils literal notranslate"><span class="pre">Renderer.profiler_capabilities</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.Renderer.profiler_enabled"><code class="docutils literal notranslate"><span class="pre">Renderer.profiler_enabled</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.Renderer.remove_render_hook"><code class="docutils literal notranslate"><span class="pre">Renderer.remove_render_hook()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.Renderer.set_point_lights"><code class="docutils literal notranslate"><span class="pre">Renderer.set_point_lights()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.render.Renderer.set_profiler_enabled"><code class="docutils literal notranslate"><span class="pre">Renderer.set_profiler_enabled()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.Renderer.set_renderable_alpha_mode"><code class="docutils literal notranslate"><span class="pre">Renderer.set_renderable_alpha_mode()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.Renderer.set_renderable_casts_shadow"><code class="docutils literal notranslate"><span class="pre">Renderer.set_renderable_casts_shadow()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.render.Renderer.set_renderable_colors"><code class="docutils literal notranslate"><span class="pre">Renderer.set_renderable_colors()</span></code></a></li>

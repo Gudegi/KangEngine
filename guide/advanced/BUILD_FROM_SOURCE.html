@@ -351,7 +351,10 @@
 </section>
 <section id="vcpkg">
 <h2>vcpkg<a class="headerlink" href="#vcpkg" title="Link to this heading">¶</a></h2>
-<p>KangEngine uses vcpkg manifest mode for most third-party C++ dependencies.</p>
+<p>KangEngine uses vcpkg manifest mode for most third-party C++ dependencies.
+ImGui, ImGuizmo, and ImPlot are installed through this manifest and linked as
+CMake package targets. ImPlot powers the Performance panel’s frame timing graph;
+its context is created and destroyed alongside ImGui in <code class="docutils literal notranslate"><span class="pre">PanelManager</span></code>.</p>
 <ol class="arabic">
 <li><p>Clone and bootstrap vcpkg.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/microsoft/vcpkg.git
@@ -667,28 +670,93 @@ cmake<span class="w"> </span>--build<span class="w"> </span>.<span class="w"> </
 <section id="build-targets">
 <h2>Build Targets<a class="headerlink" href="#build-targets" title="Link to this heading">¶</a></h2>
 <p>Common make targets:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span>build
-make<span class="w"> </span>build_debug
-make<span class="w"> </span>build_python
-make<span class="w"> </span>build_all
-make<span class="w"> </span>build_cuda
-make<span class="w"> </span>build_python_cuda
-make<span class="w"> </span>build_usd
-make<span class="w"> </span>build_usd_python
-make<span class="w"> </span>wheel
-make<span class="w"> </span>wheel_cuda
-make<span class="w"> </span>validate_wheel
-make<span class="w"> </span>validate_wheel_cuda
-make<span class="w"> </span>validate_physx_gpu
-make<span class="w"> </span>validate_physx_gpu_cpp
-make<span class="w"> </span>run2
-</pre></div>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Target</p></th>
+<th class="head"><p>Runtime</p></th>
+<th class="head"><p>USD</p></th>
+<th class="head"><p>Output or action</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">build</span></code></p></td>
+<td><p>C++ CPU</p></td>
+<td><p>disabled</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">build/release/KangEngine</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">build_cuda</span></code></p></td>
+<td><p>C++ CUDA</p></td>
+<td><p>disabled</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">build/release/KangEngine</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">build_usd</span></code></p></td>
+<td><p>C++ CPU</p></td>
+<td><p>local</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">build/release/KangEngine</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">build_python</span></code></p></td>
+<td><p>Python CPU</p></td>
+<td><p>disabled</p></td>
+<td><p>development extension</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">build_python_cuda</span></code></p></td>
+<td><p>Python CUDA</p></td>
+<td><p>disabled</p></td>
+<td><p>development extension</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">build_usd_python</span></code></p></td>
+<td><p>Python CPU</p></td>
+<td><p>local</p></td>
+<td><p>development extension</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">build_all</span></code></p></td>
+<td><p>Python CPU on macOS, CUDA on Linux</p></td>
+<td><p>local</p></td>
+<td><p>executable and development extension</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">build_wheel</span></code></p></td>
+<td><p>Python CPU on macOS, CUDA on Linux</p></td>
+<td><p>vcpkg</p></td>
+<td><p>wheel extension under <code class="docutils literal notranslate"><span class="pre">build/wheel</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">wheel</span></code></p></td>
+<td><p>platform default</p></td>
+<td><p>bundled vcpkg</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">python/dist/*.whl</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">validate_wheel</span></code></p></td>
+<td><p>platform default</p></td>
+<td><p>bundled vcpkg</p></td>
+<td><p>isolated wheel validation</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">validate_physx_gpu</span></code></p></td>
+<td><p>Python CUDA</p></td>
+<td><p>disabled</p></td>
+<td><p>GPU regression tests</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">validate_physx_gpu_cpp</span></code></p></td>
+<td><p>C++ CUDA</p></td>
+<td><p>disabled</p></td>
+<td><p>native GPU smoke test</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">run2</span></code></p></td>
+<td><p>current release configuration</p></td>
+<td><p>current cache</p></td>
+<td><p>build and run executable</p></td>
+</tr>
+</tbody>
+</table>
 </div>
+<p>Development extensions are written to <code class="docutils literal notranslate"><span class="pre">python/kangengine/_kangengine.so</span></code>.
+Debug variants are available as <code class="docutils literal notranslate"><span class="pre">build_debug</span></code>, <code class="docutils literal notranslate"><span class="pre">build_usd_debug</span></code>,
+<code class="docutils literal notranslate"><span class="pre">build_python_debug</span></code>, and <code class="docutils literal notranslate"><span class="pre">build_usd_python_debug</span></code>.</p>
 <p>The executable target is selected in <code class="docutils literal notranslate"><span class="pre">CMakeLists.txt</span></code> by changing the active <code class="docutils literal notranslate"><span class="pre">MAIN_FILE</span></code> entry near the example list.</p>
 </section>
 <section id="openusd-optional">
 <h2>OpenUSD Optional<a class="headerlink" href="#openusd-optional" title="Link to this heading">¶</a></h2>
-<p>OpenUSD is only needed when configuring KangEngine with <code class="docutils literal notranslate"><span class="pre">-DUSE_USD=ON</span></code>.</p>
+<p>Development builds use OpenUSD from <code class="docutils literal notranslate"><span class="pre">USD_DIR</span></code> (default: <code class="docutils literal notranslate"><span class="pre">~/usd_build</span></code>). Wheel
+builds use vcpkg OpenUSD in the separate <code class="docutils literal notranslate"><span class="pre">build/wheel</span></code> directory.</p>
 <ol class="arabic">
 <li><p>Clone OpenUSD.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>~
@@ -742,55 +810,64 @@ platform, and architecture.</p>
 </section>
 <section id="python-wheels">
 <h2>Python Wheels<a class="headerlink" href="#python-wheels" title="Link to this heading">¶</a></h2>
-<p>KangEngine builds separate native wheels on each target platform. Wheel builds
-use <code class="docutils literal notranslate"><span class="pre">python/.venv/bin/python</span></code> by default, so activating the development virtual
-environment is optional. Create and populate that environment as described in
-the previous section before building a wheel.</p>
-<p>The distributed wheels intentionally disable OpenUSD. This keeps the native
-extension independent of OpenUSD, TBB, and USD plugin resources. USD-enabled
-development builds remain available through <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">build_usd_python</span></code>, but a
-USD-enabled distribution wheel is not currently produced.</p>
-<p>Build and preserve a wheel under <code class="docutils literal notranslate"><span class="pre">python/dist</span></code>:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># macOS, CPU PhysX</span>
-make<span class="w"> </span>wheel
-
-<span class="c1"># Linux, CUDA and the configured GPU PhysX build</span>
-make<span class="w"> </span>wheel_cuda
+<p>Build on each target OS using the development environment above.
+macOS uses PhysX CPU; Linux uses CUDA. Both include OpenUSD.
+Linux builds require <code class="docutils literal notranslate"><span class="pre">patchelf</span></code> on <code class="docutils literal notranslate"><span class="pre">PATH</span></code>.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span>wheel<span class="w">           </span><span class="c1"># Output: python/dist</span>
+make<span class="w"> </span>validate_wheel<span class="w">  </span><span class="c1"># Isolated install, API/stubs, USD checks</span>
 </pre></div>
 </div>
-<p>The filename records the active CPython ABI and platform, for example:</p>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>python/dist/kangengine-0.1.0-cp312-cp312-macosx_26_0_arm64.whl
+<p>Linux produces two wheels: <code class="docutils literal notranslate"><span class="pre">kangengine</span></code> and <code class="docutils literal notranslate"><span class="pre">kangengine-physx-gpu</span></code>.
+Install the engine wheel in a fresh Python 3.12 environment; pip finds the
+PhysX GPU wheel in the same directory:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--find-links<span class="w"> </span>python/dist<span class="w"> </span>python/dist/&lt;kangengine-wheel&gt;.whl
 </pre></div>
 </div>
-<p>Wheel creation uses a temporary staging directory, so stale files under a
-previous setuptools build directory cannot enter the package. The
-<code class="docutils literal notranslate"><span class="pre">kangengine/assets/external</span></code> directory is excluded; the remaining runtime
-assets, Python modules, type information, and <code class="docutils literal notranslate"><span class="pre">_kangengine.so</span></code> are included.</p>
-<p>To build, install, and test a temporary wheel without changing the development
-environment, run:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span>validate_wheel
-make<span class="w"> </span>validate_wheel_cuda<span class="w">  </span><span class="c1"># Linux CUDA host only</span>
+<p>Optional Pyroki development dependencies: <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">sync</span> <span class="pre">--project</span> <span class="pre">python</span> <span class="pre">--group</span> <span class="pre">pyroki</span></code>.</p>
+</section>
+<section id="optional-hardware-resource-usage-monitor">
+<h2>Optional Hardware / Resource Usage Monitor<a class="headerlink" href="#optional-hardware-resource-usage-monitor" title="Link to this heading">¶</a></h2>
+<p>Open <strong>Performance &gt; Resources</strong> to show resource measurements, and expand
+<strong>Hardware details</strong> for render-device information. Linux CPU/RAM monitoring
+requires access to <code class="docutils literal notranslate"><span class="pre">/proc</span></code>.
+Measurements run on a worker at most once per second while the panel requests
+them; the frame profiler does not need to be enabled.</p>
+<p>NVIDIA GPU utilization and VRAM monitoring is optional. CMake looks for <code class="docutils literal notranslate"><span class="pre">nvml.h</span></code>
+in the CUDA toolkit include directories and common installation paths. For a
+custom installation, configure the existing build with:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake<span class="w"> </span>-S<span class="w"> </span>.<span class="w"> </span>-B<span class="w"> </span>build/release<span class="w"> </span>-DKANGENGINE_NVML_INCLUDE_DIR<span class="o">=</span>/path/to/nvml/include
+cmake<span class="w"> </span>--build<span class="w"> </span>build/release<span class="w"> </span>--target<span class="w"> </span>KangEngine<span class="w"> </span>_kangengine<span class="w"> </span>-j<span class="w"> </span><span class="m">4</span>
 </pre></div>
 </div>
-<p>Validation checks the native platform tag, no-USD build policy, package
-contents, public API, and type-stub surface. It installs KangEngine into a
-temporary target directory, reuses the development environment’s Python
-dependencies, and removes the temporary wheel and installation afterward.</p>
-<p>To test the preserved wheel as a consumer, create a separate environment with
-the matching Python version and install the wheel there:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3.12<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>/tmp/kangengine-wheel-venv
-<span class="nb">source</span><span class="w"> </span>/tmp/kangengine-wheel-venv/bin/activate
-python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--upgrade<span class="w"> </span>pip
-python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>python/dist/kangengine-0.1.0-cp312-cp312-macosx_26_0_arm64.whl
-python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import kangengine as ke; assert not ke.scene.has_usd_support()&quot;</span>
+<p>This feature does not require enabling CUDA interop. At runtime the monitor
+loads <code class="docutils literal notranslate"><span class="pre">libnvidia-ml.so.1</span></code> from the NVIDIA driver. Missing headers, driver library,
+permissions, or unsupported counters produce <code class="docutils literal notranslate"><span class="pre">N/A</span></code>; they do not prevent CPU/RAM
+monitoring or rendering. Device-wide GPU measurements include other processes
+and are listed by device name/index separately from the active render device.
+The CPU table compares <strong>System</strong> and <strong>This process</strong>. RAM and VRAM show both
+scopes as used / total capacity bars with the peak observed while sampling.
+GPU utilization is shown once per device as total activity.
+Percentages and RAM/VRAM used / total capacity use two decimal places. Process
+CPU is normalized to total host CPU capacity for comparison; the per-core value
+is available in the CPU tooltip. Measurement notes and failure reasons are also
+shown in the relevant tooltips. UUIDs are retained internally for device identity
+and are not displayed.
+VRAM prefers NVML v2 allocated memory, excluding driver reservations, to match
+<code class="docutils literal notranslate"><span class="pre">nvidia-smi</span></code>. Legacy-only drivers use the v1 counter and its tooltip notes that
+reservations are included. Values are displayed in GiB (MiB divided by 1024).</p>
+<p>Process GPU utilization is not queried. Process VRAM is queried from graphics and
+compute process lists without double-counting the same PID. Child processes
+are excluded.</p>
+<p>Raw process CPU uses 100% per logical CPU; RAM usage is host <code class="docutils literal notranslate"><span class="pre">MemTotal</span> <span class="pre">-</span> <span class="pre">MemAvailable</span></code>,
+not a container memory limit. See the <a class="reference external" href="https://docs.nvidia.com/deploy/nvml-api/api/group__nvmlDeviceQueries.html">NVML device query reference</a>
+and <a class="reference external" href="https://www.man7.org/linux/man-pages/man5/proc_meminfo.5.html">Linux memory counter definitions</a>
+for the underlying counters.</p>
+<p>With <code class="docutils literal notranslate"><span class="pre">KANGENGINE_BUILD_SMOKES=ON</span></code>, validate without a display using:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake<span class="w"> </span>--build<span class="w"> </span>build/release<span class="w"> </span>--target<span class="w"> </span>resource_monitor_smoke<span class="w"> </span>-j<span class="w"> </span><span class="m">4</span>
+./build/release/resource_monitor_smoke
+./build/release/resource_monitor_smoke<span class="w"> </span>--require-gpu<span class="w">  </span><span class="c1"># Requires accessible NVIDIA hardware</span>
 </pre></div>
 </div>
-<p>Use the corresponding filename emitted by <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">wheel_cuda</span></code> on Linux.</p>
-<p>The macOS wheel contains the statically linked PhysX CPU libraries. The Linux
-CUDA wheel still requires a compatible NVIDIA driver, CUDA runtime policy, and
-GPU PhysX environment for full simulation validation. Build and test each
-wheel on the same operating-system and architecture family on which it will be
-distributed.</p>
 </section>
 <section id="build-the-documentation">
 <h2>Build the Documentation<a class="headerlink" href="#build-the-documentation" title="Link to this heading">¶</a></h2>
@@ -881,6 +958,7 @@ make<span class="w"> </span>docs
 <li><a class="reference internal" href="#openusd-optional">OpenUSD Optional</a></li>
 <li><a class="reference internal" href="#python-bindings-optional">Python Bindings Optional</a></li>
 <li><a class="reference internal" href="#python-wheels">Python Wheels</a></li>
+<li><a class="reference internal" href="#optional-hardware-resource-usage-monitor">Optional Hardware / Resource Usage Monitor</a></li>
 <li><a class="reference internal" href="#build-the-documentation">Build the Documentation</a></li>
 </ul>
 </li>
