@@ -36,7 +36,7 @@ python ./python/examples/view_obj_scene.py --obj-file /path/to/model.obj
 ## FBX mesh
 
 ```python
-meshes: list[ke.asset.FBXStaticMeshInfo] = ke.asset.FBXLoader.load_meshes(
+meshes: list[ke.asset.FBXMeshInfo] = ke.asset.FBXLoader.load_meshes(
     fbx_path=fbx_file,
     scale=scale,
 )
@@ -48,12 +48,7 @@ for i, mesh in enumerate(meshes):
     )
 ```
 
-## USD
-
-USD is available only in an explicitly USD-enabled development build. The
-distributed wheel configuration intentionally disables it.
-
-Examples:
+## Examples
 
 - `python/examples/view_fbx_mesh.py`
 - `python/examples/view_obj_scene.py`

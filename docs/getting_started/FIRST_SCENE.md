@@ -4,6 +4,7 @@ This example creates geometry data, inserts it into the scene, and demonstrates
 materials, hierarchy, local/world transforms, quaternion input, and debug axes.
 
 ```python
+import kangengine as ke
 import numpy as np
 
 
@@ -102,7 +103,8 @@ self.scene.debug_geometry.add_axes(
 create scene prims. `scene.debug_geometry` creates mesh-based renderables that
 appear in the SceneGraph and returns a `DebugPrimitiveView`.
 
-Run the complete example:
+To run the complete example below, clone the repository and run from its root
+(the example scripts are not installed by pip):
 
 ```bash
 python ./python/examples/render_prim_scene.py

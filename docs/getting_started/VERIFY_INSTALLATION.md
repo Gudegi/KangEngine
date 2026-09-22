@@ -1,34 +1,31 @@
 # Verify Installation
 
-First verify that Python can import the package and report its optional USD
-capability.
+Run in the environment where you installed KangEngine:
 
 ```bash
-python/.venv/bin/python -c \
-  "import kangengine as ke; print(ke.__file__); print('USD:', ke.scene.has_usd_support())"
+python -c "import kangengine as ke; print(ke.__file__); print('USD:', ke.scene.has_usd_support())"
+python -m pip check
 ```
 
-The default wheel should print `USD: True`. A `make build_python` development
-build or a `wheel_minimal` build should print `USD: False`.
-
-## Verify the public API
-
-```bash
-make validate_python_api
-```
-
-This builds the extension and checks the canonical package surface and type
-information.
+The PyPI wheel should report `USD: True`. The printed path should point to
+your installed package. Source builds can disable USD.
 
 ## Open a window
 
-```bash
-python ./python/examples/render_prim_scene.py
-```
+Save and run the complete [Hello App](HELLO_APP.md) example. Expect an orange
+cube on a ground plane.
 
-Expected result: a checkerboard ground, an orange box, and a blue sphere.
+## Common problems
 
-If the import succeeds but the window does not open, verify the platform OpenGL
-requirements before debugging Python packaging.
+- **No matching distribution:** check Python version, OS version, and CPU
+  architecture against [Installation](INSTALLATION.md).
+- **Import fails on Linux:** check that the NVIDIA driver meets the documented
+  requirement and the PhysX GPU and CUDA runtime packages installed successfully.
+- **Import works but no window opens:** check your graphical session and OpenGL
+  support. A headless server needs a separate rendering setup.
+
+Source contributors can use `make validate_python_api` from a checkout.
+That command rebuilds the development extension; it is not needed to verify
+a pip installation.
 
 Next: [Hello App](HELLO_APP.md).

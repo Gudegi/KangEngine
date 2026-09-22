@@ -81,7 +81,7 @@ interactive simulations whose physics should remain independent of rendering.
 Do not use `SimulationPacer` inside an App `fixed_update()` callback. Keep App
 physics in `fixed_update()` and let `FixedStepClock` schedule it.
 
-`renderFrameOnce()` is supported for manually driven rendering. Despite its
+`render_frame_once()` is supported for manually driven rendering. Despite its
 name, it currently processes input and advances App frame scheduling in
 addition to drawing. Do not treat it as a render-only function or call it from
 inside `fixed_update()`.

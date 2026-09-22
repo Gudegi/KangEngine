@@ -1,9 +1,16 @@
-# KangEngine — Animation and Simulation Engine
+# KangEngine — Character animation and GPU-parallel physics simulation
 
-KangEngine is an open-source C++17 and Python engine for real-time rendering, character animation, robotics, and PhysX-based simulation.
-Start with the guide for runnable workflows, use
-the API reference for exact Python signatures, and browse the examples for
-complete programs.
+KangEngine is a C++17/Python engine for character animation, GPU-parallel physics
+simulation, and interactive visualization, with NVIDIA PhysX integration.
+
+```bash
+pip install kangengine
+```
+
+Start with [Installation](guide/getting_started/INSTALLATION.md) for supported
+platforms, then run [Hello App](guide/getting_started/HELLO_APP.md).
+Explore [KELab benchmarks](guide/KELAB_BENCHMARKS.md) for GPU simulation
+throughput and measurement details.
 
 | Character Animation | Simulation | Rendering |
 |:---:|:---:|:---:|

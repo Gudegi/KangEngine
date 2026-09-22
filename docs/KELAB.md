@@ -2,7 +2,7 @@
 
 | | |
 |:---:|:---:|
-| ![KELab parallel humanoid environments](../../images/KELAB/demo1.png) | ![KELab humanoid simulation debug view](../../images/KELAB/demo2.png) |
+| ![KELab parallel humanoid environments](images/KELAB/demo1.png) | ![KELab humanoid simulation debug view](images/KELAB/demo2.png) |
 
 [KELab](https://github.com/Gudegi/KELab) is a reinforcement-learning framework
 built on KangEngine. It connects KangEngine simulation and rendering to
@@ -13,19 +13,16 @@ training documentation; this page covers the shortest KangEngine setup path.
 
 ## Install
 
-Until KangEngine wheels are available, build KangEngine and install both
-projects into the KELab environment:
+From a KELab checkout, install KangEngine and the training dependencies into
+the same environment. See [KangEngine requirements](getting_started/INSTALLATION.md)
+for supported Linux/NVIDIA systems.
 
 ```bash
-# KangEngine
-cd /path/to/KangEngine
-make build_python_cuda
-
 # KELab
 cd /path/to/KELab
 uv venv --python python3.12
 source .venv/bin/activate
-uv pip install -e /path/to/KangEngine/python
+uv pip install kangengine
 uv pip install -e ".[rl-games]"
 ```
 

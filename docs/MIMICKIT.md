@@ -5,14 +5,12 @@ KangEngine can be used as a backend engine of
 package. Use the `backend_kangengine` branch of MimicKit and keep MimicKit in a
 separate Python environment.
 
-> **Note:** GPU contact sensors provide contact count, contact state, and
-> accumulated normal impulse and force. Tangential friction impulse and a full
-> six-axis contact wrench are not currently exposed as sensor outputs.
+Check [Installation](getting_started/INSTALLATION.md) for the wheel's platform
+and NVIDIA driver requirements.
 
 ![MimicKit running with KangEngine](../images/Mimickit_kangengine_1.png)
 
-<details>
-<summary>MimicKit setup and run commands</summary>
+## MimicKit setup and run commands
 
 1. Clone the KangEngine-enabled MimicKit fork branch.
 
@@ -28,27 +26,20 @@ separate Python environment.
     source .venv/bin/activate
     ```
 
-3. Build KangEngine's Python extension from the KangEngine repo.
+3. Install KangEngine into the active MimicKit environment.
 
     ```bash
-    cd /path/to/KangEngine
-    make build_python
+    uv pip install kangengine
     ```
 
-4. Install KangEngine's Python package into the MimicKit environment.
-
-    ```bash
-    uv pip install -e ./python
-    ```
-
-5. Install MimicKit dependencies.
+4. Install MimicKit dependencies.
 
     ```bash
     cd /path/to/MimicKit
     uv pip install -r requirements.txt
     ```
 
-6. Run a small motion visualization test.
+5. Run a small motion visualization test.
 
     ```bash
     python mimickit/run.py \
@@ -61,7 +52,7 @@ separate Python environment.
       --test_episodes 10
     ```
 
-7. Run pretrained policy inference with KangEngine.
+6. Run pretrained policy inference with KangEngine.
 
     ```bash
     python mimickit/run.py \
@@ -74,7 +65,7 @@ separate Python environment.
       --model_file data/models/amp_humanoid_spinkick_model.pt
     ```
 
-8. Train an AMP policy with KangEngine.
+7. Train an AMP policy with KangEngine.
 
     ```bash
     python mimickit/run.py \
@@ -102,5 +93,3 @@ enable_self_collisions: false
 The `backend_kangengine` branch already includes
 `data/engines/kangengine_engine.yaml`, so you usually do not need to create it
 manually.
-
-</details>

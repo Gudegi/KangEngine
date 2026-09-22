@@ -1,67 +1,41 @@
 # Installation
 
-KangEngine currently ships as platform-specific wheels built from a source
-checkout. Use Python 3.12 and build the wheel on the same OS and architecture
-family where it will run.
-
-## Requirements
-
-- macOS on Apple Silicon, or Ubuntu 24.04
-- Python 3.12
-- CMake, a C++17 compiler, and vcpkg
-- PhysX under `$HOME/Physics/PhysX`
-
-Linux/NVIDIA GPU simulation additionally requires the supported PhysX 5.8 GPU
-build and CUDA toolkit. Start with the CPU build unless GPU simulation is the
-reason you are installing KangEngine.
-
-## Create the development environment
-
-From the repository root:
-
-```bash
-uv venv python/.venv --python 3.12
-source python/.venv/bin/activate
-uv sync --project python
-```
-
-## Build the Python extension
-
-```bash
-make build_python
-```
-
-The normal Python build intentionally disables OpenUSD. To build a USD-enabled
-development extension against `$HOME/usd_build` instead:
-
-```bash
-make build_usd_python
-```
-
-## Install for development
-
-```bash
-uv pip install -e ./python
-```
-
-## Install a Built Wheel
-
-If you received a wheel built for your operating system, architecture, and
-Python 3.12 ABI, install it into an isolated environment:
+Install KangEngine from PyPI in a Python 3.12 environment:
 
 ```bash
 python3.12 -m venv .venv
 source .venv/bin/activate
-python -m pip install --find-links /path/to/wheels /path/to/wheels/<kangengine-wheel>.whl
-python -c "import kangengine as ke; print(ke.__file__)"
+python -m pip install kangengine
 ```
 
-macOS uses CPU PhysX; Linux requires **Ubuntu 24.04 x86-64, NVIDIA driver 580+
-and a compatible GPU** (tested on RTX 4090). Both include OpenUSD.
-Keep both Linux wheels in the same folder; pip installs PhysX GPU and CUDA
-runtime dependencies automatically.
+If you use uv, run `uv pip install kangengine` in your active environment.
 
-Continue with [Verify Installation](VERIFY_INSTALLATION.md).
+## Requirements
 
-For platform-specific PhysX setup, source builds, CUDA 13 notes, and wheel
-production, see [Build from Source](../advanced/BUILD_FROM_SOURCE.md).
+The current release provides these wheels:
+
+| Platform | Requirements | Simulation |
+| --- | --- | --- |
+| macOS | macOS 26+, Apple Silicon, CPython 3.12 | PhysX CPU |
+| Linux | x86-64, glibc 2.39+ (Ubuntu 24.04 tested), CPython 3.12 | PhysX CPU/GPU |
+
+Linux also requires an NVIDIA driver version 580+ and a compatible GPU
+(tested on RTX 4090). pip installs the CUDA runtime and PhysX GPU packages
+automatically; a separate CUDA Toolkit is not required for wheel installation.
+
+Both wheels include OpenUSD. Opening a viewer requires a graphical session
+with OpenGL 4.1 support.
+
+## Verify installation
+
+```bash
+python -c "import kangengine as ke; print(ke.__file__); print('USD:', ke.scene.has_usd_support())"
+```
+
+Expect `USD: True`. Continue with [Hello App](HELLO_APP.md) to create a visible
+scene, or [Verify Installation](VERIFY_INSTALLATION.md) if installation fails.
+
+## Development installation
+
+For editable installs, C++ builds, or platforms without a matching wheel, use
+[Build from Source](../advanced/BUILD_FROM_SOURCE.md).

@@ -1,7 +1,7 @@
 # Hello App
 
-`ke.App` owns the window, render loop, camera, scene facade, and renderer. A
-Python application subclasses it and implements lifecycle callbacks.
+After `pip install kangengine`, save this as `hello_app.py`. It creates a cube
+and ground plane using built-in geometry and materials.
 
 ```python
 import kangengine as ke
@@ -9,13 +9,16 @@ import kangengine as ke
 
 class HelloApp(ke.App):
     def setup(self):
-        self.set_camera_view([3.0, -4.0, 2.0], [0.0, 0.0, 0.5])
-
-    def pre_render(self):
-        pass
-
-    def render(self):
-        pass
+        self.materials = self.create_standard_materials()
+        self.scene.add_ground("/ground", scale=10.0)
+        box = self.scene.add_mesh(
+            "/box",
+            ke.geometry.create_cube_data(1.0),
+            self.materials.common,
+            color=ke.Vec4(0.8, 0.3, 0.02, 1.0),
+        )
+        box.set_local_translation(ke.Vec3(0.0, 0.5, 0.0))
+        self.set_camera_view([3.0, 2.5, 4.0], [0.0, 0.5, 0.0])
 
 
 app = HelloApp()
@@ -23,27 +26,36 @@ app.initialize(1280, 720, False, ke.UpAxis.Y)
 app.start()
 ```
 
-Save this as `hello_app.py` and run:
+Run in a graphical session:
 
 ```bash
 python hello_app.py
 ```
 
-Lifecycle callback names retain their C++ virtual spelling, while normal
-Python methods use snake_case.
+`setup()` creates the scene once; `start()` runs the window and render loop.
+Close the window to exit. No external assets or repository checkout are needed.
 
-- `setup()`: create resources and scene objects once.
-- `pre_update()`: process input and other once-per-rendered-frame state.
-- `fixed_update(fixed_dt)`: run zero or more fixed control/physics updates.
-- `pre_render()`: synchronize the latest state and prepare visuals.
-- `render()`: build ImGui panels or other per-frame UI.
-- `post_render()`: perform work after drawing.
-- `cleanup()`: release explicitly owned simulation resources.
+## Lifecycle callbacks
 
-See [Fixed Timestep and Rendering](../simulation/FIXED_TIMESTEP.md) before
-adding physics to an application.
+Override these methods in your `ke.App` subclass using the Python names below.
+Only implement the callbacks your application needs.
 
-The complete scene example used by the next page is
-`python/examples/render_prim_scene.py`.
+| Callback | When it runs and what to put there |
+| --- | --- |
+| `setup()` | Once before the main loop; create scene objects and resources. |
+| `pre_update()` | Once per frame, before fixed updates; handle input and per-frame state. |
+| `fixed_update(fixed_dt)` | Zero or more times per frame; advance control and physics by the supplied duration in seconds. |
+| `pre_render()` | Before scene rendering; synchronize visuals with the latest state. |
+| `render()` | Each frame; add ImGui UI and custom per-frame drawing. |
+| `post_render()` | After rendering; perform end-of-frame work. |
+| `cleanup()` | When `start()` exits, including on exceptions; release resources owned by your application. |
 
-Next: [First Scene](FIRST_SCENE.md).
+Within each frame, callbacks run in this order:
+`pre_update()` → `fixed_update()` (zero or more calls) → `pre_render()` →
+`render()` → `post_render()`.
+
+Advance physics in `fixed_update()`. See
+[Fixed Timestep and Rendering](../simulation/FIXED_TIMESTEP.md) for timing
+configuration and simulation examples.
+
+Next: [First Scene](FIRST_SCENE.md) or [First Simulation](FIRST_SIMULATION.md).
