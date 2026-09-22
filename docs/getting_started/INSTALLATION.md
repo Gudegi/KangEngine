@@ -52,13 +52,14 @@ Python 3.12 ABI, install it into an isolated environment:
 ```bash
 python3.12 -m venv .venv
 source .venv/bin/activate
-python -m pip install /path/to/kangengine-0.1.0-cp312-cp312-platform.whl
+python -m pip install --find-links /path/to/wheels /path/to/wheels/<kangengine-wheel>.whl
 python -c "import kangengine as ke; print(ke.__file__)"
 ```
 
-The `kangengine` package provides a CPU wheel for macOS and a CUDA wheel for
-Linux. The Linux target is **Ubuntu 24.04 x86-64 with NVIDIA driver 580+** and a
-compatible GPU (tested on RTX 4090). Wheels bundle OpenUSD and PhysX, and pip installs the CUDA runtime on Linux.
+macOS uses CPU PhysX; Linux requires **Ubuntu 24.04 x86-64, NVIDIA driver 580+
+and a compatible GPU** (tested on RTX 4090). Both include OpenUSD.
+Keep both Linux wheels in the same folder; pip installs PhysX GPU and CUDA
+runtime dependencies automatically.
 
 Continue with [Verify Installation](VERIFY_INSTALLATION.md).
 

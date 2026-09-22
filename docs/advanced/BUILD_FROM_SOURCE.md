@@ -473,65 +473,24 @@ platform, and architecture.
 
 ## Python Wheels
 
-KangEngine builds separate native wheels on each target platform. Wheel builds
-use `python/.venv/bin/python` by default, so activating the development virtual
-environment is optional. Create and populate that environment as described in
-the previous section before building a wheel.
-
-The default wheel bundles the OpenUSD runtime; no separate OpenUSD installation is required.
-
-Build and preserve a wheel under `python/dist`:
+Build on each target OS using the development environment above.
+macOS uses PhysX CPU; Linux uses CUDA. Both include OpenUSD.
+Linux builds require `patchelf` on `PATH`.
 
 ```bash
-# macOS: CPU + vcpkg USD
-# Linux: CUDA + vcpkg USD
-make wheel
+make wheel           # Output: python/dist
+make validate_wheel  # Isolated install, API/stubs, USD checks
 ```
 
-The filename records the active CPython ABI and platform, for example:
-
-```text
-python/dist/kangengine-0.1.0-cp312-cp312-macosx_26_0_arm64.whl
-```
-
-Wheel creation uses a temporary staging directory, so stale files under a
-previous setuptools build directory cannot enter the package. The
-`kangengine/assets/external` directory is excluded; the remaining runtime
-assets, Python modules, type information, and `_kangengine.so` are included.
-
-To build, install, and test a temporary wheel without changing the development
-environment, run:
+Linux produces two wheels: `kangengine` and `kangengine-physx-gpu`.
+Install the engine wheel in a fresh Python 3.12 environment; pip finds the
+PhysX GPU wheel in the same directory:
 
 ```bash
-make validate_wheel
+python -m pip install --find-links python/dist python/dist/<kangengine-wheel>.whl
 ```
 
-`validate_wheel` installs the wheel into a temporary directory and checks its
-package contents, public API, type stubs, and USDA/USDC save-load path.
-
-To test the preserved wheel as a consumer, create a separate environment with
-the matching Python version and install the wheel there:
-
-```bash
-python3.12 -m venv /tmp/kangengine-wheel-venv
-source /tmp/kangengine-wheel-venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install python/dist/kangengine-0.1.0-cp312-cp312-macosx_26_0_arm64.whl
-python -c "import kangengine as ke; assert ke.scene.has_usd_support()"
-```
-
-Use the corresponding filename emitted by `make wheel` on Linux.
-
-The `kangengine` package uses a CPU wheel on macOS and a CUDA wheel on Linux.
-Both bundle OpenUSD and PhysX; Linux installs the CUDA runtime through the
-dependency in `python/pyproject.toml`. Wheel users do not need the CUDA Toolkit
-or PhysX SDK. The Linux target is Ubuntu 24.04 x86-64 with NVIDIA driver 580+
-and a compatible GPU; runtime testing currently covers the RTX 4090.
-
-Linux wheel builds additionally require `patchelf` on `PATH`.
-Override `PHYSX_SDK_DIR` and `PHYSX_CUDA_BIN_PLATFORM` if needed.
-Before publishing, check Linux compatibility with `auditwheel show`; current
-local wheels use the `linux_x86_64` tag and still need manylinux release validation.
+Optional Pyroki development dependencies: `uv sync --project python --group pyroki`.
 
 ## Optional Hardware / Resource Usage Monitor
 

@@ -125,7 +125,10 @@ def stage_project(
 
 
 def inspect_wheel(
-    wheel: Path, expect_usd: bool, cuda_runtime_version: str | None = None
+    wheel: Path,
+    expect_usd: bool,
+    cuda_runtime_version: str | None = None,
+    physx_runtime_version: str | None = None,
 ) -> None:
     if wheel.name.endswith("-none-any.whl"):
         raise AssertionError(f"native wheel has a pure-Python tag: {wheel.name}")
@@ -133,10 +136,7 @@ def inspect_wheel(
     with zipfile.ZipFile(wheel) as archive:
         names = set(archive.namelist())
         if cuda_runtime_version:
-            for required in (
-                "kangengine/_native/lib/libPhysXGpu_64.so",
-                "kangengine/licenses/PhysX.txt",
-            ):
+            for required in ("kangengine/licenses/PhysX.txt",):
                 if required not in names:
                     raise AssertionError(f"CUDA wheel is missing {required}")
             metadata_name = next(
@@ -145,6 +145,12 @@ def inspect_wheel(
             metadata = archive.read(metadata_name).decode()
             if f"nvidia-cuda-runtime=={cuda_runtime_version}" not in metadata:
                 raise AssertionError("CUDA runtime dependency is missing from METADATA")
+            if f"kangengine-physx-gpu=={physx_runtime_version}" not in metadata:
+                raise AssertionError(
+                    "PhysX runtime dependency does not match the built runtime"
+                )
+            if any("libPhysXGpu" in name for name in names):
+                raise AssertionError("PhysX GPU must come from the runtime dependency")
             if any("libcudart.so" in name for name in names):
                 raise AssertionError(
                     "CUDA runtime must come from the NVIDIA dependency"
@@ -195,7 +201,7 @@ def main() -> None:
     if args.extension is not None and not args.extension.is_file():
         parser.error(f"--extension does not exist: {args.extension}")
 
-    source = Path(__file__).resolve().parents[1]
+    source = Path(__file__).resolve().parents[2]
     cuda_runtime_version = None
     if sys.platform == "linux":
         project = tomllib.loads((source / "pyproject.toml").read_text())
@@ -242,6 +248,44 @@ def main() -> None:
         staged.mkdir()
         wheelhouse.mkdir()
         target.mkdir()
+        runtime_wheel = None
+        runtime_version = None
+        if sys.platform == "linux":
+            from wheel_linux import stage_physx_runtime
+
+            if args.physx_runtime is None or args.physx_license is None:
+                parser.error("Linux wheels require --physx-runtime and --physx-license")
+            runtime_project = temp / "physx-project"
+            runtime_version = stage_physx_runtime(
+                source / "physx_gpu_runtime",
+                runtime_project,
+                args.physx_runtime,
+                args.physx_license,
+            )
+            run(
+                args.uv,
+                "build",
+                "--python",
+                python_executable,
+                "--wheel",
+                "--out-dir",
+                str(wheelhouse),
+                str(runtime_project),
+            )
+            (runtime_wheel,) = wheelhouse.glob("kangengine_physx_gpu-*.whl")
+            with zipfile.ZipFile(runtime_wheel) as archive:
+                required = {
+                    "kangengine_physx_gpu/lib/libPhysXGpu_64.so",
+                    "kangengine_physx_gpu/licenses/PhysX.txt",
+                }
+                if not required.issubset(archive.namelist()):
+                    raise AssertionError(
+                        "PhysX runtime wheel is missing its library or license"
+                    )
+                if "-py3-none-linux_" not in runtime_wheel.name:
+                    raise AssertionError(
+                        f"Unexpected runtime wheel tag: {runtime_wheel.name}"
+                    )
         stage_project(
             source,
             staged,
@@ -261,18 +305,21 @@ def main() -> None:
             str(wheelhouse),
             str(staged),
         )
-        wheels = list(wheelhouse.glob("*.whl"))
+        wheels = list(wheelhouse.glob("kangengine-*.whl"))
         if len(wheels) != 1:
             raise AssertionError(f"expected one wheel, found {len(wheels)}")
         wheel = wheels[0]
-        inspect_wheel(wheel, args.expect_usd, cuda_runtime_version)
+        inspect_wheel(wheel, args.expect_usd, cuda_runtime_version, runtime_version)
 
         if args.output_dir is not None:
             output_dir = args.output_dir.absolute()
             output_dir.mkdir(parents=True, exist_ok=True)
-            output_wheel = output_dir / wheel.name
-            shutil.copy2(wheel, output_wheel)
-            print(f"Built wheel: {output_wheel}")
+            for artifact in [wheel, *([runtime_wheel] if runtime_wheel else [])]:
+                output_wheel = output_dir / artifact.name
+                shutil.copy2(artifact, output_wheel)
+                print(
+                    f"Built wheel: {output_wheel} ({artifact.stat().st_size / 1048576:.2f} MiB)"
+                )
 
         if args.build_only:
             return
@@ -287,6 +334,7 @@ def main() -> None:
             str(target),
             "--no-deps",
             str(wheel),
+            *([str(runtime_wheel)] if runtime_wheel else []),
         )
         environment = os.environ.copy()
         environment.pop("LD_LIBRARY_PATH", None)
@@ -347,6 +395,8 @@ def main() -> None:
                     "selected = [p for p in paths if any(Path(p).name.startswith(n) for n in required)]; "
                     "assert all(any(Path(p).name.startswith(n) for p in selected) for n in required), selected; "
                     "assert all(Path(p).is_relative_to(root) for p in selected), selected; "
+                    "assert all(Path(p).is_relative_to(root / 'kangengine_physx_gpu') "
+                    "for p in selected if Path(p).name == 'libPhysXGpu_64.so'), selected; "
                     "print('PASS: PhysX GPU and CUDA runtime loaded from wheel installation', selected)"
                 ),
                 cwd=temp,

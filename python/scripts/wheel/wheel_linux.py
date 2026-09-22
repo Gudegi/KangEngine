@@ -46,12 +46,11 @@ def bundle_linux_runtime(
     if physx_runtime is not None:
         if physx_license is None or not physx_license.is_file():
             raise ValueError("--physx-license must name the SDK license file")
-        shutil.copy2(physx_runtime / "libPhysXGpu_64.so", lib)
         licenses = package / "licenses"
         licenses.mkdir(exist_ok=True)
         shutil.copy2(physx_license, licenses / "PhysX.txt")
 
-    # ldd covers transitive dependencies, but not PhysX's dlopen plugin above.
+    # PhysX's dlopen plugin is supplied by kangengine-physx-gpu.
     # Collect before rewriting any search paths. Keep host OS/driver libraries
     # external; auditwheel determines the eventual manylinux policy separately.
     binaries = [extension, *lib.rglob("*.so*")]
@@ -67,6 +66,8 @@ def bundle_linux_runtime(
                 continue
             name, resolved = match.groups()
             path = Path(resolved)
+            if name == "libPhysXGpu_64.so":
+                continue
             if name.startswith("libcudart.so"):
                 if name != "libcudart.so.13":
                     raise RuntimeError(f"Unexpected CUDA dependency: {name}")
@@ -98,5 +99,47 @@ def bundle_linux_runtime(
                 ["patchelf", "--set-rpath", f"$ORIGIN/{relative_lib}", str(binary)],
                 check=True,
             )
-    paths = "$ORIGIN/_native/lib:$ORIGIN/../nvidia/cu13/lib"
+    paths = "$ORIGIN/_native/lib:$ORIGIN/../kangengine_physx_gpu/lib:$ORIGIN/../nvidia/cu13/lib"
     subprocess.run(["patchelf", "--set-rpath", paths, str(extension)], check=True)
+
+
+def stage_physx_runtime(
+    source: Path, destination: Path, runtime: Path, license_file: Path
+) -> str:
+    """Stage the separate runtime wheel without altering the SDK binary."""
+    import tomllib
+
+    if shutil.which("patchelf") is None:
+        raise RuntimeError("Linux wheel staging requires patchelf on PATH")
+    shutil.copytree(
+        source,
+        destination,
+        ignore=shutil.ignore_patterns(
+            "__pycache__", "*.egg-info", "build", "dist", "lib", "licenses"
+        ),
+    )
+    package = destination / "kangengine_physx_gpu"
+    lib = package / "lib"
+    lib.mkdir()
+    binary = lib / "libPhysXGpu_64.so"
+    shutil.copy2(runtime / binary.name, binary)
+    # This SDK build needs only the host C/C++ runtime. Fail explicitly if a
+    # future SDK adds dependencies that require a new packaging policy.
+    system = {
+        "libstdc++.so.6",
+        "libgcc_s.so.1",
+        "libm.so.6",
+        "libc.so.6",
+        "libdl.so.2",
+        "libpthread.so.0",
+        "librt.so.1",
+    }
+    unexpected = set(needed(binary)) - system
+    if unexpected:
+        raise RuntimeError(f"Unsupported PhysX GPU dependencies: {sorted(unexpected)}")
+    subprocess.run(["patchelf", "--set-rpath", "$ORIGIN", str(binary)], check=True)
+    (package / "licenses").mkdir()
+    shutil.copy2(license_file, package / "licenses" / "PhysX.txt")
+    return tomllib.loads((destination / "pyproject.toml").read_text())["project"][
+        "version"
+    ]

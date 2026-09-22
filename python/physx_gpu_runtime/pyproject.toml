@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kangengine-physx-gpu"
+version = "5.8.0.1"
+description = "PhysX 5.8 GPU runtime for KangEngine on Linux"
+readme = { text = "PhysX 5.8 GPU runtime dependency for KangEngine on Linux. Installed automatically with KangEngine. Requires a compatible NVIDIA GPU and driver 580 or newer. The PhysX license is included in the package.", content-type = "text/plain" }
+requires-python = ">=3.12"
+
+[tool.setuptools.packages.find]
+include = ["kangengine_physx_gpu*"]
+
+[tool.setuptools.package-data]
+kangengine_physx_gpu = ["lib/*.so*", "licenses/*"]
