@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "kangengine"
 version = "0.1.0"
-description = "Add your description here"
+description = "Graphics, animation, and robotics engine with PhysX and OpenUSD support"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -15,6 +15,7 @@ dependencies = [
     "pyyaml>=6.0",
     "torch>=1.9.1",
     "nvidia-cuda-runtime==13.0.96; sys_platform == 'linux'",
+    "kangengine-physx-gpu==5.8.0.1; sys_platform == 'linux'",
 ]
 
 [project.optional-dependencies]
@@ -34,14 +35,12 @@ mimickit = [
 mimickit-full = [
     "gymnasium",
 ]
-pyroki = [
-    "jaxls @ git+https://github.com/brentyi/jaxls.git@50a58be88c5ef74532f09e3f55268b4f02c490e3",
-    "pyroki @ git+https://github.com/chungmin99/pyroki.git@388e43e1fc0d0ee382968d3dd72970fd62a0450c",
-    "tqdm>=4.67",
-]
 
 [tool.setuptools]
 include-package-data = true
+
+[tool.uv.sources]
+kangengine-physx-gpu = { path = "physx_gpu_runtime", editable = true }
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -79,6 +78,12 @@ select = ["E4", "E7", "E9", "F"]
 docstring-code-format = true
 
 [dependency-groups]
+pyroki = [
+    "jaxls @ git+https://github.com/brentyi/jaxls.git@50a58be88c5ef74532f09e3f55268b4f02c490e3",
+    "pyroki @ git+https://github.com/chungmin99/pyroki.git@388e43e1fc0d0ee382968d3dd72970fd62a0450c",
+    "tqdm>=4.67",
+]
+release = ["auditwheel>=6.4; sys_platform == 'linux'", "patchelf; sys_platform == 'linux'", "twine>=6"]
 dev = [
     "ruff>=0.16.1",
 ]

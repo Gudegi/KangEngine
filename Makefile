@@ -151,14 +151,14 @@ validate_python_api: check_python_api_style build_python
 
 # wheel macOS CPU / Linux CUDA + vcpkg USD
 wheel: build_wheel
-	$(PYTHON) python/scripts/validate_wheel.py --python $(PYTHON) --uv $(UV) \
+	$(PYTHON) python/scripts/wheel/validate_wheel.py --python $(PYTHON) --uv $(UV) \
 		--expect-usd $(WHEEL_GPU_FLAGS) --usd-runtime $(WHEEL_DIR)/vcpkg_installed \
 		--extension $(WHEEL_DIR)/python/kangengine/_kangengine.so \
 		--build-only --output-dir python/dist
 
 # validate wheel macOS CPU / Linux CUDA + vcpkg USD
 validate_wheel: build_wheel
-	$(PYTHON) python/scripts/validate_wheel.py --python $(PYTHON) --uv $(UV) \
+	$(PYTHON) python/scripts/wheel/validate_wheel.py --python $(PYTHON) --uv $(UV) \
 		--expect-usd $(WHEEL_GPU_FLAGS) --usd-runtime $(WHEEL_DIR)/vcpkg_installed \
 		--extension $(WHEEL_DIR)/python/kangengine/_kangengine.so
 
