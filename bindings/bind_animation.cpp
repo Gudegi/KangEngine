@@ -381,6 +381,10 @@ void bind_animation(py::module& m) {
                                [](const ArticulationCoordinateBlock& block) {
                                    return KE::Animation::toGlm(block.axis);
                                })
+        .def_property_readonly("joint_offset",
+                               [](const ArticulationCoordinateBlock& block) {
+                                   return KE::Animation::toGlm(block.jointOffset);
+                               })
         .def_property_readonly("reference_translation",
                                [](const ArticulationCoordinateBlock& block) {
                                    return KE::Animation::toGlm(

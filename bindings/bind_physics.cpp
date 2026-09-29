@@ -19,6 +19,7 @@
 #include "engine/core/app/app.hpp"
 #include "engine/scene/scene_backend.hpp"
 #include "physics/articulation.hpp"
+#include "physics/d6_joint.hpp"
 #include "physics/physics_material.hpp"
 #include "physics/physics.hpp"
 #include <extensions/PxRigidBodyExt.h>
@@ -818,11 +819,81 @@ void bind_physics(py::module& m) {
     physics.attr("RigidStatic") = m.attr("RigidStatic");
 
     // PhysicsWorld (non-copyable, non-movable — Python must keep it alive)
+    py::enum_<D6Axis>(physics, "D6Axis")
+        .value("X", D6Axis::X).value("Y", D6Axis::Y).value("Z", D6Axis::Z)
+        .value("TWIST", D6Axis::Twist).value("SWING1", D6Axis::Swing1).value("SWING2", D6Axis::Swing2);
+    py::enum_<D6Motion>(physics, "D6Motion")
+        .value("LOCKED", D6Motion::Locked).value("LIMITED", D6Motion::Limited).value("FREE", D6Motion::Free);
+    py::enum_<D6DriveAxis>(physics, "D6DriveAxis")
+        .value("X", D6DriveAxis::X).value("Y", D6DriveAxis::Y).value("Z", D6DriveAxis::Z)
+        .value("TWIST", D6DriveAxis::Twist).value("SWING", D6DriveAxis::Swing).value("SLERP", D6DriveAxis::Slerp);
+    py::class_<D6DriveConfig>(physics, "D6DriveConfig")
+        .def(py::init([](float stiffness, float damping, float forceLimit, bool acceleration) {
+            return D6DriveConfig{stiffness, damping, forceLimit, acceleration};
+        }), py::kw_only(), py::arg("stiffness") = 0.f, py::arg("damping") = 0.f,
+            py::arg("force_limit") = PX_MAX_F32, py::arg("acceleration") = false)
+        .def_readwrite("stiffness", &D6DriveConfig::stiffness)
+        .def_readwrite("damping", &D6DriveConfig::damping)
+        .def_readwrite("force_limit", &D6DriveConfig::forceLimit)
+        .def_readwrite("acceleration", &D6DriveConfig::acceleration);
+    py::class_<D6JointConfig>(physics, "D6JointConfig")
+        .def(py::init<>())
+        .def(py::init<const D6JointConfig&>(), py::arg("config"))
+        .def_property("locked_axes", &D6JointConfig::lockedAxes, &D6JointConfig::setLockedAxes)
+        .def_readwrite("motions", &D6JointConfig::motions)
+        .def_readwrite("linear_limits", &D6JointConfig::linearLimits)
+        .def_readwrite("twist_limits", &D6JointConfig::twistLimits)
+        .def_readwrite("swing_limits", &D6JointConfig::swingLimits)
+        .def_readwrite("drives", &D6JointConfig::drives)
+        .def_readwrite("drive_target", &D6JointConfig::driveTarget)
+        .def_readwrite("drive_linear_velocity", &D6JointConfig::driveLinearVelocity)
+        .def_readwrite("drive_angular_velocity", &D6JointConfig::driveAngularVelocity)
+        .def_readwrite("break_force", &D6JointConfig::breakForce)
+        .def_readwrite("break_torque", &D6JointConfig::breakTorque)
+        .def_readwrite("enabled", &D6JointConfig::enabled)
+        .def_readwrite("frame0", &D6JointConfig::frame0)
+        .def_readwrite("frame1", &D6JointConfig::frame1)
+        .def("validate", &D6JointConfig::validate, "Validate all settings without changing a joint.");
+    py::class_<JointBody, std::shared_ptr<JointBody>>(physics, "JointBody")
+        .def_property_readonly("valid", &JointBody::valid);
+    py::class_<D6Joint, std::shared_ptr<D6Joint>>(physics, "D6Joint")
+        .def_property_readonly("valid", &D6Joint::valid)
+        .def_property_readonly("enabled", &D6Joint::enabled)
+        .def_property_readonly("broken", &D6Joint::broken)
+        .def_property_readonly("config", &D6Joint::config, "Return an independent configuration snapshot.")
+        .def("set_motion", &D6Joint::setMotion, py::arg("axis"), py::arg("motion"))
+        .def("set_linear_limit", &D6Joint::setLinearLimit, py::arg("axis"), py::arg("lower"), py::arg("upper"))
+        .def("set_twist_limit", &D6Joint::setTwistLimit, py::arg("lower"), py::arg("upper"))
+        .def("set_swing_limit", &D6Joint::setSwingLimit, py::arg("y_angle"), py::arg("z_angle"))
+        .def("set_drive", &D6Joint::setDrive, py::arg("axis"), py::arg("config"))
+        .def("set_drive_target", &D6Joint::setDriveTarget, py::arg("pose"))
+        .def("set_drive_velocity", &D6Joint::setDriveVelocity, py::arg("linear"), py::arg("angular"))
+        .def("set_break_force", &D6Joint::setBreakForce, py::arg("force"), py::arg("torque"))
+        .def("get_wrench", &D6Joint::getWrench,
+             "Read [Fx,Fy,Fz,Tx,Ty,Tz] on endpoint 1 in world axes, torque about frame1. "
+             "Call after a completed step. Disabled/broken joints return zero. "
+             "Direct GPU reads synchronize. TGS torque reporting has backend limitations; see D6_JOINTS.md.")
+        .def_property_readonly("frame0", &D6Joint::frame0)
+        .def_property_readonly("frame1", &D6Joint::frame1)
+        .def("set_enabled", &D6Joint::setEnabled, py::arg("enabled"))
+        .def("set_frame0", &D6Joint::setFrame0, py::arg("frame0"))
+        .def("set_frame1", &D6Joint::setFrame1, py::arg("frame1"))
+        .def("set_frames", &D6Joint::setFrames, py::arg("frame0"), py::arg("frame1"))
+        .def("release", &D6Joint::release);
+
     py::class_<PhysicsWorld>(
         physics, "PhysicsWorld",
         "PhysX simulation world for rigid bodies and articulations.")
         .def(py::init<PhysicsConfig>(), py::arg("config") = PhysicsConfig{},
              "Create a physics world from configuration.")
+        .def("joint_body", [](PhysicsWorld& world, PxRigidDynamic& body) {
+            return std::make_shared<JointBody>(world, &body);
+        }, py::arg("body"), py::keep_alive<0, 1>())
+        .def("joint_body", [](PhysicsWorld& world, PxRigidStatic& body) {
+            return std::make_shared<JointBody>(world, &body);
+        }, py::arg("body"), py::keep_alive<0, 1>())
+        .def("create_d6_joint", &D6Joint::create, py::arg("body0"), py::arg("body1"),
+             py::arg("config") = D6JointConfig{}, py::keep_alive<0, 1>())
         .def("step", &PhysicsWorld::step,
              "Advance simulation by one configured timestep.")
         .def("get_simulation_statistics", [](const PhysicsWorld& self) {
@@ -1405,6 +1476,13 @@ void bind_physics(py::module& m) {
         .def_property_readonly(
             "template", &Articulation::articulationTemplate,
             "Shared immutable template used to build this instance.")
+        .def("link", [](Articulation& self, const std::string& name) {
+            const auto& names = self.bodyNames();
+            auto it = std::find(names.begin(), names.end(), name);
+            if (it == names.end()) throw py::key_error(name);
+            return self.jointBody(static_cast<int>(it - names.begin()));
+        }, py::arg("name"), py::keep_alive<0, 1>())
+        .def("link", &Articulation::jointBody, py::arg("index"), py::keep_alive<0, 1>())
         .def("num_links", &Articulation::numLinks,
              "Return the number of links.")
         .def(

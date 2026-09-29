@@ -101,7 +101,15 @@ Eigen::VectorXf decompose(const BlockList& blocks,
 
 ArticulationMotionMapper::ArticulationMotionMapper(
     ArticulationCoordinateLayout layout)
-    : _layout(std::move(layout)) {}
+    : _layout(std::move(layout)) {
+    for (const auto& block : _layout.blocks()) {
+        if (!block.jointOffset.isZero(0.f))
+            throw std::invalid_argument(
+                "ArticulationMotionMapper cannot convert joint_offset on body '" +
+                block.bodyName + "': SkeletonState/SkeletonMotion use fixed child "
+                "translations. Keep this model's motion as ArticulationMotion.");
+    }
+}
 
 ArticulationMappingResult ArticulationMotionMapper::toArticulationCoordinates(
     const SkeletonState& state, bool clampToLimits) const {

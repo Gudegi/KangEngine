@@ -13,6 +13,9 @@ API overview
 
    PhysicsConfig
    PhysicsWorld
+   D6JointConfig
+   D6Joint
+   D6Batch
    ArticulationConfig
    Articulation
    PhysicsBridge
@@ -81,6 +84,24 @@ PhysX/CUDA features and invalid lifecycle state raise ``RuntimeError``.
 .. autofunction:: mjcf_friction_to_physx
 
 .. autoclass:: PhysicsWorld
+
+.. autoclass:: D6Axis
+
+.. autoclass:: D6Motion
+
+.. autoclass:: D6DriveAxis
+
+.. autoclass:: D6DriveConfig
+   :special-members: __init__
+
+.. autoclass:: D6JointConfig
+   :special-members: __init__
+
+.. autoclass:: JointBody
+
+.. autoclass:: D6Joint
+
+.. autoclass:: D6Batch
 
 .. autoclass:: ArticulationConfig
    :special-members: __init__

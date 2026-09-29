@@ -115,6 +115,14 @@ ConvexCookingOptions = _export_native_type("ConvexCookingOptions")
 RigidDynamic = _export_native_type("RigidDynamic")
 RigidStatic = _export_native_type("RigidStatic")
 ArticulationConfig = _export_native_type("ArticulationConfig")
+ArticulationTemplate = _export_native_type("ArticulationTemplate")
+D6JointConfig = _export_native_type("D6JointConfig")
+D6Axis = _export_native_type("D6Axis")
+D6Motion = _export_native_type("D6Motion")
+D6DriveAxis = _export_native_type("D6DriveAxis")
+D6DriveConfig = _export_native_type("D6DriveConfig")
+D6Joint = _export_native_type("D6Joint")
+JointBody = _export_native_type("JointBody")
 GpuPhysicsConfig = _export_native_type("GpuPhysicsConfig")
 PhysicsGpuStateViews = _export_native_type("PhysicsGpuStateViews")
 
@@ -145,6 +153,22 @@ class PhysicsWorld(_NativeWrapper):
     def step(self) -> None:
         """Advance simulation by one configured timestep."""
         self._native.step()
+
+    def joint_body(self, body):
+        """Get a checked endpoint for a rigid body in this world."""
+        return self._native.joint_body(unwrap_native(body))
+
+    def create_d6_joint(self, body0, body1, *, config=None):
+        """Connect rigid bodies/link handles; None denotes the world.
+
+        Frames are local xyz/xyzw poses (world poses for None endpoints).
+        Call only between completed physics steps.
+        """
+        def endpoint(body):
+            body = unwrap_native(body)
+            return body if body is None or isinstance(body, JointBody) else self.joint_body(body)
+        return self._native.create_d6_joint(
+            endpoint(body0), endpoint(body1), D6JointConfig() if config is None else config)
 
     def add_default_ground(self) -> None:
         self._native.add_default_ground()
@@ -432,6 +456,15 @@ class Articulation(_NativeWrapper):
             native_module.Articulation.build(unwrap_native(physics), data, config)
         )
 
+    @staticmethod
+    def build_from_template(physics, template, *, config=None) -> "Articulation":
+        native_module = _require_native()
+        return Articulation(native_module.Articulation.build_from_template(
+            unwrap_native(physics), template, ArticulationConfig() if config is None else config))
+
+    def link(self, name_or_index):
+        return self._native.link(name_or_index)
+
     def num_links(self) -> int:
         return self._native.num_links()
 
@@ -505,6 +538,14 @@ class PhysicsGpuSystem(_NativeWrapper):
     def rigid_row(self, rigid: RigidDynamic) -> int:
         return self._native.rigid_row(unwrap_native(rigid))
 
+    def fetch_d6_wrenches(self, joints: Sequence[D6Joint], output: GpuArrayView) -> None:
+        """Write joint wrenches into caller-owned CUDA float32 [N,6] storage.
+
+        The output view supplies the CUDA stream and must remain valid until
+        that stream completes. D6Batch.fetch_wrenches manages Torch storage.
+        """
+        self._native.fetch_d6_wrenches(joints, output)
+
     def views(self) -> PhysicsGpuStateViews:
         """Return borrowed GPU state views owned by this PhysicsGpuSystem.
 
@@ -556,6 +597,14 @@ __all__ = [
         "RigidStatic",
         "PhysicsWorld",
         "ArticulationConfig",
+        "ArticulationTemplate",
+        "D6JointConfig",
+        "D6Axis",
+        "D6Motion",
+        "D6DriveAxis",
+        "D6DriveConfig",
+        "D6Joint",
+        "JointBody",
         "Articulation",
         "PhysicsBridge",
         "GpuPhysicsConfig",

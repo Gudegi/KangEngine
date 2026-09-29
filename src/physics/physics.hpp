@@ -21,6 +21,8 @@ using namespace physx;
 namespace KE {
 
 class Articulation;
+class D6Joint;
+class JointBody;
 namespace Asset {
 struct ArticulationDesc;
 } // namespace Asset
@@ -164,6 +166,14 @@ class PhysicsWorld {
     std::unordered_map<MaterialKey, PxMaterial*, MaterialKeyHash>
         _materialCache;
     std::unique_ptr<ContactReportCallback> _contactCallback;
+    std::unordered_map<const D6Joint*, std::weak_ptr<D6Joint>> _d6Joints;
+    std::shared_ptr<bool> _jointLifetime = std::make_shared<bool>(true);
+    friend class D6Joint;
+    friend class JointBody;
+    friend class Articulation;
+    void trackD6Joint(const std::shared_ptr<D6Joint>& joint);
+    void untrackD6Joint(const D6Joint* joint) noexcept;
+    std::weak_ptr<bool> jointLifetime() const { return _jointLifetime; }
 
     physx::PxMaterial*
     materialForDesc(const Physics::PhysicsMaterialDesc& material);
@@ -171,6 +181,9 @@ class PhysicsWorld {
   public:
     PhysicsWorld(PhysicsConfig config);
     ~PhysicsWorld();
+    // Diagnostic count of registered D6 handles, not enabled constraints.
+    // Includes handles with deleted endpoints until release/destruction.
+    size_t numTrackedD6Joints() const { return _d6Joints.size(); }
 
     void setDt(float dt) { _dt = dt; }
 

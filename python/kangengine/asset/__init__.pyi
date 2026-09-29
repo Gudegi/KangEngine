@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy.typing as npt
 from types import ModuleType
-from typing import Literal
+from typing import Literal, Sequence
 
 from .. import UpAxis
 from ..animation import SkeletonMotion, SkeletonTree
@@ -28,11 +28,23 @@ class ImportDiagnostics:
 
 class ArticulationDesc:
     skeleton_tree: SkeletonTree
-    traversal_order: Literal["DFS", "BFS"]
-class CollisionGeomDesc: ...
+    traversal_order: Literal["DFS", "BFS", "AUTHORED"]
+    def __init__(self, skeleton_tree: SkeletonTree, *, joints: dict[int, list[JointDesc]],
+                 collision_geoms: dict[int, list[CollisionGeomDesc]],
+                 inertials: dict[int, InertialDesc]) -> None: ...
+class CollisionGeomDesc:
+    def __init__(self, *, type: CollisionGeomDescType, size: Sequence[float],
+                 position: Sequence[float], rotation_xyzw: Sequence[float]) -> None: ...
 class CollisionGeomDescType: ...
-class InertialDesc: ...
-class JointDesc: ...
+class InertialDesc:
+    def __init__(self, mass: float, *, diag_inertia: Sequence[float], com: Sequence[float]) -> None: ...
+class JointDescType:
+    REVOLUTE: JointDescType
+    PRISMATIC: JointDescType
+class JointDesc:
+    def __init__(self, name: str, *, type: JointDescType, axis: Sequence[float],
+                 joint_offset: Sequence[float], lo_limit: float, hi_limit: float,
+                 kp: float = 0., kd: float = 0.) -> None: ...
 class SiteDesc: ...
 class SiteDescType: ...
 class VisualGeomDesc: ...

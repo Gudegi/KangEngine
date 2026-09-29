@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <stdexcept>
 #include <unordered_map>
 #include <vector>
@@ -17,6 +18,7 @@ class PxRigidDynamic;
 namespace KE {
 
 class PhysicsWorld;
+class D6Joint;
 
 struct GpuPhysicsConfig {
     static constexpr uint32_t DefaultMaxContactPairs = 65536;
@@ -212,6 +214,10 @@ class PhysicsGpuSystem {
         return _views.contactPointPairIndices;
     }
 
+    // Writes endpoint-1 world wrenches directly into caller-owned CUDA [N,6].
+    // Uses output.streamHandle; callers retain output storage until completion.
+    void fetchD6Wrenches(const std::vector<std::shared_ptr<D6Joint>>& joints,
+                        Sim::GpuArrayView& output);
     void fetchRigidData();
     void fetchRigidAccelerations();
     void fetchArticulationLinkPose();
@@ -343,6 +349,12 @@ class PhysicsGpuSystem {
     void* _contactPointPairIndexBuffer = nullptr;
     std::vector<ArticulationGpuMetadata> _articulationMetadata;
     std::unordered_map<const void*, uint32_t> _articulationRows;
+    void* _d6Scratch = nullptr;
+    uint32_t _d6Capacity = 0;
+    std::vector<uint32_t> _d6Layout;
+    void* _d6StartEvent = nullptr;
+    void* _d6CopyEvent = nullptr;
+    void* _d6ReadyEvent = nullptr;
     void* _copyEvent = nullptr;
     void* _readyEvent = nullptr;
 };

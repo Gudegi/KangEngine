@@ -4,8 +4,11 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/eigen.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <array>
+#include <cmath>
 
 #include "animation/skeleton_math.hpp"
 #include "asset/articulation_desc.hpp"
@@ -17,9 +20,39 @@ using namespace KE::Asset;
 void bind_articulation_desc(py::module& m) {
     py::module asset = m.attr("asset").cast<py::module>();
 
+    py::enum_<JointDesc::Type>(asset, "JointDescType")
+        .value("REVOLUTE", JointDesc::Type::Revolute)
+        .value("PRISMATIC", JointDesc::Type::Prismatic);
+
     py::class_<JointDesc>(
         asset, "JointDesc",
         "Joint description imported from robot/character assets.")
+        .def(py::init([](const std::string& name, JointDesc::Type type,
+                         Eigen::Vector3f axis, Eigen::Vector3f jointOffset,
+                         float lo, float hi, float kp, float kd) {
+                 if (!axis.allFinite() || axis.norm() < 1e-6f ||
+                     !jointOffset.allFinite() || !std::isfinite(lo) ||
+                     !std::isfinite(hi) || lo >= hi || !std::isfinite(kp) ||
+                     !std::isfinite(kd) || kp < 0 || kd < 0)
+                     throw py::value_error(
+                         "Invalid joint axis, jointOffset, limits, or gains");
+                 JointDesc j;
+                 j.name = name;
+                 j.type = type;
+                 j.axis = axis.normalized();
+                 j.jointOffset = jointOffset;
+                 j.loLimit = lo;
+                 j.hiLimit = hi;
+                 j.kp = kp;
+                 j.kd = kd;
+                 return j;
+             }),
+             py::arg("name"), py::kw_only(), py::arg("type"), py::arg("axis"),
+             py::arg("joint_offset"), py::arg("lo_limit"), py::arg("hi_limit"),
+             py::arg("kp") = 0.f, py::arg("kd") = 0.f)
+        .def_readonly("type", &JointDesc::type)
+        .def_property_readonly("joint_offset",
+                               [](const JointDesc& j) { return j.jointOffset; })
         .def_readonly("name", &JointDesc::name, "Joint name.")
         .def_readonly("lo_limit", &JointDesc::loLimit, "Lower joint limit.")
         .def_readonly("hi_limit", &JointDesc::hiLimit, "Upper joint limit.")
@@ -72,6 +105,22 @@ void bind_articulation_desc(py::module& m) {
 
     py::class_<InertialDesc>(asset, "InertialDesc",
                              "Imported body-local inertial properties.")
+        .def(py::init([](float mass, Eigen::Vector3f diagonal,
+                         Eigen::Vector3f com) {
+                 if (!std::isfinite(mass) || mass <= 0 ||
+                     !diagonal.allFinite() || (diagonal.array() <= 0).any() ||
+                     !com.allFinite() ||
+                     2 * diagonal.maxCoeff() > diagonal.sum() + 1e-6f)
+                     throw py::value_error("Mass and physically valid diagonal "
+                                           "inertia must be positive");
+                 InertialDesc i;
+                 i.mass = mass;
+                 i.diagInertia = diagonal;
+                 i.com = com;
+                 return i;
+             }),
+             py::arg("mass"), py::kw_only(), py::arg("diag_inertia"),
+             py::arg("com"))
         .def_readonly("mass", &InertialDesc::mass, "Body mass.")
         .def_property_readonly(
             "com",
@@ -131,6 +180,32 @@ void bind_articulation_desc(py::module& m) {
     py::class_<CollisionGeomDesc>(
         asset, "CollisionGeomDesc",
         "Imported body-local collision geometry description.")
+        .def(py::init([](CollisionGeomDesc::Type type, Eigen::Vector3f size,
+                         Eigen::Vector3f position,
+                         std::array<float, 4> rotation) {
+                 if (type != CollisionGeomDesc::Type::Box &&
+                     type != CollisionGeomDesc::Type::Sphere)
+                     throw py::value_error(
+                         "Authored shapes currently support BOX and SPHERE");
+                 Eigen::Quaternionf q(rotation[3], rotation[0], rotation[1],
+                                      rotation[2]);
+                 if (!size.allFinite() || size[0] <= 0 ||
+                     !position.allFinite() || !q.coeffs().allFinite() ||
+                     std::abs(q.squaredNorm() - 1.f) > 1e-3f ||
+                     (type == CollisionGeomDesc::Type::Box &&
+                      (size.array() <= 0).any()))
+                     throw py::value_error(
+                         "Invalid shape dimensions or local pose");
+                 CollisionGeomDesc g;
+                 g.type = type;
+                 g.pos = position;
+                 g.quat = q.normalized();
+                 for (int i = 0; i < 3; ++i)
+                     g.size[i] = size[i];
+                 return g;
+             }),
+             py::kw_only(), py::arg("type"), py::arg("size"),
+             py::arg("position"), py::arg("rotation_xyzw"))
         .def_readonly("type", &CollisionGeomDesc::type,
                       "Collision geometry type.")
         .def_readonly("name", &CollisionGeomDesc::name,
@@ -184,6 +259,55 @@ void bind_articulation_desc(py::module& m) {
         asset, "ArticulationDesc",
         "Imported articulation description with skeleton, visual, collision, "
         "joint, and site payloads.")
+        .def(py::init([](std::shared_ptr<Animation::SkeletonTree> tree,
+                         JointDescMap joints, CollisionGeomDescMap shapes,
+                         InertialDescMap inertials) {
+                 if (!tree || tree->numJoints() == 0)
+                     throw py::value_error(
+                         "Articulation description requires a nonempty tree");
+                 const int n = tree->numJoints();
+                 std::vector<int> counts(n, 0);
+                 for (int i = 0; i < n; ++i) {
+                     const int parent = tree->parentIndex(i);
+                     if ((i == 0 && parent != -1) ||
+                         (i > 0 && (parent < 0 || parent >= i)))
+                         throw py::value_error(
+                             "Links must form one parent-before-child tree");
+                 }
+                 for (const auto& [index, axes] : joints) {
+                     if (index <= 0 || index >= n || axes.empty() ||
+                         axes.size() > 3)
+                         throw py::value_error(
+                             "Invalid inbound joint body index or axis count");
+                     for (const auto& axis : axes)
+                         if (axes.size() > 1 &&
+                             (axis.type != JointDesc::Type::Revolute ||
+                              !axis.jointOffset.isApprox(axes[0].jointOffset)))
+                             throw py::value_error("Spherical axes must share "
+                                                   "a child-local jointOffset");
+                     counts[index] = static_cast<int>(axes.size());
+                 }
+                 for (const auto& item : shapes)
+                     if (item.first < 0 || item.first >= n)
+                         throw py::value_error(
+                             "Collision body index out of range");
+                 for (const auto& item : inertials)
+                     if (item.first < 0 || item.first >= n)
+                         throw py::value_error(
+                             "Inertial body index out of range");
+                 ArticulationDesc d;
+                 d.skeletonTree = std::make_shared<Animation::SkeletonTree>(
+                     tree->nodeNames(), tree->parentIndices(),
+                     tree->localTranslations(), tree->localRotations(),
+                     std::move(counts));
+                 d.traversalOrder = "AUTHORED";
+                 d.joints = std::move(joints);
+                 d.collisionGeoms = std::move(shapes);
+                 d.inertials = std::move(inertials);
+                 return d;
+             }),
+             py::arg("skeleton_tree"), py::kw_only(), py::arg("joints"),
+             py::arg("collision_geoms"), py::arg("inertials"))
         .def_readonly("skeleton_tree", &ArticulationDesc::skeletonTree,
                       "Imported skeleton hierarchy.")
         .def_readonly("traversal_order", &ArticulationDesc::traversalOrder,

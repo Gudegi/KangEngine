@@ -1,11 +1,13 @@
 #include "physics_gpu_system.hpp"
 
 #include "physics.hpp"
+#include "d6_joint.hpp"
 #include "physics/physx_compat.hpp"
 #include "physics/physics_gpu_system_kernels.hpp"
 
 #include <array>
 #include <cstdint>
+#include <limits>
 #include <string>
 #include <utility>
 #include <vector>
@@ -781,6 +783,113 @@ uint32_t PhysicsGpuSystem::articulationJacobianRowCount(
 void PhysicsGpuSystem::stepStart() { checkInitialized(); }
 
 void PhysicsGpuSystem::stepFinish() { checkInitialized(); }
+
+void PhysicsGpuSystem::fetchD6Wrenches(
+    const std::vector<std::shared_ptr<D6Joint>>& joints, Sim::GpuArrayView& output) {
+    checkInitialized();
+#if defined(KANGENGINE_USE_CUDA) && KANGENGINE_PHYSX_VERSION_AT_LEAST(5, 6)
+    if (joints.size() > std::numeric_limits<uint32_t>::max())
+        throw std::invalid_argument("Too many D6 joints");
+    const auto count = static_cast<uint32_t>(joints.size());
+    if (!output.isCuda() || output.dtype != Sim::SimDType::Float32 ||
+        output.deviceId != _config.cudaDeviceId ||
+        output.shape != std::vector<int64_t>{count, 6} ||
+        (!output.strides.empty() && output.strides != std::vector<int64_t>{6, 1}) ||
+        (count && !output.data))
+        throw std::invalid_argument("D6 output must be contiguous CUDA float32 [N,6] on the physics device");
+
+    // Validate all handles before writing anything. IDs are refreshed because
+    // removal/recreation can reuse PhysX GPU slots. Only metadata lives on CPU.
+    std::vector<uint32_t> layout, rows;
+    layout.reserve(count); rows.reserve(count);
+    for (uint32_t row = 0; row < count; ++row) {
+        const auto& joint = joints[row];
+        if (!joint) throw std::invalid_argument("D6 handle cannot be null");
+        joint->requireValid();
+        if (joint->_world != _world)
+            throw std::invalid_argument("D6 joints must belong to this GPU system's world");
+        if (!joint->enabled()) continue;
+        if (_world->getScene()->getTimestamp() == joint->_createdAt)
+            throw std::runtime_error("D6 wrench requires a completed physics step after creation");
+        const auto index = joint->_joint->getGPUIndex();
+        if (index == PX_INVALID_D6_JOINT_GPU_INDEX)
+            throw std::runtime_error("D6 GPU index unavailable; complete a physics step first");
+        layout.push_back(index);
+        rows.push_back(row);
+    }
+    const uint32_t active = static_cast<uint32_t>(rows.size());
+    layout.insert(layout.end(), rows.begin(), rows.end());
+    checkCuda(cudaSetDevice(_config.cudaDeviceId), "cudaSetDevice(D6)");
+    auto stream = reinterpret_cast<cudaStream_t>(output.streamHandle);
+    for (auto* storage : {&_d6StartEvent, &_d6CopyEvent, &_d6ReadyEvent}) {
+        if (!*storage) {
+            cudaEvent_t event = nullptr;
+            checkCuda(cudaEventCreateWithFlags(&event, cudaEventDisableTiming),
+                      "cudaEventCreate(D6)");
+            *storage = event;
+        }
+    }
+    auto ready = reinterpret_cast<cudaEvent_t>(_d6ReadyEvent);
+    auto start = reinterpret_cast<cudaEvent_t>(_d6StartEvent);
+    auto copy = reinterpret_cast<cudaEvent_t>(_d6CopyEvent);
+    checkCuda(cudaStreamWaitEvent(stream, ready, 0), "cudaStreamWaitEvent(D6 reuse)");
+    if (output.readyEventHandle)
+        checkCuda(cudaStreamWaitEvent(stream,
+            reinterpret_cast<cudaEvent_t>(output.readyEventHandle), 0),
+            "cudaStreamWaitEvent(D6 output)");
+
+    if (active > _d6Capacity || layout != _d6Layout) {
+        // Structural edits may synchronize metadata uploads. Unchanged layouts
+        // perform no host synchronization or host/device transfer each step.
+        checkCuda(cudaEventSynchronize(ready), "cudaEventSynchronize(D6 layout)");
+        if (active > _d6Capacity) {
+            void* replacement = nullptr;
+            const size_t bytes = size_t(active) * (2 * sizeof(uint32_t) + 2 * sizeof(PxVec3));
+            checkCuda(cudaMalloc(&replacement, bytes), "cudaMalloc(D6 scratch)");
+            if (_d6Scratch) cudaFree(_d6Scratch);
+            _d6Scratch = replacement;
+            _d6Capacity = active;
+        }
+        _d6Layout = std::move(layout);
+        if (!_d6Layout.empty())
+            checkCuda(cudaMemcpyAsync(_d6Scratch, _d6Layout.data(),
+                _d6Layout.size() * sizeof(uint32_t), cudaMemcpyHostToDevice, stream),
+                "cudaMemcpyAsync(D6 indices)");
+    }
+    try {
+        if (count)
+            checkCuda(cudaMemsetAsync(output.data, 0, size_t(count) * 6 * sizeof(float), stream),
+                      "cudaMemsetAsync(D6 output)");
+        if (active) {
+            static_assert(sizeof(PxVec3) == 3 * sizeof(float), "D6 readback requires packed Vec3");
+            auto* indices = static_cast<PxD6JointGPUIndex*>(_d6Scratch);
+            auto* rowIndices = reinterpret_cast<uint32_t*>(_d6Scratch) + active;
+            auto* forces = static_cast<char*>(_d6Scratch) + size_t(_d6Capacity) * 2 * sizeof(uint32_t);
+            auto* torques = forces + size_t(_d6Capacity) * sizeof(PxVec3);
+            auto& api = _world->getScene()->getDirectGPUAPI();
+            for (auto type : {PxD6JointGPUAPIReadType::eJOINT_FORCE,
+                              PxD6JointGPUAPIReadType::eJOINT_TORQUE}) {
+                checkCuda(cudaEventRecord(start, stream), "cudaEventRecord(D6 start)");
+                if (!api.getD6JointData(type == PxD6JointGPUAPIReadType::eJOINT_FORCE ? forces : torques,
+                        indices, type, active, reinterpret_cast<CUevent>(start),
+                        reinterpret_cast<CUevent>(copy)))
+                    throw std::runtime_error("PxDirectGPUAPI::getD6JointData failed");
+                checkCuda(cudaStreamWaitEvent(stream, copy, 0), "cudaStreamWaitEvent(D6 copy)");
+            }
+            PhysicsGpuKernels::scatterD6WrenchesCUDA(forces, torques, rowIndices,
+                static_cast<float*>(output.data), active, output.streamHandle);
+        }
+        checkCuda(cudaEventRecord(ready, stream), "cudaEventRecord(D6 ready)");
+    } catch (...) {
+        cudaEventRecord(ready, stream);
+        throw;
+    }
+    output.readyEventHandle = reinterpret_cast<uint64_t>(ready);
+    ++output.version;
+#else
+    throw std::runtime_error("D6 CUDA wrench fetch requires a CUDA build with PhysX 5.6 or newer");
+#endif
+}
 
 void PhysicsGpuSystem::fetchRigidData() {
     checkInitialized();
@@ -2289,6 +2398,11 @@ void PhysicsGpuSystem::applyRigidCommand(const Sim::GpuArrayView* indices,
 void PhysicsGpuSystem::releaseGpuBuffers() {
 #ifdef KANGENGINE_USE_CUDA
     cudaSetDevice(_config.cudaDeviceId);
+    if (_d6ReadyEvent) cudaEventSynchronize(reinterpret_cast<cudaEvent_t>(_d6ReadyEvent));
+    if (_d6Scratch) cudaFree(_d6Scratch);
+    if (_d6StartEvent) cudaEventDestroy(reinterpret_cast<cudaEvent_t>(_d6StartEvent));
+    if (_d6CopyEvent) cudaEventDestroy(reinterpret_cast<cudaEvent_t>(_d6CopyEvent));
+    if (_d6ReadyEvent) cudaEventDestroy(reinterpret_cast<cudaEvent_t>(_d6ReadyEvent));
     if (_readyEvent)
         cudaEventDestroy(reinterpret_cast<cudaEvent_t>(_readyEvent));
     if (_copyEvent)
@@ -2378,6 +2492,10 @@ void PhysicsGpuSystem::releaseGpuBuffers() {
     if (_contactPointPairIndexBuffer)
         cudaFree(_contactPointPairIndexBuffer);
 #endif
+    _d6Scratch = nullptr;
+    _d6Capacity = 0;
+    _d6Layout.clear();
+    _d6StartEvent = _d6CopyEvent = _d6ReadyEvent = nullptr;
     _rigidCount = 0;
     _rigidIndexBuffer = nullptr;
     _rigidScratchBuffer = nullptr;

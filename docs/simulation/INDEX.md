@@ -6,6 +6,8 @@ articulations, batched environments, commands, and public state.
 - [Rigid Bodies](RIGID_BODIES.md)
 - [Fixed Timestep and Rendering](FIXED_TIMESTEP.md)
 - [Articulations](ARTICULATION.md)
+- [Procedural Articulation Builder](ARTICULATION_BUILDER.md)
+- [D6 Joints](D6_JOINTS.md)
 - [Control DOFs](DOF_CONTROL.md)
 - [Multi-Environment Simulation](MULTI_ENV.md)
 - [Procedural Terrain and Collision](PROCEDURAL_TERRAIN.md)

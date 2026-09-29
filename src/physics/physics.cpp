@@ -1,4 +1,5 @@
 #include "physics.hpp"
+#include "d6_joint.hpp"
 #include "PxBroadPhase.h"
 #include "PxSceneDesc.h"
 #include "asset/articulation_desc.hpp"
@@ -407,7 +408,23 @@ PhysicsWorld::PhysicsWorld(PhysicsConfig config) {
     fmt::print("PhysX is initialized.\n");
 }
 
+void PhysicsWorld::trackD6Joint(const std::shared_ptr<D6Joint>& joint) {
+    _d6Joints.emplace(joint.get(), joint);
+}
+
+void PhysicsWorld::untrackD6Joint(const D6Joint* joint) noexcept {
+    _d6Joints.erase(joint);
+}
+
 PhysicsWorld::~PhysicsWorld() {
+    // Remove each entry before release(), which also unregisters itself.
+    while (!_d6Joints.empty()) {
+        auto it = _d6Joints.begin();
+        auto joint = it->second.lock();
+        _d6Joints.erase(it);
+        if (joint) joint->release();
+    }
+    *_jointLifetime = false;
     if (_scene)
         _scene->release();
     if (_dispatcher)

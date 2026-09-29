@@ -8,6 +8,7 @@
 #ifdef KANGENGINE_USE_PHYSX
 #include "physics/articulation.hpp"
 #include "physics/physics.hpp"
+#include "physics/d6_joint.hpp"
 #include "physics/physics_gpu_system.hpp"
 #ifdef KANGENGINE_USE_CUDA
 #include "physics/physics_gpu_system_kernels.hpp"
@@ -263,6 +264,10 @@ void bind_physics_gpu(py::module& m) {
         .def("contact_point_pair_indices",
              &PhysicsGpuSystem::contactPointPairIndices,
              py::return_value_policy::reference_internal)
+        .def("fetch_d6_wrenches", &PhysicsGpuSystem::fetchD6Wrenches,
+             py::arg("joints"), py::arg("output"),
+             "Write endpoint-1 wrenches to caller-owned CUDA float32 [N,6]. "
+             "Uses output.stream_handle; retain its storage until completion.")
         .def("fetch_rigid_data", &PhysicsGpuSystem::fetchRigidData)
         .def("fetch_rigid_accelerations",
              &PhysicsGpuSystem::fetchRigidAccelerations)

@@ -61,6 +61,10 @@ std::string signatureFor(const ArticulationCoordinateLayout& layout) {
                << block.referenceRotation.y() << ','
                << block.referenceRotation.z() << ':' << block.lowerLimit << ':'
                << block.upperLimit << ':' << block.qSize << ':' << block.qdSize;
+        // Preserve existing signatures for zero-offset assets.
+        if (!block.jointOffset.isZero(0.f))
+            source << ":jointOffset=" << block.jointOffset.x() << ','
+                   << block.jointOffset.y() << ',' << block.jointOffset.z();
     }
 
     uint64_t hash = 14695981039346656037ull;
@@ -139,6 +143,7 @@ ArticulationCoordinateLayout::fromData(const Asset::ArticulationDesc& data,
                    jointIndex, data.skeletonTree->nodeName(bodyIndex),
                    joint.name, coordinateType(joint.type), joint.axis,
                    joint.loLimit, joint.hiLimit);
+            layout._blocks.back().jointOffset = joint.jointOffset;
         }
     }
 

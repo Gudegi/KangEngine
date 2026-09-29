@@ -986,5 +986,37 @@ void aggregateContactSensorsCUDA(
     checkCUDA(cudaGetLastError(), "contactCountToMaskKernel");
 }
 
+namespace {
+// Pack forces/torques into original [N,6] batch rows, flipping signs to
+// endpoint 1.
+__global__ void scatterD6WrenchesKernel(const float* forces,
+                                        const float* torques,
+                                        const uint32_t* rows, float* output,
+                                        uint32_t count) {
+    const uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i >= count)
+        return;
+    const size_t destination = size_t(rows[i]) * 6;
+    for (int axis = 0; axis < 3; ++axis) {
+        output[destination + axis] = -forces[size_t(i) * 3 + axis];
+        output[destination + 3 + axis] = -torques[size_t(i) * 3 + axis];
+    }
+}
+} // namespace
+
+// Launch wrench packing on the caller's CUDA stream and check launch errors.
+void scatterD6WrenchesCUDA(const void* forces, const void* torques,
+                           const uint32_t* rows, float* output, uint32_t count,
+                           uint64_t streamHandle) {
+    if (count == 0)
+        return;
+    constexpr uint32_t block = 256;
+    scatterD6WrenchesKernel<<<(count + block - 1) / block, block, 0,
+                              reinterpret_cast<cudaStream_t>(streamHandle)>>>(
+        static_cast<const float*>(forces), static_cast<const float*>(torques),
+        rows, output, count);
+    checkCUDA(cudaGetLastError(), "scatterD6WrenchesKernel");
+}
+
 } // namespace PhysicsGpuKernels
 } // namespace KE

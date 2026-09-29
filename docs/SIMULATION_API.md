@@ -7,6 +7,8 @@ simulation guide:
 - [Fixed Timestep and Rendering](simulation/FIXED_TIMESTEP.md)
 - [Rigid Bodies](simulation/RIGID_BODIES.md)
 - [Articulations](simulation/ARTICULATION.md)
+- [Procedural Articulation Builder](simulation/ARTICULATION_BUILDER.md)
+- [D6 Joints](simulation/D6_JOINTS.md)
 - [Control DOFs](simulation/DOF_CONTROL.md)
 - [Multi-Environment Simulation](simulation/MULTI_ENV.md)
 - [Contact Sensors](simulation/CONTACT_SENSORS.md)

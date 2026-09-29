@@ -39,6 +39,10 @@ struct JointDesc {
     Type type = Type::Revolute;
     std::string name;
     Eigen::Vector3f axis = Eigen::Vector3f::UnitZ();
+    // Joint origin in child-link-local coordinates.
+    // E.g. a centered 2 m Z-axis bar uses (0, 0, -1) for a hinge at its lower
+    // end.
+    Eigen::Vector3f jointOffset = Eigen::Vector3f::Zero();
     float loLimit = -3.14159f;
     float hiLimit = 3.14159f;
     float kp = 0.f;

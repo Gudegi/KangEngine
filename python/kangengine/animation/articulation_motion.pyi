@@ -25,6 +25,7 @@ class ArticulationCoordinateBlock:
     joint_name: str
     type: ArticulationCoordinateType
     axis: Vec3
+    joint_offset: Vec3
     reference_translation: Vec3
     reference_rotation: Quat
     lower_limit: float

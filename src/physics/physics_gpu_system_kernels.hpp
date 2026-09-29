@@ -9,6 +9,11 @@
 namespace KE {
 namespace PhysicsGpuKernels {
 
+// Scatter packed PhysX endpoint-0 force/torque into dense endpoint-1 wrenches.
+void scatterD6WrenchesCUDA(const void* forces, const void* torques,
+                          const uint32_t* rows, float* output,
+                          uint32_t count, uint64_t streamHandle);
+
 // Return the temporary CUB storage size required to compact a mask.
 size_t compactMaskWorkspaceSizeCUDA(uint32_t capacity,
                                     uint64_t streamHandle);

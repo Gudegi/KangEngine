@@ -115,6 +115,8 @@ class Articulation {
     std::vector<float> _KDs;
     std::vector<float> _effortLimits;
     std::vector<float> _appliedForces;
+    PhysicsWorld* _world = nullptr;
+    std::weak_ptr<bool> _worldLifetime;
 
     void syncDriveParams();
     std::vector<int> getDofPhysxIndices() const;
@@ -141,6 +143,7 @@ class Articulation {
           const ArticulationConfig& cfg = {});
 
     void release();
+    std::shared_ptr<JointBody> jointBody(int index);
     void setDriveTargets(const std::vector<float>& targets, float kp, float kd);
     void setDriveTargets(const std::vector<float>& targets);
     void setDriveVelocityTargets(const std::vector<float>& targets);

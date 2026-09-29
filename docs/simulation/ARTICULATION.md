@@ -3,6 +3,8 @@
 MJCF, URDF, and USD loaders produce a common `ArticulationDesc`.
 Load a robot, then pass its data to `world.add_articulation()`.
 
+To create a robot without an asset file, use [ArticulationBuilder](ARTICULATION_BUILDER.md).
+
 ## Load a robot
 
 Choose the loader for your file:

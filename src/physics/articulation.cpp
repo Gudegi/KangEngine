@@ -1,4 +1,5 @@
 #include "articulation.hpp"
+#include "d6_joint.hpp"
 #include "animation/skeleton_state.hpp"
 #include "collision_material_utils.hpp"
 #include "physics/physx_compat.hpp"
@@ -270,7 +271,7 @@ Articulation::Articulation(Articulation&& o) noexcept
     : _artic(o._artic), _aggregate(o._aggregate), _links(std::move(o._links)),
       _template(std::move(o._template)), _KPs(std::move(o._KPs)),
       _KDs(std::move(o._KDs)), _effortLimits(std::move(o._effortLimits)),
-      _appliedForces(std::move(o._appliedForces)) {
+      _appliedForces(std::move(o._appliedForces)), _world(o._world), _worldLifetime(std::move(o._worldLifetime)) {
     o._artic = nullptr;
     o._aggregate = nullptr;
 }
@@ -286,6 +287,8 @@ Articulation& Articulation::operator=(Articulation&& o) noexcept {
         _KDs = std::move(o._KDs);
         _effortLimits = std::move(o._effortLimits);
         _appliedForces = std::move(o._appliedForces);
+        _world = o._world;
+        _worldLifetime = std::move(o._worldLifetime);
         o._artic = nullptr;
         o._aggregate = nullptr;
     }
@@ -293,6 +296,13 @@ Articulation& Articulation::operator=(Articulation&& o) noexcept {
 }
 
 Articulation::~Articulation() { release(); }
+
+std::shared_ptr<JointBody> Articulation::jointBody(int index) {
+    auto life = _worldLifetime.lock();
+    if (!_artic || !life || !*life || index < 0 || index >= numLinks())
+        throw std::invalid_argument("Expected a live articulation link index");
+    return std::make_shared<JointBody>(*_world, _links[index]);
+}
 
 void Articulation::release() {
     if (_artic) {
@@ -662,6 +672,8 @@ Articulation::build(PhysicsWorld& physics,
         throw std::runtime_error("Articulation::build requires a template");
 
     Articulation artic;
+    artic._world = &physics;
+    artic._worldLifetime = physics.jointLifetime();
     artic._template = std::move(articulationTemplate);
     const auto& tree = artic._template->_tree;
     const auto& joints = artic._template->_joints;
@@ -740,7 +752,7 @@ Articulation::build(PhysicsWorld& physics,
             joint->setJointType(prismatic ? PxArticulationJointType::ePRISMATIC
                                           : PxArticulationJointType::eREVOLUTE);
             const PxTransform childPose(
-                PxVec3(0.f),
+                PxVec3(jd.jointOffset.x(), jd.jointOffset.y(), jd.jointOffset.z()),
                 artic._template->_jointFrames[static_cast<size_t>(i)]);
             joint->setParentPose(parentWorld.getInverse() * childWorld *
                                  childPose);
@@ -750,8 +762,9 @@ Articulation::build(PhysicsWorld& physics,
                                               jd.hiLimit);
         } else {
             joint->setJointType(PxArticulationJointType::eSPHERICAL);
+            const auto& jointOffset = jit->second[0].jointOffset;
             const PxTransform childPose(
-                PxVec3(0.f),
+                PxVec3(jointOffset.x(), jointOffset.y(), jointOffset.z()),
                 artic._template->_jointFrames[static_cast<size_t>(i)]);
             joint->setParentPose(parentWorld.getInverse() * childWorld *
                                  childPose);

@@ -28,6 +28,7 @@ struct ArticulationCoordinateBlock {
     std::string jointName;
     ArticulationCoordinateType type = ArticulationCoordinateType::Fixed;
     Eigen::Vector3f axis = Eigen::Vector3f::Zero();
+    Eigen::Vector3f jointOffset = Eigen::Vector3f::Zero();
     Eigen::Vector3f referenceTranslation = Eigen::Vector3f::Zero();
     Eigen::Quaternionf referenceRotation = Eigen::Quaternionf::Identity();
     float lowerLimit = 0.0f;
