@@ -222,6 +222,8 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/ARTICULATION.html">Articulations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/ARTICULATION_BUILDER.html">Building an articulation in Python</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/D6_JOINTS.html">Attaching bodies with D6 joints</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
@@ -542,6 +544,11 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 </dd></dl>
 
 <dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.JointDesc.joint_offset">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">joint_offset</span></span><a class="headerlink" href="#kangengine.asset.JointDesc.joint_offset" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.JointDesc.kd">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">kd</span></span><a class="headerlink" href="#kangengine.asset.JointDesc.kd" title="Link to this definition">¶</a></dt>
 <dd><p>Joint damping.</p>
@@ -564,6 +571,11 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#kangengine.asset.JointDesc.name" title="Link to this definition">¶</a></dt>
 <dd><p>Joint name.</p>
 </dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.JointDesc.type">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">type</span></span><a class="headerlink" href="#kangengine.asset.JointDesc.type" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.JointDesc.velocity_limit">
@@ -1992,10 +2004,12 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <li><a class="reference internal" href="#kangengine.asset.JointDesc.axis"><code class="docutils literal notranslate"><span class="pre">JointDesc.axis</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.JointDesc.effort_limit"><code class="docutils literal notranslate"><span class="pre">JointDesc.effort_limit</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.JointDesc.hi_limit"><code class="docutils literal notranslate"><span class="pre">JointDesc.hi_limit</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.JointDesc.joint_offset"><code class="docutils literal notranslate"><span class="pre">JointDesc.joint_offset</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.JointDesc.kd"><code class="docutils literal notranslate"><span class="pre">JointDesc.kd</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.JointDesc.kp"><code class="docutils literal notranslate"><span class="pre">JointDesc.kp</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.JointDesc.lo_limit"><code class="docutils literal notranslate"><span class="pre">JointDesc.lo_limit</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.JointDesc.name"><code class="docutils literal notranslate"><span class="pre">JointDesc.name</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.JointDesc.type"><code class="docutils literal notranslate"><span class="pre">JointDesc.type</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.JointDesc.velocity_limit"><code class="docutils literal notranslate"><span class="pre">JointDesc.velocity_limit</span></code></a></li>
 </ul>
 </li>

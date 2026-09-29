@@ -222,6 +222,8 @@
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/ARTICULATION.html">Articulations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/ARTICULATION_BUILDER.html">Building an articulation in Python</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../guide/simulation/D6_JOINTS.html">Attaching bodies with D6 joints</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/DOF_CONTROL.html">Control DOFs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../guide/simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
@@ -349,19 +351,28 @@
 <tr class="row-even"><td><p><a class="reference internal" href="#kangengine.physics.PhysicsWorld" title="kangengine.physics.PhysicsWorld"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PhysicsWorld</span></code></a></p></td>
 <td><p>PhysX simulation world.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.physics.ArticulationConfig" title="kangengine.physics.ArticulationConfig"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ArticulationConfig</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.physics.D6JointConfig" title="kangengine.physics.D6JointConfig"><code class="xref py py-obj docutils literal notranslate"><span class="pre">D6JointConfig</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.physics.D6Joint" title="kangengine.physics.D6Joint"><code class="xref py py-obj docutils literal notranslate"><span class="pre">D6Joint</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.physics.D6Batch" title="kangengine.physics.D6Batch"><code class="xref py py-obj docutils literal notranslate"><span class="pre">D6Batch</span></code></a></p></td>
+<td><p>Python batch interface over individual D6 handles, with batched CUDA readback.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.physics.ArticulationConfig" title="kangengine.physics.ArticulationConfig"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ArticulationConfig</span></code></a></p></td>
 <td><p>PhysX articulation construction settings.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.physics.Articulation" title="kangengine.physics.Articulation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Articulation</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.physics.Articulation" title="kangengine.physics.Articulation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Articulation</span></code></a></p></td>
 <td><p>PhysX articulation wrapper.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.physics.PhysicsBridge" title="kangengine.physics.PhysicsBridge"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PhysicsBridge</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.physics.PhysicsBridge" title="kangengine.physics.PhysicsBridge"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PhysicsBridge</span></code></a></p></td>
 <td><p>Sync PhysX articulation state into scene/render visuals.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.physics.GpuPhysicsConfig" title="kangengine.physics.GpuPhysicsConfig"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GpuPhysicsConfig</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.physics.GpuPhysicsConfig" title="kangengine.physics.GpuPhysicsConfig"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GpuPhysicsConfig</span></code></a></p></td>
 <td><p>Configuration for explicit GPU physics state synchronization.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#kangengine.physics.PhysicsGpuSystem" title="kangengine.physics.PhysicsGpuSystem"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PhysicsGpuSystem</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#kangengine.physics.PhysicsGpuSystem" title="kangengine.physics.PhysicsGpuSystem"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PhysicsGpuSystem</span></code></a></p></td>
 <td><p>Explicit GPU physics synchronization wrapper.</p></td>
 </tr>
 </tbody>
@@ -939,6 +950,28 @@ with PhysX bindings.  The wrapper owns a native
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsWorld.create_d6_joint">
+<span class="sig-name descname"><span class="pre">create_d6_joint</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">body0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.JointBody" title="kangengine.physics.JointBody"><span class="pre">JointBody</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#kangengine.physics.RigidDynamic" title="kangengine.physics.RigidDynamic"><span class="pre">RigidDynamic</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">RigidStatic</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">body1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.JointBody" title="kangengine.physics.JointBody"><span class="pre">JointBody</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#kangengine.physics.RigidDynamic" title="kangengine.physics.RigidDynamic"><span class="pre">RigidDynamic</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">RigidStatic</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.D6JointConfig" title="kangengine.physics.D6JointConfig"><span class="pre">D6JointConfig</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.D6Joint" title="kangengine.physics.D6Joint"><span class="pre">D6Joint</span></a></span></span><a class="headerlink" href="#kangengine.physics.PhysicsWorld.create_d6_joint" title="Link to this definition">¶</a></dt>
+<dd><p>Connect rigid bodies/link handles; None denotes the world.</p>
+<p>Frames are local xyz/xyzw poses (world poses for None endpoints).
+Call only between completed physics steps.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.physics.D6Joint" title="kangengine.physics.D6Joint"><code class="xref py py-class docutils literal notranslate"><span class="pre">D6Joint</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsWorld.create_dynamic_box">
 <span class="sig-name descname"><span class="pre">create_dynamic_box</span></span><span class="sig-paren">(</span>
 
@@ -1147,6 +1180,17 @@ unchanged after later step(), sync(), or clear_contacts() calls.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsWorld.joint_body">
+<span class="sig-name descname"><span class="pre">joint_body</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">body</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.RigidDynamic" title="kangengine.physics.RigidDynamic"><span class="pre">RigidDynamic</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">RigidStatic</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.JointBody" title="kangengine.physics.JointBody"><span class="pre">JointBody</span></a></span></span><a class="headerlink" href="#kangengine.physics.PhysicsWorld.joint_body" title="Link to this definition">¶</a></dt>
+<dd><p>Get a checked endpoint for a rigid body in this world.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.physics.JointBody" title="kangengine.physics.JointBody"><code class="xref py py-class docutils literal notranslate"><span class="pre">JointBody</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsWorld.num_body_actors">
 <span class="sig-name descname"><span class="pre">num_body_actors</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.physics.PhysicsWorld.num_body_actors" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
@@ -1251,6 +1295,678 @@ unchanged after later step(), sync(), or clear_contacts() calls.</p>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
 </dd>
 </dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.physics.D6Axis">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">D6Axis</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.physics.D6Axis" title="Link to this definition">¶</a></dt>
+<dd><p>Members:</p>
+<p>X</p>
+<p>Y</p>
+<p>Z</p>
+<p>TWIST</p>
+<p>SWING1</p>
+<p>SWING2</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.physics.D6Axis.SWING1">
+<span class="sig-name descname"><span class="pre">SWING1</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;D6Axis.SWING1:</span> <span class="pre">4&gt;</span></span><a class="headerlink" href="#kangengine.physics.D6Axis.SWING1" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.physics.D6Axis.SWING2">
+<span class="sig-name descname"><span class="pre">SWING2</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;D6Axis.SWING2:</span> <span class="pre">5&gt;</span></span><a class="headerlink" href="#kangengine.physics.D6Axis.SWING2" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.physics.D6Axis.TWIST">
+<span class="sig-name descname"><span class="pre">TWIST</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;D6Axis.TWIST:</span> <span class="pre">3&gt;</span></span><a class="headerlink" href="#kangengine.physics.D6Axis.TWIST" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.physics.D6Axis.X">
+<span class="sig-name descname"><span class="pre">X</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;D6Axis.X:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.physics.D6Axis.X" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.physics.D6Axis.Y">
+<span class="sig-name descname"><span class="pre">Y</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;D6Axis.Y:</span> <span class="pre">1&gt;</span></span><a class="headerlink" href="#kangengine.physics.D6Axis.Y" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.physics.D6Axis.Z">
+<span class="sig-name descname"><span class="pre">Z</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;D6Axis.Z:</span> <span class="pre">2&gt;</span></span><a class="headerlink" href="#kangengine.physics.D6Axis.Z" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">D6Axis.name</span> <span class="pre">-&gt;</span> <span class="pre">str</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6Axis.value">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">value</span></span><a class="headerlink" href="#kangengine.physics.D6Axis.value" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.physics.D6Motion">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">D6Motion</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.physics.D6Motion" title="Link to this definition">¶</a></dt>
+<dd><p>Members:</p>
+<p>LOCKED</p>
+<p>LIMITED</p>
+<p>FREE</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.physics.D6Motion.FREE">
+<span class="sig-name descname"><span class="pre">FREE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;D6Motion.FREE:</span> <span class="pre">2&gt;</span></span><a class="headerlink" href="#kangengine.physics.D6Motion.FREE" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.physics.D6Motion.LIMITED">
+<span class="sig-name descname"><span class="pre">LIMITED</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;D6Motion.LIMITED:</span> <span class="pre">1&gt;</span></span><a class="headerlink" href="#kangengine.physics.D6Motion.LIMITED" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.physics.D6Motion.LOCKED">
+<span class="sig-name descname"><span class="pre">LOCKED</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;D6Motion.LOCKED:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.physics.D6Motion.LOCKED" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">D6Motion.name</span> <span class="pre">-&gt;</span> <span class="pre">str</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6Motion.value">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">value</span></span><a class="headerlink" href="#kangengine.physics.D6Motion.value" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.physics.D6DriveAxis">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">D6DriveAxis</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.physics.D6DriveAxis" title="Link to this definition">¶</a></dt>
+<dd><p>Members:</p>
+<p>X</p>
+<p>Y</p>
+<p>Z</p>
+<p>TWIST</p>
+<p>SWING</p>
+<p>SLERP</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.physics.D6DriveAxis.SLERP">
+<span class="sig-name descname"><span class="pre">SLERP</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;D6DriveAxis.SLERP:</span> <span class="pre">5&gt;</span></span><a class="headerlink" href="#kangengine.physics.D6DriveAxis.SLERP" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.physics.D6DriveAxis.SWING">
+<span class="sig-name descname"><span class="pre">SWING</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;D6DriveAxis.SWING:</span> <span class="pre">4&gt;</span></span><a class="headerlink" href="#kangengine.physics.D6DriveAxis.SWING" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.physics.D6DriveAxis.TWIST">
+<span class="sig-name descname"><span class="pre">TWIST</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;D6DriveAxis.TWIST:</span> <span class="pre">3&gt;</span></span><a class="headerlink" href="#kangengine.physics.D6DriveAxis.TWIST" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.physics.D6DriveAxis.X">
+<span class="sig-name descname"><span class="pre">X</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;D6DriveAxis.X:</span> <span class="pre">0&gt;</span></span><a class="headerlink" href="#kangengine.physics.D6DriveAxis.X" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.physics.D6DriveAxis.Y">
+<span class="sig-name descname"><span class="pre">Y</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;D6DriveAxis.Y:</span> <span class="pre">1&gt;</span></span><a class="headerlink" href="#kangengine.physics.D6DriveAxis.Y" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kangengine.physics.D6DriveAxis.Z">
+<span class="sig-name descname"><span class="pre">Z</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;D6DriveAxis.Z:</span> <span class="pre">2&gt;</span></span><a class="headerlink" href="#kangengine.physics.D6DriveAxis.Z" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">D6DriveAxis.name</span> <span class="pre">-&gt;</span> <span class="pre">str</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6DriveAxis.value">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">value</span></span><a class="headerlink" href="#kangengine.physics.D6DriveAxis.value" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.physics.D6DriveConfig">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">D6DriveConfig</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.physics.D6DriveConfig" title="Link to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6DriveConfig.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">stiffness</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">damping</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">force_limit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3.4028234663852886e+38</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">acceleration</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.D6DriveConfig.__init__" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6DriveConfig.acceleration">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">acceleration</span></span><a class="headerlink" href="#kangengine.physics.D6DriveConfig.acceleration" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6DriveConfig.damping">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">damping</span></span><a class="headerlink" href="#kangengine.physics.D6DriveConfig.damping" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6DriveConfig.force_limit">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">force_limit</span></span><a class="headerlink" href="#kangengine.physics.D6DriveConfig.force_limit" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6DriveConfig.stiffness">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">stiffness</span></span><a class="headerlink" href="#kangengine.physics.D6DriveConfig.stiffness" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.physics.D6JointConfig">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">D6JointConfig</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.physics.D6JointConfig" title="Link to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6JointConfig.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.D6JointConfig.__init__" title="Link to this definition">¶</a></dt>
+<dd><p>Overloaded function.</p>
+<ol class="arabic simple">
+<li><p>__init__(self: kangengine.physics.D6JointConfig) -&gt; None</p></li>
+<li><p>__init__(self: kangengine.physics.D6JointConfig, config: kangengine.physics.D6JointConfig) -&gt; None</p></li>
+</ol>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6JointConfig.break_force">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">break_force</span></span><a class="headerlink" href="#kangengine.physics.D6JointConfig.break_force" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6JointConfig.break_torque">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">break_torque</span></span><a class="headerlink" href="#kangengine.physics.D6JointConfig.break_torque" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6JointConfig.drive_angular_velocity">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">drive_angular_velocity</span></span><a class="headerlink" href="#kangengine.physics.D6JointConfig.drive_angular_velocity" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6JointConfig.drive_linear_velocity">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">drive_linear_velocity</span></span><a class="headerlink" href="#kangengine.physics.D6JointConfig.drive_linear_velocity" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6JointConfig.drive_target">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">drive_target</span></span><a class="headerlink" href="#kangengine.physics.D6JointConfig.drive_target" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6JointConfig.drives">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">drives</span></span><a class="headerlink" href="#kangengine.physics.D6JointConfig.drives" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6JointConfig.enabled">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">enabled</span></span><a class="headerlink" href="#kangengine.physics.D6JointConfig.enabled" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6JointConfig.frame0">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">frame0</span></span><a class="headerlink" href="#kangengine.physics.D6JointConfig.frame0" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6JointConfig.frame1">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">frame1</span></span><a class="headerlink" href="#kangengine.physics.D6JointConfig.frame1" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6JointConfig.linear_limits">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">linear_limits</span></span><a class="headerlink" href="#kangengine.physics.D6JointConfig.linear_limits" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6JointConfig.locked_axes">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">locked_axes</span></span><a class="headerlink" href="#kangengine.physics.D6JointConfig.locked_axes" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6JointConfig.motions">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">motions</span></span><a class="headerlink" href="#kangengine.physics.D6JointConfig.motions" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6JointConfig.swing_limits">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">swing_limits</span></span><a class="headerlink" href="#kangengine.physics.D6JointConfig.swing_limits" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6JointConfig.twist_limits">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">twist_limits</span></span><a class="headerlink" href="#kangengine.physics.D6JointConfig.twist_limits" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6JointConfig.validate">
+<span class="sig-name descname"><span class="pre">validate</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6JointConfig.validate" title="Link to this definition">¶</a></dt>
+<dd><p>Validate all settings without changing a joint.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.physics.JointBody">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">JointBody</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.physics.JointBody" title="Link to this definition">¶</a></dt>
+<dd><dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.JointBody.valid">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">valid</span></span><a class="headerlink" href="#kangengine.physics.JointBody.valid" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.physics.D6Joint">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">D6Joint</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.physics.D6Joint" title="Link to this definition">¶</a></dt>
+<dd><dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6Joint.broken">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">broken</span></span><a class="headerlink" href="#kangengine.physics.D6Joint.broken" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6Joint.config">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">config</span></span><a class="headerlink" href="#kangengine.physics.D6Joint.config" title="Link to this definition">¶</a></dt>
+<dd><p>Return an independent configuration snapshot.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6Joint.enabled">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">enabled</span></span><a class="headerlink" href="#kangengine.physics.D6Joint.enabled" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6Joint.frame0">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">frame0</span></span><a class="headerlink" href="#kangengine.physics.D6Joint.frame0" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6Joint.frame1">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">frame1</span></span><a class="headerlink" href="#kangengine.physics.D6Joint.frame1" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Joint.get_wrench">
+<span class="sig-name descname"><span class="pre">get_wrench</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.physics.D6Joint.get_wrench" title="Link to this definition">¶</a></dt>
+<dd><p>Read [Fx,Fy,Fz,Tx,Ty,Tz] on endpoint 1 in world axes, torque about frame1. Call after a completed step. Disabled/broken joints return zero. Direct GPU reads synchronize. TGS torque reporting has backend limitations; see D6_JOINTS.md.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Joint.release">
+<span class="sig-name descname"><span class="pre">release</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Joint.release" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Joint.set_break_force">
+<span class="sig-name descname"><span class="pre">set_break_force</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">force</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">torque</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Joint.set_break_force" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Joint.set_drive">
+<span class="sig-name descname"><span class="pre">set_drive</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.D6DriveAxis" title="kangengine.physics.D6DriveAxis"><span class="pre">D6DriveAxis</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.D6DriveConfig" title="kangengine.physics.D6DriveConfig"><span class="pre">D6DriveConfig</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Joint.set_drive" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Joint.set_drive_target">
+<span class="sig-name descname"><span class="pre">set_drive_target</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Joint.set_drive_target" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Joint.set_drive_velocity">
+<span class="sig-name descname"><span class="pre">set_drive_velocity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">linear</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">angular</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Joint.set_drive_velocity" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Joint.set_enabled">
+<span class="sig-name descname"><span class="pre">set_enabled</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">enabled</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Joint.set_enabled" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Joint.set_frame0">
+<span class="sig-name descname"><span class="pre">set_frame0</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frame0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Joint.set_frame0" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Joint.set_frame1">
+<span class="sig-name descname"><span class="pre">set_frame1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frame1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Joint.set_frame1" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Joint.set_frames">
+<span class="sig-name descname"><span class="pre">set_frames</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frame0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Joint.set_frames" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Joint.set_linear_limit">
+<span class="sig-name descname"><span class="pre">set_linear_limit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.D6Axis" title="kangengine.physics.D6Axis"><span class="pre">D6Axis</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">lower</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upper</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Joint.set_linear_limit" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Joint.set_motion">
+<span class="sig-name descname"><span class="pre">set_motion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.D6Axis" title="kangengine.physics.D6Axis"><span class="pre">D6Axis</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">motion</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.D6Motion" title="kangengine.physics.D6Motion"><span class="pre">D6Motion</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Joint.set_motion" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Joint.set_swing_limit">
+<span class="sig-name descname"><span class="pre">set_swing_limit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_angle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_angle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Joint.set_swing_limit" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Joint.set_twist_limit">
+<span class="sig-name descname"><span class="pre">set_twist_limit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lower</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upper</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Joint.set_twist_limit" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6Joint.valid">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">valid</span></span><a class="headerlink" href="#kangengine.physics.D6Joint.valid" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kangengine.physics.D6Batch">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">D6Batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">joints</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#kangengine.physics.D6Joint" title="kangengine.physics.D6Joint"><span class="pre">D6Joint</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><span class="api-origin api-origin-python"><span class="pre">[python]</span></span><a class="headerlink" href="#kangengine.physics.D6Batch" title="Link to this definition">¶</a></dt>
+<dd><p>Python batch interface over individual D6 handles, with batched CUDA readback.</p>
+<p>Removing an endpoint invalidates only the joints connected to it.
+The caller owns environment/limb-to-index mapping and simulation timing.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6Batch.broken">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">broken</span></span><a class="headerlink" href="#kangengine.physics.D6Batch.broken" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Batch.create">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">world</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.PhysicsWorld" title="kangengine.physics.PhysicsWorld"><span class="pre">PhysicsWorld</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">NativePhysicsWorld</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">bodies0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#kangengine.physics.JointBody" title="kangengine.physics.JointBody"><span class="pre">JointBody</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#kangengine.physics.RigidDynamic" title="kangengine.physics.RigidDynamic"><span class="pre">RigidDynamic</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">RigidStatic</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">bodies1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#kangengine.physics.JointBody" title="kangengine.physics.JointBody"><span class="pre">JointBody</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#kangengine.physics.RigidDynamic" title="kangengine.physics.RigidDynamic"><span class="pre">RigidDynamic</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">RigidStatic</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">frames0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">frames1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.D6JointConfig" title="kangengine.physics.D6JointConfig"><span class="pre">D6JointConfig</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.D6Batch" title="kangengine.physics.D6Batch"><span class="pre">D6Batch</span></a></span></span><a class="headerlink" href="#kangengine.physics.D6Batch.create" title="Link to this definition">¶</a></dt>
+<dd><p>Connect paired body/link handles; None denotes the fixed world.</p>
+<p>Frames are [N,7] xyz/xyzw poses in each endpoint’s local coordinates
+(world coordinates for None). Explicit frames override config frames.
+Raw rigid bodies are also accepted and converted to endpoint handles.
+Torch frames are detached and converted to CPU float32, including CUDA
+inputs, then converted to Python lists once per frame batch. This device
+transfer synchronizes before the CPU PhysX calls.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.physics.D6Batch" title="kangengine.physics.D6Batch"><code class="xref py py-class docutils literal notranslate"><span class="pre">D6Batch</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Batch.create_world_links">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">create_world_links</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">world</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.PhysicsWorld" title="kangengine.physics.PhysicsWorld"><span class="pre">PhysicsWorld</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">NativePhysicsWorld</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">articulations</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#kangengine.physics.Articulation" title="kangengine.physics.Articulation"><span class="pre">Articulation</span></a><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">link_indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">world_frames</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">link_frames</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.D6JointConfig" title="kangengine.physics.D6JointConfig"><span class="pre">D6JointConfig</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.D6Batch" title="kangengine.physics.D6Batch"><span class="pre">D6Batch</span></a></span></span><a class="headerlink" href="#kangengine.physics.D6Batch.create_world_links" title="Link to this definition">¶</a></dt>
+<dd><p>Connect each link to the fixed world.</p>
+<p>world_frames: world-space attachment poses; link_frames: link-local poses.
+Both use [x, y, z, qx, qy, qz, qw]. CPU/CUDA tensors are accepted;
+CUDA frames are copied to CPU before setting PhysX constraints.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.physics.D6Batch" title="kangengine.physics.D6Batch"><code class="xref py py-class docutils literal notranslate"><span class="pre">D6Batch</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6Batch.enabled">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">enabled</span></span><a class="headerlink" href="#kangengine.physics.D6Batch.enabled" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Batch.fetch_wrenches">
+<span class="sig-name descname"><span class="pre">fetch_wrenches</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">gpu_system</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.PhysicsGpuSystem" title="kangengine.physics.PhysicsGpuSystem"><span class="pre">PhysicsGpuSystem</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">NativePhysicsGpuSystem</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Batch.fetch_wrenches" title="Link to this definition">¶</a></dt>
+<dd><p>Refresh a reusable Torch CUDA [N,6] tensor without host force copies.</p>
+<p>Pass an initialized PhysicsGpuSystem on the first call. Later calls
+reuse that system and the output tensor. Operations run on the current
+Torch stream. Use the same stream for consumers, or synchronize them
+before overwriting this shared tensor in another stream.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Batch.get_wrenches">
+<span class="sig-name descname"><span class="pre">get_wrenches</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">NDArray</span><span class="p"><span class="pre">[</span></span><span class="pre">np.float32</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.physics.D6Batch.get_wrenches" title="Link to this definition">¶</a></dt>
+<dd><p>Return host float32 [N,6] wrenches; Direct GPU reads synchronize per joint.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">GenericAlias</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float32</span></code>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Batch.release">
+<span class="sig-name descname"><span class="pre">release</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Batch.release" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Batch.set_break_force">
+<span class="sig-name descname"><span class="pre">set_break_force</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">torque</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Batch.set_break_force" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Batch.set_drive">
+<span class="sig-name descname"><span class="pre">set_drive</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.D6DriveAxis" title="kangengine.physics.D6DriveAxis"><span class="pre">D6DriveAxis</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.D6DriveConfig" title="kangengine.physics.D6DriveConfig"><span class="pre">D6DriveConfig</span></a></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Batch.set_drive" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Batch.set_drive_targets">
+<span class="sig-name descname"><span class="pre">set_drive_targets</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">poses</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Batch.set_drive_targets" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Batch.set_drive_velocity">
+<span class="sig-name descname"><span class="pre">set_drive_velocity</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">linear</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">angular</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Batch.set_drive_velocity" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Batch.set_enabled">
+<span class="sig-name descname"><span class="pre">set_enabled</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enabled</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Batch.set_enabled" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Batch.set_frames0">
+<span class="sig-name descname"><span class="pre">set_frames0</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frames</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Batch.set_frames0" title="Link to this definition">¶</a></dt>
+<dd><p>Update endpoint 0 poses; Torch inputs are detached/copied to CPU.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Batch.set_frames1">
+<span class="sig-name descname"><span class="pre">set_frames1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frames</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Batch.set_frames1" title="Link to this definition">¶</a></dt>
+<dd><p>Update endpoint 1 poses; Torch inputs are detached/copied to CPU.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Batch.set_linear_limit">
+<span class="sig-name descname"><span class="pre">set_linear_limit</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.D6Axis" title="kangengine.physics.D6Axis"><span class="pre">D6Axis</span></a></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">lower</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">upper</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Batch.set_linear_limit" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Batch.set_link_frames">
+<span class="sig-name descname"><span class="pre">set_link_frames</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frames</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Batch.set_link_frames" title="Link to this definition">¶</a></dt>
+<dd><p>Link-local frame1 updates for batches created with create_world_links.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Batch.set_motion">
+<span class="sig-name descname"><span class="pre">set_motion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.D6Axis" title="kangengine.physics.D6Axis"><span class="pre">D6Axis</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">motion</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.D6Motion" title="kangengine.physics.D6Motion"><span class="pre">D6Motion</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Batch.set_motion" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Batch.set_swing_limit">
+<span class="sig-name descname"><span class="pre">set_swing_limit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_angle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_angle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Batch.set_swing_limit" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Batch.set_twist_limit">
+<span class="sig-name descname"><span class="pre">set_twist_limit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lower</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upper</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Batch.set_twist_limit" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Batch.set_world_frames">
+<span class="sig-name descname"><span class="pre">set_world_frames</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frames</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.D6Batch.set_world_frames" title="Link to this definition">¶</a></dt>
+<dd><p>World-space frame0 updates for batches created with create_world_links.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6Batch.size">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">size</span></span><a class="headerlink" href="#kangengine.physics.D6Batch.size" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.physics.D6Batch.wrenches">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">wrenches</span></span><a class="headerlink" href="#kangengine.physics.D6Batch.wrenches" title="Link to this definition">¶</a></dt>
+<dd><p>Torch CUDA [N,6] from the last fetch; clone() to preserve a snapshot.</p>
 </dd></dl>
 
 </dd></dl>
@@ -1473,11 +2189,40 @@ unchanged after later step(), sync(), or clear_contacts() calls.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.Articulation.build_from_template">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">build_from_template</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">physics</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">template</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.Articulation" title="kangengine.physics.Articulation"><span class="pre">Articulation</span></a></span></span><a class="headerlink" href="#kangengine.physics.Articulation.build_from_template" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.physics.Articulation" title="kangengine.physics.Articulation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Articulation</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.Articulation.get_link_shape_counts">
 <span class="sig-name descname"><span class="pre">get_link_shape_counts</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#kangengine.physics.Articulation.get_link_shape_counts" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.Articulation.link">
+<span class="sig-name descname"><span class="pre">link</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name_or_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.JointBody" title="kangengine.physics.JointBody"><span class="pre">JointBody</span></a></span></span><a class="headerlink" href="#kangengine.physics.Articulation.link" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.physics.JointBody" title="kangengine.physics.JointBody"><code class="xref py py-class docutils literal notranslate"><span class="pre">JointBody</span></code></a></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -1849,6 +2594,26 @@ unchanged after later step(), sync(), or clear_contacts() calls.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuSystem.fetch_d6_wrenches">
+<span class="sig-name descname"><span class="pre">fetch_d6_wrenches</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">joints</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#kangengine.physics.D6Joint" title="kangengine.physics.D6Joint"><span class="pre">D6Joint</span></a><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">output</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">GpuArrayView</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuSystem.fetch_d6_wrenches" title="Link to this definition">¶</a></dt>
+<dd><p>Write joint wrenches into caller-owned CUDA float32 [N,6] storage.</p>
+<p>The output view supplies the CUDA stream and must remain valid until
+that stream completes. D6Batch.fetch_wrenches manages Torch storage.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.PhysicsGpuSystem.rigid_row">
 <span class="sig-name descname"><span class="pre">rigid_row</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rigid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.RigidDynamic" title="kangengine.physics.RigidDynamic"><span class="pre">RigidDynamic</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#kangengine.physics.PhysicsGpuSystem.rigid_row" title="Link to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
@@ -1877,7 +2642,7 @@ synchronization, or refresh operations.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="kangengine.physics.aggregate_contact_sensors_cuda">
-<span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">aggregate_contact_sensors_cuda</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">...</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#kangengine.physics.aggregate_contact_sensors_cuda" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">kangengine.physics.</span></span><span class="sig-name descname"><span class="pre">aggregate_contact_sensors_cuda</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">...</span></span></em><span class="sig-paren">)</span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.physics.aggregate_contact_sensors_cuda" title="Link to this definition">¶</a></dt>
 <dd><p>Aggregates contact sensor outputs on the GPU. Available only in CUDA-enabled builds.</p>
 </dd></dl>
 
@@ -2023,6 +2788,7 @@ KangEngine fallback boxes. Visual-only mesh geoms remain render-only.</p>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.add_triangle_mesh"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.add_triangle_mesh()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.clear_contacts"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.clear_contacts()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.clear_ground_actors"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.clear_ground_actors()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.create_d6_joint"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.create_d6_joint()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.create_dynamic_box"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.create_dynamic_box()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.create_dynamic_convex_compound"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.create_dynamic_convex_compound()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.create_dynamic_rigid"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.create_dynamic_rigid()</span></code></a></li>
@@ -2034,6 +2800,7 @@ KangEngine fallback boxes. Visual-only mesh geoms remain render-only.</p>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.get_rigid_contact_force"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.get_rigid_contact_force()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.get_rigid_ground_contact_force"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.get_rigid_ground_contact_force()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.get_simulation_statistics"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.get_simulation_statistics()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.joint_body"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.joint_body()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.num_body_actors"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.num_body_actors()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.num_cached_materials"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.num_cached_materials()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.num_contacts"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.num_contacts()</span></code></a></li>
@@ -2043,6 +2810,112 @@ KangEngine fallback boxes. Visual-only mesh geoms remain render-only.</p>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.set_rigid_collision_material"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.set_rigid_collision_material()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.set_rigid_collision_material_overrides"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.set_rigid_collision_material_overrides()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsWorld.step"><code class="docutils literal notranslate"><span class="pre">PhysicsWorld.step()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.physics.D6Axis"><code class="docutils literal notranslate"><span class="pre">D6Axis</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.physics.D6Axis.SWING1"><code class="docutils literal notranslate"><span class="pre">D6Axis.SWING1</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Axis.SWING2"><code class="docutils literal notranslate"><span class="pre">D6Axis.SWING2</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Axis.TWIST"><code class="docutils literal notranslate"><span class="pre">D6Axis.TWIST</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Axis.X"><code class="docutils literal notranslate"><span class="pre">D6Axis.X</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Axis.Y"><code class="docutils literal notranslate"><span class="pre">D6Axis.Y</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Axis.Z"><code class="docutils literal notranslate"><span class="pre">D6Axis.Z</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Axis.value"><code class="docutils literal notranslate"><span class="pre">D6Axis.value</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.physics.D6Motion"><code class="docutils literal notranslate"><span class="pre">D6Motion</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.physics.D6Motion.FREE"><code class="docutils literal notranslate"><span class="pre">D6Motion.FREE</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Motion.LIMITED"><code class="docutils literal notranslate"><span class="pre">D6Motion.LIMITED</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Motion.LOCKED"><code class="docutils literal notranslate"><span class="pre">D6Motion.LOCKED</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Motion.value"><code class="docutils literal notranslate"><span class="pre">D6Motion.value</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.physics.D6DriveAxis"><code class="docutils literal notranslate"><span class="pre">D6DriveAxis</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.physics.D6DriveAxis.SLERP"><code class="docutils literal notranslate"><span class="pre">D6DriveAxis.SLERP</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6DriveAxis.SWING"><code class="docutils literal notranslate"><span class="pre">D6DriveAxis.SWING</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6DriveAxis.TWIST"><code class="docutils literal notranslate"><span class="pre">D6DriveAxis.TWIST</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6DriveAxis.X"><code class="docutils literal notranslate"><span class="pre">D6DriveAxis.X</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6DriveAxis.Y"><code class="docutils literal notranslate"><span class="pre">D6DriveAxis.Y</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6DriveAxis.Z"><code class="docutils literal notranslate"><span class="pre">D6DriveAxis.Z</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6DriveAxis.value"><code class="docutils literal notranslate"><span class="pre">D6DriveAxis.value</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.physics.D6DriveConfig"><code class="docutils literal notranslate"><span class="pre">D6DriveConfig</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.physics.D6DriveConfig.__init__"><code class="docutils literal notranslate"><span class="pre">D6DriveConfig.__init__()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6DriveConfig.acceleration"><code class="docutils literal notranslate"><span class="pre">D6DriveConfig.acceleration</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6DriveConfig.damping"><code class="docutils literal notranslate"><span class="pre">D6DriveConfig.damping</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6DriveConfig.force_limit"><code class="docutils literal notranslate"><span class="pre">D6DriveConfig.force_limit</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6DriveConfig.stiffness"><code class="docutils literal notranslate"><span class="pre">D6DriveConfig.stiffness</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.physics.D6JointConfig"><code class="docutils literal notranslate"><span class="pre">D6JointConfig</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.physics.D6JointConfig.__init__"><code class="docutils literal notranslate"><span class="pre">D6JointConfig.__init__()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6JointConfig.break_force"><code class="docutils literal notranslate"><span class="pre">D6JointConfig.break_force</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6JointConfig.break_torque"><code class="docutils literal notranslate"><span class="pre">D6JointConfig.break_torque</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6JointConfig.drive_angular_velocity"><code class="docutils literal notranslate"><span class="pre">D6JointConfig.drive_angular_velocity</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6JointConfig.drive_linear_velocity"><code class="docutils literal notranslate"><span class="pre">D6JointConfig.drive_linear_velocity</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6JointConfig.drive_target"><code class="docutils literal notranslate"><span class="pre">D6JointConfig.drive_target</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6JointConfig.drives"><code class="docutils literal notranslate"><span class="pre">D6JointConfig.drives</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6JointConfig.enabled"><code class="docutils literal notranslate"><span class="pre">D6JointConfig.enabled</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6JointConfig.frame0"><code class="docutils literal notranslate"><span class="pre">D6JointConfig.frame0</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6JointConfig.frame1"><code class="docutils literal notranslate"><span class="pre">D6JointConfig.frame1</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6JointConfig.linear_limits"><code class="docutils literal notranslate"><span class="pre">D6JointConfig.linear_limits</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6JointConfig.locked_axes"><code class="docutils literal notranslate"><span class="pre">D6JointConfig.locked_axes</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6JointConfig.motions"><code class="docutils literal notranslate"><span class="pre">D6JointConfig.motions</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6JointConfig.swing_limits"><code class="docutils literal notranslate"><span class="pre">D6JointConfig.swing_limits</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6JointConfig.twist_limits"><code class="docutils literal notranslate"><span class="pre">D6JointConfig.twist_limits</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6JointConfig.validate"><code class="docutils literal notranslate"><span class="pre">D6JointConfig.validate()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.physics.JointBody"><code class="docutils literal notranslate"><span class="pre">JointBody</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.physics.JointBody.valid"><code class="docutils literal notranslate"><span class="pre">JointBody.valid</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.physics.D6Joint"><code class="docutils literal notranslate"><span class="pre">D6Joint</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.physics.D6Joint.broken"><code class="docutils literal notranslate"><span class="pre">D6Joint.broken</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Joint.config"><code class="docutils literal notranslate"><span class="pre">D6Joint.config</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Joint.enabled"><code class="docutils literal notranslate"><span class="pre">D6Joint.enabled</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Joint.frame0"><code class="docutils literal notranslate"><span class="pre">D6Joint.frame0</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Joint.frame1"><code class="docutils literal notranslate"><span class="pre">D6Joint.frame1</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Joint.get_wrench"><code class="docutils literal notranslate"><span class="pre">D6Joint.get_wrench()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Joint.release"><code class="docutils literal notranslate"><span class="pre">D6Joint.release()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Joint.set_break_force"><code class="docutils literal notranslate"><span class="pre">D6Joint.set_break_force()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Joint.set_drive"><code class="docutils literal notranslate"><span class="pre">D6Joint.set_drive()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Joint.set_drive_target"><code class="docutils literal notranslate"><span class="pre">D6Joint.set_drive_target()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Joint.set_drive_velocity"><code class="docutils literal notranslate"><span class="pre">D6Joint.set_drive_velocity()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Joint.set_enabled"><code class="docutils literal notranslate"><span class="pre">D6Joint.set_enabled()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Joint.set_frame0"><code class="docutils literal notranslate"><span class="pre">D6Joint.set_frame0()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Joint.set_frame1"><code class="docutils literal notranslate"><span class="pre">D6Joint.set_frame1()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Joint.set_frames"><code class="docutils literal notranslate"><span class="pre">D6Joint.set_frames()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Joint.set_linear_limit"><code class="docutils literal notranslate"><span class="pre">D6Joint.set_linear_limit()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Joint.set_motion"><code class="docutils literal notranslate"><span class="pre">D6Joint.set_motion()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Joint.set_swing_limit"><code class="docutils literal notranslate"><span class="pre">D6Joint.set_swing_limit()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Joint.set_twist_limit"><code class="docutils literal notranslate"><span class="pre">D6Joint.set_twist_limit()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Joint.valid"><code class="docutils literal notranslate"><span class="pre">D6Joint.valid</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#kangengine.physics.D6Batch"><code class="docutils literal notranslate"><span class="pre">D6Batch</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.physics.D6Batch.broken"><code class="docutils literal notranslate"><span class="pre">D6Batch.broken</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Batch.create"><code class="docutils literal notranslate"><span class="pre">D6Batch.create()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Batch.create_world_links"><code class="docutils literal notranslate"><span class="pre">D6Batch.create_world_links()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Batch.enabled"><code class="docutils literal notranslate"><span class="pre">D6Batch.enabled</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Batch.fetch_wrenches"><code class="docutils literal notranslate"><span class="pre">D6Batch.fetch_wrenches()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Batch.get_wrenches"><code class="docutils literal notranslate"><span class="pre">D6Batch.get_wrenches()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Batch.release"><code class="docutils literal notranslate"><span class="pre">D6Batch.release()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Batch.set_break_force"><code class="docutils literal notranslate"><span class="pre">D6Batch.set_break_force()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Batch.set_drive"><code class="docutils literal notranslate"><span class="pre">D6Batch.set_drive()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Batch.set_drive_targets"><code class="docutils literal notranslate"><span class="pre">D6Batch.set_drive_targets()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Batch.set_drive_velocity"><code class="docutils literal notranslate"><span class="pre">D6Batch.set_drive_velocity()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Batch.set_enabled"><code class="docutils literal notranslate"><span class="pre">D6Batch.set_enabled()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Batch.set_frames0"><code class="docutils literal notranslate"><span class="pre">D6Batch.set_frames0()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Batch.set_frames1"><code class="docutils literal notranslate"><span class="pre">D6Batch.set_frames1()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Batch.set_linear_limit"><code class="docutils literal notranslate"><span class="pre">D6Batch.set_linear_limit()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Batch.set_link_frames"><code class="docutils literal notranslate"><span class="pre">D6Batch.set_link_frames()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Batch.set_motion"><code class="docutils literal notranslate"><span class="pre">D6Batch.set_motion()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Batch.set_swing_limit"><code class="docutils literal notranslate"><span class="pre">D6Batch.set_swing_limit()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Batch.set_twist_limit"><code class="docutils literal notranslate"><span class="pre">D6Batch.set_twist_limit()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Batch.set_world_frames"><code class="docutils literal notranslate"><span class="pre">D6Batch.set_world_frames()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Batch.size"><code class="docutils literal notranslate"><span class="pre">D6Batch.size</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Batch.wrenches"><code class="docutils literal notranslate"><span class="pre">D6Batch.wrenches</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.physics.ArticulationConfig"><code class="docutils literal notranslate"><span class="pre">ArticulationConfig</span></code></a><ul>
@@ -2075,7 +2948,9 @@ KangEngine fallback boxes. Visual-only mesh geoms remain render-only.</p>
 </li>
 <li><a class="reference internal" href="#kangengine.physics.Articulation"><code class="docutils literal notranslate"><span class="pre">Articulation</span></code></a><ul>
 <li><a class="reference internal" href="#kangengine.physics.Articulation.build"><code class="docutils literal notranslate"><span class="pre">Articulation.build()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.Articulation.build_from_template"><code class="docutils literal notranslate"><span class="pre">Articulation.build_from_template()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.Articulation.get_link_shape_counts"><code class="docutils literal notranslate"><span class="pre">Articulation.get_link_shape_counts()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.Articulation.link"><code class="docutils literal notranslate"><span class="pre">Articulation.link()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.Articulation.num_dofs"><code class="docutils literal notranslate"><span class="pre">Articulation.num_dofs()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.Articulation.num_links"><code class="docutils literal notranslate"><span class="pre">Articulation.num_links()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.Articulation.release"><code class="docutils literal notranslate"><span class="pre">Articulation.release()</span></code></a></li>
@@ -2132,6 +3007,7 @@ KangEngine fallback boxes. Visual-only mesh geoms remain render-only.</p>
 </li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsGpuSystem"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuSystem</span></code></a><ul>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsGpuSystem.articulation_row"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuSystem.articulation_row()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.PhysicsGpuSystem.fetch_d6_wrenches"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuSystem.fetch_d6_wrenches()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsGpuSystem.rigid_row"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuSystem.rigid_row()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.PhysicsGpuSystem.views"><code class="docutils literal notranslate"><span class="pre">PhysicsGpuSystem.views()</span></code></a></li>
 </ul>

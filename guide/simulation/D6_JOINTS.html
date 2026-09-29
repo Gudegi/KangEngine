@@ -3,12 +3,12 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Pose Visualization" href="VISUALS.html"><link rel="prev" title="Load and Play Motion" href="LOAD_MOTION.html">
-        <link rel="canonical" href="https://gudegi.github.io/KangEngine/guide/animation/ARTICULATION_MOTION.html">
+<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Control DOFs" href="DOF_CONTROL.html"><link rel="prev" title="Building an articulation in Python" href="ARTICULATION_BUILDER.html">
+        <link rel="canonical" href="https://gudegi.github.io/KangEngine/guide/simulation/D6_JOINTS.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
 
-<title>Articulation Motion — KangEngine</title>
+<title>Attaching bodies with D6 joints — KangEngine</title>
 
 <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
@@ -218,26 +218,26 @@
 <li class="toctree-l3"><a class="reference internal" href="../scene_rendering/DEBUG_VISUALIZATION.html">Debug Visualization and Text Rendering</a></li>
 </ul>
 </li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="../simulation/INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l3"><a class="reference internal" href="../simulation/RIGID_BODIES.html">Rigid Bodies</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../simulation/FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../simulation/ARTICULATION.html">Articulations</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../simulation/ARTICULATION_BUILDER.html">Building an articulation in Python</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../simulation/D6_JOINTS.html">Attaching bodies with D6 joints</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../simulation/DOF_CONTROL.html">Control DOFs</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../simulation/MULTI_ENV.html">Multi-Environment Simulation</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../simulation/PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../simulation/CONTACT_SENSORS.html">Contact Sensors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../simulation/VISUALIZATION.html">Simulation Visualization</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../simulation/RUN_MODES.html">Simulation Run Modes</a></li>
+<li class="toctree-l2 current has-children"><a class="reference internal" href="INDEX.html">Simulation</a><input aria-label="Toggle navigation of Simulation" checked="" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="RIGID_BODIES.html">Rigid Bodies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="FIXED_TIMESTEP.html">Fixed Timestep and Rendering</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ARTICULATION.html">Articulations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ARTICULATION_BUILDER.html">Building an articulation in Python</a></li>
+<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Attaching bodies with D6 joints</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DOF_CONTROL.html">Control DOFs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="MULTI_ENV.html">Multi-Environment Simulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="PROCEDURAL_TERRAIN.html">Procedural Terrain and Collision</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CONTACT_SENSORS.html">Contact Sensors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="VISUALIZATION.html">Simulation Visualization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="RUN_MODES.html">Simulation Run Modes</a></li>
 </ul>
 </li>
-<li class="toctree-l2 current has-children"><a class="reference internal" href="INDEX.html">Animation</a><input aria-label="Toggle navigation of Animation" checked="" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="LOAD_MOTION.html">Load and Play Motion</a></li>
-<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Articulation Motion</a></li>
-<li class="toctree-l3"><a class="reference internal" href="VISUALS.html">Pose Visualization</a></li>
-<li class="toctree-l3"><a class="reference internal" href="RETARGETING.html">Motion Retargeting</a></li>
-<li class="toctree-l3"><a class="reference internal" href="SMPL.html">SMPL Models</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../animation/INDEX.html">Animation</a><input aria-label="Toggle navigation of Animation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../animation/LOAD_MOTION.html">Load and Play Motion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../animation/ARTICULATION_MOTION.html">Articulation Motion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../animation/VISUALS.html">Pose Visualization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../animation/RETARGETING.html">Motion Retargeting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../animation/SMPL.html">SMPL Models</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../advanced/INDEX.html">Advanced Topics</a><input aria-label="Toggle navigation of Advanced Topics" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -320,7 +320,7 @@
   </a>
 </div>
 <div class="view-this-page">
-  <a class="muted-link" href="../../_sources/guide/animation/ARTICULATION_MOTION.md.txt" title="View this page">
+  <a class="muted-link" href="../../_sources/guide/simulation/D6_JOINTS.md.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -337,292 +337,288 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="articulation-motion">
-<h1>Articulation Motion<a class="headerlink" href="#articulation-motion" title="Link to this heading">¶</a></h1>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code> stores character poses as a world-space root translation, a world-space root rotation, and parent-local joint rotations, with all rotations represented as WXYZ quaternions.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">ArticulationMotion</span></code> stores a sampled articulation trajectory as frame-major generalized configurations <code class="docutils literal notranslate"><span class="pre">q</span></code> and generalized tangent velocities <code class="docutils literal notranslate"><span class="pre">qd</span></code>, arranged according to an <code class="docutils literal notranslate"><span class="pre">ArticulationCoordinateLayout</span></code>.</p></li>
-</ul>
-<p>Use this conversion when preparing animation data for robot control, motion
-tracking, or simulation datasets.</p>
-<section id="motion-data-flow">
-<h2>Motion data flow<a class="headerlink" href="#motion-data-flow" title="Link to this heading">¶</a></h2>
-<p>KangEngine normalizes animation files and dataset-specific arrays into
-<code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code>. An articulation layout can then map the same motion into
-<code class="docutils literal notranslate"><span class="pre">ArticulationMotion</span></code>. <code class="docutils literal notranslate"><span class="pre">MotionLibrary</span></code> accepts <code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code> and articulation
-motions that can be converted back to that representation, then provides packed
-sampling and optional backend-native state generation.</p>
-<pre  class="mermaid">
-        flowchart LR
-    subgraph Sources[&quot;Motion sources&quot;]
-        direction TB
-        FILES[&quot;&lt;b&gt;BVH / FBX&lt;/b&gt;&quot;]
-        DATASETS[&quot;&lt;b&gt;NPZ / NPY / PKL&lt;/b&gt;&lt;br/&gt;AMASS · other SMPL-family data&quot;]
-        ARTNPZ[&quot;&lt;b&gt;Articulation NPZ&lt;/b&gt;&lt;br/&gt;q + qd + model signature&quot;]
-        ROBOT[&quot;&lt;b&gt;MJCF / URDF&lt;/b&gt;&quot;]
-    end
-
-    subgraph Canonical[&quot;Skeleton Animation&quot;]
-        direction TB
-        LOADER[&quot;&lt;b&gt;Motion loader&lt;/b&gt;&quot;]
-        DATASET_ADAPTER[&quot;&lt;b&gt;Dataset adapter&lt;/b&gt;&quot;]
-        SKELETON[&quot;&lt;b&gt;SkeletonMotion&lt;/b&gt;&lt;br/&gt;SkeletonTree + root transform&lt;br/&gt;+ parent-local WXYZ rotations&quot;]
-    end
-
-    subgraph Mapping[&quot;Articulation Animation&quot;]
-        direction TB
-        DESC[&quot;&lt;b&gt;ArticulationDesc&lt;/b&gt;&quot;]
-        LAYOUT[&quot;&lt;b&gt;ArticulationCoordinateLayout&lt;/b&gt;&quot;]
-        MAPPER[&quot;&lt;b&gt;ArticulationMotionMapper&lt;/b&gt;&lt;br/&gt;joint decomposition + optional limit clamping&quot;]
-        ARTLOADER[&quot;&lt;b&gt;load_articulation_motion_npz()&lt;/b&gt;&quot;]
-        ARTICULATION[&quot;&lt;b&gt;ArticulationMotion&lt;/b&gt;&lt;br/&gt;q + qd&quot;]
-    end
-
-    subgraph Runtime[&quot;Runtime sampling&quot;]
-        direction TB
-        LIBRARY[&quot;&lt;b&gt;MotionLibrary&lt;/b&gt;&lt;br/&gt;weighted multi-clip sampling&quot;]
-        ADAPTER[&quot;&lt;b&gt;Optional MotionAdapter&lt;/b&gt;&lt;br/&gt;PhysX · Newton · MuJoCo&quot;]
-        PACKED[&quot;&lt;b&gt;Packed Torch buffers&lt;/b&gt;&lt;br/&gt;skeleton frames + optional simulator frame data&quot;]
-        SAMPLE[&quot;&lt;b&gt;MotionSample&lt;/b&gt;&lt;br/&gt;skeleton pose + optional simulator state&quot;]
-    end
-
-    FILES --&gt; LOADER --&gt; SKELETON
-    DATASETS --&gt; DATASET_ADAPTER --&gt; SKELETON
-    ROBOT --&gt; DESC --&gt; LAYOUT
-    SKELETON --&gt; MAPPER
-    LAYOUT --&gt; MAPPER
-    MAPPER --&gt; ARTICULATION
-    ARTNPZ --&gt; ARTLOADER
-    LAYOUT --&gt; ARTLOADER
-    ARTLOADER --&gt; ARTICULATION
-    ARTICULATION -.-&gt;|inspect / export| SKELETON
-    SKELETON --&gt; LIBRARY
-    ARTICULATION --&gt; LIBRARY
-    ADAPTER -.-&gt;|configured with| LIBRARY
-    LIBRARY --&gt;|owns| PACKED
-    ADAPTER -.-&gt;|prepare_motion| PACKED
-    PACKED --&gt;|sample / interpolate| SAMPLE
-    ADAPTER -.-&gt;|pack_sample| SAMPLE
-
-    classDef primary fill:#eaf5e3,stroke:#568b32,stroke-width:3px,color:#28322c
-    class SKELETON,ARTICULATION,LIBRARY primary
-    </pre></section>
-<section id="convert-a-motion">
-<h2>Convert a motion<a class="headerlink" href="#convert-a-motion" title="Link to this heading">¶</a></h2>
-<p>Build the layout from the same <code class="docutils literal notranslate"><span class="pre">ArticulationDesc</span></code> used by the simulator. The
-layout preserves the loader’s BFS or DFS body order.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ke</span>
-
-<span class="n">data</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">asset</span><span class="o">.</span><span class="n">MJCFLoader</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">mjcf_path</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s2">&quot;DFS&quot;</span><span class="p">)</span>
-<span class="n">layout</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">animation</span><span class="o">.</span><span class="n">ArticulationCoordinateLayout</span><span class="o">.</span><span class="n">from_data</span><span class="p">(</span>
-    <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
-    <span class="n">free_root</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="n">mapper</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">animation</span><span class="o">.</span><span class="n">ArticulationMotionMapper</span><span class="p">(</span><span class="n">layout</span><span class="p">)</span>
-
-<span class="n">result</span> <span class="o">=</span> <span class="n">mapper</span><span class="o">.</span><span class="n">to_articulation_motion</span><span class="p">(</span><span class="n">skeleton_motion</span><span class="p">)</span>
-<span class="n">articulation_motion</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">motion</span>
-
-<span class="n">q</span> <span class="o">=</span> <span class="n">articulation_motion</span><span class="o">.</span><span class="n">q</span>    <span class="c1"># [frames, layout.nq], float32 NumPy view</span>
-<span class="n">qd</span> <span class="o">=</span> <span class="n">articulation_motion</span><span class="o">.</span><span class="n">qd</span>  <span class="c1"># [frames, layout.nv], float32 NumPy view</span>
+          <section id="attaching-bodies-with-d6-joints">
+<h1>Attaching bodies with D6 joints<a class="headerlink" href="#attaching-bodies-with-d6-joints" title="Link to this heading">¶</a></h1>
+<p>A D6 joint lets you lock, limit, or free each of six relative degrees of freedom: three translations and three rotations.
+For details, see the <a class="reference external" href="https://nvidia-omniverse.github.io/PhysX/physx/5.8.0/docs/Joints.html#d6-joint">PhysX D6 joint guide</a>.</p>
+<p>Use a D6 joint to attach a robot hand or foot to a fixed point, or connect it to
+another body. You can disable and re-enable the attachment without rebuilding the robot.</p>
+<section id="try-the-interactive-example">
+<h2>Try the interactive example<a class="headerlink" href="#try-the-interactive-example" title="Link to this heading">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>./python/examples/kw_d6_control.py
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">residual_angles</span></code> reports, in radians, rotation that joint decomposition could
-not represent. When <code class="docutils literal notranslate"><span class="pre">clamp_to_limits=True</span></code>, the residual also includes error
-introduced by limit clamping. Use it to detect unsuitable mappings or motions
-outside the robot’s range.</p>
+<p>KW5 starts hanging from its wrists. J/K toggle the hands, N/M toggle the feet,
+and R resets. The panel also provides attachment checkboxes, release-all, and
+root-force sliders. Enter pauses/plays; Space advances one step. Green points
+show active anchors and gray points show inactive ones.</p>
 </section>
-<section id="coordinate-layout">
-<h2>Coordinate layout<a class="headerlink" href="#coordinate-layout" title="Link to this heading">¶</a></h2>
-<p>Each <code class="docutils literal notranslate"><span class="pre">layout.blocks</span></code> entry describes one joint coordinate block and its offsets
-inside <code class="docutils literal notranslate"><span class="pre">q</span></code> and <code class="docutils literal notranslate"><span class="pre">qd</span></code>.</p>
+<section id="attach-a-hand-to-the-world">
+<h2>Attach a hand to the world<a class="headerlink" href="#attach-a-hand-to-the-world" title="Link to this heading">¶</a></h2>
+<p>This snippet assumes <code class="docutils literal notranslate"><span class="pre">physics_world</span></code> and <code class="docutils literal notranslate"><span class="pre">robot</span></code> already exist. Set
+<code class="docutils literal notranslate"><span class="pre">current_hand_world_position</span></code> from the robot’s freshly read link state.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">kangengine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ke</span>
+
+<span class="n">config</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">physics</span><span class="o">.</span><span class="n">D6JointConfig</span><span class="p">()</span>
+<span class="c1"># Lock translation; leave rotation free.</span>
+<span class="c1"># Axis order: X, Y, Z, TWIST, SWING1, SWING2.</span>
+<span class="n">config</span><span class="o">.</span><span class="n">locked_axes</span> <span class="o">=</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">]</span>
+<span class="n">config</span><span class="o">.</span><span class="n">frame0</span> <span class="o">=</span> <span class="p">[</span><span class="o">*</span><span class="n">current_hand_world_position</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="n">config</span><span class="o">.</span><span class="n">frame1</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="n">config</span><span class="o">.</span><span class="n">enabled</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="n">joint</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">physics</span><span class="o">.</span><span class="n">D6Joint</span> <span class="o">=</span> <span class="n">physics_world</span><span class="o">.</span><span class="n">create_d6_joint</span><span class="p">(</span>
+    <span class="kc">None</span><span class="p">,</span> <span class="n">robot</span><span class="o">.</span><span class="n">link</span><span class="p">(</span><span class="s2">&quot;LeftWrist&quot;</span><span class="p">),</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span>
+<span class="p">)</span>
+<span class="n">joint</span><span class="o">.</span><span class="n">set_enabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">None</span></code> means the fixed world. <code class="docutils literal notranslate"><span class="pre">robot.link(name_or_index)</span></code> selects the other
+endpoint. Keep <code class="docutils literal notranslate"><span class="pre">joint</span></code> alive for as long as you need the attachment.</p>
+<section id="what-do-the-frames-mean">
+<h3>What do the frames mean?<a class="headerlink" href="#what-do-the-frames-mean" title="Link to this heading">¶</a></h3>
+<p>A frame is <code class="docutils literal notranslate"><span class="pre">[x,</span> <span class="pre">y,</span> <span class="pre">z,</span> <span class="pre">qx,</span> <span class="pre">qy,</span> <span class="pre">qz,</span> <span class="pre">qw]</span></code>, with position in meters and a normalized
+quaternion. <code class="docutils literal notranslate"><span class="pre">frame0</span></code> is expressed in endpoint 0’s coordinate system;
+<code class="docutils literal notranslate"><span class="pre">frame1</span></code> is expressed in endpoint 1’s coordinate system. If an endpoint is
+<code class="docutils literal notranslate"><span class="pre">None</span></code>, it is the fixed world and its frame uses world coordinates.</p>
 <div class="table-wrapper colwidths-auto docutils container">
 <table class="docutils align-default">
 <thead>
-<tr class="row-odd"><th class="head"><p>Joint type</p></th>
-<th class="head"><p><code class="docutils literal notranslate"><span class="pre">q</span></code> value</p></th>
-<th class="head text-right"><p><code class="docutils literal notranslate"><span class="pre">q</span></code> dimension</p></th>
-<th class="head"><p><code class="docutils literal notranslate"><span class="pre">qd</span></code> value</p></th>
-<th class="head text-right"><p><code class="docutils literal notranslate"><span class="pre">qd</span></code> dimension</p></th>
+<tr class="row-odd"><th class="head"><p>Endpoint</p></th>
+<th class="head"><p>Frame coordinates</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p>Fixed</p></td>
-<td><p>none</p></td>
-<td class="text-right"><p>0</p></td>
-<td><p>none</p></td>
-<td class="text-right"><p>0</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p></td>
+<td><p>World coordinates</p></td>
 </tr>
-<tr class="row-odd"><td><p>Revolute</p></td>
-<td><p>angle</p></td>
-<td class="text-right"><p>1</p></td>
-<td><p>angular velocity</p></td>
-<td class="text-right"><p>1</p></td>
-</tr>
-<tr class="row-even"><td><p>Prismatic</p></td>
-<td><p>position</p></td>
-<td class="text-right"><p>1</p></td>
-<td><p>linear velocity</p></td>
-<td class="text-right"><p>1</p></td>
-</tr>
-<tr class="row-odd"><td><p>Spherical(Ball)</p></td>
-<td><p>quaternion <code class="docutils literal notranslate"><span class="pre">(w,</span> <span class="pre">x,</span> <span class="pre">y,</span> <span class="pre">z)</span></code></p></td>
-<td class="text-right"><p>4</p></td>
-<td><p>angular velocity <code class="docutils literal notranslate"><span class="pre">(x,</span> <span class="pre">y,</span> <span class="pre">z)</span></code></p></td>
-<td class="text-right"><p>3</p></td>
-</tr>
-<tr class="row-even"><td><p>Free root</p></td>
-<td><p>position <code class="docutils literal notranslate"><span class="pre">(x,</span> <span class="pre">y,</span> <span class="pre">z)</span></code> + quaternion <code class="docutils literal notranslate"><span class="pre">(w,</span> <span class="pre">x,</span> <span class="pre">y,</span> <span class="pre">z)</span></code></p></td>
-<td class="text-right"><p>7</p></td>
-<td><p>linear velocity <code class="docutils literal notranslate"><span class="pre">(x,</span> <span class="pre">y,</span> <span class="pre">z)</span></code> + angular velocity <code class="docutils literal notranslate"><span class="pre">(x,</span> <span class="pre">y,</span> <span class="pre">z)</span></code></p></td>
-<td class="text-right"><p>6</p></td>
+<tr class="row-odd"><td><p>Robot link or rigid body</p></td>
+<td><p>Local to that body’s origin, not its center of mass</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p>Therefore <code class="docutils literal notranslate"><span class="pre">layout.nq</span></code> and <code class="docutils literal notranslate"><span class="pre">layout.nv</span></code> may differ. Quaternion orientations use
-four configuration values but have only three tangent velocity coordinates.</p>
-<p>The layout also contains a <code class="docutils literal notranslate"><span class="pre">model_signature</span></code>. Mappers and backend adapters
-require matching signatures. <code class="docutils literal notranslate"><span class="pre">load_articulation_motion_npz()</span></code> instead requires
-matching <code class="docutils literal notranslate"><span class="pre">nq</span></code> and <code class="docutils literal notranslate"><span class="pre">nv</span></code>; it warns but still loads when only the signature differs.
-This permits compatible extensions, but the warning may indicate a different
-body order, joint layout, reference pose, or limits.</p>
+<pre  class="mermaid">
+        flowchart LR
+    subgraph endpoint0[&quot;Endpoint 0 · body0 or fixed world&quot;]
+        F0(&quot;&lt;b&gt;frame0&lt;/b&gt;&lt;br/&gt;body0 → body-local coordinates&lt;br/&gt;None → world coordinates&quot;)
+    end
+    subgraph endpoint1[&quot;Endpoint 1 · body1 or fixed world&quot;]
+        F1(&quot;&lt;b&gt;frame1&lt;/b&gt;&lt;br/&gt;body1 → body-local coordinates&lt;br/&gt;None → world coordinates&quot;)
+    end
+    F0 &lt;--&gt;|D6 joint| F1
+
+    classDef frame fill:#eff6ff,stroke:#64748b,color:#0f172a
+    class F0,F1 frame
+    style endpoint0 fill:none,stroke:#94a3b8
+    style endpoint1 fill:none,stroke:#94a3b8
+    </pre><p>An identity link frame attaches at the link origin. For an attachment elsewhere
+on the hand, supply its local pose instead. Its matching world pose is
+<code class="docutils literal notranslate"><span class="pre">link_world_pose</span> <span class="pre">*</span> <span class="pre">link_local_frame</span></code>.</p>
+<p>Before enabling, make the two attachment positions coincide. If rotation is
+locked, also align their orientations. The example leaves all rotation free,
+so only the attachment positions need to match.</p>
 </section>
-<section id="convert-back-for-inspection">
-<h2>Convert back for inspection<a class="headerlink" href="#convert-back-for-inspection" title="Link to this heading">¶</a></h2>
-<p>Convert the complete clip back to <code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code> for visualization or BVH
-export:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">preview_motion</span> <span class="o">=</span> <span class="n">mapper</span><span class="o">.</span><span class="n">to_skeleton_motion</span><span class="p">(</span><span class="n">articulation_motion</span><span class="p">)</span>
+</section>
+<section id="release-and-reattach">
+<h2>Release and reattach<a class="headerlink" href="#release-and-reattach" title="Link to this heading">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">joint</span><span class="o">.</span><span class="n">set_enabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+<span class="c1"># Let the robot move, then refresh its state and read the new hand position.</span>
+<span class="n">joint</span><span class="o">.</span><span class="n">set_frame0</span><span class="p">([</span><span class="o">*</span><span class="n">new_hand_world_position</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+<span class="n">joint</span><span class="o">.</span><span class="n">set_enabled</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Single poses can be converted in either direction:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mapped</span> <span class="o">=</span> <span class="n">mapper</span><span class="o">.</span><span class="n">to_articulation_coordinates</span><span class="p">(</span><span class="n">skeleton_state</span><span class="p">)</span>
-<span class="n">restored_state</span> <span class="o">=</span> <span class="n">mapper</span><span class="o">.</span><span class="n">to_skeleton_state</span><span class="p">(</span><span class="n">mapped</span><span class="o">.</span><span class="n">q</span><span class="p">)</span>
-</pre></div>
+<p>Keep the world anchor fixed while holding. Capture a new attachment pose only
+when reattaching. For reset, disable the affected joints first, reset the robot,
+refresh its poses, update the frames, then enable the joints.</p>
+<p>Use <code class="docutils literal notranslate"><span class="pre">set_frame1()</span></code> to change endpoint 1’s attachment frame, or <code class="docutils literal notranslate"><span class="pre">set_frames()</span></code>
+to change both frames. Repeated <code class="docutils literal notranslate"><span class="pre">joint.release()</span></code> calls are safe.</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Operation / state</p></th>
+<th class="head"><p>Effect and reuse</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">set_enabled(False)</span></code></p></td>
+<td><p>Temporarily disables the constraint; use <code class="docutils literal notranslate"><span class="pre">set_enabled(True)</span></code> to reattach.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">release()</span></code></p></td>
+<td><p>Permanently releases the joint; the handle becomes invalid and cannot be reused.</p></td>
+</tr>
+<tr class="row-even"><td><p>Broken joint</p></td>
+<td><p>Handle remains valid for inspection, but cannot be re-enabled. Create a new joint to attach again.</p></td>
+</tr>
+</tbody>
+</table>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">SkeletonState</span></code> and <code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code> cannot represent prismatic joints. An
-<code class="docutils literal notranslate"><span class="pre">ArticulationMotion</span></code> containing prismatic joints therefore cannot be converted
-back to either representation.</p>
 </section>
-<section id="reference-motion-library">
-<h2>Reference motion library<a class="headerlink" href="#reference-motion-library" title="Link to this heading">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">MotionLibrary</span></code> stores the backend-independent quaternion form: root position,
-root rotation, and local joint rotations. It accepts either <code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code>
-or <code class="docutils literal notranslate"><span class="pre">ArticulationMotion</span></code>; the latter is converted to <code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code> for
-canonical storage when registered. Consequently, articulation motion containing
-prismatic joints cannot be registered.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">adapter</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">adapters</span><span class="o">.</span><span class="n">physx</span><span class="o">.</span><span class="n">PhysXMotionAdapter</span><span class="p">(</span><span class="n">layout</span><span class="p">)</span>
-<span class="n">library</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">animation</span><span class="o">.</span><span class="n">MotionLibrary</span><span class="p">(</span>
-    <span class="n">motions</span><span class="o">=</span><span class="p">[</span><span class="n">walk_motion</span><span class="p">,</span> <span class="n">run_motion</span><span class="p">],</span>
-    <span class="n">adapter</span><span class="o">=</span><span class="n">adapter</span><span class="p">,</span>
-    <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cuda:0&quot;</span><span class="p">,</span>
-    <span class="n">precompute_kinematics</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<section id="control-multiple-attachments">
+<h2>Control multiple attachments<a class="headerlink" href="#control-multiple-attachments" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">D6Batch</span></code> lets you select joints by index. Here both links belong to the same robot:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">joints</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">physics</span><span class="o">.</span><span class="n">D6Batch</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">physics</span><span class="o">.</span><span class="n">D6Batch</span><span class="o">.</span><span class="n">create_world_links</span><span class="p">(</span>
+    <span class="n">physics_world</span><span class="p">,</span>
+    <span class="p">[</span><span class="n">robot</span><span class="p">,</span> <span class="n">robot</span><span class="p">],</span>
+    <span class="p">[</span><span class="n">left_link_id</span><span class="p">,</span> <span class="n">right_link_id</span><span class="p">],</span>
+    <span class="n">world_frames</span><span class="o">=</span><span class="p">[</span><span class="n">left_world_frame</span><span class="p">,</span> <span class="n">right_world_frame</span><span class="p">],</span>
+    <span class="n">link_frames</span><span class="o">=</span><span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]]</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span>
 <span class="p">)</span>
-
-<span class="n">sample</span> <span class="o">=</span> <span class="n">library</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span>
-    <span class="n">motion_ids</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
-    <span class="n">times</span><span class="o">=</span><span class="p">[</span><span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.75</span><span class="p">],</span>
-    <span class="n">loop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="n">joints</span><span class="o">.</span><span class="n">set_enabled</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="kc">True</span><span class="p">)</span>
+<span class="n">joints</span><span class="o">.</span><span class="n">set_enabled</span><span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="kc">False</span><span class="p">)</span>
+<span class="n">joints</span><span class="o">.</span><span class="n">set_world_frames</span><span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="n">new_left_world_frame</span><span class="p">])</span>
+<span class="n">joints</span><span class="o">.</span><span class="n">set_enabled</span><span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Frame inputs have shape <code class="docutils literal notranslate"><span class="pre">[N,</span> <span class="pre">7]</span></code>. Lists, NumPy arrays, and CPU/CUDA Torch tensors
+are accepted. When updating a subset, pass only its frames, in selected-index
+order. CUDA frame inputs are copied to CPU and synchronize that transfer;
+D6Batch does not make joint configuration updates run on GPU.</p>
+<p>For a hand attached to a sphere, use the general factory. Supply matching
+attachment poses in each body’s local coordinates:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">joints</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">physics</span><span class="o">.</span><span class="n">D6Batch</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">physics</span><span class="o">.</span><span class="n">D6Batch</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+    <span class="n">physics_world</span><span class="p">,</span>
+    <span class="n">bodies0</span><span class="o">=</span><span class="p">[</span><span class="n">robot</span><span class="o">.</span><span class="n">link</span><span class="p">(</span><span class="s2">&quot;LeftWrist&quot;</span><span class="p">)],</span>
+    <span class="n">bodies1</span><span class="o">=</span><span class="p">[</span><span class="n">sphere</span><span class="p">],</span>
+    <span class="n">frames0</span><span class="o">=</span><span class="p">[</span><span class="n">hand_local_frame</span><span class="p">],</span>
+    <span class="n">frames1</span><span class="o">=</span><span class="p">[</span><span class="n">sphere_local_frame</span><span class="p">],</span>
 <span class="p">)</span>
-
-<span class="n">local_rotation</span> <span class="o">=</span> <span class="n">sample</span><span class="o">.</span><span class="n">local_rotations_wxyz</span>
-<span class="n">body_state</span> <span class="o">=</span> <span class="n">library</span><span class="o">.</span><span class="n">sample_kinematics</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span>
-<span class="n">body_position</span> <span class="o">=</span> <span class="n">body_state</span><span class="o">.</span><span class="n">body_positions</span>
-<span class="n">body_rotation</span> <span class="o">=</span> <span class="n">body_state</span><span class="o">.</span><span class="n">body_rotations_wxyz</span>
-<span class="n">physx_joint_position</span> <span class="o">=</span> <span class="n">sample</span><span class="o">.</span><span class="n">backend_state</span><span class="o">.</span><span class="n">joint_positions</span>
-<span class="n">physx_joint_velocity</span> <span class="o">=</span> <span class="n">sample</span><span class="o">.</span><span class="n">backend_state</span><span class="o">.</span><span class="n">joint_velocities</span>
-
-<span class="c1"># If using MuJoCoMotionAdapter:</span>
-<span class="c1"># mujoco_qpos = sample.backend_state.qpos</span>
-<span class="c1"># mujoco_qvel = sample.backend_state.qvel</span>
-
-<span class="c1"># If using NewtonMotionAdapter:</span>
-<span class="c1"># newton_joint_q = sample.backend_state.joint_q</span>
-<span class="c1"># newton_joint_qd = sample.backend_state.joint_qd</span>
-
-<span class="n">buffers</span> <span class="o">=</span> <span class="n">library</span><span class="o">.</span><span class="n">packed_buffers</span><span class="p">()</span>
-<span class="n">global_position_frames</span> <span class="o">=</span> <span class="n">buffers</span><span class="o">.</span><span class="n">global_positions</span>
+<span class="n">joints</span><span class="o">.</span><span class="n">set_enabled</span><span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>The library uploads all clips and metadata to packed Torch buffers. It uses
-linear root-position interpolation and quaternion SLERP, then asks the optional
-adapter to produce simulator-native tensors on the same device. Use
-<code class="docutils literal notranslate"><span class="pre">forward_kinematics(sample)</span></code> when occasional samples need robot-body positions
-or rotations. For high-frequency imitation and GPU kernels, construct the
-library with <code class="docutils literal notranslate"><span class="pre">precompute_kinematics=True</span></code> and obtain persistent frame-major
-position, rotation, linear-velocity, and angular-velocity tensors through
-<code class="docutils literal notranslate"><span class="pre">packed_buffers()</span></code>. These borrowed tensors can be shared with runtimes such as
-Warp without a copy; acquire the view again after adding clips or calling
-<code class="docutils literal notranslate"><span class="pre">library.to(device)</span></code>. Source <code class="docutils literal notranslate"><span class="pre">SkeletonMotion</span></code> objects are not retained by default;
-pass <code class="docutils literal notranslate"><span class="pre">keep_source_motions=True</span></code> only when <code class="docutils literal notranslate"><span class="pre">library.motion(id)</span></code> is needed for
-inspection, editing, or export. The optional adapter also receives the original
-input during registration. Newton and MuJoCo adapters can reuse an
-<code class="docutils literal notranslate"><span class="pre">ArticulationMotion</span></code> input’s existing <code class="docutils literal notranslate"><span class="pre">q/qd</span></code>; the PhysX adapter derives its
-logical DOFs from the converted skeleton rotations. Use
-<code class="docutils literal notranslate"><span class="pre">sample_motion_ids(...)</span></code> for weighted clip IDs, <code class="docutils literal notranslate"><span class="pre">sample_times(...)</span></code> for random
-times, and <code class="docutils literal notranslate"><span class="pre">sample_frames(...)</span></code> for exact stored frames. <code class="docutils literal notranslate"><span class="pre">library.to(device)</span></code>
-moves the packed library without rebuilding clips.</p>
+<p><code class="docutils literal notranslate"><span class="pre">set_frames0()</span></code> and <code class="docutils literal notranslate"><span class="pre">set_frames1()</span></code> update either side while detached.
+<code class="docutils literal notranslate"><span class="pre">joints.release()</span></code> releases all joints in the batch.</p>
+<p>The batch API also provides <code class="docutils literal notranslate"><span class="pre">set_motion</span></code>, <code class="docutils literal notranslate"><span class="pre">set_linear_limit</span></code>, <code class="docutils literal notranslate"><span class="pre">set_twist_limit</span></code>,
+<code class="docutils literal notranslate"><span class="pre">set_swing_limit</span></code>, <code class="docutils literal notranslate"><span class="pre">set_drive</span></code>, <code class="docutils literal notranslate"><span class="pre">set_drive_velocity</span></code>, and <code class="docutils literal notranslate"><span class="pre">set_break_force</span></code>, each
+with <code class="docutils literal notranslate"><span class="pre">indices</span></code> followed by the individual-joint arguments. <code class="docutils literal notranslate"><span class="pre">set_drive_targets</span></code>
+accepts one <code class="docutils literal notranslate"><span class="pre">[N,</span> <span class="pre">7]</span></code> pose per selected joint. Shared settings apply to all selected
+joints. These methods validate configurations before applying updates.</p>
 </section>
-<section id="backend-buffers">
-<h2>Backend buffers<a class="headerlink" href="#backend-buffers" title="Link to this heading">¶</a></h2>
-<p>Backend adapters require only the canonical layout. The backend model or live
-articulation can be checked explicitly before simulation, but it is not part of
-reference motion storage or sampling.</p>
-<section id="mujoco">
-<h3>MuJoCo<a class="headerlink" href="#mujoco" title="Link to this heading">¶</a></h3>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">kangengine.adapters.mujoco</span><span class="w"> </span><span class="kn">import</span> <span class="n">MuJoCoMotionAdapter</span>
+<section id="axis-limits-and-drives">
+<h2>Axis limits and drives<a class="headerlink" href="#axis-limits-and-drives" title="Link to this heading">¶</a></h2>
+<p>Each axis supports <code class="docutils literal notranslate"><span class="pre">D6Motion.LOCKED</span></code>, <code class="docutils literal notranslate"><span class="pre">LIMITED</span></code>, or <code class="docutils literal notranslate"><span class="pre">FREE</span></code>. The axis order is
+X, Y, Z, TWIST, SWING1, SWING2 in the joint frame. <code class="docutils literal notranslate"><span class="pre">locked_axes</span></code> remains a
+convenience setter: <code class="docutils literal notranslate"><span class="pre">True</span></code> selects LOCKED and <code class="docutils literal notranslate"><span class="pre">False</span></code> selects FREE, overwriting
+any LIMITED setting. Set <code class="docutils literal notranslate"><span class="pre">motions</span></code> when using limits.</p>
+<p>For example, create a slider driven toward a target inside a 40 cm range:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">p</span> <span class="o">=</span> <span class="n">ke</span><span class="o">.</span><span class="n">physics</span>
+<span class="n">config</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">physics</span><span class="o">.</span><span class="n">D6JointConfig</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">D6JointConfig</span><span class="p">()</span>
+<span class="n">config</span><span class="o">.</span><span class="n">frame0</span> <span class="o">=</span> <span class="n">world_attachment_frame</span>
+<span class="n">config</span><span class="o">.</span><span class="n">frame1</span> <span class="o">=</span> <span class="n">body_attachment_frame</span>
+<span class="n">config</span><span class="o">.</span><span class="n">motions</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">D6Motion</span><span class="o">.</span><span class="n">LIMITED</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">D6Motion</span><span class="o">.</span><span class="n">LOCKED</span><span class="p">]</span> <span class="o">*</span> <span class="mi">5</span>  <span class="c1"># Limit X.</span>
+<span class="n">config</span><span class="o">.</span><span class="n">linear_limits</span> <span class="o">=</span> <span class="p">[[</span><span class="o">-</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]]</span>
+<span class="n">config</span><span class="o">.</span><span class="n">drives</span> <span class="o">=</span> <span class="p">{</span>  <span class="c1"># Configure the X drive.</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">D6DriveAxis</span><span class="o">.</span><span class="n">X</span><span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">D6DriveConfig</span><span class="p">(</span><span class="n">stiffness</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">damping</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span> <span class="n">force_limit</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="n">config</span><span class="o">.</span><span class="n">drive_target</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="n">config</span><span class="o">.</span><span class="n">enabled</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="n">joint</span><span class="p">:</span> <span class="n">ke</span><span class="o">.</span><span class="n">physics</span><span class="o">.</span><span class="n">D6Joint</span> <span class="o">=</span> <span class="n">physics_world</span><span class="o">.</span><span class="n">create_d6_joint</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">body</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
 
-<span class="n">adapter</span> <span class="o">=</span> <span class="n">MuJoCoMotionAdapter</span><span class="p">(</span><span class="n">layout</span><span class="p">)</span>
-<span class="n">adapter</span><span class="o">.</span><span class="n">validate_model</span><span class="p">(</span><span class="n">mj_model</span><span class="p">)</span>  <span class="c1"># optional compatibility check</span>
-<span class="n">buffers</span> <span class="o">=</span> <span class="n">adapter</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">articulation_motion</span><span class="p">)</span>
-<span class="c1"># buffers.qpos: [frames, layout.nq]</span>
-<span class="c1"># buffers.qvel: [frames, layout.nv]</span>
-
-<span class="n">restored</span> <span class="o">=</span> <span class="n">adapter</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span>
-    <span class="n">buffers</span><span class="o">.</span><span class="n">qpos</span><span class="p">,</span>
-    <span class="n">buffers</span><span class="o">.</span><span class="n">qvel</span><span class="p">,</span>
-    <span class="n">fps</span><span class="o">=</span><span class="n">articulation_motion</span><span class="o">.</span><span class="n">fps</span><span class="p">(),</span>
-<span class="p">)</span>
+<span class="n">joint</span><span class="o">.</span><span class="n">set_linear_limit</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="n">p</span><span class="o">.</span><span class="n">D6Axis</span><span class="o">.</span><span class="n">X</span><span class="p">,</span> <span class="n">lower</span><span class="o">=-</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>  <span class="c1"># Runtime updates.</span>
+<span class="n">joint</span><span class="o">.</span><span class="n">set_drive_target</span><span class="p">(</span><span class="n">pose</span><span class="o">=</span><span class="p">[</span><span class="mf">0.2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+<span class="n">joint</span><span class="o">.</span><span class="n">set_drive_velocity</span><span class="p">(</span><span class="n">linear</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">angular</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
 </pre></div>
 </div>
-<p>MuJoCo and canonical quaternions are both WXYZ. The adapter additionally
-converts canonical free/ball angular velocities into MuJoCo’s local tangent
-frame.</p>
+<p>Linear limits use meters. <code class="docutils literal notranslate"><span class="pre">twist_limits=[lower,</span> <span class="pre">upper]</span></code> uses radians, with
+<code class="docutils literal notranslate"><span class="pre">-2*pi</span> <span class="pre">&lt;</span> <span class="pre">lower</span> <span class="pre">&lt;</span> <span class="pre">upper</span> <span class="pre">&lt;</span> <span class="pre">2*pi</span></code>. <code class="docutils literal notranslate"><span class="pre">swing_limits=[y_angle,</span> <span class="pre">z_angle]</span></code> specifies the
+elliptical cone half-angles, each in <code class="docutils literal notranslate"><span class="pre">(0,</span> <span class="pre">pi)</span></code>. Runtime setters are
+<code class="docutils literal notranslate"><span class="pre">set_twist_limit()</span></code> and <code class="docutils literal notranslate"><span class="pre">set_swing_limit()</span></code>. Limits apply only to LIMITED axes;
+changing a limit does not change the axis motion. These are hard limits;
+soft-limit stiffness, damping, and restitution are not exposed.</p>
+<p>A drive is a position/orientation spring plus velocity damping. Its target is
+the desired pose of frame1 relative to frame0; linear and angular target
+velocities use frame0 axes, in m/s and rad/s. Drive axes are X, Y, Z, TWIST,
+SWING, and SLERP. SWING applies the same settings to both swing axes. SLERP
+requires all angular axes unlocked and cannot be active together with SWING or
+TWIST drives. <code class="docutils literal notranslate"><span class="pre">acceleration=True</span></code> asks PhysX to scale drive gains by effective
+mass/inertia; the force cap still applies.</p>
+<p><code class="docutils literal notranslate"><span class="pre">force_limit</span></code> caps each drive’s force in N or torque in N·m, not its impulse.
+It does <strong>not</strong> cap forces from locked axes or hard limits, nor the total joint
+wrench. Set a drive’s <code class="docutils literal notranslate"><span class="pre">force_limit=0</span></code>, or set both gains to zero, to turn off that
+motor. Locks and limits remain active; use <code class="docutils literal notranslate"><span class="pre">set_enabled(False)</span></code> to disable the
+whole constraint. Defaults have zero gains and maximum finite force/break caps;
+all numeric settings must be finite.</p>
+<p><code class="docutils literal notranslate"><span class="pre">joint.config</span></code> returns an independent snapshot. Changing that snapshot has no
+runtime effect; use the setters to update the live joint. Config sequence and
+dictionary fields are copied into/out of Python, so assign the whole field
+instead of editing a nested element in place.</p>
 </section>
-<section id="newton">
-<h3>Newton<a class="headerlink" href="#newton" title="Link to this heading">¶</a></h3>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">kangengine.adapters.newton</span><span class="w"> </span><span class="kn">import</span> <span class="n">NewtonMotionAdapter</span>
-
-<span class="n">adapter</span> <span class="o">=</span> <span class="n">NewtonMotionAdapter</span><span class="p">(</span><span class="n">layout</span><span class="p">)</span>
-<span class="n">adapter</span><span class="o">.</span><span class="n">validate_model</span><span class="p">(</span><span class="n">newton_model</span><span class="p">)</span>  <span class="c1"># optional compatibility check</span>
-<span class="n">buffers</span> <span class="o">=</span> <span class="n">adapter</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">articulation_motion</span><span class="p">)</span>
-<span class="c1"># buffers.joint_q:  [frames, layout.nq]</span>
-<span class="c1"># buffers.joint_qd: [frames, layout.nv]</span>
+<section id="break-thresholds-and-force-readback">
+<h2>Break thresholds and force readback<a class="headerlink" href="#break-thresholds-and-force-readback" title="Link to this heading">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">joint</span><span class="o">.</span><span class="n">set_break_force</span><span class="p">(</span><span class="n">force</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">torque</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>  <span class="c1"># N, N·m</span>
+<span class="n">physics_world</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+<span class="n">force_and_torque</span> <span class="o">=</span> <span class="n">joint</span><span class="o">.</span><span class="n">get_wrench</span><span class="p">()</span>  <span class="c1"># [Fx, Fy, Fz, Tx, Ty, Tz]</span>
+<span class="k">if</span> <span class="n">joint</span><span class="o">.</span><span class="n">broken</span><span class="p">:</span>
+    <span class="n">joint</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>  <span class="c1"># Create a new joint to attach again.</span>
 </pre></div>
 </div>
-<p>The adapter handles Newton’s XYZW quaternion storage. Optional validation also
-checks grouped D6 offsets and authored axis order. The result remains one
-reference trajectory; broadcasting it across worlds or selecting a different
-frame per world belongs to the simulation or training layer.</p>
-</section>
-<section id="physx">
-<h3>PhysX<a class="headerlink" href="#physx" title="Link to this heading">¶</a></h3>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">kangengine.adapters.physx</span><span class="w"> </span><span class="kn">import</span> <span class="n">PhysXMotionAdapter</span>
+<p><code class="docutils literal notranslate"><span class="pre">get_wrench()</span></code> reads the last solver result in world axes, signed as the force
+and torque on endpoint 1. Torque is reported about the frame1 attachment,
+not the body center of mass. It includes constraint and drive contributions,
+but not unrelated contacts or external forces. Read after a completed step;
+reading an enabled joint before its first step raises an error. Disabled or
+broken joints return zeros. A broken joint remains a valid handle but reports
+<code class="docutils literal notranslate"><span class="pre">enabled=False</span></code>; it cannot be re-enabled. Break thresholds use PhysX’s reported
+wrench and are not force clamps. A sleeping constraint may retain its last solver result.</p>
+<p>In PhysX 5.8, TGS can report incorrect torque; PGS CPU produced the expected torque in the tested cases.</p>
+<p><code class="docutils literal notranslate"><span class="pre">joint.get_wrench()</span></code> and <code class="docutils literal notranslate"><span class="pre">D6Batch.get_wrenches()</span></code> return host data and synchronize
+on Direct GPU scenes. The batch getter returns a NumPy float32 <code class="docutils literal notranslate"><span class="pre">[N,</span> <span class="pre">6]</span></code> array
+in selected-index order, reading joints individually. Use these for inspection;
+use the CUDA fetch path below for repeated GPU tensor processing.</p>
+<details>
+<summary>Advanced: GPU wrench readback with Torch CUDA</summary>
+<p>Pass your initialized <code class="docutils literal notranslate"><span class="pre">PhysicsGpuSystem</span></code> on the first fetch. For <code class="docutils literal notranslate"><span class="pre">KangSimWorld</span></code>,
+use <code class="docutils literal notranslate"><span class="pre">world.gpu_system</span></code> after <code class="docutils literal notranslate"><span class="pre">world.init_gpu_system()</span></code>. With a low-level
+<code class="docutils literal notranslate"><span class="pre">PhysicsWorld</span></code>, initialize its <code class="docutils literal notranslate"><span class="pre">PhysicsGpuSystem</span></code> explicitly first.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># After completing a simulation step:</span>
+<span class="n">joints</span><span class="o">.</span><span class="n">fetch_wrenches</span><span class="p">(</span><span class="n">gpu_system</span><span class="o">=</span><span class="n">world</span><span class="o">.</span><span class="n">gpu_system</span><span class="p">)</span>
+<span class="n">wrenches</span> <span class="o">=</span> <span class="n">joints</span><span class="o">.</span><span class="n">wrenches</span>  <span class="c1"># Torch CUDA float32 [N, 6], in joints.joints order</span>
+<span class="n">forces</span> <span class="o">=</span> <span class="n">wrenches</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span>
+<span class="n">loads</span> <span class="o">=</span> <span class="n">forces</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">selected</span> <span class="o">=</span> <span class="n">wrenches</span><span class="p">[</span><span class="n">cuda_joint_indices</span><span class="p">]</span>  <span class="c1"># Selection also stays on CUDA.</span>
 
-<span class="n">adapter</span> <span class="o">=</span> <span class="n">PhysXMotionAdapter</span><span class="p">(</span><span class="n">layout</span><span class="p">)</span>
-<span class="n">adapter</span><span class="o">.</span><span class="n">validate_articulation</span><span class="p">(</span><span class="n">articulation</span><span class="p">)</span>  <span class="c1"># optional compatibility check</span>
-<span class="n">buffers</span> <span class="o">=</span> <span class="n">adapter</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">articulation_motion</span><span class="p">)</span>
-<span class="c1"># buffers.root_positions / root_rotations_xyzw</span>
-<span class="c1"># buffers.root_linear_velocities / root_angular_velocities</span>
-<span class="c1"># buffers.joint_positions / joint_velocities</span>
+<span class="c1"># After the next completed simulation step:</span>
+<span class="n">joints</span><span class="o">.</span><span class="n">fetch_wrenches</span><span class="p">()</span>  <span class="c1"># Reuse the connected system and output allocation.</span>
+<span class="n">snapshot</span> <span class="o">=</span> <span class="n">joints</span><span class="o">.</span><span class="n">wrenches</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>  <span class="c1"># Optional independent CUDA snapshot.</span>
 </pre></div>
 </div>
-<p>PhysX root state is separate from logical joint state. Authored scalar
-revolute/prismatic DOFs use the stable canonical order. Native
-spherical blocks currently raise <code class="docutils literal notranslate"><span class="pre">NotImplementedError</span></code> instead of silently
-discarding rotation, because KangEngine’s PhysX wrapper does not yet expose a
-complete three-axis spherical state.</p>
+<p>The GPU system reads all active joints with two PhysX calls: one for forces,
+one for torques. A CUDA kernel packs and signs the result directly into the
+Torch-owned output tensor. There is no intermediate NumPy array or host force
+buffer. Invalid/released handles raise an error before output is changed;
+disabled or broken joints have zero rows. An empty batch yields <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">6]</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">fetch_wrenches()</span></code> operates on the current Torch CUDA stream and orders the
+PhysX copies with CUDA events. Consume the result on that stream. If another
+stream reads the tensor, explicitly order that read and its completion before
+the next fetch overwrites the buffer, as with other shared mutable Torch tensors.
+<code class="docutils literal notranslate"><span class="pre">wrenches</span></code> requires a successful fetch; it never initiates a read on its own.</p>
+<p>Every fetch updates the same tensor. Use <code class="docutils literal notranslate"><span class="pre">.clone()</span></code> to preserve values across
+fetches. Torch owns the allocation, so a tensor retained by the caller remains
+valid after the batch releases its joints or the GPU system is invalidated.
+No CPU fallback is performed if the GPU system is missing or uninitialized.</p>
+<p>Handle validation and GPU-index bookkeeping still run on CPU. The first fetch,
+capacity growth, or changes to the joint list/active rows can allocate or
+synchronize index metadata. Repeated fetches with the same layout reuse the
+buffers without host synchronization or CPU/GPU data transfers. This does not
+change the TGS torque-reporting limitation above.</p>
+<p>For caller-managed buffers, <code class="docutils literal notranslate"><span class="pre">gpu_system.fetch_d6_wrenches(joints,</span> <span class="pre">output)</span></code>
+accepts a <code class="docutils literal notranslate"><span class="pre">GpuArrayView</span></code> over contiguous CUDA float32 <code class="docutils literal notranslate"><span class="pre">[N,</span> <span class="pre">6]</span></code> storage on the
+physics device. It uses the view’s stream, updates its completion event, and
+requires the caller to retain the allocation until the stream completes.
+Use <code class="docutils literal notranslate"><span class="pre">ke.utils.to_gpu_array_view()</span></code> to wrap an existing CUDA tensor.</p>
+</details>
 </section>
+<section id="timing-and-lifecycle">
+<h2>Timing and lifecycle<a class="headerlink" href="#timing-and-lifecycle" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Create, update, or release joints between completed physics steps, on the
+same thread that advances the simulation.</p></li>
+<li><p>Both bodies must belong to the same physics world, and at least one endpoint
+must be dynamic or an articulation link. Both endpoints cannot be <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p>Removing an endpoint invalidates its connected joints. Check <code class="docutils literal notranslate"><span class="pre">joint.valid</span></code>
+before reusing such a handle; updates to an invalid joint raise an error.</p></li>
+<li><p>D6 attachments connect existing bodies. To define the robot’s internal hinges
+or sliders, use <a class="reference internal" href="ARTICULATION_BUILDER.html"><span class="std std-doc">ArticulationBuilder</span></a>.</p></li>
+</ul>
 </section>
 </section>
 
@@ -631,23 +627,23 @@ complete three-axis spherical state.</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="VISUALS.html">
+          <a class="next-page" href="DOF_CONTROL.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Pose Visualization</div>
+                <div class="title">Control DOFs</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="LOAD_MOTION.html">
+          <a class="prev-page" href="ARTICULATION_BUILDER.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">Load and Play Motion</div>
+                <div class="title">Building an articulation in Python</div>
                 
               </div>
             </a>
@@ -681,18 +677,17 @@ complete three-axis spherical state.</p>
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">Articulation Motion</a><ul>
-<li><a class="reference internal" href="#motion-data-flow">Motion data flow</a></li>
-<li><a class="reference internal" href="#convert-a-motion">Convert a motion</a></li>
-<li><a class="reference internal" href="#coordinate-layout">Coordinate layout</a></li>
-<li><a class="reference internal" href="#convert-back-for-inspection">Convert back for inspection</a></li>
-<li><a class="reference internal" href="#reference-motion-library">Reference motion library</a></li>
-<li><a class="reference internal" href="#backend-buffers">Backend buffers</a><ul>
-<li><a class="reference internal" href="#mujoco">MuJoCo</a></li>
-<li><a class="reference internal" href="#newton">Newton</a></li>
-<li><a class="reference internal" href="#physx">PhysX</a></li>
+<li><a class="reference internal" href="#">Attaching bodies with D6 joints</a><ul>
+<li><a class="reference internal" href="#try-the-interactive-example">Try the interactive example</a></li>
+<li><a class="reference internal" href="#attach-a-hand-to-the-world">Attach a hand to the world</a><ul>
+<li><a class="reference internal" href="#what-do-the-frames-mean">What do the frames mean?</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#release-and-reattach">Release and reattach</a></li>
+<li><a class="reference internal" href="#control-multiple-attachments">Control multiple attachments</a></li>
+<li><a class="reference internal" href="#axis-limits-and-drives">Axis limits and drives</a></li>
+<li><a class="reference internal" href="#break-thresholds-and-force-readback">Break thresholds and force readback</a></li>
+<li><a class="reference internal" href="#timing-and-lifecycle">Timing and lifecycle</a></li>
 </ul>
 </li>
 </ul>
