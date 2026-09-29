@@ -61,6 +61,72 @@ robot_visual = visual.add_articulation_scene_graph(
 )
 ```
 
+## Reading joint wrenches and efforts
+
+Read the solver-computed effort transmitted through each articulation DOF after
+a completed simulation step:
+
+```python
+import torch
+
+# All environments, logical DOF order: (num_envs, num_dofs).
+effort: torch.Tensor = world.state.get_dof_projected_joint_forces(obj_id=0)
+```
+
+The effort is computed by projecting the total parent-to-child incoming
+joint wrench onto each joint's motion axes. Revolute and spherical DOFs report
+torque in N·m; prismatic DOFs report force in N. This follows the semantics of Isaac's
+`get_dof_projected_joint_forces`.
+
+The incoming wrench is expressed at the child joint origin in the child joint
+frame, including authored anchor offsets and axis rotations.
+
+### Link incoming wrench
+
+Read the full parent-to-child force and torque for every link, including fixed
+joints that have no DOFs:
+
+```python
+# All environments, logical body/link order: (num_envs, num_links, 6).
+wrenches: torch.Tensor = world.state.get_link_incoming_joint_forces(obj_id=0)
+# Last dimension: [Fx, Fy, Fz, Tx, Ty, Tz], in N and N·m.
+```
+
+Each wrench uses the child joint origin and axes described above, not the link
+COM or world frame. The root row is zero because it has no incoming joint.
+
+For example, when a hand pushes against a wall, this reports the force and
+torque transmitted through the wrist to the hand. Contact and collision loads
+affect this reading, as do loads induced by gravity and acceleration; it does
+not isolate the wall's contact force.
+
+### Which force API should I use?
+
+| API | Returns | Typical use |
+| --- | --- | --- |
+| `world.state.get_link_incoming_joint_forces(obj_id=...)` | Force and torque transmitted from the parent joint to each link | Measuring wrist loads when a hand pushes against a wall, including through fixed joints |
+| `world.state.get_dof_projected_joint_forces(obj_id=...)` | Solver-computed force/torque transmitted through each articulation DOF | Joint effort observation, load monitoring, reward/penalty calculation |
+| `robot.get_dof_forces()` | Commanded force/torque buffer | Inspecting actuator commands sent to the articulation |
+| `D6Joint.get_wrench()` | Constraint wrench of a specific external D6 joint | Measuring loads at hand/foot attachments or other external constraints |
+
+Projected joint effort includes transmitted loads. It is neither a PD estimate
+nor the isolated wrench of an attached D6 joint.
+
+**Projected joint effort is not clamped to the actuator's effort limit.**
+
+### CPU and GPU behavior
+
+CPU scenes read a reusable PhysX articulation cache. For a standalone CPU
+articulation, `robot.get_dof_projected_joint_forces()` returns a NumPy array of
+shape `(D,)`; `robot.get_link_incoming_joint_forces()` returns `(B, 6)`.
+
+GPU scenes fetch the existing incoming-wrench buffer and select logical links
+or DOF components with Torch CUDA; there is no host readback. Both results reuse
+storage, so use `.clone()` when retaining a sample. Advanced callers can use
+`world.state.gpu.get_link_incoming_joint_forces(obj_id=0, fetch=False)` or
+`world.state.gpu.get_dof_projected_joint_forces(obj_id=0, fetch=False)` to reuse
+the last incoming-wrench fetch.
+
 ## Control example
 
 Run the complete control example with an MJCF file:

@@ -1599,7 +1599,17 @@ void bind_physics(py::module& m) {
             [](const Articulation& self) {
                 return floatArrayFromVector(self.getDofForces());
             },
-            "Return measured/applied DOF forces.")
+            "Return commanded DOF forces; these are not measured joint forces.")
+        .def("get_link_incoming_joint_forces", [](const Articulation& self) {
+            auto result = floatArrayFromVector(self.getLinkIncomingJointForces());
+            result.resize({static_cast<py::ssize_t>(self.numLinks()), py::ssize_t(6)});
+            return result;
+        }, "Return parent-to-child joint-frame wrenches [force xyz, torque xyz] in logical link order, shape (B,6); root is zero. CPU scenes only.")
+        .def("get_dof_projected_joint_forces", [](const Articulation& self) {
+            return floatArrayFromVector(self.getDofProjectedJointForces());
+        }, "Return solver joint forces (N) / torques (Nm) along logical DOFs after a completed CPU step.")
+        .def("get_dof_joint_force_indices", &Articulation::getDofJointForceIndices,
+             "Return logical DOF indices into flattened PhysX link wrenches [force xyz, torque xyz].")
         .def("get_dof_names", &Articulation::getDofNames, "Return DOF names.")
         .def("get_dof_gpu_indices", &Articulation::getDofGpuIndices,
              "Return logical DOF -> PhysX low-level GPU DOF indices.")

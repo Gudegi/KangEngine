@@ -581,6 +581,32 @@ class CPUStateBackend:
     def get_obj_body_masses(self, obj_id: int):
         return self.record(0, obj_id).cache.body_masses.clone()
 
+    def get_link_incoming_joint_forces(self, obj_id: int):
+        records = [self.record(env_id, obj_id) for env_id in range(self.num_envs)]
+        if any(not isinstance(r.cache, ArticulationStateCache) for r in records):
+            raise TypeError("incoming joint forces require an articulation")
+        return torch.stack(
+            [
+                as_tensor(
+                    r.articulation.get_link_incoming_joint_forces(), device=self.device
+                )
+                for r in records
+            ]
+        )
+
+    def get_dof_projected_joint_forces(self, obj_id: int):
+        records = [self.record(env_id, obj_id) for env_id in range(self.num_envs)]
+        if any(not isinstance(r.cache, ArticulationStateCache) for r in records):
+            raise TypeError("projected joint forces require an articulation")
+        return torch.stack(
+            [
+                as_tensor(
+                    r.articulation.get_dof_projected_joint_forces(), device=self.device
+                )
+                for r in records
+            ]
+        )
+
     def calc_obj_mass(self, env_id: int, obj_id: int) -> float:
         obj = self.record(env_id, obj_id).articulation
         if hasattr(obj, "calc_mass"):
@@ -769,6 +795,7 @@ class GPUStateBackend:
         self._row_index_tensors = {}
         self._link_index_tensors = {}
         self._dof_index_tensors = {}
+        self._joint_force_index_tensors = {}
         self._records_by_obj = {}
         self._object_kinds = {}
         self._row_index_slices = {}
@@ -785,6 +812,7 @@ class GPUStateBackend:
         self._row_index_tensors.clear()
         self._link_index_tensors.clear()
         self._dof_index_tensors.clear()
+        self._joint_force_index_tensors.clear()
         self._records_by_obj.clear()
         self._object_kinds.clear()
         self._row_index_slices.clear()
@@ -1297,6 +1325,60 @@ class GPUStateBackend:
     def articulation_link_incoming_joint_forces_tensor(self, *, fetch: bool = True):
         return self.articulation_link_incoming_joint_forces(fetch=fetch).torch()
 
+    def get_link_incoming_joint_forces(self, obj_id: int, *, fetch: bool = True):
+        """Incoming joint-frame wrenches in logical link order, shape ``(N, B, 6)``.
+
+        Fetch after a completed step; ``fetch=False`` uses the last fetched buffer.
+        The result uses shared CUDA storage; clone it to retain a sample.
+        """
+        if self._object_kind(obj_id) != "articulation":
+            raise TypeError("incoming joint forces require an articulation")
+        raw = self.articulation_link_incoming_joint_forces_tensor(fetch=fetch)
+        rows = self._row_indices(obj_id, "articulation", device=raw.device)
+        links = self._articulation_link_indices(obj_id, device=raw.device)
+        return self._select_rows_and_columns(
+            raw,
+            rows,
+            self._row_index_slices[("articulation", int(obj_id), str(raw.device))],
+            links,
+            self._link_index_slices[(int(obj_id), str(raw.device))],
+            ("incoming_joint_force", int(obj_id)),
+        )
+
+    def get_dof_projected_joint_forces(self, obj_id: int, *, fetch: bool = True):
+        """Solver joint effort in logical DOF order, shape ``(N, D)``.
+
+        Revolute/spherical DOFs report torque (Nm), prismatic DOFs force (N).
+        Read after a completed step. Projection stays on CUDA; the returned
+        reusable buffer is overwritten by the next query for this object.
+        ``fetch=False`` uses the last fetched incoming-joint-force buffer.
+        """
+        if self._object_kind(obj_id) != "articulation":
+            raise TypeError("projected joint forces require an articulation")
+        raw = self.articulation_link_incoming_joint_forces_tensor(fetch=fetch)
+        key = (int(obj_id), str(raw.device))
+        indices = self._joint_force_index_tensors.get(key)
+        if indices is None:
+            records = self._records_for_obj(obj_id)
+            first = list(records[0].articulation.get_dof_joint_force_indices())
+            for record in records[1:]:
+                if list(record.articulation.get_dof_joint_force_indices()) != first:
+                    raise RuntimeError(
+                        f"articulation obj={obj_id} has inconsistent joint force maps"
+                    )
+            indices = torch.tensor(first, dtype=torch.long, device=raw.device)
+            self._joint_force_index_tensors[key] = indices
+        rows = self._row_indices(obj_id, "articulation", device=raw.device)
+        row_key = ("articulation", int(obj_id), str(raw.device))
+        return self._select_rows_and_columns(
+            raw.flatten(1),
+            rows,
+            self._row_index_slices[row_key],
+            indices,
+            None,
+            ("projected_joint_force", int(obj_id)),
+        )
+
     def articulation_link_accelerations(self, *, fetch: bool = True):
         gpu_system = self._require_gpu_system()
         if fetch:
@@ -1616,6 +1698,24 @@ class KangWorldState:
     def get_dof_forces(self, obj_id: int) -> torch.Tensor:
         """Shape: ``(N, D)``."""
         return self._read_backend().get_dof_forces(obj_id)
+
+    def get_link_incoming_joint_forces(self, obj_id: int) -> torch.Tensor:
+        """Parent-to-child wrenches ``(N, B, 6)`` in logical body/link order.
+
+        Components are [Fx, Fy, Fz, Tx, Ty, Tz] in N and N·m, at the child
+        joint origin and in its axes. The root has no incoming joint and is zero.
+        Read after a completed step. GPU storage is shared; clone to retain.
+        """
+        return self.backend.get_link_incoming_joint_forces(obj_id)
+
+    def get_dof_projected_joint_forces(self, obj_id: int) -> torch.Tensor:
+        """Fetch solver joint effort ``(N, D)`` from the canonical CPU/GPU backend.
+
+        This is total incoming joint force projected onto each logical DOF,
+        not the commanded force buffer or a PD estimate. Call between completed
+        simulation steps. GPU results are reusable CUDA buffers; clone to retain.
+        """
+        return self.backend.get_dof_projected_joint_forces(obj_id)
 
     def get_obj_num_bodies(self, obj_id: int) -> int:
         return self.snapshot.get_obj_num_bodies(obj_id)

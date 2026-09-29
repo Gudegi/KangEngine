@@ -268,7 +268,9 @@ void setCollisionFilterData(PxRigidActor* actor, PxU32 collisionGroup) {
 
 // Move semantics
 Articulation::Articulation(Articulation&& o) noexcept
-    : _artic(o._artic), _aggregate(o._aggregate), _links(std::move(o._links)),
+    : _artic(o._artic), _aggregate(o._aggregate),
+      _jointForceCache(std::exchange(o._jointForceCache, nullptr)),
+      _links(std::move(o._links)),
       _template(std::move(o._template)), _KPs(std::move(o._KPs)),
       _KDs(std::move(o._KDs)), _effortLimits(std::move(o._effortLimits)),
       _appliedForces(std::move(o._appliedForces)), _world(o._world), _worldLifetime(std::move(o._worldLifetime)) {
@@ -281,6 +283,7 @@ Articulation& Articulation::operator=(Articulation&& o) noexcept {
         release();
         _artic = o._artic;
         _aggregate = o._aggregate;
+        _jointForceCache = std::exchange(o._jointForceCache, nullptr);
         _links = std::move(o._links);
         _template = std::move(o._template);
         _KPs = std::move(o._KPs);
@@ -305,6 +308,10 @@ std::shared_ptr<JointBody> Articulation::jointBody(int index) {
 }
 
 void Articulation::release() {
+    if (_jointForceCache) {
+        _jointForceCache->release();
+        _jointForceCache = nullptr;
+    }
     if (_artic) {
         _artic->release();
         _artic = nullptr;
@@ -505,6 +512,64 @@ std::vector<float> Articulation::getDofVelocities() const {
 }
 
 std::vector<float> Articulation::getDofForces() const { return _appliedForces; }
+
+std::vector<int> Articulation::getDofJointForceIndices() const {
+    std::vector<int> result;
+    if (!_template)
+        return result;
+    const auto links = getLinkIndices();
+    result.reserve(_template->_dofs.size());
+    for (const auto& dof : _template->_dofs) {
+        const int axis = static_cast<int>(dof.axis);
+        // PhysX axis order is twist, swing1, swing2, x, y, z.
+        const int component = axis < 3 ? axis + 3 : axis - 3;
+        result.push_back(links[dof.linkIndex] * 6 + component);
+    }
+    return result;
+}
+
+void Articulation::refreshJointForceCache() const {
+    if (!_artic || !_artic->getScene())
+        throw std::runtime_error(
+            "joint force readback requires an articulation in a scene");
+    if (_artic->getScene()->getFlags() & PxSceneFlag::eENABLE_DIRECT_GPU_API)
+        throw std::runtime_error(
+            "use world.state GPU joint-force queries for Direct GPU scenes");
+    if (!_jointForceCache)
+        _jointForceCache = _artic->createCache();
+    if (!_jointForceCache)
+        throw std::runtime_error("failed to create articulation joint force cache");
+    _artic->copyInternalStateToCache(
+        *_jointForceCache, PxArticulationCacheFlag::eLINK_INCOMING_JOINT_FORCE);
+}
+
+std::vector<float> Articulation::getLinkIncomingJointForces() const {
+    refreshJointForceCache();
+    std::vector<float> result;
+    result.reserve(_links.size() * 6);
+    for (const auto* link : _links) {
+        const auto& wrench =
+            _jointForceCache->linkIncomingJointForce[link->getLinkIndex()];
+        result.insert(result.end(), {wrench.force.x, wrench.force.y, wrench.force.z,
+                                     wrench.torque.x, wrench.torque.y, wrench.torque.z});
+    }
+    return result;
+}
+
+std::vector<float> Articulation::getDofProjectedJointForces() const {
+    refreshJointForceCache();
+    std::vector<float> result;
+    result.reserve(_template->_dofs.size());
+    for (const auto& dof : _template->_dofs) {
+        const auto& wrench = _jointForceCache->linkIncomingJointForce[
+            _links[dof.linkIndex]->getLinkIndex()];
+        const int axis = static_cast<int>(dof.axis);
+        // The SDK already reports at the child joint origin, in its frame.
+        // Joint construction aligns these axes with the authored DOFs.
+        result.push_back(axis < 3 ? wrench.torque[axis] : wrench.force[axis - 3]);
+    }
+    return result;
+}
 
 std::vector<std::string> Articulation::getDofNames() const {
     std::vector<std::string> out;

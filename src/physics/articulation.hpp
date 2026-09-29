@@ -109,6 +109,7 @@ class Articulation {
   private:
     PxArticulationReducedCoordinate* _artic = nullptr;
     PxAggregate* _aggregate = nullptr;
+    mutable PxArticulationCache* _jointForceCache = nullptr;
     std::vector<PxArticulationLink*> _links;
     std::shared_ptr<ArticulationTemplate> _template;
     std::vector<float> _KPs;
@@ -118,6 +119,7 @@ class Articulation {
     PhysicsWorld* _world = nullptr;
     std::weak_ptr<bool> _worldLifetime;
 
+    void refreshJointForceCache() const;
     void syncDriveParams();
     std::vector<int> getDofPhysxIndices() const;
 
@@ -209,6 +211,12 @@ class Articulation {
     std::vector<float> getDofPositions() const;
     std::vector<float> getDofVelocities() const;
     std::vector<float> getDofForces() const;
+    // Solver force/torque projected onto each logical DOF (CPU scenes).
+    std::vector<float> getDofProjectedJointForces() const;
+    // Child joint-frame wrench [force xyz, torque xyz] per logical link (CPU).
+    std::vector<float> getLinkIncomingJointForces() const;
+    // Logical DOF -> flattened PhysX link wrench [force xyz, torque xyz].
+    std::vector<int> getDofJointForceIndices() const;
     std::vector<std::string> getDofNames() const;
     std::vector<int> getDofGpuIndices() const;
     std::vector<std::array<float, 2>> getDofLimits() const;
