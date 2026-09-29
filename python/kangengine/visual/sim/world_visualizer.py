@@ -175,6 +175,8 @@ class ArticulationCPUExternalBackend(_VisualLifetime):
         body_prims,
         body_handles,
         collision_prims=(),
+        *,
+        render_body_ids=None,
     ):
         from ... import physics
 
@@ -186,12 +188,18 @@ class ArticulationCPUExternalBackend(_VisualLifetime):
         self.body_prims = tuple(body_prims)
         self.body_handles = tuple(int(handle) for handle in body_handles)
         self.collision_prims = tuple(collision_prims)
-        self.num_bodies = len(self.body_handles)
+        self.num_bodies = len(self.body_prims)
+        self._render_body_ids = tuple(
+            range(self.num_bodies) if render_body_ids is None else render_body_ids
+        )
+        if len(self._render_body_ids) != len(self.body_handles):
+            raise ValueError("render body IDs must match renderable handles")
         self.num_envs = len(self.env_ids)
         self._version = 0
 
         self._model = physics.SimModel()
-        self._model.set_body_renderables(list(self.body_handles))
+        for body_id, handle in zip(self._render_body_ids, self.body_handles):
+            self._model.add_shape(body_id, handle)
         self._state = physics.SimState()
         self._state.resize(self.num_envs, self.num_bodies)
         self._batch = physics.SimVisualBatch()
@@ -207,6 +215,8 @@ class ArticulationCPUExternalBackend(_VisualLifetime):
 
     def sync(self):
         self._require_valid()
+        if not self.body_handles:
+            return self
         for row, env_id in enumerate(self.env_ids):
             articulation = self.world.articulation(env_id, self.obj_id)
             pos = np.asarray(
@@ -258,7 +268,7 @@ class ArticulationCPUExternalBackend(_VisualLifetime):
         handle = int(handle)
         for body_id, body_handle in enumerate(self.body_handles):
             if body_handle == handle:
-                return body_id
+                return self._render_body_ids[body_id]
         return None
 
     def release(self):
@@ -269,6 +279,7 @@ class ArticulationCPUExternalBackend(_VisualLifetime):
         self._model = None
         self.body_prims = ()
         self.body_handles = ()
+        self._render_body_ids = ()
         self.collision_prims = ()
         self.app = None
         self.world = None
@@ -288,6 +299,8 @@ class ArticulationGPUExternalBackend(_VisualLifetime):
         body_prims,
         body_handles,
         collision_prims=(),
+        *,
+        render_body_ids=None,
     ):
         import torch
 
@@ -301,7 +314,12 @@ class ArticulationGPUExternalBackend(_VisualLifetime):
         self.body_prims = tuple(body_prims)
         self.body_handles = tuple(int(handle) for handle in body_handles)
         self.collision_prims = tuple(collision_prims)
-        self.num_bodies = len(self.body_handles)
+        self.num_bodies = len(self.body_prims)
+        self._render_body_ids = tuple(
+            range(self.num_bodies) if render_body_ids is None else render_body_ids
+        )
+        if len(self._render_body_ids) != len(self.body_handles):
+            raise ValueError("render body IDs must match renderable handles")
         self.num_envs = len(self.env_ids)
         self._rows = world.articulation_gpu_index_view(self.env_ids, self.obj_id)
         link_view = world.gpu_system.articulation_link_data()
@@ -318,7 +336,8 @@ class ArticulationGPUExternalBackend(_VisualLifetime):
                     "GPU articulation instances have different link index maps"
                 )
         self._link_indices_tensor = torch.tensor(
-            link_indices, dtype=torch.int32, device=device
+            [link_indices[i] for i in self._render_body_ids],
+            dtype=torch.int32, device=device,
         )
         self._link_indices = to_gpu_array_view(
             self._link_indices_tensor,
@@ -338,6 +357,8 @@ class ArticulationGPUExternalBackend(_VisualLifetime):
 
     def sync(self):
         self._require_valid()
+        if not self.body_handles:
+            return self
         gpu_system = self.world.gpu_system
         gpu_system.fetch_articulation_link_pose()
         link_view = gpu_system.articulation_link_data()
@@ -387,7 +408,7 @@ class ArticulationGPUExternalBackend(_VisualLifetime):
         handle = int(handle)
         for body_id, body_handle in enumerate(self.body_handles):
             if body_handle == handle:
-                return body_id
+                return self._render_body_ids[body_id]
         return None
 
     def release(self):
@@ -398,6 +419,7 @@ class ArticulationGPUExternalBackend(_VisualLifetime):
         self._link_indices_tensor = None
         self.body_prims = ()
         self.body_handles = ()
+        self._render_body_ids = ()
         self.collision_prims = ()
         self.app = None
         self.world = None
@@ -840,7 +862,7 @@ class SimWorldVisualizer:
         collision_material=None,
         show_collision: bool = False,
     ) -> VisualBatch:
-        """Create one renderable per link backed by CUDA instance transforms."""
+        """Create renderables for visual meshes backed by CUDA instance transforms."""
         self._require_valid()
         material = self._resolve_visual_material(material)
         if material is None:
@@ -866,11 +888,14 @@ class SimWorldVisualizer:
             raise RuntimeError(
                 "GPU articulation visual body count does not match PhysX links"
             )
+        # Meshless links still have body frames, but no renderer/CUDA buffer.
+        render_prims = list(articulation_visual.render_prims())
+        render_body_ids = list(articulation_visual.render_prim_body_indices())
         body_handles = [
             self.app._add_renderable(
                 material, prim, render_api.TransformSource.EXTERNAL_BUFFER
             )
-            for prim in body_prims
+            for prim in render_prims
         ]
         collision_prims = self._add_articulation_collision_visuals(
             sim_view.articulation,
@@ -890,6 +915,7 @@ class SimWorldVisualizer:
             body_prims,
             body_handles,
             collision_prims,
+            render_body_ids=render_body_ids,
         )
         batch = VisualBatch(obj_id, env_ids, backend=backend)
         batch.set_color(color)
@@ -911,7 +937,7 @@ class SimWorldVisualizer:
         collision_material=None,
         show_collision: bool = False,
     ) -> VisualBatch:
-        """Create one renderable per link backed by CPU ExternalBuffer."""
+        """Create renderables for visual meshes backed by CPU ExternalBuffer."""
         self._require_valid()
         material = self._resolve_visual_material(material)
         if material is None:
@@ -939,11 +965,14 @@ class SimWorldVisualizer:
             raise RuntimeError(
                 "CPU external articulation body count does not match PhysX links"
             )
+        # Keep all body frames, but register only meshes with the renderer.
+        render_prims = list(articulation_visual.render_prims())
+        render_body_ids = list(articulation_visual.render_prim_body_indices())
         body_handles = [
             self.app._add_renderable(
                 material, prim, render_api.TransformSource.EXTERNAL_BUFFER
             )
-            for prim in body_prims
+            for prim in render_prims
         ]
         collision_prims = self._add_articulation_collision_visuals(
             sim_view.articulation,
@@ -963,6 +992,7 @@ class SimWorldVisualizer:
             body_prims,
             body_handles,
             collision_prims,
+            render_body_ids=render_body_ids,
         )
         batch = VisualBatch(obj_id, env_ids, backend=backend)
         batch.set_color(color)
