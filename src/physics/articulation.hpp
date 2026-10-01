@@ -212,8 +212,10 @@ class Articulation {
     std::vector<float> getDofVelocities() const;
     std::vector<float> getDofForces() const;
     // Solver force/torque projected onto each logical DOF (CPU scenes).
+    // Requires PhysX 5.2+; older versions throw at readback.
     std::vector<float> getDofProjectedJointForces() const;
     // Child joint-frame wrench [force xyz, torque xyz] per logical link (CPU).
+    // Requires PhysX 5.2+; older versions throw at readback.
     std::vector<float> getLinkIncomingJointForces() const;
     // Logical DOF -> flattened PhysX link wrench [force xyz, torque xyz].
     std::vector<int> getDofJointForceIndices() const;

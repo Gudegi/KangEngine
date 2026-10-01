@@ -534,6 +534,7 @@ std::vector<int> Articulation::getDofJointForceIndices() const {
 }
 
 void Articulation::refreshJointForceCache() const {
+#if KANGENGINE_PHYSX_VERSION_AT_LEAST(5, 2)
     if (!_artic || !_artic->getScene())
         throw std::runtime_error(
             "joint force readback requires an articulation in a scene");
@@ -546,11 +547,15 @@ void Articulation::refreshJointForceCache() const {
         throw std::runtime_error("failed to create articulation joint force cache");
     _artic->copyInternalStateToCache(
         *_jointForceCache, PxArticulationCacheFlag::eLINK_INCOMING_JOINT_FORCE);
+#else
+    throw std::runtime_error("joint force readback requires PhysX 5.2 or newer");
+#endif
 }
 
 std::vector<float> Articulation::getLinkIncomingJointForces() const {
     refreshJointForceCache();
     std::vector<float> result;
+#if KANGENGINE_PHYSX_VERSION_AT_LEAST(5, 2)
     result.reserve(_links.size() * 6);
     for (const auto* link : _links) {
         const auto& wrench =
@@ -558,12 +563,14 @@ std::vector<float> Articulation::getLinkIncomingJointForces() const {
         result.insert(result.end(), {wrench.force.x, wrench.force.y, wrench.force.z,
                                      wrench.torque.x, wrench.torque.y, wrench.torque.z});
     }
+#endif
     return result;
 }
 
 std::vector<float> Articulation::getDofProjectedJointForces() const {
     refreshJointForceCache();
     std::vector<float> result;
+#if KANGENGINE_PHYSX_VERSION_AT_LEAST(5, 2)
     result.reserve(_template->_dofs.size());
     for (const auto& dof : _template->_dofs) {
         const auto& wrench = _jointForceCache->linkIncomingJointForce[
@@ -573,6 +580,7 @@ std::vector<float> Articulation::getDofProjectedJointForces() const {
         // Joint construction aligns these axes with the authored DOFs.
         result.push_back(axis < 3 ? wrench.torque[axis] : wrench.force[axis - 3]);
     }
+#endif
     return result;
 }
 

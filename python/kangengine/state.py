@@ -1704,6 +1704,7 @@ class KangWorldState:
 
         Components are [Fx, Fy, Fz, Tx, Ty, Tz] in N and N·m, at the child
         joint origin and in its axes. The root has no incoming joint and is zero.
+        Requires PhysX 5.2 or newer.
         Read after a completed step. GPU storage is shared; clone to retain.
         """
         return self.backend.get_link_incoming_joint_forces(obj_id)
@@ -1711,6 +1712,7 @@ class KangWorldState:
     def get_dof_projected_joint_forces(self, obj_id: int) -> torch.Tensor:
         """Fetch solver joint effort ``(N, D)`` from the canonical CPU/GPU backend.
 
+        Requires PhysX 5.2 or newer.
         This is total incoming joint force projected onto each logical DOF,
         not the commanded force buffer or a PD estimate. Call between completed
         simulation steps. GPU results are reusable CUDA buffers; clone to retain.
