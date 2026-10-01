@@ -4,11 +4,14 @@
 #include <fmt/core.h>
 #include <tinyxml2.h>
 
+#include <Eigen/Eigenvalues>
+#include <array>
 #include <algorithm>
 #include <cctype>
 #include <cmath>
 #include <filesystem>
 #include <queue>
+#include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string_view>
@@ -32,6 +35,109 @@ std::vector<float> splitFloats(const char* str) {
     while (ss >> v)
         out.push_back(v);
     return out;
+}
+
+// Reject invalid authored inertia without changing valid small moments.
+Eigen::Vector3f validatePrincipalMoments(const Eigen::Vector3d& moments,
+                                        const std::string& context) {
+    const auto invalid = [&](const char* reason) {
+        return std::runtime_error(context + ": " + reason);
+    };
+    if (!moments.allFinite() || (moments.array() <= 0.0).any())
+        throw invalid("principal moments must be finite and positive");
+    std::array<double, 3> sorted{moments.x(), moments.y(), moments.z()};
+    std::sort(sorted.begin(), sorted.end());
+    if (sorted[2] > sorted[0] + sorted[1] + 1e-6 * sorted[2])
+        throw invalid("principal moments violate the triangle inequality");
+    const Eigen::Vector3f stored = moments.cast<float>();
+    if (!stored.allFinite() || (stored.array() <= 0.f).any())
+        throw invalid("principal moments are outside the supported float range");
+    return stored;
+}
+
+// MJCF fullinertia is expressed at the COM in body axes. PhysX stores
+// principal moments plus the orientation of those axes, as in the URDF loader.
+void readFullInertia(tinyxml2::XMLElement* element, const char* bodyName,
+                     InertialDesc& inertial) {
+    const auto invalid = [&](const char* reason) {
+        return std::runtime_error(fmt::format(
+            "Invalid MJCF fullinertia on body '{}': {}", bodyName, reason));
+    };
+    for (const char* attribute :
+         {"diaginertia", "quat", "axisangle", "euler", "xyaxes", "zaxis"}) {
+        if (element->Attribute(attribute))
+            throw invalid(
+                "cannot also specify diaginertia or inertial orientation");
+    }
+    std::array<double, 6> values;
+    std::istringstream input(element->Attribute("fullinertia"));
+    for (double& value : values) {
+        if (!(input >> value) || !std::isfinite(value))
+            throw invalid("expected exactly six finite numbers");
+    }
+    input >> std::ws;
+    if (!input.eof())
+        throw invalid("expected exactly six finite numbers");
+
+    Eigen::Matrix3d matrix;
+    matrix << values[0], values[3], values[4], values[3], values[1], values[5],
+        values[4], values[5], values[2];
+    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> solver(matrix);
+    if (solver.info() != Eigen::Success)
+        throw invalid("failed to diagonalize tensor");
+    inertial.diagInertia = validatePrincipalMoments(solver.eigenvalues(),
+        fmt::format("Invalid MJCF fullinertia on body '{}'", bodyName));
+    Eigen::Matrix3d axes = solver.eigenvectors();
+    if (axes.determinant() < 0.0)
+        axes.col(0) *= -1.0;
+    inertial.quat = Eigen::Quaternionf(axes.cast<float>()).normalized();
+}
+
+void parseInertial(tinyxml2::XMLElement* body, int bodyIndex, float scale,
+                   ArticulationDesc& data) {
+    auto* inertialElement = body->FirstChildElement("inertial");
+    if (!inertialElement)
+        return;
+    const char* bodyName = body->Attribute("name");
+
+    InertialDesc inertial;
+    inertialElement->QueryFloatAttribute("mass", &inertial.mass);
+    auto pos = splitFloats(inertialElement->Attribute("pos"));
+    if (pos.size() >= 3)
+        inertial.com =
+            Eigen::Vector3f(pos[0], pos[1], pos[2]) * scale;
+    if (inertialElement->Attribute("fullinertia")) {
+        readFullInertia(inertialElement, bodyName, inertial);
+    } else {
+        auto quat = splitFloats(inertialElement->Attribute("quat"));
+        if (quat.size() >= 4) {
+            float w = quat[0], x = quat[1], y = quat[2],
+                  z = quat[3];
+            float len = std::sqrt(w * w + x * x + y * y + z * z);
+            if (len > 1e-6f)
+                inertial.quat = Eigen::Quaternionf(
+                    w / len, x / len, y / len, z / len);
+        }
+        const std::string context = fmt::format(
+            "Invalid MJCF diaginertia on body '{}'", bodyName);
+        const char* authored = inertialElement->Attribute("diaginertia");
+        if (!authored)
+            throw std::runtime_error(context +
+                ": explicit inertial requires diaginertia or fullinertia");
+        std::istringstream input(authored);
+        Eigen::Vector3d moments;
+        for (int axis = 0; axis < 3; ++axis) {
+            if (!(input >> moments[axis]) || !std::isfinite(moments[axis]))
+                throw std::runtime_error(context +
+                    ": expected exactly three finite numbers");
+        }
+        input >> std::ws;
+        if (!input.eof())
+            throw std::runtime_error(context +
+                ": expected exactly three finite numbers");
+        inertial.diagInertia = validatePrincipalMoments(moments, context);
+    }
+    data.inertials[bodyIndex] = inertial;
 }
 
 Eigen::Vector3f
@@ -146,15 +252,19 @@ void traverseBodies(tinyxml2::XMLElement* root, const SkeletonTree& tree,
 
         const char* bodyName = elem->Attribute("name");
         if (bodyName) {
+            int idx = -1;
             try {
-                int idx = tree.index(bodyName);
-                callback(elem, idx, bodyName, forChildren);
+                idx = tree.index(bodyName);
             } catch (const std::exception& e) {
                 if (logMissing)
                     fmt::print(stderr,
                                "Warning: body '{}' not in skeleton — {}\n",
                                bodyName, e.what());
             }
+            // Parsing failures must propagate, not masquerade as missing
+            // bodies.
+            if (idx >= 0)
+                callback(elem, idx, bodyName, forChildren);
         }
         for (auto* c = elem->FirstChildElement("body"); c;
              c = c->NextSiblingElement("body"))
@@ -164,6 +274,7 @@ void traverseBodies(tinyxml2::XMLElement* root, const SkeletonTree& tree,
 
 // Accumulated geom attributes from a <default class="X"> chain.
 struct DefaultGeomAttrs {
+    std::optional<std::string> material;
     std::string type;
     std::vector<float> size;
     std::vector<float> pos;
@@ -187,6 +298,10 @@ struct DefaultSiteAttrs {
 };
 
 struct DefaultJointAttrs {
+    std::string type;
+    std::string limited;
+    std::vector<float> range;
+    std::vector<float> pos;
     float stiffness = -1.f;
     float damping = -1.f;
     float armature = -1.f;
@@ -197,6 +312,8 @@ void readGeomDefaults(tinyxml2::XMLElement* defElem, DefaultGeomAttrs& out) {
     auto* g = defElem->FirstChildElement("geom");
     if (!g)
         return;
+    if (const char* material = g->Attribute("material"))
+        out.material = material;
     if (auto* t = g->Attribute("type"))
         out.type = t;
     auto sz = splitFloats(g->Attribute("size"));
@@ -248,6 +365,12 @@ void readJointDefaults(tinyxml2::XMLElement* defElem, DefaultJointAttrs& out) {
     auto* joint = defElem->FirstChildElement("joint");
     if (!joint)
         return;
+    if (const char* type = joint->Attribute("type"))
+        out.type = type;
+    if (const char* limited = joint->Attribute("limited"))
+        out.limited = limited;
+    out.range = splitFloats(joint->Attribute("range"));
+    out.pos = splitFloats(joint->Attribute("pos"));
     joint->QueryFloatAttribute("stiffness", &out.stiffness);
     joint->QueryFloatAttribute("damping", &out.damping);
     joint->QueryFloatAttribute("armature", &out.armature);
@@ -303,17 +426,27 @@ DefaultJointAttrs resolveJointClass(
     const std::unordered_map<std::string, DefaultJointAttrs>& map) {
     DefaultJointAttrs out;
     std::string cur = cls;
-    while (!cur.empty()) {
+    while (true) {
         auto it = map.find(cur);
         if (it == map.end())
             break;
         const auto& attrs = it->second;
+        if (out.type.empty())
+            out.type = attrs.type;
+        if (out.limited.empty())
+            out.limited = attrs.limited;
+        if (out.range.empty())
+            out.range = attrs.range;
+        if (out.pos.empty())
+            out.pos = attrs.pos;
         if (out.stiffness < 0.f && attrs.stiffness >= 0.f)
             out.stiffness = attrs.stiffness;
         if (out.damping < 0.f && attrs.damping >= 0.f)
             out.damping = attrs.damping;
         if (out.armature < 0.f && attrs.armature >= 0.f)
             out.armature = attrs.armature;
+        if (cur.empty())
+            break;
         cur = attrs.parentClass;
     }
     return out;
@@ -330,6 +463,8 @@ resolveClass(const std::string& cls,
         if (it == map.end())
             break;
         const auto& a = it->second;
+        if (!out.material && a.material)
+            out.material = a.material;
         if (out.type.empty() && !a.type.empty())
             out.type = a.type;
         if (out.size.empty() && !a.size.empty())
@@ -640,8 +775,41 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
     std::unordered_map<std::string, DefaultGeomAttrs> defaultMap;
     std::unordered_map<std::string, DefaultSiteAttrs> siteDefaultMap;
     std::unordered_map<std::string, DefaultJointAttrs> jointDefaultMap;
-    if (auto* def = root->FirstChildElement("default"))
+    if (auto* def = root->FirstChildElement("default")) {
+        readJointDefaults(def, jointDefaultMap[""]);
         collectDefaults(def, "", defaultMap, siteDefaultMap, jointDefaultMap);
+    }
+
+    // Material RGBA is resolved once per asset, including material defaults.
+    DefaultGeomAttrs mainVisualDefaults;
+    std::unordered_map<std::string, Eigen::Vector4f> materialDefaults;
+    if (auto* def = root->FirstChildElement("default")) {
+        readGeomDefaults(def, mainVisualDefaults);
+        const auto collectMaterialDefaults = [&](auto&& self,
+                tinyxml2::XMLElement* element, Eigen::Vector4f color) -> void {
+            if (auto* material = element->FirstChildElement("material"))
+                color = parseVec4(material->Attribute("rgba"), color);
+            const char* cls = element->Attribute("class");
+            materialDefaults[cls ? cls : ""] = color;
+            for (auto* child = element->FirstChildElement("default"); child;
+                 child = child->NextSiblingElement("default"))
+                self(self, child, color);
+        };
+        collectMaterialDefaults(collectMaterialDefaults, def, Eigen::Vector4f::Ones());
+    }
+    std::unordered_map<std::string, Eigen::Vector4f> materialColors;
+    if (auto* asset = root->FirstChildElement("asset")) {
+        for (auto* material = asset->FirstChildElement("material"); material;
+             material = material->NextSiblingElement("material")) {
+            const char* name = material->Attribute("name");
+            if (!name) continue;
+            const char* cls = material->Attribute("class");
+            const auto defaults = materialDefaults.find(cls ? cls : "");
+            const Eigen::Vector4f color = defaults != materialDefaults.end()
+                ? defaults->second : Eigen::Vector4f::Ones();
+            materialColors[name] = parseVec4(material->Attribute("rgba"), color);
+        }
+    }
 
     // 5. Single traversal — mesh info, joints, collision, inertial
     traverseBodies(
@@ -689,6 +857,10 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
                         DefaultGeomAttrs defs;
                         if (!effectiveCls.empty())
                             defs = resolveClass(effectiveCls, defaultMap);
+                        if (!defs.material)
+                            defs.material = mainVisualDefaults.material;
+                        if (defs.rgba.empty())
+                            defs.rgba = mainVisualDefaults.rgba;
                         Eigen::Vector3f meshPos =
                             parseVec3(geom->Attribute("pos")) * scale;
                         Eigen::Quaternionf meshQuat =
@@ -701,6 +873,22 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
                                 ? Eigen::Vector4f(rgbaValues[0], rgbaValues[1],
                                                   rgbaValues[2], rgbaValues[3])
                                 : Eigen::Vector4f(0.15f, 0.15f, 0.15f, 1.0f);
+                        const std::string material = geom->Attribute("material")
+                            ? geom->Attribute("material") : defs.material.value_or("");
+                        if (!material.empty()) {
+                            const auto color = materialColors.find(material);
+                            if (color == materialColors.end()) {
+                                _diagnostics.warnings.push_back(fmt::format(
+                                    "visual geom on body '{}' references unknown "
+                                    "material '{}'", bodyName, material));
+                            } else {
+                                // MuJoCo uses material color unless the effective
+                                // geom RGBA differs from its internal default.
+                                const Eigen::Vector4f geomDefault(.5f, .5f, .5f, 1.f);
+                                if (rgbaValues.empty() || rgba == geomDefault)
+                                    rgba = color->second;
+                            }
+                        }
                         VisualGeomDesc visual{bodyName, it->second.file, idx,
                                               meshPos,  meshQuat,        rgba};
                         visual.scale = it->second.scale * scale;
@@ -812,23 +1000,71 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
                 // A root <joint type="free"> is equivalent to <freejoint>.
                 // The articulation's floating base represents it, so it must
                 // not also be emitted as a revolute articulation DOF.
-                const char* jointType = jElem->Attribute("type");
-                if (jointType && std::string_view(jointType) == "free")
+                const char* clsAttr = jElem->Attribute("class");
+                const std::string effectiveCls =
+                    clsAttr ? clsAttr : inheritedClass;
+                const auto defaults =
+                    resolveJointClass(effectiveCls, jointDefaultMap);
+                const std::string jointType = jElem->Attribute("type")
+                                                  ? jElem->Attribute("type")
+                                                  : defaults.type;
+                if (jointType == "free")
                     continue;
 
                 JointDesc jd;
                 jd.name =
                     jElem->Attribute("name") ? jElem->Attribute("name") : "";
                 jd.type = JointDesc::Type::Revolute;
-                if (!inheritedClass.empty()) {
-                    const auto defaults =
-                        resolveJointClass(inheritedClass, jointDefaultMap);
-                    if (defaults.stiffness >= 0.f)
-                        jd.kp = defaults.stiffness;
-                    if (defaults.damping >= 0.f)
-                        jd.kd = defaults.damping;
-                    if (defaults.armature >= 0.f)
-                        jd.armature = defaults.armature;
+                if (defaults.stiffness >= 0.f)
+                    jd.kp = defaults.stiffness;
+                if (defaults.damping >= 0.f)
+                    jd.kd = defaults.damping;
+                if (defaults.armature >= 0.f)
+                    jd.armature = defaults.armature;
+                jElem->QueryFloatAttribute("stiffness", &jd.kp);
+                jElem->QueryFloatAttribute("damping", &jd.kd);
+                jElem->QueryFloatAttribute("armature", &jd.armature);
+
+                if (jointType == "ball") {
+                    // Reuse the three-axis articulation representation used by
+                    // ArticulationBuilder.SphericalJoint. MJCF ball has no
+                    // axis.
+                    const std::string limited =
+                        jElem->Attribute("limited")
+                            ? jElem->Attribute("limited")
+                            : defaults.limited;
+                    const auto range =
+                        jElem->Attribute("range")
+                            ? splitFloats(jElem->Attribute("range"))
+                            : defaults.range;
+                    if (limited == "true" ||
+                        (limited != "false" && !range.empty()))
+                        throw std::runtime_error(fmt::format(
+                            "MJCF ball joint '{}' has a rotation-angle limit; "
+                            "PhysX per-axis limits cannot represent it",
+                            jd.name));
+                    if (elem->FirstChildElement("joint") != jElem ||
+                        jElem->NextSiblingElement("joint"))
+                        throw std::runtime_error(fmt::format(
+                            "MJCF ball joint '{}' cannot be combined with "
+                            "other "
+                            "joints on the same body in a PhysX articulation",
+                            jd.name));
+                    const auto pos = jElem->Attribute("pos")
+                                         ? splitFloats(jElem->Attribute("pos"))
+                                         : defaults.pos;
+                    if (pos.size() >= 3)
+                        jd.jointOffset =
+                            scale * Eigen::Vector3f(pos[0], pos[1], pos[2]);
+                    jd.loLimit = -FLT_MAX;
+                    jd.hiLimit = FLT_MAX;
+                    const std::string name = jd.name;
+                    for (int axis = 0; axis < 3; ++axis) {
+                        jd.name = fmt::format("{}/{}", name, axis);
+                        jd.axis = Eigen::Vector3f::Unit(axis);
+                        _data.joints[idx].push_back(jd);
+                    }
+                    continue;
                 }
                 auto axisVals = splitFloats(jElem->Attribute("axis"));
                 if (axisVals.size() >= 3)
@@ -854,7 +1090,8 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
                         _diagnostics.warnings.push_back(fmt::format(
                             "Ignored joint '{}' on body '{}' because its axis "
                             "is collinear with earlier joint '{}'.",
-                            jd.name, bodyName ? bodyName : "", duplicate->name));
+                            jd.name, bodyName ? bodyName : "",
+                            duplicate->name));
                         continue;
                     }
                 }
@@ -864,9 +1101,6 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
                     jd.loLimit = rangeVals[0] * degToRad;
                     jd.hiLimit = rangeVals[1] * degToRad;
                 }
-                jElem->QueryFloatAttribute("stiffness", &jd.kp);
-                jElem->QueryFloatAttribute("damping", &jd.kd);
-                jElem->QueryFloatAttribute("armature", &jd.armature);
                 auto forceRangeVals =
                     splitFloats(jElem->Attribute("actuatorfrcrange"));
                 if (forceRangeVals.size() >= 2) {
@@ -877,25 +1111,8 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
             }
 
             // InertialDesc: explicit element takes priority over geom-derived
-            if (auto* ie = elem->FirstChildElement("inertial")) {
-                InertialDesc inertial;
-                ie->QueryFloatAttribute("mass", &inertial.mass);
-                auto pos = splitFloats(ie->Attribute("pos"));
-                if (pos.size() >= 3)
-                    inertial.com =
-                        Eigen::Vector3f(pos[0], pos[1], pos[2]) * scale;
-                auto quat = splitFloats(ie->Attribute("quat"));
-                if (quat.size() >= 4) {
-                    float w = quat[0], x = quat[1], y = quat[2], z = quat[3];
-                    float len = std::sqrt(w * w + x * x + y * y + z * z);
-                    if (len > 1e-6f)
-                        inertial.quat = Eigen::Quaternionf(w / len, x / len,
-                                                           y / len, z / len);
-                }
-                auto di = splitFloats(ie->Attribute("diaginertia"));
-                if (di.size() >= 3)
-                    inertial.diagInertia = Eigen::Vector3f(di[0], di[1], di[2]);
-                _data.inertials[idx] = inertial;
+            if (elem->FirstChildElement("inertial")) {
+                parseInertial(elem, idx, scale, _data);
             } else if (!geomMasses.empty()) {
                 float totalMass = 0.f;
                 Eigen::Vector3f com = Eigen::Vector3f::Zero();
@@ -916,10 +1133,18 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
                                   gmd.mass * (r.x() * r.x() + r.y() * r.y());
                 }
 
+                // Regularize near-singular geom inertia while preserving
+                // the differences between its diagonal components.
+                const float minInertia = iTotal.minCoeff();
+                const float threshold =
+                    std::max(1e-6f * iTotal.maxCoeff(), 1e-10f);
+                if (minInertia < threshold)
+                    iTotal.array() += threshold - minInertia + 1e-6f;
+
                 InertialDesc inertial;
                 inertial.mass = totalMass;
                 inertial.com = com;
-                inertial.diagInertia = iTotal.cwiseMax(1e-4f);
+                inertial.diagInertia = iTotal;
                 _data.inertials[idx] = inertial;
             }
         });
@@ -952,8 +1177,10 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
             geom.quat = (basis * geom.quat).normalized();
         }
         for (auto& [_, joints] : _data.joints)
-            for (JointDesc& joint : joints)
+            for (JointDesc& joint : joints) {
                 joint.axis = basis * joint.axis;
+                joint.jointOffset = basis * joint.jointOffset;
+            }
         for (auto& [_, site] : _data.sites) {
             site.pos = basis * site.pos;
             site.quat = (basis * site.quat * basisInv).normalized();

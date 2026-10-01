@@ -217,13 +217,18 @@ void attachCollisionShapes(
 }
 
 // Applies MJCF inertial properties (mass, COM, diag inertia) to a link.
-// Falls back to uniform mass distribution if the link has no inertial entry.
+// Infer from shapes when no inertial entry exists; never accept PhysX's
+// unit mass/inertia fallback when that inference fails.
 void applyInertial(PxArticulationLink* link,
                    const Asset::InertialDescMap& inertials, int idx,
-                   float fallbackMass = 1.f) {
+                   const std::string& bodyName, float fallbackDensity) {
     auto it = inertials.find(idx);
     if (it == inertials.end()) {
-        PxRigidBodyExt::updateMassAndInertia(*link, fallbackMass);
+        if (!PxRigidBodyExt::updateMassAndInertia(*link, fallbackDensity))
+            throw std::runtime_error(
+                "Cannot infer mass and inertia for body '" + bodyName +
+                "': provide valid inertial properties or merge a massless "
+                "fixed frame into its physical body");
         return;
     }
     const auto& inert = it->second;
@@ -766,7 +771,8 @@ Articulation::build(PhysicsWorld& physics,
                               cfg.contactOffset, cfg.restOffset,
                               cfg.materialOverrides, tree, 0);
     setCollisionFilterData(artic._links[0], cfg.collisionGroup);
-    applyInertial(artic._links[0], inertials, 0, cfg.defaultRootMass);
+    applyInertial(artic._links[0], inertials, 0, tree->nodeName(0),
+                  cfg.defaultRootMass);
     artic._links[0]->setLinearDamping(cfg.rootLinearDamping);
     artic._links[0]->setAngularDamping(cfg.rootAngularDamping);
     artic._links[0]->setMaxDepenetrationVelocity(cfg.maxDepenetrationVelocity);
@@ -788,7 +794,8 @@ Articulation::build(PhysicsWorld& physics,
                                   cfg.contactOffset, cfg.restOffset,
                                   cfg.materialOverrides, tree, i);
         setCollisionFilterData(artic._links[i], cfg.collisionGroup);
-        applyInertial(artic._links[i], inertials, i, cfg.defaultLinkMass);
+        applyInertial(artic._links[i], inertials, i, tree->nodeName(i),
+                      cfg.defaultLinkMass);
         artic._links[i]->setLinearDamping(cfg.linkLinearDamping);
         artic._links[i]->setAngularDamping(cfg.linkAngularDamping);
         artic._links[i]->setMaxDepenetrationVelocity(
@@ -837,6 +844,10 @@ Articulation::build(PhysicsWorld& physics,
             for (const auto& dof : artic._template->_dofs) {
                 if (dof.linkIndex != i)
                     continue;
+                if (dof.loLimit == -FLT_MAX && dof.hiLimit == FLT_MAX) {
+                    joint->setMotion(dof.axis, PxArticulationMotion::eFREE);
+                    continue;
+                }
                 joint->setMotion(dof.axis, PxArticulationMotion::eLIMITED);
                 PhysXCompat::setArticulationLimit(*joint, dof.axis, dof.loLimit,
                                                   dof.hiLimit);

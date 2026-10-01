@@ -209,3 +209,111 @@ def test_world_uses_one_articulation_asset_cache_for_urdf_and_mjcf():
         assert world.get_articulation_asset_load_count() == 3
     finally:
         world.release()
+
+
+@pytest.mark.parametrize('geometry,rpy,half_extents', [
+    ('<box size="2 4 6"/>', '0 0 1.5707963267948966', [4., 2., 6.]),
+    ('<sphere radius=".5"/>', '0 0 0', [1., 1., 1.]),
+    ('<cylinder radius=".5" length="3"/>', '1.5707963267948966 0 0', [1., 3., 1.]),
+])
+def test_urdf_primitive_visual_pose_scale_and_material(tmp_path, geometry, rpy, half_extents):
+    path = tmp_path / 'primitive.urdf'
+    path.write_text(f'''<robot name="primitives">
+      <material name="paint"><color rgba=".2 .4 .6 .7"/></material>
+      <link name="root">
+        <visual><origin xyz="1 2 3" rpy="{rpy}"/>
+          <geometry>{geometry}</geometry><material name="paint"/>
+        </visual>
+        <visual><origin xyz="-1 -2 -3" rpy="{rpy}"/>
+          <geometry>{geometry}</geometry>
+          <material name="paint"><color rgba=".8 .6 .4 1"/></material>
+        </visual>
+      </link></robot>''')
+    result = ke.asset.URDFLoader.parse(str(path), scale=2.)
+    assert result.diagnostics.warnings == []
+    assert len(result.articulation.visual_geoms) == 2
+    assert not result.articulation.collision_geoms
+    asset = ke.visual.ArticulationVisualAsset.from_data(result.articulation)
+    scene = ke.scene.create_backend(ke.scene.BackendType.NATIVE)
+    bridge = asset.instantiate(scene, '/robot', '/.Resources/primitive', True)
+    prims = bridge.render_prims()
+    assert len(prims) == 2
+    for prim, center, rgba in zip(prims, ([2., 4., 6.], [-2., -4., -6.]),
+                                  ([.2, .4, .6, .7], [.8, .6, .4, 1.])):
+        mesh = prim.resolve_mesh_data()
+        assert mesh is not None and len(mesh.indices) > 0
+        vertices = np.array([_vec3(v) for v in mesh.vertices])
+        np.testing.assert_allclose(vertices.min(axis=0), np.array(center) - half_extents, atol=2e-6)
+        np.testing.assert_allclose(vertices.max(axis=0), np.array(center) + half_extents, atol=2e-6)
+        normals = np.array([_vec3(n) for n in mesh.normals])
+        np.testing.assert_allclose(np.linalg.norm(normals, axis=1), 1., atol=1e-6)
+        c = prim.get_display_color_alpha()
+        np.testing.assert_allclose([c.x, c.y, c.z, c.w], rgba, atol=1e-6)
+        assert prim.get_mesh_component() is not None
+
+
+@pytest.mark.parametrize('geometry', [
+    '<sphere/>', '<sphere radius="0"/>', '<sphere radius="-1"/>',
+    '<cylinder radius="1"/>', '<cylinder radius="1" length="-2"/>',
+    '<box size="1 2"/>', '<box size="1 0 3"/>', '<box size="1 nan 3"/>',
+])
+def test_urdf_primitive_visual_rejects_invalid_dimensions(tmp_path, geometry):
+    path = tmp_path / 'invalid.urdf'
+    path.write_text(f'''<robot name="invalid"><link name="root">
+      <visual><geometry>{geometry}</geometry></visual>
+    </link></robot>''')
+    with pytest.raises(RuntimeError, match='visual.*finite positive dimensions'):
+        ke.asset.URDFLoader.parse(str(path))
+
+
+def test_urdf_unknown_visual_geometry_warns(tmp_path):
+    path = tmp_path / 'unknown.urdf'
+    path.write_text('''<robot name="unknown"><link name="root">
+      <visual><geometry><unsupported/></geometry></visual>
+    </link></robot>''')
+    result = ke.asset.URDFLoader.parse(str(path))
+    assert not result.articulation.visual_geoms
+    assert any("unsupported URDF visual geometry 'unsupported'" in w
+               for w in result.diagnostics.warnings)
+
+
+@pytest.mark.parametrize('attributes', [
+    None,
+    'ixx="1" ixy="0" ixz="0" iyy="1" iyz="0"',
+    'ixx="0" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"',
+    'ixx="-1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"',
+    'ixx="1" ixy="2" ixz="0" iyy="1" iyz="0" izz="1"',
+    'ixx="4" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"',
+    'ixx="nan" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"',
+    'ixx="1" ixy="inf" ixz="0" iyy="1" iyz="0" izz="1"',
+    'ixx="1junk" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"',
+    'ixx="1e-60" ixy="0" ixz="0" iyy="1e-60" iyz="0" izz="1e-60"',
+    'ixx="1e40" ixy="0" ixz="0" iyy="1e40" iyz="0" izz="1e40"',
+    'ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="2.00001"',
+])
+def test_urdf_rejects_invalid_authored_inertia(tmp_path, attributes):
+    tensor = '' if attributes is None else f'<inertia {attributes}/>'
+    path = tmp_path / 'invalid_inertia.urdf'
+    path.write_text(f'''<robot name="invalid"><link name="bad_link">
+      <inertial><mass value="1"/>{tensor}</inertial>
+    </link></robot>''')
+    with pytest.raises(RuntimeError, match="Invalid URDF inertia on link 'bad_link'"):
+        ke.asset.URDFLoader.load(str(path))
+
+
+@pytest.mark.parametrize('moments', [(3e-10, 1e-10, 2e-10), (2.000001, 1., 1.)])
+def test_urdf_preserves_small_and_near_boundary_inertia(tmp_path, moments):
+    path = tmp_path / 'small_inertia.urdf'
+    x, y, z = moments
+    path.write_text(f'''<robot name="small"><link name="small_link"><inertial>
+      <mass value="1"/><origin rpy="0 0 1.5707963267948966"/>
+      <inertia ixx="{x}" ixy="0" ixz="0" iyy="{y}" iyz="0" izz="{z}"/>
+    </inertial></link></robot>''')
+    value = ke.asset.URDFLoader.load(str(path)).inertials[0]
+    np.testing.assert_allclose(np.sort(_vec3(value.diag_inertia)), sorted(moments), rtol=1e-6, atol=0)
+    q = value.quat
+    v = np.array([q.x, q.y, q.z])
+    skew = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+    rotation = np.eye(3) + 2*q.w*skew + 2*skew@skew
+    reconstructed = rotation @ np.diag(_vec3(value.diag_inertia)) @ rotation.T
+    np.testing.assert_allclose(reconstructed, np.diag([y, x, z]), atol=max(moments)*1e-6, rtol=1e-6)

@@ -1,12 +1,14 @@
 #include "asset/urdf_loader.hpp"
 
 #include "asset/mesh_loader.hpp"
+#include "geometry/primitive_mesh.hpp"
 
 #include <fmt/core.h>
 #include <tinyxml2.h>
 
 #include <Eigen/Eigenvalues>
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cmath>
 #include <cstdlib>
@@ -226,8 +228,26 @@ void validateMeshScale(const Eigen::Vector3f& value,
         throw std::runtime_error("URDF mesh has an invalid scale: " + filename);
 }
 
+// Reject invalid authored inertia without changing valid small moments.
+Eigen::Vector3f validatePrincipalMoments(const Eigen::Vector3d& moments,
+                                        const std::string& context) {
+    const auto invalid = [&](const char* reason) {
+        return std::runtime_error(context + ": " + reason);
+    };
+    if (!moments.allFinite() || (moments.array() <= 0.0).any())
+        throw invalid("principal moments must be finite and positive");
+    std::array<double, 3> sorted{moments.x(), moments.y(), moments.z()};
+    std::sort(sorted.begin(), sorted.end());
+    if (sorted[2] > sorted[0] + sorted[1] + 1e-6 * sorted[2])
+        throw invalid("principal moments violate the triangle inequality");
+    const Eigen::Vector3f stored = moments.cast<float>();
+    if (!stored.allFinite() || (stored.array() <= 0.f).any())
+        throw invalid("principal moments are outside the supported float range");
+    return stored;
+}
+
 void parseInertial(tinyxml2::XMLElement* link, int bodyIndex, float scale,
-                   ArticulationDesc& data, ImportDiagnostics& diagnostics) {
+                   ArticulationDesc& data) {
     auto* inertialElement = link->FirstChildElement("inertial");
     if (!inertialElement)
         return;
@@ -238,34 +258,35 @@ void parseInertial(tinyxml2::XMLElement* link, int bodyIndex, float scale,
     const Origin origin = parseOrigin(inertialElement, scale);
     inertial.com = origin.translation;
 
+    const std::string context = fmt::format("Invalid URDF inertia on link '{}'",
+        requiredAttribute(link, "name", "link"));
     auto* tensor = inertialElement->FirstChildElement("inertia");
-    if (!tensor) {
-        diagnostics.warnings.push_back(
-            fmt::format("link '{}' has an inertial without an inertia tensor",
-                        requiredAttribute(link, "name", "link")));
-        data.inertials[bodyIndex] = inertial;
-        return;
-    }
-
-    float ixx = 0.f, ixy = 0.f, ixz = 0.f;
-    float iyy = 0.f, iyz = 0.f, izz = 0.f;
-    tensor->QueryFloatAttribute("ixx", &ixx);
-    tensor->QueryFloatAttribute("ixy", &ixy);
-    tensor->QueryFloatAttribute("ixz", &ixz);
-    tensor->QueryFloatAttribute("iyy", &iyy);
-    tensor->QueryFloatAttribute("iyz", &iyz);
-    tensor->QueryFloatAttribute("izz", &izz);
-    Eigen::Matrix3f matrix;
+    if (!tensor)
+        throw std::runtime_error(context + ": explicit inertial requires an inertia tensor");
+    const auto readComponent = [&](const char* attribute) {
+        const char* text = tensor->Attribute(attribute);
+        double value = 0.0;
+        std::istringstream input(text ? text : "");
+        if (!(input >> value) || !std::isfinite(value))
+            throw std::runtime_error(context + ": expected finite '" + attribute + "'");
+        input >> std::ws;
+        if (!input.eof())
+            throw std::runtime_error(context + ": expected one number for '" + attribute + "'");
+        return value;
+    };
+    const double ixx = readComponent("ixx"), ixy = readComponent("ixy"),
+                 ixz = readComponent("ixz"), iyy = readComponent("iyy"),
+                 iyz = readComponent("iyz"), izz = readComponent("izz");
+    Eigen::Matrix3d matrix;
     matrix << ixx, ixy, ixz, ixy, iyy, iyz, ixz, iyz, izz;
-    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> solver(matrix);
+    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> solver(matrix);
     if (solver.info() != Eigen::Success)
-        throw std::runtime_error("Failed to diagonalize URDF inertia tensor");
-
-    Eigen::Matrix3f axes = solver.eigenvectors();
-    if (axes.determinant() < 0.f)
-        axes.col(0) *= -1.f;
-    inertial.diagInertia = solver.eigenvalues().cwiseMax(1e-8f);
-    inertial.quat = (origin.rotation * Eigen::Quaternionf(axes)).normalized();
+        throw std::runtime_error(context + ": failed to diagonalize tensor");
+    inertial.diagInertia = validatePrincipalMoments(solver.eigenvalues(), context);
+    Eigen::Matrix3d axes = solver.eigenvectors();
+    if (axes.determinant() < 0.0)
+        axes.col(0) *= -1.0;
+    inertial.quat = (origin.rotation * Eigen::Quaternionf(axes.cast<float>())).normalized();
     data.inertials[bodyIndex] = inertial;
 }
 
@@ -437,44 +458,78 @@ void URDFLoader::parseIntoData(const std::string& urdfPath, float scale,
 
     std::unordered_map<std::string, std::shared_ptr<const Scene::MeshData>>
         collisionMeshCache;
+    // Unit primitive meshes are shared within the asset; dimensions remain
+    // per-visual scales, just like authored mesh scales.
+    std::unordered_map<std::string, std::shared_ptr<const Scene::MeshData>>
+        primitiveVisualMeshes;
     for (const LinkRecord& link : links) {
         const int bodyIndex = bodyIndices.at(link.name);
-        parseInertial(link.element, bodyIndex, scale, _data, _diagnostics);
+        parseInertial(link.element, bodyIndex, scale, _data);
 
         for (auto* visual = link.element->FirstChildElement("visual"); visual;
              visual = visual->NextSiblingElement("visual")) {
             auto* geometry = visual->FirstChildElement("geometry");
-            auto* mesh =
-                geometry ? geometry->FirstChildElement("mesh") : nullptr;
-            if (!mesh) {
-                _diagnostics.warnings.push_back(fmt::format(
-                    "link '{}' has a non-mesh visual, which is not yet "
-                    "represented by VisualGeomDesc",
-                    link.name));
-                continue;
-            }
-            const std::string filename =
-                requiredAttribute(mesh, "filename", "visual mesh");
-            const auto meshPath = resolveUrdfMeshPath(filename, urdfPath);
-            if (!meshPath) {
-                _diagnostics.warnings.push_back(fmt::format(
-                    "could not resolve visual mesh '{}'",
-                    filename));
-                continue;
-            }
-            const Eigen::Vector3f meshScale =
-                parseVec3(mesh->Attribute("scale"), Eigen::Vector3f::Ones());
-            validateMeshScale(meshScale, filename);
             const Origin origin = parseOrigin(visual, scale);
             VisualGeomDesc descriptor{
-                link.name,
-                meshPath->string(),
-                bodyIndex,
-                origin.translation,
-                origin.rotation,
-                parseColor(visual->FirstChildElement("material"),
-                           materialColors)};
-            descriptor.scale = meshScale * scale;
+                link.name, "", bodyIndex, origin.translation, origin.rotation,
+                parseColor(visual->FirstChildElement("material"), materialColors)};
+            if (auto* mesh = geometry ? geometry->FirstChildElement("mesh") : nullptr) {
+                const std::string filename =
+                    requiredAttribute(mesh, "filename", "visual mesh");
+                const auto meshPath = resolveUrdfMeshPath(filename, urdfPath);
+                if (!meshPath) {
+                    _diagnostics.warnings.push_back(fmt::format(
+                        "could not resolve visual mesh '{}'", filename));
+                    continue;
+                }
+                const Eigen::Vector3f meshScale =
+                    parseVec3(mesh->Attribute("scale"), Eigen::Vector3f::Ones());
+                validateMeshScale(meshScale, filename);
+                descriptor.meshFile = meshPath->string();
+                descriptor.scale = meshScale * scale;
+            } else {
+                auto* primitive = geometry ? geometry->FirstChildElement() : nullptr;
+                const std::string type = primitive ? primitive->Name() : "";
+                Eigen::Vector3f dimensions = Eigen::Vector3f::Zero();
+                if (type == "box") {
+                    const auto size = splitFloats(primitive->Attribute("size"));
+                    if (size.size() == 3)
+                        dimensions = Eigen::Vector3f(size[0], size[1], size[2]);
+                } else if (type == "sphere") {
+                    float radius = 0.f;
+                    primitive->QueryFloatAttribute("radius", &radius);
+                    dimensions = Eigen::Vector3f::Constant(radius);
+                } else if (type == "cylinder") {
+                    float radius = 0.f, length = 0.f;
+                    primitive->QueryFloatAttribute("radius", &radius);
+                    primitive->QueryFloatAttribute("length", &length);
+                    dimensions = Eigen::Vector3f(radius, radius, length);
+                } else {
+                    _diagnostics.warnings.push_back(fmt::format(
+                        "unsupported URDF visual geometry '{}' on link '{}'",
+                        type, link.name));
+                    continue;
+                }
+                dimensions *= scale;
+                if (!dimensions.allFinite() || (dimensions.array() <= 0.f).any())
+                    throw std::runtime_error(fmt::format(
+                        "URDF visual {} on link '{}' requires finite positive dimensions",
+                        type, link.name));
+                auto& meshData = primitiveVisualMeshes[type];
+                if (!meshData) {
+                    if (type == "box")
+                        meshData = std::make_shared<Scene::MeshData>(
+                            Geometry::createBox(1.f, 1.f, 1.f));
+                    else if (type == "sphere")
+                        meshData = std::make_shared<Scene::MeshData>(
+                            Geometry::createSphere(1.f, 33, 17));
+                    else
+                        meshData = std::make_shared<Scene::MeshData>(
+                            Geometry::createCylinder(1.f, 1.f, UpAxis::Z));
+                }
+                descriptor.meshData = meshData;
+                descriptor.scale = dimensions;
+            }
             _data.visualGeoms.push_back(std::move(descriptor));
         }
 

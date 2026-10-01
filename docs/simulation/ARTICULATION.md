@@ -22,11 +22,13 @@ prim; pass `prim_path="/Robot"` to select a different robot subtree.
 
 | Format | Supported joints | 3-axis rotation |
 | --- | --- | --- |
-| MJCF | Fixed, Revolute (hinge) | 3 orthogonal Revolute joints on one body |
+| MJCF | Fixed, Revolute (hinge), Spherical (ball) | Spherical or 3 orthogonal Revolute joints on one body |
 | URDF | Fixed, Revolute, Prismatic | 3 Revolute joints with intermediate links |
 | USD | Fixed, Revolute, Prismatic | 3 Revolute joints with intermediate links |
 
-Native MJCF `ball`/`slide` and USD Spherical joint import are not supported.
+MJCF `ball` imports as a spherical joint with three free rotational DOFs;
+rotation-angle limits are not supported. MJCF `slide` and USD Spherical
+joint import are not supported.
 
 ## Create the articulation
 
