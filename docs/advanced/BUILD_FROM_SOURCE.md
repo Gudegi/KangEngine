@@ -8,7 +8,7 @@ This guide contains the detailed build setup for KangEngine. The root README kee
 - Ninja or a compatible build tool
 - A C++17 compiler
 - vcpkg
-- PhysX under `$HOME/Physics/PhysX` (5.1 CPU compatibility or 5.8 GPU)
+- PhysX under `$HOME/Physics/PhysX` (see platform-specific versions and build options below)
 - Python 3.12 for Python bindings
 
 ## vcpkg
@@ -345,35 +345,58 @@ suite or `make validate_physx_gpu_cpp` for the native smoke test. See
 
 ## macOS
 
-Tested with Apple Silicon.
+Tested with Apple Silicon using the macOS ARM64 CPU port of PhysX 5.8.
 
-1. Clone o3de PhysX under `$HOME/Physics/PhysX`.
+1. Clone the PhysX 5.8 macOS fork under `$HOME/Physics/PhysX`.
+   If this directory already contains PhysX 5.1, move that checkout aside first.
 
     ```bash
     mkdir -p ~/Physics
     cd ~/Physics
-    git clone -b 104.1 https://github.com/o3de/PhysX.git
+    git clone -b macos-arm64-5.8 https://github.com/Gudegi/PhysX.git
     ```
 
-2. Install build tools.
+2. Install build tools. Xcode command-line tools must also be installed.
 
     ```bash
-    brew install coreutils ninja autoconf automake autoconf-archive
+    brew install cmake coreutils ninja autoconf automake autoconf-archive
     ```
 
-3. Build PhysX.
+3. Build PhysX with CMake and Ninja directly. Python and Packman are not required
+   for this SDK build.
 
     ```bash
-    cd ~/Physics/PhysX/physx
-    ./buildtools/packman/packman update -y
-    ./generate_projects.sh
-
-    # The O3DE PhysX build system uses the 'mac.x86_64' directory name for all macOS builds, including Apple Silicon.
-    cd compiler/mac.x86_64
-    cmake --build . --config release
+    cd ~/Physics/PhysX
+    physx_config=release
+    physx_build="$PWD/build/macos-arm64-$physx_config"
+    cmake -S physx/compiler/public -B "$physx_build" -G Ninja \
+      -DPHYSX_ROOT_DIR="$PWD/physx" \
+      -DTARGET_BUILD_PLATFORM=mac \
+      -DPX_OUTPUT_ARCH=arm \
+      -DCMAKE_OSX_ARCHITECTURES=arm64 \
+      -DCMAKE_BUILD_TYPE="$physx_config" \
+      -DPX_GENERATE_STATIC_LIBRARIES=ON \
+      -DPX_GENERATE_GPU_PROJECTS=OFF \
+      -DPX_GENERATE_GPU_PROJECTS_ONLY=OFF \
+      -DPX_BUILDSNIPPETS=OFF \
+      -DPX_BUILDPVDRUNTIME=OFF \
+      -DPX_BUILD_PLATFORM_TESTS=ON \
+      -DPX_OUTPUT_LIB_DIR="$PWD/physx" \
+      -DPX_OUTPUT_BIN_DIR="$PWD/physx" \
+      -DCMAKE_INSTALL_PREFIX="$PWD/install/macos-arm64-$physx_config"
+    cmake --build "$physx_build" -j 6
+    ctest --test-dir "$physx_build" --output-on-failure
     ```
 
-4. Configure KangEngine.
+    Headers remain in `physx/include`; libraries are generated in
+    `physx/bin/mac.arm64/release`. Keep `PX_OUTPUT_ARCH=arm`: it enables the
+    `_64` library suffix expected by KangEngine, such as
+    `libPhysXExtensions_static_64.a`.
+
+    See the fork's [macOS build instructions](https://github.com/Gudegi/PhysX/blob/macos-arm64-5.8/physx/documentation/platformreadme/mac/README_MAC.md)
+    for supported features and platform test coverage.
+
+4. Configure from the KangEngine repository root.
 
     ```bash
     cmake --preset=vcpkg

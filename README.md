@@ -47,7 +47,7 @@ uv pip install kangengine
 
 - **OS:** macOS 26+ (Apple Silicon), Ubuntu 24.04 (x86-64)
 - **Python:** 3.12
-- **Simulation:** PhysX 5.1 CPU on macOS; PhysX 5.8 CPU/GPU on Ubuntu
+- **Simulation:** PhysX 5.8 CPU on macOS (Apple Silicon); PhysX 5.8 CPU/GPU on Ubuntu
 - **Dependencies:** OpenGL 4.1+ for visualization; NVIDIA driver 580+ for CUDA 13 on Ubuntu
 
 See [Installation](https://gudegi.github.io/KangEngine/guide/getting_started/INSTALLATION.html) for details.

@@ -111,9 +111,9 @@ if(USE_PHYSX)
 
     target_include_directories(pre_compiled_ext INTERFACE ${physx_DIR}/include)
     if(APPLE)
-        # Assume PhysX 5.1.2
-        set(PHYSX_BIN_PLATFORM "mac.x86_64" CACHE STRING "PhysX binary platform directory")
-        target_link_directories(pre_compiled_ext INTERFACE "${physx_DIR}/bin/${PHYSX_BIN_PLATFORM}/${PHYSX_BUILD_TYPE}") # TODO: actually it need to be not x86 but arm. fix build setting
+        # Assume PhysX 5.8
+        set(PHYSX_BIN_PLATFORM "mac.arm64" CACHE STRING "PhysX binary platform directory")
+        target_link_directories(pre_compiled_ext INTERFACE "${physx_DIR}/bin/${PHYSX_BIN_PLATFORM}/${PHYSX_BUILD_TYPE}")
     elseif(UNIX)
         # Assume PhysX 5.8
         set(PHYSX_BIN_PLATFORM "linux.clang" CACHE STRING "PhysX binary platform directory")
