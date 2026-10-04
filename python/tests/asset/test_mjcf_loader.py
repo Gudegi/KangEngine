@@ -10,6 +10,69 @@ def _vec3(value) -> np.ndarray:
     return np.array([value.x, value.y, value.z], dtype=np.float32)
 
 
+@pytest.mark.parametrize("loader", ["parse", "load"])
+@pytest.mark.parametrize("joint_type", ["slide", "unknown_joint"])
+@pytest.mark.parametrize("declaration", ["direct", "class", "childclass", "main"])
+def test_mjcf_rejects_unsupported_joint_type(
+    tmp_path, loader, joint_type, declaration
+):
+    defaults, body_attrs, joint_attrs = "", "", f'type="{joint_type}"'
+    if declaration in ("class", "childclass"):
+        defaults = (
+            f'<default><default class="outer"><joint type="{joint_type}"/>'
+            '<default class="inner"/></default></default>'
+        )
+        body_attrs = 'childclass="inner"' if declaration == "childclass" else ""
+        joint_attrs = 'class="inner"' if declaration == "class" else ""
+    elif declaration == "main":
+        defaults = f'<default><joint type="{joint_type}"/></default>'
+        joint_attrs = ""
+    path = tmp_path / "unsupported_joint.xml"
+    path.write_text(f'''<mujoco>{defaults}<worldbody>
+      <body name="root" {body_attrs}><body name="slider">
+        <joint name="bad_joint" {joint_attrs}/>
+      </body></body>
+    </worldbody></mujoco>''', encoding="utf-8")
+
+    with pytest.raises(RuntimeError) as error:
+        getattr(ke.asset.MJCFLoader, loader)(str(path))
+    message = str(error.value)
+    assert f"Unsupported MJCF joint type '{joint_type}'" in message
+    assert "joint 'bad_joint'" in message
+    assert "body 'slider'" in message
+
+
+@pytest.mark.parametrize("defaults,attrs", [
+    ("", ""),
+    ("", 'type="hinge"'),
+    ('<default><joint type="slide"/></default>', 'type="hinge"'),
+])
+def test_mjcf_preserves_default_and_explicit_hinge(tmp_path, defaults, attrs):
+    path = tmp_path / "hinge.xml"
+    path.write_text(f'''<mujoco>{defaults}<worldbody><body name="root">
+      <body name="link"><joint name="hinge" {attrs}/></body>
+    </body></worldbody></mujoco>''', encoding="utf-8")
+
+    result = ke.asset.MJCFLoader.parse(str(path))
+    joints = result.articulation.joints[1]
+    assert len(joints) == 1
+    assert joints[0].type == ke.asset.JointDescType.REVOLUTE
+    assert not result.diagnostics.warnings
+
+
+@pytest.mark.parametrize("joint", ['<freejoint/>', '<joint name="root" type="free"/>'])
+def test_mjcf_preserves_free_root(tmp_path, joint):
+    path = tmp_path / "free_root.xml"
+    path.write_text(f'''<mujoco><worldbody><body name="root">
+      {joint}<body name="link"><joint name="hinge"/></body>
+    </body></worldbody></mujoco>''', encoding="utf-8")
+
+    result = ke.asset.MJCFLoader.parse(str(path))
+    assert 0 not in result.articulation.joints
+    assert len(result.articulation.joints[1]) == 1
+    assert not result.diagnostics.warnings
+
+
 def test_mjcf_ignores_later_collinear_joint(tmp_path: Path):
     path = tmp_path / "backlash.xml"
     path.write_text(

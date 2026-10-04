@@ -1006,9 +1006,19 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
                     clsAttr ? clsAttr : inheritedClass;
                 const auto defaults =
                     resolveJointClass(effectiveCls, jointDefaultMap);
-                const std::string jointType = jElem->Attribute("type")
-                                                  ? jElem->Attribute("type")
-                                                  : defaults.type;
+                const std::string jointType =
+                    jElem->Attribute("type")
+                        ? jElem->Attribute("type")
+                        : (defaults.type.empty() ? "hinge" : defaults.type);
+                if (jointType != "hinge" && jointType != "ball" &&
+                    jointType != "free")
+                    throw std::runtime_error(fmt::format(
+                        "Unsupported MJCF joint type '{}' for joint '{}' on "
+                        "body '{}'; supported types are hinge, ball, and free",
+                        jointType,
+                        jElem->Attribute("name") ? jElem->Attribute("name")
+                                                 : "<unnamed>",
+                        bodyName ? bodyName : "<unnamed>"));
                 if (jointType == "free")
                     continue;
 
