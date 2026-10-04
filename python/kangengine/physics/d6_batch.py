@@ -17,6 +17,38 @@ class D6Batch:
         self._gpu_system = None
         self._wrenches = None
 
+    @classmethod
+    def create_world_frames(cls, world, articulations, frame_names, *, world_frames, config=None):
+        """Attach named model frames to world poses using their physical owners.
+
+        Example: attach a robot's named frame at a world-space xyz/xyzw pose::
+
+            joints = D6Batch.create_world_frames(
+                physics_world, [robot], ["attachment_frame"],
+                world_frames=[[0, 0, 0, 0, 0, 0, 1]],
+            )
+
+        Resolves the owning body and local frame offset automatically.
+        """
+        if isinstance(frame_names, str):
+            raise TypeError("frame_names must be a sequence of names")
+        articulations = tuple(articulations)
+        names = tuple(frame_names)
+        if len(articulations) != len(names):
+            raise ValueError("articulations and frame_names must have equal lengths")
+        indices, poses = [], []
+        for articulation, name in zip(articulations, names):
+            if articulation.num_links() == 0:
+                raise RuntimeError("Articulation has been released")
+            frame = next((f for f in articulation.template.fixed_frames if f.name == name), None)
+            if frame is None:
+                raise KeyError(name)
+            indices.append(frame.body_index)
+            poses.append([frame.pos.x, frame.pos.y, frame.pos.z,
+                          frame.quat.x, frame.quat.y, frame.quat.z, frame.quat.w])
+        return cls.create_world_links(world, articulations, indices,
+                                      world_frames=world_frames, link_frames=poses, config=config)
+
     @staticmethod
     def _frames(frames, count):
         if isinstance(frames, torch.Tensor):

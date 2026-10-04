@@ -73,7 +73,28 @@ void bind_articulation_desc(py::module& m) {
         .value("CAPSULE", SiteDesc::Type::Capsule)
         .value("BOX", SiteDesc::Type::Box);
 
-    py::class_<SiteDesc>(
+    py::class_<FixedFrameDesc>(asset, "FixedFrameDesc",
+        "A frame fixed relative to its owning body, not to the world.")
+        .def(py::init([](const std::string& name, int bodyIndex,
+                         Eigen::Vector3f pos, Eigen::Vector4f xyzw) {
+            FixedFrameDesc f;
+            f.name = name;
+            f.bodyIndex = bodyIndex;
+            f.pos = pos;
+            f.quat = Eigen::Quaternionf(xyzw[3], xyzw[0], xyzw[1], xyzw[2]);
+            if (name.empty() || bodyIndex < 0 || !pos.allFinite() ||
+                !xyzw.allFinite() || std::abs(f.quat.norm() - 1.f) > 1e-4f)
+                throw py::value_error("Invalid fixed frame name, owner or pose");
+            return f;
+        }), py::arg("name"), py::kw_only(), py::arg("body_index"),
+            py::arg("pos") = Eigen::Vector3f::Zero().eval(),
+            py::arg("quat_xyzw") = Eigen::Vector4f(0, 0, 0, 1))
+        .def_readonly("name", &FixedFrameDesc::name)
+        .def_readonly("body_index", &FixedFrameDesc::bodyIndex)
+        .def_property_readonly("pos", [](const FixedFrameDesc& f) { return Animation::toGlm(f.pos); })
+        .def_property_readonly("quat", [](const FixedFrameDesc& f) { return Animation::toGlm(f.quat); });
+
+    py::class_<SiteDesc, FixedFrameDesc>(
         asset, "SiteDesc",
         "Imported MJCF site description attached to a character body.")
         .def_readonly("type", &SiteDesc::type, "Site geometry type.")
@@ -318,6 +339,17 @@ void bind_articulation_desc(py::module& m) {
                       "Directory used to resolve mesh files.")
         .def_readonly("sites", &ArticulationDesc::sites,
                       "Imported site markers.")
+        .def_readonly("fixed_frames", &ArticulationDesc::fixedFrames)
+        .def("add_fixed_frame", [](ArticulationDesc& d, const FixedFrameDesc& frame) {
+            if (frame.bodyIndex >= d.skeletonTree->numJoints())
+                throw py::value_error("Fixed frame body index out of range");
+            if (d.sites.count(frame.name))
+                throw py::value_error("Duplicate fixed frame name: " + frame.name);
+            for (const auto& f : d.fixedFrames)
+                if (f.name == frame.name)
+                    throw py::value_error("Duplicate fixed frame name: " + frame.name);
+            d.fixedFrames.push_back(frame);
+        }, py::arg("frame"))
         .def_property_readonly(
             "joints",
             [](const ArticulationDesc& d) {

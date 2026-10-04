@@ -48,6 +48,21 @@ class _VisualLifetime:
             raise RuntimeError(f"{type(self).__name__} has been released")
 
 
+def _physical_visual_mapping(visual, articulation):
+    """Resolve imported visual node indices to compact physics body indices."""
+    template = articulation.template
+    prims = list(visual.body_prims())
+    frames = template.source_frames
+    if len(prims) != len(frames):
+        raise RuntimeError("Articulation visual source topology does not match template")
+    if list(visual.skeleton().node_names()) != [frame.name for frame in frames]:
+        raise RuntimeError("Articulation visual node order does not match template")
+    return (
+        [prims[i] for i in template.body_source_indices],
+        [frames[i].body_index for i in visual.render_prim_body_indices()],
+    )
+
+
 class RigidCPUExternalBackend(_VisualLifetime):
     """CPU rigid root poses -> native SimVisualBatch -> ExternalBuffer."""
 
@@ -602,6 +617,7 @@ class SimWorldVisualizer:
         self.cpu_visual_batches: dict[int, VisualBatch] = {}
         self.gpu_visual_batches: dict[int, VisualBatch] = {}
         self._articulation_visual_assets = {}
+        self._frame_axes = {}
         self._released = False
 
     @property
@@ -615,6 +631,10 @@ class SimWorldVisualizer:
     def release(self):
         if self._released:
             return self
+        for config in self._frame_axes.values():
+            for path in config["paths"]:
+                self.app.debug_overlay.clear(path)
+        self._frame_axes.clear()
         batches = (
             list(self.visual_batches.values())
             + list(self.cpu_visual_batches.values())
@@ -790,13 +810,13 @@ class SimWorldVisualizer:
             path,
             mesh_asset_base_path,
             True,
+            hierarchical=True,
         )
 
-        body_prims = list(articulation_visual.body_prims())
+        body_prims, render_body_ids = _physical_visual_mapping(
+            articulation_visual, articulation
+        )
         render_prims = list(articulation_visual.render_prims())
-        render_body_ids = [
-            int(i) for i in articulation_visual.render_prim_body_indices()
-        ]
         _apply_prim_color(render_prims, color)
         material = self._resolve_visual_material(material)
         body_handles = []
@@ -883,14 +903,11 @@ class SimWorldVisualizer:
         articulation_visual = asset.instantiate(
             self.scene, prim_base_path, mesh_asset_base_path
         )
-        body_prims = list(articulation_visual.body_prims())
-        if len(body_prims) != sim_view.num_bodies:
-            raise RuntimeError(
-                "GPU articulation visual body count does not match PhysX links"
-            )
+        body_prims, render_body_ids = _physical_visual_mapping(
+            articulation_visual, sim_view.articulation
+        )
         # Meshless links still have body frames, but no renderer/CUDA buffer.
         render_prims = list(articulation_visual.render_prims())
-        render_body_ids = list(articulation_visual.render_prim_body_indices())
         body_handles = [
             self.app._add_renderable(
                 material, prim, render_api.TransformSource.EXTERNAL_BUFFER
@@ -960,14 +977,11 @@ class SimWorldVisualizer:
         articulation_visual = asset.instantiate(
             self.scene, prim_base_path, mesh_asset_base_path
         )
-        body_prims = list(articulation_visual.body_prims())
-        if len(body_prims) != sim_view.num_bodies:
-            raise RuntimeError(
-                "CPU external articulation body count does not match PhysX links"
-            )
+        body_prims, render_body_ids = _physical_visual_mapping(
+            articulation_visual, sim_view.articulation
+        )
         # Keep all body frames, but register only meshes with the renderer.
         render_prims = list(articulation_visual.render_prims())
-        render_body_ids = list(articulation_visual.render_prim_body_indices())
         body_handles = [
             self.app._add_renderable(
                 material, prim, render_api.TransformSource.EXTERNAL_BUFFER
@@ -1246,6 +1260,50 @@ class SimWorldVisualizer:
             batch.sync()
         for batch in self.gpu_visual_batches.values():
             batch.sync()
+        self._sync_frame_axes()
+
+    def set_frames_visible(
+        self, obj_id: int, visible: bool, *, env_id: int = 0,
+        frame_names=None, length: float = 0.1,
+    ):
+        """Show selected attachment axes; disabled frames perform no pose queries.
+
+        CUDA poses are copied to the host only while this debug display is on.
+        ``frame_names=None`` selects every named fixed frame of one environment.
+        """
+        self._require_valid()
+        key = (int(env_id), int(obj_id))
+        if visible:
+            robot = self.world.articulation(*key)
+            if isinstance(frame_names, str):
+                raise TypeError("frame_names must be a sequence of names")
+            names = tuple(robot.frame_names if frame_names is None else frame_names)
+            if not np.isfinite(length) or length <= 0:
+                raise ValueError("length must be finite and positive")
+            for name in names:
+                if name not in robot.frame_names:
+                    raise KeyError(name)
+        old = self._frame_axes.pop(key, None)
+        if old is not None:
+            for path in old["paths"]:
+                self.app.debug_overlay.clear(path)
+        if visible and names:
+            self._frame_axes[key] = {
+                "names": names, "length": float(length),
+                "paths": tuple(f"/debug/frames/env_{key[0]}/obj_{key[1]}/frame_{i}"
+                               for i in range(len(names))),
+            }
+        return self
+
+    def _sync_frame_axes(self):
+        for (env_id, obj_id), config in self._frame_axes.items():
+            names = config["names"]
+            pos = self.world.state.get_frame_pos(obj_id, frame_names=names)
+            rot = self.world.state.get_frame_rot(obj_id, frame_names=names, fetch=False)
+            pos = pos[env_id].detach().cpu().numpy()
+            rot = rot[env_id].detach().cpu().numpy()
+            for path, p, q in zip(config["paths"], pos, rot):
+                self.app.debug_overlay.axes(path, p, q[[3, 0, 1, 2]], length=config["length"])
 
     def get_visual_articulation_scene_graph(
         self,

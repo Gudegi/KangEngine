@@ -1437,16 +1437,33 @@ void bind_physics(py::module& m) {
         .def_static(
             "create",
             [](const Asset::ArticulationDesc& data, const ArticulationConfig& cfg) {
-                return ArticulationTemplate::create(
-                    data.skeletonTree, data.collisionGeoms, data.joints,
-                    data.inertials, cfg);
+                return ArticulationTemplate::create(data, cfg);
             },
             py::arg("data"), py::arg("config") = ArticulationConfig{},
             "Precompute shared skeleton, rest transforms, collision metadata, "
             "and DOF metadata.")
         .def("num_links", &ArticulationTemplate::numLinks)
         .def("num_dofs", &ArticulationTemplate::numDofs)
-        .def_property_readonly("body_names", &ArticulationTemplate::bodyNames);
+        .def_property_readonly("body_names", &ArticulationTemplate::bodyNames)
+        .def_property_readonly("source_frames", &ArticulationTemplate::sourceFrames)
+        .def_property_readonly("fixed_frames", &ArticulationTemplate::fixedFrames)
+        .def_property_readonly("body_source_indices", &ArticulationTemplate::bodySourceIndices);
+
+    // Share name resolution between link handles and simulation body indices.
+    const auto bodyIndexByName = [](const Articulation& self, const std::string& name) {
+        const auto& names = self.bodyNames();
+        auto it = std::find(names.begin(), names.end(), name);
+        if (it != names.end()) return static_cast<int>(it - names.begin());
+        if (const auto metadata = self.articulationTemplate()) {
+            for (const auto& frame : metadata->fixedFrames()) {
+                if (frame.name == name)
+                    throw py::key_error("'" + name + "' is a fixed frame attached to '" +
+                        names.at(frame.bodyIndex) +
+                        "'. Use world.state.get_frame_pos() or get_frame_rot() to query its pose.");
+            }
+        }
+        throw py::key_error("body '" + name + "' not found");
+    };
 
     // Articulation (non-copyable)
     py::class_<Articulation>(physics, "Articulation",
@@ -1456,9 +1473,7 @@ void bind_physics(py::module& m) {
             "build",
             [](PhysicsWorld& physics, const Asset::ArticulationDesc& data,
                const ArticulationConfig& cfg) {
-                return Articulation::build(physics, data.skeletonTree,
-                                           data.collisionGeoms, data.joints,
-                                           data.inertials, cfg);
+                return Articulation::build(physics, data, cfg);
             },
             py::arg("physics"), py::arg("data"),
             py::arg("config") = ArticulationConfig{}, py::keep_alive<0, 1>(),
@@ -1476,11 +1491,18 @@ void bind_physics(py::module& m) {
         .def_property_readonly(
             "template", &Articulation::articulationTemplate,
             "Shared immutable template used to build this instance.")
-        .def("link", [](Articulation& self, const std::string& name) {
-            const auto& names = self.bodyNames();
-            auto it = std::find(names.begin(), names.end(), name);
-            if (it == names.end()) throw py::key_error(name);
-            return self.jointBody(static_cast<int>(it - names.begin()));
+        .def_property_readonly("body_names", &Articulation::bodyNames,
+            "Physical body names in body-state array order.")
+        .def_property_readonly("frame_names", [](const Articulation& self) {
+            std::vector<std::string> names;
+            if (const auto metadata = self.articulationTemplate())
+                for (const auto& frame : metadata->fixedFrames()) names.push_back(frame.name);
+            return names;
+        }, "Named fixed attachments: omitted fixed links, sites, and authored frames.")
+        .def("get_body_id", bodyIndexByName, py::arg("name"),
+            "Resolve a physical body name, with guidance for fixed-frame names.")
+        .def("link", [bodyIndexByName](Articulation& self, const std::string& name) {
+            return self.jointBody(bodyIndexByName(self, name));
         }, py::arg("name"), py::keep_alive<0, 1>())
         .def("link", &Articulation::jointBody, py::arg("index"), py::keep_alive<0, 1>())
         .def("num_links", &Articulation::numLinks,

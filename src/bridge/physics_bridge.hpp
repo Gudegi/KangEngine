@@ -63,6 +63,8 @@ class PhysicsBridge {
     struct PrimVisual {
         physx::PxArticulationLink* link;
         Scene::Prim* prim;
+        physx::PxTransform localPose{physx::PxIdentity};
+        bool hasLocalPose = false;
     };
 
     struct ColVisual {

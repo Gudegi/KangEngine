@@ -15,6 +15,7 @@ from .utils.env_utils import (
     select_optional_env_value,
 )
 from .utils.tensor import as_cpu_numpy, as_tensor, resolve_device
+from .utils.batched_rotations import quat_xyzw_multiply, quat_xyzw_rotate
 
 
 def _empty_state(batch_shape, num_bodies: int, num_dofs: int, device):
@@ -1583,6 +1584,7 @@ class KangWorldState:
                 snapshot=False,
             )
             self.snapshot = self.backend
+        self._fixed_frame_selections = {}
 
     @property
     def gpu(self):
@@ -1622,6 +1624,7 @@ class KangWorldState:
         return self.snapshot
 
     def add_articulation(self, *args, **kwargs):
+        self._fixed_frame_selections.clear()
         return self.snapshot.add_articulation(*args, **kwargs)
 
     def add_rigid(self, *args, **kwargs):
@@ -1678,6 +1681,61 @@ class KangWorldState:
     def get_body_ang_vel(self, obj_id: int) -> torch.Tensor:
         """Shape: ``(N, B, 3)``."""
         return self._read_backend().get_body_ang_vel(obj_id)
+
+    def _fixed_frame_selection(self, obj_id, frame_names, *, device):
+        if self.backend is None:
+            raise RuntimeError("World state has been released")
+        if isinstance(frame_names, str):
+            raise TypeError("frame_names must be a sequence of names")
+        names = tuple(frame_names)
+        key = (int(obj_id), names, str(device))
+        if key not in self._fixed_frame_selections:
+            articulations = tuple(self.record(e, obj_id).articulation
+                                  for e in range(self.num_envs))
+            signatures = []
+            for articulation in articulations:
+                if articulation.num_links() == 0:
+                    raise RuntimeError("Articulation has been released")
+                frames = {f.name: f for f in articulation.template.fixed_frames}
+                selected = [frames[name] for name in names]
+                signatures.append(tuple(
+                    (f.body_index, f.pos.x, f.pos.y, f.pos.z,
+                     f.quat.x, f.quat.y, f.quat.z, f.quat.w) for f in selected))
+            if any(s != signatures[0] for s in signatures[1:]):
+                raise ValueError("Fixed frame mappings differ between environments")
+            rows = signatures[0]
+            ids = torch.tensor([r[0] for r in rows], dtype=torch.long, device=device)
+            pos = torch.tensor([r[1:4] for r in rows], dtype=torch.float32,
+                               device=device).reshape(1, len(names), 3)
+            rot = torch.tensor([r[4:] for r in rows], dtype=torch.float32,
+                               device=device).reshape(1, len(names), 4)
+            self._fixed_frame_selections[key] = (articulations, ids, pos, rot)
+        articulations, ids, pos, rot = self._fixed_frame_selections[key]
+        if any(a.num_links() == 0 for a in articulations):
+            raise RuntimeError("Articulation has been released")
+        return ids, pos, rot
+
+    def get_frame_pos(self, obj_id: int, *, frame_names, fetch: bool = True) -> torch.Tensor:
+        """World positions (N, F, 3). CUDA queries use the direct GPU backend."""
+        if self.canonical_source == "gpu":
+            pos = self.backend.get_body_pos(obj_id, fetch=fetch)
+            rot = self.backend.get_body_rot(obj_id, fetch=False)
+        else:
+            backend = self._read_backend()
+            pos, rot = backend.get_body_pos(obj_id), backend.get_body_rot(obj_id)
+        ids, local_pos, _ = self._fixed_frame_selection(obj_id, frame_names, device=pos.device)
+        q = rot.index_select(1, ids)
+        return pos.index_select(1, ids) + quat_xyzw_rotate(q, local_pos.expand(q.shape[:-1] + (3,)))
+
+    def get_frame_rot(self, obj_id: int, *, frame_names, fetch: bool = True) -> torch.Tensor:
+        """World xyzw rotations (N, F, 4), preserving requested frame order."""
+        if self.canonical_source == "gpu":
+            rot = self.backend.get_body_rot(obj_id, fetch=fetch)
+        else:
+            rot = self._read_backend().get_body_rot(obj_id)
+        ids, _, local_rot = self._fixed_frame_selection(obj_id, frame_names, device=rot.device)
+        q = rot.index_select(1, ids)
+        return quat_xyzw_multiply(q, local_rot.expand_as(q))
 
     def get_contact_forces(self, obj_id: int) -> torch.Tensor:
         """Shape: ``(N, B, 3)``."""
@@ -1760,4 +1818,5 @@ class KangWorldState:
             self.backend.release()
         self.snapshot = None
         self.backend = None
+        self._fixed_frame_selections.clear()
         return self

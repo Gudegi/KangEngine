@@ -379,8 +379,10 @@ void ArticulationVisualBridgeAsset::defineMeshAssets(
 
 ArticulationVisualBridge ArticulationVisualBridgeAsset::instantiate(
     Scene::SceneBackend* scene, const std::string& primBasePath,
-    const std::string& meshAssetBasePath, bool splitVisualGeoms) const {
+    const std::string& meshAssetBasePath, bool splitVisualGeoms,
+    bool hierarchical) const {
     ArticulationVisualBridge bridge;
+    bridge._hierarchical = hierarchical;
     bridge._fk = Animation::SkeletonFK::fromData(_data, _scale);
 
     auto globalTransforms = bridge._fk.state().computeGlobalTransforms();
@@ -402,6 +404,9 @@ ArticulationVisualBridge ArticulationVisualBridgeAsset::instantiate(
     for (int i = 0; i < numBodies; i++) {
         std::string bodyName = bridge._fk.skeleton().nodeName(i);
         std::string primPath = primBasePath + "/" + bodyName;
+        const int parent = bridge._fk.skeleton().parentIndex(i);
+        if (hierarchical && parent >= 0)
+            primPath = bridge._bodyPrims[parent]->getPath() + "/" + bodyName;
         std::string meshSourcePath =
             meshAssetBasePath + "/body_" + std::to_string(i);
         const bool hasSplitVisual =
@@ -433,6 +438,10 @@ ArticulationVisualBridge ArticulationVisualBridgeAsset::instantiate(
         glm::vec3 pos =
             Animation::toGlm(globalTransforms[i].translation) * _scale;
         glm::quat rot = Animation::toGlm(globalTransforms[i].rotation);
+        if (hierarchical && parent >= 0) {
+            pos = Animation::toGlm(bridge._fk.skeleton().localTranslation(i)) * _scale;
+            rot = Animation::toGlm(bridge._fk.skeleton().localRotation(i));
+        }
         prim->setLocalMatrix(glm::translate(glm::mat4(1.0f), pos) *
                              glm::mat4_cast(rot));
         prim->addArticulationBindingComponent()->setBinding(
@@ -506,6 +515,13 @@ void ArticulationVisualBridge::applyPose() {
             continue;
         glm::vec3 pos = Animation::toGlm(globals[i].translation) * scale;
         glm::quat rot = Animation::toGlm(globals[i].rotation);
+        const int parent = _fk.skeleton().parentIndex(i);
+        if (_hierarchical && parent >= 0) {
+            const auto inv = globals[parent].rotation.conjugate();
+            pos = Animation::toGlm(Eigen::Vector3f(
+                inv * (globals[i].translation - globals[parent].translation))) * scale;
+            rot = Animation::toGlm(Eigen::Quaternionf(inv * globals[i].rotation));
+        }
         _bodyPrims[i]->setLocalMatrix(glm::translate(glm::mat4(1.0f), pos) *
                                       glm::mat4_cast(rot));
     }

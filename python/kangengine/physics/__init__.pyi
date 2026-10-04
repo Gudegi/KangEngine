@@ -265,6 +265,12 @@ class D6Batch:
     joints: tuple[D6Joint, ...]
     def __init__(self, joints: Sequence[D6Joint]) -> None: ...
     @classmethod
+    def create_world_frames(
+        cls, world: PhysicsWorld | NativePhysicsWorld, articulations: Sequence[Articulation],
+        frame_names: Sequence[str], *, world_frames: ArrayLike | Tensor,
+        config: D6JointConfig | None = None,
+    ) -> D6Batch: ...
+    @classmethod
     def create(
         cls, world: PhysicsWorld | NativePhysicsWorld,
         bodies0: Sequence[JointBody | RigidDynamic | RigidStatic | None],
@@ -499,12 +505,20 @@ class ArticulationConfig:
 
 class ArticulationTemplate:
     body_names: list[str]
+    source_frames: list[Any]
+    fixed_frames: list[Any]
+    body_source_indices: list[int]
     @staticmethod
     def create(data: Any, config: ArticulationConfig = ...) -> ArticulationTemplate: ...
     def num_links(self) -> int: ...
     def num_dofs(self) -> int: ...
 
 class Articulation:
+    @property
+    def body_names(self) -> list[str]: ...
+    @property
+    def frame_names(self) -> list[str]: ...
+    def get_body_id(self, name: str) -> int: ...
     @staticmethod
     def build_from_template(
         physics: PhysicsWorld | NativePhysicsWorld, template: ArticulationTemplate, *,

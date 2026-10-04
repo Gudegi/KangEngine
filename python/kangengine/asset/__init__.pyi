@@ -27,6 +27,9 @@ class ImportDiagnostics:
     warnings: list[str]
 
 class ArticulationDesc:
+    fixed_frames: list[FixedFrameDesc]
+    sites: dict[str, SiteDesc]
+    def add_fixed_frame(self, frame: FixedFrameDesc) -> None: ...
     skeleton_tree: SkeletonTree
     traversal_order: Literal["DFS", "BFS", "AUTHORED"]
     def __init__(self, skeleton_tree: SkeletonTree, *, joints: dict[int, list[JointDesc]],
@@ -45,7 +48,14 @@ class JointDesc:
     def __init__(self, name: str, *, type: JointDescType, axis: Sequence[float],
                  joint_offset: Sequence[float], lo_limit: float, hi_limit: float,
                  kp: float = 0., kd: float = 0.) -> None: ...
-class SiteDesc: ...
+class FixedFrameDesc:
+    name: str
+    body_index: int
+    pos: object
+    quat: object
+    def __init__(self, name: str, *, body_index: int,
+                 pos: Sequence[float] = ..., quat_xyzw: Sequence[float] = ...) -> None: ...
+class SiteDesc(FixedFrameDesc): ...
 class SiteDescType: ...
 class VisualGeomDesc: ...
 

@@ -68,6 +68,7 @@ class MjcfDofControlApp(ke.App):
         self.anim_amp = float(self.default_anim_amp)
         self.anim_speed = float(self.default_anim_speed)
         self.show_collision = False
+        self.show_frames = False
         self.show_contact_forces = False
         self.contact_force_scale = float(self.default_contact_force_scale)
         self.contact_force_view = None
@@ -518,6 +519,9 @@ class MjcfDofControlApp(ke.App):
         )
         if changed:
             self._set_collision_visible(self.show_collision)
+        changed, self.show_frames = imgui.checkbox("Show attachment frames", self.show_frames)
+        if changed:
+            self.visual.set_frames_visible(self.obj_id, self.show_frames)
         changed, self.show_contact_forces = imgui.checkbox(
             "Show contact forces",
             self.show_contact_forces,

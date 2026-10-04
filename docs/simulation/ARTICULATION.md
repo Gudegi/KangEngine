@@ -63,7 +63,87 @@ robot_visual = visual.add_articulation_scene_graph(
 )
 ```
 
-## Reading joint wrenches and efforts
+## Attachment frames
+
+Use frames for end-effectors, sensors, or tool mounts that need a named pose
+without a separate physical body.
+
+A frame is a named attachment point with a position and orientation fixed
+relative to a body. MJCF sites are imported as fixed frames. Empty non-root
+fixed links with no inertial, visual, or collision data are also imported as
+frames instead of physical bodies. The original skeleton remains available
+for animation and retargeting.
+
+### Find and read
+
+Read after a completed simulation step. On CPU, call `world.state.refresh()`
+if you have stepped or reset physics without refreshing state.
+
+```python
+import torch
+
+print(robot.body_names)  # Physical bodies, in body-state array order.
+print(robot.frame_names)  # Named attachments, queried separately.
+
+names = robot.frame_names[:1]  # Example: select the first available frame.
+position: torch.Tensor = world.state.get_frame_pos(obj_id=0, frame_names=names)
+rotation: torch.Tensor = world.state.get_frame_rot(obj_id=0, frame_names=names)
+```
+
+Positions are in world coordinates; rotations are world-space xyzw quaternions.
+Shapes are `(num_envs, len(names), 3)` and `(num_envs, len(names), 4)`, in the
+requested name order. Body, contact, and joint-wrench arrays exclude frames.
+A body and a site may share a name; frame queries select the site.
+
+GPU frame queries return CUDA tensors without host readback. Use `fetch=False`
+only when body poses have already been fetched for the current simulation state.
+
+### Add
+
+For a new robot with a custom frame, use this in place of the creation example
+above. Add frames before creating the robot or template; changing `data` later
+does not update an existing robot.
+
+`FixedFrameDesc.body_index` refers to the source `data.skeleton_tree` index.
+It is not an index into `robot.body_names`.
+
+```python
+frame: ke.asset.FixedFrameDesc = ke.asset.FixedFrameDesc(
+    "tool_sensor",
+    body_index=0,
+    pos=[0.0, 0.0, 0.1],
+)
+data.add_fixed_frame(frame=frame)
+record: ke.sim.SimArticulation = world.add_articulation(
+    data,
+    env_id=0,
+    obj_id=0,
+    config=ke.physics.ArticulationConfig.free_base(),
+)
+robot = record.articulation
+```
+
+This places `tool_sensor` 0.1 m along the source body's local Z axis.
+Frames do not create collision shapes or contact sensors. To attach one to
+the world with a constraint, use `D6Batch.create_world_frames()`; see
+[D6 joints](D6_JOINTS.md).
+
+### Visualize
+
+Frame axes are off by default. Using the names selected above:
+
+```python
+visual.set_frames_visible(obj_id=0, visible=True, env_id=0, frame_names=names)
+visual.set_frames_visible(obj_id=0, visible=False, env_id=0)  # Clear and stop queries.
+```
+
+Axes update during `visual.sync()`. While enabled, this debug display copies
+selected CUDA poses to the host. The MJCF/URDF DOF examples provide a
+**Show attachment frames** checkbox.
+
+## Joint wrenches and efforts
+
+### Read joint effort
 
 Read the solver-computed effort transmitted through each articulation DOF after
 a completed simulation step:
@@ -83,10 +163,11 @@ torque in N·m; prismatic DOFs report force in N. This follows the semantics of 
 The incoming wrench is expressed at the child joint origin in the child joint
 frame, including authored anchor offsets and axis rotations.
 
-### Link incoming wrench
+### Read link wrench
 
-Read the full parent-to-child force and torque for every link, including fixed
-joints that have no DOFs:
+Read the full parent-to-child force and torque for each physical link, including
+links connected by fixed joints with no DOFs. Empty links preserved only as
+attachment frames have no separate wrench row:
 
 ```python
 # All environments, logical body/link order: (num_envs, num_links, 6).
@@ -102,7 +183,7 @@ torque transmitted through the wrist to the hand. Contact and collision loads
 affect this reading, as do loads induced by gravity and acceleration; it does
 not isolate the wall's contact force.
 
-### Which force API should I use?
+### Choose a force API
 
 | API | Returns | Typical use |
 | --- | --- | --- |
@@ -129,7 +210,7 @@ storage, so use `.clone()` when retaining a sample. Advanced callers can use
 `world.state.gpu.get_dof_projected_joint_forces(obj_id=0, fetch=False)` to reuse
 the last incoming-wrench fetch.
 
-## Control example
+## Control
 
 Run the complete control example with an MJCF file:
 

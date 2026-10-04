@@ -84,6 +84,7 @@ class ArticulationVisualBridge {
     friend class ArticulationVisualBridgeAsset;
 
     Animation::SkeletonFK _fk;
+    bool _hierarchical = false;
     std::vector<Scene::Prim*> _bodyPrims;   // non-owning, scene owns
     std::vector<Scene::Prim*> _renderPrims; // actual renderable mesh prims
     std::vector<int> _renderPrimBodyIndices;
@@ -117,7 +118,8 @@ class ArticulationVisualBridgeAsset {
     instantiate(Scene::SceneBackend* scene,
                 const std::string& primBasePath = "/robot",
                 const std::string& meshAssetBasePath = "",
-                bool splitVisualGeoms = false) const;
+                bool splitVisualGeoms = false,
+                bool hierarchical = false) const;
 
     int numBodies() const {
         return _data.skeletonTree ? _data.skeletonTree->numJoints() : 0;

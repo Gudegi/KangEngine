@@ -34,8 +34,7 @@ int main(int argc, char** argv) {
             cfg.useAggregate = aggregate;
             cfg.collisionGroup = group;
             auto articulation = Articulation::build(
-                world, data.skeletonTree, data.collisionGeoms, data.joints,
-                data.inertials, cfg);
+                world, data, cfg);
             const PxU32 expected = gpu && !custom && group > 0 && group < (1u << 24)
                                        ? group - 1 : PX_INVALID_U32;
             for (auto* link : articulation.links()) {

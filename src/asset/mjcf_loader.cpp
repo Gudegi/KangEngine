@@ -991,7 +991,8 @@ void MJCFLoader::parseIntoData(const std::string& mjcfPath, float scale,
                 site.bodyIndex = idx;
                 site.pos *= scale;
                 site.size *= scale;
-                _data.sites[site.name] = std::move(site);
+                if (!_data.sites.emplace(site.name, site).second)
+                    throw std::runtime_error("Duplicate site name: " + site.name);
             }
 
             // Joints for this body

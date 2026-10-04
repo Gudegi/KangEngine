@@ -42,15 +42,32 @@ toCollisionShapeType(Asset::CollisionGeomDesc::Type type) {
 
 void PhysicsBridge::add(const Articulation& artic,
                         const ArticulationVisualBridge& articulationVisual) {
-    int n = artic.numLinks();
-    for (int i = 0; i < n; i++)
-        _primVisuals.push_back({artic.link(i), articulationVisual.bodyPrim(i)});
+    const auto& frames = artic.articulationTemplate()->sourceFrames();
+    if (frames.size() != articulationVisual.bodyPrims().size())
+        throw std::runtime_error("Articulation visual source topology does not match template");
+    for (size_t i = 0; i < frames.size(); ++i) {
+        const auto& f = frames[i];
+        if (f.name != articulationVisual.fk().skeleton().nodeName(i))
+            throw std::runtime_error("Articulation visual node order does not match template");
+        const int source = artic.articulationTemplate()->bodySourceIndices()[f.bodyIndex];
+        const int parent = articulationVisual.fk().skeleton().parentIndex(i);
+        // Hierarchical fixed markers inherit their authored local pose. Only
+        // physical bodies need simulation writes; flat legacy visuals still sync.
+        if (source != static_cast<int>(i) && parent >= 0 &&
+            articulationVisual.bodyPrim(i)->getParent() == articulationVisual.bodyPrim(parent))
+            continue;
+        _primVisuals.push_back({artic.link(f.bodyIndex), articulationVisual.bodyPrim(i),
+            physx::PxTransform(physx::PxVec3(f.pos.x(), f.pos.y(), f.pos.z()),
+                physx::PxQuat(f.quat.x(), f.quat.y(), f.quat.z(), f.quat.w())),
+            source != static_cast<int>(i)});
+    }
 }
 
 void PhysicsBridge::sync() {
     // Prim-based: PhysX pose -> Prim xform attributes
     for (auto& v : _primVisuals) {
         physx::PxTransform pose = v.link->getGlobalPose();
+        if (v.hasLocalPose) pose = pose * v.localPose;
         v.prim->setWorldMatrix(pxToMat4(pose));
     }
 

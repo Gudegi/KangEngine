@@ -135,7 +135,7 @@ endsolid body
     ]
 
 
-@pytest.mark.parametrize("missing_body", ["base", "marker"])
+@pytest.mark.parametrize("missing_body", ["base"])
 def test_articulation_rejects_failed_mass_inference(tmp_path: Path, missing_body):
     """Missing inertials and shapes must not silently add unit mass/inertia."""
     import xml.etree.ElementTree as ET

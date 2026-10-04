@@ -109,13 +109,13 @@ class H1InstancingApp : public App {
         for (auto h : _bodyHandles)
             setRenderableColors(h, colors);
 
-        // Build N articulations
+        // Compile shared metadata once, then build N articulations.
+        const auto config = ArticulationConfig::freeBase();
+        const auto articulationTemplate = ArticulationTemplate::create(mjcfData, config);
         _artics.resize(N);
         for (int i = 0; i < N; i++) {
             _artics[i] = Articulation::build(
-                physics, mjcfData.skeletonTree, mjcfData.collisionGeoms,
-                mjcfData.joints, mjcfData.inertials,
-                ArticulationConfig::freeBase());
+                physics, articulationTemplate, config);
         }
 
         // random targets per robot, clamped to joint limits

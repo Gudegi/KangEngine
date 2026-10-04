@@ -95,9 +95,7 @@ class H1RagdollApp : public App {
         const std::string mjcfPath = KE::getAssetPath("characters/kw/kw5.xml");
         const auto mjcfData = MJCFLoader::load(mjcfPath);
 
-        artic = Articulation::build(physics, mjcfData.skeletonTree,
-                                    mjcfData.collisionGeoms, mjcfData.joints,
-                                    mjcfData.inertials,
+        artic = Articulation::build(physics, mjcfData,
                                     ArticulationConfig::freeBase());
 
         robot = ArticulationVisualBridge::fromData(mjcfData, getScene());

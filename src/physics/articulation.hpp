@@ -89,16 +89,27 @@ class ArticulationTemplate {
     std::vector<PxQuat> _jointFrames;
     std::vector<std::string> _bodyNames;
     std::vector<DofInfo> _dofs;
+    std::vector<Asset::FixedFrameDesc> _sourceFrames;
+    std::vector<Asset::FixedFrameDesc> _fixedFrames;
+    std::vector<int> _bodySourceIndices;
 
     friend class Articulation;
 
+    // Input topology already contains only physical bodies.
+    static std::shared_ptr<ArticulationTemplate>
+    createPhysical(std::shared_ptr<const Animation::SkeletonTree> tree,
+                   const Asset::CollisionGeomDescMap& colGeoms,
+                   const Asset::JointDescMap& joints,
+                   const Asset::InertialDescMap& inertials,
+                   const ArticulationConfig& cfg);
+
   public:
     static std::shared_ptr<ArticulationTemplate>
-    create(std::shared_ptr<const Animation::SkeletonTree> tree,
-           const Asset::CollisionGeomDescMap& colGeoms,
-           const Asset::JointDescMap& joints,
-           const Asset::InertialDescMap& inertials,
+    create(const Asset::ArticulationDesc& data,
            const ArticulationConfig& cfg = {});
+    const auto& sourceFrames() const { return _sourceFrames; }
+    const auto& fixedFrames() const { return _fixedFrames; }
+    const auto& bodySourceIndices() const { return _bodySourceIndices; }
 
     int numLinks() const { return static_cast<int>(_bodyNames.size()); }
     int numDofs() const { return static_cast<int>(_dofs.size()); }
@@ -134,10 +145,7 @@ class Articulation {
 
     static Articulation
     build(PhysicsWorld& physics,
-          std::shared_ptr<const Animation::SkeletonTree> tree,
-          const Asset::CollisionGeomDescMap& colGeoms,
-          const Asset::JointDescMap& joints,
-          const Asset::InertialDescMap& inertials,
+          const Asset::ArticulationDesc& data,
           const ArticulationConfig& cfg = {});
     static Articulation
     build(PhysicsWorld& physics,

@@ -52,14 +52,19 @@ struct JointDesc {
     float velocityLimit = FLT_MAX;
 };
 
-// Named body-local reference frame parsed from MJCF <site> elements.
-struct SiteDesc {
-    enum class Type { Sphere, Capsule, Box };
-    Type type = Type::Sphere;
+// Fixed relative to its owning body, not to the world. On imported assets,
+// bodyIndex is a source skeleton node; templates resolve it to a physical body.
+struct FixedFrameDesc {
     std::string name;
     int bodyIndex = -1;
     Eigen::Vector3f pos = Eigen::Vector3f::Zero();
     Eigen::Quaternionf quat = Eigen::Quaternionf::Identity();
+};
+
+// MJCF site display metadata shares the same authoritative attachment pose.
+struct SiteDesc : FixedFrameDesc {
+    enum class Type { Sphere, Capsule, Box };
+    Type type = Type::Sphere;
     Eigen::Vector3f size = Eigen::Vector3f::Zero();
     Eigen::Vector4f rgba = Eigen::Vector4f(0.15f, 0.15f, 0.15f, 1.0f);
     // True when the site orientation was derived from MJCF zaxis.
@@ -142,6 +147,7 @@ struct ArticulationDesc {
     std::string assetDir;
     JointDescMap joints;
     SiteDescMap sites;
+    std::vector<FixedFrameDesc> fixedFrames;
     CollisionGeomDescMap collisionGeoms;
     InertialDescMap inertials;
 };

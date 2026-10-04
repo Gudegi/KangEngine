@@ -173,9 +173,7 @@ class MjcfArticulationGalleryApp : public App {
                 }
 
                 _artics.push_back(Articulation::build(
-                    physics, data.skeletonTree, data.collisionGeoms,
-                    data.joints, data.inertials,
-                    ArticulationConfig::freeBase()));
+                    physics, data, ArticulationConfig::freeBase()));
                 Articulation& artic = _artics.back();
                 physicsBridge.add(artic, skel);
 

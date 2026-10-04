@@ -218,13 +218,18 @@ class SimArticulation:
 
     @property
     def body_names(self) -> list[str]:
-        return [f"body_{i}" for i in range(self.num_bodies)]
+        return list(self.articulation.body_names)
+
+    @property
+    def frame_names(self) -> list[str]:
+        """Named fixed attachments, queried through world.state.get_frame_pos/rot."""
+        return list(self.articulation.frame_names)
 
     def get_joint_id(self, name: str) -> int:
         return _find_name(self.joint_names, name, "joint")
 
     def get_body_id(self, name: str) -> int:
-        return _find_name(self.body_names, name, "body")
+        return self.articulation.get_body_id(name)
 
     def add_contact_sensor(self, body_ids=None, *, name: str = ""):
         return self._require_world().add_contact_sensor(
@@ -621,6 +626,10 @@ class SimArticulationBatch:
     @property
     def body_names(self) -> list[str]:
         return self.first.body_names
+
+    @property
+    def frame_names(self) -> list[str]:
+        return self.first.frame_names
 
     def get_joint_id(self, name: str) -> int:
         return self.first.get_joint_id(name)

@@ -1251,7 +1251,8 @@ void bind_animation(py::module& m) {
              py::arg("scene"), py::arg("path") = "/robot",
              py::arg("mesh_asset_base_path") = "",
              py::arg("split_visual_geoms") = false,
-             "Instantiate this asset into a scene.")
+             py::arg("hierarchical") = false,
+             "Instantiate this asset; hierarchical preserves source-node parenting.")
         .def("num_bodies", &ArticulationVisualBridgeAsset::numBodies,
              "Return the number of bodies in this asset.");
 

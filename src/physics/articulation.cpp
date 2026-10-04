@@ -664,6 +664,102 @@ float Articulation::calcMass() const {
 }
 
 std::shared_ptr<ArticulationTemplate> ArticulationTemplate::create(
+    const Asset::ArticulationDesc& data, const ArticulationConfig& cfg) {
+    const auto& tree = data.skeletonTree;
+    if (!tree || tree->numJoints() == 0)
+        throw std::runtime_error("ArticulationTemplate requires a non-empty SkeletonTree");
+    const auto globals = Animation::SkeletonState::zeroPose(tree).computeGlobalTransforms();
+    const int count = tree->numJoints();
+    std::vector<PxTransform> poses;
+    for (const auto& g : globals)
+        poses.emplace_back(PxVec3(g.translation.x(), g.translation.y(), g.translation.z()),
+                           toPxQuat(g.rotation));
+    std::vector<bool> hasVisual(count, false);
+    for (const auto& visual : data.visualGeoms) {
+        if (visual.bodyIndex < 0 || visual.bodyIndex >= count)
+            throw std::runtime_error("Visual body index out of range");
+        hasVisual[visual.bodyIndex] = true;
+    }
+    std::vector<int> owner(count), sources, parents, dofCounts;
+    std::vector<std::string> names;
+    std::vector<Eigen::Vector3f> translations;
+    std::vector<Eigen::Quaternionf> rotations;
+    Asset::JointDescMap joints;
+    Asset::CollisionGeomDescMap geoms;
+    Asset::InertialDescMap inertials;
+    auto frameAt = [](const std::string& name, int body, const PxTransform& pose) {
+        Asset::FixedFrameDesc frame;
+        frame.name = name;
+        frame.bodyIndex = body;
+        frame.pos = Eigen::Vector3f(pose.p.x, pose.p.y, pose.p.z);
+        frame.quat = Eigen::Quaternionf(pose.q.w, pose.q.x, pose.q.y, pose.q.z);
+        return frame;
+    };
+    std::vector<Asset::FixedFrameDesc> sourceFrames;
+    for (int i = 0; i < count; ++i) {
+        const int parent = tree->parentIndex(i);
+        if ((i == 0 && parent != -1) || (i > 0 && (parent < 0 || parent >= i)))
+            throw std::runtime_error("Articulation tree must be parent-before-child");
+        const auto jit = data.joints.find(i);
+        const bool moving = jit != data.joints.end() &&
+            std::any_of(jit->second.begin(), jit->second.end(), [](const auto& j) {
+                return j.type != Asset::JointDesc::Type::Fixed;
+            });
+        // An empty collision entry can request a fallback shape: preserve it.
+        const bool marker = i > 0 && !moving && !hasVisual[i] &&
+            !data.inertials.count(i) && !data.collisionGeoms.count(i);
+        if (marker) {
+            owner[i] = owner[parent];
+        } else {
+            owner[i] = static_cast<int>(sources.size());
+            const int physicalParent = parent < 0 ? -1 : owner[parent];
+            const PxTransform local = physicalParent < 0 ? poses[i] :
+                poses[sources[physicalParent]].getInverse() * poses[i];
+            sources.push_back(i);
+            names.push_back(tree->nodeName(i));
+            parents.push_back(physicalParent);
+            translations.emplace_back(local.p.x, local.p.y, local.p.z);
+            rotations.emplace_back(local.q.w, local.q.x, local.q.y, local.q.z);
+            dofCounts.push_back(moving ? static_cast<int>(jit->second.size()) : 0);
+            if (moving) joints[owner[i]] = jit->second;
+            if (data.collisionGeoms.count(i)) geoms[owner[i]] = data.collisionGeoms.at(i);
+            if (data.inertials.count(i)) inertials[owner[i]] = data.inertials.at(i);
+        }
+        sourceFrames.push_back(frameAt(tree->nodeName(i), owner[i],
+            poses[sources[owner[i]]].getInverse() * poses[i]));
+    }
+    auto compact = std::make_shared<Animation::SkeletonTree>(
+        names, parents, translations, rotations, dofCounts);
+    auto result = createPhysical(compact, geoms, joints, inertials, cfg);
+    result->_sourceFrames = sourceFrames;
+    result->_bodySourceIndices = sources;
+    for (int i = 0; i < count; ++i)
+        if (sources[owner[i]] != i)
+            result->_fixedFrames.push_back(sourceFrames[i]);
+    auto addFrame = [&](const Asset::FixedFrameDesc& frame) {
+        if (frame.name.empty() || frame.bodyIndex < 0 || frame.bodyIndex >= count ||
+            !frame.pos.allFinite() || !frame.quat.coeffs().allFinite() ||
+            std::abs(frame.quat.norm() - 1.f) > 1e-4f)
+            throw std::runtime_error("Invalid fixed frame: " + frame.name);
+        for (const auto& existing : result->_fixedFrames)
+            if (existing.name == frame.name)
+                throw std::runtime_error("Duplicate fixed frame name: " + frame.name);
+        const PxTransform local(PxVec3(frame.pos.x(), frame.pos.y(), frame.pos.z()),
+                                toPxQuat(frame.quat));
+        const int body = owner[frame.bodyIndex];
+        result->_fixedFrames.push_back(frameAt(frame.name, body,
+            poses[sources[body]].getInverse() * poses[frame.bodyIndex] * local));
+    };
+    for (const auto& frame : data.fixedFrames) addFrame(frame);
+    // Stable site order makes frame selection independent of hash iteration.
+    std::vector<std::string> siteNames;
+    for (const auto& item : data.sites) siteNames.push_back(item.first);
+    std::sort(siteNames.begin(), siteNames.end());
+    for (const auto& name : siteNames) addFrame(data.sites.at(name));
+    return result;
+}
+
+std::shared_ptr<ArticulationTemplate> ArticulationTemplate::createPhysical(
     std::shared_ptr<const Animation::SkeletonTree> tree,
     const Asset::CollisionGeomDescMap& colGeoms,
     const Asset::JointDescMap& joints,
@@ -731,15 +827,9 @@ std::shared_ptr<ArticulationTemplate> ArticulationTemplate::create(
 
 Articulation
 Articulation::build(PhysicsWorld& physics,
-                    std::shared_ptr<const Animation::SkeletonTree> tree,
-                    const Asset::CollisionGeomDescMap& colGeoms,
-                    const Asset::JointDescMap& joints,
-                    const Asset::InertialDescMap& inertials,
+                    const Asset::ArticulationDesc& data,
                     const ArticulationConfig& cfg) {
-    return build(physics,
-                 ArticulationTemplate::create(std::move(tree), colGeoms, joints,
-                                              inertials, cfg),
-                 cfg);
+    return build(physics, ArticulationTemplate::create(data, cfg), cfg);
 }
 
 Articulation

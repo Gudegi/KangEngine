@@ -189,9 +189,7 @@ class H1PhysicsApp : public App {
         for (auto* prim : robot.bodyPrims())
             addRenderable(&stlMaterial, prim);
 
-        artic = Articulation::build(physics, mjcfData.skeletonTree,
-                                    mjcfData.collisionGeoms, mjcfData.joints,
-                                    mjcfData.inertials,
+        artic = Articulation::build(physics, mjcfData,
                                     ArticulationConfig::fixedBase());
         targets.assign(artic.numDofs(), 0.f);
         dofNames = artic.getDofNames();
