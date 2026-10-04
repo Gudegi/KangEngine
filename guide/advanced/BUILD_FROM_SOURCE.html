@@ -347,7 +347,7 @@
 <li><p>Ninja or a compatible build tool</p></li>
 <li><p>A C++17 compiler</p></li>
 <li><p>vcpkg</p></li>
-<li><p>PhysX under <code class="docutils literal notranslate"><span class="pre">$HOME/Physics/PhysX</span></code> (5.1 CPU compatibility or 5.8 GPU)</p></li>
+<li><p>PhysX under <code class="docutils literal notranslate"><span class="pre">$HOME/Physics/PhysX</span></code> (see platform-specific versions and build options below)</p></li>
 <li><p>Python 3.12 for Python bindings</p></li>
 </ul>
 </section>
@@ -632,32 +632,53 @@ suite or <code class="docutils literal notranslate"><span class="pre">make</span
 </section>
 <section id="macos">
 <h2>macOS<a class="headerlink" href="#macos" title="Link to this heading">¶</a></h2>
-<p>Tested with Apple Silicon.</p>
+<p>Tested with Apple Silicon using the macOS ARM64 CPU port of PhysX 5.8.</p>
 <ol class="arabic">
-<li><p>Clone o3de PhysX under <code class="docutils literal notranslate"><span class="pre">$HOME/Physics/PhysX</span></code>.</p>
+<li><p>Clone the PhysX 5.8 macOS fork under <code class="docutils literal notranslate"><span class="pre">$HOME/Physics/PhysX</span></code>.
+If this directory already contains PhysX 5.1, move that checkout aside first.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mkdir<span class="w"> </span>-p<span class="w"> </span>~/Physics
 <span class="nb">cd</span><span class="w"> </span>~/Physics
-git<span class="w"> </span>clone<span class="w"> </span>-b<span class="w"> </span><span class="m">104</span>.1<span class="w"> </span>https://github.com/o3de/PhysX.git
+git<span class="w"> </span>clone<span class="w"> </span>-b<span class="w"> </span>macos-arm64-5.8<span class="w"> </span>https://github.com/Gudegi/PhysX.git
 </pre></div>
 </div>
 </li>
-<li><p>Install build tools.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>brew<span class="w"> </span>install<span class="w"> </span>coreutils<span class="w"> </span>ninja<span class="w"> </span>autoconf<span class="w"> </span>automake<span class="w"> </span>autoconf-archive
+<li><p>Install build tools. Xcode command-line tools must also be installed.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>brew<span class="w"> </span>install<span class="w"> </span>cmake<span class="w"> </span>coreutils<span class="w"> </span>ninja<span class="w"> </span>autoconf<span class="w"> </span>automake<span class="w"> </span>autoconf-archive
 </pre></div>
 </div>
 </li>
-<li><p>Build PhysX.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>~/Physics/PhysX/physx
-./buildtools/packman/packman<span class="w"> </span>update<span class="w"> </span>-y
-./generate_projects.sh
-
-<span class="c1"># The O3DE PhysX build system uses the &#39;mac.x86_64&#39; directory name for all macOS builds, including Apple Silicon.</span>
-<span class="nb">cd</span><span class="w"> </span>compiler/mac.x86_64
-cmake<span class="w"> </span>--build<span class="w"> </span>.<span class="w"> </span>--config<span class="w"> </span>release
+<li><p>Build PhysX with CMake and Ninja directly. Python and Packman are not required
+for this SDK build.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>~/Physics/PhysX
+<span class="nv">physx_config</span><span class="o">=</span>release
+<span class="nv">physx_build</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">/build/macos-arm64-</span><span class="nv">$physx_config</span><span class="s2">&quot;</span>
+cmake<span class="w"> </span>-S<span class="w"> </span>physx/compiler/public<span class="w"> </span>-B<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$physx_build</span><span class="s2">&quot;</span><span class="w"> </span>-G<span class="w"> </span>Ninja<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-DPHYSX_ROOT_DIR<span class="o">=</span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">/physx&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-DTARGET_BUILD_PLATFORM<span class="o">=</span>mac<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-DPX_OUTPUT_ARCH<span class="o">=</span>arm<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-DCMAKE_OSX_ARCHITECTURES<span class="o">=</span>arm64<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-DCMAKE_BUILD_TYPE<span class="o">=</span><span class="s2">&quot;</span><span class="nv">$physx_config</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-DPX_GENERATE_STATIC_LIBRARIES<span class="o">=</span>ON<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-DPX_GENERATE_GPU_PROJECTS<span class="o">=</span>OFF<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-DPX_GENERATE_GPU_PROJECTS_ONLY<span class="o">=</span>OFF<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-DPX_BUILDSNIPPETS<span class="o">=</span>OFF<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-DPX_BUILDPVDRUNTIME<span class="o">=</span>OFF<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-DPX_BUILD_PLATFORM_TESTS<span class="o">=</span>ON<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-DPX_OUTPUT_LIB_DIR<span class="o">=</span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">/physx&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-DPX_OUTPUT_BIN_DIR<span class="o">=</span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">/physx&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-DCMAKE_INSTALL_PREFIX<span class="o">=</span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">/install/macos-arm64-</span><span class="nv">$physx_config</span><span class="s2">&quot;</span>
+cmake<span class="w"> </span>--build<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$physx_build</span><span class="s2">&quot;</span><span class="w"> </span>-j<span class="w"> </span><span class="m">6</span>
+ctest<span class="w"> </span>--test-dir<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$physx_build</span><span class="s2">&quot;</span><span class="w"> </span>--output-on-failure
 </pre></div>
 </div>
+<p>Headers remain in <code class="docutils literal notranslate"><span class="pre">physx/include</span></code>; libraries are generated in
+<code class="docutils literal notranslate"><span class="pre">physx/bin/mac.arm64/release</span></code>. Keep <code class="docutils literal notranslate"><span class="pre">PX_OUTPUT_ARCH=arm</span></code>: it enables the
+<code class="docutils literal notranslate"><span class="pre">_64</span></code> library suffix expected by KangEngine, such as
+<code class="docutils literal notranslate"><span class="pre">libPhysXExtensions_static_64.a</span></code>.</p>
+<p>See the fork’s <a class="reference external" href="https://github.com/Gudegi/PhysX/blob/macos-arm64-5.8/physx/documentation/platformreadme/mac/README_MAC.md">macOS build instructions</a>
+for supported features and platform test coverage.</p>
 </li>
-<li><p>Configure KangEngine.</p>
+<li><p>Configure from the KangEngine repository root.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake<span class="w"> </span>--preset<span class="o">=</span>vcpkg
 </pre></div>
 </div>

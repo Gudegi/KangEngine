@@ -1726,6 +1726,36 @@ transfer synchronizes before the CPU PhysX calls.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="kangengine.physics.D6Batch.create_world_frames">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">create_world_frames</span></span><span class="sig-paren">(</span>
+
+<dl>
+<dd><em class="sig-param"><span class="n"><span class="pre">world</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.PhysicsWorld" title="kangengine.physics.PhysicsWorld"><span class="pre">PhysicsWorld</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">NativePhysicsWorld</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">articulations</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#kangengine.physics.Articulation" title="kangengine.physics.Articulation"><span class="pre">Articulation</span></a><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">frame_names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>,</dd>
+<dd><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">world_frames</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayLike</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span></span></em>,</dd>
+<dd><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#kangengine.physics.D6JointConfig" title="kangengine.physics.D6JointConfig"><span class="pre">D6JointConfig</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>,</dd>
+</dl>
+
+<span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kangengine.physics.D6Batch" title="kangengine.physics.D6Batch"><span class="pre">D6Batch</span></a></span></span><a class="headerlink" href="#kangengine.physics.D6Batch.create_world_frames" title="Link to this definition">¶</a></dt>
+<dd><p>Attach named model frames to world poses using their physical owners.</p>
+<p>Example: attach a robot’s named frame at a world-space xyz/xyzw pose:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">joints</span> <span class="o">=</span> <span class="n">D6Batch</span><span class="o">.</span><span class="n">create_world_frames</span><span class="p">(</span>
+    <span class="n">physics_world</span><span class="p">,</span> <span class="p">[</span><span class="n">robot</span><span class="p">],</span> <span class="p">[</span><span class="s2">&quot;attachment_frame&quot;</span><span class="p">],</span>
+    <span class="n">world_frames</span><span class="o">=</span><span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]],</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Resolves the owning body and local frame offset automatically.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#kangengine.physics.D6Batch" title="kangengine.physics.D6Batch"><code class="xref py py-class docutils literal notranslate"><span class="pre">D6Batch</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="kangengine.physics.D6Batch.create_world_links">
 <span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">create_world_links</span></span><span class="sig-paren">(</span>
 
@@ -2896,6 +2926,7 @@ KangEngine fallback boxes. Visual-only mesh geoms remain render-only.</p>
 <li><a class="reference internal" href="#kangengine.physics.D6Batch"><code class="docutils literal notranslate"><span class="pre">D6Batch</span></code></a><ul>
 <li><a class="reference internal" href="#kangengine.physics.D6Batch.broken"><code class="docutils literal notranslate"><span class="pre">D6Batch.broken</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.D6Batch.create"><code class="docutils literal notranslate"><span class="pre">D6Batch.create()</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.physics.D6Batch.create_world_frames"><code class="docutils literal notranslate"><span class="pre">D6Batch.create_world_frames()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.D6Batch.create_world_links"><code class="docutils literal notranslate"><span class="pre">D6Batch.create_world_links()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.D6Batch.enabled"><code class="docutils literal notranslate"><span class="pre">D6Batch.enabled</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.physics.D6Batch.fetch_wrenches"><code class="docutils literal notranslate"><span class="pre">D6Batch.fetch_wrenches()</span></code></a></li>

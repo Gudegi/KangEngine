@@ -465,6 +465,11 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <dt class="sig sig-object py" id="kangengine.asset.ArticulationDesc">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">ArticulationDesc</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.ArticulationDesc" title="Link to this definition">¶</a></dt>
 <dd><p>Imported articulation description with skeleton, visual, collision, joint, and site payloads.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kangengine.asset.ArticulationDesc.add_fixed_frame">
+<span class="sig-name descname"><span class="pre">add_fixed_frame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">FixedFrameDesc</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#kangengine.asset.ArticulationDesc.add_fixed_frame" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.ArticulationDesc.asset_dir">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">asset_dir</span></span><a class="headerlink" href="#kangengine.asset.ArticulationDesc.asset_dir" title="Link to this definition">¶</a></dt>
@@ -476,6 +481,11 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">collision_geoms</span></span><a class="headerlink" href="#kangengine.asset.ArticulationDesc.collision_geoms" title="Link to this definition">¶</a></dt>
 <dd><p>Collision geometry descriptions keyed by body index.</p>
 </dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="kangengine.asset.ArticulationDesc.fixed_frames">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">fixed_frames</span></span><a class="headerlink" href="#kangengine.asset.ArticulationDesc.fixed_frames" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.ArticulationDesc.inertials">
@@ -588,7 +598,8 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 <dl class="py class">
 <dt class="sig sig-object py" id="kangengine.asset.SiteDesc">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kangengine.asset.</span></span><span class="sig-name descname"><span class="pre">SiteDesc</span></span><span class="api-origin api-origin-native"><span class="pre">[native]</span></span><a class="headerlink" href="#kangengine.asset.SiteDesc" title="Link to this definition">¶</a></dt>
-<dd><p>Imported MJCF site description attached to a character body.</p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">FixedFrameDesc</span></code></p>
+<p>Imported MJCF site description attached to a character body.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="kangengine.asset.SiteDesc.body_index">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">body_index</span></span><a class="headerlink" href="#kangengine.asset.SiteDesc.body_index" title="Link to this definition">¶</a></dt>
@@ -1989,8 +2000,10 @@ Inspect <code class="docutils literal notranslate"><span class="pre">ImportDiagn
 </ul>
 </li>
 <li><a class="reference internal" href="#kangengine.asset.ArticulationDesc"><code class="docutils literal notranslate"><span class="pre">ArticulationDesc</span></code></a><ul>
+<li><a class="reference internal" href="#kangengine.asset.ArticulationDesc.add_fixed_frame"><code class="docutils literal notranslate"><span class="pre">ArticulationDesc.add_fixed_frame()</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.ArticulationDesc.asset_dir"><code class="docutils literal notranslate"><span class="pre">ArticulationDesc.asset_dir</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.ArticulationDesc.collision_geoms"><code class="docutils literal notranslate"><span class="pre">ArticulationDesc.collision_geoms</span></code></a></li>
+<li><a class="reference internal" href="#kangengine.asset.ArticulationDesc.fixed_frames"><code class="docutils literal notranslate"><span class="pre">ArticulationDesc.fixed_frames</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.ArticulationDesc.inertials"><code class="docutils literal notranslate"><span class="pre">ArticulationDesc.inertials</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.ArticulationDesc.joints"><code class="docutils literal notranslate"><span class="pre">ArticulationDesc.joints</span></code></a></li>
 <li><a class="reference internal" href="#kangengine.asset.ArticulationDesc.sites"><code class="docutils literal notranslate"><span class="pre">ArticulationDesc.sites</span></code></a></li>
