@@ -22,6 +22,7 @@
 #include <GLFW/glfw3.h>
 #include <imgui.h>
 #include <algorithm>
+#include <array>
 #include <cstring>
 #include <iomanip>
 #include <optional>
@@ -133,6 +134,8 @@ void bind_imgui(py::module& m) {
         py::int_(static_cast<int>(ImGuiWindowFlags_NoMove));
     imgui.attr("WindowFlags_NoScrollbar") =
         py::int_(static_cast<int>(ImGuiWindowFlags_NoScrollbar));
+    imgui.attr("WindowFlags_NoInputs") =
+        py::int_(static_cast<int>(ImGuiWindowFlags_NoInputs));
     imgui.attr("WindowFlags_HorizontalScrollbar") =
         py::int_(static_cast<int>(ImGuiWindowFlags_HorizontalScrollbar));
     imgui.def(
@@ -165,20 +168,44 @@ void bind_imgui(py::module& m) {
         const ImVec2 pos = ImGui::GetCursorScreenPos();
         return py::make_tuple(pos.x, pos.y);
     });
+    imgui.def("set_cursor_screen_pos", [](float x, float y) {
+        ImGui::SetCursorScreenPos(ImVec2(x, y));
+    }, py::arg("x"), py::arg("y"));
+    imgui.def("calc_text_size", [](const std::string& text) {
+        const ImVec2 size = ImGui::CalcTextSize(text.c_str());
+        return py::make_tuple(size.x, size.y);
+    }, py::arg("text"));
     imgui.def(
         "image",
         [](Backend::Texture* texture, float width, float height,
-           float opacity) {
+           float opacity, const std::array<float, 2>& uv0,
+           const std::array<float, 2>& uv1, float rounding) {
             if (!texture)
                 return;
+            if (rounding > 0.0f) {
+                const ImVec2 pos = ImGui::GetCursorScreenPos();
+                ImGui::Dummy(ImVec2(width, height));
+                ImGui::GetWindowDrawList()->AddImageRounded(
+                    static_cast<ImTextureID>(texture->getNativeHandle()),
+                    pos, ImVec2(pos.x + width, pos.y + height),
+                    ImVec2(uv0[0], uv0[1]), ImVec2(uv1[0], uv1[1]),
+                    ImGui::ColorConvertFloat4ToU32(ImVec4(
+                        1.0f, 1.0f, 1.0f, std::clamp(opacity, 0.0f, 1.0f))),
+                    rounding);
+                return;
+            }
             ImGui::Image(
                 static_cast<ImTextureID>(texture->getNativeHandle()),
-                ImVec2(width, height), ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f),
+                ImVec2(width, height), ImVec2(uv0[0], uv0[1]),
+                ImVec2(uv1[0], uv1[1]),
                 ImVec4(1.0f, 1.0f, 1.0f, std::clamp(opacity, 0.0f, 1.0f)),
                 ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
         },
         py::arg("texture"), py::arg("width"), py::arg("height"),
-        py::arg("opacity") = 1.0f);
+        py::arg("opacity") = 1.0f,
+        py::arg("uv0") = std::array<float, 2>{0.0f, 1.0f},
+        py::arg("uv1") = std::array<float, 2>{1.0f, 0.0f},
+        py::arg("rounding") = 0.0f);
     imgui.def(
         "draw_circle_filled",
         [](float x, float y, float radius, const glm::vec4& color) {
@@ -190,14 +217,15 @@ void bind_imgui(py::module& m) {
         py::arg("x"), py::arg("y"), py::arg("radius"), py::arg("color"));
     imgui.def(
         "draw_rect_filled",
-        [](float x1, float y1, float x2, float y2, const glm::vec4& color) {
+        [](float x1, float y1, float x2, float y2, const glm::vec4& color,
+           float rounding) {
             ImGui::GetWindowDrawList()->AddRectFilled(
                 ImVec2(x1, y1), ImVec2(x2, y2),
                 ImGui::ColorConvertFloat4ToU32(
-                    ImVec4(color.r, color.g, color.b, color.a)));
+                    ImVec4(color.r, color.g, color.b, color.a)), rounding);
         },
         py::arg("x1"), py::arg("y1"), py::arg("x2"), py::arg("y2"),
-        py::arg("color"));
+        py::arg("color"), py::arg("rounding") = 0.0f);
     imgui.def(
         "draw_convex_polygon_filled",
         [](const py::sequence& points, const glm::vec4& color) {
@@ -1136,6 +1164,11 @@ py::class_<glm::vec3>(m, "Vec3")
              py::arg("speed"), "Set interactive camera movement speed.")
         .def("get_camera_move_speed", &App::getCameraMoveSpeed,
              "Return interactive camera movement speed.")
+        .def_property("camera_keyboard_enabled", &App::getCameraKeyboardEnabled,
+                      &App::setCameraKeyboardEnabled,
+                      "Enable WASD camera movement; mouse navigation is unaffected.")
+        .def_property_readonly("keyboard_input_captured", &App::isKeyboardInputCaptured,
+                               "Whether UI currently owns keyboard input.")
         .def("set_skybox",
              py::overload_cast<const std::string&>(&App::setSkybox),
              py::arg("cross_image_path"),
@@ -1799,19 +1832,28 @@ py::class_<glm::vec3>(m, "Vec3")
             [](App* app, Material* material, const std::string& fbxPath,
                const std::optional<std::string>& bindFbxPath,
                const std::string& primBasePath, int clipIndex, float fps,
-               float scale, bool useMaterials) {
+               float scale, bool useMaterials,
+               std::shared_ptr<Animation::SkeletonTree> skeletonTree) {
+                if (skeletonTree && (bindFbxPath || clipIndex != -1 || fps != -1.0f))
+                    throw py::value_error(
+                        "skeleton_tree uses fbx_path as the skin source; do not supply bind_fbx_path, clip_index or fps");
                 const std::string& resolvedBindPath =
                     bindFbxPath.has_value() ? bindFbxPath.value() : fbxPath;
                 return std::make_unique<Bridge::SkinVisualBridge>(
                     Bridge::SkinVisualBridge::fromFBXWithBind(
                         app, material, fbxPath, resolvedBindPath, primBasePath,
-                        clipIndex, fps, scale, useMaterials));
+                        clipIndex, fps, scale, useMaterials, std::move(skeletonTree)));
             },
             py::arg("app"), py::arg("material"), py::arg("fbx_path"),
             py::arg("bind_fbx_path") = py::none(),
             py::arg("path") = "/fbx_character", py::arg("clip_index") = -1,
             py::arg("fps") = -1.0f, py::arg("scale") = 0.01f,
-            py::arg("use_materials") = true)
+            py::arg("use_materials") = true, py::kw_only(),
+            py::arg("skeleton_tree") = nullptr,
+            "Load an FBX skin and clip, or connect only its skin to skeleton_tree by bone name. "
+            "External skeletons use apply_state/apply_pose, not motion/apply_time; no retargeting is performed.")
+        .def("apply_state", &Bridge::SkinVisualBridge::applyState,
+             py::arg("state"))
         .def("apply_time", &Bridge::SkinVisualBridge::applyTime,
              py::arg("time"), py::arg("loop") = true)
         .def(

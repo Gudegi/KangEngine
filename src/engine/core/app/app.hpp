@@ -318,8 +318,12 @@ class App {
     double getDroppedWallTime() const;
     void setCameraMoveSpeed(float speed);
     float getCameraMoveSpeed() const { return _cameraMoveSpeed; }
+    void setCameraKeyboardEnabled(bool enabled) { _cameraKeyboardEnabled = enabled; }
+    bool getCameraKeyboardEnabled() const { return _cameraKeyboardEnabled; }
+    bool isKeyboardInputCaptured() const;
 
   private:
+    bool _cameraKeyboardEnabled = true;
     float _renderHz = 0.0f;
     FixedStepClock _fixedStepClock;
     bool _simulationHotkeysEnabled = false;

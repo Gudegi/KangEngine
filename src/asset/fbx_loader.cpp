@@ -978,14 +978,16 @@ SkeletonMotion loadMotionFromScene(const std::string& fbxPath,
                           std::move(localRotationsWxyz));
 }
 
-void remapSkinnedMeshesToMotionByName(std::vector<FBXSkinnedMeshInfo>& meshes,
-                                      const SkeletonMotion& motion) {
+void remapSkinnedMeshesByName(std::vector<FBXSkinnedMeshInfo>& meshes,
+                            const SkeletonTree& tree) {
     std::unordered_map<std::string, int> sourceIndexByName;
     const std::vector<std::string>& sourceNames =
-        motion.skeletonTree().nodeNames();
+        tree.nodeNames();
     sourceIndexByName.reserve(sourceNames.size());
-    for (int i = 0; i < static_cast<int>(sourceNames.size()); ++i)
-        sourceIndexByName[sourceNames[static_cast<size_t>(i)]] = i;
+    for (int i = 0; i < static_cast<int>(sourceNames.size()); ++i) {
+        if (!sourceIndexByName.emplace(sourceNames[static_cast<size_t>(i)], i).second)
+            throw std::runtime_error("FBX target skeleton has duplicate joint names");
+    }
 
     for (FBXSkinnedMeshInfo& mesh : meshes) {
         mesh.skinnedMeshData.boneNodeIndices.clear();
@@ -994,7 +996,7 @@ void remapSkinnedMeshesToMotionByName(std::vector<FBXSkinnedMeshInfo>& meshes,
             auto it = sourceIndexByName.find(boneName);
             if (it == sourceIndexByName.end()) {
                 throw std::runtime_error(fmt::format(
-                    "FBX skin bone '{}' is missing from motion skeleton",
+                    "FBX skin bone '{}' is missing from target skeleton",
                     boneName));
             }
             mesh.skinnedMeshData.boneNodeIndices.push_back(it->second);
@@ -1038,15 +1040,32 @@ void bakeBindMeshTransforms(std::vector<FBXSkinnedMeshInfo>& meshes) {
     for (FBXSkinnedMeshInfo& mesh : meshes) {
         if (mesh.bindMeshMatrices.empty() || mesh.bindBoneMatrices.empty())
             continue;
-        // Split bind/motion assets such as the Geno FBX set store skinned
-        // vertices below the skeleton bind space. Bake the root bind bone and
-        // mesh bind transforms once so runtime skin matrices can stay
-        // currentBoneGlobal * inverseBindBone.
-        const glm::mat4 rootBind =
+        // OpenFBX exposes the raw cluster Transform = inverse(boneBind) *
+        // meshBindWorld, unlike the FBX SDK's global GetTransformMatrix().
+        // Recover one common mesh transform; slot zero is not necessarily root.
+        const glm::mat4 boneBind =
             glmMat4FromRowMajorArray(mesh.bindBoneMatrices[0]);
-        const glm::mat4 meshBind =
+        const glm::mat4 meshToBoneBind =
             glmMat4FromRowMajorArray(mesh.bindMeshMatrices[0]);
-        transformMeshData(mesh.skinnedMeshData.mesh, rootBind * meshBind);
+        const glm::mat4 meshBindWorld = boneBind * meshToBoneBind;
+        if (mesh.bindBoneMatrices.size() != mesh.bindMeshMatrices.size())
+            throw std::runtime_error("FBX cluster bind matrix count mismatch");
+        for (size_t slot = 0; slot < mesh.bindBoneMatrices.size(); ++slot) {
+            const glm::mat4 candidate =
+                glmMat4FromRowMajorArray(mesh.bindBoneMatrices[slot]) *
+                glmMat4FromRowMajorArray(mesh.bindMeshMatrices[slot]);
+            for (int col = 0; col < 4; ++col)
+                for (int row = 0; row < 4; ++row) {
+                    const float expected = meshBindWorld[col][row];
+                    const float actual = candidate[col][row];
+                    if (!std::isfinite(expected) || !std::isfinite(actual) ||
+                        std::abs(actual - expected) > 1e-4f * (1.0f + std::abs(expected)))
+                        throw std::runtime_error(fmt::format(
+                            "FBX mesh '{}' has inconsistent bind transforms at bone '{}'",
+                            mesh.metadata.name, mesh.boneNames[slot]));
+                }
+        }
+        transformMeshData(mesh.skinnedMeshData.mesh, meshBindWorld);
     }
 }
 
@@ -1185,6 +1204,7 @@ loadSkinnedMeshesFromScene(const std::string& fbxPath,
         result.push_back(std::move(info));
     }
 
+    bakeBindMeshTransforms(result);
     return result;
 }
 
@@ -1346,7 +1366,8 @@ std::vector<FBXStaticMeshInfo> FBXLoader::loadMeshes(const std::string& fbxPath,
 }
 
 std::vector<FBXSkinnedMeshInfo>
-FBXLoader::loadSkinnedMeshes(const std::string& fbxPath, float scale) {
+FBXLoader::loadSkinnedMeshes(const std::string& fbxPath, float scale,
+                           const SkeletonTree* skeletonTree) {
     const ofbx::u16 flags = static_cast<ofbx::u16>(
         ofbx::LoadFlags::IGNORE_ANIMATIONS | ofbx::LoadFlags::IGNORE_CAMERAS |
         ofbx::LoadFlags::IGNORE_LIGHTS);
@@ -1355,7 +1376,10 @@ FBXLoader::loadSkinnedMeshes(const std::string& fbxPath, float scale) {
         loadSceneOrThrow(fbxPath, flags),
         [](ofbx::IScene* s) { s->destroy(); });
 
-    return loadSkinnedMeshesFromScene(fbxPath, *scene, scale);
+    auto meshes = loadSkinnedMeshesFromScene(fbxPath, *scene, scale);
+    if (skeletonTree)
+        remapSkinnedMeshesByName(meshes, *skeletonTree);
+    return meshes;
 }
 
 FBXImportResult FBXLoader::parse(const std::string& fbxPath, int clipIndex,
@@ -1405,9 +1429,8 @@ FBXImportResult FBXLoader::parseWithBind(const std::string& motionFbxPath,
         loadMotionFromScene(motionFbxPath, *motionScene, clipIndex, fps, scale);
     result.character.skinnedMeshes =
         loadSkinnedMeshesFromScene(bindFbxPath, *bindScene, scale);
-    bakeBindMeshTransforms(result.character.skinnedMeshes);
-    remapSkinnedMeshesToMotionByName(result.character.skinnedMeshes,
-                                     result.character.motion);
+    remapSkinnedMeshesByName(result.character.skinnedMeshes,
+                            result.character.motion.skeletonTree());
     result.diagnostics.printWarnings("FBXLoader " + motionFbxPath);
     return result;
 }

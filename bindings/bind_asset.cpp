@@ -828,17 +828,19 @@ void bind_asset(py::module& m) {
                     "Load FBX character data using a separate bind-pose file.")
         .def_static(
             "load_skinned_meshes",
-            [](const std::string& fbxPath, float scale) {
+            [](const std::string& fbxPath, float scale,
+               const Animation::SkeletonTree* skeletonTree) {
                 py::list result;
                 for (auto& mesh :
-                     FBXLoader::loadSkinnedMeshes(fbxPath, scale)) {
+                     FBXLoader::loadSkinnedMeshes(fbxPath, scale, skeletonTree)) {
                     result.append(
                         std::make_shared<FBXSkinnedMeshInfo>(std::move(mesh)));
                 }
                 return result;
             },
             py::arg("fbx_path"), py::arg("scale") = 0.01f,
-            "Load skinned meshes from an FBX file.");
+            py::kw_only(), py::arg("skeleton_tree") = nullptr,
+            "Load bind-world meshes, optionally remapping bone names to an existing skeleton.");
 
     py::module_ fbxDebug = asset.def_submodule(
         "FBXDebug", "FBX debug and importer inspection helpers.");

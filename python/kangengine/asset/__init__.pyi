@@ -317,9 +317,9 @@ class FBXLoader:
 
     @staticmethod
     def load_skinned_meshes(
-        fbx_path: str, scale: float = 0.01
+        fbx_path: str, scale: float = 0.01, *, skeleton_tree: SkeletonTree | None = None
     ) -> list[FBXSkinnedMeshInfo]:
-        """Load skinned meshes without animation data."""
+        """Load bind-world meshes; optionally map bones to an existing skeleton."""
         ...
 
 class USDMeshInfo:

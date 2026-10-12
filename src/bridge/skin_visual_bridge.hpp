@@ -53,15 +53,18 @@ class SkinVisualBridge {
     fromFBX(App* app, Material* material, const std::string& fbxPath,
             const std::string& primBasePath = "/fbx_character",
             int clipIndex = -1, float fps = -1.0f, float scale = 0.01f,
-            bool useMaterials = true);
+            bool useMaterials = true,
+            std::shared_ptr<const Animation::SkeletonTree> skeletonTree = nullptr);
 
     static SkinVisualBridge fromFBXWithBind(
         App* app, Material* material, const std::string& motionFbxPath,
         const std::string& bindFbxPath,
         const std::string& primBasePath = "/fbx_character", int clipIndex = -1,
-        float fps = -1.0f, float scale = 0.01f, bool useMaterials = true);
+        float fps = -1.0f, float scale = 0.01f, bool useMaterials = true,
+        std::shared_ptr<const Animation::SkeletonTree> skeletonTree = nullptr);
 
     Animation::SkeletonState applyTime(float time, bool loop = true);
+    Animation::SkeletonState applyState(const Animation::SkeletonState& state);
     Animation::SkeletonState
     applyPose(const Eigen::Vector3f& rootTranslation,
               const std::vector<Eigen::Quaternionf>& localRotations);
@@ -71,16 +74,15 @@ class SkinVisualBridge {
     void setCastsShadow(bool castsShadow);
     bool remove();
 
-    const Animation::SkeletonMotion& motion() const { return _motion; }
+    const Animation::SkeletonMotion& motion() const;
     const std::vector<MeshBinding>& meshes() const { return _meshes; }
     std::vector<MeshBinding>& meshes() { return _meshes; }
 
   private:
-    Animation::SkeletonState applyState(const Animation::SkeletonState& state);
-
     App* _app = nullptr;
     std::string _basePath;
     Animation::SkeletonMotion _motion;
+    std::shared_ptr<const Animation::SkeletonTree> _tree;
     std::vector<MeshBinding> _meshes;
     std::vector<Animation::Transform> _globalTransforms;
     std::vector<glm::mat4> _globalMatrices;

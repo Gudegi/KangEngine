@@ -74,15 +74,17 @@ SkinVisualBridge
 SkinVisualBridge::fromFBX(App* app, Material* material,
                                 const std::string& fbxPath,
                                 const std::string& primBasePath, int clipIndex,
-                                float fps, float scale, bool useMaterials) {
+                                float fps, float scale, bool useMaterials,
+                                std::shared_ptr<const Animation::SkeletonTree> skeletonTree) {
     return fromFBXWithBind(app, material, fbxPath, fbxPath, primBasePath,
-                           clipIndex, fps, scale, useMaterials);
+                           clipIndex, fps, scale, useMaterials, std::move(skeletonTree));
 }
 
 SkinVisualBridge SkinVisualBridge::fromFBXWithBind(
     App* app, Material* material, const std::string& motionFbxPath,
     const std::string& bindFbxPath, const std::string& primBasePath,
-    int clipIndex, float fps, float scale, bool useMaterials) {
+    int clipIndex, float fps, float scale, bool useMaterials,
+    std::shared_ptr<const Animation::SkeletonTree> skeletonTree) {
     if (!app)
         throw std::runtime_error(
             "SkinVisualBridge::fromFBX requires App");
@@ -93,15 +95,24 @@ SkinVisualBridge SkinVisualBridge::fromFBXWithBind(
     SkinVisualBridge bridge;
     bridge._app = app;
     bridge._basePath = primBasePath;
-    Asset::FBXCharacterData character =
-        (motionFbxPath == bindFbxPath)
+    Asset::FBXCharacterData character;
+    if (skeletonTree) {
+        if (skeletonTree->numJoints() == 0)
+            throw std::invalid_argument("SkinVisual requires a nonempty skeleton");
+        character.skinnedMeshes = Asset::FBXLoader::loadSkinnedMeshes(
+            bindFbxPath, scale, skeletonTree.get());
+        bridge._tree = std::move(skeletonTree);
+    } else {
+        character = (motionFbxPath == bindFbxPath)
             ? Asset::FBXLoader::loadCharacter(motionFbxPath, clipIndex, fps,
                                               scale)
             : Asset::FBXLoader::loadCharacterWithBind(
                   motionFbxPath, bindFbxPath, clipIndex, fps, scale);
-    bridge._motion = std::move(character.motion);
+        bridge._motion = std::move(character.motion);
+        bridge._tree = bridge._motion.skeletonTreePtr();
+    }
     Scene::defineSkeletonTree(app->getScene(), primBasePath + "/skeleton_tree",
-                              bridge._motion.skeletonTree());
+                              *bridge._tree);
     std::vector<Asset::FBXSkinnedMeshInfo>& meshes = character.skinnedMeshes;
     bridge._meshes.reserve(meshes.size());
 
@@ -142,7 +153,7 @@ SkinVisualBridge SkinVisualBridge::fromFBXWithBind(
         binding.boneNodeIndices = imported.skinnedMeshData.boneNodeIndices;
         binding.inverseBindMatrices =
             imported.skinnedMeshData.inverseBindMatrices;
-        validateBoneSlots(binding, bridge._motion.skeletonTree().numJoints());
+        validateBoneSlots(binding, bridge._tree->numJoints());
         binding.boneMatrices.assign(binding.inverseBindMatrices.size(),
                                     glm::mat4(1.0f));
         binding.baseColor = color;
@@ -184,26 +195,38 @@ SkinVisualBridge SkinVisualBridge::fromFBXWithBind(
         bridge._meshes.push_back(std::move(binding));
     }
 
-    bridge.applyTime(0.0f);
+    if (bridge._motion.numFrames() > 0)
+        bridge.applyTime(0.0f);
+    else
+        bridge.applyState(Animation::SkeletonState::fromRotationAndRootTranslation(
+            bridge._tree, bridge._tree->localRotations(),
+            bridge._tree->localTranslation(0)));
     return bridge;
+}
+
+const Animation::SkeletonMotion& SkinVisualBridge::motion() const {
+    if (_motion.numFrames() == 0)
+        throw std::runtime_error(
+            "SkinVisual with an external skeleton has no motion; use apply_state or apply_pose");
+    return _motion;
 }
 
 Animation::SkeletonState SkinVisualBridge::applyTime(float time,
                                                            bool loop) {
-    const Animation::SkeletonState state = _motion.sample(time, loop);
+    const Animation::SkeletonState state = motion().sample(time, loop);
     return applyState(state);
 }
 
 Animation::SkeletonState SkinVisualBridge::applyPose(
     const Eigen::Vector3f& rootTranslation,
     const std::vector<Eigen::Quaternionf>& localRotations) {
-    if (static_cast<int>(localRotations.size()) != _motion.numJoints()) {
+    if (!_tree || static_cast<int>(localRotations.size()) != _tree->numJoints()) {
         throw std::runtime_error(
             "SkinVisualBridge::applyPose local rotation count does not "
             "match motion skeleton joint count");
     }
 
-    Animation::SkeletonState state = _motion.frame(0);
+    Animation::SkeletonState state = Animation::SkeletonState::zeroPose(_tree);
     state.setRootTranslation(rootTranslation);
     for (int i = 0; i < static_cast<int>(localRotations.size()); ++i) {
         Eigen::Quaternionf q = localRotations[static_cast<size_t>(i)];
@@ -221,6 +244,20 @@ SkinVisualBridge::applyState(const Animation::SkeletonState& state) {
     if (!_app)
         return state;
 
+    if (!state.skeletonTreePtr() || state.rotations().size() !=
+            static_cast<size_t>(_tree->numJoints()))
+        throw std::invalid_argument("SkinVisual state has an incompatible skeleton");
+    if (state.skeletonTreePtr() != _tree) {
+        const auto& other = state.skeletonTree();
+        if (other.nodeNames() != _tree->nodeNames() ||
+            other.parentIndices() != _tree->parentIndices())
+            throw std::invalid_argument("SkinVisual state has an incompatible skeleton");
+        for (int joint = 0; joint < _tree->numJoints(); ++joint) {
+            const auto delta = other.localTranslation(joint) - _tree->localTranslation(joint);
+            if (!delta.allFinite() || delta.norm() > 1e-5f)
+                throw std::invalid_argument("SkinVisual state has incompatible bone offsets");
+        }
+    }
     state.computeGlobalTransformsInto(_globalTransforms);
 
     _globalMatrices.resize(_globalTransforms.size());

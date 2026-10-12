@@ -5,12 +5,18 @@ from __future__ import annotations
 import numpy.typing as npt
 
 from .. import Vec4
-from ..animation import SkeletonMotion, SkeletonState
+from ..animation import SkeletonMotion, SkeletonState, SkeletonTree
 from ..app import App
 from ..material import Material
 
 class SkinVisual:
-    """Integrated FBX motion-loading and skinning bridge."""
+    """FBX skinning with an imported clip or an external compatible skeleton.
+
+    With skeleton_tree, fbx_path supplies only the skin. Bone names must match;
+    this does not retarget different proportions or joint axes. Apply external
+    poses with apply_state/apply_pose; motion/apply_time require an imported clip.
+    Do not combine skeleton_tree with bind_fbx_path, clip_index or fps.
+    """
 
     @staticmethod
     def from_fbx(
@@ -23,9 +29,12 @@ class SkinVisual:
         fps: float = -1.0,
         scale: float = 0.01,
         use_materials: bool = True,
+        *,
+        skeleton_tree: SkeletonTree | None = None,
     ) -> SkinVisual: ...
 
     def apply_time(self, time: float, loop: bool = True) -> SkeletonState: ...
+    def apply_state(self, state: SkeletonState) -> SkeletonState: ...
     def apply_pose(
         self,
         root_translation: npt.ArrayLike,

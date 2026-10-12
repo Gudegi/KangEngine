@@ -56,6 +56,9 @@ struct FBXSkinnedMeshInfo {
     FBXMeshMetadata metadata;
     Scene::SkinnedMeshData skinnedMeshData;
     std::vector<std::string> boneNames;
+    // Raw OpenFBX cluster matrices: bone-local -> bind world, and
+    // mesh-local -> bone-local respectively. Their product is mesh bind world.
+    // skinnedMeshData vertices/normals/tangents are already baked into bind world.
     std::vector<std::array<float, 16>> bindBoneMatrices;
     std::vector<std::array<float, 16>> bindMeshMatrices;
     int overweightVertexCount = 0;
@@ -99,7 +102,8 @@ class FBXLoader {
                                                      float scale = 0.01f);
 
     static std::vector<FBXSkinnedMeshInfo>
-    loadSkinnedMeshes(const std::string& fbxPath, float scale = 0.01f);
+    loadSkinnedMeshes(const std::string& fbxPath, float scale = 0.01f,
+                     const Animation::SkeletonTree* skeletonTree = nullptr);
 
     static FBXImportResult parse(const std::string& fbxPath, int clipIndex = -1,
                                  float fps = -1.0f, float scale = 0.01f);

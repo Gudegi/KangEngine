@@ -76,6 +76,10 @@ __all__ += [
     "MotionLibrary",
     "MotionLibraryBuffers",
     "MotionSample",
+    "MotionMatchingConfig",
+    "MotionMatchingDatabase",
+    "MotionMatchingController",
+    "WalkingFeatures",
     "load_articulation_motion_npz",
     "retarget_angle_motion",
     "save_articulation_motion_npz",
@@ -101,6 +105,10 @@ for _type in (
     set_public_module(_type, __name__)
 
 _LAZY_IMPORTS = {
+    "MotionMatchingConfig": (".matching", "MotionMatchingConfig"),
+    "MotionMatchingDatabase": (".matching", "MotionMatchingDatabase"),
+    "MotionMatchingController": (".matching", "MotionMatchingController"),
+    "WalkingFeatures": (".matching", "WalkingFeatures"),
     "MotionKinematics": (".motion_library", "MotionKinematics"),
     "MotionLibrary": (".motion_library", "MotionLibrary"),
     "MotionLibraryBuffers": (".motion_library", "MotionLibraryBuffers"),

@@ -18,6 +18,10 @@
 #include "animation/skeleton_math.hpp"
 #include "animation/full_body_ik.hpp"
 #include "animation/skeleton_motion.hpp"
+#include "animation/skeleton_motion_player.hpp"
+#include "animation/trajectory_spring.hpp"
+#include "animation/skeleton_pose_smoother.hpp"
+#include "animation/motion_matching_index.hpp"
 #include "animation/skeleton_state.hpp"
 #include "animation/skeleton_tree.hpp"
 #include "animation/skinning.hpp"
@@ -33,6 +37,91 @@ using namespace KE::Animation;
 using namespace KE::Bridge;
 
 namespace {
+
+using SpringArray = py::array_t<double, py::array::c_style | py::array::forcecast>;
+
+Eigen::Vector3d springVector(const SpringArray& value, const char* name) {
+    if (value.ndim() != 1 || value.size() != 3)
+        throw py::value_error(std::string(name) + " must have shape [3]");
+    return Eigen::Vector3d(value.data()[0], value.data()[1], value.data()[2]);
+}
+
+Eigen::Quaterniond springRotation(const SpringArray& value, const char* name) {
+    if (value.ndim() != 1 || value.size() != 4)
+        throw py::value_error(std::string(name) + " must have shape [4] (WXYZ)");
+    return Eigen::Quaterniond(value.data()[0], value.data()[1],
+                              value.data()[2], value.data()[3]);
+}
+
+py::array_t<double> springOutput(const SpringArray& times, py::ssize_t width) {
+    if (times.ndim() == 0) return py::array_t<double>({width});
+    return py::array_t<double>({times.size(), width});
+}
+
+void bindTrajectorySprings(py::module_& anim) {
+    anim.def("trajectory_spring_position",
+        [](const SpringArray& position, const SpringArray& velocity,
+           const SpringArray& acceleration, const SpringArray& desiredVelocity,
+           double halfLife, const SpringArray& times) {
+            if (times.ndim() > 1)
+                throw py::value_error("dt must be a scalar or a 1D array of horizons");
+            const auto p = springVector(position, "position");
+            const auto v = springVector(velocity, "velocity");
+            const auto a = springVector(acceleration, "acceleration");
+            const auto goal = springVector(desiredVelocity, "desired_velocity");
+            // Validate state even for an empty horizon array.
+            if (times.size() == 0)
+                trajectorySpringPosition(p, v, a, goal, halfLife, 0);
+            auto positions = springOutput(times, 3);
+            auto velocities = springOutput(times, 3);
+            auto accelerations = springOutput(times, 3);
+            for (py::ssize_t i = 0; i < times.size(); ++i) {
+                const auto result = trajectorySpringPosition(p, v, a, goal, halfLife, times.data()[i]);
+                for (int axis = 0; axis < 3; ++axis) {
+                    positions.mutable_data()[i * 3 + axis] = std::get<0>(result)[axis];
+                    velocities.mutable_data()[i * 3 + axis] = std::get<1>(result)[axis];
+                    accelerations.mutable_data()[i * 3 + axis] = std::get<2>(result)[axis];
+                }
+            }
+            return py::make_tuple(positions, velocities, accelerations);
+        }, py::arg("position"), py::arg("velocity"), py::arg("acceleration"),
+        py::kw_only(), py::arg("desired_velocity"), py::arg("half_life"),
+        py::arg("dt"),
+        "Predict (position, velocity, acceleration) toward constant desired_velocity. "
+        "Inputs are 3D vectors in one coordinate frame. dt is seconds, scalar "
+        "or [H]; outputs have shape [3] or [H,3]. Horizons are independent of each "
+        "other and do not mutate inputs. Decay rate is 2*ln(2)/half_life. Zero "
+        "half_life snaps velocity and advances position; zero dt preserves state.");
+
+    anim.def("trajectory_spring_rotation",
+        [](const SpringArray& rotation, const SpringArray& angularVelocity,
+           const SpringArray& desiredRotation, double halfLife, const SpringArray& times) {
+            if (times.ndim() > 1)
+                throw py::value_error("dt must be a scalar or a 1D array of horizons");
+            const auto q = springRotation(rotation, "rotation_wxyz");
+            const auto w = springVector(angularVelocity, "angular_velocity");
+            const auto goal = springRotation(desiredRotation, "desired_rotation_wxyz");
+            if (times.size() == 0)
+                trajectorySpringRotation(q, w, goal, halfLife, 0);
+            auto rotations = springOutput(times, 4);
+            auto velocities = springOutput(times, 3);
+            for (py::ssize_t i = 0; i < times.size(); ++i) {
+                const auto result = trajectorySpringRotation(q, w, goal, halfLife, times.data()[i]);
+                rotations.mutable_data()[i * 4] = result.first.w();
+                for (int axis = 0; axis < 3; ++axis) {
+                    rotations.mutable_data()[i * 4 + axis + 1] = result.first.vec()[axis];
+                    velocities.mutable_data()[i * 3 + axis] = result.second[axis];
+                }
+            }
+            return py::make_tuple(rotations, velocities);
+        }, py::arg("rotation_wxyz"), py::arg("angular_velocity"), py::kw_only(),
+        py::arg("desired_rotation_wxyz"), py::arg("half_life"), py::arg("dt"),
+        "Predict (rotation_wxyz, angular_velocity) toward a constant unit quaternion. "
+        "Angular velocity is spatial radians/sec in the rotations' coordinate frame. "
+        "dt is scalar or [H]; outputs have shape [4]/[3] or [H,4]/[H,3]. "
+        "Uses shortest-arc error and SO(3) velocity conversion for arbitrary axes. "
+        "Zero half_life snaps to the goal with zero velocity; zero dt preserves state.");
+}
 
 Eigen::Vector3f eigenVec3FromArray(const FloatArray& array, const char* name) {
     auto view = vec3ArrayView(array, name);
@@ -360,6 +449,7 @@ articulationMotionArray(KE::Animation::ArticulationMotion& motion,
 void bind_animation(py::module& m) {
     py::module anim = m.def_submodule(
         "animation", "Skeleton animation, skinning, and visualization APIs.");
+    bindTrajectorySprings(anim);
 
     py::enum_<ArticulationCoordinateType>(anim, "ArticulationCoordinateType")
         .value("FIXED", ArticulationCoordinateType::Fixed)
@@ -632,7 +722,9 @@ void bind_animation(py::module& m) {
 
     py::class_<SkeletonMotion>(
         anim, "SkeletonMotion",
-        "Sampled skeleton animation clip with root motion and local rotations.")
+        "Sampled skeleton animation clip with root motion and local rotations. "
+        "Native copies share immutable frame arrays; returned NumPy arrays "
+        "remain independent snapshots.")
         .def_static(
             "from_arrays",
             [](const SkeletonTree& tree, const FloatArray& rootTranslations,
@@ -699,6 +791,9 @@ void bind_animation(py::module& m) {
         .def("sample", &SkeletonMotion::sample, py::arg("time"),
              py::arg("loop") = true,
              "Sample a SkeletonState at time in seconds.")
+        .def("sample_into", &SkeletonMotion::sampleInto, py::arg("time"),
+             py::arg("state"), py::arg("loop") = true,
+             "Sample into a reusable compatible SkeletonState.")
         .def(
             "root_translation",
             [](const SkeletonMotion& self, int frame) {
@@ -1107,6 +1202,283 @@ void bind_animation(py::module& m) {
             py::arg("translation"), "Set the root translation from a vec3.")
         .def("print_global_positions", &SkeletonState::printGlobalPositions,
              "Print global joint positions for debugging.");
+
+    py::class_<SkeletonPoseSample>(
+        anim, "SkeletonPoseSample",
+        "Placed local pose and velocities shared by samplers and decoders.")
+        .def(py::init([](const SkeletonState& state,
+                         const FloatArray& rootVelocity,
+                         const FloatArray& angularVelocities) {
+                 auto view = vec3ArrayView(angularVelocities,
+                                           "local_angular_velocities");
+                 if (!state.skeletonTreePtr() ||
+                     view.count != static_cast<size_t>(state.numJoints()))
+                     throw py::value_error("local_angular_velocities must have "
+                                           "one vector per joint");
+                 SkeletonPoseSample result;
+                 result.state = state;
+                 result.rootLinearVelocity =
+                     eigenVec3FromArray(rootVelocity, "root_linear_velocity");
+                 result.localAngularVelocities.reserve(view.count);
+                 for (size_t i = 0; i < view.count; ++i)
+                     result.localAngularVelocities.emplace_back(
+                         view.data[3 * i], view.data[3 * i + 1],
+                         view.data[3 * i + 2]);
+                 return result;
+             }),
+             py::arg("state"), py::kw_only(), py::arg("root_linear_velocity"),
+             py::arg("local_angular_velocities"))
+        .def_property_readonly("state",
+                               [](const SkeletonPoseSample& self) {
+                                   return SkeletonState(self.state);
+                               })
+        .def_property_readonly("root_linear_velocity",
+                               [](const SkeletonPoseSample& self) {
+                                   py::array_t<float> result(3);
+                                   std::copy(self.rootLinearVelocity.data(),
+                                             self.rootLinearVelocity.data() + 3,
+                                             result.mutable_data());
+                                   return result;
+                               })
+        .def_property_readonly(
+            "local_angular_velocities", [](const SkeletonPoseSample& self) {
+                return floatArrayFromVec3Vector(self.localAngularVelocities);
+            });
+
+    py::class_<SkeletonPoseSmoother>(
+        anim, "SkeletonPoseSmoother",
+        "Shared pose inertialization, independent of clips and learned state.")
+        .def(py::init<const SkeletonPoseSample&, float>(), py::arg("initial"),
+             py::kw_only(), py::arg("half_life") = 0.1f)
+        .def("reset", &SkeletonPoseSmoother::reset, py::arg("target"))
+        .def("transition", &SkeletonPoseSmoother::transition,
+             py::arg("target"))
+        .def("advance", &SkeletonPoseSmoother::advance, py::arg("target"),
+             py::arg("dt"))
+        .def_property("half_life", &SkeletonPoseSmoother::halfLife,
+                      &SkeletonPoseSmoother::setHalfLife)
+        .def_property_readonly("sample",
+                               [](const SkeletonPoseSmoother& self) {
+                                   return SkeletonPoseSample(self.sample());
+                               });
+
+    py::class_<MotionMatch>(anim, "MotionMatch",
+                            "Search result shared by native and Python search. "
+                            "Cost includes continuation bias.")
+        .def(py::init([](std::size_t row, std::size_t motionIndex,
+                         std::size_t frameIndex, double time, double cost) {
+                 return MotionMatch{row, motionIndex, frameIndex, time, cost};
+             }),
+             py::kw_only(), py::arg("row"), py::arg("motion_index"),
+             py::arg("frame_index"), py::arg("time"), py::arg("cost"))
+        .def_readonly("row", &MotionMatch::row)
+        .def_readonly("motion_index", &MotionMatch::motionIndex)
+        .def_readonly("frame_index", &MotionMatch::frameIndex)
+        .def_readonly("time", &MotionMatch::time)
+        .def_readonly("cost", &MotionMatch::cost)
+        .def("__repr__",
+             [](const MotionMatch& self) {
+                 return py::str("MotionMatch(row={}, motion_index={}, "
+                                "frame_index={}, time={}, cost={})")
+                     .format(self.row, self.motionIndex, self.frameIndex,
+                             self.time, self.cost);
+             })
+        .def(
+            "__eq__",
+            [](const MotionMatch& a, const MotionMatch& b) {
+                return a.row == b.row && a.motionIndex == b.motionIndex &&
+                       a.frameIndex == b.frameIndex && a.time == b.time &&
+                       a.cost == b.cost;
+            },
+            py::is_operator())
+        .def("__hash__", [](const MotionMatch& self) {
+            return py::hash(py::make_tuple(self.row, self.motionIndex,
+                                           self.frameIndex, self.time,
+                                           self.cost));
+        });
+
+    using DoubleFeatures =
+        py::array_t<double, py::array::c_style | py::array::forcecast>;
+    py::class_<MotionMatchingIndex>(
+        anim, "MotionMatchingIndex",
+        "Owned float64 feature index with exact native search.")
+        .def(py::init([](const DoubleFeatures& features,
+                         const std::vector<std::size_t>& frameCounts,
+                         const std::vector<std::size_t>& candidateCounts,
+                         const std::vector<double>& fps) {
+                 if (features.ndim() != 2 || features.shape(0) == 0 ||
+                     features.shape(1) == 0)
+                     throw py::value_error("features must have nonempty shape "
+                                           "[frames, dimensions]");
+                 if (frameCounts.size() != candidateCounts.size() ||
+                     frameCounts.size() != fps.size())
+                     throw py::value_error(
+                         "clip metadata arrays must have equal lengths");
+                 std::vector<MotionMatchingClipInfo> clips;
+                 for (std::size_t i = 0; i < fps.size(); ++i)
+                     clips.push_back(
+                         {frameCounts[i], candidateCounts[i], fps[i]});
+                 return MotionMatchingIndex(
+                     std::vector<double>(features.data(),
+                                         features.data() + features.size()),
+                     static_cast<std::size_t>(features.shape(1)),
+                     std::move(clips));
+             }),
+             py::arg("features"), py::kw_only(), py::arg("clip_frame_counts"),
+             py::arg("clip_candidate_counts"), py::arg("clip_fps"))
+        .def_property_readonly("num_frames", &MotionMatchingIndex::numFrames)
+        .def_property_readonly("feature_dimension",
+                               &MotionMatchingIndex::featureDimension)
+        .def_property_readonly("num_motions", &MotionMatchingIndex::numMotions)
+        .def(
+            "search",
+            [](const MotionMatchingIndex& self, const DoubleFeatures& query,
+               std::optional<std::size_t> currentMotionIndex,
+               std::optional<double> currentTime, double continuationBias,
+               std::optional<std::vector<std::size_t>> allowedMotionIndices) {
+                if (query.ndim() != 1 ||
+                    static_cast<std::size_t>(query.size()) !=
+                        self.featureDimension())
+                    throw py::value_error(
+                        "query must have shape [feature_dimension]");
+                // Copy this small query before releasing the GIL. The index
+                // owns its feature storage independently of Python arrays.
+                std::vector<double> values(query.data(),
+                                           query.data() + query.size());
+                MotionMatchingSearchOptions options;
+                options.currentMotionIndex = currentMotionIndex;
+                options.currentTime = currentTime;
+                options.continuationBias = continuationBias;
+                options.allowedMotionIndices = std::move(allowedMotionIndices);
+                py::gil_scoped_release release;
+                return self.search(values, options);
+            },
+            py::arg("query"), py::kw_only(),
+            py::arg("current_motion_index") = py::none(),
+            py::arg("current_time") = py::none(),
+            py::arg("continuation_bias") = 0.0,
+            py::arg("allowed_motion_indices") = py::none(),
+            "Search normalized features; equal scores choose the lowest "
+            "database row.");
+
+    py::class_<SkeletonMotionPlayer>(anim, "SkeletonMotionPlayer",
+                                     "Native skeleton playback with root "
+                                     "alignment and inertial transitions.")
+        .def(py::init([](std::vector<SkeletonMotion> motions,
+                         const std::string& upAxis,
+                         const std::string& forwardAxis, float halfLife) {
+                 if (upAxis != "Y" && upAxis != "Z")
+                     throw py::value_error("up_axis must be 'Y' or 'Z'");
+                 if (forwardAxis != "X" && forwardAxis != "Y" &&
+                     forwardAxis != "Z")
+                     throw py::value_error(
+                         "forward_axis must be 'X', 'Y', or 'Z'");
+                 const int up = upAxis == "Y" ? 1 : 2;
+                 const int forward =
+                     forwardAxis == "X" ? 0 : (forwardAxis == "Y" ? 1 : 2);
+                 return SkeletonMotionPlayer(std::move(motions), up, forward,
+                                             halfLife);
+             }),
+             py::arg("motions"), py::kw_only(), py::arg("up_axis") = "Z",
+             py::arg("forward_axis") = "X",
+             py::arg("transition_half_life") = 0.1f,
+             "Start clip 0 with walking alignment. If its initial forward axis "
+             "is vertical, start in source coordinates; use reset_placed to "
+             "specify placement.")
+        .def("reset", &SkeletonMotionPlayer::reset, py::arg("motion_index") = 0,
+             py::arg("time") = 0.0,
+             "Reset at the planar origin with built-in walking alignment and "
+             "clear transition offsets.")
+        .def(
+            "transition", &SkeletonMotionPlayer::transition,
+            py::arg("motion_index"), py::arg("time"),
+            "Align and switch clips while preserving output pose and velocity.")
+        .def(
+            "reset_placed",
+            [](SkeletonMotionPlayer& self, int motionIndex, double time,
+               const FloatArray& rotation, const FloatArray& translation) {
+                auto q = vec4ArrayView(rotation, "rotation_wxyz");
+                if (q.count != 1)
+                    throw py::value_error("rotation_wxyz must have shape [4]");
+                self.resetPlaced(
+                    motionIndex, time,
+                    Eigen::Quaternionf(q.data[0], q.data[1], q.data[2],
+                                       q.data[3]),
+                    eigenVec3FromArray(translation, "translation"));
+            },
+            py::arg("motion_index"), py::arg("time"), py::kw_only(),
+            py::arg("rotation_wxyz"), py::arg("translation"),
+            "Reset using an explicit source-to-world rigid transform.")
+        .def(
+            "transition_placed",
+            [](SkeletonMotionPlayer& self, int motionIndex, double time,
+               const FloatArray& rotation, const FloatArray& translation) {
+                auto q = vec4ArrayView(rotation, "rotation_wxyz");
+                if (q.count != 1)
+                    throw py::value_error("rotation_wxyz must have shape [4]");
+                self.transitionPlaced(
+                    motionIndex, time,
+                    Eigen::Quaternionf(q.data[0], q.data[1], q.data[2],
+                                       q.data[3]),
+                    eigenVec3FromArray(translation, "translation"));
+            },
+            py::arg("motion_index"), py::arg("time"), py::kw_only(),
+            py::arg("rotation_wxyz"), py::arg("translation"),
+            "Switch clips using an explicit source-to-world rigid transform "
+            "before smoothing; this is not a target root pose.")
+        .def("advance", &SkeletonMotionPlayer::advance, py::arg("dt"),
+             "Advance playback and transition decay; clip time clamps at its "
+             "end.")
+        .def_property_readonly(
+            "state",
+            [](const SkeletonMotionPlayer& self) {
+                return SkeletonState(self.state());
+            },
+            "Return an independent snapshot of the current output pose.")
+        .def_property_readonly("motion_index",
+                               &SkeletonMotionPlayer::motionIndex)
+        .def_property_readonly("time", &SkeletonMotionPlayer::time)
+        .def_property_readonly("duration", &SkeletonMotionPlayer::duration)
+        .def_property(
+            "transition_half_life", &SkeletonMotionPlayer::transitionHalfLife,
+            &SkeletonMotionPlayer::setTransitionHalfLife,
+            "Spring decay setting in seconds; zero disables smoothing.")
+        .def_property_readonly("root_position",
+                               [](const SkeletonMotionPlayer& self) {
+                                   py::array_t<float> result(3);
+                                   const Eigen::Vector3f value =
+                                       self.rootPosition();
+                                   std::copy(value.data(), value.data() + 3,
+                                             result.mutable_data());
+                                   return result;
+                               })
+        .def_property_readonly("heading_rotation_wxyz",
+                               [](const SkeletonMotionPlayer& self) {
+                                   py::array_t<float> result(4);
+                                   const Eigen::Quaternionf value =
+                                       self.headingRotation();
+                                   auto* output = result.mutable_data();
+                                   output[0] = value.w();
+                                   output[1] = value.x();
+                                   output[2] = value.y();
+                                   output[3] = value.z();
+                                   return result;
+                               })
+        .def_property_readonly("root_linear_velocity",
+                               [](const SkeletonMotionPlayer& self) {
+                                   py::array_t<float> result(3);
+                                   const auto& value =
+                                       self.rootLinearVelocity();
+                                   std::copy(value.data(), value.data() + 3,
+                                             result.mutable_data());
+                                   return result;
+                               })
+        .def_property_readonly(
+            "local_angular_velocities",
+            [](const SkeletonMotionPlayer& self) {
+                return floatArrayFromVec3Vector(self.localAngularVelocities());
+            },
+            "Angular velocities in parent frames; the root uses world space.");
 
     // ArticulationVisual / ArticulationVisualAsset
     py::class_<ArticulationVisualBridge>(

@@ -1,4 +1,5 @@
 #include "skeleton_motion.hpp"
+#include "quaternion_math.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -52,28 +53,45 @@ SkeletonMotion::SkeletonMotion(std::shared_ptr<const SkeletonTree> tree,
                                float fps, std::string motionName,
                                std::vector<float> rootTranslations,
                                std::vector<float> localRotationsWxyz)
-    : _fps(fps), _tree(std::move(tree)), _motionName(std::move(motionName)),
-      _rootTranslations(std::move(rootTranslations)),
-      _localRotationsWxyz(std::move(localRotationsWxyz)) {
+    : _fps(fps), _tree(std::move(tree)), _motionName(std::move(motionName)) {
     if (!_tree)
         throw std::runtime_error("SkeletonMotion requires a SkeletonTree");
     if (_fps <= 0.0f)
         throw std::runtime_error("SkeletonMotion fps must be positive");
-    if (_rootTranslations.size() % 3 != 0)
+    if (rootTranslations.size() % 3 != 0)
         throw std::runtime_error(
             "SkeletonMotion rootTranslations must have shape [frames, 3]");
 
-    const int frames = numFrames();
+    const int frames = static_cast<int>(rootTranslations.size() / 3);
     const int joints = numJoints();
-    if (static_cast<int>(_localRotationsWxyz.size()) != frames * joints * 4) {
+    if (static_cast<int>(localRotationsWxyz.size()) != frames * joints * 4) {
         throw std::runtime_error(
             "SkeletonMotion localRotationsWxyz must have shape "
             "[frames, joints, 4]");
     }
+    _data = std::make_shared<const Data>(
+        std::move(rootTranslations), std::move(localRotationsWxyz));
+}
+
+void SkeletonMotion::validateFrameData() const {
+    const auto& frames = data();
+    std::call_once(frames.validation, [&frames] {
+        for (float value : frames.rootTranslations) {
+            if (!std::isfinite(value))
+                throw std::invalid_argument("motion requires finite root translations");
+        }
+        const auto& rotations = frames.localRotationsWxyz;
+        for (size_t index = 0; index < rotations.size(); index += 4) {
+            const Eigen::Quaternionf q(rotations[index], rotations[index + 1],
+                                       rotations[index + 2], rotations[index + 3]);
+            if (!q.coeffs().allFinite() || std::abs(q.norm() - 1.0f) > 1e-3f)
+                throw std::invalid_argument("motion requires finite unit quaternions");
+        }
+    });
 }
 
 int SkeletonMotion::numFrames() const {
-    return static_cast<int>(_rootTranslations.size() / 3);
+    return static_cast<int>(rootTranslationsFlat().size() / 3);
 }
 
 float SkeletonMotion::duration() const {
@@ -85,7 +103,7 @@ float SkeletonMotion::duration() const {
 Eigen::Vector3f SkeletonMotion::rootTranslation(int frameIndex) const {
     if (frameIndex < 0 || frameIndex >= numFrames())
         throw std::out_of_range("SkeletonMotion root frame out of range");
-    const float* p = _rootTranslations.data() + frameIndex * 3;
+    const float* p = rootTranslationsFlat().data() + frameIndex * 3;
     return Eigen::Vector3f(p[0], p[1], p[2]);
 }
 
@@ -100,7 +118,7 @@ Eigen::Quaternionf SkeletonMotion::localRotation(int frameIndex,
         (static_cast<size_t>(frameIndex) * static_cast<size_t>(numJoints()) +
          static_cast<size_t>(jointIndex)) *
         4;
-    const float* q = _localRotationsWxyz.data() + offset;
+    const float* q = localRotationsWxyzFlat().data() + offset;
     Eigen::Quaternionf quat(q[0], q[1], q[2], q[3]);
     if (quat.norm() <= 1e-6f)
         return Eigen::Quaternionf::Identity();
@@ -118,44 +136,73 @@ SkeletonState SkeletonMotion::frame(int frameIndex) const {
 }
 
 SkeletonState SkeletonMotion::sample(float time, bool loop) const {
+    SkeletonState output;
+    sampleInto(static_cast<double>(time), output, loop);
+    return output;
+}
+
+void SkeletonMotion::sampleInto(double time, SkeletonState& output,
+                                bool loop) const {
     const int frames = numFrames();
     if (frames <= 0)
         throw std::runtime_error("Cannot sample empty SkeletonMotion");
-    if (frames == 1)
-        return frame(0);
+    if (!std::isfinite(time) || !std::isfinite(_fps) || _fps <= 0.0f)
+        throw std::invalid_argument("SkeletonMotion sampling requires finite time and positive finite fps");
+    if (numJoints() <= 0 ||
+        _tree->localTranslations().size() != static_cast<size_t>(numJoints()) ||
+        _tree->localRotations().size() != static_cast<size_t>(numJoints()))
+        throw std::invalid_argument("SkeletonMotion sampling requires a nonempty complete skeleton");
 
-    const float maxTime = duration();
-    const float loopPeriod = static_cast<float>(frames) / _fps;
-    float t = time;
-    if (loop && loopPeriod > 0.0f) {
+    const double maxTime = static_cast<double>(frames - 1) / _fps;
+    const double loopPeriod = static_cast<double>(frames) / _fps;
+    double t = time;
+    if (loop) {
         t = std::fmod(t, loopPeriod);
-        if (t < 0.0f)
+        if (t < 0.0)
             t += loopPeriod;
     } else {
-        t = std::clamp(t, 0.0f, maxTime);
+        t = std::clamp(t, 0.0, maxTime);
     }
 
-    const float frameFloat = t * _fps;
+    const double frameFloat = t * static_cast<double>(_fps);
     const int i0 =
         std::clamp(static_cast<int>(std::floor(frameFloat)), 0, frames - 1);
     const int i1 = std::min(i0 + 1, frames - 1);
-    const float alpha = i0 == i1 ? 0.0f : frameFloat - static_cast<float>(i0);
+    const float alpha = i0 == i1 ? 0.0f : static_cast<float>(frameFloat - i0);
 
     const Eigen::Vector3f root =
         rootTranslation(i0) * (1.0f - alpha) + rootTranslation(i1) * alpha;
 
-    std::vector<Eigen::Quaternionf> rotations;
-    rotations.reserve(static_cast<size_t>(numJoints()));
+    if (!output.skeletonTreePtr()) {
+        output = SkeletonState::zeroPose(_tree);
+    } else {
+        if (!output.isLocal() || output.rotations().size() != static_cast<size_t>(numJoints()))
+            throw std::invalid_argument("SkeletonMotion sampleInto requires a compatible local output state");
+        if (output.skeletonTreePtr() != _tree) {
+            const auto& other = output.skeletonTree();
+            if (other.nodeNames() != _tree->nodeNames() ||
+                other.parentIndices() != _tree->parentIndices() ||
+                other.localTranslations().size() != _tree->localTranslations().size() ||
+                other.localRotations().size() != _tree->localRotations().size())
+                throw std::invalid_argument("SkeletonMotion sampleInto output skeleton is incompatible");
+            for (int joint = 0; joint < numJoints(); ++joint) {
+                const auto& a = _tree->localRotation(joint);
+                const auto& b = other.localRotation(joint);
+                const Eigen::Vector3f delta = other.localTranslation(joint) - _tree->localTranslation(joint);
+                if (!delta.allFinite() || delta.norm() > 1e-5f ||
+                    !a.coeffs().allFinite() || !b.coeffs().allFinite() ||
+                    a.norm() <= 1e-6f || b.norm() <= 1e-6f ||
+                    a.normalized().angularDistance(b.normalized()) > 1e-5f)
+                    throw std::invalid_argument("SkeletonMotion sampleInto output rest transforms are incompatible");
+            }
+        }
+    }
+    output.setRootTranslation(root);
     for (int j = 0; j < numJoints(); ++j) {
         Eigen::Quaternionf q0 = localRotation(i0, j);
         Eigen::Quaternionf q1 = localRotation(i1, j);
-        if (q0.dot(q1) < 0.0f)
-            q1.coeffs() *= -1.0f;
-        rotations.push_back(q0.slerp(alpha, q1).normalized());
+        output.setRotation(j, q0.slerp(alpha, alignQuaternion(q0, q1)).normalized());
     }
-
-    return SkeletonState::fromRotationAndRootTranslation(_tree, rotations, root,
-                                                         true);
 }
 
 std::vector<Transform> SkeletonMotion::globalTransforms() const {

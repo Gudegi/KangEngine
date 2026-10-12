@@ -7,7 +7,9 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <memory>
+#include <mutex>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace KE {
@@ -15,6 +17,7 @@ namespace Animation {
 
 class SkeletonMotion {
   public:
+    // Copies share immutable frames and skeleton; sampled states are independent.
     SkeletonMotion() = default;
     SkeletonMotion(std::shared_ptr<const SkeletonTree> tree, float fps,
                    std::string motionName, std::vector<float> rootTranslations,
@@ -38,6 +41,12 @@ class SkeletonMotion {
     // with reusable buffers for per-frame playback hot loops.
     SkeletonState frame(int frameIndex) const;
     SkeletonState sample(float time, bool loop = true) const;
+    // Initializes empty output or reuses a compatible local state; otherwise throws.
+    // Looping holds the last frame for 1/fps seconds, without blending to the first.
+    void sampleInto(double time, SkeletonState& output, bool loop = true) const;
+
+    // Checks finite positions and unit rotations once per shared frame buffer.
+    void validateFrameData() const;
 
     std::vector<Transform> globalTransforms() const;
     std::vector<Eigen::Vector3f> globalPositions() const;
@@ -49,10 +58,10 @@ class SkeletonMotion {
     std::vector<Eigen::Vector3f> rootLinearAccelerations() const;
 
     const std::vector<float>& rootTranslationsFlat() const {
-        return _rootTranslations;
+        return data().rootTranslations;
     }
     const std::vector<float>& localRotationsWxyzFlat() const {
-        return _localRotationsWxyz;
+        return data().localRotationsWxyz;
     }
 
   private:
@@ -65,8 +74,23 @@ class SkeletonMotion {
     //   glm::quat, MJCF quat attributes, and ke.quat constructor semantics.
     // - Python/numpy and PhysX flat boundary APIs use xyzw and must convert
     //   explicitly when data crosses that boundary.
-    std::vector<float> _rootTranslations;   // [num_frames, 3]
-    std::vector<float> _localRotationsWxyz; // [num_frames, num_joints, 4]
+    struct Data {
+        Data() = default;
+        Data(std::vector<float> translations, std::vector<float> rotations)
+            : rootTranslations(std::move(translations)),
+              localRotationsWxyz(std::move(rotations)) {}
+
+        std::vector<float> rootTranslations;   // [num_frames, 3]
+        std::vector<float> localRotationsWxyz; // [num_frames, num_joints, 4]
+        mutable std::once_flag validation;
+    };
+    std::shared_ptr<const Data> _data;
+
+    const Data& data() const {
+        // Allocation-free fallback for default and moved-from motions.
+        static const Data empty;
+        return _data ? *_data : empty;
+    }
 };
 
 } // namespace Animation

@@ -19,6 +19,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+motion-matching = ["scipy>=1.13"]
 terrain = ["warp-lang>=1.16,<2.0"]
 docs = [
     "sphinx>=8",

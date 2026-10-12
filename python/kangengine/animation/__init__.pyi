@@ -55,6 +55,29 @@ from .motion_library import (
 
 _Float32Array: TypeAlias = npt.NDArray[np.float32]
 
+def trajectory_spring_position(
+    position: npt.ArrayLike,
+    velocity: npt.ArrayLike,
+    acceleration: npt.ArrayLike,
+    *,
+    desired_velocity: npt.ArrayLike,
+    half_life: float,
+    dt: npt.ArrayLike,
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    """Predict [3] vectors, or [H,3] arrays for independent time horizons."""
+    ...
+
+def trajectory_spring_rotation(
+    rotation_wxyz: npt.ArrayLike,
+    angular_velocity: npt.ArrayLike,
+    *,
+    desired_rotation_wxyz: npt.ArrayLike,
+    half_life: float,
+    dt: npt.ArrayLike,
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    """Predict WXYZ rotation and spatial angular velocity at one or H times."""
+    ...
+
 class SkeletonTree:
     """Read-only skeleton hierarchy and local bind transforms."""
 

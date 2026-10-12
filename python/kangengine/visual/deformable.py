@@ -66,7 +66,11 @@ class SkinnedSurfaceAsset:
     def from_fbx(
         cls, skeleton_tree: SkeletonTree, mesh_info: FBXSkinnedMeshInfo
     ) -> SkinnedSurfaceAsset:
-        """Convert one imported FBX skinned mesh without reading the file again."""
+        """Convert one imported FBX mesh; the loader already baked bind coordinates.
+
+        To use a different compatible skeleton, pass it as ``skeleton_tree`` to
+        ``FBXLoader.load_skinned_meshes`` first, so bone indices match this tree.
+        """
         positions = np.asarray(mesh_info.vertices, np.float32)
         indices = np.asarray(mesh_info.mesh_data.indices, np.int32)
         normals = np.asarray(mesh_info.normals, np.float32)

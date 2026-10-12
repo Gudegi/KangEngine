@@ -2,6 +2,7 @@
 #define _SKELETON_MATH_HPP_
 
 #include "skeleton_state.hpp"
+#include "quaternion_math.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>

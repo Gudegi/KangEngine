@@ -783,6 +783,9 @@ mimickit = [
 mimickit-full = [
     { name = "gymnasium" },
 ]
+motion-matching = [
+    { name = "scipy" },
+]
 terrain = [
     { name = "warp-lang" },
 ]
@@ -814,6 +817,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.26" },
     { name = "nvidia-cuda-runtime", marker = "sys_platform == 'linux'", specifier = "==13.0.96" },
     { name = "pyyaml", specifier = ">=6.0" },
+    { name = "scipy", marker = "extra == 'motion-matching'", specifier = ">=1.13" },
     { name = "sphinx", marker = "extra == 'docs'", specifier = ">=8" },
     { name = "sphinx-autodoc-typehints", marker = "extra == 'docs'", specifier = ">=3" },
     { name = "sphinx-copybutton", marker = "extra == 'docs'", specifier = ">=0.5" },
@@ -822,7 +826,7 @@ requires-dist = [
     { name = "torch", specifier = ">=1.9.1" },
     { name = "warp-lang", marker = "extra == 'terrain'", specifier = ">=1.16,<2.0" },
 ]
-provides-extras = ["terrain", "docs", "mimickit", "mimickit-full"]
+provides-extras = ["motion-matching", "terrain", "docs", "mimickit", "mimickit-full"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "ruff", specifier = ">=0.16.1" }]

@@ -1055,8 +1055,10 @@ void App::renderShortcutHelp() {
         section("Camera");
         shortcut("Left drag", "Orbit Camera");
         shortcut("Right drag", "Look Around");
-        shortcut("W / S", "Move Up / Down");
-        shortcut("A / D", "Move Left / Right");
+        if (_cameraKeyboardEnabled) {
+            shortcut("W / S", "Move Up / Down");
+            shortcut("A / D", "Move Left / Right");
+        }
         shortcut("Mouse wheel", "Dolly Camera");
 
         section("Interaction");
@@ -1933,7 +1935,7 @@ void App::processInput() {
         return;
 
     // look at specifc target or // look at forward direction
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+    if (_cameraKeyboardEnabled && glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
         if (_io->isMouseLeftClicked == true) {
             glm::vec3 nextCameraPos = cameraPos + cameraSpeed * cameraUp;
             glm::vec3 nextCameraFront =
@@ -1954,7 +1956,7 @@ void App::processInput() {
         }
         _camera.setCameraPos(cameraPos);
     }
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+    if (_cameraKeyboardEnabled && glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
         if (_io->isMouseLeftClicked == true) {
             glm::vec3 nextCameraPos = cameraPos - cameraSpeed * cameraUp;
             glm::vec3 nextCameraFront = _camera.getTargetPos() - nextCameraPos;
@@ -1971,7 +1973,7 @@ void App::processInput() {
         }
         _camera.setCameraPos(cameraPos);
     }
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+    if (_cameraKeyboardEnabled && glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
         if (_io->isMouseLeftClicked == true) {
             cameraPos -= cameraSpeed * cameraRight;
         } else {
@@ -1983,7 +1985,7 @@ void App::processInput() {
         }
         _camera.setCameraPos(cameraPos);
     }
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+    if (_cameraKeyboardEnabled && glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
         if (_io->isMouseLeftClicked == true) {
             cameraPos += cameraSpeed * cameraRight;
         } else {
@@ -2086,6 +2088,14 @@ bool App::shouldBlockMouseInput() const {
         return true;
     }
     return ImGui::GetIO().WantCaptureMouse && !isEditorViewportInputActive();
+}
+
+bool App::isKeyboardInputCaptured() const {
+    if (_hideUI || !ImGui::GetCurrentContext())
+        return false;
+    const auto& io = ImGui::GetIO();
+    return io.WantTextInput ||
+           (io.WantCaptureKeyboard && !isEditorViewportInputActive());
 }
 
 glm::vec2 App::getMouseNDC() const {

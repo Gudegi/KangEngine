@@ -1,6 +1,7 @@
 """Keyboard and standard gamepad input facades."""
 
 from .gamepad import Gamepad, GamepadState
+from .locomotion import LocomotionInput
 
 
 class Keyboard:
@@ -31,12 +32,15 @@ class Input:
 
 
 from .gamepad_visualizer import GamepadVisualizer
+from .keyboard_visualizer import KeyboardVisualizer
 
 
 __all__ = [
     "Gamepad",
     "GamepadState",
     "GamepadVisualizer",
+    "KeyboardVisualizer",
     "Input",
     "Keyboard",
+    "LocomotionInput",
 ]
