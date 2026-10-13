@@ -233,8 +233,13 @@ class WalkingFeatures:
         config,
         trajectory_positions,
         trajectory_directions,
+        joint_positions=None,
+        joint_velocities=None,
+        skeleton_tree=None,
+        reference_position=None,
+        reference_rotation_wxyz=None,
     ):
-        """Combine the cached pose with a desired trajectory into raw features.
+        """Combine a live pose or an explicitly sampled clip with a trajectory.
 
         Args:
             pose_features: Full-clip pose cache [F,P] from build_clip().
@@ -243,6 +248,11 @@ class WalkingFeatures:
             trajectory_positions: Displacements [H,3] in reference-frame meters.
             trajectory_directions: Directions [H,3] in the same frame, one per
                 horizon; planar projections must be nonzero and are normalized here.
+            joint_positions: World joint positions [J,3] in meters. None uses the clip cache.
+            joint_velocities: World joint velocities [J,3] in m/s, required with positions.
+            skeleton_tree: Joint names/order of supplied positions and velocities.
+            reference_position: World reference origin [3] in meters.
+            reference_rotation_wxyz: Reference-to-world rotation [4].
 
         Returns:
             Raw features [D] in describe() block order, before DB normalization.
@@ -265,8 +275,60 @@ class WalkingFeatures:
             )
         return np.concatenate(
             (
-                _interpolate(pose_features, frame),
+                _interpolate(pose_features, frame)
+                if joint_positions is None
+                else self.encode_pose(
+                    joint_positions,
+                    joint_velocities,
+                    skeleton_tree=skeleton_tree,
+                    config=config,
+                    reference_position=reference_position,
+                    reference_rotation_wxyz=reference_rotation_wxyz,
+                ),
                 positions[:, planar].reshape(-1),
                 (directions / lengths).reshape(-1),
+            )
+        )
+
+    @staticmethod
+    def encode_pose(
+        joint_positions,
+        joint_velocities,
+        *,
+        skeleton_tree,
+        config,
+        reference_position,
+        reference_rotation_wxyz,
+    ):
+        """Encode current joint positions and velocities in the DB reference frame.
+
+        Args:
+            joint_positions: World positions [J,3] in meters, in skeleton order.
+            joint_velocities: World linear velocities [J,3] in m/s, in skeleton order.
+            skeleton_tree: Joint names/order of the supplied arrays.
+            config: Feature joints and ground-plane axes used by the database.
+            reference_position: World origin [3] in meters; height is projected to zero.
+            reference_rotation_wxyz: Unit reference-to-world rotation [4].
+
+        Returns:
+            Raw position/velocity features [P], before normalization and weights.
+        """
+        positions = np.asarray(joint_positions)
+        velocities = np.asarray(joint_velocities)
+        shape = (skeleton_tree.num_joints(), 3)
+        if positions.shape != shape or velocities.shape != shape:
+            raise ValueError(f"joint positions and velocities must have shape {shape}")
+        origin = np.array(reference_position, dtype=np.float64, copy=True)
+        origin["XYZ".index(config.up_axis)] = 0.0
+        position_ids = [skeleton_tree.index(name) for name in config.position_joints]
+        velocity_ids = [skeleton_tree.index(name) for name in config.velocity_joints]
+        return np.concatenate(
+            (
+                quat_wxyz_rotate_numpy(
+                    reference_rotation_wxyz, positions[position_ids] - origin, inverse=True
+                ).ravel(),
+                quat_wxyz_rotate_numpy(
+                    reference_rotation_wxyz, velocities[velocity_ids], inverse=True
+                ).ravel(),
             )
         )

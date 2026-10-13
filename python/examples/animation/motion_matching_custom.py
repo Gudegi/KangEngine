@@ -69,9 +69,7 @@ def main():
     def query(current: animation.MotionMatchingController):
         # Convert world displacements/directions to the query frame.
         heading = current.reference_rotation_wxyz
-        return database.make_query(
-            current.motion_index,
-            current.time,
+        return current.make_query(
             desired_height=0.95,
             trajectory_positions=quat_wxyz_rotate_numpy(
                 heading, positions, inverse=True

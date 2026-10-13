@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import math
+from collections import deque
+from operator import index
 
 import numpy as np
 import numpy.typing as npt
@@ -32,6 +34,7 @@ class MotionMatchingController:
         search_interval: float = 0.15,
         continuation_bias: float = 0.01,
         transition_half_life: float = 0.1,
+        history_size: int = 10,
         search_backend: str = "native",
         root_placement=None,
     ) -> None:
@@ -42,6 +45,7 @@ class MotionMatchingController:
             search_interval: Positive time between searches, in seconds.
             continuation_bias: Nonnegative cost reduction favoring continuation.
             transition_half_life: Smoothing decay in seconds; zero disables it.
+            history_size: Output poses retained, including the current pose; at least 2.
             search_backend: "native" or the "python" reference search.
             root_placement: Optional callback (source_state, current_state) returning
                 a rigid (rotation_wxyz [4], translation [3] in meters) from source
@@ -56,6 +60,10 @@ class MotionMatchingController:
             raise ValueError("continuation_bias must be finite and nonnegative")
         if search_backend not in ("native", "python"):
             raise ValueError("search_backend must be 'native' or 'python'")
+        history_size = index(history_size)
+        if history_size < 2:
+            raise ValueError("history_size must be at least 2")
+        self._history = deque(maxlen=history_size)
         self._search_backend = search_backend
         self.root_placement = root_placement
         self.database = database
@@ -85,6 +93,16 @@ class MotionMatchingController:
         self._elapsed_time = 0.0
         self._last_match: MotionMatch | None = None
         self._transition_count = 0
+        state = self.state
+        self._history.clear()
+        self._history.append(state)
+        self._joint_positions = state.compute_global_matrices()[:, :3, 3].copy()
+        self._joint_velocities = np.zeros_like(self._joint_positions)
+
+    @property
+    def history(self) -> tuple[_ke.animation.SkeletonState, ...]:
+        """Recent output poses, oldest first."""
+        return tuple(self._history)
 
     @property
     def root_placement(self):
@@ -268,6 +286,29 @@ class MotionMatchingController:
         """Sample an independent native pose with accumulated root placement."""
         return self._player.state
 
+    def make_query(self, **feature_inputs) -> np.ndarray:
+        """Build a query from output positions and backward-difference velocities.
+
+        Args:
+            **feature_inputs: Builder-specific goals, such as reference-frame
+                trajectory_positions/directions. The builder must accept joint_positions,
+                joint_velocities, skeleton_tree, reference_position, and
+                reference_rotation_wxyz, as WalkingFeatures does.
+
+        Returns:
+            Normalized, weighted query features [D].
+        """
+        return self.database.make_query(
+            self.motion_index,
+            self.time,
+            joint_positions=self._joint_positions,
+            joint_velocities=self._joint_velocities,
+            skeleton_tree=self.database.motions[0].skeleton_tree,
+            reference_position=self.reference_position,
+            reference_rotation_wxyz=self.reference_rotation_wxyz,
+            **feature_inputs,
+        )
+
     def _planar_vector(self, value: npt.ArrayLike, name: str) -> np.ndarray:
         result = np.asarray(value, dtype=np.float32)
         if result.shape != (3,) or not np.isfinite(result).all():
@@ -285,9 +326,7 @@ class MotionMatchingController:
         local_directions = quat_wxyz_rotate_numpy(
             heading, np.broadcast_to(facing, local_positions.shape), inverse=True
         )
-        return self.database.make_query(
-            self.motion_index,
-            self.time,
+        return self.make_query(
             trajectory_positions=local_positions,
             trajectory_directions=local_directions,
         )
@@ -374,6 +413,8 @@ class MotionMatchingController:
             raise TypeError("query_provider must be callable")
 
         remaining = float(dt)
+        previous_positions = self._joint_positions
+        advanced = 0.0
         while remaining > 1e-12:
             duration = self._player.duration
             if self._until_search <= 1e-10 or self.time >= duration - 1e-10:
@@ -385,4 +426,10 @@ class MotionMatchingController:
             self._elapsed_time += advance
             self._until_search -= advance
             remaining -= advance
+            advanced += advance
+            state = self.state
+            self._joint_positions = state.compute_global_matrices()[:, :3, 3].copy()
+            self._joint_velocities = (self._joint_positions - previous_positions) / advanced
+        if advanced > 0:
+            self._history.append(state)
         return self.state

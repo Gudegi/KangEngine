@@ -698,6 +698,8 @@ void bind_animation(py::module& m) {
              "rotations.")
         .def("num_joints", &SkeletonTree::numJoints,
              "Return the number of joints/nodes.")
+        .def("index", &SkeletonTree::index, py::arg("name"),
+             "Return the joint index for a name.")
         .def("node_name", &SkeletonTree::nodeName, py::arg("index"),
              "Return a joint name by index.")
         .def("parent_index", &SkeletonTree::parentIndex, py::arg("index"),

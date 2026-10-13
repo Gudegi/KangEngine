@@ -7,12 +7,88 @@ import numpy as np
 import pytest
 
 from kangengine import animation
+from kangengine.animation.matching import make_walking_query
 from kangengine.utils.math import (
     quat_wxyz_multiply_numpy,
     quat_wxyz_rotate_numpy,
     quat_wxyz_to_rotation_vector_numpy,
 )
 from test_motion_matching import make_config, make_motion
+
+
+@pytest.mark.parametrize("filtered", [False, True])
+def test_walking_query_preserves_output_pose_and_velocity_across_transition(filtered):
+    motions = [
+        make_motion(animated=True, velocity=(0.7, 0, 0)),
+        make_motion(animated=True, velocity=(0, 1.5, 0)),
+    ]
+    db = (
+        filtered_database(motions)
+        if filtered
+        else animation.MotionMatchingDatabase.from_motions(motions, config=make_config())
+    )
+    controller = animation.MotionMatchingController(db, transition_half_life=0.2)
+    controller.reset(time=0.23)
+
+    def pose_query():
+        query = make_walking_query(
+            controller, desired_velocity=(1, 0, 0), facing_angle=0, half_life=0.2
+        )
+        return (query / db.weights * db.scale + db.mean)[:15]
+
+    before = pose_query()
+    controller._place(1, 0.61, reset=False)
+    np.testing.assert_allclose(pose_query(), before, atol=2e-5)
+    cached = db._clips[1].pose_features[round(controller.time * motions[1].fps())]
+    assert np.linalg.norm(pose_query() - cached) > 0.1
+
+    previous_positions = controller.state.compute_global_matrices()[:, :3, 3]
+    controller._until_search = 1.0
+    controller.step(dt=0.07, desired_velocity=(1, 0, 0))
+    query = pose_query()
+    heading = controller.reference_rotation_wxyz
+    positions = controller.state.compute_global_matrices()[:, :3, 3]
+    origin = controller.reference_position.copy()
+    origin[2] = 0
+    np.testing.assert_allclose(
+        query[:6].reshape(2, 3),
+        quat_wxyz_rotate_numpy(heading, positions[[1, 2]] - origin, inverse=True),
+        atol=2e-6,
+    )
+    measured = (positions - previous_positions) / 0.07
+    np.testing.assert_allclose(
+        query[6:].reshape(3, 3),
+        quat_wxyz_rotate_numpy(heading, measured[[1, 2, 0]], inverse=True),
+        atol=2e-6,
+    )
+
+
+def test_external_world_positions_and_velocities_encode_in_joint_order():
+    tree = animation.SkeletonTree(
+        names=["root", "joint", "tip"],
+        parents=[-1, 0, 1],
+        local_translations=np.array([[0, 0, 0], [1, 0, 0], [1, 0, 0]]),
+        local_rotations_wxyz=np.tile((1, 0, 0, 0), (3, 1)),
+    )
+    quarter_turn = (np.sqrt(0.5), 0, 0, np.sqrt(0.5))
+    state = animation.SkeletonState.from_rotation_and_root_translation(
+        tree, [quarter_turn, quarter_turn, (1, 0, 0, 0)], (0, 0, 1)
+    )
+    encoded = animation.WalkingFeatures.encode_pose(
+        state.compute_global_matrices()[:, :3, 3],
+        [(1, 0, 0), (0, 0, 0), (0, -1, 2)],
+        skeleton_tree=tree,
+        config=make_config(
+            position_joints=("tip",), velocity_joints=("joint", "tip", "root")
+        ),
+        reference_position=(0, 0, 0),
+        reference_rotation_wxyz=(1, 0, 0, 0),
+    )
+    np.testing.assert_allclose(
+        encoded.reshape(-1, 3),
+        [(-1, 1, 1), (0, 0, 0), (0, -1, 2), (1, 0, 0)],
+        atol=1e-6,
+    )
 
 
 def noisy_motion(fps=60):

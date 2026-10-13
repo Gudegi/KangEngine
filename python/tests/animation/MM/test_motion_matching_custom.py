@@ -152,9 +152,7 @@ class MotionMatchingCustomizationTests(unittest.TestCase):
                 0,
             )
             directions = np.tile((1, 0, 0), (len(positions), 1))
-            return database.make_query(
-                controller.motion_index,
-                controller.time,
+            return controller.make_query(
                 trajectory_positions=quat_wxyz_rotate_numpy(
                     heading, positions, inverse=True
                 ),

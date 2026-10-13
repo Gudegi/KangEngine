@@ -76,7 +76,7 @@ def make_walking_query(
     facing_angle: float,
     half_life: float,
 ) -> np.ndarray:
-    """Encode a predicted walking trajectory in the current reference frame.
+    """Encode the current output pose and predicted trajectory in the reference frame.
 
     Use with step_with_query to refresh prediction at each search.
 
@@ -96,9 +96,7 @@ def make_walking_query(
         half_life=half_life,
     )
     heading = controller.reference_rotation_wxyz
-    return controller.database.make_query(
-        controller.motion_index,
-        controller.time,
+    return controller.make_query(
         trajectory_positions=quat_wxyz_rotate_numpy(
             heading, positions[1:] - controller.reference_position, inverse=True
         ),

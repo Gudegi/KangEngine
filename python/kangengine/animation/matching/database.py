@@ -606,7 +606,10 @@ class MotionMatchingDatabase:
             time: Clip-local seconds, including the unsearchable tail.
             **feature_inputs: Builder-specific inputs. Walking uses
                 trajectory_positions/directions [H,3] in the reference frame;
-                positions are relative displacements in meters.
+                positions are relative displacements in meters. Pass world-space
+                joint_positions/joint_velocities [J,3], skeleton_tree, and
+                reference_position/reference_rotation_wxyz to use external state
+                instead of sampling the source clip cache.
 
         Returns:
             A normalized, weighted feature vector [D] ready for search().
