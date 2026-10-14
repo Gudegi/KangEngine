@@ -25,10 +25,10 @@ def main(*, ui=False):
                               transform_source=ke.render.TransformSource.EXTERNAL_BUFFER)
     transforms = np.tile(np.eye(4, dtype=np.float32), (3, 1, 1))
     batch.set_transform_buffer(transforms)
-    app.render_frame_once()
+    app.update_and_draw()
     assert renderer.latest_frame_profile() is None
     renderer.set_profiler_enabled(enabled=True)
-    app.render_frame_once()
+    app.update_and_draw()
     frame: ke.render.FrameProfile = renderer.latest_frame_profile()
     supported = renderer.profiler_capabilities.pass_timestamps
     assert frame is not None and frame.revision == 0
@@ -67,18 +67,18 @@ def main(*, ui=False):
             assert not pending["finalized"] and pending["revision"] == 0
             assert any(s["status"] == "pending" and s["duration_ms"] is None for s in pending["samples"])
     for _ in range(3):
-        app.render_frame_once()
+        app.update_and_draw()
     assert frame.frame_index == original
     assert renderer.latest_frame_profile().frame_index > original
     assert isinstance(frame.samples, tuple)
     renderer.set_profiler_enabled(enabled=False)
     retained = renderer.latest_frame_profile().frame_index
-    app.render_frame_once()
+    app.update_and_draw()
     assert renderer.latest_frame_profile().frame_index == retained
     for _ in range(120):
         if all(f.finalized for f in renderer.frame_profile_history()):
             break
-        app.render_frame_once()
+        app.update_and_draw()
         time.sleep(0.001)
     completed = renderer.frame_profile_history()[0]
     assert completed.finalized
@@ -143,7 +143,7 @@ def main(*, ui=False):
             else:
                 assert math.isclose(actual.mean_ms, exported["mean_ms"], rel_tol=1e-9)
     renderer.set_profiler_enabled(enabled=True)
-    app.render_frame_once()
+    app.update_and_draw()
     assert renderer.latest_frame_profile().capture_id == frame.capture_id + 1
     assert renderer.profile_summary().frame_count == 1
     print("PASS: renderer profiler snapshots, asynchronous GPU passes, toggle and JSON export")

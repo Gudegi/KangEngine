@@ -264,7 +264,12 @@ class App {
 
     //////
     void start();
-    void renderFrameOnce();
+    // Full application iteration; start() uses this same path.
+    void updateAndDraw();
+    // Poll window events and handle input without scheduling updates.
+    void processEvents();
+    // Run render callbacks, capture, and present without polling or updating.
+    void drawFrame();
     bool shouldClose();
     void requestClose();
     virtual void setup() {}     // 처음에 사용
@@ -311,6 +316,8 @@ class App {
     void setSimulationPaused(bool paused);
     bool isSimulationPaused() const;
     void requestSimulationStep();
+    // External simulation loops consume a paused single-step request once.
+    bool consumeSimulationStep();
     void setSimulationHotkeysEnabled(bool enabled);
     bool getSimulationHotkeysEnabled() const {
         return _simulationHotkeysEnabled;
@@ -323,6 +330,10 @@ class App {
     bool isKeyboardInputCaptured() const;
 
   private:
+    void executeFrame(bool update);
+    double _lastUpdateTime = -1.0;
+    double _lastEventTime = -1.0;
+    float _eventDeltaTime = 0.0f;
     bool _cameraKeyboardEnabled = true;
     float _renderHz = 0.0f;
     FixedStepClock _fixedStepClock;

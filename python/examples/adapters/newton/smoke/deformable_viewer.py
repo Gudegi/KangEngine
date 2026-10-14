@@ -1,6 +1,8 @@
 """Verify Newton CPU particle and cloth-surface visualization."""
 
 from kangengine.adapters.newton import ViewerKE
+import kangengine as ke
+import numpy as np
 
 
 def main():
@@ -56,6 +58,33 @@ def main():
             raise RuntimeError("Newton cloth surface was not registered")
         if "/model/particle_constraints" not in viewer._lines:
             raise RuntimeError("Newton particle constraints were not registered")
+
+        colors = np.zeros((model.tri_count, 3), dtype=np.float32)
+        colors[:model.tri_count // 2, 0] = 1.0
+        colors[model.tri_count // 2:, 2] = 1.0
+        model.tri_color.assign(colors)
+        model.tri_opacity.assign(np.full(model.tri_count, 0.4, dtype=np.float32))
+        viewer.log_state(state)
+        viewer.end_frame()
+        visible = [batch for batch in viewer._dynamic_meshes.values()
+                   if batch.view.component.visible]
+        assert len(visible) == 2
+        assert not viewer._dynamic_meshes["/model/triangles"].view.component.visible
+        for batch in visible:
+            assert batch.view.component.alpha_mode == ke.render.AlphaMode.BLEND
+            assert abs(batch.view.get_base_color().w - 0.4) < 1e-6
+
+        # Moving live vertices must not change the registered source mesh.
+        source = visible[0].view.prim.get_mesh_component().mesh_data
+        original_x = source.vertices[0].x
+        cached_colors = [batch.colors for batch in visible]
+        points = state.particle_q.numpy().copy()
+        points[:, 0] += 0.1
+        state.particle_q.assign(points)
+        viewer.log_state(state)
+        viewer.end_frame()
+        assert source.vertices[0].x == original_x
+        assert all(batch.colors is cached for batch, cached in zip(visible, cached_colors))
         print("PASS: Newton particles, cloth, and soft surfaces render")
     finally:
         viewer.close()

@@ -20,7 +20,7 @@ def main():
             assert component.resource_handle != ke.scene.InvalidResourceHandle
             assert component.mesh_data is not None
             assert prim.get_render_component() is not None
-        app.render_frame_once()
+        app.draw_frame()
         instance.remove_visual()
         assert app.scene.get_prim_at_path("/terrain/chunk_0") is None
     instance.remove()

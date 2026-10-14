@@ -52,8 +52,9 @@ class _CaptureViewer:
                 colors,
                 materials,
                 hidden=False,
+                opacities=None,
             ):
-                del colors, materials
+                del colors, materials, opacities
                 if xforms is not None and not hidden:
                     self.instances[str(name)] = (
                         str(mesh),

@@ -90,23 +90,24 @@ def main() -> None:
         renderer.set_profiler_enabled(enabled=True)
     elapsed = []
     for i in range(args.warmup + args.samples):
+        app.process_events()
         start = time.perf_counter()
         if batch is not None:
             transforms[:, 3, 1] = math.sin(i * 0.03) * 0.1
             batch.set_transform_buffer(transforms)
-        app.render_frame_once()
+        app.draw_frame()
         if i >= args.warmup:
             elapsed.append((time.perf_counter() - start) * 1000)
 
     result = {"schema_version": 1, "metadata": vars(args) | {
         "output": str(args.output), "python": platform.python_version(),
         "headless_mode": "hidden_glfw" if not args.windowed else "windowed",
-        "pacing": "direct_render_frame_once", "renderer_settings": "engine_defaults",
+        "pacing": "direct_draw_frame", "renderer_settings": "engine_defaults",
         "gpu_timing": "pass_timestamps" if renderer.profiler_capabilities.pass_timestamps else "unsupported",
         "gpu_external_timestamps": renderer.profiler_capabilities.external_timestamps,
         "workload": "cube_grid",
         "measured_at": datetime.now(timezone.utc).isoformat(),
-        "wall_coverage": "fixture_update_and_render_frame_once",
+        "wall_coverage": "fixture_update_and_draw_frame",
         "external_cpu_generation": "outside_native_frame",
     }, "wall_ms": {"mean": statistics.mean(elapsed), "median": statistics.median(elapsed),
                    "p95": sorted(elapsed)[math.ceil(len(elapsed) * 0.95) - 1],
@@ -137,7 +138,8 @@ def main() -> None:
         while drain_frames < 240 and time.monotonic() < deadline:
             if all(f.finalized for f in renderer.frame_profile_history()):
                 break
-            app.render_frame_once()
+            app.process_events()
+            app.draw_frame()
             drain_frames += 1
             time.sleep(0.001)
         result["metadata"]["gpu_drain_frames"] = drain_frames

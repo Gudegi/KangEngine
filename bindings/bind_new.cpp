@@ -1150,6 +1150,8 @@ py::class_<glm::vec3>(m, "Vec3")
              py::arg("paused"))
         .def("is_simulation_paused", &App::isSimulationPaused)
         .def("request_simulation_step", &App::requestSimulationStep)
+        .def("consume_simulation_step", &App::consumeSimulationStep,
+             "Consume one paused step request for an externally stepped loop.")
         .def("set_simulation_hotkeys_enabled",
              &App::setSimulationHotkeysEnabled, py::arg("enabled"),
              "Enable Enter play/pause and Space pause/single-step shortcuts.")
@@ -1179,8 +1181,14 @@ py::class_<glm::vec3>(m, "Vec3")
             py::arg("face_paths"),
             "Set a skybox from six cubemap face image paths.")
         .def("start", &App::start, "Enter the application render loop.")
-        .def("render_frame_once", &App::renderFrameOnce,
-             "Render and process one frame without entering the main loop.")
+        .def("update_and_draw", &App::updateAndDraw,
+             "Process events, run pre_update and due fixed_update callbacks, "
+             "then draw and present one frame.")
+        .def("process_events", &App::processEvents,
+             "Poll window events and handle input without running update callbacks.")
+        .def("draw_frame", &App::drawFrame,
+             "Run pre_render/render/post_render, capture and present the current "
+             "state without polling events or scheduling updates.")
         .def(
             "read_rgb_pixels",
             [](App& self, bool flipY) {

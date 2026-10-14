@@ -203,7 +203,8 @@ class _KangEngineViewer(App):
             self.visual_bridge.sync()
 
     def render_once(self):
-        self.render_frame_once()
+        self.process_events()
+        self.draw_frame()
 
     def draw_lines(self, slot, starts, ends, colors, line_width):
         self.setup_viewer()

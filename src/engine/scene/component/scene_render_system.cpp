@@ -270,6 +270,16 @@ void SceneRenderSystem::setExternalBuffer(RenderComponent& component,
     _renderer->setRenderableExternalBuffer(registration.handle, desc);
 }
 
+void SceneRenderSystem::setInstanceColors(
+    RenderComponent& component, const std::vector<glm::vec4>& colors) {
+    const auto& registration = requireRegistration(component);
+    if (component.transformSource() != TransformSource::ExternalBuffer)
+        throw std::runtime_error(
+            "Instance colors require an ExternalBuffer renderable; "
+            "use Prim display color for SceneGraph objects");
+    _renderer->setRenderableColors(registration.handle, colors);
+}
+
 void SceneRenderSystem::updateInstances(
     RenderComponent& component, const std::vector<glm::mat4>& transforms,
     const std::vector<glm::vec4>* colors) {

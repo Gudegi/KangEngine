@@ -303,10 +303,25 @@ Backend::Texture* MeshInstancer::alphaMaskTexture() const {
 }
 
 void MeshInstancer::setColors(const std::vector<glm::vec4>& colors) {
-    _colors = colors;
+    const size_t count = _hasExternalBufferDesc
+                             ? static_cast<size_t>(_externalBufferDesc.count)
+                             : (_hasDirectCudaTransforms ? _colors.size()
+                                                         : _transforms.size());
+    if (!colors.empty() && colors.size() != 1 && colors.size() != count)
+        throw std::invalid_argument(
+            "colors must be empty, length 1, or match the instance count");
+    if (colors.empty())
+        _colors.assign(count, glm::vec4(1.0f));
+    else if (colors.size() == 1)
+        _colors.assign(count, colors.front());
+    else
+        _colors = colors;
     _colorsDirty = true;
     _updateTransparency();
-    _uploadInstanceData(_transforms, _colors);
+    // Color-only updates must not overwrite device-owned transform data or
+    // change the visible instance count after culling.
+    if (!_colors.empty() && _colors.size() <= static_cast<size_t>(_allocatedInstances))
+        _colorVBO->setData(_colors.data(), sizeof(glm::vec4) * _colors.size());
 }
 
 void MeshInstancer::updateFromTransforms(

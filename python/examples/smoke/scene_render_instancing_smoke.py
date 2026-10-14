@@ -29,7 +29,7 @@ def main():
     assert first.prim.get_path() != second.prim.get_path()
 
     first.set_visible(False)
-    app.render_frame_once()
+    app.draw_frame()
     hidden_pick = app.ray_pick(ke.Vec3(-2.0, 0.0, 5.0), ke.Vec3(0.0, 0.0, -1.0))
     second_pick = app.ray_pick(ke.Vec3(2.0, 0.0, 5.0), ke.Vec3(0.0, 0.0, -1.0))
     assert not hidden_pick.hit
@@ -57,7 +57,7 @@ def main():
     gc.collect()
     assert transforms_ref() is not None
 
-    app.render_frame_once()
+    app.draw_frame()
     batch_pick = app.ray_pick(ke.Vec3(0.0, 0.0, 5.0), ke.Vec3(0.0, 0.0, -1.0))
     assert batch_pick.hit
     assert batch_pick.transform_source == ke.render.TransformSource.EXTERNAL_BUFFER

@@ -22,8 +22,8 @@ def load_newton():
     except ImportError as exc:
         raise NewtonUnavailableError(
             "The KangEngine Newton adapter requires Newton and Warp. "
-            "Install the tested viewer environment with 'newton==1.5.0', or "
-            "'newton[sim]==1.5.0' for the MuJoCo MJCF examples. Importing "
+            "Install the tested viewer environment with 'newton==1.6.1', or "
+            "'newton[sim]==1.6.1' for the MuJoCo MJCF examples. Importing "
             "kangengine itself does not require them."
         ) from exc
     return newton, warp

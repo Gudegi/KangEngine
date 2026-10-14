@@ -36,14 +36,16 @@ void FixedStepClock::requestSingleStep() {
         _singleStepRequested = true;
 }
 
+bool FixedStepClock::consumeSingleStep() {
+    const bool requested = _paused && _singleStepRequested;
+    _singleStepRequested = false;
+    return requested;
+}
+
 int FixedStepClock::advance(double wallDeltaSeconds) {
     if (_paused) {
         _accumulator = 0.0;
-        if (_singleStepRequested && _stepHz > 0.0) {
-            _singleStepRequested = false;
-            return 1;
-        }
-        return 0;
+        return _stepHz > 0.0 && consumeSingleStep() ? 1 : 0;
     }
 
     const double stepInterval = getStepInterval();

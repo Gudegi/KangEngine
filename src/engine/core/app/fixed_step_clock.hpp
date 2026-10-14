@@ -22,6 +22,7 @@ class FixedStepClock {
     void setPaused(bool paused);
     bool isPaused() const { return _paused; }
     void requestSingleStep();
+    bool consumeSingleStep();
 
     /// Return how many fixed updates are due for this rendered frame.
     int advance(double wallDeltaSeconds);

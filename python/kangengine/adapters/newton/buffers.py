@@ -77,11 +77,7 @@ def to_numpy(value, *, name: str, allow_cuda_readback: bool = False) -> np.ndarr
     return np.asarray(numpy_method())
 
 
-def rgba_array(colors, count: int, *, allow_cuda_readback: bool) -> np.ndarray:
-    if count == 0:
-        return np.empty((0, 4), dtype=np.float32)
-    if colors is None:
-        return np.ones((count, 4), dtype=np.float32)
+def _color_rows(colors, count: int, *, allow_cuda_readback: bool) -> np.ndarray:
     values = np.asarray(
         to_numpy(
             colors,
@@ -110,14 +106,66 @@ def rgba_array(colors, count: int, *, allow_cuda_readback: bool) -> np.ndarray:
             f"received shape {values.shape}"
         )
     values = values.reshape(-1, channels)
+    if len(values) not in (1, count):
+        raise ValueError(f"colors has {len(values)} entries; expected 1 or {count}")
+    return values
+
+
+def rgba_array(colors, count: int, *, allow_cuda_readback: bool) -> np.ndarray:
+    if count == 0:
+        return np.empty((0, 4), dtype=np.float32)
+    if colors is None:
+        return np.ones((count, 4), dtype=np.float32)
+    values = _color_rows(colors, count, allow_cuda_readback=allow_cuda_readback)
     if len(values) == 1 and count > 1:
         values = np.repeat(values, count, axis=0)
-    if len(values) != count:
-        raise ValueError(f"colors has {len(values)} entries; expected 1 or {count}")
-    if channels == 4:
+    if values.shape[1] == 4:
         return values
     alpha = np.ones((count, 1), dtype=np.float32)
     return np.concatenate((values, alpha), axis=1)
+
+
+def instance_rgba(
+    colors, opacities, count, *, previous=None, allow_cuda_readback=False
+):
+    """Merge appearance updates, returning previous itself when values match.
+
+    Inputs may be modified in place by Newton, so compare values rather than
+    producer identities. Omitted channels retain their prior values.
+    """
+    rgb = None
+    if colors is not None:
+        rows = _color_rows(colors, count, allow_cuda_readback=allow_cuda_readback)
+        rgb = np.broadcast_to(rows[:, :3], (count, 3))
+    alpha = None
+    if opacities is not None:
+        alpha = np.asarray(
+            to_numpy(
+                opacities, name="opacities", allow_cuda_readback=allow_cuda_readback
+            ),
+            dtype=np.float32,
+        ).reshape(-1)
+        if len(alpha) not in (1, count):
+            raise ValueError(f"opacities has {len(alpha)} entries; expected 1 or {count}")
+        alpha = np.broadcast_to(alpha, (count,))
+    if previous is not None and previous.shape == (count, 4):
+        if (
+            (rgb is None or np.array_equal(rgb, previous[:, :3]))
+            and (alpha is None or np.array_equal(alpha, previous[:, 3]))
+        ):
+            return previous
+    values = (
+        np.ones((count, 4), dtype=np.float32)
+        if previous is None
+        else np.broadcast_to(previous, (count, 4)).copy()
+    )
+    if rgb is not None:
+        values[:, :3] = rgb
+    if alpha is not None:
+        np.clip(alpha, 0.0, 1.0, out=values[:, 3])
+    if previous is not None and np.array_equal(values, previous):
+        return previous
+    return values
 
 
 def transform_array_to_torch_matrices(xforms, scales=None, out=None):

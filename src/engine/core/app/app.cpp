@@ -443,6 +443,8 @@ void App::start() {
 
     setup();
     _renderVariable->lastFrameTime = 0.0;
+    _lastUpdateTime = -1.0;
+    _lastEventTime = -1.0;
     _fixedStepClock.reset();
     GLFWwindow* window = _window.getGlfwWindow();
     while (!glfwWindowShouldClose(window)) {
@@ -463,7 +465,7 @@ void App::start() {
             glfwPollEvents();
             continue;
         }
-        renderFrameOnce();
+        updateAndDraw();
     }
     glfwDestroyWindow(window);
     glfwTerminate();
@@ -596,10 +598,29 @@ bool App::writeActiveSceneCameraPreviewPNG(int width, int height,
     return ok;
 }
 
-void App::renderFrameOnce() {
-    // TODO: Split frame orchestration into runFrame(). FixedStepClock and
-    // update callbacks belong there; renderFrameOnce() should become a
-    // render-only path without advancing simulation.
+void App::processEvents() {
+    if (shouldClose())
+        return;
+    {
+        auto scope = _graphicsDevice->profileContext()->cpuScope("event_poll");
+        glfwPollEvents();
+    }
+    if (shouldClose())
+        return;
+    const double now = glfwGetTime();
+    _eventDeltaTime = _lastEventTime >= 0.0
+                          ? static_cast<float>(now - _lastEventTime)
+                          : 0.0f;
+    _lastEventTime = now;
+    processInput();
+    processSimulationHotkeys();
+}
+
+void App::updateAndDraw() { executeFrame(true); }
+
+void App::drawFrame() { executeFrame(false); }
+
+void App::executeFrame(bool update) {
     auto smoothMetric = [](float& metric, double valueSeconds) {
         const float valueMs = static_cast<float>(valueSeconds * 1000.0);
         metric = metric <= 0.0f ? valueMs : metric * 0.9f + valueMs * 0.1f;
@@ -630,6 +651,8 @@ void App::renderFrameOnce() {
             glfwGetWindowAttrib(window, GLFW_VISIBLE) ? "true" : "false");
         profile.setMetadata("render_hz", std::to_string(_renderHz));
         profile.setMetadata("pacing_coverage", "outside_frame_excluded");
+        profile.setMetadata("frame_execution",
+                            update ? "update_and_draw" : "draw_frame");
         profile.setMetadata("tone_map_mode",
                             std::to_string(static_cast<int>(
                                 getRenderer().settings().toneMapMode)));
@@ -659,18 +682,27 @@ void App::renderFrameOnce() {
         profile.setMetadata("frame_interval_ms",
                             std::to_string(frameDelta * 1000.0));
 
-    processInput();
-    processSimulationHotkeys();
     const double updateStart = glfwGetTime();
-    {
-        auto scope = profile.cpuScope("simulation/pre_update");
-        this->preUpdate();
-    }
-    const int fixedUpdateCount = _fixedStepClock.advance(frameDelta);
-    const double fixedDt = _fixedStepClock.getStepInterval();
-    for (int i = 0; i < fixedUpdateCount; ++i) {
-        auto scope = profile.cpuScope("simulation/fixed_update");
-        this->fixedUpdate(fixedDt);
+    int fixedUpdateCount = 0;
+    if (update) {
+        processEvents();
+        if (shouldClose())
+            return;
+        const double now = glfwGetTime();
+        const double updateDelta =
+            _lastUpdateTime >= 0.0 ? now - _lastUpdateTime : 0.0;
+        _lastUpdateTime = now;
+        _renderVariable->deltaTime = static_cast<float>(updateDelta);
+        {
+            auto scope = profile.cpuScope("simulation/pre_update");
+            this->preUpdate();
+        }
+        fixedUpdateCount = _fixedStepClock.advance(updateDelta);
+        const double fixedDt = _fixedStepClock.getStepInterval();
+        for (int i = 0; i < fixedUpdateCount; ++i) {
+            auto scope = profile.cpuScope("simulation/fixed_update");
+            this->fixedUpdate(fixedDt);
+        }
     }
     if (profile.active())
         profile.setMetadata("fixed_update_count",
@@ -841,16 +873,12 @@ void App::renderFrameOnce() {
         _videoRecordingToggleRequested = false;
     }
     const double renderEnd = glfwGetTime();
-    // End the ordered GL interval before swap/VSync and event polling.
+    // End the ordered GL interval before swap/VSync.
     gpuFrame.reset();
 
     {
         auto scope = profile.cpuScope("present");
         glfwSwapBuffers(window);
-    }
-    {
-        auto scope = profile.cpuScope("event_poll");
-        glfwPollEvents();
     }
     const double frameEnd = glfwGetTime();
     ++_frameIndex;
@@ -907,6 +935,8 @@ void App::setSimulationPaused(bool paused) {
 bool App::isSimulationPaused() const { return _fixedStepClock.isPaused(); }
 
 void App::requestSimulationStep() { _fixedStepClock.requestSingleStep(); }
+
+bool App::consumeSimulationStep() { return _fixedStepClock.consumeSingleStep(); }
 
 void App::setSimulationHotkeysEnabled(bool enabled) {
     _simulationHotkeysEnabled = enabled;
@@ -1911,7 +1941,7 @@ void App::processInput() {
         return;
     }
     float cameraSpeed =
-        static_cast<float>(_cameraMoveSpeed * _renderVariable->deltaTime);
+        static_cast<float>(_cameraMoveSpeed * _eventDeltaTime);
     float scaleDistance = _camera.getCamToLookDistance();
     glm::vec3 cameraPos = _camera.getCameraPos();
     glm::vec3 cameraFront = _camera.getCameraLookDir();

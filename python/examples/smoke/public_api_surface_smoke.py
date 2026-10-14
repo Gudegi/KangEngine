@@ -21,6 +21,10 @@ def main() -> None:
     assert ke.App is app_application.App
     assert ke.App.__module__ == "kangengine"
     assert hasattr(ke.App, "set_video_recording_resolution")
+    for name in ("update_and_draw", "process_events", "draw_frame",
+                 "consume_simulation_step"):
+        assert callable(getattr(ke.App, name))
+    assert not hasattr(ke.App, "render_frame_once")
     assert not hasattr(ke, "NativeApp")
     assert "NativeApp" not in ke.app.__all__
     assert ke.SceneContext is app_application.SceneContext

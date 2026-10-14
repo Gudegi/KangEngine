@@ -59,6 +59,8 @@ class SceneRenderSystem {
                     int slot);
     void setExternalBuffer(RenderComponent& component,
                            const ExternalBufferDesc& desc);
+    void setInstanceColors(RenderComponent& component,
+                           const std::vector<glm::vec4>& colors);
     void updateInstances(RenderComponent& component,
                          const std::vector<glm::mat4>& transforms,
                          const std::vector<glm::vec4>* colors = nullptr);

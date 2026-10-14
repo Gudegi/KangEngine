@@ -19,7 +19,12 @@ from ._dependency import (
     load_picking,
     load_viewer_base,
 )
-from .buffers import rgba_array, to_numpy, transform_array_to_warp_matrices
+from .buffers import (
+    instance_rgba,
+    rgba_array,
+    to_numpy,
+    transform_array_to_warp_matrices,
+)
 from .conventions import transform_array_to_glm_matrices
 from .geometry import compute_vertex_normals, mesh_data_from_arrays
 
@@ -43,12 +48,15 @@ class _InstanceBatch:
     mesh_name: str
     count: int
     transform_buffer: object | None = None
+    colors: np.ndarray | None = None
+    cuda: bool = False
 
 
 @dataclass(slots=True)
 class _DynamicMeshBatch:
     view: object
     indices: np.ndarray
+    colors: np.ndarray | None = None
 
 
 class _NewtonApp(App):
@@ -123,12 +131,6 @@ class _NewtonApp(App):
             )
         imgui.end()
 
-    def fixed_update(self, fixed_dt):
-        del fixed_dt
-        viewer = self.viewer
-        if viewer is not None and self.is_simulation_paused():
-            viewer._pending_single_steps += 1
-
     def on_ray_picked(self, result):
         self.viewer._select_from_ray_pick(result)
 
@@ -167,8 +169,8 @@ class ViewerKE(_ViewerBase):
         self.allow_cuda_readback = bool(allow_cuda_readback)
         self._closed = False
         self._frame_version = 0
-        self._pending_single_steps = 0
         self._meshes: dict[str, object] = {}
+        self._mesh_colors: dict[str, np.ndarray] = {}
         self._instances: dict[str, _InstanceBatch] = {}
         self._lines: dict[str, object] = {}
         self._points: dict[str, object] = {}
@@ -190,9 +192,6 @@ class ViewerKE(_ViewerBase):
             headless=bool(headless),
         )
         self.app.set_simulation_hotkeys_enabled(True)
-        # App's fixed clock only transports paused single-step requests here;
-        # Newton still owns the actual simulation dt and substep count.
-        self.app.set_fixed_update_hz(60.0)
         self.app.set_external_force_drag_enabled(False)
         self.app.set_interaction_mode(_ke.InteractionMode.FORCE)
         self.materials = self.app.create_standard_materials()
@@ -212,6 +211,7 @@ class ViewerKE(_ViewerBase):
         self._points.clear()
         self._dynamic_meshes.clear()
         self._meshes.clear()
+        self._mesh_colors.clear()
         self._mujoco_contacts = None
         self._mujoco_contacts_solver_id = None
         self._selection_info = None
@@ -262,12 +262,8 @@ class ViewerKE(_ViewerBase):
 
     def should_step(self) -> bool:
         if not self.is_paused():
-            self._pending_single_steps = 0
             return True
-        if self._pending_single_steps == 0:
-            return False
-        self._pending_single_steps -= 1
-        return True
+        return self.app.consume_simulation_step()
 
     def is_key_down(self, key: str | int) -> bool:
         if isinstance(key, int):
@@ -438,7 +434,8 @@ class ViewerKE(_ViewerBase):
 
     def end_frame(self):
         if not self._closed:
-            self.app.render_frame_once()
+            self.app.process_events()
+            self.app.draw_frame()
             self._frame_version += 1
 
     def save_screenshot(self, output_path=None) -> Path:
@@ -480,10 +477,21 @@ class ViewerKE(_ViewerBase):
         color=None,
         roughness=None,
         metallic=None,
+        dynamic=False,
+        opacity=None,
     ):
-        del texture, color, roughness, metallic
+        del texture, roughness, metallic
         key = str(name)
-        dynamic_surface = key == "/model/triangles"
+        triangle_path = self._qualify("/model/triangles")
+        dynamic_surface = key == triangle_path or key.startswith(triangle_path + "/")
+        if dynamic and not dynamic_surface:
+            raise NotImplementedError(
+                "Dynamic mesh prototypes are not supported by ViewerKE"
+            )
+        if dynamic_surface and hidden:
+            if key in self._dynamic_meshes:
+                self._dynamic_meshes[key].view.set_visible(False)
+            return
         point_values = to_numpy(
             points,
             name=f"{name}.points",
@@ -518,12 +526,9 @@ class ViewerKE(_ViewerBase):
             self._meshes[key] = mesh_data_from_arrays(
                 point_values, index_values, normal_values, uv_values
             )
+            self._mesh_colors[key] = instance_rgba(color, opacity, 1)
             return
         dynamic = self._dynamic_meshes.get(key)
-        if hidden:
-            if dynamic is not None:
-                dynamic.view.set_visible(False)
-            return
 
         flat_indices = np.asarray(index_values, dtype=np.uint32).reshape(-1)
         topology_changed = dynamic is None or not np.array_equal(
@@ -549,6 +554,14 @@ class ViewerKE(_ViewerBase):
             )
             dynamic.view.update_geometry(point_values, normals)
         dynamic.view.set_visible(True)
+        values = instance_rgba(color, opacity, 1, previous=dynamic.colors)
+        if values is not dynamic.colors:
+            rgba = values[0]
+            dynamic.view.set_base_color(_ke.Vec4(*map(float, rgba)))
+            dynamic.view.set_alpha_mode(
+                render_api.AlphaMode.BLEND if rgba[3] < 1.0 else render_api.AlphaMode.OPAQUE
+            )
+            dynamic.colors = values
 
     def log_instances(
         self,
@@ -559,6 +572,7 @@ class ViewerKE(_ViewerBase):
         colors,
         materials,
         hidden=False,
+        opacities=None,
     ):
         del materials
         key = str(name)
@@ -570,6 +584,7 @@ class ViewerKE(_ViewerBase):
         if xforms is None:
             batch = self._instances.get(key)
             if batch is not None:
+                self._update_instance_appearance(batch, colors, opacities)
                 batch.view.set_visible(True)
             return
         try:
@@ -579,7 +594,9 @@ class ViewerKE(_ViewerBase):
 
         device = getattr(xforms, "device", None)
         if bool(getattr(device, "is_cuda", False)):
-            self._log_cuda_instances(key, name, mesh, mesh_data, xforms, scales, colors)
+            self._log_cuda_instances(
+                key, name, mesh, mesh_data, xforms, scales, colors, opacities
+            )
             return
 
         transform_values = to_numpy(
@@ -618,20 +635,12 @@ class ViewerKE(_ViewerBase):
                 self.newton_material,
                 transform_source=render_api.TransformSource.EXTERNAL_BUFFER,
             )
-            color_values = (
-                None
-                if colors is None
-                else rgba_array(
-                    colors,
-                    len(matrices),
-                    allow_cuda_readback=self.allow_cuda_readback,
-                )
-            )
             batch = _InstanceBatch(view=view, mesh_name=str(mesh), count=len(matrices))
             self._instances[key] = batch
             batch.view._render_system.update_instances(
-                batch.view.component, matrices, color_values
+                batch.view.component, matrices
             )
+        self._update_instance_appearance(batch, colors, opacities)
         batch.transform_buffer = matrices
         batch.view.set_transform_buffer(
             matrices,
@@ -641,7 +650,33 @@ class ViewerKE(_ViewerBase):
         )
         batch.view.set_visible(True)
 
-    def _log_cuda_instances(self, key, name, mesh, mesh_data, xforms, scales, colors):
+    def _update_instance_appearance(self, batch, colors, opacities):
+        initial = batch.colors is None
+        # CUDA appearance is setup metadata unless the caller opts into readback.
+        if batch.cuda and not initial and not self.allow_cuda_readback:
+            return
+        if not initial and colors is None and opacities is None:
+            return
+        values = instance_rgba(
+            colors,
+            opacities,
+            batch.count,
+            previous=self._mesh_colors[batch.mesh_name] if initial else batch.colors,
+            allow_cuda_readback=initial or self.allow_cuda_readback,
+        )
+        if values is batch.colors:
+            return
+        batch.view._render_system.set_instance_colors(batch.view.component, values)
+        batch.view.set_alpha_mode(
+            render_api.AlphaMode.BLEND
+            if np.any(values[:, 3] < 1.0)
+            else render_api.AlphaMode.OPAQUE
+        )
+        batch.colors = values
+
+    def _log_cuda_instances(
+        self, key, name, mesh, mesh_data, xforms, scales, colors, opacities
+    ):
         """Update one Newton instance batch without CUDA-to-host state copies."""
 
         from ...utils.sim_buffer import SimBuffer
@@ -657,15 +692,14 @@ class ViewerKE(_ViewerBase):
                 self.newton_material,
                 transform_source=render_api.TransformSource.EXTERNAL_BUFFER,
             )
-            # Colors are model metadata. Read them once while registering the
-            # batch; dynamic state transforms stay on the CUDA device.
-            color_values = rgba_array(colors, count, allow_cuda_readback=True)
             identities = np.repeat(np.eye(4, dtype=np.float32)[None], count, axis=0)
             view._render_system.update_instances(
-                view.component, identities, color_values
+                view.component, identities
             )
-            batch = _InstanceBatch(view=view, mesh_name=str(mesh), count=count)
+            batch = _InstanceBatch(view=view, mesh_name=str(mesh), count=count, cuda=True)
             self._instances[key] = batch
+
+        self._update_instance_appearance(batch, colors, opacities)
 
         matrices, torch_stream = transform_array_to_warp_matrices(
             xforms, scales, out=batch.transform_buffer
@@ -1017,4 +1051,5 @@ class ViewerKE(_ViewerBase):
         self._points.clear()
         self._dynamic_meshes.clear()
         self._meshes.clear()
+        self._mesh_colors.clear()
         self.app = None

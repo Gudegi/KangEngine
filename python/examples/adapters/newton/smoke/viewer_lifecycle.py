@@ -39,7 +39,7 @@ def _exercise_viewer(model_a, model_b):
         if viewer.should_step():
             raise RuntimeError("paused Newton viewer unexpectedly accepted a step")
         viewer.app.request_simulation_step()
-        viewer.app.render_frame_once()
+        viewer.end_frame()
         if not viewer.should_step() or viewer.should_step():
             raise RuntimeError("single-step request was not consumed exactly once")
 

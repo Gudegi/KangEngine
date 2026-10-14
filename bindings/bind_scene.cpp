@@ -803,6 +803,15 @@ void bind_scene(py::module& m) {
              py::arg("component"), py::arg("descriptor"),
              "Attach an external transform buffer through registration.")
         .def(
+            "set_instance_colors",
+            [](KE::Scene::SceneRenderSystem& self,
+               KE::Scene::RenderComponent& component, const FloatArray& colors) {
+                self.setInstanceColors(component, vec4Array(colors, "colors"));
+            },
+            py::arg("component"), py::arg("colors"),
+            "Set ExternalBuffer RGBA multipliers without replacing transforms. "
+            "Accept one color or one per instance; empty resets to white.")
+        .def(
             "update_instances",
             [](KE::Scene::SceneRenderSystem& self,
                KE::Scene::RenderComponent& component,

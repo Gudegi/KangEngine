@@ -865,10 +865,14 @@ class App(_NativeApp):
 
     - `setup()` runs once before the loop starts.
     - `pre_update()` handles per-frame input before simulation updates.
-    - `fixed_update(dt)` runs zero or more fixed updates per rendered frame.
+    - `fixed_update(dt)` runs zero or more times in `update_and_draw()`.
     - `pre_render()` runs before scene rendering each frame.
     - `render()` runs while the ImGui frame is active.
-    - `post_render()` runs after UI rendering and buffer swap setup.
+    - `post_render()` runs after UI rendering and before capture/presentation.
+
+    `start()` repeats `update_and_draw()`. External simulation loops use
+    `process_events()` and `draw_frame()`; drawing runs the render hooks without
+    invoking `pre_update()` or `fixed_update()`.
 
     The C++ implementation still handles the default camera controls:
     WASD/mouse navigation, H to hide UI, Escape to close, framebuffer updates,
