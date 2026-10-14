@@ -4,6 +4,8 @@ import asyncio
 import base64
 from concurrent.futures import Future
 import json
+import os
+from pathlib import Path
 import subprocess
 import sys
 import threading
@@ -55,7 +57,10 @@ class FakeAutomation:
 
 
 @pytest.fixture
-def server():
+def server(monkeypatch):
+    from kangengine.adapters.mcp._tool_groups import TOOL_GROUPS
+
+    monkeypatch.setenv("KANGENGINE_MCP_TOOLS", ",".join(TOOL_GROUPS))
     automation = FakeAutomation()
     with McpServer(automation, port=0) as server:
         yield server, automation
@@ -82,9 +87,39 @@ def test_tools_and_image_use_official_sdk(server, mode):
                     "scene_inspect",
                     "viewport_capture",
                     "renderer_profile",
+                    "scenario_targets",
+                    "scenario_start",
+                    "scenario_status",
+                    "scenario_cancel",
+                    "scenario_capture",
+                    "profile_start",
+                    "profile_status",
+                    "profile_result",
+                    "profile_cancel",
+                    "camera_get",
+                    "camera_set",
+                    "scene_set_visibility",
+                    "recording_status",
+                    "recording_start",
+                    "recording_stop",
+                    "scene_create_primitive",
+                    "scene_set_transform",
+                    "scene_set_material",
+                    "scene_delete",
+                    "object_inspect",
+                    "resource_inspect",
+                    "camera_focus",
+                    "search_docs",
+                    "get_doc",
+                    "get_api_docs",
                 }
                 assert tools["scene_inspect"].annotations.read_only_hint
                 assert not tools["viewport_capture"].annotations.read_only_hint
+                assert tools["scenario_start"].annotations.destructive_hint
+                assert not tools["scenario_start"].annotations.read_only_hint
+                assert tools["scene_delete"].annotations.destructive_hint
+                assert tools["scene_set_transform"].input_schema["required"] == ["path"]
+                assert tools["scenario_capture"].annotations.read_only_hint
                 status = await client.call_tool("engine_status", {})
                 assert status.structured_content["app_session_id"] == "test-app"
                 scene = await client.call_tool(
@@ -102,6 +137,74 @@ def test_tools_and_image_use_official_sdk(server, mode):
                 assert capture.structured_content["frame_id"] == 42
                 assert capture.structured_content["include_ui"] is False
                 assert capture.structured_content["orientation"] == "top_left"
+                for name, arguments in (
+                    (
+                        "scenario_start",
+                        {
+                            "target": "fixture",
+                            "scenario": "orbit",
+                            "duration": 13,
+                            "output_path": "at-13s.png",
+                        },
+                    ),
+                    ("profile_start", {"frame_count": 5}),
+                    ("profile_status", {"job_id": "profile"}),
+                    (
+                        "profile_result",
+                        {"job_id": "profile", "offset": 1, "max_frames": 2},
+                    ),
+                    ("profile_cancel", {"job_id": "profile"}),
+                    ("camera_get", {}),
+                    ("camera_set", {"position": [3, 2, 3], "target": [0, 0, 0]}),
+                    ("scene_set_visibility", {"path": "/subject", "visible": False}),
+                    ("recording_status", {}),
+                    ("recording_start", {"output_path": "new.mp4", "fps": 30}),
+                    ("recording_stop", {}),
+                    (
+                        "scene_create_primitive",
+                        {"path": "/box", "shape": "box", "color": [1, 0, 0]},
+                    ),
+                    ("scene_set_transform", {"path": "/box", "translation": [1, 2, 3]}),
+                    ("scene_set_material", {"path": "/box", "color": [0, 1, 0]}),
+                    ("scene_delete", {"path": "/box"}),
+                    ("object_inspect", {"path": "/box"}),
+                    ("resource_inspect", {"handle": 1}),
+                    ("camera_focus", {"path": "/box", "distance": 3}),
+                ):
+                    response = await client.call_tool(name, arguments)
+                    assert not response.is_error, response
+                    assert response.structured_content["command"] == name
+                    for key, value in arguments.items():
+                        assert automation.calls[-1][1][key] == value
+                    if name == "scene_set_transform":
+                        assert automation.calls[-1][1]["rotation_wxyz"] is None
+                        assert automation.calls[-1][1]["scale"] is None
+                    assert tools[name].annotations.read_only_hint == (
+                        name
+                        in {
+                            "profile_status",
+                            "profile_result",
+                            "camera_get",
+                            "recording_status",
+                            "object_inspect",
+                            "resource_inspect",
+                        }
+                    )
+
+                api = await client.call_tool(
+                    "get_api_docs", {"symbol": "App.initialize"}
+                )
+                assert (
+                    not api.is_error and "width" in api.structured_content["signature"]
+                )
+                docs = await client.call_tool(
+                    "search_docs", {"query": "recording_start"}
+                )
+                assert not docs.is_error and docs.structured_content["results"]
+                page = await client.call_tool(
+                    "get_doc", {"path": "integrations/MCP.md"}
+                )
+                assert not page.is_error and page.structured_content["text"]
 
     asyncio.run(run())
     assert all(thread != main_thread for _, _, thread in automation.calls)
@@ -206,6 +309,38 @@ def test_cli_checks_session_without_printing_token(server, tmp_path):
     result = subprocess.run(command, capture_output=True, text=True, timeout=15)
     assert result.returncode != 0
     assert "App session changed" in result.stderr
+    assert server.token not in result.stdout + result.stderr
+
+
+def test_cli_discovers_server_from_another_working_directory(
+    server, tmp_path, monkeypatch
+):
+    from kangengine.adapters.mcp._connection import write_connection
+
+    server, _ = server
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path / "runtime"))
+    if sys.platform == "darwin":
+        pytest.skip("Subprocess home isolation is not configured for macOS")
+    path = write_connection(
+        url=server.url, token=server.token, app_session_id="test-app"
+    )
+    env = dict(os.environ, PYTHONPATH=str(Path(__file__).resolve().parents[2]))
+    command = [sys.executable, "-m", "kangengine.adapters.mcp", "status"]
+    result = subprocess.run(
+        command, cwd=tmp_path, env=env, capture_output=True, text=True, timeout=15
+    )
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["app_session_id"] == "test-app"
+    write_connection(url=server.url, token="other-secret", app_session_id="another-app")
+    result = subprocess.run(
+        command, cwd=tmp_path, env=env, capture_output=True, text=True, timeout=15
+    )
+    assert result.returncode != 0 and "Multiple MCP connection files" in result.stderr
+    selected = [*command[:-1], "--connection-file", str(path), "status"]
+    result = subprocess.run(
+        selected, cwd=tmp_path, env=env, capture_output=True, text=True, timeout=15
+    )
+    assert result.returncode == 0, result.stderr
     assert server.token not in result.stdout + result.stderr
 
 

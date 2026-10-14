@@ -1,4 +1,4 @@
-"""Observation contracts using native prims without a graphics context."""
+"""App-side MCP observations using native prims without a graphics context."""
 
 import json
 from types import MethodType, SimpleNamespace
@@ -7,8 +7,9 @@ import numpy as np
 import pytest
 
 import kangengine as ke
+from profile_helpers import _frame
 from kangengine.app.capture import AutomationError
-from kangengine.app.inspection import engine_status, renderer_profile, scene_inspect
+from kangengine.app.mcp.inspection import engine_status, renderer_profile, scene_inspect
 
 
 @pytest.fixture
@@ -33,6 +34,7 @@ def app():
         up_axis=ke.UpAxis.Z,
         headless=True,
         run_config=None,
+        has_active_scene_camera=lambda: False,
     )
 
 
@@ -181,42 +183,6 @@ def _profile_renderer(*, enabled, frames):
         profiler_capabilities=capabilities,
         frame_profile_history=lambda: tuple(frames),
         profile_summary=lambda *, max_frames: summary,
-    )
-
-
-def _frame(frame_index, status):
-    counter_names = (
-        "draw_calls",
-        "indexed_draw_calls",
-        "instances",
-        "triangles",
-        "buffer_upload_bytes",
-        "texture_upload_bytes",
-        "external_buffer_bytes",
-        "buffer_allocations",
-        "buffer_allocated_bytes",
-    )
-    return SimpleNamespace(
-        capture_id=3,
-        frame_index=frame_index,
-        revision=2,
-        finalized=status != ke.render.ProfileSampleStatus.PENDING,
-        backend=ke.render.BackendType.OPENGL,
-        gpu_latency_frames=None,
-        dropped_samples=0,
-        counters=SimpleNamespace(**dict.fromkeys(counter_names, 0)),
-        metadata={"coverage": "RHI"},
-        samples=(
-            SimpleNamespace(
-                sample_id=1,
-                parent_sample_id=None,
-                path="scene",
-                duration_ms=None,
-                available=False,
-                domain=ke.render.ProfileTimingDomain.GPU,
-                status=status,
-            ),
-        ),
     )
 
 

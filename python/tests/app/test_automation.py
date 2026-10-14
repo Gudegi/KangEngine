@@ -47,7 +47,7 @@ class AutomationTest(unittest.TestCase):
         self.service = AutomationService(self.app, output_dir=self.directory.name)
         self.addCleanup(self.service.close)
         patcher = mock.patch(
-            "kangengine.app.inspection.engine_status",
+            "kangengine.app.mcp.inspection.engine_status",
             return_value={"render_enabled": True},
         )
         patcher.start()
@@ -205,7 +205,7 @@ class AutomationTest(unittest.TestCase):
 
     def test_idle_frames_skip_hooks_and_status_refreshes_on_demand(self):
         with mock.patch(
-            "kangengine.app.inspection.engine_status", return_value={}
+            "kangengine.app.mcp.inspection.engine_status", return_value={}
         ) as inspect:
             self.frame()
             self.assertEqual(inspect.call_count, 1)

@@ -13,6 +13,7 @@ import uuid
 import weakref
 
 from .capture import AutomationError, CaptureResult
+from .mcp.authoring import COMMANDS as AUTHORING_COMMANDS
 
 MAX_PENDING = 16
 REQUEST_TIMEOUT = 10.0
@@ -20,6 +21,20 @@ MAX_PNG_BYTES = 8 * 1024 * 1024
 MAX_CAPTURE_PIXELS = 4096 * 4096
 REQUESTS_PER_FRAME = 4
 MAX_ENCODING_JOBS = 2
+CONTROL_COMMANDS = {
+    "camera_get",
+    "camera_set",
+    "scene_set_visibility",
+    "recording_status",
+    "recording_start",
+    "recording_stop",
+}
+PROFILE_COMMANDS = {
+    "profile_start",
+    "profile_status",
+    "profile_result",
+    "profile_cancel",
+}
 
 
 @dataclass(eq=False)
@@ -44,6 +59,7 @@ class AutomationService:
         self._owner = threading.get_ident()
         self.app_session_id = uuid.uuid4().hex
         self.output_dir = Path(output_dir).expanduser().resolve()
+        self.recording_dir = Path("tmp/recordings").resolve()
         self._state = "initializing"
         self._metadata = {}
         self._last_frame_id = None
@@ -53,6 +69,9 @@ class AutomationService:
         self._captures = []
         self._frame_active = False
         self._encoder = None
+        self._mcp_scenario_runner = None
+        self._profile_runner = None
+        self._scene_authoring = None
         self._encoding_slots = threading.BoundedSemaphore(MAX_ENCODING_JOBS)
 
     @property
@@ -70,12 +89,23 @@ class AutomationService:
             if command == "engine_status" and self._state == "initializing":
                 future.set_result(self._status())
                 return future
-            if command not in {
-                "engine_status",
-                "scene_inspect",
-                "viewport_capture",
-                "renderer_profile",
-            }:
+            if (
+                command
+                not in {
+                    "engine_status",
+                    "scene_inspect",
+                    "viewport_capture",
+                    "renderer_profile",
+                    "scenario_targets",
+                    "scenario_start",
+                    "scenario_status",
+                    "scenario_cancel",
+                    "scenario_capture",
+                }
+                | CONTROL_COMMANDS
+                | PROFILE_COMMANDS
+                | AUTHORING_COMMANDS
+            ):
                 future.set_exception(
                     AutomationError("INVALID_ARGUMENT", "Unknown operation")
                 )
@@ -150,9 +180,33 @@ class AutomationService:
         if threading.get_ident() != self._owner:
             raise RuntimeError("App frame operations must run on the creating thread")
 
+    def _mcp_scenario_command(self, app, command, arguments):
+        if self._mcp_scenario_runner is None:
+            from .mcp.scenario import McpScenarioRunner
+
+            self._mcp_scenario_runner = McpScenarioRunner(app._mcp_scenario_targets)
+        runner = self._mcp_scenario_runner
+        if command == "scenario_targets":
+            return runner.list_targets()
+        if command == "scenario_start":
+            if app.run_config is not None and not app.run_config.render_enabled:
+                raise AutomationError(
+                    "UNSUPPORTED", "Scenario capture requires rendering"
+                )
+            arguments = {
+                **arguments,
+                "output_path": self._output_path(arguments.get("output_path")),
+            }
+            return runner.start(**arguments)
+        if command == "scenario_status":
+            return runner.status(**arguments)
+        if command == "scenario_cancel":
+            return runner.cancel(**arguments)
+        return runner.capture(**arguments)
+
     def on_frame_started(self):
         self._check_owner()
-        from . import inspection
+        from .mcp import inspection
 
         app = self._app()
         with self._lock:
@@ -167,6 +221,9 @@ class AutomationService:
             ]
             if self._queue:
                 app._request_automation_frame()
+        # The preceding frame's profiler scope has finalized before this boundary.
+        if self._profile_runner is not None:
+            self._profile_runner.tick(app)
         if initializing or any(
             request.command == "engine_status" for request in requests
         ):
@@ -180,6 +237,40 @@ class AutomationService:
             if not self._alive(request):
                 continue
             try:
+                if (
+                    request.command.startswith("scenario_")
+                    or request.command
+                    in CONTROL_COMMANDS | PROFILE_COMMANDS | AUTHORING_COMMANDS
+                ):
+                    # Mutation commits once owner-thread execution starts. A transport
+                    # timeout cannot then report a cancelled start that already ran.
+                    with self._lock:
+                        if not self._alive(request):
+                            continue
+                        if not request.future.set_running_or_notify_cancel():
+                            continue
+                        request.timer.cancel()
+                    try:
+                        result = self._control_command(
+                            app, request.command, request.arguments
+                        )
+                        if isinstance(result, dict):
+                            result = {
+                                **result,
+                                "app_session_id": self.app_session_id,
+                                "processed_before_frame_id": int(app.frame_index),
+                            }
+                        request.future.set_result(result)
+                    except Exception as exc:
+                        code = (
+                            exc.code
+                            if isinstance(exc, AutomationError)
+                            else "INVALID_ARGUMENT"
+                            if isinstance(exc, (TypeError, ValueError))
+                            else "INTERNAL_ERROR"
+                        )
+                        request.future.set_exception(AutomationError(code, str(exc)))
+                    continue
                 if request.command == "engine_status":
                     with self._lock:
                         if self._alive(request):
@@ -211,6 +302,40 @@ class AutomationService:
                 self._fail(request, "INVALID_ARGUMENT", str(exc))
             except Exception as exc:
                 self._fail(request, "INTERNAL_ERROR", str(exc))
+        if self._mcp_scenario_runner is not None:
+            self._mcp_scenario_runner.tick(
+                lambda **kwargs: self.submit("viewport_capture", **kwargs)
+            )
+            if self._mcp_scenario_runner.active is not None:
+                app._request_automation_frame()
+        if self._profile_runner is not None and self._profile_runner.active is not None:
+            app._request_automation_frame()
+
+    def _control_command(self, app, command, arguments):
+        if command in AUTHORING_COMMANDS:
+            if self._scene_authoring is None:
+                from .mcp.authoring import SceneAuthoring
+
+                self._scene_authoring = SceneAuthoring()
+            return getattr(self._scene_authoring, command)(app, **arguments)
+        if command.startswith("scenario_"):
+            return self._mcp_scenario_command(app, command, arguments)
+        if command in PROFILE_COMMANDS:
+            if self._profile_runner is None:
+                from .mcp.profiling import ProfileRunner
+
+                self._profile_runner = ProfileRunner()
+            method = getattr(self._profile_runner, command.removeprefix("profile_"))
+            if command in {"profile_start", "profile_cancel"}:
+                return method(app, **arguments)
+            return method(**arguments)
+        from .mcp import control
+
+        if command == "recording_start":
+            return control.recording_start(
+                app, output_dir=self.recording_dir, **arguments
+            )
+        return getattr(control, command)(app, **arguments)
 
     def _output_path(self, output_path):
         if output_path is None:
@@ -342,5 +467,9 @@ class AutomationService:
             self._captures.clear()
         if self._encoder is not None:
             self._encoder.shutdown(wait=True, cancel_futures=True)
+        if self._mcp_scenario_runner is not None:
+            self._mcp_scenario_runner.close()
+        if self._profile_runner is not None:
+            self._profile_runner.close(self._app())
         with self._lock:
             self._state = "closed"

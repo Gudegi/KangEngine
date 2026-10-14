@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from .. import scene
-from .capture import AutomationError
+from ... import scene
+from ..capture import AutomationError
 
 
 _CAPABILITY_FIELDS = (
@@ -58,7 +58,19 @@ def engine_status(app) -> dict:
         "render_enabled": app.run_config.render_enabled if app.run_config else True,
         "capabilities": {
             "scene_inspect": app.scene.get_root_prim() is not None,
+            "scene_authoring": app.scene.get_root_prim() is not None,
             "renderer_profile": True,
+            "profile_start": app.run_config.render_enabled if app.run_config else True,
+            "camera_get": True,
+            "camera_set": not app.has_active_scene_camera(),
+            "scene_set_visibility": app.scene.get_root_prim() is not None,
+            "recording_start": app.run_config.render_enabled
+            if app.run_config
+            else True,
+            "recording_status": True,
+            "recording_stop": True,
+            "scenario_targets": True,
+            "scenario_start": bool(getattr(app, "_mcp_scenario_targets", {})),
         },
     }
 
@@ -118,12 +130,7 @@ def _prim_snapshot(app, prim, depth: int) -> dict:
     }
 
 
-def scene_inspect(
-    app, *, path: str = "/", max_depth: int = 3, max_prims: int = 200
-) -> dict:
-    """Copy a subtree; ExternalBuffer matrices describe its owner, not its instances."""
-    _bounded_integer(max_depth, "max_depth", 0, 16)
-    _bounded_integer(max_prims, "max_prims", 1, 1000)
+def _resolve_prim(app, path):
     if (
         not isinstance(path, str)
         or not path.startswith("/")
@@ -142,6 +149,16 @@ def scene_inspect(
     root = scene_root if path == "/" else app.scene.get_prim_at_path(path)
     if root is None:
         raise AutomationError("NOT_FOUND", f"scene prim does not exist: {path}")
+    return root
+
+
+def scene_inspect(
+    app, *, path: str = "/", max_depth: int = 3, max_prims: int = 200
+) -> dict:
+    """Copy a subtree; ExternalBuffer matrices describe its owner, not its instances."""
+    _bounded_integer(max_depth, "max_depth", 0, 16)
+    _bounded_integer(max_prims, "max_prims", 1, 1000)
+    root = _resolve_prim(app, path)
 
     prims = []
     truncated = False

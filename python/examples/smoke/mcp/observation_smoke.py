@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -62,6 +63,26 @@ async def _observe(url, token, session_id, output_dir):
                     "scene_inspect",
                     "viewport_capture",
                     "renderer_profile",
+                    "profile_start",
+                    "profile_status",
+                    "profile_result",
+                    "profile_cancel",
+                    "camera_get",
+                    "camera_set",
+                    "scene_set_visibility",
+                    "recording_status",
+                    "recording_start",
+                    "recording_stop",
+                    "scene_create_primitive",
+                    "scene_set_transform",
+                    "scene_set_material",
+                    "scene_delete",
+                    "object_inspect",
+                    "resource_inspect",
+                    "camera_focus",
+                    "search_docs",
+                    "get_doc",
+                    "get_api_docs",
                 }
                 for _ in range(100):
                     status = await client.call_tool("engine_status", {})
@@ -111,7 +132,7 @@ def main():
         output_dir = Path(directory)
         app.automation.output_dir = output_dir
         server = app.enable_mcp(port=0)
-        record_path = Path("tmp/mcp/session.json")
+        record_path = app._mcp_connection_file
         record = json.loads(record_path.read_text())
         assert record_path.stat().st_mode & 0o777 == 0o600
         assert record["app_session_id"] == app.automation.app_session_id
@@ -132,6 +153,11 @@ def main():
                         "--output",
                         "cli.png",
                     ],
+                    cwd=output_dir,
+                    env={
+                        **os.environ,
+                        "PYTHONPATH": str(Path(__file__).resolve().parents[3]),
+                    },
                     capture_output=True,
                     text=True,
                     timeout=20,

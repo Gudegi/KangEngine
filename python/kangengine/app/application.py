@@ -8,13 +8,12 @@ without talking directly to the pybind class.
 
 from __future__ import annotations
 
-import json
 import os
 from concurrent.futures import Future
 from pathlib import Path
-import tempfile
 import threading
 from types import SimpleNamespace
+from typing import TYPE_CHECKING
 
 from .._core import _ke
 from .._public import unwrap_native
@@ -23,8 +22,12 @@ from .. import input as input_api
 from .. import material as material_api
 from .. import render as render_api
 from ..recording import VideoCaptureController
+from ..utils.math import quat_wxyz_to_matrix_numpy
 from .capture import CaptureResult
 from .playback_controller import PlaybackController
+
+if TYPE_CHECKING:
+    from .mcp.scenario import McpScenarioTarget
 
 keys = _ke.keys
 scene = _ke.scene
@@ -51,7 +54,7 @@ def _texture_path_candidate(path) -> Path:
 
 
 def _rotation_matrix(rotation):
-    """Return a float32 3x3 matrix from a matrix or wxyz quaternion."""
+    """Adapt optional debug-axis input to a rotation matrix."""
     import numpy as np
 
     if rotation is None:
@@ -60,31 +63,7 @@ def _rotation_matrix(rotation):
     array = np.asarray(value, dtype=np.float32)
     if array.shape == (3, 3):
         return array
-    w, x, y, z = array.reshape(4)
-    norm = float(w * w + x * x + y * y + z * z)
-    if norm <= 1.0e-12:
-        raise ValueError("rotation quaternion must be non-zero")
-    scale = 2.0 / norm
-    return np.array(
-        [
-            [
-                1.0 - scale * (y * y + z * z),
-                scale * (x * y - z * w),
-                scale * (x * z + y * w),
-            ],
-            [
-                scale * (x * y + z * w),
-                1.0 - scale * (x * x + z * z),
-                scale * (y * z - x * w),
-            ],
-            [
-                scale * (x * z - y * w),
-                scale * (y * z + x * w),
-                1.0 - scale * (x * x + y * y),
-            ],
-        ],
-        dtype=np.float32,
-    )
+    return quat_wxyz_to_matrix_numpy(array.reshape(4))
 
 
 def _sphere_instance_data(centers, radii, colors):
@@ -892,6 +871,7 @@ class App(_NativeApp):
         super().__init__()
         self._owner_thread = threading.get_ident()
         self._automation = None
+        self._mcp_scenario_targets = {}
         self._mcp_server = None
         self._mcp_connection_file = None
         self._closing = False
@@ -1537,6 +1517,22 @@ class App(_NativeApp):
     def get_video_recording_path(self):
         return self._video_capture.output_path
 
+    def register_mcp_scenario_target(self, name: str, target: McpScenarioTarget) -> None:
+        """Register an optional MCP extension for scenario playback and capture.
+
+        Args:
+            name: Unique nonempty name used by MCP scenario tools.
+            target: An implementation of
+                ``kangengine.app.mcp.scenario.McpScenarioTarget``.
+                Register before running frames; registration does not start MCP.
+        """
+        self._check_owner_thread()
+        if self.closed:
+            raise RuntimeError("App is closed")
+        if not isinstance(name, str) or not name or name in self._mcp_scenario_targets:
+            raise ValueError("MCP scenario target name must be nonempty and unique")
+        self._mcp_scenario_targets[name] = target
+
     @property
     def automation(self):
         """Common observation service; create it on the App thread before sharing."""
@@ -1568,8 +1564,8 @@ class App(_NativeApp):
     def enable_mcp(self, *, port: int = 8765, token: str | None = None):
         """Start the optional loopback observation server on this App.
 
-        Connection credentials are saved in ``tmp/mcp/session.json`` with
-        owner-only permissions. The same service can also be enabled by
+        Connection credentials are saved per session in the user's MCP runtime
+        or cache directory, with owner-only POSIX permissions. Enable it also by
         ``KANGENGINE_MCP=1`` when calling :meth:`start`.
         """
         self._check_owner_thread()
@@ -1578,23 +1574,18 @@ class App(_NativeApp):
         if self._mcp_server is not None:
             return self._mcp_server
         from ..adapters.mcp import McpServer
+        from ..adapters.mcp._connection import write_connection
 
         service = self.automation
         server = McpServer(service, port=port, token=token)
         server.start()
-        connection_file = Path("tmp/mcp/session.json").resolve()
-        temporary_path = None
         try:
-            connection_file.parent.mkdir(parents=True, exist_ok=True)
-            descriptor, temporary_path = tempfile.mkstemp(dir=connection_file.parent)
-            with os.fdopen(descriptor, "w") as stream:
-                json.dump({"url": server.url, "token": server.token,
-                           "app_session_id": service.app_session_id}, stream)
-                stream.write("\n")
-            os.replace(temporary_path, connection_file)
+            connection_file = write_connection(
+                url=server.url,
+                token=server.token,
+                app_session_id=service.app_session_id,
+            )
         except Exception:
-            if temporary_path is not None:
-                Path(temporary_path).unlink(missing_ok=True)
             server.close()
             raise
         self._mcp_server = server
@@ -1680,11 +1671,13 @@ class App(_NativeApp):
                 self._mcp_server.close()
                 self._mcp_server = None
             if self._mcp_connection_file is not None:
-                path = self._mcp_connection_file
-                if path.exists():
-                    record = json.loads(path.read_text())
-                    if record.get("app_session_id") == self._automation.app_session_id:
-                        path.unlink()
+                from ..adapters.mcp._connection import remove_connection
+
+                remove_connection(
+                    self._mcp_connection_file,
+                    app_session_id=self._automation.app_session_id,
+                )
+                self._mcp_connection_file = None
         finally:
             try:
                 self.cleanup()
@@ -1700,6 +1693,7 @@ class App(_NativeApp):
                     self._textures_by_uri.clear()
                     self._scene_hook_resource_handles.clear()
                     self._render_hook_resource_usage.clear()
+                    self._mcp_scenario_targets.clear()
                     super().close()
 
     def initialize(

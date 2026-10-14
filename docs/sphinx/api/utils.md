@@ -50,6 +50,8 @@ debug drawing.
 
 .. autofunction:: quat_wxyz_to_xyzw
 
+.. autofunction:: quat_wxyz_to_matrix_numpy
+
 .. autofunction:: quat_wxyz_twist_angle
 ```
 
