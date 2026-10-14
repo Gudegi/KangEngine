@@ -8,9 +8,11 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/fwd.hpp>
+#include <atomic>
 #include <iostream>
 #include <memory>
 #include <string>
+#include <thread>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -96,6 +98,12 @@ class App {
     UIScale _uiScale;
 
   private:
+    const std::thread::id _ownerThread = std::this_thread::get_id();
+    bool _closed = false;
+    bool _setupStarted = false;
+    bool _inFrame = false;
+    std::atomic<bool> _automationRequested{false};
+    void requireOwnerThread() const;
     std::unique_ptr<Backend::GraphicsDevice> _graphicsDevice;
     // Main Scene Pipeline: RHI-owned 4x MSAA attachments resolve into the
     // legacy framebuffer's single-sample color texture during migration.
@@ -263,7 +271,11 @@ class App {
                                           float aspectOverride = 0.0f);
 
     //////
-    void start();
+    void start(bool closeOnExit = true);
+    void close();
+    bool isInitialized() const { return _initialized; }
+    bool isClosed() const { return _closed; }
+    bool isInFrame() const { return _inFrame; }
     // Full application iteration; start() uses this same path.
     void updateAndDraw();
     // Poll window events and handle input without scheduling updates.
@@ -278,7 +290,8 @@ class App {
     virtual void preRender() {}  // 루프 안에서 사용됨. 렌더 전에 사용
     virtual void render() {}     // overrideable 실제 렌더링
     virtual void postRender() {} // 렌더링 이후 마무리
-    // Internal Python service hook. It is skipped while frame capture is idle.
+    // Internal services run independently of user lifecycle overrides.
+    virtual void onFrameStartedInternal() {}
     virtual void onFrameRenderedInternal() {}
     virtual void onRayPicked(const RayPickResult& result) {}
     virtual void onRayPickHover(const RayPickResult& result) {}
@@ -291,6 +304,7 @@ class App {
 
     // Frame rate control
     float getDeltaTime() const;
+    uint64_t getFrameIndex() const { return _frameIndex; }
     float getMeasuredRenderFPS() const { return _measuredRenderFPS; }
     float getFrameCPUTimeMs() const { return _frameCPUTimeMs; }
     float getUpdateCPUTimeMs() const { return _updateCPUTimeMs; }
@@ -302,6 +316,10 @@ class App {
     float getRenderHz() const { return _renderHz; }
     void setFrameCaptureActive(bool active) { _frameCaptureActive = active; }
     bool getFrameCaptureActive() const { return _frameCaptureActive; }
+    // Workers may signal demand; engine access stays on the owner thread.
+    void requestAutomationFrame() {
+        _automationRequested.store(true, std::memory_order_relaxed);
+    }
     bool consumeVideoRecordingToggleRequested() {
         const bool requested = _videoRecordingToggleRequested;
         _videoRecordingToggleRequested = false;

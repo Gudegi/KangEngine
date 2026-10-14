@@ -10,17 +10,26 @@ namespace KE {
 
 PanelManager::PanelManager() {}
 
-PanelManager::~PanelManager() {
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
+PanelManager::~PanelManager() { shutdown(); }
+
+void PanelManager::shutdown() {
+    _panels.clear();
+    if (!_initialized)
+        return;
+    if (ImGui::GetIO().BackendRendererUserData)
+        ImGui_ImplOpenGL3_Shutdown();
+    if (ImGui::GetIO().BackendPlatformUserData)
+        ImGui_ImplGlfw_Shutdown();
     ImPlot::DestroyContext();
     ImGui::DestroyContext();
+    _initialized = false;
 }
 
 void PanelManager::init(GLFWwindow* window) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImPlot::CreateContext();
+    _initialized = true;
     ImGuiIO& io = ImGui::GetIO();
     (void)io;
     io.ConfigFlags |=

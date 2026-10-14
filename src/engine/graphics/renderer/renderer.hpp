@@ -79,6 +79,7 @@ class Renderer {
     void bind(Backend::GraphicsDevice* device, Rasterizer* rasterizer,
               PostProcessor* postProcessor,
               SelectionOutlineProcessor* selectionOutlineProcessor);
+    void release();
     void setViewportSize(int width, int height);
     RendererProfiler& profiler() { return _profiler; }
     void setProfilerEnabled(bool enabled) { _profiler.setEnabled(enabled); }

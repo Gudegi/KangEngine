@@ -3,6 +3,7 @@
 #include "utils/asset_path.hpp"
 #include <fmt/base.h>
 #include <fstream>
+#include <stdexcept>
 
 namespace KE {
 
@@ -15,7 +16,15 @@ Window::Window() {
     this->initGlad(); // TODO: Remove OpenGL dependency
 }
 
-Window::~Window() {}
+Window::~Window() { close(); }
+
+void Window::close() {
+    if (!_window)
+        return;
+    glfwDestroyWindow(_window);
+    _window = nullptr;
+    glfwTerminate();
+}
 
 void Window::init(int width, int height, bool headless) {
     if (_window == nullptr)
@@ -52,7 +61,8 @@ void Window::initGlfw() {
     // Prevent changing current directory
     glfwInitHint(GLFW_COCOA_CHDIR_RESOURCES, GLFW_FALSE);
 #endif
-    glfwInit();
+    if (glfwInit() != GLFW_TRUE)
+        throw std::runtime_error("Failed to initialize GLFW");
     std::ifstream mappingFile(getAssetPath("gamepad/gamecontrollerdb.txt"));
     if (mappingFile) {
         const std::string mappings{
@@ -73,9 +83,8 @@ void Window::initGlfw() {
 
     _window = glfwCreateWindow(_width, _height, "KangEngine", nullptr, nullptr);
     if (_window == NULL) {
-        std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
-        return;
+        throw std::runtime_error("Failed to create GLFW window");
     }
     glfwMakeContextCurrent(_window);
     // glfwSetWindowUserPointer(_window, this);
@@ -93,7 +102,8 @@ void Window::initGlad() {
         return;
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-        std::cout << "Failed to initialize GLAD" << std::endl;
+        close();
+        throw std::runtime_error("Failed to initialize GLAD");
     }
 }
 

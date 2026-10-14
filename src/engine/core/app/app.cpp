@@ -34,6 +34,7 @@
 #include <memory>
 #include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -178,11 +179,67 @@ App::App()
       _renderWireframe(false), _io(new App::IO),
       _renderVariable(new App::RenderVariable) {}
 
-App::~App() {}
+// Destruction, including Python finalization, belongs to the creating thread.
+App::~App() { close(); }
+
+void App::requireOwnerThread() const {
+    if (std::this_thread::get_id() != _ownerThread)
+        throw std::runtime_error("App must be used on its creating thread");
+}
+
+void App::close() {
+    if (_closed)
+        return;
+    requireOwnerThread();
+    if (_inFrame)
+        throw std::runtime_error(
+            "Cannot close App during a frame; use request_close instead");
+    _closed = true;
+    _initialized = false;
+    _automationRequested.store(false, std::memory_order_relaxed);
+    _frameCaptureActive = false;
+    if (auto* window = _window.getGlfwWindow())
+        glfwMakeContextCurrent(window);
+
+    // Scene registrations and GL owners must be released while the context lives.
+    _sceneRenderSystem.clear();
+    _sceneRenderSystem.bind(nullptr);
+    _sceneResourceManager.clear();
+    _sceneResourceManager.bindScene(nullptr);
+    _scene.reset();
+    _interaction = InteractionController{};
+    _panelManager.shutdown();
+    _editorViewportPanel = nullptr;
+    _renderer.release();
+    _rasterizer.reset();
+    _selectionOutlineProcessor.reset();
+    _sceneCameraPreviewPostProcessor.reset();
+    _postProcessor.reset();
+    _lastPresentedFramebuffer = nullptr;
+    _sceneRenderTarget.reset();
+    _sceneDrawTarget.reset();
+    _sceneClearTarget.reset();
+    _sceneMsaaDepthStencilView.reset();
+    _sceneResolveColorView.reset();
+    _sceneMsaaColorView.reset();
+    _sceneMsaaDepthStencil.reset();
+    _sceneMsaaColor.reset();
+    _sceneCameraPreviewFramebuffer.reset();
+    _selectionMaskFramebuffer.reset();
+    _framebuffer.reset();
+    _graphicsDevice.reset();
+    GLFWCallbackWrapper::setApp(nullptr);
+    _window.close();
+}
 
 void App::initialize(int width, int height, bool hideUI, UpAxis upAxis,
                      Backend::BackendType graphicsBackendType,
                      Scene::BackendType sceneBackendType, bool headless) {
+    requireOwnerThread();
+    if (_closed)
+        throw std::runtime_error("App is closed");
+    if (_initialized)
+        throw std::runtime_error("App is already initialized");
     _width = width;
     _height = height;
     _hideUI = hideUI;
@@ -435,40 +492,47 @@ void App::registerBuiltinRenderResources() {
 
 // for entire process in c++
 // //////////////////////////////////////////////////////////////////////
-void App::start() {
-    if (!_initialized) {
-        std::cerr << "App was not initialized" << std::endl;
-        return;
-    }
+void App::start(bool closeOnExit) {
+    requireOwnerThread();
+    if (_closed || !_initialized)
+        throw std::runtime_error("App must be initialized and open before start");
+    if (_setupStarted)
+        throw std::runtime_error("App.start can only be called once");
 
-    setup();
-    _renderVariable->lastFrameTime = 0.0;
-    _lastUpdateTime = -1.0;
-    _lastEventTime = -1.0;
-    _fixedStepClock.reset();
-    GLFWwindow* window = _window.getGlfwWindow();
-    while (!glfwWindowShouldClose(window)) {
-        const double currentFrame = glfwGetTime();
-        const double deltaTime =
-            _renderVariable->lastFrameTime > 0.0
-                ? currentFrame - _renderVariable->lastFrameTime
-                : 0.0;
-        const float renderInterval =
-            (_renderHz > 0.0f) ? (1.0f / _renderHz) : 0.0f;
-        if (_renderVariable->lastFrameTime > 0.0 && renderInterval > 0.0f &&
-            deltaTime < renderInterval) {
-            const double remaining = renderInterval - deltaTime;
-            if (remaining > 0.002f) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(
-                    static_cast<int>((remaining - 0.001f) * 1000)));
+    try {
+        _setupStarted = true;
+        setup();
+        _renderVariable->lastFrameTime = 0.0;
+        _lastUpdateTime = -1.0;
+        _lastEventTime = -1.0;
+        _fixedStepClock.reset();
+        while (!shouldClose()) {
+            const double currentFrame = glfwGetTime();
+            const double deltaTime =
+                _renderVariable->lastFrameTime > 0.0
+                    ? currentFrame - _renderVariable->lastFrameTime
+                    : 0.0;
+            const float renderInterval =
+                (_renderHz > 0.0f) ? (1.0f / _renderHz) : 0.0f;
+            if (_renderVariable->lastFrameTime > 0.0 && renderInterval > 0.0f &&
+                deltaTime < renderInterval) {
+                const double remaining = renderInterval - deltaTime;
+                if (remaining > 0.002f) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(
+                        static_cast<int>((remaining - 0.001f) * 1000)));
+                }
+                glfwPollEvents();
+                continue;
             }
-            glfwPollEvents();
-            continue;
+            updateAndDraw();
         }
-        updateAndDraw();
+    } catch (...) {
+        if (closeOnExit)
+            close();
+        throw;
     }
-    glfwDestroyWindow(window);
-    glfwTerminate();
+    if (closeOnExit)
+        close();
 }
 
 bool App::shouldClose() {
@@ -599,6 +663,9 @@ bool App::writeActiveSceneCameraPreviewPNG(int width, int height,
 }
 
 void App::processEvents() {
+    requireOwnerThread();
+    if (_closed || !_initialized)
+        throw std::runtime_error("App must be initialized and open before processing events");
     if (shouldClose())
         return;
     {
@@ -621,6 +688,17 @@ void App::updateAndDraw() { executeFrame(true); }
 void App::drawFrame() { executeFrame(false); }
 
 void App::executeFrame(bool update) {
+    requireOwnerThread();
+    if (_closed || !_initialized)
+        throw std::runtime_error("App must be initialized and open before rendering");
+    if (_inFrame)
+        throw std::runtime_error("App cannot render a nested frame");
+    struct FrameGuard {
+        bool& active;
+        explicit FrameGuard(bool& value) : active(value) { active = true; }
+        ~FrameGuard() { active = false; }
+    } frameGuard(_inFrame);
+
     auto smoothMetric = [](float& metric, double valueSeconds) {
         const float valueMs = static_cast<float>(valueSeconds * 1000.0);
         metric = metric <= 0.0f ? valueMs : metric * 0.9f + valueMs * 0.1f;
@@ -630,6 +708,15 @@ void App::executeFrame(bool update) {
     GLFWwindow* window = _window.getGlfwWindow();
     if (window == nullptr || glfwWindowShouldClose(window))
         return;
+
+    const bool automationFrame =
+        _automationRequested.load(std::memory_order_relaxed) &&
+        _automationRequested.exchange(false, std::memory_order_relaxed);
+    if (automationFrame) {
+        this->onFrameStartedInternal();
+        if (shouldClose())
+            return;
+    }
 
     auto profileFrame = getRenderer().profiler().frame(
         _frameIndex, _graphicsDevice->getBackendType());
@@ -868,7 +955,7 @@ void App::executeFrame(bool update) {
         auto scope = profile.cpuScope("render/post_callback");
         this->postRender();
     }
-    if (_videoRecordingToggleRequested || _frameCaptureActive) {
+    if (_videoRecordingToggleRequested || _frameCaptureActive || automationFrame) {
         this->onFrameRenderedInternal();
         _videoRecordingToggleRequested = false;
     }
@@ -974,30 +1061,31 @@ double App::getDroppedWallTime() const {
 }
 
 std::vector<uint8_t> App::readRgbPixels(bool flipY) {
-    if (_lastPresentedFramebuffer)
-        return _lastPresentedFramebuffer->readColorPixels(flipY);
-    if (!_framebuffer)
-        return {};
-    return _framebuffer->readColorPixels(flipY);
+    requireOwnerThread();
+    if (!_lastPresentedFramebuffer)
+        throw std::runtime_error("No completed scene frame is available");
+    return _lastPresentedFramebuffer->readColorPixels(flipY);
 }
 
 std::vector<uint8_t> App::readRgbPixelsResized(int width, int height,
                                                bool flipY) {
-    Backend::Framebuffer* source = _lastPresentedFramebuffer
-                                       ? _lastPresentedFramebuffer
-                                       : _framebuffer.get();
-    if (!source)
-        return {};
-    return source->readColorPixelsResized(width, height, flipY);
+    requireOwnerThread();
+    if (width <= 0 || height <= 0)
+        throw std::invalid_argument("Capture width and height must be positive");
+    if (!_lastPresentedFramebuffer)
+        throw std::runtime_error("No completed scene frame is available");
+    return _lastPresentedFramebuffer->readColorPixelsResized(width, height, flipY);
 }
 
 bool App::writePixelsPNG(const std::string& path, bool flipY) {
     auto pixels = this->readRgbPixels(flipY);
     if (pixels.empty())
         return false;
+    const auto* colorTexture = _lastPresentedFramebuffer->getColorTexture();
     // If fail, stbi_write_png returns 0
-    return stbi_write_png(path.c_str(), _width, _height, 3, pixels.data(),
-                          _width * 3) != 0;
+    return stbi_write_png(path.c_str(), colorTexture->getWidth(),
+                          colorTexture->getHeight(), 3, pixels.data(),
+                          colorTexture->getWidth() * 3) != 0;
 }
 
 bool App::writeScreenshotFrame() {

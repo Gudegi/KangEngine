@@ -897,6 +897,7 @@ void bind_scene(py::module& m) {
              py::arg("path"), py::return_value_policy::reference,
              "Find a descendant prim by absolute path.")
         .def("get_children", &KE::Scene::Prim::getChildren,
+             py::return_value_policy::reference,
              "Return direct child prims.")
         .def(
             "set_pickable",

@@ -39,6 +39,7 @@ class PanelManager {
     float _fontSize = 12.0f;
     UILayoutMode _layoutMode = UILayoutMode::Viewer;
     bool _layoutInitialized = false;
+    bool _initialized = false;
 
     ///
     /// @brief list contains the each panels.
@@ -84,6 +85,7 @@ class PanelManager {
     ~PanelManager();
 
     void init(GLFWwindow* window);
+    void shutdown();
 
     float getFontSize() { return _fontSize; }
 

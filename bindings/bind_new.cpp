@@ -60,6 +60,10 @@ class PyApp : public App {
     void postRender() override {
         PYBIND11_OVERRIDE_NAME(void, App, "post_render", postRender);
     }
+    void onFrameStartedInternal() override {
+        PYBIND11_OVERRIDE_NAME(void, App, "_on_frame_started_internal",
+                               onFrameStartedInternal);
+    }
     void onFrameRenderedInternal() override {
         PYBIND11_OVERRIDE_NAME(void, App, "_on_frame_rendered_internal",
                                onFrameRenderedInternal);
@@ -1135,6 +1139,13 @@ py::class_<glm::vec3>(m, "Vec3")
         .def("set_frame_capture_active", &App::setFrameCaptureActive,
              py::arg("active"))
         .def("get_frame_capture_active", &App::getFrameCaptureActive)
+        .def("_request_automation_frame", &App::requestAutomationFrame,
+             "Thread-safe signal for pending owner-thread automation work.")
+        .def_property_readonly("is_initialized", &App::isInitialized)
+        .def_property_readonly("closed", &App::isClosed)
+        .def_property_readonly("in_frame", &App::isInFrame)
+        .def_property_readonly("frame_index", &App::getFrameIndex,
+                               "Zero-based frame index; advances after presentation.")
         .def("consume_video_recording_toggle_requested",
              &App::consumeVideoRecordingToggleRequested)
         .def("set_fixed_update_hz", &App::setFixedUpdateHz,
@@ -1180,26 +1191,33 @@ py::class_<glm::vec3>(m, "Vec3")
             py::overload_cast<const std::vector<std::string>&>(&App::setSkybox),
             py::arg("face_paths"),
             "Set a skybox from six cubemap face image paths.")
-        .def("start", &App::start, "Enter the application render loop.")
+        .def("start", [](App& self) { self.start(false); },
+             py::call_guard<py::gil_scoped_release>(),
+             "Enter the application loop; close after Python-owned cleanup.")
+        .def("close", &App::close,
+             "Release the application and graphics context on its creating thread.")
         .def("update_and_draw", &App::updateAndDraw,
+             py::call_guard<py::gil_scoped_release>(),
              "Process events, run pre_update and due fixed_update callbacks, "
              "then draw and present one frame.")
         .def("process_events", &App::processEvents,
+             py::call_guard<py::gil_scoped_release>(),
              "Poll window events and handle input without running update callbacks.")
         .def("draw_frame", &App::drawFrame,
+             py::call_guard<py::gil_scoped_release>(),
              "Run pre_render/render/post_render, capture and present the current "
              "state without polling events or scheduling updates.")
         .def(
             "read_rgb_pixels",
             [](App& self, bool flipY) {
-                const int width = self.getWidth();
-                const int height = self.getHeight();
-                py::array_t<uint8_t> out({height, width, 3});
-
                 std::vector<uint8_t> pixels = self.readRgbPixels(flipY);
+                const auto* color = self.getPresentedTexture();
+                const int width = color->getWidth();
+                const int height = color->getHeight();
                 if (pixels.size() != static_cast<std::size_t>(width) *
                                          static_cast<std::size_t>(height) * 3)
-                    return out;
+                    throw std::runtime_error("Framebuffer RGB readback failed");
+                py::array_t<uint8_t> out({height, width, 3});
                 std::memcpy(out.mutable_data(), pixels.data(), pixels.size());
                 return out;
             },
@@ -1208,12 +1226,12 @@ py::class_<glm::vec3>(m, "Vec3")
         .def(
             "read_rgb_pixels_resized",
             [](App& self, int width, int height, bool flipY) {
-                py::array_t<uint8_t> out({height, width, 3});
                 std::vector<uint8_t> pixels =
                     self.readRgbPixelsResized(width, height, flipY);
                 if (pixels.size() != static_cast<std::size_t>(width) *
                                          static_cast<std::size_t>(height) * 3)
-                    return out;
+                    throw std::runtime_error("Framebuffer RGB readback failed");
+                py::array_t<uint8_t> out({height, width, 3});
                 std::memcpy(out.mutable_data(), pixels.data(), pixels.size());
                 return out;
             },

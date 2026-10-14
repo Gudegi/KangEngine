@@ -40,6 +40,38 @@ void main() {
 
 Renderer::~Renderer() = default;
 
+void Renderer::release() {
+    _offscreenCopyBindGroup.reset();
+    _offscreenCopyPipeline.reset();
+    _offscreenCopySampler.reset();
+    _offscreenCopyPipelineLayout.reset();
+    for (auto& layout : _offscreenCopyGroupLayouts)
+        layout.reset();
+    _offscreenOutputTarget.reset();
+    _offscreenOutputView.reset();
+    _offscreenResolveTarget.reset();
+    _offscreenDrawTarget.reset();
+    _offscreenClearTarget.reset();
+    _offscreenDepthStencilView.reset();
+    _offscreenResolveColorView.reset();
+    _offscreenMsaaColorView.reset();
+    _offscreenMsaaDepthStencil.reset();
+    _offscreenIntermediateColor.reset();
+    _offscreenMsaaColor.reset();
+    _sceneHookFramePipelineLayout.reset();
+    _sceneHookDefaultPipelineLayout.reset();
+    _profiler.bind(nullptr);
+    _profiler.setEnabled(false);
+    _device = nullptr;
+    _rasterizer = nullptr;
+    _postProcessor = nullptr;
+    _selectionOutlineProcessor = nullptr;
+    _offscreenFramebuffer = nullptr;
+    _offscreenResolvedColor = nullptr;
+    _offscreenWidth = _offscreenHeight = 0;
+    _offscreenOutputFormat = Backend::TextureFormat::Undefined;
+}
+
 void Renderer::bind(Backend::GraphicsDevice* device, Rasterizer* rasterizer,
                     PostProcessor* postProcessor,
                     SelectionOutlineProcessor* selectionOutlineProcessor) {

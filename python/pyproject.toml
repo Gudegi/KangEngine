@@ -19,6 +19,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+mcp = ["mcp>=2.3,<3"]
 motion-matching = ["scipy>=1.13"]
 terrain = ["warp-lang>=1.16,<2.0"]
 docs = [

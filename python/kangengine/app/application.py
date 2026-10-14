@@ -8,7 +8,12 @@ without talking directly to the pybind class.
 
 from __future__ import annotations
 
+import json
+import os
+from concurrent.futures import Future
 from pathlib import Path
+import tempfile
+import threading
 from types import SimpleNamespace
 
 from .._core import _ke
@@ -18,6 +23,7 @@ from .. import input as input_api
 from .. import material as material_api
 from .. import render as render_api
 from ..recording import VideoCaptureController
+from .capture import CaptureResult
 from .playback_controller import PlaybackController
 
 keys = _ke.keys
@@ -884,6 +890,11 @@ class App(_NativeApp):
 
     def __init__(self):
         super().__init__()
+        self._owner_thread = threading.get_ident()
+        self._automation = None
+        self._mcp_server = None
+        self._mcp_connection_file = None
+        self._closing = False
         self._previous_key_states = {}
         self.width = 1920
         self.height = 1080
@@ -1526,8 +1537,84 @@ class App(_NativeApp):
     def get_video_recording_path(self):
         return self._video_capture.output_path
 
+    @property
+    def automation(self):
+        """Common observation service; create it on the App thread before sharing."""
+        if self._automation is None:
+            self._check_owner_thread()
+            if self.closed:
+                raise RuntimeError("App is closed")
+            from .automation import AutomationService
+
+            self._automation = AutomationService(self)
+            self._request_automation_frame()
+        return self._automation
+
+    def capture_frame(
+        self, *, output_path: str | Path | None = None
+    ) -> Future[CaptureResult]:
+        """Request the next scene frame as a future of CaptureResult.
+
+        Args:
+            output_path: Optional PNG beneath ``tmp/captures``. Relative paths
+                are relative to that directory; existing files are rejected.
+
+        Returns:
+            A future containing PNG bytes and native frame identity. Wait from
+            a worker thread or after rendering a frame, never in a render hook.
+        """
+        return self.automation.submit("viewport_capture", output_path=output_path)
+
+    def enable_mcp(self, *, port: int = 8765, token: str | None = None):
+        """Start the optional loopback observation server on this App.
+
+        Connection credentials are saved in ``tmp/mcp/session.json`` with
+        owner-only permissions. The same service can also be enabled by
+        ``KANGENGINE_MCP=1`` when calling :meth:`start`.
+        """
+        self._check_owner_thread()
+        if self.closed:
+            raise RuntimeError("App is closed")
+        if self._mcp_server is not None:
+            return self._mcp_server
+        from ..adapters.mcp import McpServer
+
+        service = self.automation
+        server = McpServer(service, port=port, token=token)
+        server.start()
+        connection_file = Path("tmp/mcp/session.json").resolve()
+        temporary_path = None
+        try:
+            connection_file.parent.mkdir(parents=True, exist_ok=True)
+            descriptor, temporary_path = tempfile.mkstemp(dir=connection_file.parent)
+            with os.fdopen(descriptor, "w") as stream:
+                json.dump({"url": server.url, "token": server.token,
+                           "app_session_id": service.app_session_id}, stream)
+                stream.write("\n")
+            os.replace(temporary_path, connection_file)
+        except Exception:
+            if temporary_path is not None:
+                Path(temporary_path).unlink(missing_ok=True)
+            server.close()
+            raise
+        self._mcp_server = server
+        self._mcp_connection_file = connection_file
+        print(f"KangEngine MCP: {server.url} (credentials: {connection_file})")
+        return server
+
+    def _check_owner_thread(self):
+        if threading.get_ident() != self._owner_thread:
+            raise RuntimeError("App operations must run on the creating thread")
+
+    def _on_frame_started_internal(self):
+        """Internal native-loop callback; application subclasses should not override it."""
+        if self._automation is not None:
+            self._automation.on_frame_started()
+
     def _on_frame_rendered_internal(self):
         """Internal native-loop callback; application subclasses should not override it."""
+        if self._automation is not None:
+            self._automation.on_frame_rendered()
         self._video_capture.on_frame_rendered(self)
 
     def _recording_run_mode(self):
@@ -1562,13 +1649,58 @@ class App(_NativeApp):
         pass
 
     def start(self):
+        self._check_owner_thread()
         try:
+            if os.environ.get("KANGENGINE_MCP") == "1":
+                self.enable_mcp(
+                    port=int(os.environ.get("KANGENGINE_MCP_PORT", "8765")),
+                    token=os.environ.get("KANGENGINE_MCP_TOKEN"),
+                )
             return super().start()
+        finally:
+            self.close()
+
+    def close(self):
+        """Finalize App services and release graphics resources on the owner thread.
+
+        This is idempotent and is called by ``start`` even after a callback
+        raises. Manually stepped apps must call it in a ``finally`` block.
+        App-owned native views must not be used after this call.
+        """
+        self._check_owner_thread()
+        if self.closed or self._closing:
+            return
+        if self.in_frame:
+            raise RuntimeError("Cannot close App during a frame; use request_close instead")
+        self._closing = True
+        try:
+            if self._automation is not None:
+                self._automation.close()
+            if self._mcp_server is not None:
+                self._mcp_server.close()
+                self._mcp_server = None
+            if self._mcp_connection_file is not None:
+                path = self._mcp_connection_file
+                if path.exists():
+                    record = json.loads(path.read_text())
+                    if record.get("app_session_id") == self._automation.app_session_id:
+                        path.unlink()
         finally:
             try:
                 self.cleanup()
             finally:
-                self._video_capture.close(self)
+                try:
+                    self._video_capture.close(self)
+                finally:
+                    self.standard_materials = None
+                    self.shaders = None
+                    self.materials = []
+                    self.textures = []
+                    self._resource_handles_by_object_id.clear()
+                    self._textures_by_uri.clear()
+                    self._scene_hook_resource_handles.clear()
+                    self._render_hook_resource_usage.clear()
+                    super().close()
 
     def initialize(
         self,
