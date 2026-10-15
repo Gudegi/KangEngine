@@ -32,7 +32,7 @@ def make_scissor():
                                       half[0]**2 + half[2]**2,
                                       half[0]**2 + half[1]**2])
         builder.add_link(name, parent=parent, position=local_position,
-                         rotation_xyzw=(0., math.sin(delta/2), 0., math.cos(delta/2)),
+                         quat_xyzw=(0., math.sin(delta/2), 0., math.cos(delta/2)),
                          joint=joint, mass=mass, inertia_diagonal=inertia,
                          shapes=[Builder.BoxShape(half)])
         poses[name], shapes[name] = (position, angle), half
@@ -96,7 +96,7 @@ class Scissor:
     def state(self):
         self.world.state.refresh()
         positions = self.world.state.get_body_pos(0)[0].detach().cpu().numpy().copy()
-        rotations = self.world.state.get_body_rot(0)[0].detach().cpu().numpy().copy()
+        rotations = self.world.state.get_body_quat_xyzw(0)[0].detach().cpu().numpy().copy()
         return positions, rotations
 
     def close(self):
@@ -130,7 +130,7 @@ class Viewer(ke.App):
         positions, rotations = self.demo.state()
         for view, position, rotation in zip(self.views, positions, rotations):
             view.prim.set_local_translation(ke.Vec3(*map(float, position)))
-            view.prim.set_local_rotation(ke.Quat(float(rotation[3]), *map(float, rotation[:3])))
+            view.prim.set_local_quat_wxyz(ke.Quat(float(rotation[3]), *map(float, rotation[:3])))
 
     def render(self):
         imgui.begin("Procedural scissor")

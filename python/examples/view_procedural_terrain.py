@@ -260,11 +260,11 @@ class ProceduralTerrainViewer(ke.App):
     def _sync_collision_test_bodies(self):
         for _kind, actor, view, _size in self.test_bodies:
             pos = actor.get_root_position()
-            rot = actor.get_root_rotation()
+            rot = actor.get_root_quat_xyzw()
             view.prim.set_local_translation(
                 ke.Vec3(float(pos[0]), float(pos[1]), float(pos[2]))
             )
-            view.prim.set_local_rotation(
+            view.prim.set_local_quat_wxyz(
                 ke.Quat(float(rot[3]), float(rot[0]), float(rot[1]), float(rot[2]))
             )
 

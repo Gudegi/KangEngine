@@ -171,7 +171,7 @@ class DebugVisualizationApp(ke.App):
         )
 
         box_pos = self.box.get_world_translation()
-        box_quat = self.box.get_world_rotation()
+        box_quat = self.box.get_world_quat()
         self.world_text.set_position(
             "/labels/box",
             box_pos + box_quat * ke.Vec3(0.0, 1.2, 0.0),

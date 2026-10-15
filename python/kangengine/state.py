@@ -24,11 +24,11 @@ def _empty_state(batch_shape, num_bodies: int, num_dofs: int, device):
 
     return SimObjectState(
         root_pos=empty(3),
-        root_rot=empty(4),
+        root_quat_xyzw=empty(4),
         root_vel=empty(3),
         root_ang_vel=empty(3),
         body_pos=empty(num_bodies, 3),
-        body_rot=empty(num_bodies, 4),
+        body_quat_xyzw=empty(num_bodies, 4),
         body_vel=empty(num_bodies, 3),
         body_ang_vel=empty(num_bodies, 3),
         body_contact_force=empty(num_bodies, 3),
@@ -42,11 +42,11 @@ def _empty_state(batch_shape, num_bodies: int, num_dofs: int, device):
 def _state_slice(state, index):
     return SimObjectState(
         root_pos=state.root_pos[index],
-        root_rot=state.root_rot[index],
+        root_quat_xyzw=state.root_quat_xyzw[index],
         root_vel=state.root_vel[index],
         root_ang_vel=state.root_ang_vel[index],
         body_pos=state.body_pos[index],
-        body_rot=state.body_rot[index],
+        body_quat_xyzw=state.body_quat_xyzw[index],
         body_vel=state.body_vel[index],
         body_ang_vel=state.body_ang_vel[index],
         body_contact_force=state.body_contact_force[index],
@@ -61,13 +61,18 @@ def _state_slice(state, index):
 class SimObjectState:
     """Torch state views for one object or an environment batch.
 
+    Poses and velocities use world coordinates: positions in meters, XYZW
+    quaternions, linear velocities in m/s, and angular velocities in rad/s.
+    Body poses describe physical links (or rigid shape frames), not joint-local
+    rotations. DOF values use joint coordinates (radians or meters).
+
     Shapes:
         root_pos: ``(..., 3)``.
-        root_rot: ``(..., 4)``.
+        root_quat_xyzw: ``(..., 4)``.
         root_vel: ``(..., 3)``.
         root_ang_vel: ``(..., 3)``.
         body_pos: ``(..., B, 3)``.
-        body_rot: ``(..., B, 4)``.
+        body_quat_xyzw: ``(..., B, 4)``.
         body_vel: ``(..., B, 3)``.
         body_ang_vel: ``(..., B, 3)``.
         body_contact_force: ``(..., B, 3)``.
@@ -78,11 +83,11 @@ class SimObjectState:
     """
 
     root_pos: torch.Tensor
-    root_rot: torch.Tensor
+    root_quat_xyzw: torch.Tensor
     root_vel: torch.Tensor
     root_ang_vel: torch.Tensor
     body_pos: torch.Tensor
-    body_rot: torch.Tensor
+    body_quat_xyzw: torch.Tensor
     body_vel: torch.Tensor
     body_ang_vel: torch.Tensor
     body_contact_force: torch.Tensor
@@ -137,8 +142,8 @@ class ArticulationStateCache:
         state.root_pos.copy_(
             as_tensor(a.get_root_position(), shape=(3,), device=self.device)
         )
-        state.root_rot.copy_(
-            as_tensor(a.get_root_rotation(), shape=(4,), device=self.device)
+        state.root_quat_xyzw.copy_(
+            as_tensor(a.get_root_quat_xyzw(), shape=(4,), device=self.device)
         )
         state.root_vel.copy_(
             as_tensor(a.get_root_linear_velocity(), shape=(3,), device=self.device)
@@ -151,9 +156,9 @@ class ArticulationStateCache:
                 a.get_link_positions(), shape=(self.num_bodies, 3), device=self.device
             )
         )
-        state.body_rot.copy_(
+        state.body_quat_xyzw.copy_(
             as_tensor(
-                a.get_link_rotations(), shape=(self.num_bodies, 4), device=self.device
+                a.get_link_quats_xyzw(), shape=(self.num_bodies, 4), device=self.device
             )
         )
         state.body_vel.copy_(
@@ -195,7 +200,7 @@ class ArticulationStateCache:
             values = self.physics.get_contact_forces(self.articulation)
         out.copy_(as_tensor(values, shape=(self.num_bodies, 3), device=self.device))
 
-    def set_root(self, pos, rot_xyzw, linear_velocity=None, angular_velocity=None):
+    def set_root(self, pos, quat_xyzw, linear_velocity=None, angular_velocity=None):
         linear_velocity = (
             [0.0, 0.0, 0.0] if linear_velocity is None else linear_velocity
         )
@@ -204,7 +209,7 @@ class ArticulationStateCache:
         )
         self.articulation.set_root_state(
             as_cpu_numpy(pos, shape=(3,)),
-            as_cpu_numpy(rot_xyzw, shape=(4,)),
+            as_cpu_numpy(quat_xyzw, shape=(4,)),
             as_cpu_numpy(linear_velocity, shape=(3,)),
             as_cpu_numpy(angular_velocity, shape=(3,)),
         )
@@ -233,7 +238,7 @@ class RigidStateCache:
         physics=None,
         body_names=None,
         local_pos=None,
-        local_rot=None,
+        local_quat_xyzw=None,
         device=None,
     ):
         self.rigid = rigid
@@ -245,13 +250,13 @@ class RigidStateCache:
             if local_pos is None
             else np.asarray(local_pos, dtype=np.float32).reshape(-1, 3)
         )
-        self.local_rot = (
+        self.local_quat_xyzw = (
             np.tile(
                 np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32),
                 (len(self.body_names), 1),
             )
-            if local_rot is None
-            else np.asarray(local_rot, dtype=np.float32).reshape(-1, 4)
+            if local_quat_xyzw is None
+            else np.asarray(local_quat_xyzw, dtype=np.float32).reshape(-1, 4)
         )
         if len(self.body_names) != self.local_pos.shape[0]:
             raise ValueError(
@@ -277,20 +282,20 @@ class RigidStateCache:
 
     def refresh_into(self, state: SimObjectState) -> SimObjectState:
         pos = as_cpu_numpy(self.rigid.get_root_position(), shape=(3,))
-        rot = as_cpu_numpy(self.rigid.get_root_rotation(), shape=(4,))
+        rot = as_cpu_numpy(self.rigid.get_root_quat_xyzw(), shape=(4,))
         vel = as_cpu_numpy(self.rigid.get_root_linear_velocity(), shape=(3,))
         ang_vel = as_cpu_numpy(self.rigid.get_root_angular_velocity(), shape=(3,))
-        body_pos, body_rot = expand_rigid_body_state(
-            pos, rot, self.local_pos, self.local_rot
+        body_pos, body_quat_xyzw = expand_rigid_body_state(
+            pos, rot, self.local_pos, self.local_quat_xyzw
         )
         body_vel = np.repeat(vel.reshape(1, 3), self.num_bodies, axis=0)
         body_ang_vel = np.repeat(ang_vel.reshape(1, 3), self.num_bodies, axis=0)
         state.root_pos.copy_(as_tensor(pos, device=self.device))
-        state.root_rot.copy_(as_tensor(rot, device=self.device))
+        state.root_quat_xyzw.copy_(as_tensor(rot, device=self.device))
         state.root_vel.copy_(as_tensor(vel, device=self.device))
         state.root_ang_vel.copy_(as_tensor(ang_vel, device=self.device))
         state.body_pos.copy_(as_tensor(body_pos, device=self.device))
-        state.body_rot.copy_(as_tensor(body_rot, device=self.device))
+        state.body_quat_xyzw.copy_(as_tensor(body_quat_xyzw, device=self.device))
         state.body_vel.copy_(as_tensor(body_vel, device=self.device))
         state.body_ang_vel.copy_(as_tensor(body_ang_vel, device=self.device))
         self._copy_contact_forces(state.body_contact_force, False)
@@ -308,7 +313,7 @@ class RigidStateCache:
         if self.num_bodies:
             out[0] = as_tensor(values, shape=(3,), device=self.device)
 
-    def set_root(self, pos, rot_xyzw, linear_velocity=None, angular_velocity=None):
+    def set_root(self, pos, quat_xyzw, linear_velocity=None, angular_velocity=None):
         linear_velocity = (
             [0.0, 0.0, 0.0] if linear_velocity is None else linear_velocity
         )
@@ -317,7 +322,7 @@ class RigidStateCache:
         )
         self.rigid.set_root_state(
             as_cpu_numpy(pos, shape=(3,)),
-            as_cpu_numpy(rot_xyzw, shape=(4,)),
+            as_cpu_numpy(quat_xyzw, shape=(4,)),
             as_cpu_numpy(linear_velocity, shape=(3,)),
             as_cpu_numpy(angular_velocity, shape=(3,)),
         )
@@ -447,7 +452,7 @@ class CPUStateBackend:
         physics=None,
         body_names=None,
         local_pos=None,
-        local_rot=None,
+        local_quat_xyzw=None,
     ):
         env_id = int(env_id)
         obj_id = int(obj_id)
@@ -463,7 +468,7 @@ class CPUStateBackend:
             physics=physics,
             body_names=body_names,
             local_pos=local_pos,
-            local_rot=local_rot,
+            local_quat_xyzw=local_quat_xyzw,
             device=self.device,
         )
         record = ObjectRecord(env_id, obj_id, rigid, str(name), cache)
@@ -524,8 +529,8 @@ class CPUStateBackend:
     def get_root_pos(self, obj_id: int):
         return self._batched_state(obj_id).root_pos
 
-    def get_root_rot(self, obj_id: int):
-        return self._batched_state(obj_id).root_rot
+    def get_root_quat_xyzw(self, obj_id: int):
+        return self._batched_state(obj_id).root_quat_xyzw
 
     def get_root_vel(self, obj_id: int):
         return self._batched_state(obj_id).root_vel
@@ -536,8 +541,8 @@ class CPUStateBackend:
     def get_body_pos(self, obj_id: int):
         return self._batched_state(obj_id).body_pos
 
-    def get_body_rot(self, obj_id: int):
-        return self._batched_state(obj_id).body_rot
+    def get_body_quat_xyzw(self, obj_id: int):
+        return self._batched_state(obj_id).body_quat_xyzw
 
     def get_body_vel(self, obj_id: int):
         return self._batched_state(obj_id).body_vel
@@ -621,7 +626,7 @@ class CPUStateBackend:
         env_id: EnvIdLike,
         obj_id: int,
         pos,
-        rot_xyzw,
+        quat_xyzw,
         linear_velocity=None,
         angular_velocity=None,
     ):
@@ -629,7 +634,7 @@ class CPUStateBackend:
         for env_index, eid in enumerate(env_ids):
             self.record(eid, obj_id).cache.set_root(
                 select_env_value(pos, env_index, len(env_ids), (3,)),
-                select_env_value(rot_xyzw, env_index, len(env_ids), (4,)),
+                select_env_value(quat_xyzw, env_index, len(env_ids), (4,)),
                 select_optional_env_value(
                     linear_velocity, env_index, len(env_ids), (3,)
                 ),
@@ -732,11 +737,11 @@ class StateSnapshotBackend(CPUStateBackend):
                 )
                 link_state = articulation_link_data[row, link_indices[:num_bodies]]
                 state.root_pos.copy_(link_state[0, 0:3].to(self.device))
-                state.root_rot.copy_(link_state[0, 3:7].to(self.device))
+                state.root_quat_xyzw.copy_(link_state[0, 3:7].to(self.device))
                 state.root_vel.copy_(link_state[0, 7:10].to(self.device))
                 state.root_ang_vel.copy_(link_state[0, 10:13].to(self.device))
                 state.body_pos.copy_(link_state[:, 0:3].to(self.device))
-                state.body_rot.copy_(link_state[:, 3:7].to(self.device))
+                state.body_quat_xyzw.copy_(link_state[:, 3:7].to(self.device))
                 state.body_vel.copy_(link_state[:, 7:10].to(self.device))
                 state.body_ang_vel.copy_(link_state[:, 10:13].to(self.device))
                 dof_indices = cache.dof_gpu_indices.to(articulation_qpos.device)
@@ -751,7 +756,7 @@ class StateSnapshotBackend(CPUStateBackend):
                 row = int(gpu_system.rigid_row(cache.rigid))
                 rigid_state = rigid_data[row]
                 state.root_pos.copy_(rigid_state[0:3].to(self.device))
-                state.root_rot.copy_(rigid_state[3:7].to(self.device))
+                state.root_quat_xyzw.copy_(rigid_state[3:7].to(self.device))
                 state.root_vel.copy_(rigid_state[7:10].to(self.device))
                 state.root_ang_vel.copy_(rigid_state[10:13].to(self.device))
                 state.body_pos.copy_(
@@ -760,11 +765,11 @@ class StateSnapshotBackend(CPUStateBackend):
                     .reshape(1, 3)
                     .expand_as(state.body_pos)
                 )
-                state.body_rot.copy_(
+                state.body_quat_xyzw.copy_(
                     rigid_state[3:7]
                     .to(self.device)
                     .reshape(1, 4)
-                    .expand_as(state.body_rot)
+                    .expand_as(state.body_quat_xyzw)
                 )
                 state.body_vel.copy_(
                     rigid_state[7:10]
@@ -1130,7 +1135,7 @@ class GPUStateBackend:
             )[:, 0, 0:3]
         return self._rigid_tensor(obj_id, fetch=fetch)[:, 0:3]
 
-    def get_root_rot(self, obj_id: int, *, fetch: bool = True):
+    def get_root_quat_xyzw(self, obj_id: int, *, fetch: bool = True):
         kind = self._object_kind(obj_id)
         if kind == "articulation":
             return self._articulation_link_tensor(
@@ -1164,7 +1169,7 @@ class GPUStateBackend:
         num_bodies = self._records_for_obj(obj_id)[0].cache.num_bodies
         return rigid[:, 0:3].reshape(self.num_envs, 1, 3).expand(-1, num_bodies, -1)
 
-    def get_body_rot(self, obj_id: int, *, fetch: bool = True):
+    def get_body_quat_xyzw(self, obj_id: int, *, fetch: bool = True):
         kind = self._object_kind(obj_id)
         if kind == "articulation":
             return self._articulation_link_tensor(
@@ -1231,12 +1236,19 @@ class GPUStateBackend:
         )
 
     def rigid_data(self, *, fetch: bool = True):
+        """Return the GPU ``(R, 13)`` world-state view.
+
+        Columns: position (m) ``0:3``, quaternion XYZW ``3:7``, linear velocity
+        (m/s) ``7:10``, angular velocity (rad/s) ``10:13``. Fetch refreshes all
+        fields; the owning GPU system must remain alive while using this view.
+        """
         gpu_system = self._require_gpu_system()
         if fetch:
             gpu_system.fetch_rigid_data()
         return gpu_system.rigid_data()
 
     def rigid_data_tensor(self, *, fetch: bool = True):
+        """Return a zero-copy tensor with the layout and lifetime of rigid_data()."""
         raw = self._frame_cache.get("rigid_data")
         if raw is not None and not fetch:
             return raw
@@ -1255,12 +1267,21 @@ class GPUStateBackend:
         return self.rigid_accelerations(fetch=fetch).torch()
 
     def articulation_link_data(self, *, fetch: bool = True):
+        """Return the GPU ``(A, max_links, 13)`` world-state view.
+
+        Columns match rigid_data(): position ``0:3``, quaternion XYZW ``3:7``,
+        linear velocity ``7:10``, angular velocity ``10:13``. Fetch refreshes
+        only pose; call fetch_articulation_link_vel() on the GPU system
+        before reading velocity. Padding beyond each articulation's link count
+        is not state. The owning GPU system must remain alive.
+        """
         gpu_system = self._require_gpu_system()
         if fetch:
             gpu_system.fetch_articulation_link_pose()
         return gpu_system.articulation_link_data()
 
     def articulation_link_data_tensor(self, *, fetch: bool = True):
+        """Return a zero-copy tensor with articulation_link_data() semantics."""
         return self.articulation_link_data(fetch=fetch).torch()
 
     def articulation_joint_positions(self, *, fetch: bool = True):
@@ -1654,9 +1675,9 @@ class KangWorldState:
         """Shape: ``(N, 3)``."""
         return self._read_backend().get_root_pos(obj_id)
 
-    def get_root_rot(self, obj_id: int) -> torch.Tensor:
-        """Shape: ``(N, 4)``."""
-        return self._read_backend().get_root_rot(obj_id)
+    def get_root_quat_xyzw(self, obj_id: int) -> torch.Tensor:
+        """World-space XYZW quaternions; shape: ``(N, 4)``."""
+        return self._read_backend().get_root_quat_xyzw(obj_id)
 
     def get_root_vel(self, obj_id: int) -> torch.Tensor:
         """Shape: ``(N, 3)``."""
@@ -1670,9 +1691,9 @@ class KangWorldState:
         """Shape: ``(N, B, 3)``."""
         return self._read_backend().get_body_pos(obj_id)
 
-    def get_body_rot(self, obj_id: int) -> torch.Tensor:
-        """Shape: ``(N, B, 4)``."""
-        return self._read_backend().get_body_rot(obj_id)
+    def get_body_quat_xyzw(self, obj_id: int) -> torch.Tensor:
+        """World-space XYZW quaternions; shape: ``(N, B, 4)``."""
+        return self._read_backend().get_body_quat_xyzw(obj_id)
 
     def get_body_vel(self, obj_id: int) -> torch.Tensor:
         """Shape: ``(N, B, 3)``."""
@@ -1719,23 +1740,23 @@ class KangWorldState:
         """World positions (N, F, 3). CUDA queries use the direct GPU backend."""
         if self.canonical_source == "gpu":
             pos = self.backend.get_body_pos(obj_id, fetch=fetch)
-            rot = self.backend.get_body_rot(obj_id, fetch=False)
+            rot = self.backend.get_body_quat_xyzw(obj_id, fetch=False)
         else:
             backend = self._read_backend()
-            pos, rot = backend.get_body_pos(obj_id), backend.get_body_rot(obj_id)
+            pos, rot = backend.get_body_pos(obj_id), backend.get_body_quat_xyzw(obj_id)
         ids, local_pos, _ = self._fixed_frame_selection(obj_id, frame_names, device=pos.device)
         q = rot.index_select(1, ids)
         return pos.index_select(1, ids) + quat_xyzw_rotate(q, local_pos.expand(q.shape[:-1] + (3,)))
 
-    def get_frame_rot(self, obj_id: int, *, frame_names, fetch: bool = True) -> torch.Tensor:
+    def get_frame_quat_xyzw(self, obj_id: int, *, frame_names, fetch: bool = True) -> torch.Tensor:
         """World xyzw rotations (N, F, 4), preserving requested frame order."""
         if self.canonical_source == "gpu":
-            rot = self.backend.get_body_rot(obj_id, fetch=fetch)
+            rot = self.backend.get_body_quat_xyzw(obj_id, fetch=fetch)
         else:
-            rot = self._read_backend().get_body_rot(obj_id)
-        ids, _, local_rot = self._fixed_frame_selection(obj_id, frame_names, device=rot.device)
+            rot = self._read_backend().get_body_quat_xyzw(obj_id)
+        ids, _, local_quat_xyzw = self._fixed_frame_selection(obj_id, frame_names, device=rot.device)
         q = rot.index_select(1, ids)
-        return quat_xyzw_multiply(q, local_rot.expand_as(q))
+        return quat_xyzw_multiply(q, local_quat_xyzw.expand_as(q))
 
     def get_contact_forces(self, obj_id: int) -> torch.Tensor:
         """Shape: ``(N, B, 3)``."""

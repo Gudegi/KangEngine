@@ -172,9 +172,9 @@ class SimArticulation:
         """Shape: ``(..., 3)``."""
         return self.get_data(env_ids).root_pos
 
-    def get_root_rot(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
-        """Shape: ``(..., 4)``."""
-        return self.get_data(env_ids).root_rot
+    def get_root_quat_xyzw(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """World-space XYZW quaternions; shape: ``(..., 4)``."""
+        return self.get_data(env_ids).root_quat_xyzw
 
     def get_root_vel(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
         """Shape: ``(..., 3)``."""
@@ -188,9 +188,9 @@ class SimArticulation:
         """Shape: ``(..., B, 3)``."""
         return self.get_data(env_ids).body_pos
 
-    def get_body_rot(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
-        """Shape: ``(..., B, 4)``."""
-        return self.get_data(env_ids).body_rot
+    def get_body_quat_xyzw(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """World-space XYZW quaternions; shape: ``(..., B, 4)``."""
+        return self.get_data(env_ids).body_quat_xyzw
 
     def get_dof_pos(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
         """Shape: ``(..., D)``."""
@@ -271,17 +271,17 @@ class SimArticulation:
         self,
         env_ids: EnvIdLike | None,
         pos: torch.Tensor,
-        rot_xyzw: torch.Tensor,
+        quat_xyzw: torch.Tensor,
         linear_velocity: torch.Tensor | None = None,
         angular_velocity: torch.Tensor | None = None,
         immediate: bool = False,
     ) -> Self:
-        """Shapes: position/velocity ``(..., 3)``, rotation ``(..., 4)``."""
+        """World pose/velocities: vectors ``(..., 3)``, XYZW quaternion ``(..., 4)``."""
         self._require_world().set_root_state(
             self._selected_env_ids(env_ids),
             self.obj_id,
             pos,
-            rot_xyzw,
+            quat_xyzw,
             linear_velocity,
             angular_velocity,
             immediate=immediate,
@@ -387,9 +387,9 @@ class SimRigid:
         """Shape: ``(..., 3)``."""
         return self.get_data(env_ids).root_pos
 
-    def get_root_rot(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
-        """Shape: ``(..., 4)``."""
-        return self.get_data(env_ids).root_rot
+    def get_root_quat_xyzw(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """World-space XYZW quaternions; shape: ``(..., 4)``."""
+        return self.get_data(env_ids).root_quat_xyzw
 
     def get_root_vel(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
         """Shape: ``(..., 3)``."""
@@ -403,9 +403,9 @@ class SimRigid:
         """Shape: ``(..., B, 3)``."""
         return self.get_data(env_ids).body_pos
 
-    def get_body_rot(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
-        """Shape: ``(..., B, 4)``."""
-        return self.get_data(env_ids).body_rot
+    def get_body_quat_xyzw(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """World-space XYZW quaternions; shape: ``(..., B, 4)``."""
+        return self.get_data(env_ids).body_quat_xyzw
 
     @property
     def num_bodies(self) -> int:
@@ -453,17 +453,17 @@ class SimRigid:
         self,
         env_ids: EnvIdLike | None,
         pos: torch.Tensor,
-        rot_xyzw: torch.Tensor,
+        quat_xyzw: torch.Tensor,
         linear_velocity: torch.Tensor | None = None,
         angular_velocity: torch.Tensor | None = None,
         immediate: bool = False,
     ) -> Self:
-        """Shapes: position/velocity ``(..., 3)``, rotation ``(..., 4)``."""
+        """World pose/velocities: vectors ``(..., 3)``, XYZW quaternion ``(..., 4)``."""
         self._require_world().set_root_state(
             self._selected_env_ids(env_ids),
             self.obj_id,
             pos,
-            rot_xyzw,
+            quat_xyzw,
             linear_velocity,
             angular_velocity,
             immediate=immediate,
@@ -561,9 +561,9 @@ class SimArticulationBatch:
         """Shape: ``(N, 3)``."""
         return self.get_data(env_ids).root_pos
 
-    def get_root_rot(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
-        """Shape: ``(N, 4)``."""
-        return self.get_data(env_ids).root_rot
+    def get_root_quat_xyzw(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """World-space XYZW quaternions; shape: ``(N, 4)``."""
+        return self.get_data(env_ids).root_quat_xyzw
 
     def get_root_vel(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
         """Shape: ``(N, 3)``."""
@@ -577,9 +577,9 @@ class SimArticulationBatch:
         """Shape: ``(N, B, 3)``."""
         return self.get_data(env_ids).body_pos
 
-    def get_body_rot(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
-        """Shape: ``(N, B, 4)``."""
-        return self.get_data(env_ids).body_rot
+    def get_body_quat_xyzw(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """World-space XYZW quaternions; shape: ``(N, B, 4)``."""
+        return self.get_data(env_ids).body_quat_xyzw
 
     def get_dof_pos(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
         """Shape: ``(N, D)``."""
@@ -670,7 +670,7 @@ class SimArticulationBatch:
         self,
         env_ids: EnvIdLike | None,
         pos: torch.Tensor,
-        rot_xyzw: torch.Tensor,
+        quat_xyzw: torch.Tensor,
         linear_velocity: torch.Tensor | None = None,
         angular_velocity: torch.Tensor | None = None,
         immediate: bool = False,
@@ -680,7 +680,7 @@ class SimArticulationBatch:
             self._selected_env_ids(env_ids),
             self.obj_id,
             pos,
-            rot_xyzw,
+            quat_xyzw,
             linear_velocity,
             angular_velocity,
             immediate=immediate,
@@ -774,9 +774,9 @@ class SimRigidBatch:
         """Shape: ``(N, 3)``."""
         return self.get_data(env_ids).root_pos
 
-    def get_root_rot(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
-        """Shape: ``(N, 4)``."""
-        return self.get_data(env_ids).root_rot
+    def get_root_quat_xyzw(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """World-space XYZW quaternions; shape: ``(N, 4)``."""
+        return self.get_data(env_ids).root_quat_xyzw
 
     def get_root_vel(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
         """Shape: ``(N, 3)``."""
@@ -790,9 +790,9 @@ class SimRigidBatch:
         """Shape: ``(N, B, 3)``."""
         return self.get_data(env_ids).body_pos
 
-    def get_body_rot(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
-        """Shape: ``(N, B, 4)``."""
-        return self.get_data(env_ids).body_rot
+    def get_body_quat_xyzw(self, env_ids: EnvIdLike | None = None) -> torch.Tensor:
+        """World-space XYZW quaternions; shape: ``(N, B, 4)``."""
+        return self.get_data(env_ids).body_quat_xyzw
 
     @property
     def records(self) -> tuple[SimRigid, ...]:
@@ -832,7 +832,7 @@ class SimRigidBatch:
         self,
         env_ids: EnvIdLike | None,
         pos: torch.Tensor,
-        rot_xyzw: torch.Tensor,
+        quat_xyzw: torch.Tensor,
         linear_velocity: torch.Tensor | None = None,
         angular_velocity: torch.Tensor | None = None,
         immediate: bool = False,
@@ -842,7 +842,7 @@ class SimRigidBatch:
             self._selected_env_ids(env_ids),
             self.obj_id,
             pos,
-            rot_xyzw,
+            quat_xyzw,
             linear_velocity,
             angular_velocity,
             immediate=immediate,
@@ -951,7 +951,7 @@ class BatchCommandBuffer:
 @dataclass(slots=True)
 class RootStateReset:
     pos: np.ndarray
-    rot_xyzw: np.ndarray
+    quat_xyzw: np.ndarray
     linear_velocity: np.ndarray | None = None
     angular_velocity: np.ndarray | None = None
 
@@ -1229,7 +1229,7 @@ class KangSimWorld:
         obj_id: int = 0,
         name: str = "",
         pos=None,
-        rot_xyzw=None,
+        quat_xyzw=None,
         density: float = 1.0,
         collision_group: int | None = None,
         contact_offset: float = 0.02,
@@ -1242,14 +1242,14 @@ class KangSimWorld:
             raise ValueError(f"object already registered at env={key[0]}, obj={key[1]}")
         if pos is None:
             pos = np.zeros(3, dtype=np.float32)
-        if rot_xyzw is None:
-            rot_xyzw = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32)
+        if quat_xyzw is None:
+            quat_xyzw = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32)
         if collision_group is None:
             collision_group = key[0] + 1
         rigid = self.physics.create_dynamic_rigid(
             data,
             _as_cpu_numpy(pos).reshape(3),
-            _as_cpu_numpy(rot_xyzw).reshape(4),
+            _as_cpu_numpy(quat_xyzw).reshape(4),
             float(density),
             int(collision_group),
             float(contact_offset),
@@ -1260,7 +1260,7 @@ class KangSimWorld:
         shape_specs = rigid_shape_specs(data)
         body_names = [spec.name for spec in shape_specs]
         local_pos = np.stack([spec.local_pos for spec in shape_specs], axis=0)
-        local_rot = np.stack([spec.local_rot for spec in shape_specs], axis=0)
+        local_quat_xyzw = np.stack([spec.local_quat_xyzw for spec in shape_specs], axis=0)
         record = SimRigid(key[0], key[1], str(name), rigid, self, data)
         self.rigids[key] = record
         self.state.add_rigid(
@@ -1271,7 +1271,7 @@ class KangSimWorld:
             physics=self.physics,
             body_names=body_names,
             local_pos=local_pos,
-            local_rot=local_rot,
+            local_quat_xyzw=local_quat_xyzw,
         )
         self.commands[key] = CommandBuffer(ControlMode.NONE)
         self.resets[key] = ResetBuffer()
@@ -1289,7 +1289,7 @@ class KangSimWorld:
         obj_id: int = 0,
         name: str = "",
         pos=None,
-        rot_xyzw=None,
+        quat_xyzw=None,
         collision_group: int | None = None,
         contact_offset: float = 0.02,
         rest_offset: float = 0.0,
@@ -1300,14 +1300,14 @@ class KangSimWorld:
             raise ValueError(f"object already registered at env={key[0]}, obj={key[1]}")
         if pos is None:
             pos = np.zeros(3, dtype=np.float32)
-        if rot_xyzw is None:
-            rot_xyzw = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32)
+        if quat_xyzw is None:
+            quat_xyzw = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32)
         if collision_group is None:
             collision_group = key[0] + 1
         rigid = self.physics.create_static_rigid(
             data,
             _as_cpu_numpy(pos).reshape(3).tolist(),
-            _as_cpu_numpy(rot_xyzw).reshape(4).tolist(),
+            _as_cpu_numpy(quat_xyzw).reshape(4).tolist(),
             int(collision_group),
             float(contact_offset),
             float(rest_offset),
@@ -2141,7 +2141,7 @@ class KangSimWorld:
                 else:
                     cache.set_root(
                         reset.root.pos,
-                        reset.root.rot_xyzw,
+                        reset.root.quat_xyzw,
                         reset.root.linear_velocity,
                         reset.root.angular_velocity,
                     )
@@ -2208,7 +2208,7 @@ class KangSimWorld:
                 reset.pos, dtype=torch.float32, device=device
             )
             rigid_state[row, 3:7] = torch.as_tensor(
-                reset.rot_xyzw, dtype=torch.float32, device=device
+                reset.quat_xyzw, dtype=torch.float32, device=device
             )
             linear_velocity = (
                 np.zeros(3, dtype=np.float32)
@@ -2252,7 +2252,7 @@ class KangSimWorld:
                 reset.pos, dtype=torch.float32, device=device
             )
             link_state[row, root_link_index, 3:7] = torch.as_tensor(
-                reset.rot_xyzw, dtype=torch.float32, device=device
+                reset.quat_xyzw, dtype=torch.float32, device=device
             )
             linear_velocity = (
                 np.zeros(3, dtype=np.float32)
@@ -3076,10 +3076,13 @@ class KangSimWorld:
     def set_gpu_root_state_batch(self, env_ids, obj_id: int, state):
         """Queue CUDA root states without creating per-environment reset objects.
 
-        ``env_ids`` may be a one-dimensional CUDA int32/int64 tensor. It stays
-        on device through row selection and the indexed PhysX apply call.
-        ``state`` must be a contiguous ``float32`` CUDA tensor shaped ``[N, 13]``
-        with position, xyzw rotation, linear velocity, and angular velocity.
+        Args:
+            env_ids: Environment rows, optionally a 1-D CUDA int32/int64 tensor
+                kept on device through row selection and indexed PhysX apply.
+            obj_id: Simulation object index.
+            state: Contiguous float32 CUDA tensor ``(N, 13)`` in world space:
+                position in meters ``0:3``, quaternion XYZW ``3:7``, linear
+                velocity in m/s ``7:10``, angular velocity in rad/s ``10:13``.
         """
         ids = self._gpu_reset_env_ids(env_ids)
         oid = int(obj_id)
@@ -3183,7 +3186,7 @@ class KangSimWorld:
         env_id: EnvIdLike,
         obj_id: int,
         pos,
-        rot_xyzw,
+        quat_xyzw,
         linear_velocity=None,
         angular_velocity=None,
         immediate: bool = False,
@@ -3196,8 +3199,8 @@ class KangSimWorld:
         )
         cuda_rot = (
             torch is not None
-            and torch.is_tensor(rot_xyzw)
-            and rot_xyzw.device.type == "cuda"
+            and torch.is_tensor(quat_xyzw)
+            and quat_xyzw.device.type == "cuda"
         )
         cuda_lin_vel = (
             torch is not None
@@ -3221,7 +3224,7 @@ class KangSimWorld:
             )
         if immediate:
             self.state.set_root_state(
-                env_id, obj_id, pos, rot_xyzw, linear_velocity, angular_velocity
+                env_id, obj_id, pos, quat_xyzw, linear_velocity, angular_velocity
             )
             env_ids = env_id_list(env_id, self.num_envs)
             for eid in env_ids:
@@ -3243,7 +3246,7 @@ class KangSimWorld:
                 gpu_device = int(self.gpu_system.rigid_data().device_id)
             for name, value, is_cuda, width in (
                 ("position", pos, cuda_pos, 3),
-                ("rotation", rot_xyzw, cuda_rot, 4),
+                ("rotation", quat_xyzw, cuda_rot, 4),
                 ("linear velocity", linear_velocity, cuda_lin_vel, 3),
                 ("angular velocity", angular_velocity, cuda_ang_vel, 3),
             ):
@@ -3285,7 +3288,7 @@ class KangSimWorld:
                 raise KeyError(f"no object registered at env={eid}, obj={obj_id}")
             if cuda_root_reset:
                 pos_arr = pos if pos.ndim == 1 else pos[env_index]
-                rot_arr = rot_xyzw if rot_xyzw.ndim == 1 else rot_xyzw[env_index]
+                rot_arr = quat_xyzw if quat_xyzw.ndim == 1 else quat_xyzw[env_index]
                 linear_velocity_arr = None
                 if linear_velocity is not None:
                     linear_velocity_arr = (
@@ -3310,7 +3313,7 @@ class KangSimWorld:
                 continue
 
             pos_arr = select_env_value(pos, env_index, len(env_ids), (3,))
-            rot_arr = select_env_value(rot_xyzw, env_index, len(env_ids), (4,))
+            rot_arr = select_env_value(quat_xyzw, env_index, len(env_ids), (4,))
             linear_velocity_arr = select_optional_env_value(
                 linear_velocity, env_index, len(env_ids), (3,)
             )

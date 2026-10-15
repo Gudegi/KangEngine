@@ -11,6 +11,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 from .._core import _ke
+from ..utils.math import quat_xyzw_to_wxyz
 from .wrappers import ArticulationConfig, ArticulationTemplate
 
 if TYPE_CHECKING:
@@ -61,7 +62,7 @@ class ArticulationBuilder:
     class BoxShape:
         half_extents: _Vec3
         position: _Vec3 = (0., 0., 0.)
-        rotation_xyzw: _Quat = (0., 0., 0., 1.)
+        quat_xyzw: _Quat = (0., 0., 0., 1.)
 
     @dataclass(frozen=True)
     class SphereShape:
@@ -75,7 +76,7 @@ class ArticulationBuilder:
     def add_link(
         self, name: str, *, parent: str | None = None,
         position: ArrayLike = (0., 0., 0.),
-        rotation_xyzw: ArrayLike = (0., 0., 0., 1.),
+        quat_xyzw: ArrayLike = (0., 0., 0., 1.),
         joint: (
             ArticulationBuilder.RevoluteJoint | ArticulationBuilder.PrismaticJoint
             | ArticulationBuilder.SphericalJoint | ArticulationBuilder.FixedJoint | None
@@ -97,12 +98,12 @@ class ArticulationBuilder:
                 raise ValueError("parent must name an already-added link")
             parent_index = self._names.index(parent)
         position = np.asarray(position, dtype=np.float32)
-        rotation = np.asarray(rotation_xyzw, dtype=np.float32)
+        rotation = np.asarray(quat_xyzw, dtype=np.float32)
         if position.shape != (3,) or not np.isfinite(position).all():
             raise ValueError("position must be a finite 3-vector")
         if (rotation.shape != (4,) or not np.isfinite(rotation).all()
                 or abs(float(rotation @ rotation) - 1) > 1e-3):
-            raise ValueError("rotation_xyzw must be a normalized quaternion")
+            raise ValueError("quat_xyzw must be a normalized quaternion")
         asset = _ke.asset
         inertial = asset.InertialDesc(mass, diag_inertia=inertia_diagonal, com=com)
         descriptors = []
@@ -135,18 +136,18 @@ class ArticulationBuilder:
             if isinstance(shape, ArticulationBuilder.BoxShape):
                 collisions.append(asset.CollisionGeomDesc(
                     type=asset.CollisionGeomDescType.BOX, size=shape.half_extents,
-                    position=shape.position, rotation_xyzw=shape.rotation_xyzw))
+                    position=shape.position, quat_xyzw=shape.quat_xyzw))
             elif isinstance(shape, ArticulationBuilder.SphereShape):
                 collisions.append(asset.CollisionGeomDesc(
                     type=asset.CollisionGeomDescType.SPHERE, size=(shape.radius, 0., 0.),
-                    position=shape.position, rotation_xyzw=(0., 0., 0., 1.)))
+                    position=shape.position, quat_xyzw=(0., 0., 0., 1.)))
             else:
                 raise TypeError("unsupported authored collision shape")
         index = len(self._names)
         self._names.append(name)
         self._parents.append(parent_index)
         self._positions.append(position.copy())
-        self._rotations.append(rotation[[3, 0, 1, 2]].copy())
+        self._rotations.append(quat_xyzw_to_wxyz(rotation))
         if descriptors:
             self._joints[index] = descriptors
         if collisions:

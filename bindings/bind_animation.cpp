@@ -130,13 +130,13 @@ Eigen::Vector3f eigenVec3FromArray(const FloatArray& array, const char* name) {
     return Eigen::Vector3f(view.data[0], view.data[1], view.data[2]);
 }
 
-Eigen::Quaternionf eigenQuatXyzwFromArray(const FloatArray& array,
+Eigen::Quaternionf eigenQuatWxyzFromArray(const FloatArray& array,
                                           const char* name) {
     auto view = vec4ArrayView(array, name);
     if (view.count != 1)
         throw py::value_error(std::string(name) + " expected shape [4]");
-    return Eigen::Quaternionf(view.data[3], view.data[0], view.data[1],
-                              view.data[2]);
+    return Eigen::Quaternionf(view.data[0], view.data[1], view.data[2],
+                              view.data[3]);
 }
 
 std::vector<Eigen::Quaternionf> eigenQuatWxyzArray(const FloatArray& array,
@@ -1164,25 +1164,28 @@ void bind_animation(py::module& m) {
             },
             "Compute global joint positions.")
         .def(
-            "rotation",
+            "get_joint_quat",
             [](const SkeletonState& self, int i) {
                 return toGlm(self.rotation(i));
             },
-            py::arg("index"), "Return a joint rotation.")
+            py::arg("index"),
+            "Return the indexed node's Quat in the state's local/global frame.")
         .def(
-            "set_rotation",
+            "set_joint_quat_wxyz",
             [](SkeletonState& self, int i, const FloatArray& q) {
-                self.setRotation(i, eigenQuatXyzwFromArray(q, "rotation"));
+                self.setRotation(i, eigenQuatWxyzFromArray(q, "quat_wxyz"));
             },
-            py::arg("index"), py::arg("rotation"),
-            "Set a joint rotation from an XYZW array.")
+            py::arg("index"), py::arg("quat_wxyz"),
+            "Set the indexed skeleton node's quaternion from WXYZ values, "
+            "including the root. Does not convert between local and global frames.")
         .def(
-            "set_rotation",
+            "set_joint_quat_wxyz",
             [](SkeletonState& self, int i, const glm::quat& q) {
                 self.setRotation(i, fromGlm(q));
             },
-            py::arg("index"), py::arg("rotation"),
-            "Set a joint rotation from a quaternion.")
+            py::arg("index"), py::arg("quat_wxyz"),
+            "Set the indexed skeleton node's quaternion from a Quat object. "
+            "Does not convert between local and global frames.")
         .def(
             "root_translation",
             [](const SkeletonState& self) {
@@ -1521,19 +1524,19 @@ void bind_animation(py::module& m) {
         .def("apply_pose", &ArticulationVisualBridge::applyPose,
              "Apply the current skeleton/body state to scene prims.")
         .def(
-            "set_joint_rotation",
+            "set_joint_quat_wxyz",
             [](ArticulationVisualBridge& self, int idx, const FloatArray& q) {
                 self.setJointRotation(idx,
-                                      eigenQuatXyzwFromArray(q, "rotation"));
+                                      eigenQuatWxyzFromArray(q, "quat_wxyz"));
             },
-            py::arg("index"), py::arg("rotation"),
-            "Set a joint rotation from an XYZW array.")
+            py::arg("index"), py::arg("quat_wxyz"),
+            "Set the indexed node's quaternion from WXYZ values in the state frame.")
         .def(
-            "set_joint_rotation",
+            "set_joint_quat_wxyz",
             [](ArticulationVisualBridge& self, int idx, const glm::quat& q) {
                 self.setJointRotation(idx, fromGlm(q));
             },
-            py::arg("index"), py::arg("rotation"),
+            py::arg("index"), py::arg("quat_wxyz"),
             "Set a joint rotation from a quaternion.")
         .def(
             "set_root_translation",

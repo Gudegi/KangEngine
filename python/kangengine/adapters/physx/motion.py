@@ -8,6 +8,7 @@ from typing import Sequence
 import numpy as np
 import numpy.typing as npt
 import torch
+from ...utils import batched_rotations
 
 from ...animation.articulation_motion import (
     ArticulationCoordinateLayout,
@@ -490,7 +491,8 @@ class PhysXMotionAdapter:
             joint_velocities=joint_velocities,
             root_positions=root_positions if has_root else None,
             root_rotations_xyzw=(
-                root_rotations_wxyz[..., [1, 2, 3, 0]] if has_root else None
+                batched_rotations.quat_wxyz_to_xyzw(root_rotations_wxyz)
+                if has_root else None
             ),
             root_linear_velocities=root_linear_velocities if has_root else None,
             root_angular_velocities=root_angular_velocities if has_root else None,

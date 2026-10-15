@@ -46,7 +46,7 @@ print("\n=== Prim Attribute Test ===")
 box_pos = ke.Vec3(0.0, 10.0, 0.0)
 cube_prim.set_local_translation(box_pos)
 cube_prim.set_local_scale(ke.Vec3(1.3, 1.3, 1.3))
-cube_prim.set_local_rotation(ke.Quat(1.0, 0.0, 0.0, 0.0))
+cube_prim.set_local_quat_wxyz(ke.Quat(1.0, 0.0, 0.0, 0.0))
 
 # Test display color
 cube_prim.set_display_color(ke.Vec3(0.8, 0.3, 0.02))

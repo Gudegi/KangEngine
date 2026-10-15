@@ -123,7 +123,7 @@ def test_filter_removes_reference_jitter_but_preserves_source_motion():
     db = filtered_database([motion])
     positions = db.reference_positions(0)
     yaw = np.unwrap(
-        2 * np.arctan2(db.reference_rotations(0)[:, 3], db.reference_rotations(0)[:, 0])
+        2 * np.arctan2(db.reference_quats_wxyz(0)[:, 3], db.reference_quats_wxyz(0)[:, 0])
     )
     t = np.arange(len(roots)) / motion.fps()
     assert np.std(positions[30:-30, 1]) < np.std(roots[30:-30, 1]) * 0.3
@@ -139,10 +139,10 @@ def test_reference_frame_query_reproduces_database_row():
     frame = 43
     time = frame / db.motions[0].fps()
     times = time + np.asarray(db.config.trajectory_times)
-    heading = db.reference_rotation(0, time)
+    heading = db.reference_quat_wxyz(0, time)
     origin = db.reference_position(0, time)
     positions = np.array([db.reference_position(0, t) for t in times])
-    headings = np.array([db.reference_rotation(0, t) for t in times])
+    headings = np.array([db.reference_quat_wxyz(0, t) for t in times])
     query = db.make_query(
         0,
         time,
@@ -167,7 +167,7 @@ def test_placement_preserves_hips_residual_and_reference_derivatives():
     db.motions[0].sample_into(time=time, state=source, loop=False)
     alignment = quat_wxyz_multiply_numpy(
         controller.reference_rotation_wxyz,
-        db.reference_rotation(0, time) * (1, -1, -1, -1),
+        db.reference_quat_wxyz(0, time) * (1, -1, -1, -1),
     )
     # Every original joint retains its position relative to the filtered origin.
     expected = controller.reference_position + quat_wxyz_rotate_numpy(

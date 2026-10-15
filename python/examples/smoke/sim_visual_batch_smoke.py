@@ -50,7 +50,7 @@ def main():
             )
 
     _assert_close(state.get_body_pos(2, 1), [2.0, 1.0, 4.0])
-    _assert_close(state.get_body_rot(2, 1), [0.0, 0.0, 0.0, 1.0])
+    _assert_close(state.get_body_quat_xyzw(2, 1), [0.0, 0.0, 0.0, 1.0])
 
     batch = physics.SimVisualBatch()
     batch.set_model(model)

@@ -16,6 +16,7 @@ from ...animation.articulation_motion import (
     ArticulationMotionMapper,
 )
 from ...utils.math import quat_wxyz_to_xyzw, quat_xyzw_to_wxyz
+from ...utils import batched_rotations
 from ...utils.batched_rotations import quat_wxyz_conjugate, quat_wxyz_multiply
 from ._dependency import load_newton
 
@@ -275,7 +276,7 @@ class NewtonMotionAdapter:
                 if block.type == ArticulationCoordinateType.FREE
                 else block.q_offset
             )
-            joint_q[..., offset : offset + 4] = quaternion[..., [1, 2, 3, 0]]
+            joint_q[..., offset : offset + 4] = batched_rotations.quat_wxyz_to_xyzw(quaternion)
         return NewtonMotionTensorSample(joint_q=joint_q, joint_qd=joint_qd)
 
     def unpack(

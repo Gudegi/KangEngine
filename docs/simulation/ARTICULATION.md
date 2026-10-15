@@ -63,6 +63,30 @@ robot_visual = visual.add_articulation_scene_graph(
 )
 ```
 
+## Read and set rotations
+
+Physics and simulation quaternion arrays use **XYZW** and world coordinates:
+
+| API | Shape |
+| --- | --- |
+| `robot.get_root_quat_xyzw()` | `(4,)` |
+| `robot.get_link_quats_xyzw()` | Flat `(num_links * 4,)` |
+| `world.state.get_root_quat_xyzw(obj_id=0)` | `(num_envs, 4)` |
+| `world.state.get_body_quat_xyzw(obj_id=0)` | `(num_envs, num_bodies, 4)` |
+
+State objects expose the same values as `root_quat_xyzw` and `body_quat_xyzw`.
+Read after a completed step and refresh, as for the other state fields.
+`set_root_state(..., quat_xyzw=...)` takes XYZW as well. The low-level
+`robot.reset_root(pos=..., quat_xyzw=...)` accepts XYZW arrays or a `ke.Quat`
+object; its default quaternion is the identity `(0, 0, 0, 1)`.
+
+Animation and scene quaternion arrays use WXYZ; see
+[Quaternion ordering](../getting_started/FIRST_SCENE.md#quaternion-ordering)
+for conversion. Packed root/link buffers retain their names and
+[13-column layout](../advanced/PHYSX_GPU.md#writing-root-and-dof-state).
+MimicKit adapter methods such as `get_root_rot()` keep MimicKit's interface names
+and XYZW convention.
+
 ## Attachment frames
 
 Use frames for end-effectors, sensors, or tool mounts that need a named pose
@@ -87,7 +111,7 @@ print(robot.frame_names)  # Named attachments, queried separately.
 
 names = robot.frame_names[:1]  # Example: select the first available frame.
 position: torch.Tensor = world.state.get_frame_pos(obj_id=0, frame_names=names)
-rotation: torch.Tensor = world.state.get_frame_rot(obj_id=0, frame_names=names)
+rotation: torch.Tensor = world.state.get_frame_quat_xyzw(obj_id=0, frame_names=names)
 ```
 
 Positions are in world coordinates; rotations are world-space xyzw quaternions.

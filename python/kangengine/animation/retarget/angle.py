@@ -501,7 +501,7 @@ class AngleRetargeter:
         rotations = torch.empty((len(self._source_names), 4), dtype=torch.float64)
         if source_state.is_local():
             for joint in range(len(self._source_names)):
-                rotation = source_state.rotation(joint)
+                rotation = source_state.get_joint_quat(joint)
                 rotations[joint] = torch.tensor(
                     (rotation.w, rotation.x, rotation.y, rotation.z),
                     dtype=torch.float64,
@@ -511,7 +511,7 @@ class AngleRetargeter:
             )
         else:
             for joint in range(len(self._source_names)):
-                rotation = source_state.rotation(joint)
+                rotation = source_state.get_joint_quat(joint)
                 rotations[joint] = torch.tensor(
                     (rotation.w, rotation.x, rotation.y, rotation.z),
                     dtype=torch.float64,

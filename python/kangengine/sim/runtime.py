@@ -16,9 +16,12 @@ StateAccess = Literal["snapshot", "gpu"]
 class ArticulationStateView:
     """Torch tensors for control and reinforcement-learning loops.
 
+    Root pose and velocities use world coordinates, meters, XYZW quaternions,
+    m/s, and rad/s. DOFs use joint coordinates (radians or meters).
+
     Shapes:
         root_pos: ``(N, 3)``.
-        root_rot: ``(N, 4)``.
+        root_quat_xyzw: ``(N, 4)``.
         root_vel: ``(N, 3)``.
         root_ang_vel: ``(N, 3)``.
         dof_pos: ``(N, D)``.
@@ -26,7 +29,7 @@ class ArticulationStateView:
     """
 
     root_pos: torch.Tensor
-    root_rot: torch.Tensor
+    root_quat_xyzw: torch.Tensor
     root_vel: torch.Tensor
     root_ang_vel: torch.Tensor
     dof_pos: torch.Tensor
@@ -140,7 +143,7 @@ class SimulationRuntime:
             state = self.world.state.gpu
             return ArticulationStateView(
                 root_pos=state.get_root_pos(obj_id, fetch=False),
-                root_rot=state.get_root_rot(obj_id, fetch=False),
+                root_quat_xyzw=state.get_root_quat_xyzw(obj_id, fetch=False),
                 root_vel=state.get_root_vel(obj_id, fetch=False),
                 root_ang_vel=state.get_root_ang_vel(obj_id, fetch=False),
                 dof_pos=state.get_dof_pos(obj_id, fetch=False),
@@ -150,7 +153,7 @@ class SimulationRuntime:
         state = self.world.state.object_states(obj_id)
         return ArticulationStateView(
             root_pos=state.root_pos,
-            root_rot=state.root_rot,
+            root_quat_xyzw=state.root_quat_xyzw,
             root_vel=state.root_vel,
             root_ang_vel=state.root_ang_vel,
             dof_pos=state.dof_pos,
@@ -162,7 +165,7 @@ class SimulationRuntime:
         obj_id: int,
         env_ids: torch.Tensor,
         root_pos: torch.Tensor,
-        root_rot: torch.Tensor,
+        root_quat_xyzw: torch.Tensor,
         root_vel: torch.Tensor,
         root_ang_vel: torch.Tensor,
         dof_pos: torch.Tensor,
@@ -172,7 +175,7 @@ class SimulationRuntime:
         self._require_initialized()
         if self.uses_gpu_state:
             root_state = torch.cat(
-                (root_pos, root_rot, root_vel, root_ang_vel),
+                (root_pos, root_quat_xyzw, root_vel, root_ang_vel),
                 dim=-1,
             ).contiguous()
             dof_state = torch.stack(
@@ -192,7 +195,7 @@ class SimulationRuntime:
             selected_env_ids,
             obj_id,
             root_pos,
-            root_rot,
+            root_quat_xyzw,
             root_vel,
             root_ang_vel,
         )
@@ -210,7 +213,17 @@ class SimulationRuntime:
         root_state: torch.Tensor,
         dof_state: torch.Tensor,
     ) -> None:
-        """Apply packed GPU root ``(N, 13)`` and DOF ``(N, D, 2)`` state."""
+        """Apply packed GPU articulation state.
+
+        Args:
+            env_ids: Environment rows to update.
+            obj_id: Articulation object index.
+            root_state: ``(N, 13)`` world-space rows: position in meters
+                ``0:3``, quaternion XYZW ``3:7``, linear velocity in m/s
+                ``7:10``, angular velocity in rad/s ``10:13``.
+            dof_state: ``(N, D, 2)`` joint position and velocity, in radians
+                and rad/s for angular DOFs, meters and m/s for linear DOFs.
+        """
         self._require_initialized()
         if not self.uses_gpu_state:
             raise RuntimeError("packed articulation state requires GPU state access")

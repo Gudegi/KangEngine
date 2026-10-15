@@ -265,7 +265,7 @@ class MultiEnvSimWorldApp(ke.App):
         view.prim.set_local_translation(ke.Vec3(self.ramp_pos))
         # ke.Quat constructor is (w, x, y, z), while PhysX binding args above
         # use xyzw lists.
-        view.prim.set_local_rotation(
+        view.prim.set_local_quat_wxyz(
             ke.Quat(
                 self.ramp_rot_xyzw[3],
                 self.ramp_rot_xyzw[0],

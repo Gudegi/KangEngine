@@ -78,7 +78,7 @@ class RobotViewer(ke.App):
         )
         for i in range(self.robot.num_bodies()):
             q = local_rot[idx][i]
-            self.robot.set_joint_rotation(
+            self.robot.set_joint_quat_wxyz(
                 i, ke.Quat(float(q[0]), float(q[1]), float(q[2]), float(q[3]))
             )
         self.robot.apply_pose()

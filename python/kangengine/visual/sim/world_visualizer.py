@@ -16,6 +16,7 @@ import numpy as np
 from ..._core import _ke
 from ... import render as render_api
 from ...rigid import expand_rigid_body_state, rigid_shape_specs
+from ...utils.math import quat_xyzw_to_wxyz
 from ..articulation import ArticulationVisualAsset
 from .batch import VisualBatch
 from .utils import (
@@ -75,7 +76,7 @@ class RigidCPUExternalBackend(_VisualLifetime):
         body_prims,
         body_handles,
         local_pos,
-        local_rot,
+        local_quat_xyzw,
     ):
         from ... import physics
 
@@ -92,15 +93,15 @@ class RigidCPUExternalBackend(_VisualLifetime):
 
         self._model = physics.SimModel()
         local_pos = np.asarray(local_pos, dtype=np.float32).reshape(-1, 3)
-        local_rot = np.asarray(local_rot, dtype=np.float32).reshape(-1, 4)
-        if len(self.body_handles) != len(local_pos) or len(local_pos) != len(local_rot):
+        local_quat_xyzw = np.asarray(local_quat_xyzw, dtype=np.float32).reshape(-1, 4)
+        if len(self.body_handles) != len(local_pos) or len(local_pos) != len(local_quat_xyzw):
             raise ValueError("rigid visual shape arrays must have matching lengths")
         for shape_id, handle in enumerate(self.body_handles):
             self._model.add_shape(
                 0,
                 handle,
                 tuple(float(v) for v in local_pos[shape_id]),
-                tuple(float(v) for v in local_rot[shape_id]),
+                tuple(float(v) for v in local_quat_xyzw[shape_id]),
                 f"rigid_shape_{shape_id}",
             )
         self._model.add_object_boundary(0, 1, f"rigid_{self.obj_id}")
@@ -133,7 +134,7 @@ class RigidCPUExternalBackend(_VisualLifetime):
                 row,
                 0,
                 rigid.get_root_position(),
-                rigid.get_root_rotation(),
+                rigid.get_root_quat_xyzw(),
             )
         self._batch.prepare_from_state(self._state)
         self._version += 1
@@ -238,7 +239,7 @@ class ArticulationCPUExternalBackend(_VisualLifetime):
                 articulation.get_link_positions(), dtype=np.float32
             ).reshape(self.num_bodies, 3)
             rot = np.asarray(
-                articulation.get_link_rotations(), dtype=np.float32
+                articulation.get_link_quats_xyzw(), dtype=np.float32
             ).reshape(self.num_bodies, 4)
             for body_id in range(self.num_bodies):
                 self._state.set_body_transform(
@@ -541,7 +542,7 @@ class RigidVisual:
         self.rigid = rigid
         self.specs = rigid_shape_specs(data)
         self.local_pos = np.stack([spec.local_pos for spec in self.specs], axis=0)
-        self.local_rot = np.stack([spec.local_rot for spec in self.specs], axis=0)
+        self.local_quat_xyzw = np.stack([spec.local_quat_xyzw for spec in self.specs], axis=0)
         self.body_prims = []
         self.body_handles = []
         for idx, spec in enumerate(self.specs):
@@ -553,16 +554,16 @@ class RigidVisual:
 
     def sync(self):
         root_pos = np.asarray(self.rigid.get_root_position(), dtype=np.float32)
-        root_rot = np.asarray(self.rigid.get_root_rotation(), dtype=np.float32)
-        body_pos, body_rot = expand_rigid_body_state(
-            root_pos, root_rot, self.local_pos, self.local_rot
+        root_quat_xyzw = np.asarray(self.rigid.get_root_quat_xyzw(), dtype=np.float32)
+        body_pos, body_quat_xyzw = expand_rigid_body_state(
+            root_pos, root_quat_xyzw, self.local_pos, self.local_quat_xyzw
         )
-        for prim, pos, rot in zip(self.body_prims, body_pos, body_rot):
+        for prim, pos, rot in zip(self.body_prims, body_pos, body_quat_xyzw):
             prim.set_world_translation(
                 _ke.Vec3(float(pos[0]), float(pos[1]), float(pos[2]))
             )
-            prim.set_world_rotation(
-                _ke.Quat(float(rot[3]), float(rot[0]), float(rot[1]), float(rot[2]))
+            prim.set_world_quat_wxyz(
+                _ke.Quat.from_xyzw(rot)
             )
 
     def _define_shape_prim(self, base_path, idx, spec):
@@ -1114,7 +1115,7 @@ class SimWorldVisualizer:
             body_prims,
             body_handles,
             rigid_visual.local_pos,
-            rigid_visual.local_rot,
+            rigid_visual.local_quat_xyzw,
         )
         batch = VisualBatch(obj_id, env_ids, backend=backend)
         batch.set_color(color)
@@ -1299,11 +1300,11 @@ class SimWorldVisualizer:
         for (env_id, obj_id), config in self._frame_axes.items():
             names = config["names"]
             pos = self.world.state.get_frame_pos(obj_id, frame_names=names)
-            rot = self.world.state.get_frame_rot(obj_id, frame_names=names, fetch=False)
+            rot = self.world.state.get_frame_quat_xyzw(obj_id, frame_names=names, fetch=False)
             pos = pos[env_id].detach().cpu().numpy()
             rot = rot[env_id].detach().cpu().numpy()
             for path, p, q in zip(config["paths"], pos, rot):
-                self.app.debug_overlay.axes(path, p, q[[3, 0, 1, 2]], length=config["length"])
+                self.app.debug_overlay.axes(path, p, quat_xyzw_to_wxyz(q), length=config["length"])
 
     def get_visual_articulation_scene_graph(
         self,
@@ -1359,7 +1360,7 @@ class SimWorldVisualizer:
             record.rigid_visual.sync()
 
     def set_body_transforms_scene_graph(
-        self, env_id: int, obj_id: int, body_pos=None, body_rot=None
+        self, env_id: int, obj_id: int, body_pos=None, body_quat_xyzw=None
     ):
         """Override rendered body prim transforms with world-space FK poses.
 
@@ -1376,18 +1377,14 @@ class SimWorldVisualizer:
                     _ke.Vec3(float(pos[0]), float(pos[1]), float(pos[2]))
                 )
 
-        if body_rot is not None:
-            for prim, rot in zip(record.body_prims, body_rot):
-                # MimicKit stores quaternions as xyzw; KangEngine's Python quat
-                # constructor takes wxyz.
-                prim.set_world_rotation(
-                    _ke.Quat(
-                        float(rot[3]), float(rot[0]), float(rot[1]), float(rot[2])
-                    ),
+        if body_quat_xyzw is not None:
+            for prim, rot in zip(record.body_prims, body_quat_xyzw):
+                prim.set_world_quat_wxyz(
+                    _ke.Quat.from_xyzw(rot),
                 )
 
     def set_root_transform_scene_graph(
-        self, env_id: int, obj_id: int, root_pos=None, root_rot=None
+        self, env_id: int, obj_id: int, root_pos=None, root_quat_xyzw=None
     ):
         """Apply a root-only fallback pose to a visual articulation.
 
@@ -1406,14 +1403,14 @@ class SimWorldVisualizer:
                 _ke.Vec3(float(pos[0]), float(pos[1]), float(pos[2]))
             )
 
-        if root_rot is not None:
-            rot = root_rot
-            record.articulation_visual.set_joint_rotation(
+        if root_quat_xyzw is not None:
+            rot = root_quat_xyzw
+            record.articulation_visual.set_joint_quat_wxyz(
                 0,
-                _ke.Quat(float(rot[3]), float(rot[0]), float(rot[1]), float(rot[2])),
+                _ke.Quat.from_xyzw(rot),
             )
 
-        if root_pos is not None or root_rot is not None:
+        if root_pos is not None or root_quat_xyzw is not None:
             record.articulation_visual.apply_pose()
 
     def set_collision_visible(self, visible: bool):

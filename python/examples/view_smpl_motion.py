@@ -123,11 +123,11 @@ class SMPLMotionViewer(ke.App):
         for target, source in enumerate(self.motion_joint_indices):
             if source is None:
                 continue
-            rotation = state.rotation(source)
+            rotation = state.get_joint_quat(source)
             rotations[target] = [rotation.w, rotation.x, rotation.y, rotation.z]
         root = state.root_translation()
         root_translation = np.asarray([root.x, root.y, root.z], dtype=np.float32)
-        self.body.update_pose_correctives(
+        self.body.update_pose_correctives_from_rotations(
             self.surface,
             rotations,
             enabled=self.pose_correctives,

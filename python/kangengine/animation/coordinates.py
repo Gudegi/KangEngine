@@ -93,10 +93,10 @@ def convert_state_coordinates(
     rotations = np.asarray(
         [
             (
-                state.rotation(i).w,
-                state.rotation(i).x,
-                state.rotation(i).y,
-                state.rotation(i).z,
+                state.get_joint_quat(i).w,
+                state.get_joint_quat(i).x,
+                state.get_joint_quat(i).y,
+                state.get_joint_quat(i).z,
             )
             for i in range(state.num_joints())
         ],

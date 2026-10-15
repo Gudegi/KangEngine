@@ -531,7 +531,7 @@ void bind_physics(py::module& m) {
                  part.indices = triangleIndicesFromPy(indices, "indices");
                  auto p = fixedFloatValues<3>(localPosition, "local_position");
                  auto q = fixedFloatValues<4>(localRotationXyzw,
-                                              "local_rotation_xyzw");
+                                              "local_quat_xyzw");
                  part.localPosition = glm::vec3(p[0], p[1], p[2]);
                  part.localRotation =
                      glm::quat(q[3], q[0], q[1], q[2]);
@@ -539,7 +539,7 @@ void bind_physics(py::module& m) {
              }),
              py::arg("vertices"), py::arg("indices") = py::none(),
              py::arg("local_position") = std::array<float, 3>{0.f, 0.f, 0.f},
-             py::arg("local_rotation_xyzw") =
+             py::arg("local_quat_xyzw") =
                  std::array<float, 4>{0.f, 0.f, 0.f, 1.f})
         .def_static(
             "from_mesh_data",
@@ -568,7 +568,7 @@ void bind_physics(py::module& m) {
                 self.localPosition = glm::vec3(p[0], p[1], p[2]);
             })
         .def_property(
-            "local_rotation_xyzw",
+            "local_quat_xyzw",
             [](const ConvexMeshPart& self) {
                 return py::make_tuple(self.localRotation.x,
                                       self.localRotation.y,
@@ -576,7 +576,7 @@ void bind_physics(py::module& m) {
                                       self.localRotation.w);
             },
             [](ConvexMeshPart& self, py::handle value) {
-                auto q = fixedFloatValues<4>(value, "local_rotation_xyzw");
+                auto q = fixedFloatValues<4>(value, "local_quat_xyzw");
                 self.localRotation =
                     glm::quat(q[3], q[0], q[1], q[2]);
             })
@@ -606,7 +606,7 @@ void bind_physics(py::module& m) {
             },
             "Return root position as [x, y, z].")
         .def(
-            "get_root_rotation",
+            "get_root_quat_xyzw",
             [](const PxRigidDynamic& self) {
                 PxTransform pose = self.getGlobalPose();
                 return floatArrayFromVector(
@@ -646,7 +646,7 @@ void bind_physics(py::module& m) {
             },
             "Return the center-of-mass position in the actor frame.")
         .def(
-            "get_local_com_rotation",
+            "get_local_com_quat_xyzw",
             [](const PxRigidDynamic& self) {
                 const PxQuat rotation = self.getCMassLocalPose().q;
                 return floatArrayFromVector(
@@ -679,16 +679,16 @@ void bind_physics(py::module& m) {
         .def(
             "set_root_state",
             [](PxRigidDynamic& self, const FloatArray& pos,
-               const FloatArray& rot_xyzw, const FloatArray& linear_velocity,
+               const FloatArray& quat_xyzw, const FloatArray& linear_velocity,
                const FloatArray& angular_velocity) {
                 auto p = vec3ArrayView(pos, "pos");
-                auto q = vec4ArrayView(rot_xyzw, "rot_xyzw");
+                auto q = vec4ArrayView(quat_xyzw, "quat_xyzw");
                 auto lv = vec3ArrayView(linear_velocity, "linear_velocity");
                 auto av = vec3ArrayView(angular_velocity, "angular_velocity");
                 if (p.count != 1 || q.count != 1 || lv.count != 1 ||
                     av.count != 1) {
                     throw py::value_error(
-                        "set_root_state expects single pos[3], rot_xyzw[4], "
+                        "set_root_state expects single pos[3], quat_xyzw[4], "
                         "linear_velocity[3], angular_velocity[3]");
                 }
                 self.setGlobalPose(PxTransform(
@@ -700,26 +700,26 @@ void bind_physics(py::module& m) {
                     PxVec3(av.data[0], av.data[1], av.data[2]));
                 self.wakeUp();
             },
-            py::arg("pos"), py::arg("rot_xyzw"), py::arg("linear_velocity"),
+            py::arg("pos"), py::arg("quat_xyzw"), py::arg("linear_velocity"),
             py::arg("angular_velocity"),
             "Set root pose and velocities from numpy arrays.")
         .def(
             "set_root_state",
             [](PxRigidDynamic& self, const std::vector<float>& pos,
-               const std::vector<float>& rot_xyzw,
+               const std::vector<float>& quat_xyzw,
                const std::vector<float>& linear_velocity,
                const std::vector<float>& angular_velocity) {
-                if (pos.size() != 3 || rot_xyzw.size() != 4 ||
+                if (pos.size() != 3 || quat_xyzw.size() != 4 ||
                     linear_velocity.size() != 3 ||
                     angular_velocity.size() != 3) {
                     throw std::runtime_error(
-                        "set_root_state expects pos[3], rot_xyzw[4], "
+                        "set_root_state expects pos[3], quat_xyzw[4], "
                         "linear_velocity[3], angular_velocity[3]");
                 }
                 self.setGlobalPose(
                     PxTransform(PxVec3(pos[0], pos[1], pos[2]),
-                                PxQuat(rot_xyzw[0], rot_xyzw[1], rot_xyzw[2],
-                                       rot_xyzw[3])));
+                                PxQuat(quat_xyzw[0], quat_xyzw[1], quat_xyzw[2],
+                                       quat_xyzw[3])));
                 self.setLinearVelocity(PxVec3(linear_velocity[0],
                                               linear_velocity[1],
                                               linear_velocity[2]));
@@ -728,7 +728,7 @@ void bind_physics(py::module& m) {
                                                angular_velocity[2]));
                 self.wakeUp();
             },
-            py::arg("pos"), py::arg("rot_xyzw"),
+            py::arg("pos"), py::arg("quat_xyzw"),
             py::arg("linear_velocity") = std::vector<float>{0.f, 0.f, 0.f},
             py::arg("angular_velocity") = std::vector<float>{0.f, 0.f, 0.f},
             "Set root pose and velocities from Python sequences.")
@@ -789,7 +789,7 @@ void bind_physics(py::module& m) {
                  const PxTransform pose = self.getGlobalPose();
                  return floatArrayFromVector({pose.p.x, pose.p.y, pose.p.z});
              })
-        .def("get_root_rotation",
+        .def("get_root_quat_xyzw",
              [](const PxRigidStatic& self) {
                  const PxTransform pose = self.getGlobalPose();
                  return floatArrayFromVector(
@@ -801,12 +801,12 @@ void bind_physics(py::module& m) {
                const std::vector<float>& rotXyzw) {
                 if (pos.size() != 3 || rotXyzw.size() != 4)
                     throw py::value_error(
-                        "set_root_pose expects pos[3], rot_xyzw[4]");
+                        "set_root_pose expects pos[3], quat_xyzw[4]");
                 self.setGlobalPose(PxTransform(
                     PxVec3(pos[0], pos[1], pos[2]),
                     PxQuat(rotXyzw[0], rotXyzw[1], rotXyzw[2], rotXyzw[3])));
             },
-            py::arg("pos"), py::arg("rot_xyzw"))
+            py::arg("pos"), py::arg("quat_xyzw"))
         .def("num_shapes", &PxRigidStatic::getNbShapes,
              "Return the number of collision shapes attached to this body.")
         .def("get_convex_collision_meshes",
@@ -919,7 +919,7 @@ void bind_physics(py::module& m) {
                 bool gpuCompatible, float contactOffset, float restOffset, bool registerAsGround,
                 uint32_t numPrimsPerLeaf, float weldTolerance) {
             if (position.size() != 3 || rotation.size() != 4)
-                throw py::value_error("position requires 3 values and rotation_xyzw requires 4");
+                throw py::value_error("position requires 3 values and quat_xyzw requires 4");
             return self.createStaticTriangleMesh(mesh,
                 glm::vec3(position[0], position[1], position[2]),
                 glm::quat(rotation[3], rotation[0], rotation[1], rotation[2]),
@@ -927,7 +927,7 @@ void bind_physics(py::module& m) {
                 numPrimsPerLeaf, weldTolerance);
         }, py::arg("mesh"), py::kw_only(),
            py::arg("position") = std::vector<float>{0, 0, 0},
-           py::arg("rotation_xyzw") = std::vector<float>{0, 0, 0, 1},
+           py::arg("quat_xyzw") = std::vector<float>{0, 0, 0, 1},
            py::arg("material") = PhysicsMaterialDesc{}, py::arg("gpu_compatible") = true,
            py::arg("contact_offset") = 0.02f, py::arg("rest_offset") = 0.f,
            py::arg("register_as_ground") = true,
@@ -959,7 +959,7 @@ void bind_physics(py::module& m) {
                     rotXyzw.size() != 4) {
                     throw py::value_error(
                         "add_static_box expects half_extents[3], pos[3], "
-                        "and rot_xyzw[4]");
+                        "and quat_xyzw[4]");
                 }
                 self.createStaticBox(
                     glm::vec3(halfExtents[0], halfExtents[1], halfExtents[2]),
@@ -968,7 +968,7 @@ void bind_physics(py::module& m) {
                     registerAsGround);
             },
             py::arg("half_extents"), py::arg("pos"),
-            py::arg("rot_xyzw") = std::vector<float>{0.f, 0.f, 0.f, 1.f},
+            py::arg("quat_xyzw") = std::vector<float>{0.f, 0.f, 0.f, 1.f},
             py::arg("register_as_ground") = true,
             "Add a static box collider, useful for ramps and simple terrain.")
         .def(
@@ -1030,7 +1030,7 @@ void bind_physics(py::module& m) {
                     rotXyzw.size() != 4) {
                     throw py::value_error(
                         "create_dynamic_box expects half_extents[3], pos[3], "
-                        "and rot_xyzw[4]");
+                        "and quat_xyzw[4]");
                 }
                 return self.createDynamicBox(
                     glm::vec3(halfExtents[0], halfExtents[1], halfExtents[2]),
@@ -1039,7 +1039,7 @@ void bind_physics(py::module& m) {
                     density);
             },
             py::arg("half_extents"), py::arg("pos"),
-            py::arg("rot_xyzw") = std::vector<float>{0.f, 0.f, 0.f, 1.f},
+            py::arg("quat_xyzw") = std::vector<float>{0.f, 0.f, 0.f, 1.f},
             py::arg("density") = 1.0f, py::return_value_policy::reference,
             "Create a dynamic box for low-level physics tests and tools.")
         .def(
@@ -1049,7 +1049,7 @@ void bind_physics(py::module& m) {
                 if (pos.size() != 3 || rotXyzw.size() != 4) {
                     throw py::value_error(
                         "create_dynamic_sphere expects pos[3] and "
-                        "rot_xyzw[4]");
+                        "quat_xyzw[4]");
                 }
                 return self.createDynamicSphere(
                     radius, glm::vec3(pos[0], pos[1], pos[2]),
@@ -1057,7 +1057,7 @@ void bind_physics(py::module& m) {
                     density);
             },
             py::arg("radius"), py::arg("pos"),
-            py::arg("rot_xyzw") = std::vector<float>{0.f, 0.f, 0.f, 1.f},
+            py::arg("quat_xyzw") = std::vector<float>{0.f, 0.f, 0.f, 1.f},
             py::arg("density") = 1.0f, py::return_value_policy::reference,
             "Create a dynamic sphere for low-level physics tests and tools.")
         .def(
@@ -1068,11 +1068,11 @@ void bind_physics(py::module& m) {
                const PhysicsMaterialDesc& material, PxU32 collisionGroup,
                float contactOffset, float restOffset) {
                 auto p = vec3ArrayView(pos, "pos");
-                auto q = vec4ArrayView(rotXyzw, "rot_xyzw");
+                auto q = vec4ArrayView(rotXyzw, "quat_xyzw");
                 if (p.count != 1 || q.count != 1)
                     throw py::value_error(
                         "create_dynamic_convex_compound expects pos[3] and "
-                        "rot_xyzw[4]");
+                        "quat_xyzw[4]");
                 return self.createDynamicConvexCompound(
                     parts, glm::vec3(p.data[0], p.data[1], p.data[2]),
                     glm::quat(q.data[3], q.data[0], q.data[1], q.data[2]),
@@ -1080,7 +1080,7 @@ void bind_physics(py::module& m) {
                     restOffset);
             },
             py::arg("parts"), py::arg("pos"),
-            py::arg("rot_xyzw") = std::array<float, 4>{0.f, 0.f, 0.f, 1.f},
+            py::arg("quat_xyzw") = std::array<float, 4>{0.f, 0.f, 0.f, 1.f},
             py::arg("density") = 1.0f,
             py::arg("cooking") = ConvexCookingOptions{},
             py::arg("material") = PhysicsMaterialDesc{},
@@ -1098,11 +1098,11 @@ void bind_physics(py::module& m) {
                const PhysicsMaterialDesc& material, PxU32 collisionGroup,
                float contactOffset, float restOffset, bool registerAsGround) {
                 auto p = vec3ArrayView(pos, "pos");
-                auto q = vec4ArrayView(rotXyzw, "rot_xyzw");
+                auto q = vec4ArrayView(rotXyzw, "quat_xyzw");
                 if (p.count != 1 || q.count != 1)
                     throw py::value_error(
                         "create_static_convex_compound expects pos[3] and "
-                        "rot_xyzw[4]");
+                        "quat_xyzw[4]");
                 return self.createStaticConvexCompound(
                     parts, glm::vec3(p.data[0], p.data[1], p.data[2]),
                     glm::quat(q.data[3], q.data[0], q.data[1], q.data[2]),
@@ -1111,7 +1111,7 @@ void bind_physics(py::module& m) {
             },
             py::arg("parts"),
             py::arg("pos") = std::array<float, 3>{0.f, 0.f, 0.f},
-            py::arg("rot_xyzw") = std::array<float, 4>{0.f, 0.f, 0.f, 1.f},
+            py::arg("quat_xyzw") = std::array<float, 4>{0.f, 0.f, 0.f, 1.f},
             py::arg("cooking") = ConvexCookingOptions{},
             py::arg("material") = PhysicsMaterialDesc{},
             py::arg("collision_group") = 0,
@@ -1168,15 +1168,15 @@ void bind_physics(py::module& m) {
         .def(
             "create_dynamic_rigid",
             [](PhysicsWorld& self, const Asset::ArticulationDesc& data,
-               const FloatArray& pos, const FloatArray& rot_xyzw, float density,
+               const FloatArray& pos, const FloatArray& quat_xyzw, float density,
                PxU32 collisionGroup, float contactOffset, float restOffset,
                const std::vector<CollisionMaterialOverride>&
                    materialOverrides) {
                 auto p = vec3ArrayView(pos, "pos");
-                auto q = vec4ArrayView(rot_xyzw, "rot_xyzw");
+                auto q = vec4ArrayView(quat_xyzw, "quat_xyzw");
                 if (p.count != 1 || q.count != 1) {
                     throw py::value_error(
-                        "create_dynamic_rigid expects pos[3], rot_xyzw[4]");
+                        "create_dynamic_rigid expects pos[3], quat_xyzw[4]");
                 }
                 return self.createDynamicRigid(
                     data, glm::vec3(p.data[0], p.data[1], p.data[2]),
@@ -1184,7 +1184,7 @@ void bind_physics(py::module& m) {
                     density, collisionGroup, contactOffset, restOffset,
                     materialOverrides);
             },
-            py::arg("data"), py::arg("pos"), py::arg("rot_xyzw"),
+            py::arg("data"), py::arg("pos"), py::arg("quat_xyzw"),
             py::arg("density") = 1.0f, py::arg("collision_group") = 0,
             py::arg("contact_offset") = 0.02f, py::arg("rest_offset") = 0.0f,
             py::arg("material_overrides") =
@@ -1195,22 +1195,22 @@ void bind_physics(py::module& m) {
             "create_static_rigid",
             [](PhysicsWorld& self, const Asset::ArticulationDesc& data,
                const std::vector<float>& pos,
-               const std::vector<float>& rot_xyzw, PxU32 collisionGroup,
+               const std::vector<float>& quat_xyzw, PxU32 collisionGroup,
                float contactOffset, float restOffset,
                const std::vector<CollisionMaterialOverride>&
                    materialOverrides) {
-                if (pos.size() != 3 || rot_xyzw.size() != 4)
+                if (pos.size() != 3 || quat_xyzw.size() != 4)
                     throw py::value_error(
-                        "create_static_rigid expects pos[3], rot_xyzw[4]");
+                        "create_static_rigid expects pos[3], quat_xyzw[4]");
                 return self.createStaticRigid(
                     data, glm::vec3(pos[0], pos[1], pos[2]),
-                    glm::quat(rot_xyzw[3], rot_xyzw[0], rot_xyzw[1],
-                              rot_xyzw[2]),
+                    glm::quat(quat_xyzw[3], quat_xyzw[0], quat_xyzw[1],
+                              quat_xyzw[2]),
                     collisionGroup, contactOffset, restOffset,
                     materialOverrides);
             },
             py::arg("data"), py::arg("pos"),
-            py::arg("rot_xyzw") = std::vector<float>{0.f, 0.f, 0.f, 1.f},
+            py::arg("quat_xyzw") = std::vector<float>{0.f, 0.f, 0.f, 1.f},
             py::arg("collision_group") = 0, py::arg("contact_offset") = 0.02f,
             py::arg("rest_offset") = 0.0f,
             py::arg("material_overrides") =
@@ -1221,23 +1221,23 @@ void bind_physics(py::module& m) {
             "create_dynamic_rigid",
             [](PhysicsWorld& self, const Asset::ArticulationDesc& data,
                const std::vector<float>& pos,
-               const std::vector<float>& rot_xyzw, float density,
+               const std::vector<float>& quat_xyzw, float density,
                PxU32 collisionGroup, float contactOffset, float restOffset,
                const std::vector<CollisionMaterialOverride>&
                    materialOverrides) {
-                if (pos.size() != 3 || rot_xyzw.size() != 4) {
+                if (pos.size() != 3 || quat_xyzw.size() != 4) {
                     throw std::runtime_error(
-                        "create_dynamic_rigid expects pos[3], rot_xyzw[4]");
+                        "create_dynamic_rigid expects pos[3], quat_xyzw[4]");
                 }
                 return self.createDynamicRigid(
                     data, glm::vec3(pos[0], pos[1], pos[2]),
-                    glm::quat(rot_xyzw[3], rot_xyzw[0], rot_xyzw[1],
-                              rot_xyzw[2]),
+                    glm::quat(quat_xyzw[3], quat_xyzw[0], quat_xyzw[1],
+                              quat_xyzw[2]),
                     density, collisionGroup, contactOffset, restOffset,
                     materialOverrides);
             },
             py::arg("data"), py::arg("pos"),
-            py::arg("rot_xyzw") = std::vector<float>{0.f, 0.f, 0.f, 1.f},
+            py::arg("quat_xyzw") = std::vector<float>{0.f, 0.f, 0.f, 1.f},
             py::arg("density") = 1.0f, py::arg("collision_group") = 0,
             py::arg("contact_offset") = 0.02f, py::arg("rest_offset") = 0.0f,
             py::arg("material_overrides") =
@@ -1459,7 +1459,7 @@ void bind_physics(py::module& m) {
                 if (frame.name == name)
                     throw py::key_error("'" + name + "' is a fixed frame attached to '" +
                         names.at(frame.bodyIndex) +
-                        "'. Use world.state.get_frame_pos() or get_frame_rot() to query its pose.");
+                        "'. Use world.state.get_frame_pos() or get_frame_quat_xyzw() to query its pose.");
             }
         }
         throw py::key_error("body '" + name + "' not found");
@@ -1560,7 +1560,7 @@ void bind_physics(py::module& m) {
             },
             "Return root position as [x, y, z].")
         .def(
-            "get_root_rotation",
+            "get_root_quat_xyzw",
             [](const Articulation& self) {
                 return floatArrayFromVector(self.getRootRotationFlat());
             },
@@ -1584,7 +1584,7 @@ void bind_physics(py::module& m) {
             },
             "Return flat per-link positions.")
         .def(
-            "get_link_rotations",
+            "get_link_quats_xyzw",
             [](const Articulation& self) {
                 return floatArrayFromVector(self.getLinkRotationsFlat());
             },
@@ -1804,20 +1804,34 @@ void bind_physics(py::module& m) {
                                            PxQuat(rot.x, rot.y, rot.z, rot.w)));
             },
             py::arg("pos") = glm::vec3(0.f),
-            py::arg("rot") = glm::quat(1.f, 0.f, 0.f, 0.f), "Reset root pose.")
+            py::arg("quat_xyzw").noconvert() = glm::quat(1.f, 0.f, 0.f, 0.f),
+            "Reset the root world pose using a Quat object.")
+        .def(
+            "reset_root",
+            [](Articulation& self, const glm::vec3& pos,
+               const FloatArray& quat_xyzw) {
+                auto q = vec4ArrayView(quat_xyzw, "quat_xyzw");
+                if (q.count != 1)
+                    throw py::value_error("quat_xyzw expected shape [4]");
+                self.resetRoot(PxTransform(PxVec3(pos.x, pos.y, pos.z),
+                    PxQuat(q.data[0], q.data[1], q.data[2], q.data[3])));
+            },
+            py::arg("pos") = glm::vec3(0.f),
+            py::arg("quat_xyzw") = py::make_tuple(0.f, 0.f, 0.f, 1.f),
+            "Reset the root world pose using an XYZW quaternion.")
         .def(
             "set_root_state",
             [](Articulation& self, const FloatArray& pos,
-               const FloatArray& rot_xyzw, const FloatArray& linear_velocity,
+               const FloatArray& quat_xyzw, const FloatArray& linear_velocity,
                const FloatArray& angular_velocity) {
                 auto p = vec3ArrayView(pos, "pos");
-                auto q = vec4ArrayView(rot_xyzw, "rot_xyzw");
+                auto q = vec4ArrayView(quat_xyzw, "quat_xyzw");
                 auto lv = vec3ArrayView(linear_velocity, "linear_velocity");
                 auto av = vec3ArrayView(angular_velocity, "angular_velocity");
                 if (p.count != 1 || q.count != 1 || lv.count != 1 ||
                     av.count != 1) {
                     throw py::value_error(
-                        "set_root_state expects single pos[3], rot_xyzw[4], "
+                        "set_root_state expects single pos[3], quat_xyzw[4], "
                         "linear_velocity[3], angular_velocity[3]");
                 }
                 self.setRootState(
@@ -1827,33 +1841,33 @@ void bind_physics(py::module& m) {
                     PxVec3(lv.data[0], lv.data[1], lv.data[2]),
                     PxVec3(av.data[0], av.data[1], av.data[2]));
             },
-            py::arg("pos"), py::arg("rot_xyzw"), py::arg("linear_velocity"),
+            py::arg("pos"), py::arg("quat_xyzw"), py::arg("linear_velocity"),
             py::arg("angular_velocity"),
             "Set root pose and velocities from numpy arrays.")
         .def(
             "set_root_state",
             [](Articulation& self, const std::vector<float>& pos,
-               const std::vector<float>& rot_xyzw,
+               const std::vector<float>& quat_xyzw,
                const std::vector<float>& linear_velocity,
                const std::vector<float>& angular_velocity) {
-                if (pos.size() != 3 || rot_xyzw.size() != 4 ||
+                if (pos.size() != 3 || quat_xyzw.size() != 4 ||
                     linear_velocity.size() != 3 ||
                     angular_velocity.size() != 3) {
                     throw std::runtime_error(
-                        "set_root_state expects pos[3], rot_xyzw[4], "
+                        "set_root_state expects pos[3], quat_xyzw[4], "
                         "linear_velocity[3], angular_velocity[3]");
                 }
 
                 self.setRootState(PxTransform(PxVec3(pos[0], pos[1], pos[2]),
-                                              PxQuat(rot_xyzw[0], rot_xyzw[1],
-                                                     rot_xyzw[2], rot_xyzw[3])),
+                                              PxQuat(quat_xyzw[0], quat_xyzw[1],
+                                                     quat_xyzw[2], quat_xyzw[3])),
                                   PxVec3(linear_velocity[0], linear_velocity[1],
                                          linear_velocity[2]),
                                   PxVec3(angular_velocity[0],
                                          angular_velocity[1],
                                          angular_velocity[2]));
             },
-            py::arg("pos"), py::arg("rot_xyzw"),
+            py::arg("pos"), py::arg("quat_xyzw"),
             py::arg("linear_velocity") = std::vector<float>{0.f, 0.f, 0.f},
             py::arg("angular_velocity") = std::vector<float>{0.f, 0.f, 0.f},
             "Set root pose and velocities from Python sequences.")

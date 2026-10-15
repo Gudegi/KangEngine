@@ -371,7 +371,7 @@ class MjcfDofControlApp(ke.App):
         if body_id >= body_pos.shape[0]:
             self._clear_drag_force()
             return None
-        body_rot = self._state_array(self.world.state.get_body_rot(self.obj_id)[0])
+        body_rot = self._state_array(self.world.state.get_body_quat_xyzw(self.obj_id)[0])
         body_vel = self._state_array(self.world.state.get_body_vel(self.obj_id)[0])
         body_ang_vel = self._state_array(
             self.world.state.get_body_ang_vel(self.obj_id)[0]

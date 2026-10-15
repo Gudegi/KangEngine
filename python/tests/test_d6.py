@@ -229,13 +229,13 @@ def test_linear_and_angular_limits(solver):
     try:
         steps(world, 240)
         assert body.get_root_position()[0] == pytest.approx(.05, abs=.003)
-        q = body.get_root_rotation()
+        q = body.get_root_quat_xyzw()
         assert 2*np.arctan2(q[0], q[3]) == pytest.approx(.2, abs=.02)
         joint.set_linear_limit(p.D6Axis.X, -.1, .1)
         joint.set_twist_limit(-.4, .4)
         steps(world, 240)
         assert body.get_root_position()[0] == pytest.approx(.1, abs=.003)
-        q = body.get_root_rotation()
+        q = body.get_root_quat_xyzw()
         assert 2*np.arctan2(q[0], q[3]) == pytest.approx(.4, abs=.02)
     finally:
         joint.release()
@@ -340,14 +340,14 @@ def test_swing_cone_limit_and_runtime_drive_switch(axis):
     joint = world.create_d6_joint(None, body, config=config)
     try:
         steps(world, 240)
-        q = body.get_root_rotation()
+        q = body.get_root_quat_xyzw()
         assert 2*np.arctan2(q[axis], q[3]) == pytest.approx(config.swing_limits[axis-1], abs=.02)
         # Switch angular motor model with a zero-capped prior motor. Limits remain.
         joint.set_drive(p.D6DriveAxis.SWING, p.D6DriveConfig(stiffness=100, force_limit=0))
         joint.set_drive(p.D6DriveAxis.SLERP, p.D6DriveConfig(stiffness=100, damping=10, force_limit=2))
         joint.set_drive_target(IDENTITY)
         steps(world, 240)
-        q = body.get_root_rotation()
+        q = body.get_root_quat_xyzw()
         assert abs(2*np.arctan2(q[axis], q[3])) < .02
     finally:
         joint.release()

@@ -124,7 +124,7 @@ world.set_root_state(
     env_ids,
     obj_id,
     pos,
-    rot_xyzw,
+    quat_xyzw,
     linear_velocity,
     angular_velocity,
 )
@@ -132,7 +132,7 @@ world.set_root_state(
 rigid.set_root_state(
     env_ids,
     pos,
-    rot_xyzw,
+    quat_xyzw,
     linear_velocity,
     angular_velocity,
 )
@@ -148,11 +148,21 @@ Useful row helpers:
 - `world.articulation_gpu_row(env_id, obj_id)`
 - `world.articulation_gpu_index_view(env_ids, obj_id)`
 
-Root state layout is:
+Packed state keeps the same last-axis layout throughout the simulation API:
 
-```text
-[position xyz, rotation xyzw, linear velocity xyz, angular velocity xyz]
-```
+| Slice | Value | Frame / unit |
+| --- | --- | --- |
+| `[..., 0:3]` | Position XYZ | World, meters |
+| `[..., 3:7]` | Quaternion XYZW | Body orientation in world |
+| `[..., 7:10]` | Linear velocity XYZ | World, m/s |
+| `[..., 10:13]` | Angular velocity XYZ | World, rad/s |
+
+`root_state` has shape `(N, 13)`, `rigid_data` has shape `(rigid_count, 13)`,
+and `articulation_link_data` has shape `(articulation_count, max_links, 13)`.
+Only each articulation's actual links are valid; padded entries are not state.
+`fetch_rigid_data()` refreshes the whole rigid row. Articulation pose and velocity
+require `fetch_articulation_link_pose()` and `fetch_articulation_link_vel()`
+respectively. Accessing a raw view does not itself fetch fresh data.
 
 <details>
 <summary>How high-level state maps to PhysX GPU buffers</summary>

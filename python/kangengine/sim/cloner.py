@@ -66,7 +66,7 @@ class GridCloner:
         config=None,
         env_ids=None,
         initial_root_pos=None,
-        initial_root_rot=None,
+        initial_root_quat_xyzw=None,
         initial_linear_velocity=None,
         initial_angular_velocity=None,
     ):
@@ -89,14 +89,14 @@ class GridCloner:
 
         if initial_root_pos is None:
             initial_root_pos = articulation.first.articulation.get_root_position()
-        if initial_root_rot is None:
-            initial_root_rot = articulation.first.articulation.get_root_rotation()
+        if initial_root_quat_xyzw is None:
+            initial_root_quat_xyzw = articulation.first.articulation.get_root_quat_xyzw()
         root_pos = self._world_positions(selected, initial_root_pos)
-        root_rot = self._expand_value(
-            initial_root_rot,
+        root_quat_xyzw = self._expand_value(
+            initial_root_quat_xyzw,
             selected,
             width=4,
-            name="initial_root_rot",
+            name="initial_root_quat_xyzw",
         )
         linear_velocity = self._optional_value(
             initial_linear_velocity,
@@ -113,7 +113,7 @@ class GridCloner:
         articulation.set_root_state(
             selected,
             root_pos,
-            root_rot,
+            root_quat_xyzw,
             linear_velocity=linear_velocity,
             angular_velocity=angular_velocity,
             immediate=True,
@@ -128,7 +128,7 @@ class GridCloner:
         name: str = "",
         env_ids=None,
         initial_root_pos=(0.0, 0.0, 0.0),
-        initial_root_rot=(0.0, 0.0, 0.0, 1.0),
+        initial_root_quat_xyzw=(0.0, 0.0, 0.0, 1.0),
         initial_linear_velocity=None,
         initial_angular_velocity=None,
         density: float = 1.0,
@@ -139,11 +139,11 @@ class GridCloner:
     ):
         selected = tuple(env_id_list(env_ids, self.num_envs))
         root_pos = self._world_positions(selected, initial_root_pos)
-        root_rot = self._expand_value(
-            initial_root_rot,
+        root_quat_xyzw = self._expand_value(
+            initial_root_quat_xyzw,
             selected,
             width=4,
-            name="initial_root_rot",
+            name="initial_root_quat_xyzw",
         )
         for row, env_id in enumerate(selected):
             kwargs = dict(
@@ -151,7 +151,7 @@ class GridCloner:
                 obj_id=obj_id,
                 name=name,
                 pos=root_pos[row],
-                rot_xyzw=root_rot[row],
+                quat_xyzw=root_quat_xyzw[row],
                 contact_offset=contact_offset,
                 rest_offset=rest_offset,
             )
@@ -173,7 +173,7 @@ class GridCloner:
             rigid.set_root_state(
                 selected,
                 root_pos,
-                root_rot,
+                root_quat_xyzw,
                 linear_velocity=self._optional_value(
                     initial_linear_velocity,
                     selected,

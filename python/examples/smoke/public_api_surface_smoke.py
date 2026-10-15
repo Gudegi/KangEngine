@@ -37,18 +37,18 @@ def main() -> None:
     assert ke.RenderablePrimView.__module__ == "kangengine"
     for method_name in (
         "set_local_translation",
-        "set_local_rotation",
+        "set_local_quat_wxyz",
         "set_local_rotation_axis_angle",
         "set_local_scale",
         "set_local_matrix",
         "set_world_translation",
-        "set_world_rotation",
+        "set_world_quat_wxyz",
         "set_world_rotation_axis_angle",
         "set_world_matrix",
         "get_local_translation",
-        "get_local_rotation",
+        "get_local_quat",
         "get_world_translation",
-        "get_world_rotation",
+        "get_world_quat",
         "compute_local_matrix",
         "compute_world_matrix",
     ):

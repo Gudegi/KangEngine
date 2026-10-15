@@ -142,7 +142,7 @@ class KwMotionTrackingApp(ke.App):
         num_bodies = min(self.ghost.num_bodies(), self.local_rot.shape[1])
         for body_idx in range(num_bodies):
             q = self.local_rot[idx][body_idx]
-            self.ghost.set_joint_rotation(
+            self.ghost.set_joint_quat_wxyz(
                 body_idx,
                 ke.Quat(float(q[0]), float(q[1]), float(q[2]), float(q[3])),
             )

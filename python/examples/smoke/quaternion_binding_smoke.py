@@ -23,8 +23,8 @@ def main():
 
     scene = ke.scene.create_backend(ke.scene.BackendType.NATIVE)
     prim = scene.define_prim("/World/Test", ke.scene.PrimType.XFORM)
-    prim.set_local_rotation(np.array([1.0, 0.0, 0.0, 0.0]))
-    _close(prim.get_local_rotation(), [1.0, 0.0, 0.0, 0.0])
+    prim.set_local_quat_wxyz(np.array([1.0, 0.0, 0.0, 0.0]))
+    _close(prim.get_local_quat(), [1.0, 0.0, 0.0, 0.0])
 
     print("PASS: quaternion bindings use wxyz; xyzw conversion is explicit")
 

@@ -19,7 +19,7 @@ def load_model(scale=1.0):
     # stays one metre, and authored +Y becomes world -X.
     builder.add_link(
         "hinge", parent="root", mass=2*scale, com=(.75, 0., 0.),
-        rotation_xyzw=(0., 0., 2**-.5, 2**-.5),
+        quat_xyzw=(0., 0., 2**-.5, 2**-.5),
         inertia_diagonal=(1., 1., 1.),
         joint=p.ArticulationBuilder.RevoluteJoint(axis=(0., 1., 0.), joint_offset=(-.25, 0., 0.),
                              kp=10000., kd=200.),
@@ -30,13 +30,13 @@ def load_model(scale=1.0):
     )
     builder.add_link(
         "ball", parent="root", mass=4*scale, com=(.3, .5, .2),
-        rotation_xyzw=(0., 0., 2**-.5, 2**-.5),
+        quat_xyzw=(0., 0., 2**-.5, 2**-.5),
         inertia_diagonal=(1., 1., 1.), joint=p.ArticulationBuilder.SphericalJoint(kp=10000., kd=200.),
     )
     # A fixed joint has no DOF effort but still transmits a complete wrench.
     builder.add_link(
         "fixed", parent="root", mass=2*scale, com=(.4, .3, 0.),
-        rotation_xyzw=(0., 0., 2**-.5, 2**-.5),
+        quat_xyzw=(0., 0., 2**-.5, 2**-.5),
         inertia_diagonal=(1., 1., 1.), joint=p.ArticulationBuilder.FixedJoint(),
     )
     return builder.build()

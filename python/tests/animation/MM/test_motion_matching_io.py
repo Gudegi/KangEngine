@@ -87,7 +87,7 @@ def test_roundtrip_preserves_search_queries_and_playback_without_rebuilding(tmp_
             before.local_rotations_wxyz(), after.local_rotations_wxyz()
         )
         np.testing.assert_array_equal(
-            original.reference_rotations(i), restored.reference_rotations(i)
+            original.reference_quats_wxyz(i), restored.reference_quats_wxyz(i)
         )
         for time in (0, 0.137, (before.num_frames() - 1) / before.fps()):
             inputs = dict(

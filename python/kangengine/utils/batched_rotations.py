@@ -3,6 +3,16 @@
 import torch
 
 
+def quat_wxyz_to_xyzw(quat: torch.Tensor) -> torch.Tensor:
+    """Reorder [..., 4] quaternions, preserving device, dtype, and gradients."""
+    return quat[..., [1, 2, 3, 0]]
+
+
+def quat_xyzw_to_wxyz(quat: torch.Tensor) -> torch.Tensor:
+    """Reorder [..., 4] quaternions, preserving device, dtype, and gradients."""
+    return quat[..., [3, 0, 1, 2]]
+
+
 def _require_last_dim(value: torch.Tensor, width: int, name: str) -> None:
     if value.ndim == 0 or value.shape[-1] != width:
         raise ValueError(f"{name} must have shape [..., {width}]")

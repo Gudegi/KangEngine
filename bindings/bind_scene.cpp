@@ -256,9 +256,9 @@ void bind_scene(py::module& m) {
              py::arg("translation"), "Set local translation.")
         .def("set_local_scale", &KE::Scene::TransformComponent::setLocalScale,
              py::arg("scale"), "Set local scale.")
-        .def("set_local_rotation",
+        .def("set_local_quat_wxyz",
              &KE::Scene::TransformComponent::setLocalRotation,
-             py::arg("rotation"), "Set local rotation.")
+             py::arg("quat_wxyz"), "Set parent-relative rotation from WXYZ values or a Quat.")
         .def("set_local_rotation_axis_angle",
              &KE::Scene::TransformComponent::setLocalRotationAxisAngle,
              py::arg("axis"), py::arg("angle_radians"),
@@ -268,9 +268,9 @@ void bind_scene(py::module& m) {
         .def("set_world_translation",
              &KE::Scene::TransformComponent::setWorldTranslation,
              py::arg("translation"), "Set world translation.")
-        .def("set_world_rotation",
+        .def("set_world_quat_wxyz",
              &KE::Scene::TransformComponent::setWorldRotation,
-             py::arg("rotation"), "Set world rotation.")
+             py::arg("quat_wxyz"), "Set world-space rotation from WXYZ values or a Quat.")
         .def("set_world_rotation_axis_angle",
              &KE::Scene::TransformComponent::setWorldRotationAxisAngle,
              py::arg("axis"), py::arg("angle_radians"),
@@ -280,13 +280,13 @@ void bind_scene(py::module& m) {
         .def("get_local_translation",
              &KE::Scene::TransformComponent::getLocalTranslation,
              "Return the effective parent-relative translation.")
-        .def("get_local_rotation",
+        .def("get_local_quat",
              &KE::Scene::TransformComponent::getLocalRotation,
              "Return the effective parent-relative quaternion rotation.")
         .def("get_world_translation",
              &KE::Scene::TransformComponent::getWorldTranslation,
              "Return the effective world-space translation.")
-        .def("get_world_rotation",
+        .def("get_world_quat",
              &KE::Scene::TransformComponent::getWorldRotation,
              "Return the effective world-space quaternion rotation.")
         .def("compute_local_matrix",
@@ -1078,8 +1078,8 @@ void bind_scene(py::module& m) {
              py::arg("translation"), "Set local translation.")
         .def("set_local_scale", &KE::Scene::Prim::setLocalScale,
              py::arg("scale"), "Set local scale.")
-        .def("set_local_rotation", &KE::Scene::Prim::setLocalRotation,
-             py::arg("rotation"), "Set local quaternion rotation.")
+        .def("set_local_quat_wxyz", &KE::Scene::Prim::setLocalRotation,
+             py::arg("quat_wxyz"), "Set parent-relative rotation from WXYZ values or a Quat.")
         .def("set_local_rotation_axis_angle",
              &KE::Scene::Prim::setLocalRotationAxisAngle, py::arg("axis"),
              py::arg("angle_radians"),
@@ -1088,8 +1088,8 @@ void bind_scene(py::module& m) {
              py::arg("matrix"), "Set local transform matrix.")
         .def("set_world_translation", &KE::Scene::Prim::setWorldTranslation,
              py::arg("translation"), "Set world translation.")
-        .def("set_world_rotation", &KE::Scene::Prim::setWorldRotation,
-             py::arg("rotation"), "Set world quaternion rotation.")
+        .def("set_world_quat_wxyz", &KE::Scene::Prim::setWorldRotation,
+             py::arg("quat_wxyz"), "Set world-space rotation from WXYZ values or a Quat.")
         .def("set_world_rotation_axis_angle",
              &KE::Scene::Prim::setWorldRotationAxisAngle, py::arg("axis"),
              py::arg("angle_radians"),
@@ -1098,20 +1098,17 @@ void bind_scene(py::module& m) {
              py::arg("matrix"), "Set world transform matrix.")
         .def("get_local_translation", &KE::Scene::Prim::getLocalTranslation,
              "Return the effective parent-relative translation.")
-        .def("get_local_rotation", &KE::Scene::Prim::getLocalRotation,
+        .def("get_local_quat", &KE::Scene::Prim::getLocalRotation,
              "Return the effective parent-relative quaternion rotation.")
         .def("get_world_translation", &KE::Scene::Prim::getWorldTranslation,
              "Return the effective world-space translation.")
-        .def("get_world_rotation", &KE::Scene::Prim::getWorldRotation,
+        .def("get_world_quat", &KE::Scene::Prim::getWorldRotation,
              "Return the effective world-space quaternion rotation.")
         .def("add_translate_op", &KE::Scene::Prim::addTranslateOp,
              py::arg("translation"),
              "Compatibility alias for local translation.")
         .def("add_scale_op", &KE::Scene::Prim::addScaleOp, py::arg("scale"),
              "Compatibility alias for local scale.")
-        .def("add_rotate_quaternion_op",
-             &KE::Scene::Prim::addRotateQuaternionOp, py::arg("rotation"),
-             "Compatibility alias for local quaternion rotation.")
         // Display color
         .def("set_display_color", &KE::Scene::Prim::setDisplayColor,
              py::arg("color"), "Set RGB display color metadata.")

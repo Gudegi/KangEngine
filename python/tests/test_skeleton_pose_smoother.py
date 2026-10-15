@@ -134,7 +134,7 @@ class SkeletonPoseSmootherTests(unittest.TestCase):
             local_angular_velocities=np.full((6, 3), np.inf),
         )
         bad_rotation = initial.state
-        bad_rotation.set_rotation(index=0, rotation=(0, 0, 0, 0))
+        bad_rotation.set_joint_quat_wxyz(index=0, quat_wxyz=(0, 0, 0, 0))
         bad_rotation_sample = SkeletonPoseSample(
             bad_rotation,
             root_linear_velocity=(0, 0, 0),

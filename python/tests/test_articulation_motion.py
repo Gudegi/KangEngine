@@ -137,10 +137,10 @@ def test_mapper_converts_reference_pose_to_canonical_q():
     assert np.allclose(
         q[root.q_offset + 3 : root.q_offset + 7],
         [
-            state.rotation(0).w,
-            state.rotation(0).x,
-            state.rotation(0).y,
-            state.rotation(0).z,
+            state.get_joint_quat(0).w,
+            state.get_joint_quat(0).x,
+            state.get_joint_quat(0).y,
+            state.get_joint_quat(0).z,
         ],
     )
     for block in layout.blocks[1:]:

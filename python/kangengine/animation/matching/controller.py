@@ -135,7 +135,7 @@ class MotionMatchingController:
             )
         else:
             # Align the reference track while preserving source Hips residual motion.
-            source_rotation = self.database.reference_rotation(motion_index, time)
+            source_rotation = self.database.reference_quat_wxyz(motion_index, time)
             source_position = self.database.reference_position(motion_index, time)
             destination_rotation = (
                 (1, 0, 0, 0) if reset else self.reference_rotation_wxyz
@@ -246,7 +246,7 @@ class MotionMatchingController:
             return self.heading_rotation_wxyz
         rotation = quat_wxyz_multiply_numpy(
             self._reference_alignment_rotation,
-            self.database.reference_rotation(self.motion_index, self.time),
+            self.database.reference_quat_wxyz(self.motion_index, self.time),
         )
         return rotation / np.linalg.norm(rotation)
 

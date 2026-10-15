@@ -41,11 +41,11 @@ class MyApp(ke.App):
             color=ke.Vec4(0.3, 0.3, 0.02, 1.0),
         )
         box2.set_local_translation(ke.Vec3(0.0, 1.5, 0.0))
-        box2.set_local_rotation(np.array([0.924, 0, 0, 0.383]))
+        box2.set_local_quat_wxyz(np.array([0.924, 0, 0, 0.383]))
         box2.set_local_scale(ke.Vec3(0.5, 0.5, 0.5))
 
         w_trans = box2.get_world_translation()
-        w_ori = box2.get_world_rotation()
+        w_ori = box2.get_world_quat()
         self.scene.debug_geometry.add_axes(
             "/debug/box2_axes",
             w_trans,
@@ -57,9 +57,9 @@ class MyApp(ke.App):
         # self.scene.remove_prim("/debug/box2_axes")
 
         print(box2.get_local_translation())
-        print(box2.get_local_rotation())
-        print(box2.get_local_rotation().to_wxyz())
-        print(box2.get_local_rotation().to_xyzw())
+        print(box2.get_local_quat())
+        print(box2.get_local_quat().to_wxyz())
+        print(box2.get_local_quat().to_xyzw())
         print(box2.get_world_translation())
         print(np.array(w_ori))
         # box2.remove()

@@ -62,8 +62,9 @@ void bind_physics_gpu(py::module& m) {
         "PhysicsGpuSystem is released.")
         .def(py::init<>())
         .def_readwrite("rigid_data", &PhysicsGpuStateViews::rigidData,
-                       "Rigid pose and velocity state refreshed by "
-                       "fetch_rigid_data().")
+                       "World state [R,13]: position xyz (m), quaternion xyzw, "
+                       "linear velocity xyz (m/s), angular velocity xyz (rad/s). "
+                       "Refreshed by fetch_rigid_data().")
         .def_readwrite("rigid_force", &PhysicsGpuStateViews::rigidForce,
                        "Rigid force command buffer submitted by "
                        "apply_rigid_force().")
@@ -75,7 +76,9 @@ void bind_physics_gpu(py::module& m) {
                        "Rigid COM linear/angular acceleration state.")
         .def_readwrite("articulation_link_data",
                        &PhysicsGpuStateViews::articulationLinkData,
-                       "Articulation link pose and velocity state.")
+                       "World state [A,max_links,13]: position xyz (m), quaternion xyzw, "
+                       "linear velocity xyz (m/s), angular velocity xyz (rad/s). "
+                       "Pose and velocity have separate fetch methods; padded links are not state.")
         .def_readwrite("articulation_joint_positions",
                        &PhysicsGpuStateViews::articulationJointPositions,
                        "Articulation joint-position state.")
@@ -188,7 +191,9 @@ void bind_physics_gpu(py::module& m) {
         .def("step_start", &PhysicsGpuSystem::stepStart)
         .def("step_finish", &PhysicsGpuSystem::stepFinish)
         .def("rigid_data", &PhysicsGpuSystem::rigidData,
-             py::return_value_policy::reference_internal)
+             py::return_value_policy::reference_internal,
+             "Return [R,13] world state: position xyz (m), quaternion xyzw, "
+             "linear velocity xyz (m/s), angular velocity xyz (rad/s). Does not fetch.")
         .def("rigid_force", &PhysicsGpuSystem::rigidForce,
              py::return_value_policy::reference_internal)
         .def("rigid_torque", &PhysicsGpuSystem::rigidTorque,
@@ -196,7 +201,9 @@ void bind_physics_gpu(py::module& m) {
         .def("rigid_accelerations", &PhysicsGpuSystem::rigidAccelerations,
              py::return_value_policy::reference_internal)
         .def("articulation_link_data", &PhysicsGpuSystem::articulationLinkData,
-             py::return_value_policy::reference_internal)
+             py::return_value_policy::reference_internal,
+             "Return [A,max_links,13] world state with the rigid_data() column layout. "
+             "Does not fetch; pose and velocity are refreshed separately.")
         .def("articulation_joint_positions",
              &PhysicsGpuSystem::articulationJointPositions,
              py::return_value_policy::reference_internal)

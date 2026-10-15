@@ -5,7 +5,7 @@
 `ke.Quat` objects consistently use `wxyz` ordering, including construction
 from Python or NumPy values and conversion with `np.asarray(q)`. Use
 `ke.Quat.from_xyzw(...)` and `q.to_xyzw()` at APIs that explicitly use
-`rot_xyzw` arrays. Physics and simulation state arrays retain their documented
+`quat_xyzw` arrays. Physics and simulation state arrays retain their documented
 `xyzw` ordering.
 
 KangEngine's Python API is organized by task and domain. Start with the user

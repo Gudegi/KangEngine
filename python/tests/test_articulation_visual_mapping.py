@@ -18,7 +18,7 @@ def test_cpu_renderables_follow_their_physical_links(render_body_ids):
     rotations = np.tile([0., 0., 2**-.5, 2**-.5], (4, 1))
     robots = [SimpleNamespace(
         get_link_positions=lambda env_id=env_id: positions[env_id],
-        get_link_rotations=lambda: rotations,
+        get_link_quats_xyzw=lambda: rotations,
     ) for env_id in range(2)]
     world = SimpleNamespace(articulation=lambda env_id, obj_id: robots[env_id])
     buffers = {}

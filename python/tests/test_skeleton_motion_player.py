@@ -71,7 +71,7 @@ def rotations_wxyz(state) -> np.ndarray:
     return np.array(
         [
             (q.w, q.x, q.y, q.z)
-            for q in (state.rotation(index=i) for i in range(state.num_joints()))
+            for q in (state.get_joint_quat(index=i) for i in range(state.num_joints()))
         ],
         dtype=np.float64,
     )
@@ -519,7 +519,7 @@ class SkeletonMotionPlayerTests(unittest.TestCase):
         snapshot = player.state
         snapshot_matrices = snapshot.compute_global_matrices().copy()
         snapshot.set_root_translation(translation=(99, 98, 97))
-        snapshot.set_rotation(index=4, rotation=(0, 0, 0, 1))
+        snapshot.set_joint_quat_wxyz(index=4, quat_wxyz=(1, 0, 0, 0))
         np.testing.assert_allclose(
             player.state.compute_global_matrices(), snapshot_matrices, atol=1e-6
         )

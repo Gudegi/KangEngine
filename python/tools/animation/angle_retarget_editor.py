@@ -162,7 +162,7 @@ class EditableSkeleton:
             prim = scene.Prim.define_manipulation_group(app.scene.native, path)
             translation = bind_root if joint == 0 else tree.local_translation(joint)
             prim.set_local_translation(translation)
-            prim.set_local_rotation(ke.Quat(*self.default_local_rotations[joint]))
+            prim.set_local_quat_wxyz(ke.Quat(*self.default_local_rotations[joint]))
             handle = app.scene.add_mesh(f"{path}/handle", sphere, app.materials.common)
             handle.set_base_color(joint_color)
             self.joint_prims.append(prim)
@@ -236,7 +236,7 @@ class EditableSkeleton:
     def local_rotations(self) -> np.ndarray:
         rotations = np.empty((self.tree.num_joints(), 4), dtype=np.float32)
         for joint, prim in enumerate(self.joint_prims):
-            rotations[joint] = _quat_tuple(prim.get_local_rotation())
+            rotations[joint] = _quat_tuple(prim.get_local_quat())
         return rotations
 
     def sync_skin(self) -> None:
@@ -279,14 +279,14 @@ class EditableSkeleton:
         for name, value in rotations.items():
             joint = indices.get(name)
             if joint is not None:
-                self.joint_prims[joint].set_local_rotation(ke.Quat(*value))
+                self.joint_prims[joint].set_local_quat_wxyz(ke.Quat(*value))
 
     def set_bind_root(self, value: tuple[float, float, float]) -> None:
         self.bind_root = value
         self.joint_prims[0].set_local_translation(value)
 
     def reset_joint(self, joint: int) -> None:
-        self.joint_prims[joint].set_local_rotation(
+        self.joint_prims[joint].set_local_quat_wxyz(
             ke.Quat(*self.default_local_rotations[joint])
         )
 
@@ -824,11 +824,11 @@ class RetargetEditor(ke.App):
         axis = torch.tensor((0.0, 1.0, 0.0), dtype=torch.float32)
         delta = quat_wxyz_from_angle_axis(angle, axis)
         current = torch.tensor(
-            _quat_tuple(self.target_edit.root_prim.get_local_rotation()),
+            _quat_tuple(self.target_edit.root_prim.get_local_quat()),
             dtype=torch.float32,
         )
         rotation = quat_wxyz_multiply(delta, current)
-        self.target_edit.root_prim.set_local_rotation(ke.Quat(*rotation.tolist()))
+        self.target_edit.root_prim.set_local_quat_wxyz(ke.Quat(*rotation.tolist()))
         self.preview_needs_rebuild = True
         self.status = f"Rotated target B facing by {degrees:+g} degrees around Y."
 
@@ -864,7 +864,7 @@ class RetargetEditor(ke.App):
         source_rotations = self.source_edit.local_rotations()
         target_rotations = self.target_edit.local_rotations()
         facing = torch.tensor(
-            _quat_tuple(self.target_edit.root_prim.get_local_rotation()),
+            _quat_tuple(self.target_edit.root_prim.get_local_quat()),
             dtype=torch.float32,
         )
         target_rotations[0] = quat_wxyz_multiply(

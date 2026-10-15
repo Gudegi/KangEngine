@@ -85,7 +85,7 @@ def main():
         0.0,
         math.sin(math.pi / 4.0),
     )
-    local_rotation = _quat_wxyz(child.get_local_rotation())
+    local_rotation = _quat_wxyz(child.get_local_quat())
     if local_rotation[0] < 0.0:
         local_rotation = tuple(-value for value in local_rotation)
     _close_tuple(local_rotation, expected_local_rotation)
@@ -97,7 +97,7 @@ def main():
         math.sin(math.pi / 8.0),
         0.0,
     )
-    world_rotation = _quat_wxyz(child_transform.get_world_rotation())
+    world_rotation = _quat_wxyz(child_transform.get_world_quat())
     if world_rotation[0] < 0.0:
         world_rotation = tuple(-value for value in world_rotation)
     _close_tuple(world_rotation, expected_world_rotation)

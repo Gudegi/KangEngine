@@ -199,13 +199,13 @@ class ConvexCollisionViewer(ke.App):
     def _sync_visuals(self):
         for name, actor in self.actors.items():
             pos = actor.get_root_position()
-            rot = actor.get_root_rotation()
+            rot = actor.get_root_quat_xyzw()
             views = [*self.collision_views[name], self.source_views[name]]
             for view in views:
                 view.prim.set_local_translation(
                     ke.Vec3(float(pos[0]), float(pos[1]), float(pos[2]))
                 )
-                view.prim.set_local_rotation(
+                view.prim.set_local_quat_wxyz(
                     ke.Quat(float(rot[3]), float(rot[0]), float(rot[1]), float(rot[2]))
                 )
 
@@ -213,7 +213,7 @@ class ConvexCollisionViewer(ke.App):
         u1, u2, u3 = self.reset_rng.random(3)
         sqrt_u1 = np.sqrt(u1)
         sqrt_one_minus_u1 = np.sqrt(1.0 - u1)
-        rotation_xyzw = [
+        quat_xyzw = [
             sqrt_one_minus_u1 * np.sin(2.0 * np.pi * u2),
             sqrt_one_minus_u1 * np.cos(2.0 * np.pi * u2),
             sqrt_u1 * np.sin(2.0 * np.pi * u3),
@@ -222,7 +222,7 @@ class ConvexCollisionViewer(ke.App):
         for name, actor in self.actors.items():
             actor.set_root_state(
                 self.initial_positions[name],
-                rotation_xyzw,
+                quat_xyzw,
                 [0.0, 0.0, 0.0],
                 [0.0, 0.0, 0.0],
             )

@@ -253,7 +253,7 @@ class ArticulatedSurface:
             raise ValueError("state skeleton does not match the articulated surface")
         self._native.set_root_translation(state.root_translation())
         for index in range(state.num_joints()):
-            self._native.set_joint_rotation(index, state.rotation(index))
+            self._native.set_joint_quat_wxyz(index, state.get_joint_quat(index))
         self._native.apply_pose()
         return self
 

@@ -425,7 +425,7 @@ class KangEngineEngine(_BaseEngine):
         elif not is_visual and is_rigid:
             rigid_kwargs = {
                 "pos": self._world_pos(env_id, start_pos),
-                "rot_xyzw": start_rot,
+                "quat_xyzw": start_rot,
                 "contact_offset": float(self._config.get("contact_offset", 0.02)),
                 "rest_offset": float(self._config.get("rest_offset", 0.0)),
             }
@@ -1125,8 +1125,8 @@ class KangEngineEngine(_BaseEngine):
         if self._is_static_obj(obj_id):
             return self._static_root_batch(obj_id, rotation=True)
         if self._use_gpu_logical_state():
-            return self._world.state.gpu.get_root_rot(obj_id, fetch=False)
-        return self._world.state.get_root_rot(obj_id)
+            return self._world.state.gpu.get_root_quat_xyzw(obj_id, fetch=False)
+        return self._world.state.get_root_quat_xyzw(obj_id)
 
     def _state_root_vel(self, obj_id: int):
         if self._is_static_obj(obj_id):
@@ -1153,8 +1153,8 @@ class KangEngineEngine(_BaseEngine):
         if self._is_static_obj(obj_id):
             return self._static_body_pose_batch(obj_id, rotation=True)
         if self._use_gpu_logical_state():
-            return self._world.state.gpu.get_body_rot(obj_id, fetch=False)
-        return self._world.state.get_body_rot(obj_id)
+            return self._world.state.gpu.get_body_quat_xyzw(obj_id, fetch=False)
+        return self._world.state.get_body_quat_xyzw(obj_id)
 
     def _state_body_vel(self, obj_id: int):
         if self._is_static_obj(obj_id):
@@ -1721,7 +1721,7 @@ class KangEngineEngine(_BaseEngine):
         return not obj.is_visual and obj.is_static
 
     def _static_root_batch(self, obj_id, *, rotation):
-        getter = "get_root_rotation" if rotation else "get_root_position"
+        getter = "get_root_quat_xyzw" if rotation else "get_root_position"
         values = [
             np.asarray(
                 getattr(self._world.rigid(env_id, obj_id), getter)(),
@@ -1734,14 +1734,14 @@ class KangEngineEngine(_BaseEngine):
     def _static_body_pose_batch(self, obj_id, *, rotation):
         specs = rigid_shape_specs(self._objects[0][obj_id].data)
         local_pos = np.stack([spec.local_pos for spec in specs], axis=0)
-        local_rot = np.stack([spec.local_rot for spec in specs], axis=0)
+        local_rot = np.stack([spec.local_quat_xyzw for spec in specs], axis=0)
         positions = []
         rotations = []
         for env_id in range(self._num_envs):
             rigid = self._world.rigid(env_id, obj_id)
             body_pos, body_rot = expand_rigid_body_state(
                 np.asarray(rigid.get_root_position(), dtype=np.float32),
-                np.asarray(rigid.get_root_rotation(), dtype=np.float32),
+                np.asarray(rigid.get_root_quat_xyzw(), dtype=np.float32),
                 local_pos,
                 local_rot,
             )

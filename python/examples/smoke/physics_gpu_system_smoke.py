@@ -25,7 +25,7 @@ VALIDATION_STEPS = 4
 CONTACT_RIGID_ROWS = (0, 1)
 RIGID_LAYOUT = {
     "position": slice(0, 3),
-    "rotation_xyzw": slice(3, 7),
+    "quat_xyzw": slice(3, 7),
     "linear_velocity": slice(7, 10),
     "angular_velocity": slice(10, 13),
 }
@@ -285,7 +285,7 @@ def _assert_sparse_root_state_apply(world, gpu_system, rigid_state, rigid_view, 
     target_ang_vel = torch.zeros(3, device="cuda:0")
 
     rigid_state[target_row, RIGID_LAYOUT["position"]] = target_pos
-    rigid_state[target_row, RIGID_LAYOUT["rotation_xyzw"]] = target_rot
+    rigid_state[target_row, RIGID_LAYOUT["quat_xyzw"]] = target_rot
     rigid_state[target_row, RIGID_LAYOUT["linear_velocity"]] = target_lin_vel
     rigid_state[target_row, RIGID_LAYOUT["angular_velocity"]] = target_ang_vel
 
@@ -360,7 +360,7 @@ def main():
         articulation.get_root_position(), dtype=np.float32
     )
     articulation_root_rotation = np.asarray(
-        articulation.get_root_rotation(), dtype=np.float32
+        articulation.get_root_quat_xyzw(), dtype=np.float32
     )
 
     gpu_config = physics.GpuPhysicsConfig()

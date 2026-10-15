@@ -161,6 +161,20 @@ surface.apply_state(state=state)
 Use `apply_pose(root_translation=..., local_rotations_wxyz=...)` when an
 intermediate `SkeletonState` is not otherwise needed.
 
+To edit one skeleton node, including the root, use its index and a WXYZ
+quaternion:
+
+```python
+state.set_joint_quat_wxyz(index=0, quat_wxyz=(1.0, 0.0, 0.0, 0.0))
+joint_quat: ke.Quat = state.get_joint_quat(index=0)
+surface.apply_state(state=state)
+```
+
+The value uses the state's local or global convention (`state.is_local()`);
+the setter does not convert between coordinate frames. `ke.Quat` objects are
+also accepted. `ArticulationVisual.set_joint_quat_wxyz()` uses the same WXYZ
+input convention; call `apply_pose()` afterward to update its scene prims.
+
 ## Instances and motion trails
 
 `SkinnedSurface` and `ArticulatedSurface` create independently posed instances

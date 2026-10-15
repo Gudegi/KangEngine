@@ -25,10 +25,12 @@ __all__ = [
 
 @dataclass(slots=True)
 class RigidShapeSpec:
+    """One shape's pose relative to its actor: position (m) and XYZW quaternion."""
+
     name: str
     geom_type: str
     local_pos: np.ndarray
-    local_rot: np.ndarray
+    local_quat_xyzw: np.ndarray
     size: np.ndarray
     mesh_data: Any = None
 
@@ -70,19 +72,20 @@ def rigid_body_names(data) -> list[str]:
     return [spec.name for spec in rigid_shape_specs(data)]
 
 
-def expand_rigid_body_state(root_pos, root_rot, local_pos, local_rot):
+def expand_rigid_body_state(root_pos, root_quat_xyzw, local_pos, local_quat_xyzw):
+    """Compose actor-world and shape-local poses into world positions and XYZW quaternions."""
     root_pos = np.asarray(root_pos, dtype=np.float32).reshape(3)
-    root_rot = quat_xyzw_normalize(np.asarray(root_rot, dtype=np.float32).reshape(4))
+    root_quat_xyzw = quat_xyzw_normalize(np.asarray(root_quat_xyzw, dtype=np.float32).reshape(4))
     local_pos = np.asarray(local_pos, dtype=np.float32).reshape(-1, 3)
-    local_rot = np.asarray(local_rot, dtype=np.float32).reshape(-1, 4)
+    local_quat_xyzw = np.asarray(local_quat_xyzw, dtype=np.float32).reshape(-1, 4)
     body_pos = np.stack(
-        [root_pos + quat_xyzw_rotate(root_rot, pos) for pos in local_pos], axis=0
+        [root_pos + quat_xyzw_rotate(root_quat_xyzw, pos) for pos in local_pos], axis=0
     ).astype(np.float32)
-    body_rot = np.stack(
-        [quat_xyzw_normalize(quat_xyzw_multiply(root_rot, rot)) for rot in local_rot],
+    body_quat_xyzw = np.stack(
+        [quat_xyzw_normalize(quat_xyzw_multiply(root_quat_xyzw, rot)) for rot in local_quat_xyzw],
         axis=0,
     ).astype(np.float32)
-    return body_pos, body_rot
+    return body_pos, body_quat_xyzw
 
 
 def _shape_spec(name: str, geom) -> RigidShapeSpec:
@@ -94,7 +97,7 @@ def _shape_spec(name: str, geom) -> RigidShapeSpec:
             end = _vec3(geom.to_pos)
             local_pos = (start + end) * 0.5
             axis = end - start
-            local_rot = quat_xyzw_from_two_vectors([1.0, 0.0, 0.0], axis)
+            local_quat_xyzw = quat_xyzw_from_two_vectors([1.0, 0.0, 0.0], axis)
             size = size.copy()
             size[1] = np.linalg.norm(axis) * 0.5
         else:
@@ -103,10 +106,10 @@ def _shape_spec(name: str, geom) -> RigidShapeSpec:
             axis = quat_xyzw_rotate(
                 mjcf_rot, np.array([0.0, 0.0, 1.0], dtype=np.float32)
             )
-            local_rot = quat_xyzw_from_two_vectors([1.0, 0.0, 0.0], axis)
+            local_quat_xyzw = quat_xyzw_from_two_vectors([1.0, 0.0, 0.0], axis)
     else:
         local_pos = _vec3(geom.pos)
-        local_rot = (
+        local_quat_xyzw = (
             _quat(geom.quat)
             if geom_type == "Box"
             else np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32)
@@ -116,7 +119,7 @@ def _shape_spec(name: str, geom) -> RigidShapeSpec:
         name,
         geom_type,
         local_pos.astype(np.float32),
-        quat_xyzw_normalize(local_rot),
+        quat_xyzw_normalize(local_quat_xyzw),
         size.astype(np.float32),
         getattr(geom, "mesh_data", None),
     )

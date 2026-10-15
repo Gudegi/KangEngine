@@ -48,7 +48,7 @@ def create_target_prim(
         color=ke.Vec4(1.0, 0.75, 0.05, 1.0),
     )
     target.set_world_translation(ke.Vec3(*map(float, position)))
-    target.set_world_rotation(ke.Quat.from_xyzw(rotation))
+    target.set_world_quat_wxyz(ke.Quat.from_xyzw(rotation))
     return target.prim
 
 
@@ -56,7 +56,7 @@ def target_prim_pose(target_prim) -> tuple[np.ndarray, np.ndarray]:
     """Read the gizmo-authored target pose in Newton's xyzw convention."""
 
     position = target_prim.get_world_translation()
-    rotation = target_prim.get_world_rotation()
+    rotation = target_prim.get_world_quat()
     return (
         np.array([position.x, position.y, position.z], dtype=np.float32),
         np.asarray(rotation.to_xyzw(), dtype=np.float32),

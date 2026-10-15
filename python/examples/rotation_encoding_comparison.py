@@ -193,7 +193,7 @@ class RotationEncodingComparison(ke.App):
         return quat_xyzw_heading_xz(quat)
 
     def _observation(self, experiment: RobotExperiment) -> dict[str, torch.Tensor]:
-        body_rotations = self.world.state.get_body_rot(0)[experiment.env_id]
+        body_rotations = self.world.state.get_body_quat_xyzw(0)[experiment.env_id]
         source_rotation = body_rotations[experiment.heading_source_body].to(
             dtype=torch.float32
         )

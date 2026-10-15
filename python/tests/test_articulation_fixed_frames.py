@@ -77,7 +77,7 @@ def test_fixed_chain_pose_and_indices(tmp_path, order, gpu, device, monkeypatch)
                 guard.setattr(torch.Tensor, "cpu", reject_host)
                 guard.setattr(torch.Tensor, "numpy", reject_host)
             positions = state.get_frame_pos(0, frame_names=selected)
-            rotations = state.get_frame_rot(0, frame_names=selected)
+            rotations = state.get_frame_quat_xyzw(0, frame_names=selected)
             state.get_frame_pos(0, frame_names=selected, fetch=False)
         angle = np.pi/2 + .4
         arm = np.array([1., 1., 0.])
@@ -111,7 +111,7 @@ def test_fixed_chain_pose_and_indices(tmp_path, order, gpu, device, monkeypatch)
             np.testing.assert_allclose(matrix.reshape(4, 4, order="F")[:3, 3], end, atol=2e-5)
             assert marker.get_transform_component().version == marker_version
             # FK updates still use local transforms in a hierarchical visual.
-            view.set_joint_rotation(names.index("arm"), [0., 0., 0., 1.])
+            view.set_joint_quat_wxyz(names.index("arm"), [1., 0., 0., 0.])
             view.apply_pose()
             zero_end = np.asarray(marker.compute_world_matrix()).reshape(4, 4, order="F")[:3, 3]
             np.testing.assert_allclose(zero_end, [1, 2.2, 0], atol=2e-5)

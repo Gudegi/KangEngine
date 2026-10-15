@@ -263,15 +263,23 @@ class SkeletonState:
     def compute_global_positions(self) -> list[Vec3]:
         """Return S global node positions."""
         ...
-    def rotation(self, index: int) -> Quat:
+    def get_joint_quat(self, index: int) -> Quat:
         """Return one stored node rotation."""
         ...
     @overload
-    def set_rotation(self, index: int, rotation: npt.ArrayLike | torch.Tensor) -> None:
-        """Set one node rotation from an XYZW array with shape ``(4,)``."""
+    def set_joint_quat_wxyz(
+        self, index: int, quat_wxyz: npt.ArrayLike | torch.Tensor
+    ) -> None:
+        """Set a skeleton node's quaternion without changing coordinate frames.
+
+        Args:
+            index: Skeleton node index, including the root.
+            quat_wxyz: WXYZ quaternion of shape ``(4,)`` in the state's
+                local or global convention, as indicated by ``is_local()``.
+        """
         ...
     @overload
-    def set_rotation(self, index: int, rotation: Quat) -> None: ...
+    def set_joint_quat_wxyz(self, index: int, quat_wxyz: Quat) -> None: ...
     def root_translation(self) -> Vec3:
         """Return the root translation."""
         ...

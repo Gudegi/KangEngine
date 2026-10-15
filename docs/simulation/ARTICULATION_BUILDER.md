@@ -54,7 +54,7 @@ articulation config.
 
 ## Understand the coordinates
 
-- Link `position` and `rotation_xyzw` place its origin relative to its parent
+- Link `position` and `quat_xyzw` place its origin relative to its parent
   when joint positions are zero.
 - Joint `axis` and `joint_offset` are expressed in the child link's coordinates.
 - Shape positions and `com` are also local to the link. Moving a shape or its

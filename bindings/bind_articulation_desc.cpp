@@ -226,7 +226,7 @@ void bind_articulation_desc(py::module& m) {
                  return g;
              }),
              py::kw_only(), py::arg("type"), py::arg("size"),
-             py::arg("position"), py::arg("rotation_xyzw"))
+             py::arg("position"), py::arg("quat_xyzw"))
         .def_readonly("type", &CollisionGeomDesc::type,
                       "Collision geometry type.")
         .def_readonly("name", &CollisionGeomDesc::name,

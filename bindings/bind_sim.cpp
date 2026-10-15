@@ -211,7 +211,7 @@ void bind_sim(py::module& m) {
             },
             py::arg("body_id"), py::arg("renderable_handle"),
             py::arg("local_pos") = py::make_tuple(0.0f, 0.0f, 0.0f),
-            py::arg("local_rot") = py::make_tuple(0.0f, 0.0f, 0.0f, 1.0f),
+            py::arg("local_quat_xyzw") = py::make_tuple(0.0f, 0.0f, 0.0f, 1.0f),
             py::arg("name") = "",
             "Add one shape-to-renderable mapping for native visual batches. "
             "Regular scene objects should be authored through app.scene "
@@ -239,13 +239,13 @@ void bind_sim(py::module& m) {
                                       quatFromXYZWSequence(rot));
             },
             py::arg("env_id"), py::arg("body_id"), py::arg("pos"),
-            py::arg("rot"))
+            py::arg("quat_xyzw"))
         .def("get_body_pos",
              [](const KE::SimState& self, int envId, int bodyId) {
                  return vec3Tuple(self.bodyPos[static_cast<size_t>(
                      self.bodyIndex(envId, bodyId))]);
              })
-        .def("get_body_rot",
+        .def("get_body_quat_xyzw",
              [](const KE::SimState& self, int envId, int bodyId) {
                  return quatXYZWTuple(self.bodyRot[static_cast<size_t>(
                      self.bodyIndex(envId, bodyId))]);

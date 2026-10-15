@@ -126,10 +126,10 @@ class RenderablePrimView:
         self.prim.set_local_translation(translation)
         return self
 
-    def set_local_rotation(self, rotation):
-        """Set the parent-relative quaternion rotation."""
+    def set_local_quat_wxyz(self, quat_wxyz):
+        """Set parent-relative rotation from WXYZ values or a Quat."""
         self._require_scene_graph_transform()
-        self.prim.set_local_rotation(rotation)
+        self.prim.set_local_quat_wxyz(quat_wxyz)
         return self
 
     def set_local_rotation_axis_angle(self, axis, angle_radians: float):
@@ -156,10 +156,10 @@ class RenderablePrimView:
         self.prim.set_world_translation(translation)
         return self
 
-    def set_world_rotation(self, rotation):
-        """Set quaternion rotation in world space."""
+    def set_world_quat_wxyz(self, quat_wxyz):
+        """Set world-space rotation from WXYZ values or a Quat."""
         self._require_scene_graph_transform()
-        self.prim.set_world_rotation(rotation)
+        self.prim.set_world_quat_wxyz(quat_wxyz)
         return self
 
     def set_world_rotation_axis_angle(self, axis, angle_radians: float):
@@ -179,20 +179,20 @@ class RenderablePrimView:
         self._require_scene_graph_transform()
         return self.prim.get_local_translation()
 
-    def get_local_rotation(self):
+    def get_local_quat(self):
         """Return the effective parent-relative quaternion rotation."""
         self._require_scene_graph_transform()
-        return self.prim.get_local_rotation()
+        return self.prim.get_local_quat()
 
     def get_world_translation(self):
         """Return the effective world-space translation."""
         self._require_scene_graph_transform()
         return self.prim.get_world_translation()
 
-    def get_world_rotation(self):
+    def get_world_quat(self):
         """Return the effective world-space quaternion rotation."""
         self._require_scene_graph_transform()
-        return self.prim.get_world_rotation()
+        return self.prim.get_world_quat()
 
     def compute_local_matrix(self):
         """Compute the effective parent-relative transform matrix."""

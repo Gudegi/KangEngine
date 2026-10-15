@@ -49,7 +49,7 @@ def test_authored_trs_matches_native_transform(fixture, magnitude):
     rotation = np.array([2, -3, 4, 5], dtype=float)
     expected = root.add_child("expected", ke.scene.PrimType.XFORM)
     expected.set_local_translation([1, 2, 3])
-    expected.set_local_rotation((rotation / np.linalg.norm(rotation)).tolist())
+    expected.set_local_quat_wxyz((rotation / np.linalg.norm(rotation)).tolist())
     expected.set_local_scale([2, 3, 4])
 
     editor.scene_set_transform(

@@ -205,21 +205,21 @@ class PhysicsWorld(_NativeWrapper):
         self,
         half_extents: Sequence[float],
         pos: Sequence[float],
-        rot_xyzw: Sequence[float] = (0.0, 0.0, 0.0, 1.0),
+        quat_xyzw: Sequence[float] = (0.0, 0.0, 0.0, 1.0),
         register_as_ground: bool = True,
     ) -> None:
         return self._native.add_static_box(
-            half_extents, pos, rot_xyzw, register_as_ground
+            half_extents, pos, quat_xyzw, register_as_ground
         )
 
     def add_triangle_mesh(
         self, mesh, *, position=(0.0, 0.0, 0.0),
-        rotation_xyzw=(0.0, 0.0, 0.0, 1.0), material=None,
+        quat_xyzw=(0.0, 0.0, 0.0, 1.0), material=None,
         gpu_compatible=True, contact_offset=0.02, rest_offset=0.0,
         register_as_ground=True, num_prims_per_leaf=4, weld_tolerance=0.0,
     ) -> RigidStatic:
         """Cook/cache an immutable source mesh and create an exclusive static shape."""
-        options = dict(position=position, rotation_xyzw=rotation_xyzw,
+        options = dict(position=position, quat_xyzw=quat_xyzw,
                        gpu_compatible=gpu_compatible, contact_offset=contact_offset,
                        rest_offset=rest_offset, register_as_ground=register_as_ground,
                        num_prims_per_leaf=num_prims_per_leaf, weld_tolerance=weld_tolerance)
@@ -294,25 +294,25 @@ class PhysicsWorld(_NativeWrapper):
         self,
         half_extents: Sequence[float],
         pos: Sequence[float],
-        rot_xyzw: Sequence[float] = (0.0, 0.0, 0.0, 1.0),
+        quat_xyzw: Sequence[float] = (0.0, 0.0, 0.0, 1.0),
         density: float = 1.0,
     ) -> RigidDynamic:
-        return self._native.create_dynamic_box(half_extents, pos, rot_xyzw, density)
+        return self._native.create_dynamic_box(half_extents, pos, quat_xyzw, density)
 
     def create_dynamic_sphere(
         self,
         radius: float,
         pos: Sequence[float],
-        rot_xyzw: Sequence[float] = (0.0, 0.0, 0.0, 1.0),
+        quat_xyzw: Sequence[float] = (0.0, 0.0, 0.0, 1.0),
         density: float = 1.0,
     ) -> RigidDynamic:
-        return self._native.create_dynamic_sphere(radius, pos, rot_xyzw, density)
+        return self._native.create_dynamic_sphere(radius, pos, quat_xyzw, density)
 
     def create_dynamic_convex_compound(
         self,
         parts: Sequence[ConvexMeshPart],
         pos: Any,
-        rot_xyzw: Any = (0.0, 0.0, 0.0, 1.0),
+        quat_xyzw: Any = (0.0, 0.0, 0.0, 1.0),
         density: float = 1.0,
         cooking: ConvexCookingOptions | None = None,
         material: PhysicsMaterialDesc | None = None,
@@ -328,7 +328,7 @@ class PhysicsWorld(_NativeWrapper):
         return self._native.create_dynamic_convex_compound(
             parts,
             pos,
-            rot_xyzw,
+            quat_xyzw,
             density,
             cooking,
             material,
@@ -341,7 +341,7 @@ class PhysicsWorld(_NativeWrapper):
         self,
         parts: Sequence[ConvexMeshPart],
         pos: Any = (0.0, 0.0, 0.0),
-        rot_xyzw: Any = (0.0, 0.0, 0.0, 1.0),
+        quat_xyzw: Any = (0.0, 0.0, 0.0, 1.0),
         cooking: ConvexCookingOptions | None = None,
         material: PhysicsMaterialDesc | None = None,
         collision_group: int = 0,
@@ -357,7 +357,7 @@ class PhysicsWorld(_NativeWrapper):
         return self._native.create_static_convex_compound(
             parts,
             pos,
-            rot_xyzw,
+            quat_xyzw,
             cooking,
             material,
             collision_group,
@@ -410,7 +410,7 @@ class PhysicsWorld(_NativeWrapper):
         self,
         data: Any,
         pos: Any,
-        rot_xyzw: Any = (0.0, 0.0, 0.0, 1.0),
+        quat_xyzw: Any = (0.0, 0.0, 0.0, 1.0),
         density: float = 1.0,
         collision_group: int = 0,
         contact_offset: float = 0.02,
@@ -420,7 +420,7 @@ class PhysicsWorld(_NativeWrapper):
         return self._native.create_dynamic_rigid(
             data,
             pos,
-            rot_xyzw,
+            quat_xyzw,
             density,
             collision_group,
             contact_offset,

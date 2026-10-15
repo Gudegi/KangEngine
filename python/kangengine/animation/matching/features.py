@@ -118,7 +118,7 @@ class WalkingFeatures:
         up = "XYZ".index(config.up_axis)
         forward = np.eye(3)["XYZ".index(config.forward_axis)]
         planar = [axis for axis in range(3) if axis != up]
-        headings = self.reference_rotations(rotations[:, 0], config=config)
+        headings = self.reference_quats_wxyz(rotations[:, 0], config=config)
         reference_positions = None
         if self.position_filter_window or self.rotation_filter_window:
             reference_positions = self._filter(
@@ -193,11 +193,11 @@ class WalkingFeatures:
         return savgol_filter(values, window, order, axis=0, mode="interp")
 
     @staticmethod
-    def reference_rotations(rotations, *, config) -> np.ndarray:
+    def reference_quats_wxyz(rotations_wxyz, *, config) -> np.ndarray:
         """Extract yaw about up_axis from projected source forward.
 
         Args:
-            rotations: Unit WXYZ root rotations [F,4] in source coordinates.
+            rotations_wxyz: Unit WXYZ root rotations [F,4] in source coordinates.
             config: Source up and forward axes.
 
         Returns:
@@ -208,7 +208,7 @@ class WalkingFeatures:
         """
         forward = np.eye(3)["XYZ".index(config.forward_axis)]
         up = "XYZ".index(config.up_axis)
-        direction = quat_wxyz_rotate_numpy(rotations, forward).astype(np.float64)
+        direction = quat_wxyz_rotate_numpy(rotations_wxyz, forward).astype(np.float64)
         direction[:, up] = 0.0
         lengths = np.linalg.norm(direction, axis=-1)
         invalid = np.flatnonzero(lengths < 1e-6)
@@ -220,7 +220,7 @@ class WalkingFeatures:
         angles = np.unwrap(
             np.arctan2(np.cross(forward, direction)[:, up], direction @ forward)
         )
-        headings = np.zeros((len(rotations), 4), dtype=np.float64)
+        headings = np.zeros((len(rotations_wxyz), 4), dtype=np.float64)
         headings[:, 0] = np.cos(angles / 2.0)
         headings[:, up + 1] = np.sin(angles / 2.0)
         return headings

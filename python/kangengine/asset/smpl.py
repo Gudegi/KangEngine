@@ -281,13 +281,13 @@ class SMPLBody:
             raise ValueError("surface was not created from this SMPL body")
         if not enabled:
             return surface.reset_bind_geometry()
-        if not hasattr(state, "rotation"):
+        if not hasattr(state, "get_joint_quat"):
             raise TypeError("state must be a SkeletonState")
         if not state.is_local():
             raise ValueError("SMPL pose correctives require local rotations")
         rotations_wxyz = np.empty((state.num_joints(), 4), np.float32)
         for joint in range(state.num_joints()):
-            rotation = state.rotation(joint)
+            rotation = state.get_joint_quat(joint)
             rotations_wxyz[joint] = (
                 rotation.w,
                 rotation.x,

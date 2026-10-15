@@ -559,7 +559,7 @@ class MotionMatchingDatabase:
             raise ValueError("time must be within the sampled clip interval (seconds)")
         return min(time * clip.fps, len(clip.roots) - 1)
 
-    def reference_rotations(self, motion_index: int) -> np.ndarray:
+    def reference_quats_wxyz(self, motion_index: int) -> np.ndarray:
         """Builder-defined reference-to-source rotations [frames,4] in WXYZ."""
         return self._clip(motion_index).headings
 
@@ -567,7 +567,7 @@ class MotionMatchingDatabase:
         """Read-only full source root translations as [source frames, 3]."""
         return self._clip(motion_index).roots
 
-    def reference_rotation(self, motion_index: int, time: float) -> np.ndarray:
+    def reference_quat_wxyz(self, motion_index: int, time: float) -> np.ndarray:
         """Slerp the builder-defined reference rotation without looping."""
         clip = self._clip(motion_index)
         return _interpolate_rotation(clip.headings, self._frame_at_time(clip, time))

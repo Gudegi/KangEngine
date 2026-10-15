@@ -217,12 +217,12 @@ class HeightmapTerrainViewer(ke.App):
         if self.test_actor is None or self.test_view is None:
             return
         pos = self.test_actor.get_root_position()
-        rot = self.test_actor.get_root_rotation()
+        quat_xyzw = self.test_actor.get_root_quat_xyzw()
         self.test_view.prim.set_local_translation(
             ke.Vec3(float(pos[0]), float(pos[1]), float(pos[2]))
         )
-        self.test_view.prim.set_local_rotation(
-            ke.Quat(float(rot[3]), float(rot[1]), float(rot[2]), float(rot[0]))
+        self.test_view.prim.set_local_quat_wxyz(
+            ke.Quat.from_xyzw(quat_xyzw)
         )
 
     def _setup_camera(self):

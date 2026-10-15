@@ -5,6 +5,7 @@ from typing import Any, ClassVar, overload
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from torch import Tensor
+from .. import Quat
 from .articulation_builder import ArticulationBuilder as ArticulationBuilder
 
 class PhysicsGpuDynamicsConfig:
@@ -121,7 +122,7 @@ class ConvexMeshPart:
     vertices: Any
     indices: Any
     local_position: tuple[float, float, float]
-    local_rotation_xyzw: tuple[float, float, float, float]
+    local_quat_xyzw: tuple[float, float, float, float]
     vertex_count: int
     triangle_count: int
     def __init__(
@@ -129,7 +130,7 @@ class ConvexMeshPart:
         vertices: Any,
         indices: Any | None = None,
         local_position: Sequence[float] = (0.0, 0.0, 0.0),
-        local_rotation_xyzw: Sequence[float] = (0.0, 0.0, 0.0, 1.0),
+        local_quat_xyzw: Sequence[float] = (0.0, 0.0, 0.0, 1.0),
     ) -> None: ...
     @staticmethod
     def from_mesh_data(mesh: Any) -> ConvexMeshPart: ...
@@ -141,15 +142,15 @@ class ConvexCookingOptions:
 
 class RigidStatic:
     def get_root_position(self) -> Any: ...
-    def get_root_rotation(self) -> Any: ...
-    def set_root_pose(self, pos: Sequence[float], rot_xyzw: Sequence[float]) -> None: ...
+    def get_root_quat_xyzw(self) -> Any: ...
+    def set_root_pose(self, pos: Sequence[float], quat_xyzw: Sequence[float]) -> None: ...
     def num_shapes(self) -> int: ...
     def get_convex_collision_meshes(self) -> Any: ...
     def release(self) -> None: ...
 
 class RigidDynamic:
     def get_root_position(self) -> Any: ...
-    def get_root_rotation(self) -> Any: ...
+    def get_root_quat_xyzw(self) -> Any: ...
     def get_root_linear_velocity(self) -> Any: ...
     def get_root_angular_velocity(self) -> Any: ...
     def get_mass(self) -> float: ...
@@ -157,14 +158,14 @@ class RigidDynamic:
     def get_convex_collision_meshes(self) -> list[Any]: ...
     def get_inverse_mass(self) -> float: ...
     def get_local_com_position(self) -> Any: ...
-    def get_local_com_rotation(self) -> Any: ...
+    def get_local_com_quat_xyzw(self) -> Any: ...
     def get_mass_space_inertia(self) -> Any: ...
     def get_mass_space_inverse_inertia(self) -> Any: ...
     def release(self) -> None: ...
     def set_root_state(
         self,
         pos: Any,
-        rot_xyzw: Any,
+        quat_xyzw: Any,
         linear_velocity: Any = ...,
         angular_velocity: Any = ...,
     ) -> None: ...
@@ -328,7 +329,7 @@ class PhysicsWorld:
     def remove_static_actor(self, actor: RigidStatic) -> None: ...
     def add_triangle_mesh(
         self, mesh: Any, *, position: Sequence[float] = ...,
-        rotation_xyzw: Sequence[float] = ..., material: PhysicsMaterialDesc | None = None,
+        quat_xyzw: Sequence[float] = ..., material: PhysicsMaterialDesc | None = None,
         gpu_compatible: bool = True, contact_offset: float = 0.02,
         rest_offset: float = 0.0, register_as_ground: bool = True,
         num_prims_per_leaf: int = 4, weld_tolerance: float = 0.0,
@@ -349,7 +350,7 @@ class PhysicsWorld:
         self,
         half_extents: Sequence[float],
         pos: Sequence[float],
-        rot_xyzw: Sequence[float] = ...,
+        quat_xyzw: Sequence[float] = ...,
         register_as_ground: bool = True,
     ) -> None: ...
     def add_heightfield(
@@ -379,21 +380,21 @@ class PhysicsWorld:
         self,
         half_extents: Sequence[float],
         pos: Sequence[float],
-        rot_xyzw: Sequence[float] = ...,
+        quat_xyzw: Sequence[float] = ...,
         density: float = 1.0,
     ) -> RigidDynamic: ...
     def create_dynamic_sphere(
         self,
         radius: float,
         pos: Sequence[float],
-        rot_xyzw: Sequence[float] = ...,
+        quat_xyzw: Sequence[float] = ...,
         density: float = 1.0,
     ) -> RigidDynamic: ...
     def create_dynamic_convex_compound(
         self,
         parts: Sequence[ConvexMeshPart],
         pos: Any,
-        rot_xyzw: Any = (0.0, 0.0, 0.0, 1.0),
+        quat_xyzw: Any = (0.0, 0.0, 0.0, 1.0),
         density: float = 1.0,
         cooking: ConvexCookingOptions | None = None,
         material: PhysicsMaterialDesc | None = None,
@@ -405,7 +406,7 @@ class PhysicsWorld:
         self,
         parts: Sequence[ConvexMeshPart],
         pos: Any = (0.0, 0.0, 0.0),
-        rot_xyzw: Any = (0.0, 0.0, 0.0, 1.0),
+        quat_xyzw: Any = (0.0, 0.0, 0.0, 1.0),
         cooking: ConvexCookingOptions | None = None,
         material: PhysicsMaterialDesc | None = None,
         collision_group: int = 0,
@@ -444,7 +445,7 @@ class PhysicsWorld:
         self,
         data: Any,
         pos: Any,
-        rot_xyzw: Any = ...,
+        quat_xyzw: Any = ...,
         density: float = 1.0,
         collision_group: int = 0,
         contact_offset: float = 0.02,
@@ -514,6 +515,14 @@ class ArticulationTemplate:
     def num_dofs(self) -> int: ...
 
 class Articulation:
+    def get_root_quat_xyzw(self) -> NDArray[np.float32]: ...
+    def get_link_quats_xyzw(self) -> NDArray[np.float32]:
+        """Return flat world-space XYZW quaternions, with 4 values per link."""
+        ...
+    def reset_root(
+        self, pos: ArrayLike = (0., 0., 0.),
+        quat_xyzw: ArrayLike | Quat = (0., 0., 0., 1.),
+    ) -> None: ...
     @property
     def body_names(self) -> list[str]: ...
     @property

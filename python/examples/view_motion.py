@@ -129,7 +129,7 @@ class MotionViewer(ke.App):
         num_bodies = min(self.robot.num_bodies(), self.local_rot.shape[1])
         for body_idx in range(num_bodies):
             q = self.local_rot[idx][body_idx]  # wxyz
-            self.robot.set_joint_rotation(
+            self.robot.set_joint_quat_wxyz(
                 body_idx,
                 ke.Quat(float(q[0]), float(q[1]), float(q[2]), float(q[3])),
             )

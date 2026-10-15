@@ -80,7 +80,7 @@ class RetargetTest(unittest.TestCase):
         for result in (pose, state):
             root = result.root_translation()
             np.testing.assert_allclose((root.x, root.y, root.z), (2, 2, 3))
-            child = result.rotation(1)
+            child = result.get_joint_quat(1)
             np.testing.assert_allclose(
                 (child.w, child.x, child.y, child.z),
                 source.local_rotations_wxyz()[1, 1],
