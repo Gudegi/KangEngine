@@ -194,6 +194,9 @@ def control_ui(app, *, autoplay=True):
         "Show desired trajectory", app.show_trajectory
     )
     _, app.show_look = imgui.checkbox("Show look arrow", app.show_look)
+    _, app.show_contacts = imgui.checkbox("Show foot contacts", app.show_contacts)
+    if app.show_contacts:
+        imgui.text("Green: contact | Red: no contact")
     imgui.text("Cyan: input look | Orange: desired path and future facing")
     _, app.show_keyboard = imgui.checkbox("Show keyboard input", app.show_keyboard)
     if app.show_keyboard:
@@ -215,6 +218,8 @@ class MotionMatchingViewer(ke.App):
         demo_input: Callable[[float], tuple[np.ndarray, float, str]] | None = None,
         trajectory_half_life: float = 0.2,
         search_backend: str = "native",
+        contact_joints: tuple[str, ...] | None = None,
+        contact_offsets: np.ndarray | None = None,
     ):
         super().__init__()
         self.database = database
@@ -249,6 +254,18 @@ class MotionMatchingViewer(ke.App):
         self.run_speed = run_speed
         self.velocity = np.zeros(3)
 
+        tree = database.motions[0].skeleton_tree
+        names = (
+            database.config.position_joints
+            if contact_joints is None
+            else contact_joints
+        )
+        self.contact_module = animation.FootContactModule(
+            tree, names, offsets=contact_offsets
+        )
+        self._contact_normal = np.eye(3)["XYZ".index(database.config.up_axis)]
+        self.show_contacts = False
+
     def setup(self):
         materials: SimpleNamespace = self.create_standard_materials()
         self.add_ground(material=materials.ground)
@@ -265,7 +282,21 @@ class MotionMatchingViewer(ke.App):
         self.update_camera()
 
     def apply_pose(self):
-        self.character_visual.apply_state(state=self.controller.state)
+        state = self.controller.state
+        self.character_visual.apply_state(state=state)
+        return state
+
+    def _draw_contacts(self):
+        path = "/motion_matching/foot_contacts"
+        if not self.show_contacts or self.contact_module.positions is None:
+            self.clear_debug_points(path)
+            return
+        colors = np.where(
+            self.contact_module.contacts[:, None],
+            ke.preset_rgba(ke.ColorType.LIME_GREEN),
+            ke.preset_rgba(ke.ColorType.RED),
+        )
+        self.log_debug_points(path, self.contact_module.positions, colors, 30.0)
 
     def update_camera(self):
         up = np.eye(3)["XYZ".index(self.database.config.up_axis)]
@@ -280,7 +311,7 @@ class MotionMatchingViewer(ke.App):
         self.speed = 0.0
         self.heading_degrees = 0.0
         self.velocity[:] = 0
-        self.apply_pose()
+        self.contact_module.reset(state=self.apply_pose())
         self.update_camera()
 
     def update_input(self):
@@ -324,8 +355,11 @@ class MotionMatchingViewer(ke.App):
         self.update_input()
         angle = math.radians(self.heading_degrees)
         if not self.paused:
+            if self.contact_module.positions is None:
+                self.contact_module.reset(state=self.apply_pose())
+            dt = min(self.get_delta_time(), 0.1)
             self.controller.step_with_query(
-                dt=min(self.get_delta_time(), 0.1),
+                dt=dt,
                 query_provider=lambda controller: make_walking_query(
                     controller,
                     desired_velocity=self.velocity,
@@ -333,7 +367,12 @@ class MotionMatchingViewer(ke.App):
                     half_life=self.trajectory_half_life,
                 ),
             )
-            self.apply_pose()
+            state = self.apply_pose()
+            if dt > 0:
+                self.contact_module.update(
+                    state=state, dt=dt, ground_normals=self._contact_normal
+                )
+        self._draw_contacts()
         follow_character(self)
         points, directions = predict_walking_trajectory(
             self.controller,

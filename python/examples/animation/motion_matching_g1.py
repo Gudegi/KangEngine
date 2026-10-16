@@ -20,6 +20,9 @@ from motion_matching_common import MotionMatchingViewer, benchmark_search, parse
 REPO = Path(__file__).resolve().parents[3]
 DEFAULT_DATASET = REPO.parent / "dataset/seed/g1/csv"
 DEFAULT_CHARACTER = REPO / "assets/characters/g1/g1_29dof.xml"
+# Heel/toe probes under the ankle links, based on the MJCF foot collision spheres.
+CONTACT_JOINTS = ("left_ankle_roll_link",) * 2 + ("right_ankle_roll_link",) * 2
+CONTACT_OFFSETS = np.tile([[-0.05, 0, -0.035], [0.12, 0, -0.035]], (2, 1))
 POSITION_FILTER_WINDOW = 2.0
 ROTATION_FILTER_WINDOW = 2.0
 FPS = 120.0
@@ -188,6 +191,8 @@ class Viewer(MotionMatchingViewer):
             walk_speed=1.0,
             run_speed=3.0,
             demo_input=_demo_input,
+            contact_joints=CONTACT_JOINTS,
+            contact_offsets=CONTACT_OFFSETS,
         )
         self.mapper = _load_mapper(DEFAULT_CHARACTER)
         self.character_path = DEFAULT_CHARACTER
@@ -210,7 +215,9 @@ class Viewer(MotionMatchingViewer):
 
     def apply_pose(self):
         self.q, self.correction = _project_pose(self.mapper, self.controller.state)
-        self.character_visual.apply_state(state=self.mapper.to_skeleton_state(self.q))
+        state = self.mapper.to_skeleton_state(self.q)
+        self.character_visual.apply_state(state=state)
+        return state
 
     def render(self):
         super().render()

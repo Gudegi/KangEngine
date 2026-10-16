@@ -80,6 +80,8 @@ __all__ += [
     "MotionMatchingDatabase",
     "MotionMatchingController",
     "WalkingFeatures",
+    "FootContactDetector",
+    "FootContactModule",
     "load_articulation_motion_npz",
     "retarget_angle_motion",
     "save_articulation_motion_npz",
@@ -105,6 +107,8 @@ for _type in (
     set_public_module(_type, __name__)
 
 _LAZY_IMPORTS = {
+    "FootContactDetector": (".contact_detector", "FootContactDetector"),
+    "FootContactModule": (".modules", "FootContactModule"),
     "MotionMatchingConfig": (".matching", "MotionMatchingConfig"),
     "MotionMatchingDatabase": (".matching", "MotionMatchingDatabase"),
     "MotionMatchingController": (".matching", "MotionMatchingController"),

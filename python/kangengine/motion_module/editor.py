@@ -7,6 +7,7 @@ from typing import Optional
 import numpy as np
 
 from .._core import _ke
+from ..animation.contact_detector import _contact_mask
 from ..utils import (
     DEFAULT_CONTACT_SEMANTICS,
     DEFAULT_TRACKING_SEMANTICS,
@@ -188,10 +189,12 @@ class ContactData:
         axis = int(np.clip(self.up_axis, 0, 2))
         heights = self.positions[:, :, axis]
         floor_heights = np.min(heights, axis=0, keepdims=True)
-        height_ok = heights <= floor_heights + float(height_threshold)
-        speed = np.linalg.norm(self.velocities, axis=2)
-        velocity_ok = speed <= float(velocity_threshold)
-        return height_ok & velocity_ok
+        return _contact_mask(
+            heights,
+            self.velocities,
+            floor_heights + float(height_threshold),
+            float(velocity_threshold),
+        )
 
 
 class MotionCameraFollower:

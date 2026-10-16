@@ -18,6 +18,8 @@ from .coordinates import (
     convert_state_coordinates as convert_state_coordinates,
 )
 from .transform import transform_motion as transform_motion
+from .contact_detector import FootContactDetector as FootContactDetector
+from .modules import FootContactModule as FootContactModule
 from .articulation_motion import (
     ArticulationCoordinateBlock as ArticulationCoordinateBlock,
     ArticulationCoordinateLayout as ArticulationCoordinateLayout,
